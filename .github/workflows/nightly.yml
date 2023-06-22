@@ -1,0 +1,81 @@
+name: Nightly Build and Test
+
+on:
+  schedule:  # UTC at 0300 - 11pm EDT
+    - cron:  '0 3 * * *'
+  workflow_dispatch:
+
+env:
+  MAIN_PYTHON_VERSION: '3.10'
+
+jobs:
+
+  nightly_test:
+    name: Testing
+    needs: [smoke-tests]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        python-version: [ '3.8', '3.9', '3.10', '3.11' ]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: 'refs/heads/main'
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Docker container
+        run: make pull-docker
+
+      - name: Run pytest
+        uses: ansys/actions/tests-pytest@v4
+        env:
+          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER )}}
+        with:
+          checkout: false
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          pytest-extra-args: -rvx --setup-show --cov=ansys.dynamicreporting --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+
+  nightly_and_upload:
+    name: nightly_and_upload
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build library source and wheel artifacts
+        uses: ansys/actions/build-library@v4
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+      - name: Rename wheel
+        run: python codegen/rename_whl.py
+
+      - name: Upload to Azure PyPi
+        if: ${{ !env.ACT }}
+        run: twine upload --verbose dist/*
+        env:
+          TWINE_USERNAME: PAT
+          TWINE_PASSWORD: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
+          TWINE_REPOSITORY_URL: ${{ secrets.PRIVATE_PYPI_URL }}
+
+  build-failure:
+    name: Teams notify on failure
+    if: failure()
+    needs: [ nightly_test, nightly_and_upload]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Microsoft Teams Notification
+        uses: jdcargile/ms-teams-notification@v1.3
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
+          notification-summary: Nightly failure
+          notification-color: dc3545
+          timezone: America/New_York

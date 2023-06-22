@@ -1,0 +1,399 @@
+"""Item module.
+
+Module to create Item instances.
+
+Any object from an ADR database can be represented as a Item instance.
+This class allows for easy creation and manipulation of such objects.
+
+Examples
+--------
+::
+
+    import ansys.dynamicreporting.core as adr
+    adr_service = Service()
+    ret = adr_service.connect()
+    my_img = adr_service.create_item()
+    my_img.item_image = 'Image_to_push_on_report'
+
+"""
+import os.path
+import requests
+import sys
+from typing import Optional
+
+from .adr_utils import in_ipynb, table_attr, type_maps
+import webbrowser
+
+try:
+    from IPython.display import IFrame
+except ImportError:
+    pass
+
+
+# Generate the items for the ADR database
+class Item:
+
+    """Class to create an object that represents an ADR item.
+
+    Create an instance of this class for each item in the database you want to
+    interact with. When the object is created, no type is set. This will be determined the
+    first time you set the item_* attribute, and can not be changed. So for example if you
+    create an instance with:
+
+    >>> my_txt = adr_service.create_item()
+    >>> my_txt.item_text = '<h1>The test</h1>This is a text item'
+
+
+    the object my_txt is now a text item, and the type can not be changed at a later time. You
+    can reset the attributes describing the object at any time and the change will automatically
+    be propagated into the database. You can control the rendering of these objects via
+    the attributes described below. Note that these attributes mirror the generic
+    data item attributes, as described `here`_
+
+    .. _here: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
+
+    Parameters
+    ----------
+    service : ansys.dynamicreporting.core.Service
+        dynamicreporting object that provides the connection to the database the
+        Item will interact with.
+        Default: None
+    obj_name : str
+        Name of the item in the database. Default: 'default'
+    source : str
+        Name of the source for the item in the database. Default: 'ADR'
+
+
+    Examples
+    --------
+    Initialize the class inside a dynamic reporting service and set the object to be
+    a text item.
+    ::
+
+        import ansys.dynamicreporting.core as adr
+        adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+        adr_service.connect(url='http://localhost:8010')
+        my_txt = adr_service.create_item()
+        my_txt.item_text = '<h1>The test</h1>This is a text item'
+
+    """
+
+    def __init__(self, service: 'ADR' = None, obj_name: Optional[str] = "default",
+                 source: Optional[str] = "ADR") -> None:
+        self.item = None
+        self.serverobj = service.serverobj
+        self._url = None
+        self.logger = service.logger
+        self.source = source
+        self.obj_name = obj_name
+        self.type = None
+        self.item_text = ""
+        """Set the text. HTML and LaTex formatting supported"""
+        self.item_image = None
+        """Set the image object - file or png binary"""
+        self.item_scene = None
+        """Set the 3D scene file. AVZ, PLY, GBT, STL formats supported."""
+        # Attributes for the table items
+        self.table_attr = table_attr
+        self.item_table = None
+        """Set the table values. This needs to be a numpy array."""
+        self.table_dict = {}
+        self.item = self.serverobj.create_item(name=self.obj_name, source=self.source)
+
+    @property
+    def url(self):
+        """URL corresponding to the Item"""
+        if self.serverobj.get_URL() is not None and self.item.guid is not None:
+            self._url = self.serverobj.get_URL() + "/reports/report_display/?usemenus=off&query=A%7Ci_guid%7C%eq%7C"
+            self._url += str(self.item.guid)
+        else:
+            self._url = None
+        return self._url
+
+    def __pushonly__(self):
+        """
+        Push self to the server - with server existence check
+        """
+        ret = 0
+        if self._url is None:
+            _ = self.url
+        if self.serverobj is not None:
+            ret = self.serverobj.put_objects([self.item])
+        else:
+            self.logger.error("No connection to service established")
+        return ret
+
+    def __push__(self, value):
+        if self.type == "text":
+            self.item.set_payload_html(value)
+        elif self.type == "image":
+            # If the image is passed as a file, first open it. Otherwise, directly
+            # pass it as a payload value
+            if os.path.exists(value):
+                with open(value, "rb") as fb:
+                    img = fb.read()
+            else:
+                img = value
+            self.item.set_payload_image(img)
+        elif self.type == "scene":
+            self.item.set_payload_scene(value)
+        elif self.type == "table":
+            self.item.set_payload_table(self.table_dict)
+        elif self.type == "animation":
+            self.item.set_payload_animation(value)
+        elif self.type == "file":
+            self.item.set_payload_file(value)
+        elif self.type == "tree":
+            self.item.set_payload_tree(value)
+        _ = self.__pushonly__()
+
+    def __setattr__(self, name, value, only_set=False):
+        # If only_set is set to True, then skip the push methods. This is needed when using the
+        # setattr to create Item objs that correspond to what is in the database, but
+        # not to actually push changes to the database items - for example, when querying it
+        if name == "item":
+            super().__setattr__(name, value)
+            return 0
+        if self.item is None:
+            super().__setattr__(name, value)
+            return 0
+        if name in type_maps:
+            if self.type is None:
+                self.type = type_maps[name]
+            if self.type != type_maps[name]:
+                self.logger.error(f"Can not set {name} on an item of type: {self.type}")
+                return -1
+            if name == "item_table":
+                self.table_dict["array"] = value
+            if only_set is False:
+                self.__push__(value)
+        if name in self.table_attr:
+            if self.type == "table":
+                if value is not None:
+                    self.table_dict[name] = value
+                    if "array" in self.table_dict.keys():
+                        if only_set is False:
+                            self.__push__(value)
+        super().__setattr__(name, value)
+        return 0
+
+    def __copyattrs__(self, dataitem=None):
+        """
+        Copy the attributes from a data Item into the current Item
+        This is useful in the query method when creating a Item that corresponds to an existing
+        DataItem
+
+        Parameters
+        ----------
+        dataitem : utils.report_objects.ItemREST
+            ADR item to copy from. Default: None
+        """
+        if dataitem is None:
+            return
+        if dataitem.type == "table":
+            for t_attr in self.table_attr:
+                self.__setattr__(t_attr, dataitem.payloaddata.get(t_attr, None), only_set=True)
+
+    def visualize(self, new_tab: Optional[bool] = False) -> None:
+        """Render this item only
+
+        Parameters
+        ----------
+        new_tab : bool
+            If the current environment is a Jupyter notebook, then set if item should be rendered
+            in the current location (False, default) or on a new tab (True).
+            If the environment is not a Jupyter notebook, always display by opening a new tab.
+
+        Returns
+        -------
+        Rendered item
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect(url='http://localhost:8010')
+            my_txt = adr_service.create_item()
+            my_txt.item_text = '<h1>The test</h1>This is a text item'
+            my_txt.visualize(new_tab = True)
+
+        Text item rendering in a new tab
+
+        """
+        if in_ipynb() and not new_tab:
+            iframe = self.get_iframe()
+            if iframe is not None:
+                display(iframe)
+            else: # pragma: no cover
+                self.logger.error("Could not generate an IFrame")
+        else:
+            if self._url is None: # pragma: no cover
+                self.logger.error("Could not obtain a url")
+            else:
+                webbrowser.open_new(self._url)
+
+    def get_iframe(self, width=0, height=0):
+        """Return IFrame corresponding to the Item
+
+        Parameters
+        ----------
+        int width :
+            Width of the IFrame object. Default is min(Item width * 1,1, 1000).
+            If Item width is 0, then default is 1000
+        int height :
+            Height of the IFrame object. Default is min(Item height, fixed height) where
+            fixed height is 800 for Item scene, 400 otherwise
+
+        Returns
+        -------
+        IFrame
+            IFrame obj corresponding to the Item. If no IFrame can be generated, None is returned
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect(url='http://localhost:8010')
+            my_txt = adr_service.create_item()
+            my_txt.item_text = '<h1>The test</h1>This is a text item'
+            item_iframe = my_txt.get_iframe()
+
+        """
+        if 'IPython.display' in sys.modules:
+            if width == 0:
+                if self.item.width == 0:
+                    width = 1000
+                else:
+                    width = min(self.item.width * 1.1, 1000)
+            if height == 0:
+                if self.type == "scene":
+                    height = 800
+                else:
+                    height = 400
+                if self.item.height > 0:
+                    height = min(self.item.height * 1.1, height)
+            iframe = IFrame(src=self._url, width=width, height=height)
+        else:
+            iframe = None
+        return iframe
+
+    def set_tags(self, tagstring: str = '') -> bool:
+        """Set tags on the Item
+
+        Parameters
+        ----------
+        str tagstring :
+            Set the tags on the item. Multiple tags are space-separated. Tag syntax is:
+            tagname=value
+
+        Returns
+        -------
+        bool
+            True is success
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            my_txt = adr_service.create_item()
+            my_txt.item_text = '<h1>The test</h1>This is a text item'
+            my_txt.set_tags("tagone=1 tagtwo=two")
+
+        """
+        self.item.set_tags(tagstring)
+        ret = self.__pushonly__()
+        return ret == requests.codes.ok
+
+    def get_tags(self) -> str:
+        """Get tags of the Item
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        str
+            Tags set on the Item
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            item_list = adr_service.query()
+            first_item = item_list[0]
+            all_tags = first_item.get_tags()
+
+        """
+        tags = self.item.get_tags()
+        return tags
+
+    def add_tag(self, tag: str = '', value: str = '') -> bool:
+        """Add a tag to the Item
+
+        Parameters
+        ----------
+        tag str :
+            Tag name
+        value str :
+            Tag value
+
+        Returns
+        -------
+        bool
+            True is success
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            my_txt = adr_service.create_item()
+            my_txt.item_text = '<h1>The test</h1>This is a text item'
+            my_txt.add_tag(tag='tagone', value='one')
+
+        """
+        self.item.add_tag(tag=tag, value=value)
+        ret = self.__pushonly__()
+        return ret == requests.codes.ok
+
+    def rem_tag(self, tag: str = '') -> bool:
+        """Remove a tag on the Item
+
+        Parameters
+        ----------
+        tag str :
+            Tag to remove
+
+        Returns
+        -------
+        bool
+            True is success
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            item_list = adr_service.query()
+            first_item = item_list[0]
+            all_tags = first_item.rem_tags(tag='tagone')
+
+        """
+        self.item.rem_tag(tag=tag)
+        ret = self.__pushonly__()
+        return ret == requests.codes.ok

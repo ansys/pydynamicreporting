@@ -1,0 +1,34 @@
+name: Nightly Documentation Build
+
+on:
+  schedule:  # UTC at 0400 - 12am EDT
+    - cron:  '0 4 * * *'
+  workflow_dispatch:
+
+env:
+  DOCUMENTATION_CNAME: 'dynamicreporting.docs.pyansys.com'
+  MAIN_PYTHON_VERSION: '3.10'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs_build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Ansys documentation building action
+        uses: ansys/actions/doc-build@v4
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+  docs_upload:
+    needs: docs_build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy development documentation
+        uses: ansys/actions/doc-deploy-dev@v4
+        with:
+          cname: ${{ env.DOCUMENTATION_CNAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
