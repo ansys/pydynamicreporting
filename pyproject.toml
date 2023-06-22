@@ -65,7 +65,7 @@ tests = [
     "pyansys-docker==5.0.4",
     "numpy==1.25.0",
     "psutil==5.9.5",
-    "pytest==7.3.1",
+    "pytest==7.3.2",
     "pytest-cov==4.0.0",
 ]
 doc = [
@@ -87,7 +87,7 @@ dev = [
     "pillow==9.5.0",
     "psutil==5.9.5",
     "pyansys-docker==5.0.4",
-    "pytest==7.3.1",
+    "pytest==7.3.2",
     "pytest-cov==4.0.0",
     "Sphinx==7.0.1",
     "sphinx-copybutton==0.5.2",
