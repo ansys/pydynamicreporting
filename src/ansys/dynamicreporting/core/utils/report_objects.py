@@ -3183,7 +3183,7 @@ class sqlqueriesREST(GeneratorREST):
                 out_msg = "SQLite file is not a valid database"
         else:
             try:
-                import psycopg2
+                import psycopg
 
                 attrs = dict(
                     sqldb="dbname",
@@ -3197,7 +3197,7 @@ class sqlqueriesREST(GeneratorREST):
                     tmp = str(p.get(key, ""))
                     if len(tmp):
                         conn_string += f"{attrs[key]}={tmp} "
-                _ = psycopg2.connect(conn_string.strip())
+                _ = psycopg.connect(conn_string.strip())
             except Exception as e:
                 valid = False
                 out_msg = f"Could not validate connection:\n{e}"
