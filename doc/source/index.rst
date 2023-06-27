@@ -47,7 +47,7 @@ features. This is the best place to post questions and code.
 
 License
 -------
-`PyDynamicReporting is licensed under the MIT license.
+PyDynamicReporting is licensed under the MIT license.
 
 PyDynamicReporting makes no commercial claim over Ansys whatsoever.
 This library extends Ansys Dynamic Reporting by adding a Python
