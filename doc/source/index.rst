@@ -11,10 +11,6 @@ Ansys Dynamic Reporting
    examples/index
    contributing
 
-|title|
-
-.. |title| image:: https://nexusdemo.ensight.com/static/website/images/nexus_front_page.png
-
 Introduction
 ------------
 Ansys Dynamic Reporting is the report generator technologies used by Ansys tools. It allows
