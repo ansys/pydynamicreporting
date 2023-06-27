@@ -7,6 +7,9 @@ on:
 
 env:
   MAIN_PYTHON_VERSION: '3.10'
+  PACKAGE_NAME: 'ansys-dynamicreporting-core'
+  PACKAGE_NAMESPACE: 'ansys.dynamicreporting'
+
 
 jobs:
 
