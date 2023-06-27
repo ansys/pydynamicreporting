@@ -34,7 +34,7 @@ package, install the latest package with this code:
    make install-dev  # install pydynamicreporting in editable mode
 
 
-Now you can start developing ``pydynamicreporting``.
+Now you can start developing the ``pydynamicreporting`` package.
 
 
 Create an Ansys Dynamic Reporting instance

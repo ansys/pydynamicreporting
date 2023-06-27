@@ -79,7 +79,7 @@ of installation are available:
 
 
 The code provided for both installation modes use a `virtual environment
-"https://docs.python.org/3/library/venv.html>`_.
+<https://docs.python.org/3/library/venv.html>`_.
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
