@@ -31,14 +31,12 @@ PyDynamicReporting
    :target: https://github.com/psf/black
    :alt: Black
 
-.. |title| image:: https://nexusdemo.ensight.com/static/website/images/nexus_front_page.png
-
 .. _Nexus: https://nexusdemo.ensight.com/docs/html/Nexus.html
 
 Overview
 --------
 The ``pydynamicreporting`` repository contains the Python client library for
-Ansys Dynamic Reporting, previously known as `Nexus`_. Ansys Dynamic
+Ansys Dynamic Reporting, previously documented as `Nexus`_. Ansys Dynamic
 Reporting is a service for pushing items of many types, including images, text,
 3D scenes, and tables, into a database, where you can keep them organized and
 create dynamic reports from them. When you use PyDynamicReporting to connect to
