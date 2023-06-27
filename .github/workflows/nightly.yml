@@ -10,6 +10,15 @@ env:
 
 jobs:
 
+  style:
+    name: Code style
+    runs-on: ubuntu-latest
+    steps:
+      - name: PyAnsys code style checks
+        uses: ansys/actions/code-style@v4
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
   smoke-tests:
     name: Build and smoke tests
     runs-on: ${{ matrix.os }}
