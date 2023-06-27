@@ -50,11 +50,11 @@ License
 `PyDynamicReporting is licensed under the MIT license.
 
 PyDynamicReporting makes no commercial claim over Ansys whatsoever.
-This library extends the functionality of Ansys Dynamic Reporting by
-adding a Python interface to Ansys Dynamic Reproting without changing
-the core behavior or license of the original software. The use of
-PyDynamicReporting requires a legally licensed copy of an Ansys product
-that supports Ansys Dynamic Reporting.
+This library extends Ansys Dynamic Reporting by adding a Python
+interface to Ansys Dynamic Reporting without changing the core behavior
+or license of the original software. The use of PyDynamicReporting
+requires a legally licensed copy of an Ansys product that supports
+Ansys Dynamic Reporting.
 
 Project index
 -------------
