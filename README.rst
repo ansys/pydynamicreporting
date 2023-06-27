@@ -31,8 +31,6 @@ Ansys Dynamic Reporting
    :target: https://github.com/psf/black
    :alt: Black
 
-.. |title| image:: https://nexusdemo.ensight.com/static/website/images/nexus_front_page.png
-
 .. _Ansys Dynamic Reporting: https://nexusdemo.ensight.com/docs/html/Nexus.html
 
 Overview
@@ -49,8 +47,6 @@ please see `the Ansys Dynamic Reporting documentation page`_.
 
 .. _the Ansys Dynamic Reporting documentation page: https://nexusdemo.ensight.com/docs/html/Nexus.html
 
-
-|title|
 
 
 Installation
