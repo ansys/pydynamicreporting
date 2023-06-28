@@ -11,9 +11,6 @@ Examples::
     my_img = adr_service.create_item()
     my_img.item_image = 'Image_to_push_on_report'
     adr_service.visualize_report()
-
-::
-Visualization of the default report
 """
 
 import atexit
