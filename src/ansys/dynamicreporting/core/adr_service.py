@@ -54,7 +54,7 @@ class Service:
     --------
     Initialize the class and connect to an Ansys Dynamic Reporting service running on
     localhost on port 8010 with ``username`` set to ``"admin"`` and ``password``
-    set to ``"mypsw"``using a local Ansys installation::
+    set to ``"mypsw"`` using a local Ansys installation::
 
         import ansys.dynamicreporting.core as adr
         installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
@@ -91,7 +91,7 @@ class Service:
             Default:
         data_directory: str, optional
             Directory where Docker is to store temporary copy of files. The
-            default is ``None``, in which case ``TMP_DIR``is used. This parameter
+            default is ``None``, in which case ``TMP_DIR`` is used. This parameter
             is used only if the value for the ``ansys_installation`` parameter
             is set to ``"docker"``.
         db_directory: str, optional
@@ -642,7 +642,7 @@ class Service:
         Parameters
         ----------
         query_type : str, optional
-            Type of objects to query. The default is ``"Item"`. Options are ``"Item"``,
+            Type of objects to query. The default is ``"Item"``. Options are ``"Item"``,
             ``"Session"``, and ``"Dataset"``.
         filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
@@ -889,7 +889,7 @@ class Service:
 #            - ``"image"``: File that contains the image. Each subsequent key is information
 #              that represents the image.
 #            - ``"var"``: Variable for coloring the parts.
-#            -``"time"``: Value of the timestep that the snapshot is taken at/
+#            - ``"time"``: Value of the timestep that the snapshot is taken at.
 #
 #        report_name : str, optional
 #            Name of the report to place the slider under.
