@@ -3,8 +3,8 @@ Report module.
 
 Module to handle Report instances.
 
-A top level report from an Ansys Dynamic Reporting database can be represented
-as a Report instance. This class allows for easy creation and
+A top-level report from an Ansys Dynamic Reporting database can be represented
+as a ``Report`` instance. This class allows for easy creation and
 manipulation of such objects.
 
 Examples
@@ -65,17 +65,20 @@ class Report:
 
         Parameters
         ----------
-        new_tab : bool
-            If the current environment is a Jupyter notebook, then set if item should be rendered
-            in the current location (False, default) or on a new tab (True).
-            If the environment is not a Jupyter notebook, always display by opening a new tab.
+        new_tab : bool, optoinal
+            Whether to render the report in a new tab if the current environment
+            is a Jupyter notebook. The default is ``False``, in which case the
+            report is rendered in the current location. If the environment is
+            not a Jupyter notebook, the report is always rendered in a new tab.
 
         Returns
         -------
-        Rendered report
+        Report
+            Rendered report
 
         Examples
         --------
+        Render a report in a new tab.
         ::
 
             import ansys.dynamicreporting.core as adr
@@ -83,8 +86,6 @@ class Report:
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My First Report")
             my_report.visualize(new_tab = True)
-
-        Report rendering in a new tab
         """
         if in_ipynb() and not new_tab:  # pragma: no cover
             iframe = self.get_iframe()
@@ -101,16 +102,12 @@ class Report:
 
     def get_url(self) -> str:
         """
-        Return URL corresponding to the report.
-
-        Parameters
-        ----------
-        None
+        Get the URL for the report.
 
         Returns
         -------
         str
-            String corresponding to URL for the report. If no URL exists, empty str is returned
+            URL for the report. If no URL exists, an empty string is returned.
 
         Examples
         --------
@@ -148,20 +145,20 @@ class Report:
 
     def get_iframe(self, width: int = 1000, height: int = 800):
         """
-        Return IFrame corresponding to the Report.
+        Get the iframe for the report.
 
         Parameters
         ----------
-        int width :
-            Width of the IFrame object. Default is 1000
-        int height :
-            Height of the IFrame object. Default is 800
+        width : int, optional
+            Width of the iframe object. The default is ``1000``.
+        height : int, optional
+            Height of the iframe object. The default is ``800``.
 
         Returns
         -------
-        IFrame
-            IFrame obj corresponding to the Report. If no IFrame can be generated,
-            None is returned
+        iframe
+            iframe object for the report. If no iframe can be generated,
+            ``None`` is returned.
 
         Examples
         --------

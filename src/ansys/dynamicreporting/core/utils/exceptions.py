@@ -1,7 +1,7 @@
 """
 template_editor.exceptions
------------------------
-All exceptions used in the template_editor code base are defined here.
+--------------------------
+This module definse all exceptions used in the code base for the template editor.
 """
 
 

@@ -14,9 +14,10 @@ except ImportError:
 
 class BaseEncoder(json.JSONEncoder):
     """
-    Base encoding operations WARNING!
+    Provides base encoding operations.
 
-    isinstance() checks ALWAYS COME FIRST!
+    .. warning::
+       The ``isinstance()`` checks **always** come first.
     """
 
     def default(self, obj):
@@ -43,14 +44,17 @@ class BaseEncoder(json.JSONEncoder):
 
 class PayloaddataEncoder(BaseEncoder):
     """
-    JSONEncoder subclass that knows how to encode item.payloaddata.
+    Provides the ``JSONEncoder`` subclass, which knows how to encode item.payloaddata.
 
-    We support encoding of float, int, datetime.datetime, str, bool, uuid.UUID, None.
-    We only need to explicitly do numpy/ nexus_array, datetime.datetime, uuid.UUID.
-    rest is taken care of by json.
+    This class supports encoding of these datatypes: float, int, datetime.datetime, str,
+    bool, uuid.UUID, and None. Only these datatypes need to explicitly be taken care of:
+    numpy, nexus_array, datetime.datetime, and uuid.UUID. The other datayptes are taken
+    care of by JSON.
 
-    WARNING: This method is completely dependent on the fact that the user input will only contain
-    the above accepted data types. If that list above changes, the code below HAS to handle that.
+    .. warning::
+       This ``default`` method is completely dependent on the fact that user input will
+       contain only the above accepted data types. If the list above changes, the code
+       below must handle that.
     """
 
     def default(self, obj):
