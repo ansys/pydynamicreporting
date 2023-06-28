@@ -2,8 +2,9 @@ Getting started
 ###############
 
 PyDynamicReporting supports Ansys Dynamic Reporting 2023 R2 and later. To run
-PyDynamicReporting, you must have either a local copy of Ansys Dynamic
-Reporting or use a Docker image that PyDynamicReporting sets up for you.
+PyDynamicReporting, you must have either a local copy of an Ansys installation
+with a product that uses Ansys Dynamic Reporting or use a Docker image that
+PyDynamicReporting sets up for you.
 
 To get a copy of Ansys, visit the `Ansys <https://www.ansys.com/>`_ website.
 
@@ -20,8 +21,8 @@ To install the latest package from GitHub, run this command:
     pip install ansys-dynamicreporting-core
 
 
-If you plan on doing local *development* of the ``pydynamicreporting``
-package, install the latest package with this code:
+If you plan on doing local *development* of PyDynamicReporting, install the
+latest ``pydynamicreporting`` package with this code:
 
 .. code::
 
@@ -67,14 +68,14 @@ download (if not already available) and run a Docker image:
 The ``data_directory`` parameter must pass a temporary directory that has to exist and be
 empty. This directory stores temporary information from the Docker image.
 
-Launch or connect to an Ansys Dynamic Reporting service
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Launch and connect to an Ansys Dynamic Reporting service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that you have an Ansys Dynamic Reporting instance set up, you can
-start an Ansys Dynamic Reporting service or connect to an already running
+Once an Ansys Dynamic Reporting instance is created, you can launch
+an Ansys Dynamic Reporting service or connect to a running
 one.
 
-To connect to an already running service, execute this code:
+To connect to a running service, run this code:
 
 .. code:: python
 
@@ -101,28 +102,28 @@ port and login credentials, you must provide the appropriate values in the
 
 
 .. note::
-   When you are connecting to an Ansys Dynamic Reporting service that is already
-   running, the web components that you obtain from PyDynamicReporting might or
-   might not be embedded. This is controlled by how the Ansys Dynamic Reporting service
-   was started. To ensure that web components can be embedded, you must launch
-   the Ansys Dynamic Reporting service with iFrames enabled via this flag:
+   When you are connecting to a running Ansys Dynamic Reporting service, the
+   web components that you obtain from PyDynamicReporting might or might not
+   be embedded. This is controlled by how the Ansys Dynamic Reporting service
+   was launched. To ensure that web components can be embedded, you must
+   launch the Ansys Dynamic Reporting service with iframes enabled via this flag:
 
    .. code::
 
       --allow_iframe_embedding
 
 
-   If you are using PyDnamicReporting to start the Ansys Dynamic Reporting
-   service, iFrames are enabled by default, so you do not need to do anything.
-   For more information on the launcher in Ansys Dynamic Reporting, see the
-   Ansys Dynamic Reporting `documentation`_.
+   If you are using PyDnamicReporting to launch the Ansys Dynamic Reporting
+   service, you do not need to take any action because iframes are enabled
+   by default. For more information on the launcher in Ansys Dynamic Reporting,
+   see the Ansys Dynamic Reporting `documentation`_.
 
 
 .. _documentation: https://nexusdemo.ensight.com/docs/is/html/Nexus.html
 
-Now, assume instead that you do not have a running Ansys Dynamic Reporting
-service accessible to you and that you need to start one. You can use
-this simple start method:
+Now, assume instead that you do not have a running Ansys Dynamic
+Reporting service accessible to you and that you must launch one. You can use
+this simple launch method:
 
 .. code:: python
 
@@ -135,9 +136,9 @@ this simple start method:
    session_guid = adr_service.start(create_db=True)
 
 
-Your ``adr_service`` object is now connected to a newly started Ansys Dynamic
+The ``adr_service`` object is now connected to a newly launched Ansys Dynamic
 Reporting service on a new database. Once again, you can control the parameters
-of the Ansys Dynamic Reporting service (port number, username and
+of the Ansys Dynamic Reporting service (port number, username, and
 password) by passing them as arguments:
 
 .. code:: python

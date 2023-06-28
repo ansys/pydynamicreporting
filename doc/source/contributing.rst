@@ -30,7 +30,7 @@ install and activate this tool with these commands:
    pre-commit install
 
 
-At which point, you can directly execute `pre-commit <https://pre-commit.com/>`_ with
+You can then directly execute `pre-commit <https://pre-commit.com/>`_ with
 this command:
 
 .. code:: bash

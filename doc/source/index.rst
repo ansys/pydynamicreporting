@@ -13,8 +13,9 @@ PyDynamicReporting
 
 Introduction
 ------------
-Ansys Dynamic Reporting provides the report generator technologies that are used in many
-Ansys products. It allows you to collect data in multiple formats from different sources,
+Ansys Dynamic Reporting, previously documented as `Nexus`_, provides the report
+generator technologies that are used in several Ansys products. Ansys Dynamic
+Reporting allows you to collect data in multiple formats from different sources,
 aggregate it, analyze it, and display it in highly interactive reports.
 
 Here are some key features of Ansys Dynamic Reporting:
@@ -25,13 +26,12 @@ Here are some key features of Ansys Dynamic Reporting:
 - Web-based interface that allows you to quickly and intuitively interact with database items
 - Template editor for generating report templates
 - Live reports that automatically update when new data is available
-- Reports with a high degree of interactively
-
+- Reports with a high degree of interactivity
 
 What is PyDynamicReporting?
 ---------------------------
 PyDynamicReporting is part of the `PyAnsys <https://docs.pyansys.com>`_ ecosystem. It is
-a Python client library that allows you to launch and connect to the Ansys Dynamic Reporting
+a Python client library that allows you to launch and connect to an Ansys Dynamic Reporting
 service and control the database and reports. It also provides you with quick access to web
 components so that you can easily embed items or reports in other apps.
 
