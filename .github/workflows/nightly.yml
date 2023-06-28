@@ -90,7 +90,7 @@ jobs:
         if: ${{ !env.ACT }}
         run: twine upload --verbose dist/*
         env:
-          TWINE_USERNAME: PAT
+          TWINE_USERNAME: "__token__"
           TWINE_PASSWORD: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
           TWINE_REPOSITORY_URL: ${{ secrets.PRIVATE_PYPI_URL }}
 
