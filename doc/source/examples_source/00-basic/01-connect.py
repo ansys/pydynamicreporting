@@ -1,13 +1,13 @@
 """
 .. _ref_connect:
 
-Connect Services
-================
+Connect services
+----------------
 
-In this example we will use the API to start an Ansys Dynamic Reporting
-service, and then create a second instance of the class and connect it
-to the already running service. We will show that we can create and modify
-items on the original database with this new instance
+This example shows how to start an Ansys Dynamic Reporting
+service and then create a second instance of the ``Service`` class and connect it
+to the already running service. It then shows how to create and modify
+items on the original database with this new instance.
 """
 
 ###############################################################################

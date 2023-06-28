@@ -11,6 +11,8 @@ PyDynamicReporting
    examples/index
    contributing
 
+.. _Nexus: https://nexusdemo.ensight.com/docs/html/Nexus.html
+
 Introduction
 ------------
 Ansys Dynamic Reporting, previously documented as `Nexus`_, provides the report

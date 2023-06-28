@@ -1,7 +1,7 @@
 """
 .. _ref_queries_example:
 
-Item Queries
+Item queries
 ============
 
 The Ansys Dynamic Reporting database can contain any number of items - from a few to tens of thousands.
