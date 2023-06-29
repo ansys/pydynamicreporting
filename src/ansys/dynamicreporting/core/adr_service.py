@@ -48,7 +48,7 @@ from .exceptions import (
 # Main class
 class Service:
     """
-    Provides for creating a connection to an Ansys Dynamic Reoprting service.
+    Provides for creating a connection to an Ansys Dynamic Reporting service.
 
     Examples
     --------

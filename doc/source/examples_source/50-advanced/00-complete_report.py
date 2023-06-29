@@ -4,18 +4,21 @@
 Create a report from scratch
 ============================
 
-Use the ``pydynamicreporting`` API to build a report from scratch: start a new Ansys Dynamic
-Reporting instance on a new database, populate it, generate a report
-template. As a result, get a report.
+To use PyDynamicReporting to build a report from scratch, you start
+a new Ansys Dynamic Reporting instance on a new database, populate it,
+amd generate a report template. As a result, you get a report.
+
+.. note::
+   This example assumes that you have a local Ansys installation.
 
 """
 
 ###############################################################################
 # Start an Ansys Dynamic Reporting service
 # ----------------------------------------
-# Start an Ansys Dynamic Reporting service with a new database, assuming you have a local Ansys
-# installation. Make sure to pass as the database directory the path to an
-# empty directory.
+#
+# Start an Ansys Dynamic Reporting service with a new database. The path for the
+# database directory must be to an empty directory.
 
 import numpy as np
 
@@ -31,7 +34,7 @@ session_guid = adr_service.start(create_db=True)
 # Create report template
 # ----------------------
 #
-# Create a report template using the low-level Ansys Dynamic Reporting API
+# Create a report template using the low-level API for Ansys Dynamic Reporting.
 #
 
 adr_service = adr.Service(ansys_installation=ansys_loc, db_directory=db_dir)
@@ -248,11 +251,12 @@ server.put_objects(template_023)
 server.put_objects(template_003)
 
 ###############################################################################
-# Verify the Report
+# Verify the report
 # -----------------
-# Use the get_list_reports method on the Ansys Dynamic Reporting object
+#
+# Use the ``get_list_reports`` method on the Ansys Dynamic Reporting object
 # to verify that there is one top-level report in the database now. This
-# call will return a list of the names of the top-level reports.
+# call returns a list of the names of the top-level reports.
 #
 
 adr_service.get_list_reports()
@@ -261,7 +265,7 @@ adr_service.get_list_reports()
 # Create items
 # ------------
 #
-# Now that the report template is set, populate the database with items with the
+# Now that the report template is set, populate the database with items with
 # proper tags and names.
 #
 
@@ -344,7 +348,7 @@ o.set_tags("solution=solverA section=references")
 # Visualize the report
 # --------------------
 #
-# Finally visualize the report
+# Visualize the report.
 #
 
 adr_service.visualize_report(report_name="Solution Analysis from Multiphysics simulation")
@@ -354,7 +358,8 @@ adr_service.visualize_report(report_name="Solution Analysis from Multiphysics si
 #
 # Close the service
 # -----------------
-# Close the Ansys Dynamic Reporting service. The database with the items
-# that were created will remain on disk.
+#
+# Close the Ansys Dynamic Reporting service. The database with the items that
+# were created remains on disk.
 
 adr_service.stop()

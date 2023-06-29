@@ -1,8 +1,8 @@
 .. _basic-gallery:
 
-Introductory examples
----------------------
+Examples
+--------
 
-These introductory examples show how to use PyDynamicReporting to create or connect to
+Introductory examples show how to use PyDynamicReporting to create or connect to
 an Ansys Dynamic Reporting service, create a database for a service, and create and
-visualize items in a database for a service.
+visualize items in this database.

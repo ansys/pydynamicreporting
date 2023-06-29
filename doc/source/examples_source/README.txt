@@ -1,5 +1,5 @@
 
 .. _gallery:
 
-This section provides examples of using PyDynamicReporting.
+This section provides usage examples for PyDynamicReporting.
 

@@ -47,7 +47,8 @@ class Report:
         Returns
         -------
         bool
-            True if a TemplateREST obj was found and assigned to self.report, False otherwise
+            ``True`` if a ``TemplateREST`` object was found and assigned to ``self.report``,
+            ``False`` otherwise.
         """
         success = False
         all_reports = self.service.serverobj.get_objects(objtype=report_objects.TemplateREST)
@@ -65,7 +66,7 @@ class Report:
 
         Parameters
         ----------
-        new_tab : bool, optoinal
+        new_tab : bool, optional
             Whether to render the report in a new tab if the current environment
             is a Jupyter notebook. The default is ``False``, in which case the
             report is rendered in the current location. If the environment is
@@ -74,7 +75,7 @@ class Report:
         Returns
         -------
         Report
-            Rendered report
+            Rendered report.
 
         Examples
         --------
@@ -102,12 +103,12 @@ class Report:
 
     def get_url(self) -> str:
         """
-        Get the URL for the report.
+        Get the URL corresponding to the report.
 
         Returns
         -------
         str
-            URL for the report. If no URL exists, an empty string is returned.
+            URL corresponding to the report. If no URL exists, an empty string is returned.
 
         Examples
         --------
@@ -145,7 +146,7 @@ class Report:
 
     def get_iframe(self, width: int = 1000, height: int = 800):
         """
-        Get the iframe for the report.
+        Get the iframe object corresponding to the report.
 
         Parameters
         ----------
@@ -157,7 +158,7 @@ class Report:
         Returns
         -------
         iframe
-            iframe object for the report. If no iframe can be generated,
+            iframe object corresponding to the report. If no iframe can be generated,
             ``None`` is returned.
 
         Examples

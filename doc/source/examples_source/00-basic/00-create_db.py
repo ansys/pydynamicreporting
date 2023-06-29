@@ -2,19 +2,22 @@
 .. _ref_createdb:
 
 Create a database
------------------
+=================
 
-This example shows how to create an Ansys Dynamic Reporting service via the
-``pydynamicreporting`` API and create a new database for this service.
-The example then walks through how to create items in the database.
+This example shows how to use PyDynamicReporting to create an Ansys
+Dynamic Reporting service, create a database for this service, and
+create items in this database.
+
+.. note::
+   This example assumes that you have a local Ansys installation.
+
 """
 
 ###############################################################################
 # Start an Ansys Dynamic Reporting service
 # ----------------------------------------
-# Start an Ansys Dynamic Reporting service with a new database, assuming you
-# have a local Ansys installation. Make sure to pass as the database
-# directory the path to an empty directory.
+# Start an Ansys Dynamic Reporting service with a new database. The path for the
+# database directory must be to an empty directory.
 
 import numpy as np
 
@@ -29,10 +32,9 @@ session_guid = adr_service.start(create_db=True)
 # Create items
 # ------------
 #
-# Now that we have an Ansys Dynamic Reporting service running on top of a new
-# database, create some items into the database of different types - text,
-# image and 3D scene to start. The payload for these items comes from
-# files on disk.
+# Now that an Ansys Dynamic Reporting service is running on top of the new
+# database, create some items of different types (text, image, and 3D scene)
+# in the databas. The payload for these items comes from files on disk.
 
 my_text = adr_service.create_item()
 my_text.item_text = "<h1>Analysis Title</h1>This is the first of many items"
@@ -45,11 +47,11 @@ my_scene.item_scene = r"""D:\tmp\tmp_scene.avz"""
 # Visualize all items
 # -------------------
 #
-# Visualize all the items that currently are in the database by invoking the
-# default report, which is simply the list of items one after the other. If you
-# are running inside a python interpreter such as Jupyter Notebook, the
-# visualization is embedded in the web page. If not, a browser will open with
-# the html page showing this default report.
+# Visualize all items  currently in the database by invoking the
+# default report, which is simply the list of items, one after the other.
+# If you are running inside a Python interpreter such as Jupyter Notebook, the
+# visualization is embedded in the web page. If not, a browser opens an
+# html page that displays the default report.
 
 adr_service.visualize_report()
 
@@ -61,8 +63,8 @@ adr_service.visualize_report()
 # Create tables and trees
 # -----------------------
 #
-# Table and plot items can be generated easily via passing a numpy array. Trees
-# are represented via python dictionaries. All the different options for tables
+# Table and plot items can be generated easily by passing a numpy array. Trees
+# are represented via Python dictionaries. All the different options for tables
 # and trees can be set here.
 
 my_plot = adr_service.create_item()
@@ -98,9 +100,9 @@ my_tree.item_tree = tree
 # Visualize tables and trees
 # --------------------------
 #
-# You can visualize the single items as web components similarly to how we
-# visualized the default report earlier by calling the visualize method
-# on the single items.
+# You can visualize single items as web components, similarly to how you
+# visualized the default report. Simply calling the ``visualize()`` method
+# on each of the single items.
 #
 
 my_plot.visualize()
@@ -119,7 +121,8 @@ my_tree.visualize()
 #
 # Close the service
 # -----------------
+#
 # Close the Ansys Dynamic Reporting service. The database with the items that
-# were created will remain on disk.
+# were created remains on disk.
 
 adr_service.stop()

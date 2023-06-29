@@ -1,16 +1,16 @@
 User guide
 ##########
 
-This section describes how to use PyDynamicReporting.
+This section describes concepts that you need to know to use PyDynamicReporting.
 
 API overview
 ------------
 
-PyDynamicReporting provides an API with three main classes:
+The PyDynamicReporting API hash three main classes:
 
 - ``Service``: Provides for launching and connecting to an Ansys Dynamic
   Reporting service. This class also provides for creating, querying, and
-  deleting database and for stopping an Ansys Dynamic ``Report`` service.
+  deleting the database and for stopping an Ansys Dynamic ``Report`` service.
 - ``Item``: Provides access to the items in the database and allows
   them to be modified.
 - ``Report``: Provides access to and rendering of ``Report`` objects.
@@ -20,13 +20,13 @@ Dynamic Reporting service:
 
 - Images
 - Animations
-- 3D Scenes (AVZ format supported)
+- 3D Scenes (AVZ file format supported)
 - Tables
 - Trees
-- Text (HTML and LaTeX formatting supported)
-- Files (generic file formats)
+- Text (HTML and LaTeX file formats supported)
+- Files (generic file formats supported)
 
-For example, this code connects to a running Ansys Dynamic Reporting service and
+This code connects to a running Ansys Dynamic Reporting service and
 pushes an image item on a new session:
 
 .. code:: python
@@ -45,24 +45,24 @@ pushes an image item on a new session:
 A rendering of the image object is embedded in the current interpreter. You
 can follow the same steps to create and visualize other item types.
 
-To get access to the URL corresponding to a item, you use this attribute:
+To get the URL corresponding to an item, use this attribute:
 
 .. code:: python
 
    first_image.url()
 
 
-Similarly, to get the iframe corresponding to the item, you use this
-attribute:
+Similarly, to get the iframe corresponding to an item, use this attribute:
 
 .. code:: python
 
    first_image.get_iframe()
 
 
-This allows you to embed the item visualization into any other app.
+With the corresponding URL or iframe, you can embed the item visualization
+into any other app.
 
-.. note:: If you want to update the image, all you need to do is redefine
+.. note:: If you want to update an image, all you need to do is redefine
    the ``item_image`` attribute. The Ansys Dynamic Reporting database is
    automatically updated.
 
@@ -85,7 +85,7 @@ On the Ansys Dynamic Reporting object, you can execute the
 :func:`visualize_report<ansys.dynamicreporting.core.Service.visualize_report>`
 method to visualize all items that are present in the session.
 
-The following code results in an widget embedded in the app that you are running
+The following code embeds a widget in the app that you are running
 from. It shows that both items (image and text) have been created.
 
 .. code:: python
@@ -107,11 +107,11 @@ Connect to and query an existing Ansys Dynamic Reporting session
 ----------------------------------------------------------------
 
 You can start an Ansys Dynamic Reporting session in one Python interpreter
-and connect to it in a different interpreter or machine simply by passing the
+and connect to it in a different interpreter or on a different machine simply by passing the
 session GUID as the parameter in the :func:`connect<ansys.dynamicreporting.core.Service.connect>`
 method.
 
-In the first Python interpreter, run this code:
+In the first Python interpreter, run this code to start an Ansys Dynamic Reporting session:
 
 .. code:: python
 
@@ -126,8 +126,10 @@ In the first Python interpreter, run this code:
    session_guid = adr_service.session_guid
 
 
-The session contains the GUID for this session. Copy and paste the GUID into ae
-Python interpreter on a second machine:
+The session contains the GUID needed to connect to this session in a different
+interpreter or on a different machine.
+
+Copy and paste the GUID:
 
 .. code:: python
 
@@ -137,7 +139,7 @@ Python interpreter on a second machine:
    ret = adr_service.connect(url="http://localhost:8010", session=session_guid)
 
 
-Now that you are connected to the session, you can query its items:
+Once you are connected to the session, you can query its items:
 
 .. code:: python
 
@@ -151,8 +153,8 @@ string follows the same structure as the queries described in
 `Query Expressions <https://nexusdemo.ensight.com/docs/html/Nexus.html?QueryExpressions.html>`_
 in the documentation for Ansys Dynamic Reporting.
 
-To get a list of the existing report templates in the database, you
-can use the :func:`get_list_reports<ansys.dynamicreporting.core.Service.get_list_reports>`
+To get a list of the existing report templates in the database, use the
+:func:`get_list_reports<ansys.dynamicreporting.core.Service.get_list_reports>`
 method:
 
 .. code:: python
@@ -160,7 +162,7 @@ method:
    all_reports = adr_service.get_list_reports()
 
 
-Additionally, to query the database for a specific report, you can use the
+To query the database for a specific report, use the
 :func:`get_report<ansys.dynamicreporting.core.Service.get_report>`
 method:
 
@@ -175,9 +177,9 @@ Backward compatibility with template generator scripts
 
 The template editor in Ansys Dynamic Reporting contains a feature for exporting
 a Python script to create report templates on the connected server with all their
-settings and properties and then pushing these report templates to a new server.
-This script uses the low-level API for Ansys Dynamic Reporting, which was available
-before PyDynamicReporting.
+settings and properties and push these report templates to a new server.
+This script uses the low-level API for Ansys Dynamic Reporting that preceded
+PyDynamicReporting.
 
 A legacy script starts with these lines of code:
 
@@ -189,9 +191,9 @@ A legacy script starts with these lines of code:
    server = report_remote_server.Server("http://127.0.0.1:9528", "nexus", "cei")
 
 
-These lines are then followed by a series of commands that describe the template names and properties.
+Following these lines are a series of commands that describe the template names and properties.
 
-To convert a legacy script to a report template for PyDynamicReporting, replace the first few
+To convert a legacy script to a report template for PyDynamicReporting, replace the preceding
 lines in the script with these lines:
 
 .. code:: python
