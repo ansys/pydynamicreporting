@@ -19,7 +19,7 @@ and delete tags on items.
 # Start an Ansys Dynamic Reporting service
 # ----------------------------------------
 #
-#  Start an Ansys Dynamic Reporting service with a new database. The path for the
+# Start an Ansys Dynamic Reporting service with a new database. The path for the
 # database directory must be to an empty directory.
 
 import ansys.dynamicreporting.core as adr
