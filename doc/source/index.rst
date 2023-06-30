@@ -24,7 +24,7 @@ Here are some key features of Ansys Dynamic Reporting:
 
 - Handles multiple data formats natively.
 - Stores data from multiple sources, including CAD packages, simulation software, and postprocessors.
-- Provides tools for aggregatating, filtering, and processing data in the database.
+- Provides tools for aggregating, filtering, and processing data in the database.
 - Supplies a web-based interface for quickly and intuitively interacting with database items.
 - Includes a template editor for generating report templates.
 - Displays live reports that automatically update when new data is available.
