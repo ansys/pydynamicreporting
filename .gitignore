@@ -67,3 +67,6 @@ venv/
 
 # VSCode
 .vscode
+
+# Ignore Sphinx files
+doc/_build
