@@ -10,6 +10,7 @@ a precise and effective manner. This example shows how to add, modify, query,
 and delete tags on items.
 
 .. note::
+
    This example assumes that you have a local Ansys installation.
 
 """
@@ -46,8 +47,8 @@ my_text.get_tags()
 # ---------------
 #
 # Once the tags have been set, you can add or delete to them. Use the get_tags
-# method to verify the new value of the tags is the expected 'var=pressure dp=3'
-#
+# method to verify the new value of the tags is the expected ``var=pressure dp=3``.
+
 my_text.add_tag(tag="dp", value="3")
 my_text.rem_tag("time")
 my_text.get_tags()

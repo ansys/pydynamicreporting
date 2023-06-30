@@ -63,7 +63,7 @@ class Item:
         Ansys Dynamic Reporting object that provides the connection to the database
         that the item is to interact with. The default is ``None``.
     obj_name : str, optional
-        Name of the item in the database. The default is ``default".
+        Name of the item in the database. The default is ``default``.
     source : str, optional
         Name of the source for the item in the database. The default is ``"ADR"``.
 
