@@ -5,8 +5,8 @@ Item queries
 ============
 
 The Ansys Dynamic Reporting database can contain any number of items, from a few
-to tens of thousands. To handle all this data, the ``query()`` method allows
-you to quickly slice the database to select a subset of items.
+to tens of thousands. To handle all this data, the :func:`queryansys.dynamicreporting.core.Service.query>`
+method allows you to quickly slice the database to select a subset of items.
 
 .. note::
    This example assumes that you have a local Ansys installation.
@@ -31,9 +31,9 @@ session_guid = adr_service.start(create_db=True)
 # ------------
 #
 # Now that an Ansys Dynamic Reporting service is running on top of a
-# new database, you can populate it. To keep this simple, this code creates
-# multiple text item. It then sets some different names, sources, and tags
-# to the items.
+# new database, you can populate it. To keep this example simple, this code
+# creates multiple text items. It then sets some different names, sources, and
+#  tags.
 
 for i in range(100):
     if i % 3 == 0:
@@ -59,11 +59,11 @@ for i in range(100):
 #
 # Now that the database is populated with a hundred items with different
 # names, sources, and tags, query the database, beginning with an empty
-# query that returns the entire set (all 100) items. Next, query on the
-# source name, which results in three different lists, with 34, 33 and 33 items.
-# respectively. Finally, query on the name and the dp tag. See that the lists have the
-# expected length. You can try different queries using the other attributes that
-# have been set on the items.
+# query that returns the entire set (all 100 items). Next, query on the
+# source name, which results in three different lists, with 34, 33, and 33 items
+# respectively. Finally, query on the name and the ``dp`` tag. See that the lists
+# have theexpected length. You can try different queries using the other attributes
+# that have been set on the items.
 #
 
 all_items = adr_service.query()

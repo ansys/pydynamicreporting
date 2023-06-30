@@ -50,10 +50,36 @@ class Service:
     """
     Provides for creating a connection to an Ansys Dynamic Reporting service.
 
+    Parameters
+    ----------
+    ansys_version : int, optional
+        Three-digit format for a locally installed Ansys version.
+        For example, ``232`` for Ansys 2023 R2. The default is ``None``.
+    docker_image : str, optional
+        Docker image to use if you do not have a local Ansys installation.
+        The default is ``"ghcr.io/ansys-internal/nexus"``.
+    data_directory : str, optional
+        Path to the directory for storing temporary information from the Docker image.
+        The default is ``None``. This parameter must pass a directory that exists and
+        is empty.
+    db_directory : str, optional
+        Path to the database directory for the Ansys Dynamic Reporting service.
+        The default is ``None``. This parameter must pass a directory that exists and
+        is empty.
+    port : int, optional
+        Port to run the Ansys Dynamic Reporting service on. The default is ``8000``.
+    logfile : str, optional
+        File to write logs to. The default is ``None``.
+    ansys_installation : str, optional
+        Path to the directory where Ansys is installed locally. If Ansys is not
+        installed locally but is to be run in a Docker image, set the
+        value for this paraemter to ``"docker"``.
+
+
     Examples
     --------
     Initialize the class and connect to an Ansys Dynamic Reporting service running on
-    localhost on port 8010 with ``username`` set to ``"admin"`` and ``password``
+    the localhost on port 8010 with ``username`` set to ``"admin"`` and ``password``
     set to ``"mypsw"`` using a local Ansys installation::
 
         import ansys.dynamicreporting.core as adr
@@ -201,7 +227,7 @@ class Service:
 
     @property
     def url(self):
-        """URL of the service."""
+        """URL for the service."""
         return self._url
 
     def connect(
@@ -217,13 +243,13 @@ class Service:
         Parameters
         ----------
         url : str, optional
-            Service URL. The default is ``http://localhost:8000``.
+            URL for the service. The default is ``http://localhost:8000``.
         username : str, optional
-            Username of the service. The default is ``"nexus"``.
+            Username for the service. The default is ``"nexus"``.
         password : str, optional
-            Password of the service. The default is ``"cei"``.
+            Password for the service. The default is ``"cei"``.
         session : str, optional
-            GUID of the session to work with. The default is ``""``,
+            GUID for the session to work with. The default is ``""``,
             in which case a new session with its own GUID is created.
             All created items are then pushed on this session. Visualizations
             are all filtered so that only items for this session are shown.
@@ -231,8 +257,8 @@ class Service:
         Returns
         -------
         bool
-            ``True`` when connection is established, ``False`` when connection
-            could not be established.
+            ``True`` when the connection is established, ``False`` when the
+            connection could not be established.
 
         Examples
         --------
@@ -274,9 +300,9 @@ class Service:
         Parameters
         ----------
         username : str, optional
-            Username of the service. The default is ``"nexus"``.
+            Username for the service. The default is ``"nexus"``.
         password : str, optional
-            Password of the service. The default is ``"cei"``.
+            Password for the service. The default is ``"cei"``.
         create_db : bool, optional
             Whether to create a new database before starting the service on top
             of it. The default is ``False``. If ``True``, this method creates a
@@ -285,12 +311,12 @@ class Service:
             specified by the ``db_dir`` parameter already exists and is not empty.
         error_if_create_db_exists : bool, optional
             Whether to raise an error if the ``create_db`` parameter is set to
-            ``True`` and the database already exists.  If ``False``, the ``start()``
-            method uses the database found instead of creating a new one.
+            ``True`` and the database already exists. The default is ``False``,
+            in which case the ``start()`` method uses the database found instead
+            of creating one.
         exit_on_close : bool, optional
-            Whether to automatically shut down the launched service when exiting
-            the script. The default is ``False``, in which case the service continues
-            to run.
+            Whether to automatically shut down the service when exiting the script.
+            The default is ``False``, in which case the service continues to run.
         delete_db : bool, optional
             Whether to automatically delete the database when exiting the script. The
             default is ``False``. This parameter is valid only if this parameter and
@@ -299,7 +325,7 @@ class Service:
         Returns
         -------
         str
-            ID of the connected session. If the service could not be started
+            ID of the connected session. If the service could not be started,
             ``0`` is returned.
 
         Examples
@@ -545,9 +571,9 @@ class Service:
         Parameters
         ----------
         report_name : str, optional
-            Name of the report to visualize. the default is ``""``, in which
+            Name of the report. the default is ``""``, in which
             case all items assigned to the session are shown.
-        new_tab : bool, optoinal
+        new_tab : bool, optional
             Whether to render the report in a new tab if the current environment
             is a Jupyter notebook. The default is ``False``, in which case the
             report is rendered in the current location. If the environment is
@@ -621,7 +647,8 @@ class Service:
 
         Returns
         -------
-            Item object
+        Object
+            Item object.
 
         Examples
         --------
@@ -638,6 +665,8 @@ class Service:
     def query(self, query_type: str = "Item", filter: Optional[str] = "") -> list:
         """
         Query the database.
+
+        .. _Query Expressions: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
 
         Parameters
         ----------
@@ -700,7 +729,7 @@ class Service:
 
     def delete(self, items: list) -> bool:
         """
-        Delete items from the database.
+        Delete objects from the database.
 
         Parameters
         ----------
@@ -709,7 +738,7 @@ class Service:
             ``"Item"``, ``"Session"``, or ``Dataset``.
 
             .. note:: Deleting a session or a dataset also deletes all items
-               associated with the session or datasetm.
+               associated with the session or dataset.
 
         Returns
         -------
@@ -779,7 +808,7 @@ class Service:
 
         Returns
         -------
-        Report
+        Object
             Report object. If no such object can be found, ``None`` is returned.
 
         Examples
@@ -801,21 +830,21 @@ class Service:
         """
         Get a list of top-level reports in the database.
 
-        This method can get either a list of the names of the reports or
-        a list of ``Report`` items corresponding to these reports.
+        This method can get either a list of the names of the top-level reports
+        or a list of ``Report`` items corresponding to these reports.
 
         Parameters
         ----------
         r_type : str, optional
             Type of object to return. The default is ``"name"``, which returns
-            a list of the names of the top-level reports. If you set the value
+            a list of the names of the reports. If you set the value
             for this parameter to ``"report"``, this method returns a list of
             the ``Report`` items corresponding to these reports.
 
         Returns
         -------
         list
-            List of the top-level report in the database. The list can be of the names
+            List of the top-level reports in the database. The list can be of the names
             of these reports or the ``Report`` items corresponding to these reports.
 
         Examples

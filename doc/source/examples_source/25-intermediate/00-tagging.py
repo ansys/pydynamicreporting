@@ -34,8 +34,9 @@ session_guid = adr_service.start(create_db=True)
 # -------------------------
 #
 # Now that an Ansys Dynamic Reporting service is running on top of a new
-# database, create an item and set some tags on it. Use the ``get_tags()``
-# method to see the values of the tags.
+# database, create an item and set some tags on it. Use the
+# :func:`get_tags<ansys.dynamicreporting.core.Item.get_tags>` method to
+# see the values of the tags.
 
 my_text = adr_service.create_item()
 my_text.item_text = "<h1>Analysis Title</h1>This is the first of many items"
@@ -46,8 +47,9 @@ my_text.get_tags()
 # Modify the tags
 # ---------------
 #
-# Once the tags have been set, you can add or delete to them. Use the get_tags
-# method to verify the new value of the tags is the expected ``var=pressure dp=3``.
+# Once the tags have been set, you can add or delete to them. Use the
+# :func:`get_tags<ansys.dynamicreporting.core.Item.get_tags>` method
+# to verify that the new value of the tags is the expected ``var=pressure dp=3``.
 
 my_text.add_tag(tag="dp", value="3")
 my_text.rem_tag("time")
@@ -60,7 +62,7 @@ my_text.get_tags()
 #
 # Add a couple of other items and tag them. Then, query the database
 # for items that have a specific tag set on them. Given the preceding
-# code, this results only in two items. See the contents of the ``dp3_items``
+# code, this results in only two items. See the contents of the ``dp3_items``
 # list.
 
 my_second_text = adr_service.create_item()

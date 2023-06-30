@@ -6,9 +6,9 @@ This section describes concepts that you need to know to use PyDynamicReporting.
 API overview
 ------------
 
-The PyDynamicReporting API hash three main classes:
+The PyDynamicReporting API has three main classes:
 
-- ``Service``: Provides for launching and connecting to an Ansys Dynamic
+- ``Service``: Provides for starting and connecting to an Ansys Dynamic
   Reporting service. This class also provides for creating, querying, and
   deleting the database and for stopping an Ansys Dynamic ``Report`` service.
 - ``Item``: Provides access to the items in the database and allows
@@ -43,7 +43,7 @@ pushes an image item on a new session:
 
 
 A rendering of the image object is embedded in the current interpreter. You
-can follow the same steps to create and visualize other item types.
+can follow the same steps to create and visualize other types of items.
 
 To get the URL corresponding to an item, use this attribute:
 
@@ -74,12 +74,12 @@ to visualize it standalone, as shown in the preceding code examples. The second
 is to visualize it together with all the other items that are present in the
 current Ansys Dynamic Reporting session.
 
-Each time that you use either the PyDnamicReporting
-:func:`start<ansys.dynamicreporting.core.Service.start>` or
+Each time that you use the PyDnamicReporting
+:func:`start<ansys.dynamicreporting.core.Service.start>` method to
+start an Ansys Dynamic Reporting service or the
 :func:`connect<ansys.dynamicreporting.core.Service.connect>` method
-to connect to an Ansys Dynamic Reporting service, you are connected
-to a specific session. Each session can be identified by a GUID
-(globally unique identifier).
+to connect to one, you are connected to a specific session. Each
+session has its own GUID (globally unique identifier).
 
 On the Ansys Dynamic Reporting object, you can execute the
 :func:`visualize_report<ansys.dynamicreporting.core.Service.visualize_report>`
@@ -107,11 +107,11 @@ Connect to and query an existing Ansys Dynamic Reporting session
 ----------------------------------------------------------------
 
 You can start an Ansys Dynamic Reporting session in one Python interpreter
-and connect to it in a different interpreter or on a different machine simply by passing the
+and connect to it in a different interpreter or on a different machine by passing the
 session GUID as the parameter in the :func:`connect<ansys.dynamicreporting.core.Service.connect>`
 method.
 
-In the first Python interpreter, run this code to start an Ansys Dynamic Reporting session:
+This code starts an Ansys Dynamic Reporting session in the first interpreter:
 
 .. code:: python
 
@@ -129,7 +129,7 @@ In the first Python interpreter, run this code to start an Ansys Dynamic Reporti
 The session contains the GUID needed to connect to this session in a different
 interpreter or on a different machine.
 
-Copy and paste the GUID:
+This GUID is then copied and pasted into another interpreter as shown in this code:
 
 .. code:: python
 
@@ -178,7 +178,7 @@ Backward compatibility with template generator scripts
 The template editor in Ansys Dynamic Reporting contains a feature for exporting
 a Python script to create report templates on the connected server with all their
 settings and properties and push these report templates to a new server.
-This script uses the low-level API for Ansys Dynamic Reporting that preceded
+This script uses the low-level API for Ansys Dynamic Reporting, which preceded
 PyDynamicReporting.
 
 A legacy script starts with these lines of code:
@@ -194,7 +194,7 @@ A legacy script starts with these lines of code:
 Following these lines are a series of commands that describe the template names and properties.
 
 To convert a legacy script to a report template for PyDynamicReporting, replace the preceding
-lines in the script with these lines:
+lines in the legacy script with these lines:
 
 .. code:: python
 

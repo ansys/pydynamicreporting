@@ -68,10 +68,10 @@ download (if not already available) and run a Docker image:
 The ``data_directory`` parameter must pass a temporary directory that has to exist and be
 empty. This directory stores temporary information from the Docker image.
 
-Launch and connect to an Ansys Dynamic Reporting service
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Start and connect to an Ansys Dynamic Reporting service
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once an Ansys Dynamic Reporting instance is created, you can launch
+Once an Ansys Dynamic Reporting instance is created, you can start
 an Ansys Dynamic Reporting service or connect to a running
 one.
 
@@ -88,8 +88,8 @@ To connect to a running service, run this code:
 The preceding code assumes that there is a running Ansys Dynamic Reporting
 service on your machine on port 8000 with the default username and password.
 If the Ansys Dynamic Reporting service does not use the default values for
-port and login credentials, you must provide the appropriate values in the
-:func:`connect<ansys.dynamicreporting.core.Service.connect>` method:
+the URL, port, and login credentials, you must provide the appropriate values
+in the :func:`connect<ansys.dynamicreporting.core.Service.connect>` method:
 
 .. code:: python
 
@@ -105,15 +105,15 @@ port and login credentials, you must provide the appropriate values in the
    When you are connecting to a running Ansys Dynamic Reporting service, the
    web components that you obtain from PyDynamicReporting might or might not
    be embedded. This is controlled by how the Ansys Dynamic Reporting service
-   was launched. To ensure that web components can be embedded, you must
-   launch the Ansys Dynamic Reporting service with iframes enabled via this flag:
+   was started. To ensure that web components can be embedded, you must
+   start the Ansys Dynamic Reporting service with iframes enabled via this flag:
 
    .. code::
 
       --allow_iframe_embedding
 
 
-   If you are using PyDnamicReporting to launch the Ansys Dynamic Reporting
+   If you are using PyDnamicReporting to start the Ansys Dynamic Reporting
    service, you do not need to take any action because iframes are enabled
    by default. For more information on the launcher in Ansys Dynamic Reporting,
    see the Ansys Dynamic Reporting `documentation`_.
@@ -121,9 +121,9 @@ port and login credentials, you must provide the appropriate values in the
 
 .. _documentation: https://nexusdemo.ensight.com/docs/is/html/Nexus.html
 
-Now, assume instead that you do not have a running Ansys Dynamic
-Reporting service accessible to you and that you must launch one. You can use
-this simple launch method:
+Now, assume that you do not have a running Ansys Dynamic Reporting service
+accessible to you and that you must start one. You can use this simple
+start method:
 
 .. code:: python
 
@@ -136,7 +136,7 @@ this simple launch method:
    session_guid = adr_service.start(create_db=True)
 
 
-The ``adr_service`` object is now connected to a newly launched Ansys Dynamic
+The ``adr_service`` object is now connected to a newly started Ansys Dynamic
 Reporting service on a new database. Once again, you can control the parameters
 of the Ansys Dynamic Reporting service (port number, username, and
 password) by passing them as arguments:

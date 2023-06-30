@@ -5,12 +5,13 @@ Connect services
 ================
 
 This example shows how to start an Ansys Dynamic Reporting
-service, create a second instance of the ``Service`` class, and connect it
-to the already running service. It then shows how to create and modify
-items in the original database with this new instance.
+service via a DOcker image, create a second instance of the ``Service``
+class, and connect it to the already running service. It then shows
+how to create and modify items in the original database with this
+new instance.
 
 .. note::
-   This example assumes that you do have a local Ansys installation and
+   This example assumes that you do not have a local Ansys installation but
    are starting an Ansys Dynamic Reporting Service via a Docker image on
    a new database.
 
@@ -34,9 +35,9 @@ session_guid = adr_service.start(create_db=True)
 # ------------
 #
 # Given that the Ansys Dynamic Reporting service is running on top
-# of an empty database, create a few items for the database and then visualize
-# the default report that shows all the items, one after the other. This
-# assumes that you have files on disk for the payload of the items.
+# of an empty database, create a few items in the database and then visualize
+# the default report that shows all these items, one after the other. Note that
+# this code assumes that you have files on disk for the payload of the items.
 
 my_text = adr_service.create_item(obj_name="Text", source="Documentation")
 my_text.item_text = "This is a simple string with no HTML formatting."
@@ -54,7 +55,7 @@ adr_service.visualize_report()
 # ---------------------------------
 #
 # Now that you have a running Ansys Dynamic Reporting service, create a
-# second instance of the Ansys Dynamic ``Reporting`` class and use it to
+# second instance of the ``Reporting`` class and use it to
 # connect to the database. Visualize the default report.
 
 connected_s = adr.Service()
@@ -71,8 +72,7 @@ connected_s.visualize_report()
 #
 # Use the new object for the connected service to create an ``Image`` item.
 # Visualize the default report again to verify that this item has been
-# added to the database correctly.
-#
+# added to the database.
 
 my_image = connected_s.create_item(obj_name="Image", source="Documentation")
 my_image.item_image = r"D:\tmp\local_img.png"
@@ -86,9 +86,9 @@ connected_s.visualize_report()
 # Visualize only items from a session
 # -----------------------------------
 #
-# Now assume that you want to visualize only the items that were
+# Assume that you want to visualize only the items that were
 # created from the connected Ansys Dynamic Reporting session and not the
-# original instance. To achieve this, adding a filter to the default
+# original instance. To achieve this, you add a filter to the default
 # report visualization. Note that running this method on either of the
 # Ansys Dynamic Reporting instances produces the same result.
 

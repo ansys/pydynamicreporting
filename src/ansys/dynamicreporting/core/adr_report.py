@@ -31,6 +31,20 @@ except ImportError:
 
 # Generate the report object for the database
 class Report:
+    """
+    Provides for generating the ``Report`` object for the database.
+
+    Parameters
+    ----------
+    service : ansys.dynamicreporting.core.Service, optional
+        Ansys Dynamic Reporting object that provides the connection to the database.
+        The default is ``None``.
+    report_name : str, optional
+        Name of the report object in the database. The default is ``default``.
+    report_object : str, optional
+        Name for the ``Report`` object. The default is ``None``.
+    """
+
     def __init__(self, service=None, report_name="default", report_obj=None):
         self.report_name = report_name
         self.service = service

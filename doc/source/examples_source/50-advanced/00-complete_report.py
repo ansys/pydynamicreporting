@@ -31,8 +31,8 @@ adr_service = adr.Service(ansys_installation=ansys_loc, db_directory=db_dir, por
 session_guid = adr_service.start(create_db=True)
 
 ###############################################################################
-# Create report template
-# ----------------------
+# Create a report template
+# ------------------------
 #
 # Create a report template using the low-level API for Ansys Dynamic Reporting.
 #
@@ -254,10 +254,10 @@ server.put_objects(template_003)
 # Verify the report
 # -----------------
 #
-# Use the ``get_list_reports`` method on the Ansys Dynamic Reporting object
-# to verify that there is one top-level report in the database now. This
-# call returns a list of the names of the top-level reports.
-#
+# Use the :func:`get_list_reports<ansys.dynamicreporting.core.Service.get_list_reports>`
+# method on the Ansys Dynamic Reporting object to verify that there is one
+# top-level report in the database now. This call returns a list of the names
+# of the top-level reports.
 
 adr_service.get_list_reports()
 
@@ -265,7 +265,7 @@ adr_service.get_list_reports()
 # Create items
 # ------------
 #
-# Now that the report template is set, populate the database with items with
+# Now that the report template is set, populate the database with items having
 # proper tags and names.
 #
 

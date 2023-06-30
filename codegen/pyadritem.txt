@@ -47,13 +47,13 @@ class Item:
 
 
     The type of the item created in the preceding code cannot be changed. However,
-    you can reset the attributes describing the object at any time. Changes are automatically
-    propagated into the database. You can control the rendering of these objects using
-    the attributes described in the "Parameters" sectionn.
+    the attributes describing the object can be reset at any time. These hanges are
+    automatically propagated into the database. The attributes described in the
+    following "Parameters" section can be used to control the rendering of these objects.
 
     .. note::
        These attributes mirror the generic data item attributes described in
-       `Data Items`_ in the Ansys Dynamic Reporting documentation.
+       `Data Items`_ in the documentation for Ansys Dynamic Reporting.
 
     .. _Data Items: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
 
@@ -63,16 +63,15 @@ class Item:
         Ansys Dynamic Reporting object that provides the connection to the database
         that the item is to interact with. The default is ``None``.
     obj_name : str, optional
-        Name of the item in the database. The default is ``default``.
+        Name of the item object in the database. The default is ``default``.
     source : str, optional
         Name of the source for the item in the database. The default is ``"ADR"``.
 
 
     Examples
     --------
-    Initialize the class inside an Ansys Dynamic Reporting service and set the object to be
-    a text item.
-    ::
+    Initialize the ``Service`` class inside an Ansys Dynamic Reporting service and
+    create an object as a text item::
 
         import ansys.dynamicreporting.core as adr
         adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
@@ -92,21 +91,21 @@ class Item:
         self.obj_name = obj_name
         self.type = None
         self.item_text = ""
-        """Text. HTML and LaTeX formatting are supported."""
+        """Text (HTML and LaTeX formatting)"""
         self.item_image = None
-        """Image object. Image and PNG binary files are supported."""
+        """Image object (Image and PNG binary files)"""
         self.item_scene = None
-        """3D scene file. AVZ, PLY, GBT, and STL files are supported."""
+        """3D scene (AVZ, PLY, GBT, and STL files)"""
         # Attributes for the table items
         self.table_attr = table_attr
         self.item_table = None
-        """Table values. Values must be in a numpy array."""
+        """Table values (Must be in a numpy array)"""
         self.table_dict = {}
         self.item = self.serverobj.create_item(name=self.obj_name, source=self.source)
 
     @property
     def url(self):
-        """URL corresponding to the item."""
+        """URL corresponding to the item"""
         if self.serverobj.get_URL() is not None and self.item.guid is not None:
             self._url = self.serverobj.get_URL() + "/reports/report_display/?usemenus=off&query=A%7Ci_guid%7C%eq%7C"
             self._url += str(self.item.guid)
@@ -216,7 +215,7 @@ class Item:
 
         Examples
         --------
-        ::
+        Create a text item and render it in a new tab::
 
             import ansys.dynamicreporting.core as adr
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
@@ -225,7 +224,6 @@ class Item:
             my_txt.item_text = '<h1>The test</h1>This is a text item'
             my_txt.visualize(new_tab = True)
 
-        Text item rendering in a new tab
 
         """
         if in_ipynb() and not new_tab:
@@ -247,7 +245,7 @@ class Item:
         ----------
         width : int, optional
             Width of the iframe object. The default is ``min(Item width * 1,1, 1000)``.
-            If the item width is ``0``, the default is ``1000``.
+            For example, if the item width is ``0``, the default is ``1000``.
         height : int, optional
             Height of the iframe object. The default is ``min(Item height, fixed height)``,
             where the fixed height is ``800`` for an item scene and ``400`` otherwise.
