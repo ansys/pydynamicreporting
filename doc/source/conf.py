@@ -16,9 +16,10 @@ copyright = f"(c) {datetime.now().year} ANSYS, Inc. All rights reserved"
 author = "Ansys Inc."
 release = version = __version__
 
-# use the default pyansys logo
+# Select desired logo, theme, and declare the html title
 html_logo = pyansys_logo_black
 html_theme = "ansys_sphinx_theme"
+html_short_title = html_title = "PyDynamicReporting"
 
 # specify the location of your github repo
 html_context = {
