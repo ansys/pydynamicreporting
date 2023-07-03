@@ -33,7 +33,7 @@ session_guid = adr_service.start(create_db=True)
 # Now that an Ansys Dynamic Reporting service is running on top of a
 # new database, you can populate it. To keep this example simple, this code
 # creates multiple text items. It then sets some different names, sources, and
-#  tags.
+# tags.
 
 for i in range(100):
     if i % 3 == 0:
