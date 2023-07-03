@@ -84,7 +84,9 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
       - name: Rename wheel
-        run: python codegen/rename_whl.py
+        run: |
+          python codegen/rename_whl.py
+          rm -rf dist/*.tar.gz
 
       - name: Upload to Azure PyPi
         if: ${{ !env.ACT }}
