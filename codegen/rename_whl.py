@@ -9,3 +9,10 @@ for name in glob.glob("dist/*.whl"):
         chunks.insert(2, date_tag)
         new_name = "-".join(chunks)
         os.rename(name, new_name)
+
+for name in glob.glob("dist/*.tar.gz"):
+    chunks = name.split(".")
+    if len(chunks) == 5:
+        chunks[2] = f"{chunks[2]}-{date_tag}"
+        new_name = ".".join(chunks)
+        os.rename(name, new_name)
