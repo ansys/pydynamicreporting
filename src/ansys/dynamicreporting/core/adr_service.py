@@ -60,7 +60,8 @@ class Service:
         The default is ``"ghcr.io/ansys-internal/nexus"``.
     data_directory : str, optional
         Path to the directory for storing temporary information from the Docker image.
-        The default is ``None``. This parameter must pass a directory that exists and
+        The default is creating a new directory inside the OS 
+        temporary directory. This parameter must pass a directory that exists and
         is empty.
     db_directory : str, optional
         Path to the database directory for the Ansys Dynamic Reporting service.
@@ -69,7 +70,8 @@ class Service:
     port : int, optional
         Port to run the Ansys Dynamic Reporting service on. The default is ``8000``.
     logfile : str, optional
-        File to write logs to. The default is ``None``.
+        File to write logs to. The default is ``None``. Acceptable values are
+        filenames or ``stdout`` for standard output.
     ansys_installation : str, optional
         Path to the directory where Ansys is installed locally. If Ansys is not
         installed locally but is to be run in a Docker image, set the
@@ -306,9 +308,10 @@ class Service:
         create_db : bool, optional
             Whether to create a new database before starting the service on top
             of it. The default is ``False``. If ``True``, this method creates a
-            database in the directory specified by the ``db_dir`` parameter and
-            starts the service on top of it. An error is raised if the directory
-            specified by the ``db_dir`` parameter already exists and is not empty.
+            database in the directory specified by the ``db_directory``
+            parameter and starts the service on top of it. An error is raised
+            if the directory specified by the ``db_directory`` parameter 
+            already exists and is not empty.
         error_if_create_db_exists : bool, optional
             Whether to raise an error if the ``create_db`` parameter is set to
             ``True`` and the database already exists. The default is ``False``,
@@ -476,7 +479,8 @@ class Service:
             import ansys.dynamicreporting.core as adr
             installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
             adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
-            session_guid = adr_service.start(username = 'admin', password = 'mypsw',db_dir ='/tmp/dbase')
+            session_guid = adr_service.start(username = 'admin', password = 'mypsw', 
+            db_directory ='/tmp/dbase')
             ret_stop = adr_service.stop()
         """
 

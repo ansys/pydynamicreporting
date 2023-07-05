@@ -2,8 +2,10 @@
 API reference
 *************
 
-Ansys Dynamic Reporting contains a low-level API that gives access to all features
-with a high level of detail. For a comprehensive description of this API, see
+Ansys Dynamic Reporting contains a low-level API that allows the user to access
+a;; the available features and properties in full detail. While this low-level
+API is very powerful, it can also be quite complex to use and it requires a
+steep learning curve. For a comprehensive description of this API, see
 `External Python API <https://nexusdemo.ensight.com/docs/html/Nexus.html?ExternalPythonAPI.html>`_
 in the documentation for Ansys Dynamic Reporting.
 

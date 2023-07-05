@@ -41,8 +41,8 @@ class Report:
         The default is ``None``.
     report_name : str, optional
         Name of the report object in the database. The default is ``default``.
-    report_object : str, optional
-        Name for the ``Report`` object. The default is ``None``.
+    report_obj : str, optional
+        TemplateREST object from low-level ADR API. Do not modify.
     """
 
     def __init__(self, service=None, report_name="default", report_obj=None):
