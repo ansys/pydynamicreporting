@@ -60,7 +60,7 @@ class Service:
         The default is ``"ghcr.io/ansys-internal/nexus"``.
     data_directory : str, optional
         Path to the directory for storing temporary information from the Docker image.
-        The default is creating a new directory inside the OS 
+        The default is creating a new directory inside the OS
         temporary directory. This parameter must pass a directory that exists and
         is empty.
     db_directory : str, optional
@@ -310,7 +310,7 @@ class Service:
             of it. The default is ``False``. If ``True``, this method creates a
             database in the directory specified by the ``db_directory``
             parameter and starts the service on top of it. An error is raised
-            if the directory specified by the ``db_directory`` parameter 
+            if the directory specified by the ``db_directory`` parameter
             already exists and is not empty.
         error_if_create_db_exists : bool, optional
             Whether to raise an error if the ``create_db`` parameter is set to
@@ -479,7 +479,7 @@ class Service:
             import ansys.dynamicreporting.core as adr
             installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
             adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
-            session_guid = adr_service.start(username = 'admin', password = 'mypsw', 
+            session_guid = adr_service.start(username = 'admin', password = 'mypsw',
             db_directory ='/tmp/dbase')
             ret_stop = adr_service.stop()
         """
