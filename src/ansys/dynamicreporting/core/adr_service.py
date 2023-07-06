@@ -1,7 +1,7 @@
 """
 Service module.
 
-Module to create a ADR Service instance
+Module for creating an Ansys Dynamic Reporting Service instance.
 
 Examples::
 
@@ -11,9 +11,6 @@ Examples::
     my_img = adr_service.create_item()
     my_img.item_image = 'Image_to_push_on_report'
     adr_service.visualize_report()
-
-::
-Visualization of the default report
 """
 
 import atexit
@@ -51,18 +48,46 @@ from .exceptions import (
 # Main class
 class Service:
     """
-    Class to create a connection to a dynamic reoprting service.
+    Provides for creating a connection to an Ansys Dynamic Reporting service.
+
+    Parameters
+    ----------
+    ansys_version : int, optional
+        Three-digit format for a locally installed Ansys version.
+        For example, ``232`` for Ansys 2023 R2. The default is ``None``.
+    docker_image : str, optional
+        Docker image to use if you do not have a local Ansys installation.
+        The default is ``"ghcr.io/ansys-internal/nexus"``.
+    data_directory : str, optional
+        Path to the directory for storing temporary information from the Docker image.
+        The default is creating a new directory inside the OS
+        temporary directory. This parameter must pass a directory that exists and
+        is empty.
+    db_directory : str, optional
+        Path to the database directory for the Ansys Dynamic Reporting service.
+        The default is ``None``. This parameter must pass a directory that exists and
+        is empty.
+    port : int, optional
+        Port to run the Ansys Dynamic Reporting service on. The default is ``8000``.
+    logfile : str, optional
+        File to write logs to. The default is ``None``. Acceptable values are
+        filenames or ``stdout`` for standard output.
+    ansys_installation : str, optional
+        Path to the directory where Ansys is installed locally. If Ansys is not
+        installed locally but is to be run in a Docker image, set the
+        value for this paraemter to ``"docker"``.
+
 
     Examples
     --------
     Initialize the class and connect to an Ansys Dynamic Reporting service running on
-    localhost on port 8010,  with username = admin and password = mypsw,
-    using a local Ansys installation::
+    the localhost on port 8010 with ``username`` set to ``"admin"`` and ``password``
+    set to ``"mypsw"`` using a local Ansys installation::
 
         import ansys.dynamicreporting.core as adr
         installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
         adr_service = adr.Service(ansys_installation = installation_dir)
-        ret = adr_service.connect(url = "http://localhost:8010", username = 'admin', password = 'mypsw')
+        ret = adr_service.connect(url = "http://localhost:8010", username = "admin", password = "mypsw")
     """
 
     def __init__(
@@ -76,33 +101,36 @@ class Service:
         ansys_installation: Optional[str] = None,
     ) -> None:
         """
-        Initialize a dynamic reporting object.
+        Initialize an Ansys Dynamic Reporting object.
 
         Parameters
         ----------
-        ansys_installation : str
-            Optional argument. This is needed only if the Service instance will be used to
-            launch a dynamic reporting service. Not needed if connecting to an existing service.
-            Location of the ANSYS installation, including the version directory. Example:
-            r'C:\\Program Files\\ANSYS Inc\\v232'
-            If there is no local installation and the user wants to use the docker image instead,
-            enter 'docker'
-            Default:  None
-        docker_image : str
-            Location of the docker image for Ansys dynamic reporting. Used only if ansys_installation
-            is 'docker'
-            Default: ghcr.io/ansys-internal/nexus
-        data_directory: str
-            Host directory where to store temporary copy of files from Docker
-            To be used only if ansys_installation is 'docker'
-            Default: None, which corresponds to TMP_DIR
-        db_directory: str
-            Host directory containing the database.
+        ansys_installation : str, optional
+            Locatation of the Ansys installation, including the version directory.
+            For example, r'C:\\Program Files\\ANSYS Inc\\v232'. The default is
+            ``None``. This parameter is needed only if the Service instance is
+            to launch a dynamic Reporting service. It is not needed if connecting
+            to an existing service. If there is no local Ansys installation and
+            a Docker image is to be used instead, enter ``"docker"``.
+        docker_image : str, optional
+            Location of the Docker image for Ansys Dynamic Reporting. The defaults
+            is ghcr.io/ansys-internal/nexus. This parameter is used only if the
+            value for the ``ansys_installation`` parameter is set to ``"docker"``.
+            Default:
+        data_directory: str, optional
+            Directory where Docker is to store temporary copy of files. The
+            default is ``None``, in which case ``TMP_DIR`` is used. This parameter
+            is used only if the value for the ``ansys_installation`` parameter
+            is set to ``"docker"``.
+        db_directory: str, optional
+            Directory containing the database. The default is ``None``.
         port: int
-            Service port number. Default: 8000
-        logfile: str
-            Location for the log file. If None, no logging. If 'stdout', use stdout
-            Default = None
+            Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
+            case ``8000`` is used.
+        logfile: str, optional
+            Location for the log file. The default is ``None``, in which case no
+            logging occurs. If this parameter is set to ``"stdout"``, logs are
+            written to stdout.
         """
         self.serverobj = None
         self._session_guid = ""
@@ -193,7 +221,7 @@ class Service:
 
     @property
     def session_guid(self):
-        """The GUID of the session associated with the service."""
+        """GUID of the session associated with the service."""
         if self._session_guid == "":
             self.logger.error("No session attached to this instance.")
         else:
@@ -201,7 +229,7 @@ class Service:
 
     @property
     def url(self):
-        """URL of the service."""
+        """URL for the service."""
         return self._url
 
     def connect(
@@ -216,21 +244,23 @@ class Service:
 
         Parameters
         ----------
-        url : str
-            Service url. Default: http://localhost:8000
-        username : str
-            Username of the service. Default: nexus
-        password : str
-            Password of the service. Default: cei
-        session : str
-            GUID of the session to work with. All created items will be pushed on that session.
-            Visualizations will all be filtered to only items for this session. Default: '', which
-            will create a new session GUID
+        url : str, optional
+            URL for the service. The default is ``http://localhost:8000``.
+        username : str, optional
+            Username for the service. The default is ``"nexus"``.
+        password : str, optional
+            Password for the service. The default is ``"cei"``.
+        session : str, optional
+            GUID for the session to work with. The default is ``""``,
+            in which case a new session with its own GUID is created.
+            All created items are then pushed on this session. Visualizations
+            are all filtered so that only items for this session are shown.
 
         Returns
         -------
         bool
-            True: Connection established / False: Could not establish connection
+            ``True`` when the connection is established, ``False`` when the
+            connection could not be established.
 
         Examples
         --------
@@ -271,31 +301,35 @@ class Service:
 
         Parameters
         ----------
-        username : str
-            Username of the service. Default: nexus
-        password : str
-            Password of the service. Default: cei
-        create_db : bool
-            Flag if you want to create a new database before starting the service on top
-            of it. If True, then the method will create a database at db_dir and start the
-            service on top of it. Error if the directory db_dir already exists and is not empty.
-            Default: False
-        error_if_create_db_exists : bool
-            If true, start() will return an error if create_db is true and the database already
-            exists.  If false, start() will use the database found instead of creating a new one.
-        exit_on_close : bool
-            Flag if you want the launched service to automatically shut down when exiting
-            the script. Default: False = the service will keep running
-        delete_db : bool
-            Flag if you want the database to be automatically deleted when exiting the script.
-            Only valid if exit_on_close is also set to True. Default: False = do not delete
-            database
+        username : str, optional
+            Username for the service. The default is ``"nexus"``.
+        password : str, optional
+            Password for the service. The default is ``"cei"``.
+        create_db : bool, optional
+            Whether to create a new database before starting the service on top
+            of it. The default is ``False``. If ``True``, this method creates a
+            database in the directory specified by the ``db_directory``
+            parameter and starts the service on top of it. An error is raised
+            if the directory specified by the ``db_directory`` parameter
+            already exists and is not empty.
+        error_if_create_db_exists : bool, optional
+            Whether to raise an error if the ``create_db`` parameter is set to
+            ``True`` and the database already exists. The default is ``False``,
+            in which case the ``start()`` method uses the database found instead
+            of creating one.
+        exit_on_close : bool, optional
+            Whether to automatically shut down the service when exiting the script.
+            The default is ``False``, in which case the service continues to run.
+        delete_db : bool, optional
+            Whether to automatically delete the database when exiting the script. The
+            default is ``False``. This parameter is valid only if this parameter and
+            the ``exit_on_close`` parameter are set to ``True``.
 
         Returns
         -------
         str
-            ID of the connected session. If the service could not be started
-            this will be '0'
+            ID of the connected session. If the service could not be started,
+            ``0`` is returned.
 
         Examples
         --------
@@ -431,12 +465,12 @@ class Service:
 
     def stop(self) -> bool:
         """
-        Stop the service connected to this session.
+        Stop the service connected to the session.
 
         Returns
         -------
         bool
-            True if able to stop the service. False otherwise
+            ``True`` if the service was stopped, ``False`` otherwise.
 
         Examples
         --------
@@ -445,7 +479,8 @@ class Service:
             import ansys.dynamicreporting.core as adr
             installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
             adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
-            session_guid = adr_service.start(username = 'admin', password = 'mypsw',db_dir ='/tmp/dbase')
+            session_guid = adr_service.start(username = 'admin', password = 'mypsw',
+            db_directory ='/tmp/dbase')
             ret_stop = adr_service.stop()
         """
 
@@ -504,20 +539,19 @@ class Service:
 
     def __check_filter__(self, filter: str = ""):
         """
-        Verify validity of query string.
+        Verify validity of the query string for filtering.
 
         Parameters
         ----------
-        filter : str
-            Query filter. Syntax corresponds to the Ansys dynamic reporting syntax,
-            which can be found at `this`_ link.
-
-            .. _this: https://nexusdemo.ensight.com/docs/html/Nexus.html?QueryExpressions.html
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
         bool
-            True if filter string is valid. False otherwise.
+            ``True`` if the query string is valid, ``False`` otherwise.
         """
         for query_stanza in filter.split(";"):
             if len(query_stanza) > 0:
@@ -540,22 +574,23 @@ class Service:
 
         Parameters
         ----------
-        report_name : str
-            Name of the report to visualize. If empty, show all the items
-            assigned to the current session
-        new_tab : bool
-            If the current environment is a Jupyter notebook, then set if the report should be
-            rendered in the current location (False, default) or on a new tab (True).
-            If the environment is not a Jupyter notebook, always display by opening a new tab.
-        filter : str
-            Query filter. Syntax corresponds to the Ansys dynamic reporting syntax, which can
-            be found at `this`_ link. Default: Empty, aka no filter
-
-            .. _this: https://nexusdemo.ensight.com/docs/html/Nexus.html?QueryExpressions.html
+        report_name : str, optional
+            Name of the report. the default is ``""``, in which
+            case all items assigned to the session are shown.
+        new_tab : bool, optional
+            Whether to render the report in a new tab if the current environment
+            is a Jupyter notebook. The default is ``False``, in which case the
+            report is rendered in the current location. If the environment is
+            not a Jupyter notebook, the report is always rendered in a new tab.
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
-            Rendering of the report.
+        Report
+            Rendered report.
 
         Examples
         --------
@@ -608,14 +643,16 @@ class Service:
 
         Parameters
         ----------
-        obj_name : str
-            Name of the item. Default : 'default'
-        source : str
-            Name of the source the item is being generated from. Default : 'ADR'
+        obj_name : str, optional
+            Name of the item. The default is ``"default"``.
+        source : str, optional
+            Name of the source to generate the item from. The default is ``"ADR"``,
+            which is Ansys Dynamic Reporting.
 
         Returns
         -------
-            Item object
+        Object
+            Item object.
 
         Examples
         --------
@@ -633,20 +670,22 @@ class Service:
         """
         Query the database.
 
+        .. _Query Expressions: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
+
         Parameters
         ----------
-        query_type : str
-            Type of objects to query. Options: Item, Session, Dataset. Default: Item
-        filter : str
-            Query filter. Syntax corresponds to the Ansys dynamic reporting syntax, which
-            can be found at `this`_ link. Default: Empty, aka no filter
-
-            .. _this: https://nexusdemo.ensight.com/docs/html/Nexus.html?QueryExpressions.html
+        query_type : str, optional
+            Type of objects to query. The default is ``"Item"``. Options are ``"Item"``,
+            ``"Session"``, and ``"Dataset"``.
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
         list
-            List of queried objects
+            List of queried objects.
 
         Examples
         --------
@@ -694,19 +733,21 @@ class Service:
 
     def delete(self, items: list) -> bool:
         """
-        Delete items from the database.
+        Delete objects from the database.
 
         Parameters
         ----------
         items : list
-            List of objects to delete. The objects can be of type Item, Session or Dataset.
-            Note that deleting a Session or a Dataset will also delete all the Item
-            associated with them.
+            List of objects to delete. The objects can be of one of these types:
+            ``"Item"``, ``"Session"``, or ``Dataset``.
+
+            .. note:: Deleting a session or a dataset also deletes all items
+               associated with the session or dataset.
 
         Returns
         -------
         bool
-            True if able to delete all items. False otherwise
+            ``True`` if all items were deleted, ``False`` otherwise.
 
         Examples
         --------
@@ -760,19 +801,19 @@ class Service:
 
     def get_report(self, report_name: str) -> Report:
         """
-        Get a Report item that corresponds to a Report in the database with the passed
+        Get a ``Report`` item that corresponds to a report in the database with a given
         name.
 
         Parameters
         ----------
         report_name : str
-            Name of the report in the database. This needs to be a top level report, not the name
-            of a subsection of the report
+            Name of the report in the database. The name must be for a top-level report, not a name
+            of a subsection within a report.
 
         Returns
         -------
-        Report
-            Report object. If no such object can be found, return None
+        Object
+            Report object. If no such object can be found, ``None`` is returned.
 
         Examples
         --------
@@ -791,21 +832,24 @@ class Service:
 
     def get_list_reports(self, r_type: Optional[str] = "name") -> list:
         """
-        Get the list of top level reports in the database, either as report names or
-        Report.
+        Get a list of top-level reports in the database.
+
+        This method can get either a list of the names of the top-level reports
+        or a list of ``Report`` items corresponding to these reports.
 
         Parameters
         ----------
-        r_type : str
-            Type of object to return. If name, return a list of the names of the reports. If
-            'report', return a list of the Report items corresponding to the reports.
-            Default: 'name'
+        r_type : str, optional
+            Type of object to return. The default is ``"name"``, which returns
+            a list of the names of the reports. If you set the value
+            for this parameter to ``"report"``, this method returns a list of
+            the ``Report`` items corresponding to these reports.
 
         Returns
         -------
         list
-            List of the top-level report in the database. Can be a list of the names or a
-            list of the Report corresponding to the top reports.
+            List of the top-level reports in the database. The list can be of the names
+            of these reports or the ``Report`` items corresponding to these reports.
 
         Examples
         --------
@@ -835,12 +879,15 @@ class Service:
 
 
 #    def create_report(self, report_name: Optional[str] = "") -> None:
-#        """Create a top level report. Report filter filters out all items
+#        """Create a top-level report.
+#
+#        A report filter filters out all items
 #
 #        Parameters
 #        ----------
 #        report_name : str
-#            Name of the report. Must not be empty and must not match any existing report name
+#            Name of the report. This parameter must not be empty and the
+#            name specified must not match any existing report name.
 #
 #        Returns
 #        -------
@@ -863,23 +910,26 @@ class Service:
 #        self.serverobj.put_objects(new_template)
 #
 #    def create_slider(self,images: Optional[list] = None, report_name: Optional[str] = "") -> None:
-#        """Create a slider template and add it to a specific report
+#        """Create a slider template and add it to a report.
 
 #        Parameters
 #        ----------
-#        images : list
-#            list of images for the slider. Each entry is a dictionary with the following keys:
-#            'image': file that contains the image
-#            each additional key is information that represents the image. Example:
-#            'var': variable the parts is colored by
-#            'time': value of timestep the snapshot is taken at
-#            These tags will be used to create the slider controllers
-#        report_name : str
-#            name of the report under which the slider needs to be placed
+#        images : list, optional
+#            List of images for the slider. The default is ``None``. Each entry in the list
+#            is a dictionary with the following keys, which are used to create the slider
+#            controllers:
+#
+#            - ``"image"``: File that contains the image. Each subsequent key is information
+#              that represents the image.
+#            - ``"var"``: Variable for coloring the parts.
+#            - ``"time"``: Value of the timestep that the snapshot is taken at.
+#
+#        report_name : str, optional
+#            Name of the report to place the slider under.
 #        """
 #        Returns
 #        -------
-#            None
+#        None
 
 #        if images is None:
 #            images = []

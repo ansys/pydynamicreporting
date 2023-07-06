@@ -1,8 +1,8 @@
 .. _advanced-gallery:
 
-Advanced Examples
+Advanced examples
 =================
 
-These ``ansys-dynamicreporting-core`` examples show how to use the
-low-level Ansys Dynamic Reporting API to create reports, query
-them, and visualize reports based on customers case studies.
+Advanced examples show how to use the low-level API in Ansys
+Dynamic Reporting to create, query, and visualize reports based on
+customers case studies.

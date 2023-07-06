@@ -1,35 +1,34 @@
-*****************
-API documentation
-*****************
+*************
+API reference
+*************
 
-``pydynamicreporting``
-~~~~~~~~~~~~~~~~~~~~~~
- .. _here: https://nexusdemo.ensight.com/docs/html/Nexus.html?ExternalPythonAPI.html
+Ansys Dynamic Reporting contains a low-level API that allows the user to access
+a;; the available features and properties in full detail. While this low-level
+API is very powerful, it can also be quite complex to use and it requires a
+steep learning curve. For a comprehensive description of this API, see
+`External Python API <https://nexusdemo.ensight.com/docs/html/Nexus.html?ExternalPythonAPI.html>`_
+in the documentation for Ansys Dynamic Reporting.
 
-The Ansys Dynamic Reporting product contains a low-level API that
-gives access to all the features with a high level of detail.
-An extensive description of that API can be found  `here`_
+The goal of PyDynamicReporting is to provide an easier, more Pythonic way to
+start or connect to an Ansys Dynamic Reporting service so that you do not need
+to understand the intricacies of Ansys Dynamic Reporting to manipulate its
+database and reports. For this reason, the PyDynamicReporting API provides only a subset
+of features, which are wrapped in such a way as to make the workflow easier.
 
-The goal of the ``pydynamicreporting`` library is to allow the use to have
-an easier,  more pythonic way to connect / start an Ansys Dynamic Reporting
-service and manipulate its database and reports, without the need to
-understand the intricacy of the Ansys Dynamic Reporting project. For this reason,
-only a subset of features are available through this API, wrapped in such a way
-to make the workflow easier for average user. If you are interested in extended
-control of all the options and features of Ansys Dynamic Reporting, please
-know that the low-level API can be used in conjunction with
-``pydynamicreporting``.
+If you are interested in extended control of all options and features of
+Ansys Dynamic Reporting, you can use its low-level API in conjunction
+with the PyDnamicReporting API.
 
-To connect to or start an Ansys Dynamic Reporting service, create an instance
-of the Service class. This instance can also be used to query the database,
-add, or delete items, and visualize reports.
+To use PyDynamicReporting to start or connect to an Ansys Dynamic Reporting service,
+you create an instance of the ``Service`` class. You then use this instance to
+query the database, to add and delete items, and to visualize reports.
 
 Items inside the Ansys Dynamic Reporting service are represented as instances
-of the Item class. These items can be created, queried, or modified via
-methods in the ``Item`` and in the ``Service`` class.
+of the ``Item`` class. You use methods in both the ``Item`` class and ``Service``
+class to create, query, and modify items.
 
-(work in progress) The Ansys Dynamic Reporting reports can easily be
-accessed via Report instances.
+Lastly, you create and use ``Report`` instances to access reports in Ansys
+Dynamic Reporting.
 
 .. autosummary::
    :toctree: _autosummary/

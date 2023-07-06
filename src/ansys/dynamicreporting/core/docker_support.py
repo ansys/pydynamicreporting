@@ -1,9 +1,9 @@
 """
-DockerSupport module.
+Docker Support module.
 
-The docker support module provides ``pydynamicreporting`` with the ability to start
-and stop the Ansys Dynamic Reporting Docker container as well as
-routines for copying files between the host file system and the container's file system.
+The Docker Support module provides PyDnamicReporting with the ability to start
+and stop the Ansys Dynamic Reporting Docker container as well as routines for
+copying files between the host file system and the container's file system.
 
 Examples:
     ::
@@ -25,18 +25,21 @@ from .constants import DOCKER_DEV_REPO_URL, DOCKER_REPO_URL
 
 class DockerLauncher:
     """
-    Create a instance for interacting with a Nexus Docker container.
+    Creates a instance for interacting with a Nexus Docker container.
 
-    The newly constructed instance doesn't do much itself.  The significant
+    The newly constructed instance doesn't do much itself. The significant
     functionally happens via object methods.
 
-    Args:
-        data_directory:
-            Host directory to make into the container at /data
-        docker_image_name:
-            Optional Docker Image name to use
-        use_dev:
-            Option to use the latest ensight_dev Docker Image; overridden by docker_image_name if specified.
+    Parameters
+    ----------
+    data_directory : str
+        Directory to make into the container at ``/data``.
+    docker_image_name : str, optional
+        Name of the Docker image to use. The default is ``None``.
+    use_dev : bool, optional
+        Whether to use the latest ``ensight_dev`` Docker image. The
+        default is ``False``. This parameter is overridden if a value
+        is specified for the ``docker_image_name`` parameter.
 
     Examples:
         ::
@@ -86,12 +89,14 @@ class DockerLauncher:
         """
         Pulls the Docker image.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
 
-        Raises:
-            RuntimeError:
-                if Docker couldn't pull the image.
+        Raises
+        ------
+        RuntimeError:
+           If Docker couldn't pull the image.
         """
         try:
             self._docker_client.images.pull(self._image_name)
@@ -100,24 +105,29 @@ class DockerLauncher:
 
     def start(self, host_directory: str, db_directory: str, port: int) -> None:
         """
-        Start the Nexus Docker container using the local image.  The container runs in
-        detached mode with /bin/bash as the entry point. This allows other tasks to be
-        executed within the container.
+        Start the Docker container for Ansys Dynamic Reporting using a local image.
 
-        Args:
-            host_directory: host directory to map into the container as
-                needed for copy methods
-            db_directory: host directory for the Nexus database
-            port: Nexus TCP port number
+        The container runs in detached mode with ``/bin/bash`` as the entry point.
+        This allows other tasks to be executed within the container.
 
-        Returns:
-            None
+        Parameters
+        ----------
+        host_directory : str
+            Directory to map into the container as needed for copy methods.
+        db_directory : str
+            Directory for the Ansys Dynamic Reporting database.
+        port: TCP port number for Ansys Dynamic Reporting.
 
-        Raises:
-            ValueError:
-                bad argument
-            RuntimeError:
-                variety of error conditions.
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError:
+            Bad argument.
+        RuntimeError:
+            Variety of error conditions.
         """
 
         if not host_directory:  # pragma: no cover
@@ -153,8 +163,8 @@ class DockerLauncher:
         self._container_name = container_name
 
         # Start the container in detached mode and override
-        # the default entrypoint so we can run multiple commands
-        # within the container.
+        # the default entrypoint so multiple commands can be
+        # run within the container.
         #
         # we run "/bin/bash" as container user "ensight" in lieu of
         # the default entrypoint command "ensight" which is in the
@@ -221,59 +231,66 @@ class DockerLauncher:
 
     def container_name(self) -> str:
         """
-        Returns the Docker container name or None.
+        Get the Docker container name.
 
-        Args:
-            None
-
-        Returns:
-            The container name or None
-
-        Raises:
-            None
+        Returns
+        =======
+        str
+            Name of the container or ``None`` if a container was not found.
         """
         return self._container_name
 
     def ansys_version(self) -> str:
         """
-        Returns the Ansys version as a 3 digit number string as found in the Docker
-        container.
+        Get the three-digit Ansys version from the Docker container.
 
-        Returns:
-            Ansys 3-digit version as a string, or None if not found or not start()'ed
+        Returns
+        -------
+        str
+            Three-digit Ansys version or ``None`` if this string was
+            not found or the container was not started.
         """
         return self._ansys_version
 
     def cei_home(self) -> str:
         """
-        Returns the location of CEI_HOME as a string.
+        Get the location of the ``CEI_HOME`` directory within the Docker container.
 
-        Returns:
-            Location of CEI directory within the container
+        Returns
+        -------
+        str
+            Location of the ``CEI_HOME`` directory.
         """
         return self._cei_home
 
     def nexus_directory(self) -> str:
         """
-        Returns the location of the nexusNNN directory as a string.
+        Get the location of the ``nexusNNN`` directory within the Docker container.
 
-        Returns:
-            Location of nexusNNN directory within the container
+        Returns
+        -------
+        str
+            Location of the ``nexusNNN`` directory.
         """
         return self._nexus_directory
 
     def run_in_container(self, cmd_line: str) -> str:
         """
-        Run the command specified by cmdLine in the container.
+        Run a command in the Docker container.
 
-        Args:
-            cmdLine: command line to run in the container
+        Parameters
+        ----------
+        cmdLine: str
+            Command to run in the Docker container.
 
-        Returns:
-            Output from the command
+        Returns
+        -------
+        str
+            Output from the command.
 
-        Raises:
-            RuntimeError
+        Raises
+        ------
+        RuntimeError
         """
 
         cmd = ["bash", "--login", "-c", cmd_line]
@@ -293,16 +310,21 @@ class DockerLauncher:
         directory: str,
     ) -> str:
         """
-        Run '/bin/ls' on the specified directory in the container and return the output.
+        Run the `'/bin/ls'` command on a directory in the Docker container.
 
-        Args:
-            directory: directory within the container
+        Parameters
+        ----------
+        directory: str
+           Directory in the container to run the command on.
 
-        Returns:
-            Output from the command as a string
+        Returns
+        -------
+        str
+           Output from the command.
 
-        Raises:
-            RuntimeError
+        Raises
+        ------
+        RuntimeError
         """
 
         ls_cmd = "/bin/ls " + directory
@@ -314,17 +336,26 @@ class DockerLauncher:
         do_recursive: bool = False,
     ) -> str:
         """
-        Run '/bin/cp' in the container on the specified src into /host_directory/.
+        Run the `'/bin/cp'` command in the Docker container on a source item.
 
-        Args:
-            src: item (file or directory) within the container under /Nexus/CEI/
-            do_recursive: if True, use '/bin/cp -r'
+        This command copies the source item locally to the ``host_directory``.
 
-        Returns:
-            Output from the command as a string
+        Parameters
+        ----------
+        src: str
+            Item (file or directory) within the container under the ``/Nexus/CEI/``
+            directory.
+        do_recursive: bool, optional
+           Whether to use the `'/bin/cp -r'` command. The default is ``False``.
 
-        Raises:
-            RuntimeError
+        Returns
+        -------
+        str
+            Output from the command.
+
+        Raises
+        ------
+        RuntimeError
         """
 
         cp_cmd = "/bin/cp "
@@ -337,17 +368,18 @@ class DockerLauncher:
 
     def create_nexus_db(self) -> str:
         """
-        Run 'nexus_launcher create --db_directory <dir>' in the container on the
-        previously specified db_directory.
+        Run the ``nexus_launcher create --db_directory <dir>`` in the Docker container.
 
-        Args:
-            None
+        This command runs on the previously specified database directory.
 
-        Returns:
-            Output from the command as a string
+        Returns
+        -------
+        str
+            Output from the command.
 
-        Raises:
-            RuntimeError
+        Raises
+        ------
+        RuntimeError
         """
         nexus_cmd = self._cei_home + "/bin/nexus_launcher create --db_directory /db_directory/ "
         return self.run_in_container(nexus_cmd)
@@ -359,19 +391,27 @@ class DockerLauncher:
         allow_iframe_embedding: bool,
     ) -> str:
         """
-        Run the 'nexus_launcher start ...' command in the container for the previously
-        specified db_directory.
+        Run the ``nexus_launcher start ...`` command in the Docker container.
 
-        Args:
-            username: username
-            password: password
-            allow_iframe_embedding: if iframes must be allowed
+        This command runs on the previously specified database directory.
 
-        Returns:
-            Output from the command as a string
+        Parameters
+        ----------
+        username : str
+            Username.
+        password : str
+            Password
+        allow_iframe_embedding : bool
+            Whether iframes must be allowed.
 
-        Raises:
-            RuntimeError
+        Returns
+        -------
+        str
+            Output from the command.
+
+        Raises
+        ------
+        RuntimeError
         """
         nexus_cmd = self._cei_home + "/bin/nexus_launcher start"
         nexus_cmd += " --db_directory /db_directory"

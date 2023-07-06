@@ -4,19 +4,23 @@
 Tagging
 =======
 
-A crucial aspect of Ansys Dynamic Reporting is the tagging functionality. Adding tags to items
+Tagging is an important feature of Ansys Dynamic Reporting. Adding tags to items
 allows the database to organize them and the templates to create reports in
-a precise and effective manner. This example shows how to add, modify, query
+a precise and effective manner. This example shows how to add, modify, query,
 and delete tags on items.
+
+.. note::
+
+   This example assumes that you have a local Ansys installation.
 
 """
 
 ###############################################################################
 # Start an Ansys Dynamic Reporting service
 # ----------------------------------------
-# Start an Ansys Dynamic Reporting service with a new database, assuming
-# you have a local Ansys installation. Make sure to pass as the database
-# directory the path to an empty directory.
+#
+# Start an Ansys Dynamic Reporting service with a new database. The path for the
+# database directory must be to an empty directory.
 
 import ansys.dynamicreporting.core as adr
 
@@ -29,9 +33,10 @@ session_guid = adr_service.start(create_db=True)
 # Create an item and tag it
 # -------------------------
 #
-# Now that we have an Ansys Dynamic Reporting service running on top of a new
-# database, create an item and set some tags to it. Use the get_tags method
-# to see the values of the tags.
+# Now that an Ansys Dynamic Reporting service is running on top of a new
+# database, create an item and set some tags on it. Use the
+# :func:`get_tags<ansys.dynamicreporting.core.Item.get_tags>` method to
+# see the values of the tags.
 
 my_text = adr_service.create_item()
 my_text.item_text = "<h1>Analysis Title</h1>This is the first of many items"
@@ -42,9 +47,10 @@ my_text.get_tags()
 # Modify the tags
 # ---------------
 #
-# Once the tags have been set, you can add or delete to them. Use the get_tags
-# method to verify the new value of the tags is the expected 'var=pressure dp=3'
-#
+# Once the tags have been set, you can add or delete to them. Use the
+# :func:`get_tags<ansys.dynamicreporting.core.Item.get_tags>` method
+# to verify that the new value of the tags is the expected ``var=pressure dp=3``.
+
 my_text.add_tag(tag="dp", value="3")
 my_text.rem_tag("time")
 my_text.get_tags()
@@ -54,9 +60,10 @@ my_text.get_tags()
 # Query items based on tag values
 # -------------------------------
 #
-# Let us add a couple of other items and tag them. Then, let us query the database
-# for items with a specific tag assigned to them. See that this results only in
-# two items, as expected - see the contents of the dp3_items list.
+# Add a couple of other items and tag them. Then, query the database
+# for items that have a specific tag set on them. Given the preceding
+# code, this results in only two items. See the contents of the ``dp3_items``
+# list.
 
 my_second_text = adr_service.create_item()
 my_second_text.item_text = "<h1>Second Text</h1>Second text item"
@@ -69,7 +76,8 @@ dp3_items = adr_service.query(filter="A|i_tags|cont|dp=3")
 ###############################################################################
 # Close the service
 # -----------------
-# Close the Ansys Dynamic Reporting service. The database with the
-# items that were created will remain on disk.
+#
+# Close the Ansys Dynamic Reporting service. The database with the items that
+# were created remains on disk.
 
 adr_service.stop()

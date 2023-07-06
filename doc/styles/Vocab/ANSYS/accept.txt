@@ -1,10 +1,10 @@
 ANSYS
 Ansys
 ansys
+Ansys Dynamic Reporting
+PyDynamicReporting
 databas
 nd
 Nexus
-PyNexus
-pynexus
-pythonic
-Ansys Dynamic Reporting
+postprocessors
+Pythonic

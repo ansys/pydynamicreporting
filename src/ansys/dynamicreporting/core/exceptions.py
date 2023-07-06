@@ -3,9 +3,9 @@
 
 class PyadrException(Exception):
     """
-    Base exception.
+    Provides base exceptions.
 
-    All other exceptions inherit from here.
+    All other exceptions inherit from this base class.
     """
 
     detail: str = "An error occurred."
@@ -21,7 +21,7 @@ class PyadrException(Exception):
 
 
 class DatabaseDirNotProvidedError(PyadrException):
-    """Exception raised when database dir is not provided."""
+    """Exception raised when the database directory is not provided."""
 
     detail = "db_directory must be provided when using Docker"
 
@@ -33,7 +33,7 @@ class CannotCreateDatabaseError(PyadrException):
 
 
 class InvalidAnsysPath(PyadrException):
-    """Exception raised if ANSYS install path is invalid."""
+    """Exception raised if ANSYS installation path is invalid."""
 
     detail = "Invalid ANSYS installation path"
 

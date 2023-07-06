@@ -1,9 +1,10 @@
 """Item module.
 
-Module to create Item instances.
+Module to create ``Item`` instances.
 
-Any object from an ADR database can be represented as a Item instance.
-This class allows for easy creation and manipulation of such objects.
+Any object from an Ansys Dynamic Reporting database can be represented
+as an ``Item`` instance. This class allows for easy creation and manipulation
+of such objects.
 
 Examples
 --------
@@ -33,42 +34,44 @@ except ImportError:
 # Generate the items for the ADR database
 class Item:
 
-    """Class to create an object that represents an ADR item.
+    """Provides for creating an object that represents an Ansys Dynamic Reporting item.
 
-    Create an instance of this class for each item in the database you want to
-    interact with. When the object is created, no type is set. This will be determined the
-    first time you set the item_* attribute, and can not be changed. So for example if you
-    create an instance with:
+    Create an instance of this class for each item in the database that you want to
+    interact with. When the object is created, no type is set. The type, determined the
+    first time that you set the ``item_*`` attribute, cannot be changed.
+
+    This code creates an instance with the object ``my_txt`` as a text item:
 
     >>> my_txt = adr_service.create_item()
     >>> my_txt.item_text = '<h1>The test</h1>This is a text item'
 
 
-    the object my_txt is now a text item, and the type can not be changed at a later time. You
-    can reset the attributes describing the object at any time and the change will automatically
-    be propagated into the database. You can control the rendering of these objects via
-    the attributes described below. Note that these attributes mirror the generic
-    data item attributes, as described `here`_
+    The type of the item created in the preceding code cannot be changed. However,
+    the attributes describing the object can be reset at any time. These hanges are
+    automatically propagated into the database. The attributes described in the
+    following "Parameters" section can be used to control the rendering of these objects.
 
-    .. _here: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
+    .. note::
+       These attributes mirror the generic data item attributes described in
+       `Data Items`_ in the documentation for Ansys Dynamic Reporting.
+
+    .. _Data Items: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
 
     Parameters
     ----------
-    service : ansys.dynamicreporting.core.Service
-        dynamicreporting object that provides the connection to the database the
-        Item will interact with.
-        Default: None
-    obj_name : str
-        Name of the item in the database. Default: 'default'
-    source : str
-        Name of the source for the item in the database. Default: 'ADR'
+    service : ansys.dynamicreporting.core.Service, optional
+        Ansys Dynamic Reporting object that provides the connection to the database
+        that the item is to interact with. The default is ``None``.
+    obj_name : str, optional
+        Name of the item object in the database. The default is ``default``.
+    source : str, optional
+        Name of the source for the item in the database. The default is ``"ADR"``.
 
 
     Examples
     --------
-    Initialize the class inside a dynamic reporting service and set the object to be
-    a text item.
-    ::
+    Initialize the ``Service`` class inside an Ansys Dynamic Reporting service and
+    create an object as a text item::
 
         import ansys.dynamicreporting.core as adr
         adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
@@ -88,21 +91,21 @@ class Item:
         self.obj_name = obj_name
         self.type = None
         self.item_text = ""
-        """Set the text. HTML and LaTex formatting supported"""
+        """Text (HTML and LaTeX formatting)"""
         self.item_image = None
-        """Set the image object - file or png binary"""
+        """Image object (Image and PNG binary files)"""
         self.item_scene = None
-        """Set the 3D scene file. AVZ, PLY, GBT, STL formats supported."""
+        """3D scene (AVZ, PLY, GBT, and STL files)"""
         # Attributes for the table items
         self.table_attr = table_attr
         self.item_table = None
-        """Set the table values. This needs to be a numpy array."""
+        """Table values (Must be in a numpy array)"""
         self.table_dict = {}
         self.item = self.serverobj.create_item(name=self.obj_name, source=self.source)
 
     @property
     def url(self):
-        """URL corresponding to the Item"""
+        """URL corresponding to the item"""
         if self.serverobj.get_URL() is not None and self.item.guid is not None:
             self._url = self.serverobj.get_URL() + "/reports/report_display/?usemenus=off&query=A%7Ci_guid%7C%eq%7C"
             self._url += str(self.item.guid)
@@ -195,22 +198,24 @@ class Item:
                 self.__setattr__(t_attr, dataitem.payloaddata.get(t_attr, None), only_set=True)
 
     def visualize(self, new_tab: Optional[bool] = False) -> None:
-        """Render this item only
+        """Render this item only.
 
         Parameters
         ----------
-        new_tab : bool
-            If the current environment is a Jupyter notebook, then set if item should be rendered
-            in the current location (False, default) or on a new tab (True).
-            If the environment is not a Jupyter notebook, always display by opening a new tab.
+        new_tab : bool, optional
+            Whether to render the item in a new tab if the current environment is a Jupyter
+            notebook. The default is ``False``, in which case the item is rendered in the
+            current location. If the environment is not a Jupyter notebook, the item is
+            always rendered in a new tab.
 
         Returns
         -------
-        Rendered item
+        Item
+            Rendered item.
 
         Examples
         --------
-        ::
+        Create a text item and render it in a new tab::
 
             import ansys.dynamicreporting.core as adr
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
@@ -219,7 +224,6 @@ class Item:
             my_txt.item_text = '<h1>The test</h1>This is a text item'
             my_txt.visualize(new_tab = True)
 
-        Text item rendering in a new tab
 
         """
         if in_ipynb() and not new_tab:
@@ -235,21 +239,22 @@ class Item:
                 webbrowser.open_new(self._url)
 
     def get_iframe(self, width=0, height=0):
-        """Return IFrame corresponding to the Item
+        """Get the iframe object corresponding to the item.
 
         Parameters
         ----------
-        int width :
-            Width of the IFrame object. Default is min(Item width * 1,1, 1000).
-            If Item width is 0, then default is 1000
-        int height :
-            Height of the IFrame object. Default is min(Item height, fixed height) where
-            fixed height is 800 for Item scene, 400 otherwise
+        width : int, optional
+            Width of the iframe object. The default is ``min(Item width * 1,1, 1000)``.
+            For example, if the item width is ``0``, the default is ``1000``.
+        height : int, optional
+            Height of the iframe object. The default is ``min(Item height, fixed height)``,
+            where the fixed height is ``800`` for an item scene and ``400`` otherwise.
 
         Returns
         -------
-        IFrame
-            IFrame obj corresponding to the Item. If no IFrame can be generated, None is returned
+        iframe
+            iframe object corresponding to the item. If no iframe can be generated,
+            ``None`` is returned.
 
         Examples
         --------
@@ -282,18 +287,18 @@ class Item:
         return iframe
 
     def set_tags(self, tagstring: str = '') -> bool:
-        """Set tags on the Item
+        """Set tags on the item.
 
         Parameters
         ----------
-        str tagstring :
-            Set the tags on the item. Multiple tags are space-separated. Tag syntax is:
-            tagname=value
+        tagstring : str, optional
+            Tags to set on the item. Separate multiple tags with a space. The
+            tag syntax is ``tagname=value``.
 
         Returns
         -------
         bool
-            True is success
+            ``True`` when successful, ``False`` when failed.
 
         Examples
         --------
@@ -312,16 +317,12 @@ class Item:
         return ret == requests.codes.ok
 
     def get_tags(self) -> str:
-        """Get tags of the Item
-
-        Parameters
-        ----------
-        None
+        """Get the tags on the item.
 
         Returns
         -------
         str
-            Tags set on the Item
+            Tags on the item.
 
         Examples
         --------
@@ -339,19 +340,19 @@ class Item:
         return tags
 
     def add_tag(self, tag: str = '', value: str = '') -> bool:
-        """Add a tag to the Item
+        """Add a tag to the item.
 
         Parameters
         ----------
-        tag str :
-            Tag name
-        value str :
-            Tag value
+        tag : str, optional
+            Tag name. The default is ``""``.
+        value str : str, optional
+            Tag value.  The default is ``""``.
 
         Returns
         -------
         bool
-            True is success
+            ``True`` when successful, ``False`` when failed.
 
         Examples
         --------
@@ -370,17 +371,17 @@ class Item:
         return ret == requests.codes.ok
 
     def rem_tag(self, tag: str = '') -> bool:
-        """Remove a tag on the Item
+        """Remove a tag on the item.
 
         Parameters
         ----------
-        tag str :
-            Tag to remove
+        tag : str, optional
+            Tag to remove. The default is ``""``.
 
         Returns
         -------
         bool
-            True is success
+            ``True`` when successful, ``False`` when failed.
 
         Examples
         --------
