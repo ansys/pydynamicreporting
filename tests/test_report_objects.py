@@ -366,6 +366,17 @@ def test_layout_html() -> bool:
     assert success
 
 
+def test_set_comments() -> None:
+    a = ro.LayoutREST()
+    a.set_comments(value="lololol")
+    success = False
+    try:
+        a.set_comments(value=4)
+    except ValueError as e:
+        success = "input needs to be a string" in str(e)
+    assert success
+
+
 def test_layout_transport() -> bool:
     a = ro.LayoutREST()
     zero = a.get_transpose()

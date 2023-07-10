@@ -1634,6 +1634,18 @@ class LayoutREST(TemplateREST):
         else:
             raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
 
+    def set_comments(self, value=""):
+        if "Layout:" in self.report_type:
+            if isinstance(value, str):
+                d = json.loads(self.params)
+                d["comments"] = value
+                self.params = json.dumps(d)
+                return
+            else:
+                raise ValueError("Error: input needs to be a string")
+        else:
+            raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
+
     def get_transpose(self):
         if "Layout:" in self.report_type:
             if "transpose" in json.loads(self.params):
