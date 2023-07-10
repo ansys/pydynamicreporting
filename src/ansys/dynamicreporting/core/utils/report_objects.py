@@ -1644,7 +1644,7 @@ class LayoutREST(TemplateREST):
             else:
                 raise ValueError("Error: input needs to be a string")
         else:
-            raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
+            raise ValueError(f"Error: Comments not supported on the report type {self.report_type}")
 
     def get_transpose(self):
         if "Layout:" in self.report_type:
