@@ -1,10 +1,10 @@
-# Authors
+# Contributors
 
 ## Project Lead
 
 * [Marina Galvagni](https://github.com/margalva)
 
-## Contributors
+## Individual Contributors
 
 * [Chris Garrison](https://github.com/chrisg564)
 * [Cyrille Defranoux](https://github.com/cdan6)

@@ -106,11 +106,9 @@ jobs:
           retention-days: 60
           if-no-files-found: error
 
-      # TO BE ACTIVATED ONCE PROJECT GOES PUBLIC
-      #
-      # - name: Upload coverage to Codecov
-      #   if: env.MAIN_PYTHON_VERSION == matrix.python-version
-      #   uses: codecov/codecov-action@v3
+      - name: Upload coverage to Codecov
+        if: env.MAIN_PYTHON_VERSION == matrix.python-version
+        uses: codecov/codecov-action@v3
 
   docs:
     name: Build docs
@@ -139,24 +137,12 @@ jobs:
     needs: [package]
     runs-on: ubuntu-latest
     steps:
-      # TO BE DELETED ONCE PROJECT GOES PUBLIC
-      #
-      - name: Release to the private PyPI repository
-        uses: ansys/actions/release-pypi-private@v4
-        if: ${{ !env.ACT }}
+      - name: Release to the public PyPI repository
+        uses: ansys/actions/release-pypi-public@v4
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           twine-username: "__token__"
-          twine-token: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
-
-      # TO BE ACTIVATED ONCE PROJECT GOES PUBLIC
-      #
-      # - name: Release to the public PyPI repository
-      #   uses: ansys/actions/release-pypi-public@v4
-      #   with:
-      #     library-name: ${{ env.PACKAGE_NAME }}
-      #     twine-username: "__token__"
-      #     twine-token: ${{ secrets.PYPI_TOKEN }}
+          twine-token: ${{ secrets.PYPI_TOKEN }}
 
       - name: Release to GitHub
         uses: ansys/actions/release-github@v4
