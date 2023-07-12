@@ -55,7 +55,7 @@ features. This is the best place to post questions and code.
 Installation
 ------------
 The ``pydynamicreporting`` package supports Python 3.7 through 3.11 on
-Windows and Linux. It is currently available on the PyPi 
+Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
 To install the package, simply run
@@ -65,7 +65,7 @@ To install the package, simply run
    pip install ansys-dynamicreporting-core
 
 
-Alternatively, the user can download the repository and locally build the 
+Alternatively, the user can download the repository and locally build the
 package. Two modes of installation are available:
 
 - Developer installation
