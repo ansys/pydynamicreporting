@@ -865,7 +865,7 @@ class Server:
         url = self.build_url_with_query(report_guid, query)
         file_path = os.path.abspath(file_name)
         if has_qt and (parent is not None):
-            from report_download_pdf import NexusPDFSave
+            from .report_download_pdf import NexusPDFSave
 
             app = QtGui.QGuiApplication.instance()
             worker = NexusPDFSave(app)
