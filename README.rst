@@ -55,24 +55,18 @@ features. This is the best place to post questions and code.
 Installation
 ------------
 The ``pydynamicreporting`` package supports Python 3.7 through 3.11 on
-Windows and Linux. It is currently available only on the Ansys private
-repository at `PyAnsysPyPI <https://pkgs.dev.azure.com/pyansys/_packaging/pyansys/pypi>`_.
+Windows and Linux. It is currently available on the PyPi
+`repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
-Installing from this private repository requires a PAT (private access
-token). For information on obtaining a PAT, see `Release and publishing
-<https://dev.docs.pyansys.com/dev/how-to/releasing.html#downloading-artifacts>`_
-in the *PyAnsys Developer's Guide*.
-
-To install the package from the Ansys private repository, run this code,
-where ``<PAT>`` is the obtained token:
+To install the package, simply run
 
 .. code::
 
-   pip install --pre ansys-dynamicreporting-core --index-url=https://<PAT>@pkgs.dev.azure.com/pyansys/_packaging/pyansys/pypi/simple/
+   pip install ansys-dynamicreporting-core
 
 
-Once the ``pydynamicreporting`` package is publicly available on GitHub, two modes
-of installation are available:
+Alternatively, the user can download the repository and locally build the
+package. Two modes of installation are available:
 
 - Developer installation
 - User installation
