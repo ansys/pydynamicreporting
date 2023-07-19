@@ -694,7 +694,7 @@ class Service:
             import ansys.dynamicreporting.core as adr
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
-            imgs = adr_service.query(type='Item', filter='A|i_type|cont|image;')
+            imgs = adr_service.query(query_type='Item', filter='A|i_type|cont|image;')
         """
         queried_items = []
         valid = self.__check_filter__(filter)
