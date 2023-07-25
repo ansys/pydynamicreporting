@@ -1,3 +1,4 @@
+from os import environ
 from os.path import isdir, join
 from random import random
 import shutil
@@ -253,14 +254,18 @@ def test_export_pdf(adr_service_query, get_exec) -> bool:
         success = False
     s = adr_service_query.serverobj
     if exec_basis:
-        import re
+        if environ.get("ANSYS_REL_INT_I"):
+            ansys_version = int(environ.get("ANSYS_REL_INT_I"))
+        else:
+            import re
 
-        matches = re.search(r".*v([0-9]{3}).*", exec_basis)
+            matches = re.search(r".*v([0-9]{3}).*", exec_basis)
+            ansys_version = int(matches.group(1))
         s.export_report_as_pdf(
             report_guid=my_report.report.guid,
             file_name="mytest",
             exec_basis=exec_basis,
-            ansys_version=int(matches.group(1)),
+            ansys_version=ansys_version,
         )
     else:
         # If no local installation, then you can not run the routine for pdf conversion. OSError expected.
