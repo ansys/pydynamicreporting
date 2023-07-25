@@ -78,6 +78,7 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     else:
         cleanup_docker(request)
         ansys_installation = "docker"
+    subprocess.run(["git", "restore", db_dir])
     tmp_service = Service(
         ansys_installation=ansys_installation,
         docker_image=DOCKER_DEV_REPO_URL,
