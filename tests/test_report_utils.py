@@ -104,6 +104,7 @@ def test_from_local_8bit() -> bool:
 
 def test_run_web_request(adr_service_query) -> bool:
     resp = ru.run_web_request(method="GET", server=adr_service_query.serverobj, relative_url="")
+    adr_service_query.stop()
     assert resp.ok is True
 
 

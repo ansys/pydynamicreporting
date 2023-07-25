@@ -15,14 +15,21 @@ from ansys.dynamicreporting.core.utils.exceptions import DBCreationFailedError
 from .conftest import cleanup_docker
 
 
-def test_copy_item(adr_service_query, request) -> bool:
+def test_copy_item(adr_service_query, request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "newcopy")
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=8000 + int(random() * 4000),
-    )
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+            port=8000 + int(random() * 4000),
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+            port=8000 + int(random() * 4000),
+        )
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     s = tmp_adr.serverobj
     succ = s.copy_items(
@@ -30,20 +37,28 @@ def test_copy_item(adr_service_query, request) -> bool:
     )
     adr_service_query.stop()
     tmp_adr.stop()
-    cleanup_docker(request)
+    if get_exec == "":
+        cleanup_docker(request)
     assert succ
 
 
-def test_start_stop(request) -> bool:
-    cleanup_docker(request)
+def test_start_stop(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "create_delete")
     port_r = 8000 + int(random() * 4000)
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=port_r,
-    )
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+            port=port_r,
+        )
+    else:
+        cleanup_docker(request)
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+            port=port_r,
+        )
     succ = True
     try:
         r.create_new_local_database(
@@ -79,16 +94,23 @@ def test_validate_existing(adr_service_query) -> bool:
     assert succ
 
 
-def test_fail_newdb(request) -> bool:
-    cleanup_docker(request)
+def test_fail_newdb(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "create_twice")
     port_r = 8000 + int(random() * 4000)
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=port_r,
-    )
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+            port=port_r,
+        )
+    else:
+        cleanup_docker(request)
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+            port=port_r,
+        )
     succ = True
     try:
         r.create_new_local_database(
@@ -305,16 +327,23 @@ def test_get_pptx(adr_service_query, request) -> bool:
     assert success is True
 
 
-def test_copy_template(adr_service_query, request) -> bool:
+def test_copy_template(adr_service_query, request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "newcopytemp")
     if isdir(db_dir):
         shutil.rmtree(db_dir)
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=8000 + int(random() * 4000),
-    )
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+            port=8000 + int(random() * 4000),
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+            port=8000 + int(random() * 4000),
+        )
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     s = tmp_adr.serverobj
     succ = s.copy_items(
@@ -322,7 +351,8 @@ def test_copy_template(adr_service_query, request) -> bool:
     )
     adr_service_query.stop()
     tmp_adr.stop()
-    cleanup_docker(request)
+    if get_exec == '':
+        cleanup_docker(request)
     assert succ
 
 
@@ -342,16 +372,23 @@ def test_groups(adr_service_create, request) -> bool:
     assert succ and succ_two and succ_three
 
 
-def test_acls_start(request) -> bool:
-    cleanup_docker(request)
+def test_acls_start(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "create_delete")
     port_r = 8000 + int(random() * 4000)
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=port_r,
-    )
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+            port=port_r,
+        )
+    else:
+        cleanup_docker(request)
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+            port=port_r,
+        )
     r.create_new_local_database(
         parent=None,
         directory=db_dir,

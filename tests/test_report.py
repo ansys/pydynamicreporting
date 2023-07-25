@@ -33,7 +33,6 @@ def test_iframe_report(adr_service_query) -> bool:
     except SyntaxError:
         success = False
     adr_service_query.stop()
-
     assert success is True
 
 

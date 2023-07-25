@@ -205,12 +205,17 @@ def test_connect_to_connected(adr_service_create) -> bool:
     assert "0" == try_again
 
 
-def test_create_on_existing(request) -> bool:
-    cleanup_docker(request)
+def test_create_on_existing(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
-    tmp_adr = Service(
-        ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
-    )
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec, db_directory=db_dir
+        )
+    else:
+        cleanup_docker(request)
+        tmp_adr = Service(
+            ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
+        )
     session_id = tmp_adr.start(create_db=True)
     assert session_id == "0"
 
@@ -287,16 +292,21 @@ def test_vis_report_name(adr_service_query) -> bool:
     assert success is None
 
 
-def test_connect_to_running(adr_service_query, request) -> bool:
+def test_connect_to_running(adr_service_query, request, get_exec) -> bool:
     # Connect to a running service and make sure you can access the same dataset
-    all_items = adr_service_query.query(query_type="Item")
     db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=8000 + int(random() * 4000),
-    )
+    all_items = adr_service_query.query(query_type="Item")
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+        )
     tmp_adr.connect(url=adr_service_query.url, session=adr_service_query.session_guid)
     all_items_second = tmp_adr.query(query_type="Item")
     adr_service_query.stop()
