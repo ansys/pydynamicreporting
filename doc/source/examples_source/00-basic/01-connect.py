@@ -101,4 +101,5 @@ adr_service.visualize_report(filter=f"A|s_guid|cont|{connected_s.session_guid}")
 # Close the Ansys Dynamic Reporting service. The database with the items that
 # were created remains on disk.
 
+# sphinx_gallery_thumbnail_path = '_static/01_connect_3.png'
 adr_service.stop()
