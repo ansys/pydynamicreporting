@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from ansys.dynamicreporting.core import Report, Service
 from ansys.dynamicreporting.core.utils import report_remote_server
@@ -11,6 +12,7 @@ def test_geturl_report(adr_service_query) -> bool:
     assert "http:" in url
 
 
+@pytest.mark.ado_test
 def test_visualize_report(adr_service_query) -> bool:
     success = False
     try:
@@ -36,6 +38,7 @@ def test_iframe_report(adr_service_query) -> bool:
     assert success is True
 
 
+@pytest.mark.ado_test
 def test_unit_report_url(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_3.txt")
     a = Service(logfile=logfile)
@@ -50,6 +53,7 @@ def test_unit_report_url(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_report_visualize(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
@@ -64,6 +68,7 @@ def test_unit_report_visualize(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_report_iframe(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
@@ -78,6 +83,7 @@ def test_unit_report_iframe(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_no_url(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)

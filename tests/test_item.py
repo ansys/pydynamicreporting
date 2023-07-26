@@ -1,10 +1,12 @@
 from os.path import join
 
 import numpy as np
+import pytest
 
 from ansys.dynamicreporting.core import Item, Service
 
 
+@pytest.mark.ado_test
 def test_create_img(adr_service_create, request) -> bool:
     _ = adr_service_create.start(
         create_db=True,
@@ -167,6 +169,7 @@ def test_iframe_on_img_item(adr_service_query) -> bool:
     assert success is True
 
 
+@pytest.mark.ado_test
 def test_get_url(adr_service_query) -> bool:
     filter_str = "A|i_type|cont|table"
     one_item = adr_service_query.query(query_type="Item", filter=filter_str)
@@ -175,6 +178,7 @@ def test_get_url(adr_service_query) -> bool:
     assert (url is not None) and ("http" in url)
 
 
+@pytest.mark.ado_test
 def test_create_table(adr_service_create) -> bool:
     _ = adr_service_create.start(
         create_db=True,
@@ -268,6 +272,7 @@ def test_get_tags(adr_service_query) -> bool:
     assert success is True and len(tags) == 36
 
 
+@pytest.mark.ado_test
 def test_add_tag(adr_service_query) -> bool:
     success = False
     try:

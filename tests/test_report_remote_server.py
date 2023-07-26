@@ -1,6 +1,7 @@
 from os import environ
 from os.path import isdir, join
 from random import random
+import pytest
 import shutil
 import uuid
 
@@ -42,6 +43,7 @@ def test_copy_item(adr_service_query, request, get_exec) -> bool:
     assert succ
 
 
+@pytest.mark.ado_test
 def test_start_stop(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "create_delete")
     port_r = 8000 + int(random() * 4000)
@@ -173,6 +175,7 @@ def test_server_token(adr_service_create) -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_server_guids(adr_service_create) -> bool:
     _ = adr_service_create.start(
         create_db=True,
@@ -188,6 +191,7 @@ def test_server_guids(adr_service_create) -> bool:
     assert succ and succ_two and succ_three
 
 
+@pytest.mark.ado_test
 def test_default() -> bool:
     s = r.Server()
     succ = False
@@ -206,11 +210,13 @@ def test_default() -> bool:
     assert succ and succ_two and succ_three
 
 
+@pytest.mark.ado_test
 def test_template() -> bool:
     s = r.Server()
     assert isinstance(s.create_template(parent=s.create_template()), ro.basicREST)
 
 
+@pytest.mark.ado_test
 def test_url_query() -> bool:
     s = r.Server()
     s.cur_url = "http://localhost:8000"
@@ -266,6 +272,7 @@ def test_export_html(adr_service_query) -> bool:
     assert success is True
 
 
+@pytest.mark.ado_test
 def test_export_pdf(adr_service_query, get_exec) -> bool:
     exec_basis = get_exec
     success = False
@@ -299,6 +306,7 @@ def test_export_pdf(adr_service_query, get_exec) -> bool:
     assert success is True
 
 
+@pytest.mark.ado_test
 def test_export_pptx(adr_service_query) -> bool:
     success = False
     try:

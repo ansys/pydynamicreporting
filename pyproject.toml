@@ -101,6 +101,7 @@ markers =[
     "integration:Run integration tests",
     "smoke:Run the smoke tests",
     "unit:Run the unit tests",
+    "ado_test: subset of tests to be run in the ADO pipeline for ADR",
 ]
 norecursedirs =[
   ".git",

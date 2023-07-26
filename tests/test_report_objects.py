@@ -1,14 +1,17 @@
 import datetime
 import json
+import pytest
 import uuid
 
 from ansys.dynamicreporting.core.utils import report_objects as ro
 
 
+@pytest.mark.ado_test
 def test_convert_color() -> bool:
     assert ro.convert_color([1, 2, 3]) == "#ff1fe2fd"
 
 
+@pytest.mark.ado_test
 def test_convert_syle() -> bool:
     one = ro.convert_style(1, 0) == "none"
     two = ro.convert_style(1, 1) == "dot"
@@ -16,6 +19,7 @@ def test_convert_syle() -> bool:
     assert one and two and three
 
 
+@pytest.mark.ado_test
 def test_convert_marker() -> bool:
     one = ro.convert_marker(1) == "circle"
     two = ro.convert_marker(2) == "circle-open"
@@ -25,6 +29,7 @@ def test_convert_marker() -> bool:
     assert one and two and three and four and five
 
 
+@pytest.mark.ado_test
 def test_convert_label_format() -> bool:
     one = ro.convert_label_format("aaaf") == "floatdota"
     two = ro.convert_label_format("aaa") == "scientific"
@@ -32,10 +37,12 @@ def test_convert_label_format() -> bool:
     assert one and two and three
 
 
+@pytest.mark.ado_test
 def test_title_units() -> bool:
     assert ro.get_title_units("a", "v") == "a"
 
 
+@pytest.mark.ado_test
 class e_query:
     def __init__(self, norx=False, nory=False):
         self.QUERY_DATA = {
@@ -59,6 +66,7 @@ class e_query:
         self.RGB = [1.0, 0.0, 0.0]
 
 
+@pytest.mark.ado_test
 class e_plotter:
     def __init__(self):
         self.QUERIES = [e_query(), e_query(norx=True, nory=True)]
@@ -79,31 +87,37 @@ class e_plotter:
         self.AXISXLABELFORMAT = "%g"
 
 
+@pytest.mark.ado_test
 def test_extract_data_query() -> bool:
     a = e_query()
     assert (ro.extract_data_from_ensight_query(a) == [[0, 1], [0, 3]]).all()
 
 
+@pytest.mark.ado_test
 def test_extract_data_query_norm() -> bool:
     a = e_query(norx=True, nory=True)
     assert (ro.extract_data_from_ensight_query(a) == [[0, 1], [0, 1]]).all()
 
 
+@pytest.mark.ado_test
 def test_extract_data_plotter() -> bool:
     a = e_plotter()
     assert isinstance(ro.map_ensight_plot_to_table_dictionary(a), dict)
 
 
+@pytest.mark.ado_test
 def test_split_quoted() -> bool:
     assert ro.split_quoted_string_list(s="aa,aa", deliminator=",") == ["aa", "aa"]
 
 
+@pytest.mark.ado_test
 def test_query_parse() -> bool:
     one = ro.parse_filter(query="A|i_name|eq|test;")
     two = ro.parse_filter(query=b"A|i_name|eq|test;")
     assert len(one) == len(two) == 1
 
 
+@pytest.mark.ado_test
 def test_template() -> bool:
     a = ro.Template(initial_data={"a": 1}, mar="test")
     a.paste_reset()
@@ -114,6 +128,7 @@ def test_template() -> bool:
     assert params == mydict
 
 
+@pytest.mark.ado_test
 def test_template_types() -> bool:
     a = ro.Template(initial_data={"a": 1}, mar="test")
     one = a.report_type
@@ -121,6 +136,7 @@ def test_template_types() -> bool:
     assert one == "Layout:basic"
 
 
+@pytest.mark.ado_test
 def test_template_dirty() -> bool:
     a = ro.Template(initial_data={"a": 1}, mar="test")
     _ = a.from_json(json_dict={"a": 3})
@@ -128,16 +144,19 @@ def test_template_dirty() -> bool:
     assert a.get_dirty()
 
 
+@pytest.mark.ado_test
 def test_template_date() -> bool:
     a = ro.Template(initial_data={"a": 1}, mar="test")
     assert type(a.get_date_object()) is datetime.datetime
 
 
+@pytest.mark.ado_test
 def test_template_get() -> bool:
     a = ro.Template(initial_data={"a": 1}, mar="test")
     assert len(a.get_url_data()) == 2 and a.get_url_file() is None
 
 
+@pytest.mark.ado_test
 def test_tempalte_child() -> bool:
     a = ro.Template(initial_data={"a": 1}, mar="test")
     b = ro.Template()
@@ -145,6 +164,7 @@ def test_tempalte_child() -> bool:
     assert a.get_child_objects() == []
 
 
+@pytest.mark.ado_test
 def test_baserest() -> bool:
     a = ro.BaseRESTObject()
     a.generate_new_guid()
@@ -160,6 +180,7 @@ def test_baserest() -> bool:
     )
 
 
+@pytest.mark.ado_test
 def test_itemcategory() -> bool:
     a = ro.ItemCategoryREST()
     item = a.get_url_base_name()
@@ -170,12 +191,14 @@ def test_itemcategory() -> bool:
     )
 
 
+@pytest.mark.ado_test
 def test_itemcategory_dict() -> bool:
     a = ro.ItemCategoryREST()
     mydict = a.get_json_key_limits()
     assert mydict == {"name": 80}
 
 
+@pytest.mark.ado_test
 def test_itemcategory_url() -> bool:
     a = ro.ItemCategoryREST()
     success = False
@@ -186,6 +209,7 @@ def test_itemcategory_url() -> bool:
     assert success
 
 
+@pytest.mark.ado_test
 def test_category() -> bool:
     a = ro.ItemREST()
     one = a._validate_and_get_category(category="test")
@@ -212,6 +236,7 @@ def test_category() -> bool:
     assert one == "test" and two == "" and a.is_file_protocol() is False and succ_a
 
 
+@pytest.mark.ado_test
 def test_factory() -> bool:
     a = ro.TemplateREST()
     assert isinstance(
@@ -219,6 +244,7 @@ def test_factory() -> bool:
     ) and isinstance(a.factory(json_data={}), ro.TemplateREST)
 
 
+@pytest.mark.ado_test
 def test_templaterest() -> bool:
     a = ro.TemplateREST()
     a.reorder_children()
@@ -227,6 +253,7 @@ def test_templaterest() -> bool:
     assert len(a.get_url_data()) == 2
 
 
+@pytest.mark.ado_test
 def test_templaterest_params() -> bool:
     a = ro.TemplateREST()
     a.add_params()
@@ -245,6 +272,7 @@ def test_templaterest_params() -> bool:
     assert a.get_params() == {"b": 2, "a": 1} and succ and succ_two
 
 
+@pytest.mark.ado_test
 def test_templaterest_sort() -> bool:
     a = ro.TemplateREST()
     succ = a.get_sort_fields() == []
@@ -262,6 +290,7 @@ def test_templaterest_sort() -> bool:
     assert succ and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_templaterest_fields() -> bool:
     a = ro.TemplateREST()
     succ_three = a.get_sort_selection() == ""
@@ -292,6 +321,7 @@ def test_templaterest_fields() -> bool:
     assert succ_a and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_templaterest_filter() -> bool:
     a = ro.TemplateREST()
     strone = "firstfilter"
@@ -326,6 +356,7 @@ def test_templaterest_filter() -> bool:
     assert succ_a and succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_layout_col() -> bool:
     a = ro.LayoutREST()
     one = a.get_column_count()
@@ -343,6 +374,7 @@ def test_layout_col() -> bool:
     assert one == 1 and success and success_two
 
 
+@pytest.mark.ado_test
 def test_layout_col_width() -> bool:
     a = ro.LayoutREST()
     one = a.get_column_widths()
@@ -355,6 +387,7 @@ def test_layout_col_width() -> bool:
     assert one == [1.0] and success and a.get_column_widths() == [1, 2]
 
 
+@pytest.mark.ado_test
 def test_layout_html() -> bool:
     a = ro.LayoutREST()
     a.set_html(value="onetwo")
@@ -366,6 +399,7 @@ def test_layout_html() -> bool:
     assert success
 
 
+@pytest.mark.ado_test
 def test_set_comments() -> None:
     a = ro.LayoutREST()
     a.set_comments(value="lololol")
@@ -377,6 +411,7 @@ def test_set_comments() -> None:
     assert success
 
 
+@pytest.mark.ado_test
 def test_layout_transport() -> bool:
     a = ro.LayoutREST()
     zero = a.get_transpose()
@@ -396,6 +431,7 @@ def test_layout_transport() -> bool:
     assert 0 == zero and success and successtwo and res == "aa"
 
 
+@pytest.mark.ado_test
 def test_layout_skip() -> bool:
     a = ro.LayoutREST()
     zero = a.get_skip()
@@ -414,6 +450,7 @@ def test_layout_skip() -> bool:
     assert zero == 0 and success and successtwo and one == 1
 
 
+@pytest.mark.ado_test
 def test_gen() -> bool:
     a = ro.GeneratorREST()
     add = a.get_generated_items() == "add"
@@ -432,6 +469,7 @@ def test_gen() -> bool:
     assert add and success and successtwo and addtwo
 
 
+@pytest.mark.ado_test
 def test_gen_tags() -> bool:
     a = ro.GeneratorREST()
     one = a.get_append_tags()
@@ -444,11 +482,13 @@ def test_gen_tags() -> bool:
     assert one and success
 
 
+@pytest.mark.ado_test
 def test_basic() -> bool:
     _ = ro.basicREST()
     assert True
 
 
+@pytest.mark.ado_test
 def test_panel() -> bool:
     a = ro.panelREST()
     one = a.get_panel_style() == ""
@@ -462,6 +502,7 @@ def test_panel() -> bool:
     assert one and success and two
 
 
+@pytest.mark.ado_test
 def test_panel_link() -> bool:
     a = ro.panelREST()
     one = a.get_items_as_link() == 0
@@ -480,6 +521,7 @@ def test_panel_link() -> bool:
     assert one and success and successtwo and two
 
 
+@pytest.mark.ado_test
 def test_box() -> bool:
     a = ro.boxREST()
     one = a.get_children_layout() == {}
@@ -521,11 +563,13 @@ def test_box() -> bool:
     assert one and succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tabs() -> bool:
     _ = ro.tabsREST()
     assert True
 
 
+@pytest.mark.ado_test
 def test_carosel() -> bool:
     a = ro.carouselREST()
     one = a.get_animated() == 0
@@ -539,6 +583,7 @@ def test_carosel() -> bool:
     assert one and success and two
 
 
+@pytest.mark.ado_test
 def test_carosel_dot() -> bool:
     a = ro.carouselREST()
     one = a.get_slide_dots() == 20
@@ -552,6 +597,7 @@ def test_carosel_dot() -> bool:
     assert one and success and two
 
 
+@pytest.mark.ado_test
 def test_slider() -> bool:
     a = ro.sliderREST()
     succ = a.get_map_to_slider() == []
@@ -577,6 +623,7 @@ def test_slider() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_foot_head() -> bool:
     _ = ro.footerREST()
     _ = ro.headerREST()
@@ -584,6 +631,7 @@ def test_foot_head() -> bool:
     assert True
 
 
+@pytest.mark.ado_test
 def test_iterator() -> bool:
     a = ro.iteratorREST()
     succ = a.get_iteration_tags() == ["", ""]
@@ -635,6 +683,7 @@ def test_iterator() -> bool:
     assert succ_a and succ_b and succ_c
 
 
+@pytest.mark.ado_test
 def test_toc() -> bool:
     a = ro.tocREST()
     succ = a.get_toc() is None
@@ -652,6 +701,7 @@ def test_toc() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_link() -> bool:
     a = ro.reportlinkREST()
     a.get_report_link()
@@ -666,6 +716,7 @@ def test_link() -> bool:
     assert succ and succ_two
 
 
+@pytest.mark.ado_test
 def test_table_merge() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_merging_param() == "row"
@@ -684,6 +735,7 @@ def test_table_merge() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablemerge_title() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_table_name() == ""
@@ -697,6 +749,7 @@ def test_tablemerge_title() -> bool:
     assert succ and succ_two and succ_three
 
 
+@pytest.mark.ado_test
 def test_tablemerge_source() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_sources() == ["*|duplicate"]
@@ -730,6 +783,7 @@ def test_tablemerge_source() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablemerge_tag() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_rename_tag() == ""
@@ -744,6 +798,7 @@ def test_tablemerge_tag() -> bool:
     assert succ and succ_two and succ_three
 
 
+@pytest.mark.ado_test
 def test_tablemerge_labels() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_use_labels() == 1
@@ -762,6 +817,7 @@ def test_tablemerge_labels() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablemerge_setids() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_use_ids() == ""
@@ -799,6 +855,7 @@ def test_tablemerge_setids() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablemerge_ids_one() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_id_selection() == "all"
@@ -817,6 +874,7 @@ def test_tablemerge_ids_one() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablemerge_ids() -> bool:
     a = ro.tablemergeREST()
     a.params = json.dumps({"merge_params": {"merge_type": "0", "column_merge": "all"}})
@@ -875,6 +933,7 @@ def test_tablemerge_ids() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablemerge_unknown() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_unknown_value() == "nan"
@@ -888,6 +947,7 @@ def test_tablemerge_unknown() -> bool:
     assert succ and succ_two and succ_three
 
 
+@pytest.mark.ado_test
 def test_tablemerge_transp() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_table_transpose() == 0
@@ -906,6 +966,7 @@ def test_tablemerge_transp() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablemerge_numeric() -> bool:
     a = ro.tablemergeREST()
     succ = a.get_numeric_output() == 0
@@ -924,6 +985,7 @@ def test_tablemerge_numeric() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablemerge_nameparam() -> bool:
     a = ro.tablereduceREST()
     succ = a.get_reduce_param() == "row"
@@ -951,6 +1013,7 @@ def test_tablemerge_nameparam() -> bool:
     assert succ_a and succ_five and succ_six and succ_seven
 
 
+@pytest.mark.ado_test
 def test_tablemerge_operation() -> bool:
     a = ro.tablereduceREST()
     succ = a.get_operations() == []
@@ -1010,6 +1073,7 @@ def test_tablemerge_operation() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablemerge_transpose() -> bool:
     a = ro.tablereduceREST()
     succ = a.get_table_transpose() == 0
@@ -1033,6 +1097,7 @@ def test_tablemerge_transpose() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_tablereduce_numeric() -> bool:
     a = ro.tablereduceREST()
     succ = a.get_numeric_output() == 0
@@ -1051,6 +1116,7 @@ def test_tablereduce_numeric() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablerowcol() -> bool:
     a = ro.tablerowcolumnfilterREST()
     a = ro.tablerowcolumnfilterREST()
@@ -1092,6 +1158,7 @@ def test_tablerowcol() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablerowcol_col() -> bool:
     a = ro.tablerowcolumnfilterREST()
     succ = a.get_filter_columns() == ["*"]
@@ -1123,6 +1190,7 @@ def test_tablerowcol_col() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five and succ_six
 
 
+@pytest.mark.ado_test
 def test_tablerowcol_invertsort() -> bool:
     a = ro.tablerowcolumnfilterREST()
     succ = a.get_invert() == 0
@@ -1162,6 +1230,7 @@ def test_tablerowcol_invertsort() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablerowcol_transp() -> bool:
     a = ro.tablerowcolumnfilterREST()
     succ = a.get_table_transpose() == 0
@@ -1180,6 +1249,7 @@ def test_tablerowcol_transp() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_tablevaluefilter() -> bool:
     a = ro.tablevaluefilterREST()
     succ = a.get_table_name() == ""
@@ -1219,6 +1289,7 @@ def test_tablevaluefilter() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablevaluefilter_filter() -> bool:
     a = ro.tablevaluefilterREST()
     a.get_filter()
@@ -1334,6 +1405,7 @@ def test_tablevaluefilter_filter() -> bool:
     assert succ_a + succ_b + succ_c + succ_d + succ_e + succ_f
 
 
+@pytest.mark.ado_test
 def test_tablevaluefilter_filterparams() -> bool:
     a = ro.tablevaluefilterREST()
     a.params = '{"filter": "specific"}'
@@ -1351,6 +1423,7 @@ def test_tablevaluefilter_filterparams() -> bool:
     assert succ_one and succ_two and succ_three and succ_four and succ_five and succ_six
 
 
+@pytest.mark.ado_test
 def test_tablevaluefilter_invertdate() -> bool:
     a = ro.tablevaluefilterREST()
     succ = a.get_invert_filter() == 0
@@ -1384,6 +1457,7 @@ def test_tablevaluefilter_invertdate() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_tablesort() -> bool:
     a = ro.tablesortfilterREST()
     succ = a.get_table_name() == "sorted table"
@@ -1437,6 +1511,7 @@ def test_tablesort() -> bool:
     assert succ_a and succ_b and succ_c
 
 
+@pytest.mark.ado_test
 def test_tablesort_column() -> bool:
     a = ro.tablesortfilterREST()
     succ = a.get_sort_columns() == []
@@ -1475,6 +1550,7 @@ def test_tablesort_column() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_treerule() -> bool:
     a = ro.treemergeREST()
     succ = a.get_merge_rule() == "all"
@@ -1494,6 +1570,7 @@ def test_treerule() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_treevalue() -> bool:
     a = ro.treemergeREST()
     succ = False
@@ -1522,6 +1599,7 @@ def test_treevalue() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_sqlite_name() -> bool:
     a = ro.sqlqueriesREST()
     succ = a.get_db_type() == "SQLite"
@@ -1556,6 +1634,7 @@ def test_sqlite_name() -> bool:
     assert succ_a and succ_b
 
 
+@pytest.mark.ado_test
 def test_sqlite_postgre() -> bool:
     a = ro.sqlqueriesREST()
     a.set_db_type(value="SQLite")
@@ -1580,6 +1659,7 @@ def test_sqlite_postgre() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_squile_query() -> bool:
     a = ro.sqlqueriesREST()
     succ = a.get_query() == ""
@@ -1594,6 +1674,7 @@ def test_squile_query() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_pptx() -> bool:
     a = ro.pptxREST()
     a.input_pptx = "a"
@@ -1605,12 +1686,14 @@ def test_pptx() -> bool:
     assert succ and succ_two and succ_three
 
 
+@pytest.mark.ado_test
 def test_pptx_slide() -> bool:
     a = ro.pptxslideREST()
     a.source_slide = "a"
     assert a.source_slide == "a"
 
 
+@pytest.mark.ado_test
 def test_datafilter() -> bool:
     a = ro.datafilterREST()
     a.filter_types = "a"
@@ -1629,6 +1712,7 @@ def test_datafilter() -> bool:
     assert a.filter_single_dropdown == "g"
 
 
+@pytest.mark.ado_test
 def test_unit_template() -> bool:
     a = ro.Template()
     succ = a.get_template_object(guid="a") is None
@@ -1647,6 +1731,7 @@ def test_unit_template() -> bool:
     assert succ and succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
 def test_unit_base() -> bool:
     a = ro.BaseRESTObject()
     succ_two = a.add_quotes(s=" 'abc' ") == "' 'abc' '"
