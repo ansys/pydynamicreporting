@@ -1,6 +1,7 @@
 import os
 from os.path import join
 import platform
+
 import pytest
 
 try:

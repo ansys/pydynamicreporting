@@ -1,8 +1,8 @@
 import datetime
-import pytest
 import uuid
 
 import numpy as np
+import pytest
 
 from ansys.dynamicreporting.core.utils import encoders as en
 from ansys.dynamicreporting.core.utils import report_utils as ru

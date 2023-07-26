@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 from ansys.dynamicreporting.core import Report, Service

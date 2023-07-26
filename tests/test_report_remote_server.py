@@ -1,10 +1,10 @@
 from os import environ
 from os.path import isdir, join
 from random import random
-import pytest
 import shutil
 import uuid
 
+import pytest
 import requests
 
 from ansys.dynamicreporting.core import Service

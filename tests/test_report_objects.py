@@ -1,7 +1,8 @@
 import datetime
 import json
-import pytest
 import uuid
+
+import pytest
 
 from ansys.dynamicreporting.core.utils import report_objects as ro
 

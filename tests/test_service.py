@@ -2,8 +2,9 @@
 
 
 from os.path import join
-import pytest
 from random import random
+
+import pytest
 
 from ansys.dynamicreporting.core import Report, Service, docker_support
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL

@@ -1,4 +1,5 @@
 from os.path import isdir, join
+
 import pytest
 
 from ansys.dynamicreporting.core.utils import geofile_processing as gp

@@ -1,6 +1,7 @@
 import pickle
-import pytest
 import uuid
+
+import pytest
 
 from ansys.dynamicreporting.core.utils import extremely_ugly_hacks as ex
 
