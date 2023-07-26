@@ -5,7 +5,7 @@ Connect services
 ================
 
 This example shows how to start an Ansys Dynamic Reporting
-service via a DOcker image, create a second instance of the ``Service``
+service via a Docker image, create a second instance of the ``Service``
 class, and connect it to the already running service. It then shows
 how to create and modify items in the original database with this
 new instance.
