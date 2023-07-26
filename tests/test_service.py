@@ -223,9 +223,7 @@ def test_connect_to_connected(adr_service_create) -> bool:
 def test_create_on_existing(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
     if get_exec != "":
-        tmp_adr = Service(
-            ansys_installation=get_exec, db_directory=db_dir
-        )
+        tmp_adr = Service(ansys_installation=get_exec, db_directory=db_dir)
     else:
         cleanup_docker(request)
         tmp_adr = Service(

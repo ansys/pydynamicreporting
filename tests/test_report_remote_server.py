@@ -359,7 +359,7 @@ def test_copy_template(adr_service_query, request, get_exec) -> bool:
     )
     adr_service_query.stop()
     tmp_adr.stop()
-    if get_exec == '':
+    if get_exec == "":
         cleanup_docker(request)
     assert succ
 
