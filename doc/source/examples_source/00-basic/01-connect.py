@@ -5,7 +5,7 @@ Connect services
 ================
 
 This example shows how to start an Ansys Dynamic Reporting
-service via a DOcker image, create a second instance of the ``Service``
+service via a Docker image, create a second instance of the ``Service``
 class, and connect it to the already running service. It then shows
 how to create and modify items in the original database with this
 new instance.
@@ -101,4 +101,5 @@ adr_service.visualize_report(filter=f"A|s_guid|cont|{connected_s.session_guid}")
 # Close the Ansys Dynamic Reporting service. The database with the items that
 # were created remains on disk.
 
+# sphinx_gallery_thumbnail_path = '_static/01_connect_3.png'
 adr_service.stop()

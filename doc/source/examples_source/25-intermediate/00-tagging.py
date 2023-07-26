@@ -80,4 +80,5 @@ dp3_items = adr_service.query(filter="A|i_tags|cont|dp=3")
 # Close the Ansys Dynamic Reporting service. The database with the items that
 # were created remains on disk.
 
+# sphinx_gallery_thumbnail_path = '_static/default_thumb.png'
 adr_service.stop()

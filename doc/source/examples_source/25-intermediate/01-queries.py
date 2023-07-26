@@ -89,4 +89,5 @@ test_five = len(dp0_items) == len(dp10_items) == len(dp33_items) == 2
 # Close the Ansys Dynamic Reporting service. The database with the items that
 # were created remains on disk.
 
+# sphinx_gallery_thumbnail_path = '_static/default_thumb.png'
 adr_service.stop()

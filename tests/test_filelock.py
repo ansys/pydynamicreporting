@@ -2,6 +2,8 @@ import os
 from os.path import join
 import platform
 
+import pytest
+
 try:
     import msvcrt
 except ImportError:
@@ -16,6 +18,7 @@ from ansys.dynamicreporting.core.utils import filelock as fl
 open_mode = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_TRUNC
 
 
+@pytest.mark.ado_test
 def test_timeout(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "time.txt")
@@ -24,6 +27,7 @@ def test_timeout(request) -> bool:
     assert "could not be acquired" in a.__str__()
 
 
+@pytest.mark.ado_test
 def test_base_acquire(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base.txt")
@@ -38,6 +42,7 @@ def test_base_acquire(request) -> bool:
     assert success
 
 
+@pytest.mark.ado_test
 def test_base_release(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base2.txt")
@@ -52,6 +57,7 @@ def test_base_release(request) -> bool:
     assert success
 
 
+@pytest.mark.ado_test
 def test_base_locked(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base3.txt")
@@ -60,6 +66,7 @@ def test_base_locked(request) -> bool:
     assert a.is_locked is False
 
 
+@pytest.mark.ado_test
 def test_base_rel(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base4.txt")
@@ -68,6 +75,7 @@ def test_base_rel(request) -> bool:
     assert a.release() is None
 
 
+@pytest.mark.ado_test
 def test_platform_lock(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "platform.txt")
@@ -87,6 +95,7 @@ def test_platform_lock(request) -> bool:
     assert one is None and two is None
 
 
+@pytest.mark.ado_test
 def test_soft(request) -> bool:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "soft.txt")

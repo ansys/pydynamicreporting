@@ -72,7 +72,8 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
 @pytest.fixture
 def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
-    db_dir = os.path.join(os.path.join(request.fspath.dirname, "test_data"), "query_db")
+    local_db = os.path.join("test_data", "query_db")
+    db_dir = os.path.join(request.fspath.dirname, local_db)
     if use_local:
         ansys_installation = pytestconfig.getoption("install_path")
     else:

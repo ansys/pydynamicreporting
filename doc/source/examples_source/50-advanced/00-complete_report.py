@@ -362,4 +362,5 @@ adr_service.visualize_report(report_name="Solution Analysis from Multiphysics si
 # Close the Ansys Dynamic Reporting service. The database with the items that
 # were created remains on disk.
 
+# sphinx_gallery_thumbnail_path = '_static/00_complete_report_0.png'
 adr_service.stop()

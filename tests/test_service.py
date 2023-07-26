@@ -4,6 +4,8 @@
 from os.path import join
 from random import random
 
+import pytest
+
 from ansys.dynamicreporting.core import Report, Service, docker_support
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import DatabaseDirNotProvidedError, PyadrException
@@ -12,6 +14,7 @@ from ansys.dynamicreporting.core.utils import report_remote_server
 from .conftest import cleanup_docker
 
 
+@pytest.mark.ado_test
 def test_unit_nexus() -> bool:
     valid = False
     a = Service()
@@ -22,6 +25,7 @@ def test_unit_nexus() -> bool:
     assert valid
 
 
+@pytest.mark.ado_test
 def test_unit_nexus_nosession(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile7.txt")
     a = Service(logfile=logfile)
@@ -34,6 +38,7 @@ def test_unit_nexus_nosession(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_nodbpath(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile8.txt")
     a = Service(logfile=logfile, db_directory="aaa")
@@ -46,6 +51,7 @@ def test_unit_nodbpath(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_nexus_stop(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile.txt")
     a = Service(logfile=logfile)
@@ -54,6 +60,7 @@ def test_unit_nexus_stop(request) -> bool:
     assert "There is no service connected to the current session" in f.read()
 
 
+@pytest.mark.ado_test
 def test_unit_nexus_connect(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_2.txt")
     a = Service(logfile=logfile)
@@ -66,6 +73,7 @@ def test_unit_nexus_connect(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_createitem() -> bool:
     a = Service()
     a.serverobj = report_remote_server.Server()
@@ -77,6 +85,7 @@ def test_unit_createitem() -> bool:
     assert valid
 
 
+@pytest.mark.ado_test
 def test_unit_query() -> bool:
     a = Service()
     a.serverobj = report_remote_server.Server()
@@ -84,18 +93,21 @@ def test_unit_query() -> bool:
     assert query_list == []
 
 
+@pytest.mark.ado_test
 def test_unit_invalidqueryone() -> bool:
     a = Service()
     valid = a.__check_filter__("F|i_type|cont|html;")
     assert valid is False
 
 
+@pytest.mark.ado_test
 def test_unit_invalidquerytwo() -> bool:
     a = Service()
     valid = a.__check_filter__("A|b_type|cont|html;")
     assert valid is False
 
 
+@pytest.mark.ado_test
 def test_unit_delete_invalid(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_4.txt")
     a = Service(logfile=logfile)
@@ -109,6 +121,7 @@ def test_unit_delete_invalid(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_delete() -> bool:
     a = Service()
     a.serverobj = report_remote_server.Server()
@@ -116,6 +129,7 @@ def test_unit_delete() -> bool:
     assert ret is False
 
 
+@pytest.mark.ado_test
 def test_unit_get_report(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_5.txt")
     a = Service(logfile=logfile)
@@ -128,6 +142,7 @@ def test_unit_get_report(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_get_listreport(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_9.txt")
     a = Service(logfile=logfile)
@@ -140,6 +155,7 @@ def test_unit_get_listreport(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_no_directory() -> bool:
     success = True
     try:
@@ -205,16 +221,20 @@ def test_connect_to_connected(adr_service_create) -> bool:
     assert "0" == try_again
 
 
-def test_create_on_existing(request) -> bool:
-    cleanup_docker(request)
+def test_create_on_existing(request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
-    tmp_adr = Service(
-        ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
-    )
+    if get_exec != "":
+        tmp_adr = Service(ansys_installation=get_exec, db_directory=db_dir)
+    else:
+        cleanup_docker(request)
+        tmp_adr = Service(
+            ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
+        )
     session_id = tmp_adr.start(create_db=True)
     assert session_id == "0"
 
 
+@pytest.mark.ado_test
 def test_stop_before_starting(adr_service_create) -> bool:
     success = adr_service_create.stop()
     assert success
@@ -225,12 +245,14 @@ def test_get_sessionid(adr_service_create) -> bool:
     assert session_id == adr_service_create.session_guid
 
 
+@pytest.mark.ado_test
 def test_query_sessions(adr_service_query) -> bool:
     len_queried = len(adr_service_query.query(query_type="Session"))
     adr_service_query.stop()
     assert 3 == len_queried
 
 
+@pytest.mark.ado_test
 def test_query_dataset(adr_service_query) -> bool:
     len_queried = len(adr_service_query.query(query_type="Dataset"))
     adr_service_query.stop()
@@ -244,9 +266,9 @@ def test_query_table(adr_service_query) -> bool:
     assert 1 == len(only_table)
 
 
+@pytest.mark.ado_test
 def test_delete_item(adr_service_query) -> bool:
     only_text = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
-    # a_text = only_text[0].item_text
     ret = adr_service_query.delete(only_text)
     newly_items = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
     adr_service_query.stop()
@@ -287,16 +309,22 @@ def test_vis_report_name(adr_service_query) -> bool:
     assert success is None
 
 
-def test_connect_to_running(adr_service_query, request) -> bool:
+@pytest.mark.ado_test
+def test_connect_to_running(adr_service_query, request, get_exec) -> bool:
     # Connect to a running service and make sure you can access the same dataset
-    all_items = adr_service_query.query(query_type="Item")
     db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
-    tmp_adr = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        port=8000 + int(random() * 4000),
-    )
+    all_items = adr_service_query.query(query_type="Item")
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+        )
     tmp_adr.connect(url=adr_service_query.url, session=adr_service_query.session_guid)
     all_items_second = tmp_adr.query(query_type="Item")
     adr_service_query.stop()
@@ -331,6 +359,7 @@ def test_docker_unit() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+@pytest.mark.ado_test
 def test_exception() -> bool:
     a = PyadrException()
     succ = a.__str__() == "An error occurred."

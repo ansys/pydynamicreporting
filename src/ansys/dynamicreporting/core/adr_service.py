@@ -210,14 +210,25 @@ class Service:
                 self._ansys_installation = ansys_installation
                 # verify new path
                 if not os.path.isdir(ansys_installation):
-                    raise InvalidAnsysPath(ansys_installation)
+                    # Option for local development build
+                    if os.environ.get("CEIDEVROOTDOS") is not None:
+                        self._ansys_installation = os.environ.get("CEIDEVROOTDOS")
+                    else:
+                        raise InvalidAnsysPath(ansys_installation)
             if self._ansys_version is None:
                 # try to get version from install path
-                matches = re.search(r".*v([0-9]{3}).*", ansys_installation)
-                try:
-                    self._ansys_version = int(matches.group(1))
-                except IndexError:
-                    raise AnsysVersionAbsentError
+                matches = re.search(r".*v([0-9]{3}).*", self._ansys_installation)
+                if matches is None:
+                    # Option for local development build
+                    if os.environ.get("ANSYS_REL_INT_I") is not None:
+                        self._ansys_version = int(os.environ.get("ANSYS_REL_INT_I"))
+                    else:
+                        raise AnsysVersionAbsentError
+                else:
+                    try:
+                        self._ansys_version = int(matches.group(1))
+                    except IndexError:
+                        raise AnsysVersionAbsentError
 
     @property
     def session_guid(self):

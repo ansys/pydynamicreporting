@@ -1,9 +1,12 @@
 import os
 
+import pytest
+
 from ansys.dynamicreporting.core import Report, Service
 from ansys.dynamicreporting.core.utils import report_remote_server
 
 
+@pytest.mark.ado_test
 def test_geturl_report(adr_service_query) -> bool:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     url = my_report.get_url()
@@ -33,10 +36,10 @@ def test_iframe_report(adr_service_query) -> bool:
     except SyntaxError:
         success = False
     adr_service_query.stop()
-
     assert success is True
 
 
+@pytest.mark.ado_test
 def test_unit_report_url(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_3.txt")
     a = Service(logfile=logfile)
@@ -65,6 +68,7 @@ def test_unit_report_visualize(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_report_iframe(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
@@ -79,6 +83,7 @@ def test_unit_report_iframe(request) -> bool:
     assert err_msg
 
 
+@pytest.mark.ado_test
 def test_unit_no_url(request) -> bool:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
