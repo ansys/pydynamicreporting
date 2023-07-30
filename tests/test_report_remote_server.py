@@ -168,7 +168,7 @@ def test_server_token(adr_service_create) -> bool:
     succ_three = s.get_last_error() == ""
     s.set_username(u=s.get_username())
     s.set_password(p=s.get_password())
-    succ_four = s.get_server_name() == "Nexus Database"
+    succ_four = s.get_server_name() == "ADR Database"
     succ_five = s.stop_server_allowed()
     s.stop_local_server()
     adr_service_create.stop()
