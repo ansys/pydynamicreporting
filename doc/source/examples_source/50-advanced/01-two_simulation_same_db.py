@@ -18,6 +18,10 @@ Use a single database and report template for multiple simluation results.
 # Start an Ansys Dynamic Reporting service with a new database. The path for the
 # database directory must be to an empty directory.
 
+from random import random as r
+
+import numpy as np
+
 import ansys.dynamicreporting.core as adr
 from ansys.dynamicreporting.core.utils import report_utils
 
@@ -40,9 +44,6 @@ session_guid = adr_service.start(create_db=True)
 # simulation would produce: a set of items pushed directly into the
 # database. Please note that each item is tagged with the corresponding
 # design point.
-
-from random import random as r
-import numpy as np
 
 
 def create_items(dp=0) -> None:
