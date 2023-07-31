@@ -43,7 +43,6 @@ def test_env_arch() -> bool:
     assert ("win" in local_arch) or ("lin" in local_arch)
 
 
-@pytest.mark.ado_test
 def test_enve_home() -> bool:
     enve_home = ru.enve_home()
     assert "ansys" in enve_home
