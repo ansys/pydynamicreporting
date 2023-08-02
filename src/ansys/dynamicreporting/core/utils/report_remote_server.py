@@ -9,9 +9,11 @@ except ImportError:
 
 import collections
 import configparser
+import functools
 import hashlib
 import inspect
 import json
+import logging
 import os
 import os.path
 from pathlib import Path
@@ -31,6 +33,19 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
+
+
+def disable_warn_logging(func):
+    # Decorator to suppress harmless warning messages
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.disable(logging.WARNING)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logging.disable(logging.NOTSET)
+
+    return wrapper
 
 
 def print_allowed():
@@ -220,6 +235,7 @@ class Server:
             return True
         return False
 
+    @disable_warn_logging
     def get_api_version(self):
         url = self.get_URL()
         if url is None:
