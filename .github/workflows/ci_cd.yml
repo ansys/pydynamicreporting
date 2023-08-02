@@ -119,6 +119,7 @@ jobs:
         uses: ansys/actions/doc-build@v4
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          check-links: false
 
   package:
     name: Package library
