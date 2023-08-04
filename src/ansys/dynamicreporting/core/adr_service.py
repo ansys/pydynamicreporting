@@ -352,7 +352,7 @@ class Service:
             session_guid = adr_service.start()
         """
         if self._db_directory is None:
-            self.logger.error(f"Error: There is no database associated with this Service.\n")
+            self.logger.error("Error: There is no database associated with this Service.\n")
             return "0"
 
         if exit_on_close or self._container:
