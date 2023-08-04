@@ -348,7 +348,7 @@ class Service:
             import ansys.dynamicreporting.core as adr
             installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
             adr_service = adr.Service(ansys_installation = installation_dir,
-            db_directory = r'D:\tmp\new_db', port = 8020)
+            db_directory = r'D:\\tmp\\new_db', port = 8020)
             session_guid = adr_service.start()
         """
         if self._db_directory is None:

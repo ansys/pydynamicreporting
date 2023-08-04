@@ -163,6 +163,7 @@ def test_no_directory() -> bool:
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory="",
+            logfile=None,
         )
         success = True
     except DatabaseDirNotProvidedError:
@@ -177,6 +178,7 @@ def test_no_docker(request) -> bool:
             ansys_installation="docker",
             docker_image="ghcr.io/ansys-internal/not_existing_docker",
             db_directory=join(join(request.fspath.dirname, "test_data"), "abc"),
+            logfile=None,
         )
         success = True
     except RuntimeError:
@@ -318,12 +320,14 @@ def test_connect_to_running(adr_service_query, request, get_exec) -> bool:
         tmp_adr = Service(
             ansys_installation=get_exec,
             db_directory=db_dir,
+            logfile=None,
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
+            logfile=None,
         )
     tmp_adr.connect(url=adr_service_query.url, session=adr_service_query.session_guid)
     all_items_second = tmp_adr.query(query_type="Item")
