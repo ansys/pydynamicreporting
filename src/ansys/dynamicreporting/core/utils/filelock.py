@@ -29,6 +29,7 @@
 
 # Modules
 # ------------------------------------------------
+import functools
 import logging
 import os
 import threading
@@ -65,6 +66,19 @@ __all__ = ["Timeout", "BaseFileLock", "WindowsFileLock", "UnixFileLock", "SoftFi
 __version__ = "2.0.10"
 
 logger = logging.getLogger(__name__)
+
+
+def disable_warn_logging(func):
+    # Decorator to suppress harmless warning messages
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.disable(logging.WARNING)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logging.disable(logging.NOTSET)
+
+    return wrapper
 
 
 # Exceptions
@@ -167,6 +181,7 @@ class BaseFileLock:
         """
         return self._lock_file_fd is not None
 
+    @disable_warn_logging
     def acquire(self, timeout=None, poll_intervall=0.05):
         """
         Acquires the file lock or fails with a :exc:`Timeout` error.
@@ -262,6 +277,7 @@ class BaseFileLock:
 
         return ReturnProxy(lock=self)
 
+    @disable_warn_logging
     def release(self, force=False):
         """
         Releases the file lock.

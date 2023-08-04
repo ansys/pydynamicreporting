@@ -97,7 +97,7 @@ class Service:
         data_directory: str = None,
         db_directory: str = None,
         port: int = DOCKER_DEFAULT_PORT,
-        logfile: str = None,
+        logfile: str = "stdout",
         ansys_installation: Optional[str] = None,
     ) -> None:
         """
@@ -128,9 +128,8 @@ class Service:
             Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
             case ``8000`` is used.
         logfile: str, optional
-            Location for the log file. The default is ``None``, in which case no
-            logging occurs. If this parameter is set to ``"stdout"``, logs are
-            written to stdout.
+            Location for the log file. The default is ``stdout``.
+            If this parameter is set to ``None``, no logging occurs.
         """
         self.serverobj = None
         self._session_guid = ""
@@ -348,9 +347,14 @@ class Service:
 
             import ansys.dynamicreporting.core as adr
             installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
-            adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
+            adr_service = adr.Service(ansys_installation = installation_dir,
+            db_directory = r'D:\tmp\new_db', port = 8020)
             session_guid = adr_service.start()
         """
+        if self._db_directory is None:
+            self.logger.error(f"Error: There is no database associated with this Service.\n")
+            return "0"
+
         if exit_on_close or self._container:
             atexit.register(self.stop)
             if exit_on_close and delete_db:
