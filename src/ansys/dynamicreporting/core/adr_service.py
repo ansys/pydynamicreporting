@@ -30,7 +30,7 @@ except ImportError:  # pragma: no cover
 
 import webbrowser
 
-from ansys.dynamicreporting.core.utils import report_objects, report_remote_server
+from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
 
 from .adr_item import Item
 from .adr_report import Report
@@ -38,10 +38,16 @@ from .adr_utils import dict_items, get_logger, in_ipynb, type_maps
 from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
 from .docker_support import DockerLauncher
 from .exceptions import (
+    AlreadyConnectedError,
     AnsysVersionAbsentError,
     CannotCreateDatabaseError,
+    ConnectionToServiceError,
     DatabaseDirNotProvidedError,
     InvalidAnsysPath,
+    MissingReportError,
+    MissingSession,
+    NotValidServer,
+    StartingServiceError,
 )
 
 
@@ -97,7 +103,7 @@ class Service:
         data_directory: str = None,
         db_directory: str = None,
         port: int = DOCKER_DEFAULT_PORT,
-        logfile: str = "stdout",
+        logfile: str = None,
         ansys_installation: Optional[str] = None,
     ) -> None:
         """
@@ -128,8 +134,9 @@ class Service:
             Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
             case ``8000`` is used.
         logfile: str, optional
-            Location for the log file. The default is ``stdout``.
-            If this parameter is set to ``None``, no logging occurs.
+            Location for the log file. The default is None.
+            If this parameter is set to ``stdout``, the output will be printed
+            to stdout.
         """
         self.serverobj = None
         self._session_guid = ""
@@ -186,6 +193,11 @@ class Service:
             try:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
+                if report_utils.is_port_in_use(self._port):
+                    self.logger.warning(
+                        f"Warning: port {self._port} is already in use. Replace with a new port\n"
+                    )
+                    self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
                 self._container.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
@@ -234,6 +246,7 @@ class Service:
         """GUID of the session associated with the service."""
         if self._session_guid == "":
             self.logger.error("No session attached to this instance.")
+            raise MissingSession
         else:
             return self._session_guid
 
@@ -288,7 +301,7 @@ class Service:
             self.serverobj.validate()
         except Exception:
             self.logger.error("Can not validate dynamic reporting server.\n")
-            return False
+            raise NotValidServer
         # set url after connection succeeds
         self._url = url
         # set session id
@@ -353,7 +366,7 @@ class Service:
         """
         if self._db_directory is None:
             self.logger.error("Error: There is no database associated with this Service.\n")
-            return "0"
+            raise DatabaseDirNotProvidedError
 
         if exit_on_close or self._container:
             atexit.register(self.stop)
@@ -363,6 +376,7 @@ class Service:
         session_id = "0"
         if self._url is not None:
             self.logger.error("Already connected to a service.\n")
+            raise AlreadyConnectedError
             return session_id
 
         if create_db:
@@ -377,7 +391,7 @@ class Service:
                             f"The directory for the new database {self._db_directory} is "
                             "not empty.\n"
                         )
-                        return session_id
+                        raise DatabaseDirNotProvidedError
                     else:
                         do_create = False
             if do_create:
@@ -391,7 +405,7 @@ class Service:
                             f"Error creating the database at the path {self._db_directory} in the "
                             "Docker container.\n"
                         )
-                        return session_id
+                        raise DatabaseDirNotProvidedError
                     for f in ["db.sqlite3", "view_report.nexdb"]:
                         db_file = os.path.join(self._db_directory, f)
                         if not os.path.isfile(db_file):
@@ -402,7 +416,7 @@ class Service:
                                 + f"Cannot find file {db_file}.\n"
                             )
                             self.logger(create_output)
-                            return session_id
+                            raise CannotCreateDatabaseError
                 else:
                     create_err = report_remote_server.create_new_local_database(
                         parent=None,
@@ -415,7 +429,7 @@ class Service:
                         self.logger.error(
                             f"Error creating the database at the path {self._db_directory}.\n"
                         )
-                        return session_id
+                        raise CannotCreateDatabaseError
 
         # launch the server
         if self._container:
@@ -430,7 +444,7 @@ class Service:
                     f"Error starting the service in the Docker container.\n{str(e)}\n"
                 )
                 self.logger.error(f"Service started on port {self._port}")
-                return session_id
+                raise StartingServiceError
             self.serverobj = report_remote_server.Server(
                 url=f"http://127.0.0.1:{self._port}", username=username, password=password
             )
@@ -460,19 +474,19 @@ class Service:
                     + f"db_directory: {self._db_directory}\n"
                     + f"{str(e)}\n"
                 )
-                return session_id
+                raise StartingServiceError
 
             if not launched:
                 self.logger.error(
                     f"Error starting the service.\ndb_directory: {self._db_directory}\n"
                 )
-                return session_id
+                raise StartingServiceError
 
         if not self.serverobj.validate():
             self.logger.error(
                 f"Error validating the service.\ndb_directory: {self._db_directory}\n"
             )
-            return session_id
+            raise NotValidServer
 
         self._url = self.serverobj.get_URL()
         self._session_guid = self.serverobj.get_default_session().guid
@@ -510,7 +524,7 @@ class Service:
         except Exception:
             pass
         if v is False:
-            self.logger.error("Error validating the connected service. Can't shut it down.\n")
+            self.logger.warning("Error validating the connected service. Can't shut it down.\n")
         else:
             # If coming from a docker image, clean that up
             try:
@@ -522,7 +536,7 @@ class Service:
                     self.logger.info("Told service to shutdown.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.error(f"Problem shutting down service.\n{str(e)}\n")
+                self.logger.warning(f"Problem shutting down service.\n{str(e)}\n")
                 pass
 
         if self._delete_db and self._db_directory:
@@ -620,14 +634,14 @@ class Service:
             adr_service.visualize_report()
         """
         if self.serverobj is None:
-            self.logger.error("No connection to any report")
-            return
+            self.logger.error("No connection to any service")
+            raise ConnectionToServiceError
         url = self._url + "/reports/report_display/?"
         if report_name:
             all_reports = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
             if report_name not in [x.name for x in all_reports]:
                 self.logger.error("report_name must exist")
-                return
+                raise MissingReportError
             reportobj = [x for x in all_reports if x.name == report_name][0]
             url += "view=" + reportobj.guid + "&"
         url += "usemenus=off"
@@ -777,7 +791,7 @@ class Service:
         ret = codes.bad
         if type(items) is not list:
             self.logger.error("Error: passed argument is not a list")
-            return False
+            raise TypeError
         items_to_delete = [x.item for x in items if type(x) is Item]
         # Check the input
         not_items = [x for x in items if type(x) is not Item]
@@ -841,9 +855,14 @@ class Service:
         """
         if self.serverobj is None:
             self.logger.error("Error: no connection to any service")
-            return None
+            raise ConnectionToServiceError
         my_report = Report(service=self, report_name=report_name)
-        return my_report
+        success = my_report.__find_report_obj__()
+        if success:
+            return my_report
+        else:
+            self.logger.error("Error: there is no report with the name {report_name}.")
+            raise MissingReportError
 
     def get_list_reports(self, r_type: Optional[str] = "name") -> list:
         """
@@ -879,7 +898,7 @@ class Service:
         r_list = []
         if self.serverobj is None:
             self.logger.error("Error: no connection to any service")
-            return None
+            raise ConnectionToServiceError
         elif r_type in supported_types:
             all_reports = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
             if r_type == "name":

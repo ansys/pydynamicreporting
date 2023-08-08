@@ -23,7 +23,6 @@ def test_copy_item(adr_service_query, request, get_exec) -> bool:
             ansys_installation=get_exec,
             db_directory=db_dir,
             port=8000 + int(random() * 4000),
-            logfile=None,
         )
     else:
         tmp_adr = Service(
@@ -31,7 +30,6 @@ def test_copy_item(adr_service_query, request, get_exec) -> bool:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             port=8000 + int(random() * 4000),
-            logfile=None,
         )
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     s = tmp_adr.serverobj
@@ -54,7 +52,6 @@ def test_start_stop(request, get_exec) -> bool:
             ansys_installation=get_exec,
             db_directory=db_dir,
             port=port_r,
-            logfile=None,
         )
     else:
         cleanup_docker(request)
@@ -63,7 +60,6 @@ def test_start_stop(request, get_exec) -> bool:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             port=port_r,
-            logfile=None,
         )
     succ = True
     try:
@@ -108,7 +104,6 @@ def test_fail_newdb(request, get_exec) -> bool:
             ansys_installation=get_exec,
             db_directory=db_dir,
             port=port_r,
-            logfile=None,
         )
     else:
         cleanup_docker(request)
@@ -117,7 +112,6 @@ def test_fail_newdb(request, get_exec) -> bool:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             port=port_r,
-            logfile=None,
         )
     succ = True
     try:
@@ -350,7 +344,6 @@ def test_copy_template(adr_service_query, request, get_exec) -> bool:
             ansys_installation=get_exec,
             db_directory=db_dir,
             port=8000 + int(random() * 4000),
-            logfile=None,
         )
     else:
         tmp_adr = Service(
@@ -358,7 +351,6 @@ def test_copy_template(adr_service_query, request, get_exec) -> bool:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             port=8000 + int(random() * 4000),
-            logfile=None,
         )
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     s = tmp_adr.serverobj
@@ -396,7 +388,6 @@ def test_acls_start(request, get_exec) -> bool:
             ansys_installation=get_exec,
             db_directory=db_dir,
             port=port_r,
-            logfile=None,
         )
     else:
         cleanup_docker(request)
@@ -405,7 +396,6 @@ def test_acls_start(request, get_exec) -> bool:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             port=port_r,
-            logfile=None,
         )
     r.create_new_local_database(
         parent=None,

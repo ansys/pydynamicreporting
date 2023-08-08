@@ -56,7 +56,6 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             port=8000 + int(random() * 4000),
-            logfile=None,
         )
     else:
         cleanup_docker(request)
@@ -66,7 +65,6 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
             db_directory=db_dir,
             data_directory=tmp_docker_dir,
             port=8000 + int(random() * 4000),
-            logfile=None,
         )
     return tmp_service
 
@@ -86,7 +84,6 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
         docker_image=DOCKER_DEV_REPO_URL,
         db_directory=db_dir,
         port=8000 + int(random() * 4000),
-        logfile=None,
     )
     tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)
     return tmp_service
