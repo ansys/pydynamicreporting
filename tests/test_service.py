@@ -8,7 +8,16 @@ import pytest
 
 from ansys.dynamicreporting.core import Report, Service, docker_support
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
-from ansys.dynamicreporting.core.exceptions import DatabaseDirNotProvidedError, PyadrException
+from ansys.dynamicreporting.core.exceptions import (
+    AlreadyConnectedError,
+    CannotCreateDatabaseError,
+    ConnectionToServiceError,
+    DatabaseDirNotProvidedError,
+    MissingReportError,
+    MissingSession,
+    NotValidServer,
+    PyadrException,
+)
 from ansys.dynamicreporting.core.utils import report_remote_server
 
 from .conftest import cleanup_docker
@@ -16,39 +25,37 @@ from .conftest import cleanup_docker
 
 @pytest.mark.ado_test
 def test_unit_nexus() -> bool:
-    valid = False
     a = Service()
+    success = False
     try:
         a.start()
-    except TypeError:
-        valid = True
-    assert valid
+    except DatabaseDirNotProvidedError:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
 def test_unit_nexus_nosession(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile7.txt")
     a = Service(logfile=logfile)
-    _ = a.session_guid
-    err_msg = False
-    with open(logfile) as file:
-        for line in file:
-            if "No session attached to this instance" in line:
-                err_msg = True
-    assert err_msg
+    success = False
+    try:
+        _ = a.session_guid
+    except MissingSession:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
 def test_unit_nodbpath(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile8.txt")
     a = Service(logfile=logfile, db_directory="aaa")
-    _ = a.start(create_db=True)
-    err_msg = False
-    with open(logfile) as file:
-        for line in file:
-            if "Error creating the database at the path" in line:
-                err_msg = True
-    assert err_msg
+    success = False
+    try:
+        _ = a.start(create_db=True)
+    except CannotCreateDatabaseError:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
@@ -64,13 +71,12 @@ def test_unit_nexus_stop(request) -> bool:
 def test_unit_nexus_connect(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_2.txt")
     a = Service(logfile=logfile)
-    a.connect(url=f"http://localhost:{8000 + int(random() * 4000)}")
-    err_msg = False
-    with open(logfile) as file:
-        for line in file:
-            if " Can not validate dynamic reporting server" in line:
-                err_msg = True
-    assert err_msg
+    success = False
+    try:
+        a.connect(url=f"http://localhost:{8000 + int(random() * 4000)}")
+    except NotValidServer:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
@@ -112,13 +118,12 @@ def test_unit_delete_invalid(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_4.txt")
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
-    a.delete("aa")
-    err_msg = False
-    with open(logfile) as file:
-        for line in file:
-            if "Error: passed argument is not a list" in line:
-                err_msg = True
-    assert err_msg
+    success = False
+    try:
+        a.delete("aa")
+    except TypeError:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
@@ -133,26 +138,24 @@ def test_unit_delete() -> bool:
 def test_unit_get_report(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_5.txt")
     a = Service(logfile=logfile)
-    _ = a.get_report(report_name="Abc")
-    err_msg = False
-    with open(logfile) as file:
-        for line in file:
-            if "Error: no connection to any service" in line:
-                err_msg = True
-    assert err_msg
+    success = False
+    try:
+        _ = a.get_report(report_name="Abc")
+    except ConnectionToServiceError:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
 def test_unit_get_listreport(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_9.txt")
     a = Service(logfile=logfile)
-    _ = a.get_list_reports()
-    err_msg = False
-    with open(logfile) as file:
-        for line in file:
-            if "Error: no connection to any service" in line:
-                err_msg = True
-    assert err_msg
+    success = False
+    try:
+        _ = a.get_list_reports()
+    except ConnectionToServiceError:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
@@ -213,12 +216,16 @@ def test_connect_to_connected(adr_service_create) -> bool:
         exit_on_close=True,
         delete_db=True,
     )
-    try_again = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
-    assert "0" == try_again
+    success = False
+    try:
+        _ = adr_service_create.start(
+            create_db=True,
+            exit_on_close=True,
+            delete_db=True,
+        )
+    except AlreadyConnectedError:
+        success = True
+    assert success
 
 
 def test_create_on_existing(request, get_exec) -> bool:
@@ -230,8 +237,12 @@ def test_create_on_existing(request, get_exec) -> bool:
         tmp_adr = Service(
             ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
         )
-    session_id = tmp_adr.start(create_db=True)
-    assert session_id == "0"
+    success = False
+    try:
+        _ = tmp_adr.start(create_db=True)
+    except DatabaseDirNotProvidedError:
+        success = True
+    assert success
 
 
 @pytest.mark.ado_test
@@ -299,14 +310,22 @@ def test_vis_report_filtered(adr_service_query) -> bool:
 
 
 def test_vis_not_running(adr_service_create) -> bool:
-    success = adr_service_create.visualize_report()
-    assert success is None
+    success = False
+    try:
+        adr_service_create.visualize_report()
+    except ConnectionToServiceError:
+        success = True
+    assert success
 
 
 def test_vis_report_name(adr_service_query) -> bool:
-    success = adr_service_query.visualize_report(report_name="Not existing")
+    success = False
+    try:
+        _ = adr_service_query.visualize_report(report_name="Not existing")
+    except MissingReportError:
+        success = True
     adr_service_query.stop()
-    assert success is None
+    assert success
 
 
 @pytest.mark.ado_test

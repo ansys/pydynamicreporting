@@ -30,7 +30,7 @@ except ImportError:  # pragma: no cover
 
 import webbrowser
 
-from ansys.dynamicreporting.core.utils import report_objects, report_remote_server
+from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
 
 from .adr_item import Item
 from .adr_report import Report
@@ -38,10 +38,16 @@ from .adr_utils import dict_items, get_logger, in_ipynb, type_maps
 from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
 from .docker_support import DockerLauncher
 from .exceptions import (
+    AlreadyConnectedError,
     AnsysVersionAbsentError,
     CannotCreateDatabaseError,
+    ConnectionToServiceError,
     DatabaseDirNotProvidedError,
     InvalidAnsysPath,
+    MissingReportError,
+    MissingSession,
+    NotValidServer,
+    StartingServiceError,
 )
 
 
@@ -76,6 +82,19 @@ class Service:
         Path to the directory where Ansys is installed locally. If Ansys is not
         installed locally but is to be run in a Docker image, set the
         value for this paraemter to ``"docker"``.
+
+
+    Raises
+    ------
+    DatabaseDirNotProvidedError
+        The ``"db_directory"`` argument has not been provided when using a Docker image.
+    CannotCreateDatabaseError
+        Can not create the ``"db_directory"`` when using a Docker image.
+    InvalidAnsysPath
+        The ``"ansys_installation"`` does not correspond to a valid Ansys installation.
+        directory
+    AnsysVersionAbsentError
+        Can not find the Ansys version number from the installation directory.
 
 
     Examples
@@ -128,9 +147,9 @@ class Service:
             Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
             case ``8000`` is used.
         logfile: str, optional
-            Location for the log file. The default is ``None``, in which case no
-            logging occurs. If this parameter is set to ``"stdout"``, logs are
-            written to stdout.
+            Location for the log file. The default is None.
+            If this parameter is set to ``stdout``, the output will be printed
+            to stdout.
         """
         self.serverobj = None
         self._session_guid = ""
@@ -187,6 +206,11 @@ class Service:
             try:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
+                if report_utils.is_port_in_use(self._port):
+                    self.logger.warning(
+                        f"Warning: port {self._port} is already in use. Replace with a new port\n"
+                    )
+                    self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
                 self._container.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
@@ -235,6 +259,7 @@ class Service:
         """GUID of the session associated with the service."""
         if self._session_guid == "":
             self.logger.error("No session attached to this instance.")
+            raise MissingSession
         else:
             return self._session_guid
 
@@ -249,7 +274,7 @@ class Service:
         username: str = "nexus",
         password: str = "cei",
         session: Optional[str] = "",
-    ) -> bool:
+    ) -> None:
         """
         Connect to a running service.
 
@@ -267,11 +292,12 @@ class Service:
             All created items are then pushed on this session. Visualizations
             are all filtered so that only items for this session are shown.
 
-        Returns
-        -------
-        bool
-            ``True`` when the connection is established, ``False`` when the
-            connection could not be established.
+
+        Raises
+        ------
+        NotValidServer
+            The current Service doesn not have a valid server associated to it.
+
 
         Examples
         --------
@@ -283,20 +309,20 @@ class Service:
         """
         if self._url is not None:  # pragma: no cover
             self.logger.warning("Already connected to a dynamic reporting service.\n")
-            return True
+            return
         self.serverobj = report_remote_server.Server(url=url, username=username, password=password)
         try:
             self.serverobj.validate()
         except Exception:
             self.logger.error("Can not validate dynamic reporting server.\n")
-            return False
+            raise NotValidServer
         # set url after connection succeeds
         self._url = url
         # set session id
         if session:
             self.serverobj.get_default_session().guid = session
         self._session_guid = self.serverobj.get_default_session().guid
-        return True
+        return
 
     def start(
         self,
@@ -339,8 +365,21 @@ class Service:
         Returns
         -------
         str
-            ID of the connected session. If the service could not be started,
-            ``0`` is returned.
+            ID of the connected session.
+
+
+        Raises
+        ------
+        DatabaseDirNotProvidedError
+            There is no database directory associated with the Service.
+        CannotCreateDatabaseError
+            Error when creating the database.
+        AlreadyConnectedError
+            Object is already connected to a running ADR service.
+        StartingServiceError
+            Can not start the ADR service.
+        NotValidServer
+            Can not validate the current ADR service.
 
         Examples
         --------
@@ -348,18 +387,22 @@ class Service:
 
             import ansys.dynamicreporting.core as adr
             installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
-            adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
+            adr_service = adr.Service(ansys_installation = installation_dir,
+            db_directory = r'D:\\tmp\\new_db', port = 8020)
             session_guid = adr_service.start()
         """
+        if self._db_directory is None:
+            self.logger.error("Error: There is no database associated with this Service.\n")
+            raise DatabaseDirNotProvidedError
+
         if exit_on_close or self._container:
             atexit.register(self.stop)
             if exit_on_close and delete_db:
                 self._delete_db = True
 
-        session_id = "0"
         if self._url is not None:
             self.logger.error("Already connected to a service.\n")
-            return session_id
+            raise AlreadyConnectedError
 
         if create_db:
             # create the database if instructed to do so
@@ -373,7 +416,7 @@ class Service:
                             f"The directory for the new database {self._db_directory} is "
                             "not empty.\n"
                         )
-                        return session_id
+                        raise CannotCreateDatabaseError
                     else:
                         do_create = False
             if do_create:
@@ -387,7 +430,7 @@ class Service:
                             f"Error creating the database at the path {self._db_directory} in the "
                             "Docker container.\n"
                         )
-                        return session_id
+                        raise CannotCreateDatabaseError
                     for f in ["db.sqlite3", "view_report.nexdb"]:
                         db_file = os.path.join(self._db_directory, f)
                         if not os.path.isfile(db_file):
@@ -398,7 +441,7 @@ class Service:
                                 + f"Cannot find file {db_file}.\n"
                             )
                             self.logger(create_output)
-                            return session_id
+                            raise CannotCreateDatabaseError
                 else:
                     create_err = report_remote_server.create_new_local_database(
                         parent=None,
@@ -411,7 +454,7 @@ class Service:
                         self.logger.error(
                             f"Error creating the database at the path {self._db_directory}.\n"
                         )
-                        return session_id
+                        raise CannotCreateDatabaseError
 
         # launch the server
         if self._container:
@@ -426,7 +469,7 @@ class Service:
                     f"Error starting the service in the Docker container.\n{str(e)}\n"
                 )
                 self.logger.error(f"Service started on port {self._port}")
-                return session_id
+                raise StartingServiceError
             self.serverobj = report_remote_server.Server(
                 url=f"http://127.0.0.1:{self._port}", username=username, password=password
             )
@@ -456,32 +499,27 @@ class Service:
                     + f"db_directory: {self._db_directory}\n"
                     + f"{str(e)}\n"
                 )
-                return session_id
+                raise StartingServiceError
 
             if not launched:
                 self.logger.error(
                     f"Error starting the service.\ndb_directory: {self._db_directory}\n"
                 )
-                return session_id
+                raise StartingServiceError
 
         if not self.serverobj.validate():
             self.logger.error(
                 f"Error validating the service.\ndb_directory: {self._db_directory}\n"
             )
-            return session_id
+            raise NotValidServer
 
         self._url = self.serverobj.get_URL()
         self._session_guid = self.serverobj.get_default_session().guid
         return self._session_guid
 
-    def stop(self) -> bool:
+    def stop(self) -> None:
         """
         Stop the service connected to the session.
-
-        Returns
-        -------
-        bool
-            ``True`` if the service was stopped, ``False`` otherwise.
 
         Examples
         --------
@@ -492,7 +530,7 @@ class Service:
             adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
             session_guid = adr_service.start(username = 'admin', password = 'mypsw',
             db_directory ='/tmp/dbase')
-            ret_stop = adr_service.stop()
+            adr_service.stop()
         """
 
         if self.serverobj is None:
@@ -506,7 +544,7 @@ class Service:
         except Exception:
             pass
         if v is False:
-            self.logger.error("Error validating the connected service. Can't shut it down.\n")
+            self.logger.warning("Error validating the connected service. Can't shut it down.\n")
         else:
             # If coming from a docker image, clean that up
             try:
@@ -518,7 +556,7 @@ class Service:
                     self.logger.info("Told service to shutdown.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.error(f"Problem shutting down service.\n{str(e)}\n")
+                self.logger.warning(f"Problem shutting down service.\n{str(e)}\n")
                 pass
 
         if self._delete_db and self._db_directory:
@@ -545,8 +583,6 @@ class Service:
 
         self.serverobj = None
         self._url = None
-
-        return True
 
     def __check_filter__(self, filter: str = ""):
         """
@@ -603,6 +639,13 @@ class Service:
         Report
             Rendered report.
 
+        Raises
+        ------
+        ConnectionToServiceError
+            There is no ADR service associated with the current object.
+        MissingReportError
+            The service does not have a report with the input name.
+
         Examples
         --------
         ::
@@ -616,14 +659,14 @@ class Service:
             adr_service.visualize_report()
         """
         if self.serverobj is None:
-            self.logger.error("No connection to any report")
-            return
+            self.logger.error("No connection to any service")
+            raise ConnectionToServiceError
         url = self._url + "/reports/report_display/?"
         if report_name:
             all_reports = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
             if report_name not in [x.name for x in all_reports]:
                 self.logger.error("report_name must exist")
-                return
+                raise MissingReportError
             reportobj = [x for x in all_reports if x.name == report_name][0]
             url += "view=" + reportobj.guid + "&"
         url += "usemenus=off"
@@ -742,7 +785,7 @@ class Service:
             )
         return queried_items
 
-    def delete(self, items: list) -> bool:
+    def delete(self, items: list) -> None:
         """
         Delete objects from the database.
 
@@ -755,11 +798,6 @@ class Service:
             .. note:: Deleting a session or a dataset also deletes all items
                associated with the session or dataset.
 
-        Returns
-        -------
-        bool
-            ``True`` if all items were deleted, ``False`` otherwise.
-
         Examples
         --------
         ::
@@ -770,10 +808,9 @@ class Service:
             all_items = adr_service.query(type='Item')
             adr_service.delete(all_items)
         """
-        ret = codes.bad
         if type(items) is not list:
             self.logger.error("Error: passed argument is not a list")
-            return False
+            raise TypeError
         items_to_delete = [x.item for x in items if type(x) is Item]
         # Check the input
         not_items = [x for x in items if type(x) is not Item]
@@ -805,10 +842,9 @@ class Service:
                 )
         # Finally removing from database
         try:
-            ret = self.serverobj.del_objects(items_to_delete)
+            _ = self.serverobj.del_objects(items_to_delete)
         except Exception as e:
             self.logger.warning(f"Error in deleting items: {e}")
-        return ret == codes.ok
 
     def get_report(self, report_name: str) -> Report:
         """
@@ -826,6 +862,13 @@ class Service:
         Object
             Report object. If no such object can be found, ``None`` is returned.
 
+        Raises
+        ------
+        ConnectionToServiceError
+            There is no ADR service associated with the current object.
+        MissingReportError
+            The service does not have a report with the input name.
+
         Examples
         --------
         ::
@@ -837,9 +880,14 @@ class Service:
         """
         if self.serverobj is None:
             self.logger.error("Error: no connection to any service")
-            return None
+            raise ConnectionToServiceError
         my_report = Report(service=self, report_name=report_name)
-        return my_report
+        success = my_report.__find_report_obj__()
+        if success:
+            return my_report
+        else:
+            self.logger.error("Error: there is no report with the name {report_name}.")
+            raise MissingReportError
 
     def get_list_reports(self, r_type: Optional[str] = "name") -> list:
         """
@@ -862,6 +910,11 @@ class Service:
             List of the top-level reports in the database. The list can be of the names
             of these reports or the ``Report`` items corresponding to these reports.
 
+        Raises
+        ------
+        ConnectionToServiceError
+            There is no ADR service associated with the current object.
+
         Examples
         --------
         ::
@@ -875,7 +928,7 @@ class Service:
         r_list = []
         if self.serverobj is None:
             self.logger.error("Error: no connection to any service")
-            return None
+            raise ConnectionToServiceError
         elif r_type in supported_types:
             all_reports = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
             if r_type == "name":
@@ -887,110 +940,3 @@ class Service:
         else:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
-
-
-#    def create_report(self, report_name: Optional[str] = "") -> None:
-#        """Create a top-level report.
-#
-#        A report filter filters out all items
-#
-#        Parameters
-#        ----------
-#        report_name : str
-#            Name of the report. This parameter must not be empty and the
-#            name specified must not match any existing report name.
-#
-#        Returns
-#        -------
-#            None
-#        """
-#        if report_name == "":
-#            self.logger.error("Need a report_name input")
-#            return
-#        # Verify there isn't already a template with such a name
-#        all_reports = self.serverobj.get_objects(
-#            objtype=core.report_objects.TemplateREST
-#        )
-#        if report_name in [x.name for x in all_reports]:
-#            self.logger.error("report_name must not already exist")
-#            return
-#        new_template = self.serverobj.create_template(
-#            name=report_name, parent=None, report_type="Layout:panel"
-#        )
-#        new_template.set_filter("A|i_name|cont|__filterallout__;")
-#        self.serverobj.put_objects(new_template)
-#
-#    def create_slider(self,images: Optional[list] = None, report_name: Optional[str] = "") -> None:
-#        """Create a slider template and add it to a report.
-
-#        Parameters
-#        ----------
-#        images : list, optional
-#            List of images for the slider. The default is ``None``. Each entry in the list
-#            is a dictionary with the following keys, which are used to create the slider
-#            controllers:
-#
-#            - ``"image"``: File that contains the image. Each subsequent key is information
-#              that represents the image.
-#            - ``"var"``: Variable for coloring the parts.
-#            - ``"time"``: Value of the timestep that the snapshot is taken at.
-#
-#        report_name : str, optional
-#            Name of the report to place the slider under.
-#        """
-#        Returns
-#        -------
-#        None
-
-#        if images is None:
-#            images = []
-#        if not images:
-#            self.logger.warning("No images passed")
-#            return
-#        if not report_name:
-#            self.logger.error("Need to input a report name")
-#            return
-#        uniquetag = str(uuid.uuid1())
-#        list_tags = []
-#        all_items = []
-#        for index_i, i in enumerate(images):
-#            if index_i * 10 % len(images) == 0:
-#                self.logger.info(f"Loading slider images progress: {index_i * 100 / len(images)}%")
-#            if "image" not in i.keys():
-#                self.logger.error("All entries must contain the image key")
-#                return
-#            a = Item(nexus=self)
-#            a.item_image = i["image"]
-#            for local_key in i.keys():
-#                if local_key != "image":
-#                    # Apparently, if the tag value is 0 / 1, Nexus interprets it as True/False bool
-#                    # Make it into a string to avoid it
-#                    if i[local_key] == 0.0 or i[local_key] == 1.0:
-#                        a.item.add_tag(local_key, str(i[local_key]))
-#                    else:
-#                        a.item.add_tag(local_key, i[local_key])
-#                    if local_key not in [x.split("|")[0] for x in list_tags]:
-#                        if type(i[local_key]) is float or type(i[local_key]) is int:
-#                            list_tags.append(local_key + "|numeric_up")
-#                        else:
-#                            list_tags.append(local_key + "|text_up")
-#            # add a tag to allow the template filter to get these elements
-#            a.item.add_tag("slidertag", uniquetag)
-#            all_items.append(a.item)
-#        self.serverobj.put_objects(all_items)
-#        # Create the slider and put it under the named report
-#        all_reports = self.serverobj.get_objects(
-#            objtype=core.report_objects.TemplateREST
-#        )
-#        if report_name not in [x.name for x in all_reports]:
-#            self.logger.error("Report name invalid")
-#            return
-#        my_parent = [x for x in all_reports if x.name == report_name][0]
-#        slider_template = self.serverobj.create_template(
-#            name="Slider Template", parent=my_parent, report_type="Layout:slider"
-#        )
-#        my_parent.add_filter("O|i_tags|cont|" + uniquetag + ";")
-#        slider_template.set_filter("A|i_tags|cont|" + uniquetag + ";")
-#        slider_template.set_map_to_slider(list_tags)
-#        self.serverobj.put_objects(slider_template)
-#        self.serverobj.put_objects(my_parent)

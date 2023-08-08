@@ -28,7 +28,6 @@ def test_create_scene(adr_service_create, request) -> bool:
         exit_on_close=True,
         delete_db=True,
     )
-    # filter_str = "A|i_type|cont|scene"
     my_scene = adr_service_create.create_item()
     my_scene.item_scene = join(
         join(join(request.fspath.dirname, "test_data"), "scenes"), "scene.avz"

@@ -41,4 +41,40 @@ class InvalidAnsysPath(PyadrException):
 class AnsysVersionAbsentError(PyadrException):
     """Exception raised when ANSYS version is absent."""
 
-    detail = "The ANSYS installation version has not been provided"
+    detail = "The ANSYS installation version has not been provided."
+
+
+class MissingSession(PyadrException):
+    """Exception raised when the ADR session absent."""
+
+    detail = "There is no session attached to this ADR instance."
+
+
+class NotValidServer(PyadrException):
+    """Exception raised if the ADR server can not be validated."""
+
+    detail = "Can not validate dynamic reporting server."
+
+
+class AlreadyConnectedError(PyadrException):
+    """Exception raised if the ADR service is already connected to a service."""
+
+    detail = "Already connected to a service."
+
+
+class StartingServiceError(PyadrException):
+    """Exception raised if the ADR service can not be started."""
+
+    detail = "Error starting the ADR service."
+
+
+class ConnectionToServiceError(PyadrException):
+    """Exception raised if can not connect to ADR service."""
+
+    detail = "Can not connect to ADR service."
+
+
+class MissingReportError(PyadrException):
+    """Exception raised if there is no report."""
+
+    detail = "Can not find the corresponding report."
