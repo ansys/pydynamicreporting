@@ -131,7 +131,7 @@ def test_unit_delete() -> bool:
     a = Service()
     a.serverobj = report_remote_server.Server()
     ret = a.delete([])
-    assert ret is False
+    assert ret is None
 
 
 @pytest.mark.ado_test
@@ -240,7 +240,7 @@ def test_create_on_existing(request, get_exec) -> bool:
     success = False
     try:
         _ = tmp_adr.start(create_db=True)
-    except DatabaseDirNotProvidedError:
+    except CannotCreateDatabaseError:
         success = True
     assert success
 
@@ -248,7 +248,7 @@ def test_create_on_existing(request, get_exec) -> bool:
 @pytest.mark.ado_test
 def test_stop_before_starting(adr_service_create) -> bool:
     success = adr_service_create.stop()
-    assert success
+    assert success is None
 
 
 def test_get_sessionid(adr_service_create) -> bool:
@@ -280,10 +280,10 @@ def test_query_table(adr_service_query) -> bool:
 @pytest.mark.ado_test
 def test_delete_item(adr_service_query) -> bool:
     only_text = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
-    ret = adr_service_query.delete(only_text)
+    adr_service_query.delete(only_text)
     newly_items = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
     adr_service_query.stop()
-    assert ret and len(newly_items) == 0
+    assert len(newly_items) == 0
 
 
 def test_vis_report(adr_service_query) -> bool:
