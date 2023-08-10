@@ -37,15 +37,26 @@ a Python client library that allows you to start and connect to an Ansys Dynamic
 service and control the database and reports. It also provides you with quick access to web
 components so that you can easily embed items or reports in other apps.
 
-
 Documentation and issues
 ------------------------
-For comprehensive information on PyDynamicReporting, see the latest release
-`documentation <https://dynamicreporting.docs.pyansys.com>`_.
+Documentation for the latest stable release of PyDynamicReporting is hosted at
+`PyDynamicReporting documentation <https://dynamicreporting.docs.pyansys.com/version/stable/>`_.
+
+In the upper right corner of the documentation's title bar, there is an option
+for switching from viewing the documentation for the latest stable release
+to viewing the documentation for the development version or previously
+released versions.
+
+You can also `view <https://cheatsheets.docs.pyansys.com/pydynamicreporting_cheat_sheet.png>`_ or
+`download <https://cheatsheets.docs.pyansys.com/pydynamicreporting_cheat_sheet.pdf>`_ the
+PyDynamicReporting cheat sheet. This one-page reference provides syntax rules and commands
+for using PyDynamicReporting.
 
 On the `PyDynamicReporting Issues <https://github.com/ansys/pydynamicreporting/issues>`_
-page, you can create issues to submit questions, report bugs, and request new
-features. This is the best place to post questions and code.
+page, you can create issues to report bugs and request new features. On the `Discussions <https://discuss.ansys.com/>`_
+page on the Ansys Developer portal, you can post questions, share ideas, and get community feedback.
+
+To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@ansys.com>`_.
 
 License
 -------
