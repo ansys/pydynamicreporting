@@ -760,6 +760,9 @@ def apply_timezone_workaround() -> None:
         import tzlocal
 
         _ = tzlocal.get_localzone_name()
+    except ModuleNotFoundError:
+        # tzlocal is only used by the Django code, so if it is not present,
+        return
     except KeyError as e:
         # Issue a warning
         import warnings
