@@ -1005,6 +1005,9 @@ def create_new_local_database(
 
         return False
 
+    # Check for Linux TZ issue
+    report_utils.apply_timezone_workaround()
+
     try:
         if run_local:
             # Make a random string that could be used as a secret key for the database
@@ -1347,6 +1350,9 @@ def launch_local_database_server(
 
     if return_info is None:
         return_info = dict()
+
+    # Check for Linux TZ issue
+    report_utils.apply_timezone_workaround()
 
     # Try to use a lock file to prevent port scanning collisions
     # We create a lockfiles in the user's home directory.  Under windows, we use LOCALAPPDATA to avoid
