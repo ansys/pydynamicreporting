@@ -742,26 +742,28 @@ def get_links_from_html(html):
 
 
 def apply_timezone_workaround() -> None:
-    """Apply a workaround for known Linux system misconfigurations
+    """
+    Apply a workaround for known Linux system misconfigurations.
 
-    There is a known issue on some Linux systems where the timezone configuration is incorrect.
-    On these systems, the get_localzone_name() call will raise an exception that prevents a
-    Django instance from starting.  This effects the Nexus server as well as the adr API for
-    doing things like creating a database.
+    There is a known issue on some Linux systems where the timezone configuration is
+    incorrect. On these systems, the get_localzone_name() call will raise an exception
+    that prevents a Django instance from starting.  This effects the Nexus server as
+    well as the adr API for doing things like creating a database.
 
     The work-around is to try to trigger the exception early and (on failure) set the TZ
     environmental variable  to a known value and warn the user that this has been done.
     If the user sets TZ or corrects the system misconfiguration, that will also fix the
     issue.
-
     """
     try:
         # Attempt to trigger the misconfiguration issue.
         import tzlocal
+
         _ = tzlocal.get_localzone_name()
     except KeyError as e:
         # Issue a warning
         import warnings
+
         msg = "The timezone of this session is not configured correctly, trying 'US/Eastern' : "
         warnings.warn(msg + str(e))
         # Try a relatively well known TZ
