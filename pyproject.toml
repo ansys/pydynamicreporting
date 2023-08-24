@@ -73,7 +73,7 @@ doc = [
     "numpydoc==1.5.0",
     "pillow==10.0.0",
     "pyansys-docker==5.0.4",
-    "Sphinx==7.1.1",
+    "Sphinx==7.2.3",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.13.0",
 ]
@@ -89,7 +89,7 @@ dev = [
     "pyansys-docker==5.0.4",
     "pytest==7.4.0",
     "pytest-cov==4.1.0",
-    "Sphinx==7.1.1",
+    "Sphinx==7.2.3",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.13.0",
 ]
