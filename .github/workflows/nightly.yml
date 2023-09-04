@@ -50,7 +50,7 @@ jobs:
         python-version: [ '3.8', '3.9', '3.10', '3.11' ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: 'refs/heads/main'
 
@@ -102,7 +102,7 @@ jobs:
     needs: [ nightly_test, nightly_and_upload]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Microsoft Teams Notification
         uses: jdcargile/ms-teams-notification@v1.3
         with:
