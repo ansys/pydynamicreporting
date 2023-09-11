@@ -717,7 +717,7 @@ class Service:
             ret = adr_service.connect()
             my_img = adr_service.create_item()
         """
-        a = Item(service=self, obj_name=obj_name, source=source)
+        a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
 
     def query(self, query_type: str = "Item", filter: Optional[str] = "") -> list:
