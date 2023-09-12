@@ -88,7 +88,7 @@ class Item:
         self._url = None
         self.logger = service.logger
         self.source = source
-        self.obj_name = obj_name
+        self.obj_name = str(obj_name)
         self.type = None
         self.item_text = ""
         """Text (HTML and LaTeX formatting)"""
