@@ -50,7 +50,7 @@ def disable_warn_logging(func):
 
 def print_allowed():
     # Note: calling print() from a pythonw interpreter (e.g. template_editor launched
-    # via the icon) an cause the interpreter to crash.  We will allow print, but only
+    # via the icon) can cause the interpreter to crash.  We will allow print, but only
     # if this is not a pythonw instance.
     return not sys.executable.lower().endswith("pythonw.exe")
 
@@ -104,6 +104,13 @@ class Server:
     """
 
     def __init__(self, url=None, username=None, password=None):
+        # Check on the validity of url formatting
+        if url is not None:
+            o = urlparse(url)
+            if o is False:
+                if print_allowed():
+                    print("Error: invalid URL. Setting it to None")
+                url = None
         self.cur_url = url
         self.cur_username = username
         self.cur_password = password
@@ -935,7 +942,8 @@ class Server:
                         continue
                     self._download_report(link, q_params["filename"], directory_name=directory_name)
             except Exception as e:
-                print(f"Unable to get pptx from report '{report_guid}': {e}")
+                if print_allowed():
+                    print(f"Unable to get pptx from report '{report_guid}': {e}")
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
 
