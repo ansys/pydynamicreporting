@@ -107,7 +107,8 @@ class Server:
         # Check on the validity of url formatting
         if url is not None:
             o = urlparse(url)
-            if o is False:
+            is_valid = True if o.scheme and o.netloc else False
+            if is_valid is False:
                 if print_allowed():
                     print("Error: invalid URL. Setting it to None")
                 url = None
