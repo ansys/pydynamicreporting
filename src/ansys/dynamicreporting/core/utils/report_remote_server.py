@@ -872,6 +872,17 @@ class Server:
         )
         worker.download()
 
+    def rec(self, r, a):
+        if r.children:
+            a.append(r)
+            for i in r.children:
+                newt = self.get_object_from_guid(i)
+                if newt not in a:
+                    self.rec(newt, a)
+        else:
+            a.append(r)
+            return a
+
     def export_report_as_pdf(
         self,
         report_guid,
@@ -882,11 +893,35 @@ class Server:
         delay=None,
         exec_basis=None,
         ansys_version=None,
+        image_size=False,
     ):
         if query is None:
             query = {}
         query["print"] = "pdf"
         url = self.build_url_with_query(report_guid, query)
+        # If image_size is set to True, set width and height to make sure
+        # only 2 images are printed per page. Needed for the Fluent export
+        # capability
+        if image_size:
+            root_report = self.get_object_from_guid(report_guid)
+            backup_width = root_report.get_property().get('width', 0)
+            backup_heigth = root_report.get_property().get('heigth', 0)
+            root_report.add_property({'width':800, 'height':600})
+            _ = self.put_objects(root_report)
+            rep_list = []
+            _ = self.rec(root_report, rep_list)
+            rep_logo = [i for i in rep_list if i.name == 'Logo']
+            for i in rep_logo:
+                i.add_property({'width':0, 'height':0})
+                _ = self.put_objects(i)
+                i_count = 0
+                walk_up = i
+                while root_report.guid != walk_up.guid and i_count < 5:
+                    i_count += 1
+                    walk_up = self.get_object_from_guid(walk_up.parent)
+                    _ = self.put_objects(walk_up) 
+            _ = self.put_objects(root_report)
+
         file_path = os.path.abspath(file_name)
         if has_qt and (parent is not None):
             from .report_download_pdf import NexusPDFSave
@@ -910,6 +945,10 @@ class Server:
         run_nexus_utility(
             cmd, use_software_gl=True, exec_basis=exec_basis, ansys_version=ansys_version
         )
+        if image_size:
+            root_report = self.get_object_from_guid(report_guid)
+            root_report.add_property({'width':backup_width, 'height':backup_heigth})
+            _ = self.put_objects(root_report)
 
     def export_report_as_pptx(self, report_guid, file_name, query=None):
         """Method to export a report template with guid of report_guid as a pptx file of
