@@ -9,6 +9,7 @@ except ImportError:
 
 import collections
 import configparser
+import copy
 import functools
 import hashlib
 import inspect
@@ -872,17 +873,6 @@ class Server:
         )
         worker.download()
 
-    def rec(self, r, a):
-        if r.children:
-            a.append(r)
-            for i in r.children:
-                newt = self.get_object_from_guid(i)
-                if newt not in a:
-                    self.rec(newt, a)
-        else:
-            a.append(r)
-            return a
-
     def export_report_as_pdf(
         self,
         report_guid,
@@ -902,53 +892,72 @@ class Server:
         # If image_size is set to True, set width and height to make sure
         # only 2 images are printed per page. Needed for the Fluent export
         # capability
-        if image_size:
+        if image_size:  # pragma: no cover
             root_report = self.get_object_from_guid(report_guid)
-            backup_width = root_report.get_property().get('width', 0)
-            backup_heigth = root_report.get_property().get('heigth', 0)
-            root_report.add_property({'width':800, 'height':600})
-            _ = self.put_objects(root_report)
-            rep_list = []
-            _ = self.rec(root_report, rep_list)
-            rep_logo = [i for i in rep_list if i.name == 'Logo']
-            for i in rep_logo:
-                i.add_property({'width':0, 'height':0})
+            reports_to_modify = {root_report: copy.deepcopy(root_report.get_property())}
+            root_report.add_property({"width": 800, "height": 600})
+            # This property will propagate to all the templates. Reset it to zero on the
+            # Logo template so the Logo image doesn't get resized.
+            # Ideally you want to walk the tree from root_report down and find the Logo
+            # templates only there. In practice, that's too time consuming so just
+            # modify all Logo templates in the database and then reset them.
+            temp_logo = [i for i in self.get_objects() if i.name == "Logo"]
+            logo_reports = [self.get_object_from_guid(i.guid) for i in temp_logo]
+            for i in logo_reports:
+                reports_to_modify[i] = copy.deepcopy(i.get_property())
+                i.add_property(
+                    {
+                        "width": i.get_property().get("width", 0),
+                        "height": i.get_property().get("height", 0),
+                    }
+                )
                 _ = self.put_objects(i)
-                i_count = 0
-                walk_up = i
-                while root_report.guid != walk_up.guid and i_count < 5:
-                    i_count += 1
-                    walk_up = self.get_object_from_guid(walk_up.parent)
-                    _ = self.put_objects(walk_up) 
+            # Set the footers to not be skipped
+            footers = self.get_objects(query="A|t_types|cont|footer;")
+            footer_reports = [self.get_object_from_guid(i.guid) for i in footers]
+            footer_backup = {}
+            for i in footer_reports:
+                footer_backup[i] = i.get_params()
+                i.add_params({"skip_empty": 0})
+                _ = self.put_objects(i)
             _ = self.put_objects(root_report)
 
-        file_path = os.path.abspath(file_name)
-        if has_qt and (parent is not None):
-            from .report_download_pdf import NexusPDFSave
+        try:
+            file_path = os.path.abspath(file_name)
+            if has_qt and (parent is not None):
+                from .report_download_pdf import NexusPDFSave
 
-            app = QtGui.QGuiApplication.instance()
-            worker = NexusPDFSave(app)
-            _ = worker.save_page_pdf(url, filename=file_path, page=page, delay=delay)
-            return
+                app = QtGui.QGuiApplication.instance()
+                worker = NexusPDFSave(app)
+                _ = worker.save_page_pdf(url, filename=file_path, page=page, delay=delay)
+                return
 
-        # ok, there is a bug in the 3.7 implementation of subprocess where
-        # args are not properly encoded under Windows.  To pass a URL, you
-        # cannot use '?' and '&' chars.  So, we support base64 encodes
-        # of the URLs here...
-        url = report_utils.encode_url(url)
-        cmd = ["report_save_pdf", url, file_path]
-        if page is not None:
-            page_string = "X".join(str(x) for x in page)
-            cmd.append(page_string)
-        if delay is not None:
-            cmd.append(str(delay))
-        run_nexus_utility(
-            cmd, use_software_gl=True, exec_basis=exec_basis, ansys_version=ansys_version
-        )
-        if image_size:
-            root_report = self.get_object_from_guid(report_guid)
-            root_report.add_property({'width':backup_width, 'height':backup_heigth})
-            _ = self.put_objects(root_report)
+            # ok, there is a bug in the 3.7 implementation of subprocess where
+            # args are not properly encoded under Windows.  To pass a URL, you
+            # cannot use '?' and '&' chars.  So, we support base64 encodes
+            # of the URLs here...
+            url = report_utils.encode_url(url)
+            cmd = ["report_save_pdf", url, file_path]
+            if page is not None:
+                page_string = "X".join(str(x) for x in page)
+                cmd.append(page_string)
+            if delay is not None:
+                cmd.append(str(delay))
+            run_nexus_utility(
+                cmd, use_software_gl=True, exec_basis=exec_basis, ansys_version=ansys_version
+            )
+        except Exception as e:
+            if print_allowed():
+                print(f"Unable to get pdf from report '{report_guid}': {e}")
+        finally:
+            if image_size:  # pragma: no cover
+                for k_report in reports_to_modify:
+                    k_report.set_property(reports_to_modify.get(k_report, {}))
+                    _ = self.put_objects(k_report)
+                for k_report in footer_backup:
+                    k_report.set_params(footer_backup[k_report])
+                    _ = self.put_objects(k_report)
+                _ = self.put_objects(root_report)
 
     def export_report_as_pptx(self, report_guid, file_name, query=None):
         """Method to export a report template with guid of report_guid as a pptx file of

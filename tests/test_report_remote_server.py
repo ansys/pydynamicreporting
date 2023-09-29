@@ -296,6 +296,13 @@ def test_export_pdf(adr_service_query, get_exec) -> bool:
             exec_basis=exec_basis,
             ansys_version=ansys_version,
         )
+        s.export_report_as_pdf(
+            report_guid=my_report.report.guid,
+            file_name="mytest",
+            exec_basis=exec_basis,
+            ansys_version=ansys_version,
+            image_size=True,
+        )
     else:
         # If no local installation, then you can not run the routine for pdf conversion. OSError expected.
         try:
