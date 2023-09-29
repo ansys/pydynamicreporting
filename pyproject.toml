@@ -69,7 +69,7 @@ tests = [
     "pytest-cov==4.1.0",
 ]
 doc = [
-    "ansys-sphinx-theme==0.11.2",
+    "ansys-sphinx-theme==0.12.1",
     "numpydoc==1.5.0",
     "pillow==10.0.1",
     "pyansys-docker==5.0.4",
@@ -81,7 +81,7 @@ dev = [
     "ipdb",
     "ipython",
     "whatsonpypi",
-    "ansys-sphinx-theme==0.11.2",
+    "ansys-sphinx-theme==0.12.1",
     "numpy==1.25.1",
     "numpydoc==1.5.0",
     "pillow==10.0.1",
