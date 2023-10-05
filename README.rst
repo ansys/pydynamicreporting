@@ -66,7 +66,7 @@ To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@a
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.7 through 3.11 on
+The ``pydynamicreporting`` package supports Python 3.9 through 3.12 on
 Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
