@@ -3,10 +3,21 @@ Getting started
 
 PyDynamicReporting supports Ansys Dynamic Reporting 2023 R2 and later. To run
 PyDynamicReporting, you must have either a local copy of an Ansys installation
-with a product that uses Ansys Dynamic Reporting or use a Docker image that
-PyDynamicReporting sets up for you.
+with a product that uses Ansys Dynamic Reporting or use a Docker image.
 
 To get a copy of Ansys, visit the `Ansys <https://www.ansys.com/>`_ website.
+
+.. note::
+
+   Up to the Ansys 2023 R2 release, Ansys Dynamic Reporting is installed as
+   part of the Ansys EnSight package, under the Fluids section of the
+   installer. Starting from the Ansys 2024 R1 release, Ansys Dynamic Reporting
+   is installed separately, and can be found in the Fluids section of the
+   Ansys installer. Please also note that in all versions, Ansys Dynamic Reporting
+   is automatically installed if one of the following Ansys products is
+   installed: EnSight, Forte, Fluent, Polyflow, Icepack.
+
+
 
 Installation
 ~~~~~~~~~~~~
@@ -18,7 +29,7 @@ To install the latest package from GitHub, run this command:
 
 .. code::
 
-    pip install ansys-dynamicreporting-core
+   pip install ansys-dynamicreporting-core
 
 
 If you plan on doing local *development* of PyDynamicReporting, install the
