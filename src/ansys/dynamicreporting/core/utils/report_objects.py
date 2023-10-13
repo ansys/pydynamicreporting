@@ -3263,6 +3263,16 @@ class pptxslideREST(LayoutREST):
         props["source_slide"] = value
         self.set_property(props)
 
+    @property
+    def exclude_from_toc(self):
+        return self.get_property().get("exclude_from_toc")
+
+    @exclude_from_toc.setter
+    def exclude_from_toc(self, value):
+        props = self.get_property()
+        props["exclude_from_toc"] = value
+        self.set_property(props)
+
 
 class datafilterREST(LayoutREST):
     """Representation of Data Filter Layout Template."""

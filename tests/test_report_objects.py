@@ -1692,6 +1692,8 @@ def test_pptx_slide() -> bool:
     a = ro.pptxslideREST()
     a.source_slide = "a"
     assert a.source_slide == "a"
+    a.exclude_from_toc = "1"
+    assert a.exclude_from_toc == "1"
 
 
 @pytest.mark.ado_test
