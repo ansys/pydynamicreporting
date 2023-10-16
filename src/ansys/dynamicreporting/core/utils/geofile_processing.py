@@ -198,7 +198,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str, exec_basis: str = None):
                 close_fds=True,
                 creationflags=create_flags,
             )
-        except Exception:
+        except Exception as e:
             print(f"Warning: unable to convert '{csf_file}' into AVZ format: {str(e)}")
     # At this point, if we have an original AVZ file or a converted udrw file, we
     # still look for proxy images.
@@ -212,5 +212,5 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str, exec_basis: str = None):
                         with open(os.path.join(avz_dir, "proxy.png"), "wb") as output_file:
                             output_file.write(data)
                     break
-    except Exception:
+    except Exception as e:
         print(f"Warning: unable to extract AVZ proxy image: {str(e)}")
