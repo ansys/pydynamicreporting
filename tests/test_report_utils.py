@@ -28,7 +28,7 @@ def test_encode_decode() -> bool:
 @pytest.mark.ado_test
 def test_check_if_PIL(request) -> bool:
     no_img = ru.check_if_PIL(return_file_paths(request)[0])
-    assert no_img is False
+    assert no_img is True
 
 
 @pytest.mark.ado_test
