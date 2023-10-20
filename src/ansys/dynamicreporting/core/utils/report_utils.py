@@ -1,10 +1,8 @@
 import array
 import base64
-import json
-import io
 from html.parser import HTMLParser as BaseHTMLParser
-from PIL import Image
-from PIL.TiffTags import TAGS
+import io
+import json
 import os
 import os.path
 import platform
@@ -13,10 +11,13 @@ import sys
 import tempfile
 from typing import List, Optional
 
+from PIL import Image
+from PIL.TiffTags import TAGS
 import requests
 
 try:
     import ceiversion
+
     has_cei = True
 except (ImportError, SystemError):
     has_cei = False
@@ -52,14 +53,16 @@ def encode_url(s):
     s = "b64:" + base64.b64encode(s.encode("utf-8")).decode("utf-8").replace("=", "_")
     return s
 
+
 def check_if_PIL(img):
-    """Check if the input image can be opened by PIL
-    
+    """
+    Check if the input image can be opened by PIL.
+
     Parameters
     ----------
     img:
         string or bytes representing the picture
-    
+
     Returns
     -------
     bool:
@@ -74,24 +77,25 @@ def check_if_PIL(img):
         # Check PIL can handle the img opening
         Image.open(imgbytes)
         return True
-    except:
+    except Exception:
         return False
     finally:
         imgbytes.close()
-    
+
+
 def is_enhanced(image):
-    """Check if the input PIL image is an enhanced picture
-    
+    """
+    Check if the input PIL image is an enhanced picture.
+
     Parameters
     ----------
     image:
         the input PIL image
-    
+
     Returns
     -------
     str:
         The json metadata, if enhanced. None otherwise
-
     """
     if not image.format == "TIFF":
         return None
@@ -107,7 +111,7 @@ def is_enhanced(image):
     if not all([first_channel, second_channel, third_channel]):
         return None
     image.seek(0)
-    meta_dict = {TAGS[key] : image.tag[key] for key in image.tag_v2}
+    meta_dict = {TAGS[key]: image.tag[key] for key in image.tag_v2}
     if not meta_dict.get("ImageDescription"):
         return None
     json_description = meta_dict["ImageDescription"][0]
@@ -118,18 +122,18 @@ def is_enhanced(image):
         return None
     return json_description
 
+
 def create_new_pil_image(pil_image):
-    """Convert the existing PIL image into a new PIL image
-    for enhanced export.
-    Reading an enhanced picture with PIL and save it directly
-    does not work, so a new set of pictures for each frame needs
-    to be generated.
+    """
+    Convert the existing PIL image into a new PIL image for enhanced export. Reading an
+    enhanced picture with PIL and save it directly does not work, so a new set of
+    pictures for each frame needs to be generated.
 
     Parameters
     ----------
     pil_image:
         the PIL image currently handled
-    
+
     Returns
     -------
     list:
@@ -143,9 +147,11 @@ def create_new_pil_image(pil_image):
     images.append(Image.fromarray(numpy.array(pil_image)))
     return images
 
+
 def save_tif_stripped(pil_image, data, metadata):
-    """Convert the existing pil image into a new TIF picture
-    which can be used for generating the required data for setting the payload
+    """
+    Convert the existing pil image into a new TIF picture which can be used for
+    generating the required data for setting the payload.
 
     Parameters
     ----------
@@ -155,23 +161,23 @@ def save_tif_stripped(pil_image, data, metadata):
     data:
         the dictionary holding the data for the payload
     metadata:
-        the JSON string holding the enhanced picture meatadata
+        the JSON string holding the enhanced picture metadata
 
     Returns
     -------
     data:
         the updated dictionary holding the data for the payload
-
     """
     buff = io.BytesIO()
     new_pil_images = create_new_pil_image(pil_image)
     tiffinfo_dir = {TIFFTAG_IMAGEDESCRIPTION: metadata}
     new_pil_images[0].save(
-        buff, "TIFF",
-        compression='deflate',
+        buff,
+        "TIFF",
+        compression="deflate",
         save_all=True,
-        append_images=[new_pil_images[1],new_pil_images[2]],
-        tiffinfo=tiffinfo_dir
+        append_images=[new_pil_images[1], new_pil_images[2]],
+        tiffinfo=tiffinfo_dir,
     )
     buff.seek(0)
     data["file_data"] = buff.read()
@@ -179,11 +185,11 @@ def save_tif_stripped(pil_image, data, metadata):
     buff.close()
     return data
 
-    
+
 def PIL_image_to_data(img, guid=None):
-    """Convert the input image to a dictionary
-    holding the data for the payload
-    
+    """
+    Convert the input image to a dictionary holding the data for the payload.
+
     Parameters
     ----------
     img:
@@ -194,7 +200,7 @@ def PIL_image_to_data(img, guid=None):
     Returns
     -------
     data:
-        A dictionary holding the daa for the payload
+        A dictionary holding the data for the payload
     """
     imgbytes = img
     if isinstance(img, str):
@@ -216,14 +222,16 @@ def PIL_image_to_data(img, guid=None):
         imgbytes.close()
         return data
 
+
 def convert_image_to_ppm(pil_image):
-    """Convert the input PIL image to PPM bytes
-    
+    """
+    Convert the input PIL image to PPM bytes.
+
     Parameters
     ----------
     pil_image:
         the current PIL image being handles
-    
+
     Returns
     -------
     value:
@@ -238,8 +246,9 @@ def convert_image_to_ppm(pil_image):
 
 
 def convert_to_qimage(data, img, guid=None):
-    """Convert the input image to a QImage
-    
+    """
+    Convert the input image to a QImage.
+
     Parameters
     ----------
     data:
@@ -248,11 +257,11 @@ def convert_to_qimage(data, img, guid=None):
         The bytes representing the current image
     guid:
         The guid of the input image if it is an already existing QImage
-    
+
     Returns
     -------
     data:
-        The updated dictionary holding the data for the payload. None if Qt is not available    
+        The updated dictionary holding the data for the payload. None if Qt is not available
     """
     if has_qt:
         tmpimg = QtGui.QImage.fromData(convert_image_to_ppm(img), "ppm")
@@ -269,6 +278,7 @@ def convert_to_qimage(data, img, guid=None):
         data["file_data"] = buf.data()  # returns a bytes() instance
         return data
     return None
+
 
 def cei_arch():
     if has_cei:
