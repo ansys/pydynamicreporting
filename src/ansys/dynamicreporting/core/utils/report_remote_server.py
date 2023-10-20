@@ -58,15 +58,15 @@ def print_allowed():
 def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_version=None):
     # Run the nexus_utility.py script with the command and parameters in the args list
     # are we on windows
-    is_windows = report_utils.enve_arch().startswith("win")
-    # is_linux = report_utils.enve_arch().startswith("lin")
+    is_windows = report_utils.cei_arch().startswith("win")
+    # is_linux = report_utils.cei_arch().startswith("lin")
     # Start the work by getting the pathname to the django directory
     if ansys_version:
         report_ver = str(ansys_version)
     else:
         report_ver = report_utils.ceiversion_nexus_suffix()
     if exec_basis is None:
-        exec_basis = report_utils.enve_home()
+        exec_basis = report_utils.cei_home()
     rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
     nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
     # run any DB migrations using Python 3...
@@ -766,7 +766,7 @@ class Server:
             self._default_session.application = "Nexus Python API"
             self._default_session.version = "1.0"
             self._default_session.hostname = platform.node()
-            self._default_session.platform = report_utils.enve_arch()
+            self._default_session.platform = report_utils.cei_arch()
         return self._default_session
 
     def set_default_session(self, session, validate_digest=False):
@@ -1029,7 +1029,7 @@ def create_new_local_database(
                 f.write(secret_key)
             f.close()
             srcdir = os.path.join(
-                report_utils.enve_home(), "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
+                report_utils.cei_home(), "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
             )
             # In Python 3, we use the migration command to build the new database file and add the 'nexus'
             # superuser programmatically.  We Also stamp the current csf version into the media directory.
@@ -1530,11 +1530,11 @@ def launch_local_database_server(
         exename = os.path.join(exec_basis, "bin", "nexus_launcher" + str(ansys_version))
     else:
         exename = os.path.join(
-            report_utils.enve_home(),
+            report_utils.cei_home(),
             "bin",
             "nexus_launcher" + report_utils.ceiversion_nexus_suffix(),
         )
-    is_windows = report_utils.enve_arch().startswith("win")
+    is_windows = report_utils.cei_arch().startswith("win")
     if is_windows:
         exename += ".bat"
     command = [

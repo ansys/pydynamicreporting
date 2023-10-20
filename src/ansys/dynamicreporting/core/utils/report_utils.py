@@ -1,6 +1,10 @@
 import array
 import base64
+import json
+import io
 from html.parser import HTMLParser as BaseHTMLParser
+from PIL import Image
+from PIL.TiffTags import TAGS
 import os
 import os.path
 import platform
@@ -13,11 +17,9 @@ import requests
 
 try:
     import ceiversion
-    import enve
-
-    has_enve = True
+    has_cei = True
 except (ImportError, SystemError):
-    has_enve = False
+    has_cei = False
 
 try:
     from PyQt5 import QtCore, QtGui
@@ -32,10 +34,10 @@ try:
     has_numpy = True
 except ImportError:
     has_numpy = False
-
+TIFFTAG_IMAGEDESCRIPTION: int = 0x010E
 text_type = str
 """@package report_utils
-Methods that serve as a shim to the enve and ceiversion modules that may not be present
+Methods that serve as a shim to the ceiversion module and the CEI os info that may not be present
 """
 
 
@@ -50,69 +52,239 @@ def encode_url(s):
     s = "b64:" + base64.b64encode(s.encode("utf-8")).decode("utf-8").replace("=", "_")
     return s
 
+def check_if_PIL(img):
+    """Check if the input image can be opened by PIL
+    
+    Parameters
+    ----------
+    img:
+        string or bytes representing the picture
+    
+    Returns
+    -------
+    bool:
+        True if the image can be opened by PIL
+    """
+    # Assume you are getting bytes.
+    # If string, open it
+    imgbytes = img
+    if isinstance(img, str):
+        imgbytes = open(img, "rb")
+    try:
+        # Check PIL can handle the img opening
+        Image.open(imgbytes)
+        return True
+    except:
+        return False
+    finally:
+        imgbytes.close()
+    
+def is_enhanced(image):
+    """Check if the input PIL image is an enhanced picture
+    
+    Parameters
+    ----------
+    image:
+        the input PIL image
+    
+    Returns
+    -------
+    str:
+        The json metadata, if enhanced. None otherwise
 
-def is_enve_image(img):
-    if has_enve and has_qt:  # pragma: no cover
-        return isinstance(img, enve.image)
-    return False
+    """
+    if not image.format == "TIFF":
+        return None
+    frames = image.n_frames
+    if frames != 3:
+        return None
+    image.seek(0)
+    first_channel = image.getbands() == ("R", "G", "B")
+    image.seek(1)
+    second_channel = image.getbands() == ("R", "G", "B", "A")
+    image.seek(2)
+    third_channel = image.getbands() == ("F",)
+    if not all([first_channel, second_channel, third_channel]):
+        return None
+    image.seek(0)
+    meta_dict = {TAGS[key] : image.tag[key] for key in image.tag_v2}
+    if not meta_dict.get("ImageDescription"):
+        return None
+    json_description = meta_dict["ImageDescription"][0]
+    description = json.loads(json_description)
+    if not description.get("parts"):
+        return None
+    if not description.get("variables"):
+        return None
+    return json_description
+
+def create_new_pil_image(pil_image):
+    """Convert the existing PIL image into a new PIL image
+    for enhanced export.
+    Reading an enhanced picture with PIL and save it directly
+    does not work, so a new set of pictures for each frame needs
+    to be generated.
+
+    Parameters
+    ----------
+    pil_image:
+        the PIL image currently handled
+    
+    Returns
+    -------
+    list:
+        a list of PIL images, one for each frame of the original PIL image
+    """
+    pil_image.seek(0)
+    images = [Image.fromarray(numpy.array(pil_image))]
+    pil_image.seek(1)
+    images.append(Image.fromarray(numpy.array(pil_image)))
+    pil_image.seek(2)
+    images.append(Image.fromarray(numpy.array(pil_image)))
+    return images
+
+def save_tif_stripped(pil_image, data, metadata):
+    """Convert the existing pil image into a new TIF picture
+    which can be used for generating the required data for setting the payload
+
+    Parameters
+    ----------
+
+    pil_image:
+        the PIL image currently handled
+    data:
+        the dictionary holding the data for the payload
+    metadata:
+        the JSON string holding the enhanced picture meatadata
+
+    Returns
+    -------
+    data:
+        the updated dictionary holding the data for the payload
+
+    """
+    buff = io.BytesIO()
+    new_pil_images = create_new_pil_image(pil_image)
+    tiffinfo_dir = {TIFFTAG_IMAGEDESCRIPTION: metadata}
+    new_pil_images[0].save(
+        buff, "TIFF",
+        compression='deflate',
+        save_all=True,
+        append_images=[new_pil_images[1],new_pil_images[2]],
+        tiffinfo=tiffinfo_dir
+    )
+    buff.seek(0)
+    data["file_data"] = buff.read()
+    data["format"] = "tif"
+    buff.close()
+    return data
+
+    
+def PIL_image_to_data(img, guid=None):
+    """Convert the input image to a dictionary
+    holding the data for the payload
+    
+    Parameters
+    ----------
+    img:
+        the input picture. It may be bytes or the path to the file to read
+    guid:
+        the guid of the image if it is an already available Qt image
+
+    Returns
+    -------
+    data:
+        A dictionary holding the daa for the payload
+    """
+    imgbytes = img
+    if isinstance(img, str):
+        imgbytes = open(img, "rb")
+    data = {}
+    image = Image.open(imgbytes)
+    data["format"] = image.format.lower()
+    if data["format"] == "tiff":
+        data["format"] = "tif"
+    data["width"] = image.width
+    data["height"] = image.height
+    metadata = is_enhanced(image)
+    if metadata:
+        data = save_tif_stripped(image, data, metadata)
+        imgbytes.close()
+        return data
+    else:
+        data = convert_to_qimage(data, image, guid=guid)
+        imgbytes.close()
+        return data
+
+def convert_image_to_ppm(pil_image):
+    """Convert the input PIL image to PPM bytes
+    
+    Parameters
+    ----------
+    pil_image:
+        the current PIL image being handles
+    
+    Returns
+    -------
+    value:
+        the bytes representing the PPM image
+    """
+    buff = io.BytesIO()
+    pil_image.save(buff, "PPM")
+    buff.seek(0)
+    value = buff.read()
+    buff.close()
+    return value
 
 
-def enve_image_to_data(img, guid=None):
-    # Convert enve image object into a dictionary of image data or None
-    # The dictionary has the keys:
-    # 'width' = x pixel count
-    # 'height' = y pixel count
-    # 'format' = 'tif' or 'png'
-    # 'file_data' = a byte array of the raw image (same content as disk file)
-    if has_enve and has_qt:  # pragma: no cover
-        if isinstance(img, enve.image):
-            data = dict(width=img.dims[0], height=img.dims[1])
-            if img.enhanced:
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    path = os.path.join(temp_dir, "enhanced_image.tif")
-                    # Save the image as a tiff file (enhanced)
-                    if img.save(path, options="Compression Deflate") == 0:
-                        try:
-                            # Read the tiff image data back
-                            with open(path, "rb") as img_file:
-                                data["file_data"] = img_file.read()
-                            data["format"] = "tif"
-                            return data
-                        except OSError:
-                            return None
-            else:
-                # convert to QImage via ppm string I/O
-                tmpimg = QtGui.QImage.fromData(img.ppm(), "ppm")
-                # record the guid in the image (watermark it)
-                # note: the Qt PNG format supports text keys
-                tmpimg.setText("CEI_REPORTS_GUID", guid)
-                # save it in PNG format in memory
-                be = QtCore.QByteArray()
-                buf = QtCore.QBuffer(be)
-                buf.open(QtCore.QIODevice.WriteOnly)
-                tmpimg.save(buf, "png")
-                buf.close()
-                data["format"] = "png"
-                data["file_data"] = buf.data()  # returns a bytes() instance
-                return data
+def convert_to_qimage(data, img, guid=None):
+    """Convert the input image to a QImage
+    
+    Parameters
+    ----------
+    data:
+        The dictionary holding the data for the payload
+    img:
+        The bytes representing the current image
+    guid:
+        The guid of the input image if it is an already existing QImage
+    
+    Returns
+    -------
+    data:
+        The updated dictionary holding the data for the payload. None if Qt is not available    
+    """
+    if has_qt:
+        tmpimg = QtGui.QImage.fromData(convert_image_to_ppm(img), "ppm")
+        # record the guid in the image (watermark it)
+        # note: the Qt PNG format supports text keys
+        tmpimg.setText("CEI_REPORTS_GUID", guid)
+        # save it in PNG format in memory
+        be = QtCore.QByteArray()
+        buf = QtCore.QBuffer(be)
+        buf.open(QtCore.QIODevice.WriteOnly)
+        tmpimg.save(buf, "png")
+        buf.close()
+        data["format"] = "png"
+        data["file_data"] = buf.data()  # returns a bytes() instance
+        return data
     return None
 
-
-def enve_arch():
-    if has_enve:
-        return enve.arch()
+def cei_arch():
+    if has_cei:
+        return os.environ.get("CEI_ARCH")
     return platform.system().lower()
 
 
-def enve_home():
-    if has_enve:
-        return enve.home()
+def cei_home():
+    if has_cei:
+        return os.environ.get("CEI_HOME")
     tmp = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     return tmp
 
 
 def ceiversion_nexus_suffix():
-    if has_enve:
+    if has_cei:
         return ceiversion.nexus_suffix
     # If we are coming from pynexus, get the version from that
     try:
@@ -127,7 +299,7 @@ def ceiversion_nexus_suffix():
 
 
 def ceiversion_apex_suffix():
-    if has_enve:
+    if has_cei:
         return ceiversion.apex_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location
@@ -136,7 +308,7 @@ def ceiversion_apex_suffix():
 
 
 def ceiversion_ensight_suffix():
-    if has_enve:
+    if has_cei:
         return ceiversion.ensight_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location

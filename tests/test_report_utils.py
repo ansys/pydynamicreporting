@@ -26,26 +26,26 @@ def test_encode_decode() -> bool:
 
 
 @pytest.mark.ado_test
-def test_is_enve_image(request) -> bool:
-    no_img = ru.is_enve_image(return_file_paths(request)[0])
+def test_check_if_PIL(request) -> bool:
+    no_img = ru.check_if_PIL(return_file_paths(request)[0])
     assert no_img is False
 
 
 @pytest.mark.ado_test
-def test_enve_image_to_data(request) -> bool:
-    no_img = ru.enve_image_to_data(return_file_paths(request)[0])
+def test_PIL_image_to_data(request) -> bool:
+    no_img = ru.PIL_image_to_data(return_file_paths(request)[0])
     assert no_img is None
 
 
 @pytest.mark.ado_test
-def test_env_arch() -> bool:
-    local_arch = ru.enve_arch()
+def test_cei_arch() -> bool:
+    local_arch = ru.cei_arch()
     assert ("win" in local_arch) or ("lin" in local_arch)
 
 
-def test_enve_home() -> bool:
-    enve_home = ru.enve_home()
-    assert "ansys" in enve_home
+def test_cei_home() -> bool:
+    cei_home = ru.cei_home()
+    assert "ansys" in cei_home
 
 
 @pytest.mark.ado_test
