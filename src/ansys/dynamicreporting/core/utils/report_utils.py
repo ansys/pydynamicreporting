@@ -55,7 +55,7 @@ def check_if_PIL(img):
     Parameters
     ----------
     img:
-        string or bytes representing the picture
+        filename or bytes representing the picture
 
     Returns
     -------
@@ -78,6 +78,20 @@ def check_if_PIL(img):
 
 
 def is_enve_image_or_pil(img):
+    """
+    Check if the input image can be handled by enve or PIL.
+
+    Parameters
+    ----------
+
+    img:
+        filename or bytes representing the picture
+
+    Returns
+    -------
+    bool:
+        True if the image can be opened either by PIL or enve
+    """
     is_enve = False
     if has_enve:  # pragma: no cover
         is_enve = isinstance(img, enve.image)
