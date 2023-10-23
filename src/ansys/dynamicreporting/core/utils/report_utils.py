@@ -218,7 +218,6 @@ def PIL_image_to_data(img, guid=None):
     if metadata:
         data = save_tif_stripped(image, data, metadata)
         imgbytes.close()
-        return data
     return data
 
 
