@@ -27,14 +27,14 @@ def test_encode_decode() -> bool:
 
 @pytest.mark.ado_test
 def test_is_enve_image(request) -> bool:
-    no_img = ru.is_enve_image(return_file_paths(request)[0])
-    assert no_img is False
+    img = ru.is_enve_image_or_pil(return_file_paths(request)[0])
+    assert img is True
 
 
 @pytest.mark.ado_test
 def test_enve_image_to_data(request) -> bool:
-    no_img = ru.enve_image_to_data(return_file_paths(request)[0])
-    assert no_img is None
+    img_data = ru.image_to_data(return_file_paths(request)[0])
+    assert "file_data" in img_data.keys()
 
 
 @pytest.mark.ado_test
