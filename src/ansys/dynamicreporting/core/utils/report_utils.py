@@ -64,17 +64,24 @@ def check_if_PIL(img):
     """
     # Assume you are getting bytes.
     # If string, open it
-    imgbytes = img
+    imghandle = None
+    imgbytes = None
     if isinstance(img, str):
-        imgbytes = open(img, "rb")
+        imghandle = open(img, "rb")
+    elif isinstance(img, bytes):
+        imgbytes = img
     try:
         # Check PIL can handle the img opening
-        Image.open(imgbytes)
+        if imghandle:
+            Image.open(imghandle)
+        elif imgbytes:
+            Image.open(io.BytesIO(imgbytes))
         return True
     except Exception:
         return False
     finally:
-        imgbytes.close()
+        if imghandle:
+            imghandle.close()
 
 
 def is_enve_image_or_pil(img):
@@ -218,11 +225,18 @@ def PIL_image_to_data(img, guid=None):
     data:
         A dictionary holding the data for the payload
     """
-    imgbytes = img
+    imgbytes = None
+    imghandle = None
     if isinstance(img, str):
-        imgbytes = open(img, "rb")
+        imghandle = open(img, "rb")
+    elif isinstance(img, bytes):
+        imgbytes = img
     data = {}
-    image = Image.open(imgbytes)
+    image = None
+    if imghandle:
+        image = Image.open(imghandle)
+    elif imgbytes:
+        image = Image.open(io.BytesIO(imgbytes))
     data["format"] = image.format.lower()
     if data["format"] == "tiff":
         data["format"] = "tif"
@@ -231,14 +245,13 @@ def PIL_image_to_data(img, guid=None):
     metadata = is_enhanced(image)
     if metadata:
         data = save_tif_stripped(image, data, metadata)
-        imgbytes.close()
     else:
         buff = io.BytesIO()
         image.save(buff, "PNG")
         buff.seek(0)
         data["file_data"] = buff.read()
-        buff.close()
-        imgbytes.close()
+    if imghandle:
+        imghandle.close()
     return data
 
 
