@@ -17,17 +17,11 @@ import requests
 
 try:
     import ceiversion
+    import enve
 
-    has_cei = True
+    has_enve = True
 except (ImportError, SystemError):
-    has_cei = False
-
-try:
-    from PyQt5 import QtCore, QtGui
-
-    has_qt = True
-except ImportError:
-    has_qt = False
+    has_enve = False
 
 try:
     import numpy
@@ -38,7 +32,7 @@ except ImportError:
 TIFFTAG_IMAGEDESCRIPTION: int = 0x010E
 text_type = str
 """@package report_utils
-Methods that serve as a shim to the ceiversion module and the CEI os info that may not be present
+Methods that serve as a shim to the enve and ceiversion modules that may not be present
 """
 
 
@@ -81,6 +75,14 @@ def check_if_PIL(img):
         return False
     finally:
         imgbytes.close()
+
+
+def is_enve_image_or_pil(img):
+    is_enve = False
+    if has_enve:  # pragma: no cover
+        is_enve = isinstance(img, enve.image)
+    is_PIL = check_if_PIL(img)
+    return is_enve or is_PIL
 
 
 def is_enhanced(image):
@@ -217,84 +219,51 @@ def PIL_image_to_data(img, guid=None):
         data = save_tif_stripped(image, data, metadata)
         imgbytes.close()
         return data
-    else:
-        data = convert_to_qimage(data, image, guid=guid)
-        imgbytes.close()
-        return data
-
-
-def convert_image_to_ppm(pil_image):
-    """
-    Convert the input PIL image to PPM bytes.
-
-    Parameters
-    ----------
-    pil_image:
-        the current PIL image being handles
-
-    Returns
-    -------
-    value:
-        the bytes representing the PPM image
-    """
-    buff = io.BytesIO()
-    pil_image.save(buff, "PPM")
-    buff.seek(0)
-    value = buff.read()
-    buff.close()
-    return value
-
-
-def convert_to_qimage(data, img, guid=None):
-    """
-    Convert the input image to a QImage.
-
-    Parameters
-    ----------
-    data:
-        The dictionary holding the data for the payload
-    img:
-        The bytes representing the current image
-    guid:
-        The guid of the input image if it is an already existing QImage
-
-    Returns
-    -------
-    data:
-        The updated dictionary holding the data for the payload. None if Qt is not available
-    """
-    if has_qt:
-        tmpimg = QtGui.QImage.fromData(convert_image_to_ppm(img), "ppm")
-        # record the guid in the image (watermark it)
-        # note: the Qt PNG format supports text keys
-        tmpimg.setText("CEI_REPORTS_GUID", guid)
-        # save it in PNG format in memory
-        be = QtCore.QByteArray()
-        buf = QtCore.QBuffer(be)
-        buf.open(QtCore.QIODevice.WriteOnly)
-        tmpimg.save(buf, "png")
-        buf.close()
-        data["format"] = "png"
-        data["file_data"] = buf.data()  # returns a bytes() instance
-        return data
     return None
 
 
-def cei_arch():
-    if has_cei:
-        return os.environ.get("CEI_ARCH")
+def image_to_data(img):
+    # Convert enve image object into a dictionary of image data or None
+    # The dictionary has the keys:
+    # 'width' = x pixel count
+    # 'height' = y pixel count
+    # 'format' = 'tif' or 'png'
+    # 'file_data' = a byte array of the raw image (same content as disk file)
+    if has_enve:  # pragma: no cover
+        if isinstance(img, enve.image):
+            data = dict(width=img.dims[0], height=img.dims[1])
+            if img.enhanced:
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    path = os.path.join(temp_dir, "enhanced_image.tif")
+                    # Save the image as a tiff file (enhanced)
+                    if img.save(path, options="Compression Deflate") == 0:
+                        try:
+                            # Read the tiff image data back
+                            with open(path, "rb") as img_file:
+                                data["file_data"] = img_file.read()
+                            data["format"] = "tif"
+                            return data
+                        except OSError:
+                            return None
+        else:
+            return PIL_image_to_data(img)
+
+
+def enve_arch():
+    if has_enve:
+        return enve.arch()
     return platform.system().lower()
 
 
-def cei_home():
-    if has_cei:
-        return os.environ.get("CEI_HOME")
+def enve_home():
+    if has_enve:
+        return enve.home()
     tmp = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     return tmp
 
 
 def ceiversion_nexus_suffix():
-    if has_cei:
+    if has_enve:
         return ceiversion.nexus_suffix
     # If we are coming from pynexus, get the version from that
     try:
@@ -309,7 +278,7 @@ def ceiversion_nexus_suffix():
 
 
 def ceiversion_apex_suffix():
-    if has_cei:
+    if has_enve:
         return ceiversion.apex_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location
@@ -318,7 +287,7 @@ def ceiversion_apex_suffix():
 
 
 def ceiversion_ensight_suffix():
-    if has_cei:
+    if has_enve:
         return ceiversion.ensight_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location

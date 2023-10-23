@@ -1278,9 +1278,8 @@ class ItemREST(BaseRESTObject):
         if has_qt:  # pragma: no cover
             if isinstance(img, QtGui.QImage):
                 tmpimg = img
-            # check first if the image can be handled by PIL
-            elif report_utils.check_if_PIL(img):
-                image_data = report_utils.PIL_image_to_data(img, str(self.guid))
+            elif report_utils.is_enve_image_or_pil(img):
+                image_data = report_utils.image_to_data(img)
                 if image_data is not None:
                     self.width = image_data["width"]
                     self.height = image_data["height"]
