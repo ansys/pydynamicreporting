@@ -46,6 +46,7 @@ dependencies = [
     "requests>=2.28.2",
     "twine>=4.0.1",
     "urllib3<2.0.0",
+    "Pillow>=9.3.0"
 ]
 
 [tool.setuptools.packages.find]

@@ -1,6 +1,8 @@
 import array
 import base64
 from html.parser import HTMLParser as BaseHTMLParser
+import io
+import json
 import os
 import os.path
 import platform
@@ -9,6 +11,8 @@ import sys
 import tempfile
 from typing import List, Optional
 
+from PIL import Image
+from PIL.TiffTags import TAGS
 import requests
 
 try:
@@ -20,19 +24,12 @@ except (ImportError, SystemError):
     has_enve = False
 
 try:
-    from PyQt5 import QtCore, QtGui
-
-    has_qt = True
-except ImportError:
-    has_qt = False
-
-try:
     import numpy
 
     has_numpy = True
 except ImportError:
     has_numpy = False
-
+TIFFTAG_IMAGEDESCRIPTION: int = 0x010E
 text_type = str
 """@package report_utils
 Methods that serve as a shim to the enve and ceiversion modules that may not be present
@@ -51,20 +48,222 @@ def encode_url(s):
     return s
 
 
-def is_enve_image(img):
-    if has_enve and has_qt:  # pragma: no cover
-        return isinstance(img, enve.image)
-    return False
+def check_if_PIL(img):
+    """
+    Check if the input image can be opened by PIL.
+
+    Parameters
+    ----------
+    img:
+        filename or bytes representing the picture
+
+    Returns
+    -------
+    bool:
+        True if the image can be opened by PIL
+    """
+    # Assume you are getting bytes.
+    # If string, open it
+    imghandle = None
+    imgbytes = None
+    if isinstance(img, str):
+        imghandle = open(img, "rb")
+    elif isinstance(img, bytes):
+        imgbytes = img
+    try:
+        # Check PIL can handle the img opening
+        if imghandle:
+            Image.open(imghandle)
+        elif imgbytes:
+            Image.open(io.BytesIO(imgbytes))
+        return True
+    except Exception:
+        return False
+    finally:
+        if imghandle:
+            imghandle.close()
 
 
-def enve_image_to_data(img, guid=None):
+def is_enve_image_or_pil(img):
+    """
+    Check if the input image can be handled by enve or PIL.
+
+    Parameters
+    ----------
+
+    img:
+        filename or bytes representing the picture
+
+    Returns
+    -------
+    bool:
+        True if the image can be opened either by PIL or enve
+    """
+    is_enve = False
+    if has_enve:  # pragma: no cover
+        is_enve = isinstance(img, enve.image)
+    is_PIL = check_if_PIL(img)
+    return is_enve or is_PIL
+
+
+def is_enhanced(image):
+    """
+    Check if the input PIL image is an enhanced picture.
+
+    Parameters
+    ----------
+    image:
+        the input PIL image
+
+    Returns
+    -------
+    str:
+        The json metadata, if enhanced. None otherwise
+    """
+    if not image.format == "TIFF":
+        return None
+    frames = image.n_frames
+    if frames != 3:
+        return None
+    image.seek(0)
+    first_channel = image.getbands() == ("R", "G", "B")
+    image.seek(1)
+    second_channel = image.getbands() == ("R", "G", "B", "A")
+    image.seek(2)
+    third_channel = image.getbands() == ("F",)
+    if not all([first_channel, second_channel, third_channel]):
+        return None
+    image.seek(0)
+    meta_dict = {TAGS[key]: image.tag[key] for key in image.tag_v2}
+    if not meta_dict.get("ImageDescription"):
+        return None
+    json_description = meta_dict["ImageDescription"][0]
+    description = json.loads(json_description)
+    if not description.get("parts"):
+        return None
+    if not description.get("variables"):
+        return None
+    return json_description
+
+
+def create_new_pil_image(pil_image):
+    """
+    Convert the existing PIL image into a new PIL image for enhanced export. Reading an
+    enhanced picture with PIL and save it directly does not work, so a new set of
+    pictures for each frame needs to be generated.
+
+    Parameters
+    ----------
+    pil_image:
+        the PIL image currently handled
+
+    Returns
+    -------
+    list:
+        a list of PIL images, one for each frame of the original PIL image
+    """
+    pil_image.seek(0)
+    images = [Image.fromarray(numpy.array(pil_image))]
+    pil_image.seek(1)
+    images.append(Image.fromarray(numpy.array(pil_image)))
+    pil_image.seek(2)
+    images.append(Image.fromarray(numpy.array(pil_image)))
+    return images
+
+
+def save_tif_stripped(pil_image, data, metadata):
+    """
+    Convert the existing pil image into a new TIF picture which can be used for
+    generating the required data for setting the payload.
+
+    Parameters
+    ----------
+
+    pil_image:
+        the PIL image currently handled
+    data:
+        the dictionary holding the data for the payload
+    metadata:
+        the JSON string holding the enhanced picture metadata
+
+    Returns
+    -------
+    data:
+        the updated dictionary holding the data for the payload
+    """
+    buff = io.BytesIO()
+    new_pil_images = create_new_pil_image(pil_image)
+    tiffinfo_dir = {TIFFTAG_IMAGEDESCRIPTION: metadata}
+    new_pil_images[0].save(
+        buff,
+        "TIFF",
+        compression="deflate",
+        save_all=True,
+        append_images=[new_pil_images[1], new_pil_images[2]],
+        tiffinfo=tiffinfo_dir,
+    )
+    buff.seek(0)
+    data["file_data"] = buff.read()
+    data["format"] = "tif"
+    buff.close()
+    return data
+
+
+def PIL_image_to_data(img, guid=None):
+    """
+    Convert the input image to a dictionary holding the data for the payload.
+
+    Parameters
+    ----------
+    img:
+        the input picture. It may be bytes or the path to the file to read
+    guid:
+        the guid of the image if it is an already available Qt image
+
+    Returns
+    -------
+    data:
+        A dictionary holding the data for the payload
+    """
+    imgbytes = None
+    imghandle = None
+    if isinstance(img, str):
+        imghandle = open(img, "rb")
+    elif isinstance(img, bytes):
+        imgbytes = img
+    data = {}
+    image = None
+    if imghandle:
+        image = Image.open(imghandle)
+    elif imgbytes:
+        image = Image.open(io.BytesIO(imgbytes))
+    data["format"] = image.format.lower()
+    if data["format"] == "tiff":
+        data["format"] = "tif"
+    data["width"] = image.width
+    data["height"] = image.height
+    metadata = is_enhanced(image)
+    if metadata:
+        data = save_tif_stripped(image, data, metadata)
+    else:
+        buff = io.BytesIO()
+        image.save(buff, "PNG")
+        buff.seek(0)
+        data["file_data"] = buff.read()
+    if imghandle:
+        imghandle.close()
+    return data
+
+
+def image_to_data(img):
     # Convert enve image object into a dictionary of image data or None
     # The dictionary has the keys:
     # 'width' = x pixel count
     # 'height' = y pixel count
     # 'format' = 'tif' or 'png'
     # 'file_data' = a byte array of the raw image (same content as disk file)
-    if has_enve and has_qt:  # pragma: no cover
+    data = None
+    if has_enve:  # pragma: no cover
         if isinstance(img, enve.image):
             data = dict(width=img.dims[0], height=img.dims[1])
             if img.enhanced:
@@ -80,22 +279,8 @@ def enve_image_to_data(img, guid=None):
                             return data
                         except OSError:
                             return None
-            else:
-                # convert to QImage via ppm string I/O
-                tmpimg = QtGui.QImage.fromData(img.ppm(), "ppm")
-                # record the guid in the image (watermark it)
-                # note: the Qt PNG format supports text keys
-                tmpimg.setText("CEI_REPORTS_GUID", guid)
-                # save it in PNG format in memory
-                be = QtCore.QByteArray()
-                buf = QtCore.QBuffer(be)
-                buf.open(QtCore.QIODevice.WriteOnly)
-                tmpimg.save(buf, "png")
-                buf.close()
-                data["format"] = "png"
-                data["file_data"] = buf.data()  # returns a bytes() instance
-                return data
-    return None
+    if not data:
+        return PIL_image_to_data(img)
 
 
 def enve_arch():
