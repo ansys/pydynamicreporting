@@ -229,6 +229,7 @@ def image_to_data(img):
     # 'height' = y pixel count
     # 'format' = 'tif' or 'png'
     # 'file_data' = a byte array of the raw image (same content as disk file)
+    data = None
     if has_enve:  # pragma: no cover
         if isinstance(img, enve.image):
             data = dict(width=img.dims[0], height=img.dims[1])
@@ -245,8 +246,8 @@ def image_to_data(img):
                             return data
                         except OSError:
                             return None
-        else:
-            return PIL_image_to_data(img)
+    if not data:
+        return PIL_image_to_data(img)
 
 
 def enve_arch():
