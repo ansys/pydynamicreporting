@@ -72,7 +72,7 @@ tests = [
 doc = [
     "ansys-sphinx-theme==0.11.2",
     "numpydoc==1.5.0",
-    "pillow==10.0.1",
+    "pillow==10.1.0",
     "docker>=6.1.0",
     "Sphinx==7.2.6",
     "sphinx-copybutton==0.5.2",
@@ -85,7 +85,7 @@ dev = [
     "ansys-sphinx-theme==0.11.2",
     "numpy==1.25.1",
     "numpydoc==1.5.0",
-    "pillow==10.0.1",
+    "pillow==10.1.0",
     "psutil==5.9.5",
     "docker>=6.1.0",
     "pytest==7.4.2",
