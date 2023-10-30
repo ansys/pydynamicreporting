@@ -544,7 +544,7 @@ class Service:
         except Exception:
             pass
         if v is False:
-            self.logger.warning("Error validating the connected service. Can't shut it down.\n")
+            self.logger.error("Error validating the connected service. Can't shut it down.\n")
         else:
             # If coming from a docker image, clean that up
             try:
@@ -556,7 +556,7 @@ class Service:
                     self.logger.info("Told service to shutdown.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.warning(f"Problem shutting down service.\n{str(e)}\n")
+                self.logger.error(f"Problem shutting down service.\n{str(e)}\n")
                 pass
 
         if self._delete_db and self._db_directory:

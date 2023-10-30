@@ -64,7 +64,7 @@ def test_unit_nexus_stop(request) -> bool:
     a = Service(logfile=logfile)
     a.stop()
     f = open(logfile)
-    assert "There is no service connected to the current session" in f.read()
+    assert "Error validating the connected service" in f.read()
 
 
 @pytest.mark.ado_test
