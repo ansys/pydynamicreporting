@@ -71,7 +71,7 @@ tests = [
 ]
 doc = [
     "ansys-sphinx-theme==0.11.2",
-    "numpydoc==1.5.0",
+    "numpydoc==1.6.0",
     "pillow==10.0.1",
     "docker>=6.1.0",
     "Sphinx==7.2.6",
@@ -84,7 +84,7 @@ dev = [
     "whatsonpypi",
     "ansys-sphinx-theme==0.11.2",
     "numpy==1.25.1",
-    "numpydoc==1.5.0",
+    "numpydoc==1.6.0",
     "pillow==10.0.1",
     "psutil==5.9.5",
     "docker>=6.1.0",
