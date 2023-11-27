@@ -115,7 +115,7 @@ def test_save_as_html(adr_service_query) -> bool:
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
-        success = my_report.export_pdf(directory_name="htmltest_again")
+        success = my_report.export_html(directory_name="htmltest_again")
     except Exception:
         success = False
     adr_service_query.stop()

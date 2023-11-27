@@ -10,7 +10,7 @@ dir_list = [
     "tests/test_data/viewer_test/",
 ]
 dir_list.extend(
-    ["tests/test_data/ansys", "tests/test_data/media", "tests/test_data/webfonts/", "htmltest/"]
+    ["tests/test_data/ansys", "tests/test_data/media", "tests/test_data/webfonts/", "htmltest/", "htmltest_again/"]
 )
 dir_list.append("tests/test_data/create_delete/")
 dir_list.append("tests/test_data/create_twice/")
@@ -32,6 +32,7 @@ file_list.append("tests/test_data/index.raw")
 file_list.extend(glob.glob("tests/outfile*.txt"))
 file_list.append("mypresentation")
 file_list.append("mytest.pdf")
+file_list.append("again_mytest")
 for i_file in file_list:
     try:
         os.remove(i_file)
