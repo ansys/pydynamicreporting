@@ -201,8 +201,8 @@ class Report:
         delay: Optional[int] = None,
     ) -> bool:
         """
-        Export report as PDF. Currently works only with a local ADR installation, and not
-        a docker image.
+        Export report as PDF. Currently works only with a local ADR installation, and
+        not a docker image.
 
         Parameters
         ----------

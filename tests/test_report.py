@@ -110,7 +110,7 @@ def test_save_as_pdf(adr_service_query, request, get_exec) -> bool:
         except Exception:
             success = False
         adr_service_query.stop()
-    else: # If no local installation, then skip this test
+    else:  # If no local installation, then skip this test
         success = True
     assert success is True
 

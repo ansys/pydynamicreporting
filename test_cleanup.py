@@ -10,7 +10,13 @@ dir_list = [
     "tests/test_data/viewer_test/",
 ]
 dir_list.extend(
-    ["tests/test_data/ansys", "tests/test_data/media", "tests/test_data/webfonts/", "htmltest/", "htmltest_again/"]
+    [
+        "tests/test_data/ansys",
+        "tests/test_data/media",
+        "tests/test_data/webfonts/",
+        "htmltest/",
+        "htmltest_again/",
+    ]
 )
 dir_list.append("tests/test_data/create_delete/")
 dir_list.append("tests/test_data/create_twice/")
