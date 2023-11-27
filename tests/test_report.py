@@ -96,3 +96,27 @@ def test_unit_no_url(request) -> bool:
             if "No connection to any server" in line:
                 err_msg = True
     assert err_msg
+
+
+@pytest.mark.ado_test
+def test_save_as_pdf(adr_service_query) -> bool:
+    success = False
+    try:
+        my_report = adr_service_query.get_report(report_name="My Top Report")
+        success = my_report.export_pdf(file_name="again_mytest")
+    except Exception:
+        success = False
+    adr_service_query.stop()
+    assert success is True
+
+
+@pytest.mark.ado_test
+def test_save_as_html(adr_service_query) -> bool:
+    success = False
+    try:
+        my_report = adr_service_query.get_report(report_name="My Top Report")
+        success = my_report.export_pdf(directory_name="htmltest_again")
+    except Exception:
+        success = False
+    adr_service_query.stop()
+    assert success is True
