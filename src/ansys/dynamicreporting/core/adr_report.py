@@ -201,7 +201,8 @@ class Report:
         delay: Optional[int] = None,
     ) -> bool:
         """
-        Export report as PDF.
+        Export report as PDF. Currently works only with a local ADR installation, and not
+        a docker image.
 
         Parameters
         ----------
@@ -252,7 +253,7 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error("Can not export pdf report")
+            self.service.logger.error(f"Can not export pdf report: {str(e)}")
         return success
 
     def export_html(
@@ -310,5 +311,5 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error("Can not export static HTML report")
+            self.service.logger.error(f"Can not export static HTML report: {str(e)}")
         return success

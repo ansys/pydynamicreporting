@@ -74,6 +74,7 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
     local_db = os.path.join("test_data", "query_db")
     db_dir = os.path.join(request.fspath.dirname, local_db)
+    tmp_docker_dir = os.path.join(os.path.join(request.fspath.dirname, "test_data"), "tmp_docker_query")
     if use_local:
         ansys_installation = pytestconfig.getoption("install_path")
     else:
@@ -83,6 +84,7 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
         ansys_installation=ansys_installation,
         docker_image=DOCKER_DEV_REPO_URL,
         db_directory=db_dir,
+        data_directory=tmp_docker_dir,
         port=8000 + int(random() * 4000),
     )
     tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)

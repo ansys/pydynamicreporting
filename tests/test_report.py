@@ -99,14 +99,19 @@ def test_unit_no_url(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_save_as_pdf(adr_service_query) -> bool:
-    success = False
-    try:
-        my_report = adr_service_query.get_report(report_name="My Top Report")
-        success = my_report.export_pdf(file_name="again_mytest")
-    except Exception:
+def test_save_as_pdf(adr_service_query, request, get_exec) -> bool:
+    exec_basis = get_exec
+    if exec_basis:
         success = False
-    adr_service_query.stop()
+        try:
+            my_report = adr_service_query.get_report(report_name="My Top Report")
+            pdf_file = os.path.join(request.fspath.dirname, "again_mytest")
+            success = my_report.export_pdf(file_name=pdf_file)
+        except Exception:
+            success = False
+        adr_service_query.stop()
+    else: # If no local installation, then skip this test
+        success = True
     assert success is True
 
 
