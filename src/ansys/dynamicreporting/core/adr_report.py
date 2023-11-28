@@ -232,7 +232,7 @@ class Report:
             my_report = adr_service.get_report(report_name = "My Top Report")
             succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf')
         """
-        success = False
+        success = False  # pragma: no cover
         if self.service is None:  # pragma: no cover
             self.service.logger.error("No connection to any report")
             return ""

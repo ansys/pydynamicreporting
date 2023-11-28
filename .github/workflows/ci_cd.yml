@@ -120,6 +120,7 @@ jobs:
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
+          sphinxopts: '-j auto'
 
   package:
     name: Package library
