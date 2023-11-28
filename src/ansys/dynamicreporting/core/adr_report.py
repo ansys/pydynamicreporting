@@ -210,16 +210,17 @@ class Report:
             Path and filename for the PDF file to export.
         query : dict, optional
             Dictionary for query parameters to apply to report template before export. Default: None
-        page: list, optional
+        page : list, optional
             List of integers that represents the size of the exported pdf. Default: None, which
             corresponds to A4 size
-        delay: int, optional
+        delay : int, optional
             Seconds to delay the start of the pdf export operation. Default: None, which
             corresponds to no delay
+
         Returns
         -------
-        success
-            Pdf file for the report has been exported
+        bool
+            Success status of the PDF export: True if it worked, False otherwise
 
         Examples
         --------
@@ -274,13 +275,14 @@ class Report:
             Dictionary for query parameters to apply to report template before export. Default: None
         filename : str, optional
             Filename for the exported static HTML file. Default: index.html
-        no_inline_files: bool, optional
+        no_inline_files : bool, optional
             If True, the information is exported as stand alone files instead of in line content
             in the static HTML. Default: False
+
         Returns
         -------
-        success
-            HTML file for the report has been exported
+        bool
+            Success status of the HTML export: True if it worked, False otherwise
 
         Examples
         --------
