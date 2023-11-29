@@ -3,7 +3,7 @@ API reference
 *************
 
 Ansys Dynamic Reporting contains a low-level API that allows the user to access
-a;; the available features and properties in full detail. While this low-level
+all the available features and properties in full detail. While this low-level
 API is very powerful, it can also be quite complex to use and it requires a
 steep learning curve. For a comprehensive description of this API, see
 `External Python API <https://nexusdemo.ensight.com/docs/html/Nexus.html?ExternalPythonAPI.html>`_
@@ -29,6 +29,7 @@ class to create, query, and modify items.
 
 Lastly, you create and use ``Report`` instances to access reports in Ansys
 Dynamic Reporting.
+
 
 .. autosummary::
    :toctree: _autosummary/

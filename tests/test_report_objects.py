@@ -1251,6 +1251,16 @@ def test_tablerowcol_transp() -> bool:
 
 
 @pytest.mark.ado_test
+def test_tablevaluefilter_deprecated() -> bool:
+    a = ro.tablevaluefilterREST()
+    a.set_filter(value=["specific", ["a", "b"]])
+    succ = a.get_filter_value()[0] == "specific"
+    a.set_filter(filter_str="A|i_tags|cont|test;")
+    succ_two = "i_tags|cont|" in a.get_filter()
+    assert succ and succ_two
+
+
+@pytest.mark.ado_test
 def test_tablevaluefilter() -> bool:
     a = ro.tablevaluefilterREST()
     succ = a.get_table_name() == ""
@@ -1293,110 +1303,110 @@ def test_tablevaluefilter() -> bool:
 @pytest.mark.ado_test
 def test_tablevaluefilter_filter() -> bool:
     a = ro.tablevaluefilterREST()
-    a.get_filter()
-    a.set_filter()
+    a.get_filter_value()
+    a.set_filter_value()
     succ = False
     try:
-        a.set_filter(value="a")
+        a.set_filter_value(value="a")
     except ValueError as e:
         succ = "input should be a list" in str(e)
     succ_two = False
     try:
-        a.set_filter(value=[])
+        a.set_filter_value(value=[])
     except ValueError as e:
         succ_two = "list input is too short" in str(e)
     succ_three = False
     try:
-        a.set_filter(value=["range", 1])
+        a.set_filter_value(value=["range", 1])
     except ValueError as e:
         succ_three = "input should contain 3 elements" in str(e)
     succ_four = False
     try:
-        a.set_filter(value=["range", 1, 2])
+        a.set_filter_value(value=["range", 1, 2])
     except ValueError as e:
         succ_four = "all input elements should be strings" in str(e)
-    a.set_filter(value=["range", "a", "b"])
-    succ_five = a.get_filter()[0] == "range"
+    a.set_filter_value(value=["range", "a", "b"])
+    succ_five = a.get_filter_value()[0] == "range"
     succ_six = False
     try:
-        a.set_filter(value=["specific", "a", "b"])
+        a.set_filter_value(value=["specific", "a", "b"])
     except ValueError as e:
         succ_six = "input should contain 2 elements" in str(e)
     succ_seven = False
     try:
-        a.set_filter(value=["specific", "a"])
+        a.set_filter_value(value=["specific", "a"])
     except ValueError as e:
         succ_seven = "second input should be a list" in str(e)
     succ_eight = False
     try:
-        a.set_filter(value=["specific", [1, 2]])
+        a.set_filter_value(value=["specific", [1, 2]])
     except ValueError as e:
         succ_eight = "specific value(s) should be string" in str(e)
-    a.set_filter(value=["specific", ["a", "b"]])
-    succ_nine = a.get_filter()[0] == "specific"
+    a.set_filter_value(value=["specific", ["a", "b"]])
+    succ_nine = a.get_filter_value()[0] == "specific"
     succ_ten = False
     try:
-        a.set_filter(value=["top_percentage", "a", "b"])
+        a.set_filter_value(value=["top_percentage", "a", "b"])
     except ValueError as e:
         succ_ten = "first input is not among the acceptable values" in str(e)
     succ_eleven = False
     try:
-        a.set_filter(value=["top_percent", "a", "b"])
+        a.set_filter_value(value=["top_percent", "a", "b"])
     except ValueError as e:
         succ_eleven = "input should contain 2 elements" in str(e)
     succ_twelve = False
     try:
-        a.set_filter(value=["top_percent", "a"])
+        a.set_filter_value(value=["top_percent", "a"])
     except ValueError as e:
         succ_twelve = "second input should be a float" in str(e)
     succ_thirteen = False
     try:
-        a.set_filter(value=["top_percent", 110])
+        a.set_filter_value(value=["top_percent", 110])
     except ValueError as e:
         succ_thirteen = "percentage should be in the (0,100) range" in str(e)
-    a.set_filter(value=["top_percent", 10])
-    succ_fourteen = a.get_filter()[0] == "top_percent"
+    a.set_filter_value(value=["top_percent", 10])
+    succ_fourteen = a.get_filter_value()[0] == "top_percent"
     succ_fifteen = False
     try:
-        a.set_filter(value=["top_count", 10, 10])
+        a.set_filter_value(value=["top_count", 10, 10])
     except ValueError as e:
         succ_fifteen = "input should contain 2 elements" in str(e)
     succ_sixteen = False
     try:
-        a.set_filter(value=["top_count", "a"])
+        a.set_filter_value(value=["top_count", "a"])
     except ValueError as e:
         succ_sixteen = "second input should be an int" in str(e)
-    a.set_filter(value=["top_count", 3])
-    succ_seventeen = a.get_filter()[0] == "top_count"
+    a.set_filter_value(value=["top_count", 3])
+    succ_seventeen = a.get_filter_value()[0] == "top_count"
     succ_eighteen = False
     try:
-        a.set_filter(value=["bot_percent", 3, 3])
+        a.set_filter_value(value=["bot_percent", 3, 3])
     except ValueError as e:
         succ_eighteen = "input should contain 2 elements" in str(e)
     succ_nineteen = False
     try:
-        a.set_filter(value=["bot_percent", "a"])
+        a.set_filter_value(value=["bot_percent", "a"])
     except ValueError as e:
         succ_nineteen = "the second input should be a float" in str(e)
     succ_twenty = False
     try:
-        a.set_filter(value=["bot_percent", 110])
+        a.set_filter_value(value=["bot_percent", 110])
     except ValueError as e:
         succ_twenty = "percentage should be in the (0,100) range" in str(e)
-    a.set_filter(value=["bot_percent", 10])
-    succ_twentyone = a.get_filter()[0] == "bot_percent"
+    a.set_filter_value(value=["bot_percent", 10])
+    succ_twentyone = a.get_filter_value()[0] == "bot_percent"
     succ_twentytwo = False
     try:
-        a.set_filter(value=["bot_count", 1, 1])
+        a.set_filter_value(value=["bot_count", 1, 1])
     except ValueError as e:
         succ_twentytwo = "input should contain 2 elements" in str(e)
     succ_twentythree = False
     try:
-        a.set_filter(value=["bot_count", "a"])
+        a.set_filter_value(value=["bot_count", "a"])
     except ValueError as e:
         succ_twentythree = "second input should be an int" in str(e)
-    a.set_filter(value=["bot_count", 3])
-    succ_twentyfour = a.get_filter()[0] == "bot_count"
+    a.set_filter_value(value=["bot_count", 3])
+    succ_twentyfour = a.get_filter_value()[0] == "bot_count"
     succ_a = succ + succ_two + succ_three + succ_four + succ_five + succ_six
     succ_b = succ_seven + succ_eight + succ_nine + succ_ten + succ_eleven
     succ_c = succ_twelve + succ_thirteen + succ_fourteen + succ_fifteen
@@ -1410,17 +1420,17 @@ def test_tablevaluefilter_filter() -> bool:
 def test_tablevaluefilter_filterparams() -> bool:
     a = ro.tablevaluefilterREST()
     a.params = '{"filter": "specific"}'
-    succ_one = a.get_filter() == ["specific", ["*"]]
+    succ_one = a.get_filter_value() == ["specific", ["*"]]
     a.params = '{"filter": "range"}'
-    succ_two = a.get_filter() == ["range", "", ""]
+    succ_two = a.get_filter_value() == ["range", "", ""]
     a.params = '{"filter": "top_percent"}'
-    succ_three = a.get_filter() == ["top_percent", 10.0]
+    succ_three = a.get_filter_value() == ["top_percent", 10.0]
     a.params = '{"filter": "top_count"}'
-    succ_four = a.get_filter() == ["top_count", 10]
+    succ_four = a.get_filter_value() == ["top_count", 10]
     a.params = '{"filter": "bot_percent"}'
-    succ_five = a.get_filter() == ["bot_percent", 10.0]
+    succ_five = a.get_filter_value() == ["bot_percent", 10.0]
     a.params = '{"filter": "bot_count"}'
-    succ_six = a.get_filter() == ["bot_count", 10]
+    succ_six = a.get_filter_value() == ["bot_count", 10]
     assert succ_one and succ_two and succ_three and succ_four and succ_five and succ_six
 
 
