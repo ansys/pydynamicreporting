@@ -96,3 +96,32 @@ def test_unit_no_url(request) -> bool:
             if "No connection to any server" in line:
                 err_msg = True
     assert err_msg
+
+
+@pytest.mark.ado_test
+def test_save_as_pdf(adr_service_query, request, get_exec) -> bool:
+    exec_basis = get_exec
+    if exec_basis:
+        success = False
+        try:
+            my_report = adr_service_query.get_report(report_name="My Top Report")
+            pdf_file = os.path.join(request.fspath.dirname, "again_mytest")
+            success = my_report.export_pdf(file_name=pdf_file)
+        except Exception:
+            success = False
+        adr_service_query.stop()
+    else:  # If no local installation, then skip this test
+        success = True
+    assert success is True
+
+
+@pytest.mark.ado_test
+def test_save_as_html(adr_service_query) -> bool:
+    success = False
+    try:
+        my_report = adr_service_query.get_report(report_name="My Top Report")
+        success = my_report.export_html(directory_name="htmltest_again")
+    except Exception:
+        success = False
+    adr_service_query.stop()
+    assert success is True
