@@ -83,7 +83,7 @@ report_remote_server.launch_local_database_server
                                         terminate_on_python_exit=False,
                                         delete_db_on_python_exit=False,
                                         username="nexus",
-                                        password="cei,
+                                        password="cei",
                                         verbose=True,
                                         return_info=None,
                                         raise_exception=False,

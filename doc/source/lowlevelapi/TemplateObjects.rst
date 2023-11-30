@@ -467,7 +467,7 @@ Its specific methods are:
 
 Get the style of the Panel. Possible returned values:
 
--  'panel': correspons to Titled Panel
+-  'panel': corresponds to Titled Panel
 -  'callout-default': corresponds to Callout
 -  'callout-danger': corresponds to Callout Error
 -  'callout-warning': corresponds to Callout Warning
@@ -558,14 +558,16 @@ the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'Box reporttest'][0]my_template = server.create_template(name='Box Template', parent=my_parent, report_type = 'Layout:box')
+   my_parent = [x for x in all_reports if x.name == 'Box reporttest'][0]
+   my_template = server.create_template(name='Box Template', parent=my_parent, report_type = 'Layout:box')
 
    first_box = [x for x in all_reports if x.name == 'box_images'][0]
    my_template.set_child_position(guid=first_box.guid, value=[40,39,320,240])
    first_box.parent = my_template.guid
    second_box = [x for x in all_reports if x.name == 'box_movies'][0]
    my_template.set_child_position(guid=second_box.guid, value=[370,39,355,241])
-   my_template.set_child_clip(guid=second_box.guid, clip='scroll')second_box.parent = my_template.guid
+   my_template.set_child_clip(guid=second_box.guid, clip='scroll')
+   second_box.parent = my_template.guid
    third_box = [x for x in all_reports if x.name == 'box_plot'][0]**
 
    my_template.set_child_position(guid=third_box.guid, value=[41,288,685,210])
@@ -695,7 +697,8 @@ lines of code to create the new template:
    my_template = server.create_template(name='Basic Slider', parent=my_parent, report_type='Layout:slider')
    my_template.set_filter('A|s_app|cont|Imagery Session;')
    my_template.set_map_to_slider(['timestep|numeric_up', 'variable|text_up', 'mode|text_down'])
-   server.put_objects(my_template)server.put_objects(my_parent)
+   server.put_objects(my_template)
+   server.put_objects(my_parent)
 
 .. _footerREST:
 
@@ -1070,7 +1073,7 @@ use:
 
 .. code-block:: python
 
-   template.delete_source(name = ['temperature, 'pressure'])
+   template.delete_source(name = ['temperature', 'pressure'])
 
 
 To delete the first operation, use:

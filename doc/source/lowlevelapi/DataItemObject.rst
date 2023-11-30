@@ -268,7 +268,7 @@ array of strings (up to 20 characters), one might use code like this:
 
    import numpy
 
-   arrary = numpy.array([["A", "B", "C"], [1, 2, 3]], dtype="\|S20")
+   array = numpy.array([["A", "B", "C"], [1, 2, 3]], dtype="\|S20")
    d = dict(
        array=array,
        rowlbls=["Row 1", "Row 2"],

@@ -283,7 +283,7 @@ An example of a data item with an item name exceeding:
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
    serverobj = report_remote_server.Server(url="http://localhost:8000", username="nexus", password="cei")
-   invalid_data_item_name = "Bad"\*100
+   invalid_data_item_name = Bad\*100
    item = serverobj.create_item(invalid_data_item_name, "command line")
    item.set_payload_string("A simple text string")
    print(serverobj.put_objects(item))
