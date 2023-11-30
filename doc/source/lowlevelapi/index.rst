@@ -1,7 +1,7 @@
-External Python API
-===================
+Low Level Python API
+====================
 
-.. _external-python-api-1:
+.. _Nexus: https://nexusdemo.ensight.com/docs/html/Nexus.html
 
 .. toctree::
    :maxdepth: 4
@@ -12,29 +12,17 @@ External Python API
    ServerObject
    DatasetandSessionObjects
 
+.. _lowlevel:
 
-The external Python API is provided by the Python interpreter included
-in the CEI/Ansys distributions. The Ansys Dynamic Reporting and
-EnSight installations
-include the cpython or cpython.bat commands that access this
-interpreter. This API does not require EnSight to access ADR Nexus servers.
-It can be used to add data items to an ADR Nexus server, read items from a
-server for export, generate derivative items to be pushed back into the
-database or other custom operations.
-
-It should be noted that while this API is independent of EnSight and can
-be used in an instance of cpython, it can also be used from within the
-EnSight embedded Python interpreter as a lower-level alternative to the
-EnSight Python Ansys Dynamic Reporting API.
+The low level Python API for Ansys Dynamic Reporting
+allows the user to have full control of all the features
+of ADR and the Nexus server. It is a very powerful API, but
+at the same time it can be quite complex and requires the end user
+to fully understand how ADR works in all its components. For a
+full description of ADR as a package, see `Nexus`_
 
 Startup
 -------
-
-The external Python API is a little different from the EnSight internal
-Ansys Dynamic Reporting API. The major changes being that the
-caller must be more aware of
-the session and dataset items and that some of the other automated
-mechanisms provided by EnSight are not available.
 
 The following code snippet illustrates how to import the necessary API
 modules (technically, **import requests** is not necessary, but some of
@@ -67,35 +55,6 @@ serverobj.get_URL().
                                                     connect=serverobj)                                                  
   version_number = serverobj.validate()
   serverobj.stop_local_server()
-
-
-Using the External Python API with another CPython installation
----------------------------------------------------------------
-
-If running from the Python interpreter contained in the Ansys Dynamic Reporting
-installation, run:
-
-.. code-block:: python
-
-  from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
-  import requests
-
-
-If running from any other Python interpreter, the **import cei** should
-be replaced with code that adds the appropriate paths to the sys.path
-module. The modules are located in the **nexus{XXX}/template_editor**
-directory. For example an Ansys installation might use **C:\\Program
-Files\\Ansys Inc\\v!!version!!\\CEI\\nexus!!version!!\\template_editor**. In this case,
-the startup sequence needed to use the API from another Python
-interpreter would be:
-
-.. code-block:: python
-
-  import sys
-  sys.path.append(r'C:\\Program Files\\Ansys Inc\\v!!version!!\\CEI\\nexus!!version!!')
-  from template_editor import report_objects
-  from tempalte_editor import report_remote_server
-
 
 core.report_remote_server module
 --------------------------------
