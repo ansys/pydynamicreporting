@@ -159,7 +159,7 @@ Get the sort selection parameter.
 
 Set the sort selection parameter for the template.This function takes a
 string as input, among the following options:
- 
+
 -  'all'
 -  'first'
 -  'last'
@@ -226,7 +226,7 @@ Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem306.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a root-level template
 (i.e.: that doesn't have a parent template) in the database running
@@ -239,7 +239,7 @@ template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype= report_objects.TemplateREST)
-   my_template = server.create_template(name='Example Template', parent=None, 
+   my_template = server.create_template(name='Example Template', parent=None,
                                        report_type='Layout:panel')
    my_template.set_filter('A|i_src|cont|build_imagery;A|i_tags|cont|timestep=10;')
    my_template.set_property({'width': '50'})
@@ -258,12 +258,12 @@ template type.
 .. _template_type_table:
 
 ======================= ============================= ========================================
-**Layouts**             **Template type**             **Template API sub-class**   
+**Layouts**             **Template type**             **Template API sub-class**
 ======================= ============================= ========================================
-basic                   `Columns`_                    :ref:`report_objects.basicREST() 
+basic                   `Columns`_                    :ref:`report_objects.basicREST()
                                                       <basicREST>`
 
-panel                   `Panel`_                      :ref:`report_objects.panelREST() 
+panel                   `Panel`_                      :ref:`report_objects.panelREST()
                                                       <panelREST>`
 
 box                     `Boxes`_                      :ref:`report_objects.boxREST()
@@ -288,7 +288,7 @@ iterator                `Iterator`_                   :ref:`report_objects.itera
                                                       <iteratorREST>`
 
 tagprops                `Tag to Properties`_          :ref:`report_objects.tagpropsREST()
-                                                      <tagpropsREST>`     
+                                                      <tagpropsREST>`
 
 toc                     `Table of Contents`_          :ref:`report_objects.tocREST()
                                                       <tocREST>`
@@ -298,7 +298,7 @@ reportlink              `Link Report`_                :ref:`report_objects.repor
 ======================= ============================= ========================================
 
 ======================= ============================= ========================================
-**Generators**          **Template type**             **Template API sub-class**  
+**Generators**          **Template type**             **Template API sub-class**
 ======================= ============================= ========================================
 tablemerge              `Table Merge`_                :ref:`report_objects.tablemergeREST()
                                                       <tablemergeREST>`
@@ -389,7 +389,7 @@ documentation example in the Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem307.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a root-level template
 (i.e.: that doesn't have a parent template) in the database running
@@ -402,7 +402,7 @@ template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_template = server.create_template(name='Slider Example', parent=None, 
+   my_template = server.create_template(name='Slider Example', parent=None,
                                        report_type='Layout:panel')
    my_template.set_column_count(2)
    my_template.set_column_widths([1.0, 1.0])
@@ -417,7 +417,7 @@ GeneratorREST class
 
 Inherits from TemplateREST
 
-Class that groups all the common attributes among 
+Class that groups all the common attributes among
 `Generator templates`_. Its specific methods are:
 
 **template.get_generated_items()**
@@ -545,7 +545,7 @@ Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem305.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child template of the
 template "Box report test" that already exists in in the database
@@ -679,7 +679,7 @@ documentation example in the Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem308.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child of the template
 "Tabs" in the database running locally on port 8000. These would be the
@@ -849,7 +849,7 @@ Get the values of the Select source rows/columns. The output is a list
 where each element is a different source. Each element has the following
 form: 'row_name|merge_operation' where merge_operation can have one of
 the following values:
- 
+
 -  'duplicate': corresponds to Allow Duplicates
 -  'merge': corresponds to Combine Values
 -  'rename_tag': corresponds to Rename Using Only Tag
@@ -973,7 +973,7 @@ documentation example in the Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem309.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child of the template
 "Columns" in the database running locally on port 8000. These would be
@@ -1064,7 +1064,7 @@ example to delete the third Reduce operation from the following panel:
 .. figure:: lib/NewItem293.png
    :alt: Image
    :align: center
-   
+
 
 use:
 
@@ -1076,9 +1076,9 @@ use:
 To delete the first operation, use:
 
 .. code-block:: python
-   
+
    template.delete_source(name = ['temperature'])
-   template.add_operation(name=['\*'], unique=False, output_name='output row', 
+   template.add_operation(name=['\*'], unique=False, output_name='output row',
                           existing=True, select_names='\*', operation='count')
 
 
@@ -1102,14 +1102,14 @@ For example to create the operation in the following widget:
 .. figure:: lib/NewItem294.png
    :alt: Image
    :align: center
-   
+
 
 you would run:
 
 .. code-block:: python
-   
+
    template.add_operation(name=['temperature'], unique=True,
-                          output_name='MinTemp', existing=False, 
+                          output_name='MinTemp', existing=False,
                           select_names='simulationA', operation='min')
    template.get_table_transpose()
 
@@ -1139,25 +1139,25 @@ documentation example in the Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem310.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child of the template
 "Merge reduce example" in the database running locally on port 8000.
 These would be the lines of code to create the new template:
 
 .. code-block:: python
-   
+
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
    my_parent = [x for x in all_reports if x.name == 'Merge reduce example'][0]
-   my_template = server.create_template(name='ASCII reduce', parent=my_parent, 
+   my_template = server.create_template(name='ASCII reduce', parent=my_parent,
                                        report_type='Generator:tablereduce')
    my_template.set_generated_items("replace")
    my_template.delete_operation(name=['\*'])
-   my_template.add_operation(name=['\*'], unique=True, output_name='User', 
+   my_template.add_operation(name=['\*'], unique=True, output_name='User',
                            existing=False, select_names='Version', operation='count')
-   my_template.add_operation(name=['\*'], unique=False, output_name='Totals', 
+   my_template.add_operation(name=['\*'], unique=False, output_name='Totals',
                            existing=False, select_names='Version', operation='count')
    server.put_objects(my_template)
    server.put_objects(my_parent)
@@ -1251,19 +1251,19 @@ documentation example in the Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem311.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child of the template
 "RC Filter Generator" in the database running locally on port 8000.
 These would be the lines of code to create the new template:
 
 .. code-block:: python
-   
+
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
    my_parent = [x for x in all_reports if x.name == 'RC Filter Generator'][0]
-   my_template = server.create_template(name='Filter', parent=my_parent, 
+   my_template = server.create_template(name='Filter', parent=my_parent,
                                        report_type='Generator:tablerowcolumnfilter')
    my_template.set_filter_rows(['0', 'fuselage', '\*wing\*'])
    my_template.set_filter_columns(['1', 'Tria3', 'Tetra\*'])
@@ -1306,7 +1306,7 @@ row/column set in the following field, and needs to be a string.
 
 Get the value of Filter. Each different type of filter will return a
 different type of output:
-  
+
 -  'Range of values': it returns a list of three elements. The first
    element is 'range'. The second and third are strings that represent
    the min. and max. of the range.
@@ -1360,7 +1360,7 @@ Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem304.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child template of the
 template "Value Filter Example" that already exists in in the database
@@ -1368,13 +1368,13 @@ running locally on port 800. These would be the lines of code to create
 the new template:
 
 .. code-block:: python
-   
+
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
    my_parent = [x for x in all_reports if x.name == 'Value Filter Example'][0]
-   my_template = server.create_template(name='Generator', parent=my_parent, 
+   my_template = server.create_template(name='Generator', parent=my_parent,
                                        report_type='Generator:tablevaluefilter')
    my_template.set_sort_selection(value="first")
    my_template.set_table_name('ValueFilteredTable')
@@ -1447,24 +1447,24 @@ documentation example in the Ansys Dynamic Reporting installer):
 .. figure:: lib/NewItem312.png
    :alt: Image
    :align: center
-   
+
 
 .. figure:: lib/NewItem313.png
    :alt: Image
    :align: center
-   
+
 
 Let's also assume you want this template to be a child of the template
 "RC Sort Filter Example" in the database running locally on port 8000.
 These would be the lines of code to create the new template:
 
 .. code-block:: python
-   
+
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
    my_parent = [x for x in all_reports if x.name == 'RC Sort Filter Example'][0]
-   my_template = server.create_template(name='Sorted', parent=my_parent, 
+   my_template = server.create_template(name='Sorted', parent=my_parent,
                                        report_type='Generator:tablesortfilter')
    my_template.set_sort_rows(['+User', '+Version', '+Date'])
    my_template.set_generated_items("replace")

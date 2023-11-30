@@ -49,10 +49,10 @@ serverobj.get_URL().
   report_remote_server.create_new_local_database(None,
                                                 directory=db_dir)
   serverobj = report_remote_server.Server()
-  report_remote_server.launch_local_database_server(None, 
-                                                    port=None, 
-                                                    directory=db_dir, 
-                                                    connect=serverobj)                                                  
+  report_remote_server.launch_local_database_server(None,
+                                                    port=None,
+                                                    directory=db_dir,
+                                                    connect=serverobj)
   version_number = serverobj.validate()
   serverobj.stop_local_server()
 
@@ -75,17 +75,17 @@ report_remote_server.launch_local_database_server
 
 .. code-block:: python
 
-  bError = launch_local_database_server(parent, 
-                                        directory="", 
-                                        no_directory_prompt=False, 
-                                        port=8000, 
+  bError = launch_local_database_server(parent,
+                                        directory="",
+                                        no_directory_prompt=False,
+                                        port=8000,
                                         connect=None,
                                         terminate_on_python_exit=False,
                                         delete_db_on_python_exit=False,
                                         username="nexus",
                                         password="cei,
-                                        verbose=True, 
-                                        return_info=None, 
+                                        verbose=True,
+                                        return_info=None,
                                         raise_exception=False,
                                         use_system_tray=None,
                                         server_timeout=180.0, **kwargs)
@@ -149,9 +149,9 @@ report_remote_server.create_new_local_database
 
 .. code-block:: python
 
-  bError = create_new_local_database(parent, 
-                                     directory="", 
-                                     return_info={}, 
+  bError = create_new_local_database(parent,
+                                     directory="",
+                                     return_info={},
                                      raise_exception=False)
 
 
@@ -338,7 +338,7 @@ point value):
   def make_time(s):
     dt = parser.parse(s)
     return (dt - time_base).total_seconds()
-    
+
   # generate a row of random values
   def row_gen(start, end):
     users = ['bob', 'fred', 'mary', 'jill']
@@ -346,7 +346,7 @@ point value):
     t0 = make_time(start)
     t1 = make_time(end)
     return [users[random.randint(0,3)], versions[random.randint(0,3)], t0 + (t1 - t0)*random.random()]
-    
+
   # connect to the default ADR Nexus server (this assumes the server had been started previously
 
   s = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
@@ -356,14 +356,13 @@ point value):
   array = numpy.zeros((nrows, ncols), dtype="\|S20")
   for i in range(nrows):
     array[i] = row_gen("1/1/2017", "2/1/2017")
-    
-  item.set_payload_table_values(array, 
-                                rowlbls=None, 
-                                collbls=["User", "Version", "Date"], 
+
+  item.set_payload_table_values(array,
+                                rowlbls=None,
+                                collbls=["User", "Version", "Date"],
                                 title="January")
   item.add_tag('month', 'Jan')
   item.add_tag('user_version_example')
   if s.put_objects(item) == requests.codes.ok:
     print("Success")
-  
-  
+

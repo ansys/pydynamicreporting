@@ -214,7 +214,7 @@ printing:
 Magic tokens
 ^^^^^^^^^^^^
 
-Magic tokens is a new way for users in the ADR Nexus server 
+Magic tokens is a new way for users in the ADR Nexus server
 to login without using
 their password. Ansys Dynamic Reporting
 provides a Python API to generate a per-user
@@ -243,7 +243,7 @@ Usage:
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
    server = report_remote_server.Server()
-   opts = { "port": 8000, "directory": "C:\\Users\\Nexus\\db", 
+   opts = { "port": 8000, "directory": "C:\\Users\\Nexus\\db",
             "raise_exception": True, "connect": server
             }
    launched = report_remote_server.launch_local_database_server(None, opts)

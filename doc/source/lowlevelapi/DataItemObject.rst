@@ -78,8 +78,10 @@ An example of the use of this method is shown below:
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
 
-   serverobj = report_remote_server.Server("http://localhost:8000/", 'nexus', 'cei')
-   obj_list = serverobj.get_objects(objtype=report_objects.ItemREST, query="A|i_type|cont|string;")
+   serverobj = report_remote_server.Server("http://localhost:8000/", "nexus", "cei")
+   obj_list = serverobj.get_objects(
+       objtype=report_objects.ItemREST, query="A|i_type|cont|string;"
+   )
 
    # Previously you had to do this to get the data of an item and then decode it to view human readable content
 
@@ -133,8 +135,8 @@ below:
 
    .. code-block:: python
 
-      with open("example.png", 'rb') as fp:
-         img = fp.read()
+      with open("example.png", "rb") as fp:
+          img = fp.read()
       item.set_payload_image(img)
 
 
@@ -143,6 +145,7 @@ below:
    .. code-block:: python
 
       from PyQt4 import QtGui
+
       img = QtGui.QImage("example.png")
       item.set_payload_image(img)
 
@@ -152,9 +155,10 @@ below:
    .. code-block:: python
 
       import enve
+
       img = enve.image()
       if img.load("example.png") == 0:
-         item.set_payload_image(img)
+          item.set_payload_image(img)
 
 
 None Item
@@ -200,10 +204,12 @@ can also be set in this dictionary. A simple example:
 
    import numpy
 
-   d = dict(array=numpy.zeros((3, 2), numpy.double), 
-            rowlbls=["Row 1", "Row 2", "Row 3"], 
-            collbls=["Column A", "Column B"], 
-            title="Simple table")
+   d = dict(
+       array=numpy.zeros((3, 2), numpy.double),
+       rowlbls=["Row 1", "Row 2", "Row 3"],
+       collbls=["Column A", "Column B"],
+       title="Simple table",
+   )
    item.set_payload_table(d)
 
 
@@ -214,7 +220,7 @@ plotter attributes. One example might be:
 
 .. code-block:: python
 
-   plot = ensight.objs.core.PLOTS[0] # get the first ENS_PLOTTER object
+   plot = ensight.objs.core.PLOTS[0]  # get the first ENS_PLOTTER object
    item.set_payload_table(plot)
 
 
@@ -235,10 +241,12 @@ This is a shortcut for the following two lines of python:
 
 .. code-block:: python
 
-   d = dict(array=numpy.array(array, numpy.double), 
-            rowlbls=rowlbls, 
-            collbls=collbls, 
-            title=title)
+   d = dict(
+       array=numpy.array(array, numpy.double),
+       rowlbls=rowlbls,
+       collbls=collbls,
+       title=title,
+   )
    item.set_payload_table(d)
 
 
@@ -246,7 +254,7 @@ Note this can be handy for cases like:
 
 .. code-block:: python
 
-   item.set_payload_table_values([[1,2,3],[4,5,6]])
+   item.set_payload_table_values([[1, 2, 3], [4, 5, 6]])
 
 
 where one does not want to work with numpy and prefers to pass lists of
@@ -260,11 +268,13 @@ array of strings (up to 20 characters), one might use code like this:
 
    import numpy
 
-   arrary = numpy.array([['A','B','C'],[1,2,3]], dtype="\|S20")
-   d = dict(array=array, 
-            rowlbls=["Row 1", "Row 2"], 
-            collbls=["Column A", "Column B", "Column C"], 
-            title="Simple ASCII table")
+   arrary = numpy.array([["A", "B", "C"], [1, 2, 3]], dtype="\|S20")
+   d = dict(
+       array=array,
+       rowlbls=["Row 1", "Row 2"],
+       collbls=["Column A", "Column B", "Column C"],
+       title="Simple ASCII table",
+   )
    item.set_payload_table(d)
 
 
@@ -317,29 +327,39 @@ The following example includes examples of all of the various options:
    image_item = server.create_item(name="An Image", source="externalAPI", sequence=0)
    img = enve.image()
    if img.load("example.png") == 0:
-      image_item.set_payload_image(img)
-      
+       image_item.set_payload_image(img)
+
    leaves = list()
    for i in range(10):
-      leaves.append( dict(key='leaves', name='Leaf {}'.format(i), value=i))
+       leaves.append(dict(key="leaves", name="Leaf {}".format(i), value=i))
 
    children = list()
-   children.append( dict(key='child', name='Boolean example', value=True))
-   children.append( dict(key='child', name='Integer example', value=10))
-   children.append( dict(key='child', name='Float example', value=99.99))
-   children.append( dict(key='child', name='Simple string', value='Hello world!!!'))
-   children.append( dict(key='child', name='The current date', value=datetime.datetime.now()))
+   children.append(dict(key="child", name="Boolean example", value=True))
+   children.append(dict(key="child", name="Integer example", value=10))
+   children.append(dict(key="child", name="Float example", value=99.99))
+   children.append(dict(key="child", name="Simple string", value="Hello world!!!"))
+   children.append(
+       dict(key="child", name="The current date", value=datetime.datetime.now())
+   )
 
    # this entity will display the image item (or a link to it) created above
-   children.append( dict(key='child', name='A data item guid', value=uuid.UUID(image_item.guid)) )
-   children.append( dict(key='child_parent', 
-                        name='A child parent', 
-                        value='Parents can have values',
-                        children=leaves, 
-                        state="expanded") )
+   children.append(
+       dict(key="child", name="A data item guid", value=uuid.UUID(image_item.guid))
+   )
+   children.append(
+       dict(
+           key="child_parent",
+           name="A child parent",
+           value="Parents can have values",
+           children=leaves,
+           state="expanded",
+       )
+   )
 
    tree = list()
-   tree.append( dict(key='root', name='Top Level', value=None, children=children, state="collapsed") )
+   tree.append(
+       dict(key="root", name="Top Level", value=None, children=children, state="collapsed")
+   )
    item = server.create_item(name="Tree List Example", source="externalAPI", sequence=0)
    item.set_payload_tree(tree)
 
