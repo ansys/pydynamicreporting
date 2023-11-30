@@ -242,19 +242,27 @@ Usage:
 .. code-block:: python
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
+
    server = report_remote_server.Server()
-   opts = { "port": 8000, "directory": "C:\\Users\\Nexus\\db",
-            "raise_exception": True, "connect": server
-            }
+   opts = {
+       "port": 8000,
+       "directory": "C:\\Users\\Nexus\\db",
+       "raise_exception": True,
+       "connect": server,
+   }
    launched = report_remote_server.launch_local_database_server(None, opts)
    if launched:
-      print(server.magic_token) # auto generation.. default expiry of 1day
-      print(server.get_url_with_magic_token())
-      server.magic_token = server.generate_magic_token(max_age=60) # manual generation, with an expiry of 60 seconds
-      print(server.get_url_with_magic_token())
-      # Prints URL with token.
-      # Example: http://127.0.0.1:8000?magic_token=eyJ1c2VyX2lkIjozLCJtYXhfYWdlIjo4NjQwMCwidGltZXN0YW1wIjoiMW5QY1B5In0:1nPcPy:c3OZhMCVQQq_fXXzevQ47WHxYfbAZE5TI-GL0yBzIaw
-      template = serverobj.create_template(name="New Template", parent=None, report_type='Layout:basic')
+       print(server.magic_token)  # auto generation.. default expiry of 1day
+       print(server.get_url_with_magic_token())
+       server.magic_token = server.generate_magic_token(
+           max_age=60
+       )  # manual generation, with an expiry of 60 seconds
+       print(server.get_url_with_magic_token())
+       # Prints URL with token.
+       # Example: http://127.0.0.1:8000?magic_token=eyJ1c2VyX2lkIjozLCJtYXhfYWdlIjo4NjQwMCwidGltZXN0YW1wIjoiMW5QY1B5In0:1nPcPy:c3OZhMCVQQq_fXXzevQ47WHxYfbAZE5TI-GL0yBzIaw
+       template = serverobj.create_template(
+           name="New Template", parent=None, report_type="Layout:basic"
+       )
 
 
 Method on a report_remote_server.Server() object to create a new
@@ -282,8 +290,11 @@ An example of a data item with an item name exceeding:
 .. code-block:: python
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
-   serverobj = report_remote_server.Server(url="http://localhost:8000", username="nexus", password="cei")
-   invalid_data_item_name = Bad\*100
+
+   serverobj = report_remote_server.Server(
+       url="http://localhost:8000", username="nexus", password="cei"
+   )
+   invalid_data_item_name = 100
    item = serverobj.create_item(invalid_data_item_name, "command line")
    item.set_payload_string("A simple text string")
    print(serverobj.put_objects(item))

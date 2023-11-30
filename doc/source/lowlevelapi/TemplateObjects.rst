@@ -238,11 +238,12 @@ template:
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
-   all_reports = server.get_objects(objtype= report_objects.TemplateREST)
-   my_template = server.create_template(name='Example Template', parent=None,
-                                       report_type='Layout:panel')
-   my_template.set_filter('A|i_src|cont|build_imagery;A|i_tags|cont|timestep=10;')
-   my_template.set_property({'width': '50'})
+   all_reports = server.get_objects(objtype=report_objects.TemplateREST)
+   my_template = server.create_template(
+       name="Example Template", parent=None, report_type="Layout:panel"
+   )
+   my_template.set_filter("A|i_src|cont|build_imagery;A|i_tags|cont|timestep=10;")
+   my_template.set_property({"width": "50"})
    server.put_objects(my_template)
 
 
@@ -402,11 +403,12 @@ template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_template = server.create_template(name='Slider Example', parent=None,
-                                       report_type='Layout:panel')
+   my_template = server.create_template(
+       name="Slider Example", parent=None, report_type="Layout:panel"
+   )
    my_template.set_column_count(2)
    my_template.set_column_widths([1.0, 1.0])
-   *my_template.set_html("<h2>Example Slider Panels</h2>キャンペー")
+   * my_template.set_html("<h2>Example Slider Panels</h2>キャンペー")
    server.put_objects(my_template)
 
 
@@ -558,20 +560,22 @@ the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'Box reporttest'][0]
-   my_template = server.create_template(name='Box Template', parent=my_parent, report_type = 'Layout:box')
+   my_parent = [x for x in all_reports if x.name == "Box reporttest"][0]
+   my_template = server.create_template(
+       name="Box Template", parent=my_parent, report_type="Layout:box"
+   )
 
-   first_box = [x for x in all_reports if x.name == 'box_images'][0]
-   my_template.set_child_position(guid=first_box.guid, value=[40,39,320,240])
+   first_box = [x for x in all_reports if x.name == "box_images"][0]
+   my_template.set_child_position(guid=first_box.guid, value=[40, 39, 320, 240])
    first_box.parent = my_template.guid
-   second_box = [x for x in all_reports if x.name == 'box_movies'][0]
-   my_template.set_child_position(guid=second_box.guid, value=[370,39,355,241])
-   my_template.set_child_clip(guid=second_box.guid, clip='scroll')
+   second_box = [x for x in all_reports if x.name == "box_movies"][0]
+   my_template.set_child_position(guid=second_box.guid, value=[370, 39, 355, 241])
+   my_template.set_child_clip(guid=second_box.guid, clip="scroll")
    second_box.parent = my_template.guid
-   third_box = [x for x in all_reports if x.name == 'box_plot'][0]**
+   third_box = [x for x in all_reports if x.name == "box_plot"][0]
 
-   my_template.set_child_position(guid=third_box.guid, value=[41,288,685,210])
-   my_template.set_child_clip(guid=third_box.guid, clip='none')
+   my_template.set_child_position(guid=third_box.guid, value=[41, 288, 685, 210])
+   my_template.set_child_clip(guid=third_box.guid, clip="none")
    third_box.parent = my_template.guid
 
    server.put_objects([first_box, second_box, third_box])
@@ -693,10 +697,14 @@ lines of code to create the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'Tabs'][0]
-   my_template = server.create_template(name='Basic Slider', parent=my_parent, report_type='Layout:slider')
-   my_template.set_filter('A|s_app|cont|Imagery Session;')
-   my_template.set_map_to_slider(['timestep|numeric_up', 'variable|text_up', 'mode|text_down'])
+   my_parent = [x for x in all_reports if x.name == "Tabs"][0]
+   my_template = server.create_template(
+       name="Basic Slider", parent=my_parent, report_type="Layout:slider"
+   )
+   my_template.set_filter("A|s_app|cont|Imagery Session;")
+   my_template.set_map_to_slider(
+       ["timestep|numeric_up", "variable|text_up", "mode|text_down"]
+   )
    server.put_objects(my_template)
    server.put_objects(my_parent)
 
@@ -988,14 +996,16 @@ the lines of code to create the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'Columns'][0]
-   my_template = server.create_template(name='Merged Table', parent=my_parent, report_type='Generator:tablemerge')
+   my_parent = [x for x in all_reports if x.name == "Columns"][0]
+   my_template = server.create_template(
+       name="Merged Table", parent=my_parent, report_type="Generator:tablemerge"
+   )
    my_template.set_generated_items("replace")
    my_template.set_table_name("Simple_test")
-   my_template.set_sources(['temperature|rename_nametag','Distance|merge'])
-   my_template.set_rename_tag('\_index\_')
+   my_template.set_sources(["temperature|rename_nametag", "Distance|merge"])
+   my_template.set_rename_tag("\_index\_")
    my_template.set_use_labels(0)
-   my_template.set_use_ids('Distance')
+   my_template.set_use_ids("Distance")
    server.put_objects(my_template)
    server.put_objects(my_parent)
 
@@ -1073,16 +1083,22 @@ use:
 
 .. code-block:: python
 
-   template.delete_source(name = ['temperature', 'pressure'])
+   template.delete_source(name=["temperature", "pressure"])
 
 
 To delete the first operation, use:
 
 .. code-block:: python
 
-   template.delete_source(name = ['temperature'])
-   template.add_operation(name=['\*'], unique=False, output_name='output row',
-                          existing=True, select_names='\*', operation='count')
+   template.delete_source(name=["temperature"])
+   template.add_operation(
+       name=["\*"],
+       unique=False,
+       output_name="output row",
+       existing=True,
+       select_names="\*",
+       operation="count",
+   )
 
 
 Add a new Reduce operation.
@@ -1111,9 +1127,14 @@ you would run:
 
 .. code-block:: python
 
-   template.add_operation(name=['temperature'], unique=True,
-                          output_name='MinTemp', existing=False,
-                          select_names='simulationA', operation='min')
+   template.add_operation(
+       name=["temperature"],
+       unique=True,
+       output_name="MinTemp",
+       existing=False,
+       select_names="simulationA",
+       operation="min",
+   )
    template.get_table_transpose()
 
 
@@ -1151,17 +1172,31 @@ These would be the lines of code to create the new template:
 .. code-block:: python
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
+
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'Merge reduce example'][0]
-   my_template = server.create_template(name='ASCII reduce', parent=my_parent,
-                                       report_type='Generator:tablereduce')
+   my_parent = [x for x in all_reports if x.name == "Merge reduce example"][0]
+   my_template = server.create_template(
+       name="ASCII reduce", parent=my_parent, report_type="Generator:tablereduce"
+   )
    my_template.set_generated_items("replace")
-   my_template.delete_operation(name=['\*'])
-   my_template.add_operation(name=['\*'], unique=True, output_name='User',
-                           existing=False, select_names='Version', operation='count')
-   my_template.add_operation(name=['\*'], unique=False, output_name='Totals',
-                           existing=False, select_names='Version', operation='count')
+   my_template.delete_operation(name=["\*"])
+   my_template.add_operation(
+       name=["\*"],
+       unique=True,
+       output_name="User",
+       existing=False,
+       select_names="Version",
+       operation="count",
+   )
+   my_template.add_operation(
+       name=["\*"],
+       unique=False,
+       output_name="Totals",
+       existing=False,
+       select_names="Version",
+       operation="count",
+   )
    server.put_objects(my_template)
    server.put_objects(my_parent)
 
@@ -1263,14 +1298,16 @@ These would be the lines of code to create the new template:
 .. code-block:: python
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
+
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'RC Filter Generator'][0]
-   my_template = server.create_template(name='Filter', parent=my_parent,
-                                       report_type='Generator:tablerowcolumnfilter')
-   my_template.set_filter_rows(['0', 'fuselage', '\*wing\*'])
-   my_template.set_filter_columns(['1', 'Tria3', 'Tetra\*'])
-   my_template.set_table_name('RC_Filtered_Table')
+   my_parent = [x for x in all_reports if x.name == "RC Filter Generator"][0]
+   my_template = server.create_template(
+       name="Filter", parent=my_parent, report_type="Generator:tablerowcolumnfilter"
+   )
+   my_template.set_filter_rows(["0", "fuselage", "\*wing\*"])
+   my_template.set_filter_columns(["1", "Tria3", "Tetra\*"])
+   my_template.set_table_name("RC_Filtered_Table")
    server.put_objects(my_template)
    server.put_objects(my_parent)
 
@@ -1376,13 +1413,14 @@ the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'Value Filter Example'][0]
-   my_template = server.create_template(name='Generator', parent=my_parent,
-                                       report_type='Generator:tablevaluefilter')
+   my_parent = [x for x in all_reports if x.name == "Value Filter Example"][0]
+   my_template = server.create_template(
+       name="Generator", parent=my_parent, report_type="Generator:tablevaluefilter"
+   )
    my_template.set_sort_selection(value="first")
-   my_template.set_table_name('ValueFilteredTable')
-   my_template.set_filter_by(value = ['row', 'Quad4'])
-   my_template.set_filter_value(value=['range', '100', ''])
+   my_template.set_table_name("ValueFilteredTable")
+   my_template.set_filter_by(value=["row", "Quad4"])
+   my_template.set_filter_value(value=["range", "100", ""])
    server.put_objects(my_template)
    server.put_objects(my_parent)
 
@@ -1464,14 +1502,16 @@ These would be the lines of code to create the new template:
 .. code-block:: python
 
    from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
+
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == 'RC Sort Filter Example'][0]
-   my_template = server.create_template(name='Sorted', parent=my_parent,
-                                       report_type='Generator:tablesortfilter')
-   my_template.set_sort_rows(['+User', '+Version', '+Date'])
+   my_parent = [x for x in all_reports if x.name == "RC Sort Filter Example"][0]
+   my_template = server.create_template(
+       name="Sorted", parent=my_parent, report_type="Generator:tablesortfilter"
+   )
+   my_template.set_sort_rows(["+User", "+Version", "+Date"])
    my_template.set_generated_items("replace")
-   my_template.set_sort_columns(['+Labels'])
+   my_template.set_sort_columns(["+Labels"])
    server.put_objects(my_template)
    server.put_objects(my_parent)
 

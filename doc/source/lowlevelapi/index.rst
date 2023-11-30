@@ -46,13 +46,11 @@ serverobj.get_URL().
 .. code-block:: python
 
   db_dir = "D:/data/example_database"
-  report_remote_server.create_new_local_database(None,
-                                                directory=db_dir)
+  report_remote_server.create_new_local_database(None, directory=db_dir)
   serverobj = report_remote_server.Server()
-  report_remote_server.launch_local_database_server(None,
-                                                    port=None,
-                                                    directory=db_dir,
-                                                    connect=serverobj)
+  report_remote_server.launch_local_database_server(
+      None, port=None, directory=db_dir, connect=serverobj
+  )
   version_number = serverobj.validate()
   serverobj.stop_local_server()
 
@@ -75,20 +73,23 @@ report_remote_server.launch_local_database_server
 
 .. code-block:: python
 
-  bError = launch_local_database_server(parent,
-                                        directory="",
-                                        no_directory_prompt=False,
-                                        port=8000,
-                                        connect=None,
-                                        terminate_on_python_exit=False,
-                                        delete_db_on_python_exit=False,
-                                        username="nexus",
-                                        password="cei",
-                                        verbose=True,
-                                        return_info=None,
-                                        raise_exception=False,
-                                        use_system_tray=None,
-                                        server_timeout=180.0, **kwargs)
+  bError = launch_local_database_server(
+      parent,
+      directory="",
+      no_directory_prompt=False,
+      port=8000,
+      connect=None,
+      terminate_on_python_exit=False,
+      delete_db_on_python_exit=False,
+      username="nexus",
+      password="cei",
+      verbose=True,
+      return_info=None,
+      raise_exception=False,
+      use_system_tray=None,
+      server_timeout=180.0,
+      **kwargs
+  )
 
 
 This function will try to launch a local ADR Nexus server using the database
@@ -149,10 +150,9 @@ report_remote_server.create_new_local_database
 
 .. code-block:: python
 
-  bError = create_new_local_database(parent,
-                                     directory="",
-                                     return_info={},
-                                     raise_exception=False)
+  bError = create_new_local_database(
+      parent, directory="", return_info={}, raise_exception=False
+  )
 
 
 This function will create a new, empty database with the default
@@ -299,8 +299,9 @@ A simple example of how this API might be used:
 
   from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
 
-  serverobj = report_remote_server.Server(url="http://localhost:8000",
-                                          username="nexus", password="cei")
+  serverobj = report_remote_server.Server(
+      url="http://localhost:8000", username="nexus", password="cei"
+  )
   session = serverobj.get_default_session()
   session.application = "My Application"
   session.version = "10.2"
@@ -335,17 +336,25 @@ point value):
 
   # time values can be represented as double precision counts of seconds from a standard time_base
   time_base = datetime.datetime(1970, 1, 1)
+
+
   def make_time(s):
-    dt = parser.parse(s)
-    return (dt - time_base).total_seconds()
+      dt = parser.parse(s)
+      return (dt - time_base).total_seconds()
+
 
   # generate a row of random values
   def row_gen(start, end):
-    users = ['bob', 'fred', 'mary', 'jill']
-    versions = ['1.1', '2.0', '1.3', '1.0']
-    t0 = make_time(start)
-    t1 = make_time(end)
-    return [users[random.randint(0,3)], versions[random.randint(0,3)], t0 + (t1 - t0)*random.random()]
+      users = ["bob", "fred", "mary", "jill"]
+      versions = ["1.1", "2.0", "1.3", "1.0"]
+      t0 = make_time(start)
+      t1 = make_time(end)
+      return [
+          users[random.randint(0, 3)],
+          versions[random.randint(0, 3)],
+          t0 + (t1 - t0) * random.random(),
+      ]
+
 
   # connect to the default ADR Nexus server (this assumes the server had been started previously
 
@@ -355,14 +364,13 @@ point value):
   item = s.create_item(name="Text List Example", source="externalAPI", sequence=0)
   array = numpy.zeros((nrows, ncols), dtype="\|S20")
   for i in range(nrows):
-    array[i] = row_gen("1/1/2017", "2/1/2017")
+      array[i] = row_gen("1/1/2017", "2/1/2017")
 
-  item.set_payload_table_values(array,
-                                rowlbls=None,
-                                collbls=["User", "Version", "Date"],
-                                title="January")
-  item.add_tag('month', 'Jan')
-  item.add_tag('user_version_example')
+  item.set_payload_table_values(
+      array, rowlbls=None, collbls=["User", "Version", "Date"], title="January"
+  )
+  item.add_tag("month", "Jan")
+  item.add_tag("user_version_example")
   if s.put_objects(item) == requests.codes.ok:
-    print("Success")
+      print("Success")
 
