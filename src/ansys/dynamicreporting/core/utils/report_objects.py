@@ -1,8 +1,10 @@
 import base64
 import copy
 import datetime
+import functools
 import io
 import json
+import logging
 import os
 import os.path
 import pickle
@@ -31,6 +33,23 @@ try:
     has_numpy = True
 except ImportError:
     has_numpy = False
+
+
+logger = logging.getLogger(__name__)
+
+
+def disable_warn_logging(func):
+    # Decorator to suppress harmless warning messages
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.disable(logging.WARNING)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logging.disable(logging.NOTSET)
+
+    return wrapper
+
 
 """@package report_objects
 Basic object classes used for server operations
@@ -2764,7 +2783,7 @@ class tablevaluefilterREST(GeneratorREST):
         self.params = json.dumps(d)
         return
 
-    def get_filter(self):
+    def get_filter_value(self):
         if "filter" in json.loads(self.params):
             if json.loads(self.params)["filter"] == "range":
                 if "range_min" in json.loads(self.params):
@@ -2804,7 +2823,21 @@ class tablevaluefilterREST(GeneratorREST):
                 else:
                     return ["bot_count", 10]
 
-    def set_filter(self, value=None):
+    def set_filter(self, value=None, filter_str=""):
+        if filter_str != "":
+            return super().set_filter(filter_str=filter_str)
+        elif value is not None:
+            logger.warning(
+                "WARNING: DEPRECATED METHOD. Use set_filter_value(value) instead. \
+                The current method is to be used as set_filter(filter_str) to access \
+                high level template filtering. See documentation.\n"
+            )
+            return self.set_filter_value(value=value)
+        else:
+            logger.warning("WARNING: value should be passed as input.\n")
+            return None
+
+    def set_filter_value(self, value=None):
         if value is None:
             value = ["range", "", ""]
         if type(value) is not list:
