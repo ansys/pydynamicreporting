@@ -17,3 +17,4 @@ ansys_version = "2024R1"
 from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.adr_report import Report
 from ansys.dynamicreporting.core.adr_service import Service
+from ansys.dynamicreporting.core.adr import ADR

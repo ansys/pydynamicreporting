@@ -1,0 +1,201 @@
+#accordion {
+    background: var(--color-bg);
+    width: fit-content;
+    border: 1px solid var(--color-bg-card-header);
+    overflow-y: auto;
+    max-height: 600px;
+}
+
+#accordion::-webkit-scrollbar-thumb {
+    border-left: 1px solid var(--color-bg-card-header-no-alpha);
+}
+
+#accordion.show {
+    min-width: 250px;
+    width: 20%;
+}
+
+#accordion:not(.show) {
+    background-color: var(--color-ph-bg);
+}
+
+#accordion:not(.show) #filters-container {
+    display: none;
+}
+
+#accordion::-webkit-scrollbar-track {
+    border-left: 1px solid var(--color-bg-card-header);
+    background-color: var(--color-ph-bg);
+    padding-left: 1px;
+}
+
+#filter-header {
+    display: inline-block;
+    width: 100%;
+    border: none;
+    font-weight: bold;
+    color: var(--color-text-light);
+    background-color: var(--color-ph-bg);
+}
+
+#filters-container > div {
+    border-radius: 0;
+    border-top: none;
+}
+
+#filters-container .card-header {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-jumbotron);
+}
+
+#filters-container .card-header i {
+    float: right;
+    line-height: 24px;
+    opacity: 0.3;
+
+    -webkit-transition: -webkit-transform .2s linear;
+    -moz-transition: -moz-transform .2s linear;
+    -ms-transition: -ms-transform .2s linear;
+    transition: transform .2s linear;
+}
+
+#filters-container .card-header i.shown  {
+    transform: rotate(180deg);
+}
+
+#accordion:not(.show) .filter-header-text {
+    display: none;
+}
+
+.range-dropdown option.hidden {
+    display: none;
+}
+
+#content-column {
+    width: 100%;
+    overflow-y: auto;
+}
+
+#filter-chips-container {
+    float: left;
+    padding: 8px;
+    min-height: 50px;
+}
+
+#filter-chips {
+    display: inline-block;
+}
+
+.filter-chip {
+    background-color: var(--color-ph-bg);
+    border: 1px solid var(--color-bg-card-header);
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    width: fit-content;
+    user-select: none;
+    margin-right: 4px;
+}
+
+.filter-chip i {
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+#close-all-filters {
+    display: none;
+    background: none;
+    font-weight: bold;
+    user-select: none;
+    cursor: pointer;
+}
+
+#close-all-filters.show {
+    display: inline-block;
+}
+
+.flex-container {
+    display: flex;
+    flex-direction: row;
+}
+
+#filters-container > .card:first-child {
+    border: none;
+}
+
+#accordion .btn:focus {
+    box-shadow: none;
+}
+
+#accordion .card-body {
+    max-height: 30vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--color-bg-table);
+}
+
+#filters-container .card {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--color-bg-card-header);
+}
+
+#accordion .card > .card-header {
+    border-bottom: 1px solid var(--color-bg-card-header);
+}
+
+#accordion .card > button.collapsed {
+    border-bottom: none !important;
+    /* prevents a mis-colored border from appearing temporarily during open/close animation */
+    border-bottom-color: var(--color-bg-card-header) !important;
+}
+
+#filters-container > .card {
+    margin-bottom: -1px;
+}
+
+/* Checkbox styling */
+.select-buttons {
+    line-height: 12px;
+    margin-bottom: 6px;
+}
+
+.select-buttons > span {
+    font-size: 12px;
+    cursor: pointer;
+    margin: 0 10px;
+}
+
+/* Range slider styling */
+.range-slider {
+    margin: auto;
+    width: fit-content;
+}
+
+.range-slider label {
+    margin-bottom: 0;
+}
+
+.range-slider label:first-child {
+    float: left;
+}
+
+.range-slider label:last-child {
+    float: right;
+}
+
+.slider-selection {
+    background: rgba(4, 120, 178, 0.4);
+}
+
+.data-filter-content {
+    padding: 10px;
+}
+
+.data-filter-content .legend rect {
+    pointer-events: none;
+}
+
+.range-input.right {
+    text-align: right;
+}
