@@ -35,7 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "build>=0.8.0",
-    "django>=3.2.10",
+    "django>=4.2.1",
     "filelock>=3.7.1",
     "numpy>=1.18.0",
     "packaging>=21.0",
