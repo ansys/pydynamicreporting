@@ -3,28 +3,29 @@
 Template Objects
 ================
 
-.. _here: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?LayoutTemplates.html
-.. _link: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?QueryExpressions.html
-.. _Columns: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Columns.html
-.. _Panel: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Panel.html
-.. _Boxes: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Boxes.html
-.. _Tabs: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Tabs.html
-.. _Carousel: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Carousel.html
-.. _Slider: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Slider.html
-.. _Page Footer: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?PageFooter.html
-.. _Page Header: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?PageHeader.html
-.. _Iterator: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?Iterator.html
-.. _Tag to Properties: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TagProperties.html
-.. _Table of Contents: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableofContents.html
-.. _Link Report: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?LinkReport.html
-.. _Table Merge: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableMerge.html
-.. _Table Reduction: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableReduction.html
-.. _Table Row/Column Filter: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableRowColumnFilter.html
-.. _Table Value Filter: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableValueFilter.html
-.. _Table Row/Column Sort: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableRowColumnSort.html
-.. _SQL Query: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?SQLQuery.html
-.. _Tree Merge: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TreeMerge.html
-.. _Generator templates: https://nexusdemo.ensight.com/docs/en/html/Nexus.html?GeneratorTemplates.html
+.. _here: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html
+.. _link: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html
+.. _Columns: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Columns.html
+.. _Panel: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Panel.html
+.. _Boxes: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Boxes.html
+.. _Tabs: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Tabs.html
+.. _Carousel: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Carousel.html
+.. _Slider: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Slider.html
+.. _Page Footer: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageFooter.html
+.. _Page Header: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageHeader.html
+.. _Iterator: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Iterator.html
+.. _Tag to Properties: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TagProperties.html
+.. _Table of Contents: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableofContents.html
+.. _Link Report: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LinkedReport.html
+.. _Table Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableMerge.html
+.. _Table Reduction: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableReduction.html
+.. _Table Row/Column Filter: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnFilter.html
+.. _Table Value Filter: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableValueFilter.html
+.. _Table Row/Column Sort: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnSort.html
+.. _SQL Query: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/SQLQuery.html
+.. _Tree Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TreeMerge.html
+.. _Userdefined: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Userdefined.html
+.. _Generator templates: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/GeneratorTemplates.html
 
 
 
@@ -296,6 +297,9 @@ toc                     `Table of Contents`_          :ref:`report_objects.tocRE
 
 reportlink              `Link Report`_                :ref:`report_objects.reportlinkREST()
                                                       <reportlinkREST>`
+
+userdefined             `Userdefined`_                :ref:`report_objects.userdefinedREST()
+                                                      <userdefinedREST>`
 ======================= ============================= ========================================
 
 ======================= ============================= ========================================
@@ -823,6 +827,50 @@ None
 
 Set the guid of the linked report. It takes as input a valid guid. If
 you want to set to link to no report, set the input to None
+
+.. _userdefinedREST:
+
+userdefinedREST object
+^^^^^^^^^^^^^^^^^^^^^^
+
+Inherits from TemplateREST, LayoutREST
+
+Class that corresponds to the `Userdefined`_ Layout
+template type. This template inserts a named div into the HTML output.
+This div can be filled with any HTML the user would like.  By default,
+the HTML content will be filled in with the ``TemplateREST.set_html()``
+content (if any).  This content may be placed before or after any
+child item/layout content.
+
+Specific properties include:
+
+**template.interactive_only: int**
+
+If this property is set to a non-zero value (the default), then the
+div will not be included when ADR is outputting PDF, PowerPoint or
+Offline HTML.  If set to zero, it will be included in PDF and Offline
+HTML output.
+
+**template.before_children: int**
+
+If this property is set to zero (the default), then any child content
+is placed in the report before the div.  If set to a non-zero value, the
+children will be placed in the report after the div.
+
+**template.userdef_name: str**
+
+This property is used to specify the value of the div ``adr_userdefined_template``
+attribute.  The default value is ``unspecified``.
+
+For example, if this property is set to ``"Hello"`` and the HTML is set
+to ``<h1>Example</h1>`` the generated div will look like this:
+
+.. code-block:: html
+
+    <div adr_userdefined_template="Hello">
+    <h1>Example</h1>
+    </div>
+
 
 .. _tablemergeREST:
 
