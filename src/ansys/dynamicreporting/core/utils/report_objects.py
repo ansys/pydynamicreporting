@@ -3382,15 +3382,22 @@ class datafilterREST(LayoutREST):
 
 
 class userdefinedREST(LayoutREST):
-    """Representation of the User Defined Layout Template.
+    """
+    Representation of the User Defined Layout Template.
+
     This layout inserts a tagged div into the HTML output.  This div can be easily found
-    via Javascript and can host user-supplied HTML content."""
+    via Javascript and can host user-supplied HTML content.
+    """
 
     @property
     def interactive_only(self) -> int:
-        """"Controls if the template is rendered in 'export' situations (e.g. PDF, PPTX
-        and offline HTML).  If non-zero (the default), this template will not be
-        rendered in such situations.  Note: Children are always rendered."""
+        """
+        "Controls if the template is rendered in 'export' situations (e.g. PDF, PPTX and
+        offline HTML).
+
+        If non-zero (the default), this template will not be rendered in such
+        situations.  Note: Children are always rendered.
+        """
         return self.get_property().get("interactive_only")
 
     @interactive_only.setter
@@ -3401,8 +3408,11 @@ class userdefinedREST(LayoutREST):
 
     @property
     def before_children(self) -> int:
-        """Controls if the user-defined div is rendered before or after any children.
-        If zero (the default), the div comes after the children."""
+        """
+        Controls if the user-defined div is rendered before or after any children.
+
+        If zero (the default), the div comes after the children.
+        """
         return self.get_property().get("before_children")
 
     @before_children.setter
@@ -3413,8 +3423,11 @@ class userdefinedREST(LayoutREST):
 
     @property
     def userdef_name(self) -> str:
-        """The value of the adr_userdefined_template attribute on the user-defined div.
-        For example: <div adr_userdefined_template='userdef_name'>"""
+        """
+        The value of the adr_userdefined_template attribute on the user-defined div.
+
+        For example: <div adr_userdefined_template='userdef_name'>
+        """
         return self.get_property().get("userdef_name")
 
     @userdef_name.setter
