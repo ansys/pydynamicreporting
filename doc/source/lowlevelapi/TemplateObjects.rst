@@ -854,8 +854,8 @@ HTML output.
 **template.before_children: int**
 
 If this property is set to zero (the default), then any child content
-is placed in the report before the div.  If set non-zero, the div
-will be placed in the report before the div.
+is placed in the report before the div.  If set to a non-zero value, the
+children will be placed in the report after the div.
 
 **template.userdef_name: str**
 
