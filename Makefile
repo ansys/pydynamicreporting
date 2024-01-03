@@ -20,7 +20,6 @@ install:
 	pip install dist/*.whl
 
 install-dev:
-	python -m pip install --upgrade pip
 	pip uninstall ansys-dynamicreporting-core -y
 	pip install -e .[dev]
 
