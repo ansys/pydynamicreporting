@@ -70,3 +70,4 @@ venv/
 
 # Ignore Sphinx files
 doc/_build
+pip-wheel-metadata/
