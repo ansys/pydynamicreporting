@@ -1,0 +1,33 @@
+{% extends "website/base_website.html" %}
+
+{% block content %}
+
+<h2 class="display-4 mb-3" xmlns="http://www.w3.org/1999/html">{{ base_title }}</h2>
+
+<div class="container">
+    <div class="bs-callout bs-callout-warning">
+        <h4>Unsuccessful session launch</h4>
+        <p>{{error}}</p>
+    </div>
+        {% comment %}
+        <div id="vnc_report_div" style="padding:0 0;margin:0 0;{{height}}{{width}}">
+            <iframe id='vnc_report_frame' allowfullscreen allowTransparency='false' scrolling='no' frameborder='0'
+                    style='height:100%; width:100%; resize: both; overflow: auto; display: none; '
+                    marginheight='0' marginwidth='0'
+                    onload="var fr=document.getElementById('vnc_report_frame');var div=document.getElementById('vnc_report_div'); fr.style.height=div.new_height; div.style.height=div.new_height;">
+            </iframe>
+            <div id="report_btn_2" class="offset-0 col-sm-10">
+                <button class="btn btn-space"
+                        onclick="document.getElementById('report_btn_2').style.display='none'; document.getElementById('vnc_report_div').new_height = '{{height}}px'; document.getElementById('vnc_report_frame').style.display='block'; document.getElementById('vnc_report_frame').src='{{uri}}';">Launch</button>
+            </div>
+        </div>
+        {% endcomment %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+
+{% endblock %}
+
