@@ -286,6 +286,23 @@ def test_delete_item(adr_service_query) -> bool:
     assert len(newly_items) == 0
 
 
+@pytest.mark.ado_test
+def test_delete_report(adr_service_query) -> bool:
+    server = adr_service_query.serverobj
+    old_reports = adr_service_query.get_list_reports()
+    test_report_name = "To Delete"
+    top_report = server.create_template(
+        name=test_report_name, parent=None, report_type="Layout:panel"
+    )
+    top_report.params = '{"HTML": "Hello!!"}'
+    server.put_objects(top_report)
+    test_report = adr_service_query.get_report(test_report_name)
+    adr_service_query.delete([test_report])
+    new_reports = adr_service_query.get_list_reports()
+    adr_service_query.stop()
+    assert len(old_reports) == len(new_reports)
+
+
 def test_vis_report(adr_service_query) -> bool:
     success = False
     try:

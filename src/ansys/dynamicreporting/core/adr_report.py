@@ -239,7 +239,7 @@ class Report:
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
             return ""
-        try:
+        try:  # pragma: no cover
             if query is None:
                 query = {}
             self.service.serverobj.export_report_as_pdf(
