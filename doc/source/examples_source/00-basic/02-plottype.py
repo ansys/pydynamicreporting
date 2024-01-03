@@ -23,8 +23,9 @@ different plot types.
 # Start an Ansys Dynamic Reporting service via a Docker image on a new
 # database. The path for the database directory must be to an empty directory.
 
-import ansys.dynamicreporting.core as adr
 import numpy as np
+
+import ansys.dynamicreporting.core as adr
 
 db_dir = r"C:\tmp\new_database"
 adr_service = adr.Service(ansys_installation="docker", db_directory=db_dir)
