@@ -8,11 +8,11 @@ import requests
 
 # TODO:
 #  Improve MathJax download
-
+ANSYS_VERSION_FALLBACK="242"
 
 class ReportDownloadHTML:
     def __init__(
-        self, url=None, directory=None, debug=False, filename="index.html", no_inline_files=False
+        self, url=None, directory=None, debug=False, filename="index.html", no_inline_files=False, ansys_version=None
     ):
         # Make sure that the print query has been specified.  Set it to html if not set
         if url:
@@ -25,7 +25,9 @@ class ReportDownloadHTML:
                     query = "print=html"
                 parsed._replace(query=query)
                 url = urllib.parse.urlunparse(parsed)
-
+        self._ansys_version = ANSYS_VERSION_FALLBACK
+        if ansys_version:
+            self._ansys_version = ansys_version
         self._url = url
         self._directory = directory
         self._filename = filename
@@ -187,14 +189,14 @@ class ReportDownloadHTML:
             "play.png",
         ]
         self._download_static_files(
-            images, "/ansys/nexus/images/", "ansys/nexus/images/", "viewer image"
+            images, f"/ansys{self._ansys_version}/nexus/images/", f"ansys{self._ansys_version}/nexus/images/", "viewer image"
         )
         images = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._download_static_files(
-            images, "/ansys/nexus/utils/", "ansys/nexus/utils/", "viewer image"
+            images, f"/ansys{self._ansys_version}/nexus/utils/", f"ansys{self._ansys_version}/nexus/utils/", "viewer image"
         )
         images = ["ANSYSViewer_min.js", "viewer-loader.js"]
-        self._download_static_files(images, "/ansys/nexus/", "ansys/nexus/", "viewer image")
+        self._download_static_files(images, f"/ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/", "viewer image")
         images = [
             "jquery.contextMenu.min.css",
             "jquery.contextMenu.min.js",
@@ -202,8 +204,8 @@ class ReportDownloadHTML:
         ]
         self._download_static_files(
             images,
-            "/ansys/nexus/novnc/vendor/jQuery-contextMenu/",
-            "ansys/nexus/novnc/vendor/jQuery-contextMenu",
+            f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
+            f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
             "viewer image",
         )
 
@@ -218,7 +220,7 @@ class ReportDownloadHTML:
         self._download_static_files(fonts, "/static/website/webfonts/", "webfonts", "font")
 
     @staticmethod
-    def _fix_viewer_component_paths(filename, data):
+    def _fix_viewer_component_paths(filename, data, ansys_version):
         # Special case for AVZ viewer: ANSYSViewer_min.js to set the base path for images
         if filename.endswith("ANSYSViewer_min.js"):
             data = data.decode("utf-8")
@@ -226,7 +228,7 @@ class ReportDownloadHTML:
                 '"/static/website/images/"',
                 r'document.URL.replace(/\\/g, "/").replace("index.html", "media/")',
             )
-            data = data.replace('"/ansys/nexus/images/', '"./ansys/nexus/images/')
+            data = data.replace(f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/')
             # this one is interesting.  by default, AVZ will throw an error if you attempt to read
             # a "file://" protocol src.  In offline mode, if we are not using data URIs, then we
             # need to lie to the AVZ core and tell it to go ahead and try.
@@ -235,7 +237,7 @@ class ReportDownloadHTML:
         # Special case for the AVZ viewer web component (loading proxy images and play arrow)
         elif filename.endswith("viewer-loader.js"):
             data = data.decode("utf-8")
-            data = data.replace('"/ansys/nexus/images/', '"./ansys/nexus/images/')
+            data = data.replace(f'"/ansys{ansys_version}//nexus/images/', f'"./ansys{ansys_version}//nexus/images/')
             data = data.encode("utf-8")
         return data
 
@@ -247,7 +249,7 @@ class ReportDownloadHTML:
             if resp.status_code == requests.codes.ok:
                 filename = os.path.join(self._directory, target_path, f)
                 try:
-                    data = self._fix_viewer_component_paths(filename, resp.content)
+                    data = self._fix_viewer_component_paths(filename, resp.content, self._ansys_version)
                     open(filename, "wb").write(data)
                 except Exception:
                     print(f"Unable to download {comment}: {f}")
@@ -297,7 +299,7 @@ class ReportDownloadHTML:
                         # we need to prefix the .bin file and scene.js file with the GUID
                         basename = f"{os.path.basename(os.path.dirname(pathname))}_{basename}"
                     else:
-                        tmp = self._fix_viewer_component_paths(basename, tmp)
+                        tmp = self._fix_viewer_component_paths(basename, tmp, self._ansys_version)
                     # get the output filename
                     if pathname.startswith("/static/ansys/"):
                         # if the content is part of the /ansys/ namespace, we keep the namespace,
@@ -447,7 +449,7 @@ class ReportDownloadHTML:
         # <img src="/media/7d6838fe-f28d-11e8-a5aa-1c1b0da59167_image.png" class="img-responsive"
         # ... style="margin: 0 auto; display:flex; justify-content:center;"  alt="Image file not found">
         # in viewer-loader.js - this is handled in a special way
-        # <img class="ansys-nexus-play" id="proxy-play" src="/ansys/nexus/images/play.png">
+        # <img class="ansys-nexus-play" id="proxy-play" src="/ansys###/nexus/images/play.png">
         # video
         # <source src="/media/4a87c6c0-f34b-11e8-871b-1c1b0da59167_movie.mp4" type="video/mp4" />
         # slider template
