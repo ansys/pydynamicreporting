@@ -266,8 +266,8 @@ def image_to_data(img):
     if has_enve:  # pragma: no cover
         if isinstance(img, enve.image):
             data = dict(width=img.dims[0], height=img.dims[1])
-            if img.enhanced:
-                with tempfile.TemporaryDirectory() as temp_dir:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                if img.enhanced:
                     path = os.path.join(temp_dir, "enhanced_image.tif")
                     # Save the image as a tiff file (enhanced)
                     if img.save(path, options="Compression Deflate") == 0:
@@ -277,6 +277,14 @@ def image_to_data(img):
                                 data["file_data"] = img_file.read()
                             data["format"] = "tif"
                             return data
+                        except OSError:
+                            return None
+                else:
+                    path = os.path.join(temp_dir, "image.png")
+                    if img.save(path) == 0:
+                        try:
+                            with open(path, "rb") as img_file:
+                                return PIL_image_to_data(img_file.read())
                         except OSError:
                             return None
     if not data:

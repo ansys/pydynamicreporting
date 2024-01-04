@@ -1,8 +1,10 @@
 import base64
 import copy
 import datetime
+import functools
 import io
 import json
+import logging
 import os
 import os.path
 import pickle
@@ -31,6 +33,23 @@ try:
     has_numpy = True
 except ImportError:
     has_numpy = False
+
+
+logger = logging.getLogger(__name__)
+
+
+def disable_warn_logging(func):
+    # Decorator to suppress harmless warning messages
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.disable(logging.WARNING)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logging.disable(logging.NOTSET)
+
+    return wrapper
+
 
 """@package report_objects
 Basic object classes used for server operations
@@ -2764,7 +2783,7 @@ class tablevaluefilterREST(GeneratorREST):
         self.params = json.dumps(d)
         return
 
-    def get_filter(self):
+    def get_filter_value(self):
         if "filter" in json.loads(self.params):
             if json.loads(self.params)["filter"] == "range":
                 if "range_min" in json.loads(self.params):
@@ -2804,7 +2823,21 @@ class tablevaluefilterREST(GeneratorREST):
                 else:
                     return ["bot_count", 10]
 
-    def set_filter(self, value=None):
+    def set_filter(self, value=None, filter_str=""):
+        if filter_str != "":
+            return super().set_filter(filter_str=filter_str)
+        elif value is not None:
+            logger.warning(
+                "WARNING: DEPRECATED METHOD. Use set_filter_value(value) instead. \
+                The current method is to be used as set_filter(filter_str) to access \
+                high level template filtering. See documentation.\n"
+            )
+            return self.set_filter_value(value=value)
+        else:
+            logger.warning("WARNING: value should be passed as input.\n")
+            return None
+
+    def set_filter_value(self, value=None):
         if value is None:
             value = ["range", "", ""]
         if type(value) is not list:
@@ -3345,4 +3378,60 @@ class datafilterREST(LayoutREST):
     def filter_numeric_step(self, value):
         props = self.get_property()
         props["filter_numeric_step"] = value
+        self.set_property(props)
+
+
+class userdefinedREST(LayoutREST):
+    """
+    Representation of the User Defined Layout Template.
+
+    This layout inserts a tagged div into the HTML output.  This div can be easily found
+    via Javascript and can host user-supplied HTML content.
+    """
+
+    @property
+    def interactive_only(self) -> int:
+        """
+        "Controls if the template is rendered in 'export' situations (e.g. PDF, PPTX and
+        offline HTML).
+
+        If non-zero (the default), this template will not be rendered in such
+        situations.  Note: Children are always rendered.
+        """
+        return self.get_property().get("interactive_only")
+
+    @interactive_only.setter
+    def interactive_only(self, value: int) -> None:
+        props = self.get_property()
+        props["interactive_only"] = value
+        self.set_property(props)
+
+    @property
+    def before_children(self) -> int:
+        """
+        Controls if the user-defined div is rendered before or after any children.
+
+        If zero (the default), the div comes after the children.
+        """
+        return self.get_property().get("before_children")
+
+    @before_children.setter
+    def before_children(self, value: int) -> None:
+        props = self.get_property()
+        props["before_children"] = value
+        self.set_property(props)
+
+    @property
+    def userdef_name(self) -> str:
+        """
+        The value of the adr_userdefined_template attribute on the user-defined div.
+
+        For example: <div adr_userdefined_template='userdef_name'>
+        """
+        return self.get_property().get("userdef_name")
+
+    @userdef_name.setter
+    def userdef_name(self, value: str) -> None:
+        props = self.get_property()
+        props["userdef_name"] = value
         self.set_property(props)

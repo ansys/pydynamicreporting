@@ -64,7 +64,7 @@ def test_unit_nexus_stop(request) -> bool:
     a = Service(logfile=logfile)
     a.stop()
     f = open(logfile)
-    assert "There is no service connected to the current session" in f.read()
+    assert "Error validating the connected service" in f.read()
 
 
 @pytest.mark.ado_test
@@ -284,6 +284,23 @@ def test_delete_item(adr_service_query) -> bool:
     newly_items = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
     adr_service_query.stop()
     assert len(newly_items) == 0
+
+
+@pytest.mark.ado_test
+def test_delete_report(adr_service_query) -> bool:
+    server = adr_service_query.serverobj
+    old_reports = adr_service_query.get_list_reports()
+    test_report_name = "To Delete"
+    top_report = server.create_template(
+        name=test_report_name, parent=None, report_type="Layout:panel"
+    )
+    top_report.params = '{"HTML": "Hello!!"}'
+    server.put_objects(top_report)
+    test_report = adr_service_query.get_report(test_report_name)
+    adr_service_query.delete([test_report])
+    new_reports = adr_service_query.get_list_reports()
+    adr_service_query.stop()
+    assert len(old_reports) == len(new_reports)
 
 
 def test_vis_report(adr_service_query) -> bool:
