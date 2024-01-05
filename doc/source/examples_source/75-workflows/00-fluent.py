@@ -33,7 +33,7 @@ from ansys.pyensight.core import LocalLauncher
 import ansys.dynamicreporting.core as adr
 import os
 
-os.environ["AWP_ROOT241"]=r"""C:\Program Files\ANSYS Inc\v241"""
+os.environ["AWP_ROOT241"] = r"""C:\Program Files\ANSYS Inc\v241"""
 
 ansys_loc = r"""C:\Program Files\ANSYS Inc\v241"""
 db_dir = r"""C:\fluent_workflow\db_dir"""
@@ -45,11 +45,13 @@ db_dir = r"""C:\fluent_workflow\db_dir"""
 #
 # Let's start an instance for each of the Ansys applications we want to use.
 # Fluent will be launched with Beta features enabled. We also create a
-# sample.dvs file where to store the output from the parameter study. 
+# sample.dvs file where to store the output from the parameter study.
 #
 
-flsession = pyfluent.launch_fluent(product_version="24.1.0", version="3d", mode="solver", processor_count=4)
-enlauncher = LocalLauncher(ansys_installation = ansys_loc)
+flsession = pyfluent.launch_fluent(
+    product_version="24.1.0", version="3d", mode="solver", processor_count=4
+)
+enlauncher = LocalLauncher(ansys_installation=ansys_loc)
 ensession = enlauncher.start()
 adr_session = adr.Service(ansys_installation=ansys_loc, db_directory=db_dir)
 session_guid = adr_session.start(create_db=True)
@@ -59,9 +61,9 @@ try:
 except (FileNotFoundError, OSError):
     pass
 with open("sample.dvs", "w") as dvsfile:
-    dvsfile.write('#!DVS_CASE 1.0\n')
-    dvsfile.write('SERVER_PORT_BASE={}\n'.format(port))
-    dvsfile.write('SERVER_PORT_MULT=1\n')
+    dvsfile.write("#!DVS_CASE 1.0\n")
+    dvsfile.write(f"SERVER_PORT_BASE={port}\n")
+    dvsfile.write("SERVER_PORT_MULT=1\n")
 
 
 ###############################################################################
@@ -84,37 +86,37 @@ settings = [
     "*",
     "()",
     "cell-element-type",
-    "cell-id", 
-    "cell-type", 
+    "cell-id",
+    "cell-type",
     "pressure",
     "gas-skin-friction-coef",
-    "gas-viscosity-lam", 
-    "gas-velocity-magnitude", 
-    "gas-wall-shear", 
+    "gas-viscosity-lam",
+    "gas-velocity-magnitude",
+    "gas-wall-shear",
     "gas-x-velocity",
-    "gas-wall-shear", 
+    "gas-wall-shear",
     "gas-y-velocity",
-    "gas-y-wall-shear", 
+    "gas-y-wall-shear",
     "gas-z-velocity",
     "gas-z-wall-shear",
     "gas-vof",
     "solid-skin-friction-coef",
-    "solid-viscosity-lam", 
-    "solid-velocity-magnitude", 
-    "solid-wall-shear", 
+    "solid-viscosity-lam",
+    "solid-velocity-magnitude",
+    "solid-wall-shear",
     "solid-x-velocity",
-    "solid-wall-shear", 
+    "solid-wall-shear",
     "solid-y-velocity",
-    "solid-y-wall-shear", 
+    "solid-y-wall-shear",
     "solid-z-velocity",
     "solid-z-wall-shear",
     "solid-vof",
     "mass-imbalance",
-    "quit", 
+    "quit",
     "no",
     '"export-1"',
     '"time-step"',
-    "1"
+    "1",
 ]
 flsession.tui.file.transient_export.ensight_dvs_volume(*settings)
 flsession.solution.initialization.hybrid_initialize()
@@ -132,7 +134,11 @@ flsession.tui.solve.set.transient_controls.number_of_time_steps(250)
 #
 
 from threading import Thread
-load_dvs = lambda: ensession.load_data(os.path.join(os.getcwd(), "sample.dvs"), monitor_new_timesteps=ensession.MONITOR_NEW_TIMESTEPS_STAY_AT_CURRENT)
+
+load_dvs = lambda: ensession.load_data(
+    os.path.join(os.getcwd(), "sample.dvs"),
+    monitor_new_timesteps=ensession.MONITOR_NEW_TIMESTEPS_STAY_AT_CURRENT,
+)
 solve_fluent = lambda: flsession.solution.run_calculation.calculate()
 threads = []
 for process in [solve_fluent, load_dvs]:
@@ -162,11 +168,15 @@ ensession.ensight.file.restore_context(ctx_file)
 #
 
 my_text = adr_session.create_item()
-my_text.item_text = "<h1>Example PyFluent PyEnSight PyADR Working Test</h1>This is the first of many items"
-ensession.ensight.utils.export.animation("export.mp4",width=1920,height=1080,frames_per_second=10)
+my_text.item_text = (
+    "<h1>Example PyFluent PyEnSight PyADR Working Test</h1>This is the first of many items"
+)
+ensession.ensight.utils.export.animation(
+    "export.mp4", width=1920, height=1080, frames_per_second=10
+)
 my_animation = adr_session.create_item()
 my_animation.item_animation = "export.mp4"
-ensession.ensight.utils.export.image("export.png",width=1920,height=1080)
+ensession.ensight.utils.export.image("export.png", width=1920, height=1080)
 my_image = adr_session.create_item()
 my_image.item_image = "export.png"
 taglist = " part_type=Clip " + " partColorby=Pressure"

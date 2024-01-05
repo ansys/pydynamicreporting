@@ -4,6 +4,7 @@ repos:
   rev: 23.3.0  # IF VERSION CHANGES --> MODIFY "blacken-docs" MANUALLY AS WELL!!
   hooks:
   - id: black
+    exclude: ^doc/source/_data
 
 - repo: https://github.com/adamchainz/blacken-docs
   rev: 1.13.0
@@ -15,6 +16,7 @@ repos:
   rev: 5.11.5
   hooks:
   - id: isort
+    exclude: ^doc/source/_data
 
 - repo: https://github.com/PyCQA/flake8
   rev: 5.0.4
@@ -27,6 +29,7 @@ repos:
   - id: codespell
     args: ["--toml", "pyproject.toml"]
     additional_dependencies: [ "tomli" ]
+    exclude: ^doc/source/_data
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
   rev: 0.22.0
