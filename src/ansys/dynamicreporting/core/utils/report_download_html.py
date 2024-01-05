@@ -1,6 +1,9 @@
 import base64
 import os
 import os.path
+import pathlib
+import platform
+import re
 from typing import Optional
 import urllib.parse
 
@@ -25,9 +28,11 @@ class ReportDownloadHTML:
                     query = "print=html"
                 parsed._replace(query=query)
                 url = urllib.parse.urlunparse(parsed)
-        self._ansys_version = ANSYS_VERSION_FALLBACK
+        self._ansys_version = str(ANSYS_VERSION_FALLBACK)
         if ansys_version:
-            self._ansys_version = ansys_version
+            self._ansys_version = str(ansys_version)
+            if int(self._ansys_version) < 242:
+                self._ansys_version = ""
         self._url = url
         self._directory = directory
         self._filename = filename
@@ -75,7 +80,7 @@ class ReportDownloadHTML:
         current = 0
         while True:
             try:
-                idx1 = text.index("/static/ansys/", current)
+                idx1 = text.index(f"/static/ansys{self._ansys_version}/", current)
             except ValueError:
                 try:
                     idx1 = text.index("/static/", current)
@@ -84,7 +89,7 @@ class ReportDownloadHTML:
                         idx1 = text.index("/media/", current)
                     except ValueError:
                         try:
-                            idx1 = text.index("/ansys/", current)
+                            idx1 = text.index(f"/ansys{self._ansys_version}/", current)
                         except ValueError:
                             return text
             quote = text[idx1 - 1]
@@ -247,9 +252,10 @@ class ReportDownloadHTML:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
             resp = requests.get(url, allow_redirects=True)
             if resp.status_code == requests.codes.ok:
-                filename = os.path.join(self._directory, target_path, f)
+                filename = self._directory + os.sep + target_path + os.sep + f
+                filename = os.path.normpath(filename)
                 try:
-                    data = self._fix_viewer_component_paths(filename, resp.content, self._ansys_version)
+                    data = self._fix_viewer_component_paths(str(filename), resp.content, self._ansys_version)
                     open(filename, "wb").write(data)
                 except Exception:
                     print(f"Unable to download {comment}: {f}")
@@ -301,7 +307,7 @@ class ReportDownloadHTML:
                     else:
                         tmp = self._fix_viewer_component_paths(basename, tmp, self._ansys_version)
                     # get the output filename
-                    if pathname.startswith("/static/ansys/"):
+                    if pathname.startswith(f"/static/ansys{self._ansys_version}/"):
                         # if the content is part of the /ansys/ namespace, we keep the namespace,
                         # but remove the /static prefix
                         local_pathname = os.path.dirname(pathname).replace("/static/", "./")
@@ -331,7 +337,7 @@ class ReportDownloadHTML:
                 return -1, -1, ""
             idx2 += len(suffix)
             block = text[idx1:idx2]
-            if ("/media/" in block) or ("/static/" in block) or ("/ansys/" in block):
+            if ("/media/" in block) or ("/static/" in block) or (re.match(r"/ansys([0-9]+)", block)):
                 return idx1, idx2, text[idx1:idx2]
             start = idx2
 
@@ -422,9 +428,9 @@ class ReportDownloadHTML:
         self._make_dir([self._directory, "media", "jax", "input", "AsciiMath"])
         self._make_dir([self._directory, "media", "images"])
         self._make_dir([self._directory, "webfonts"])
-        self._make_dir([self._directory, "ansys", "nexus", "images"])
-        self._make_dir([self._directory, "ansys", "nexus", "utils"])
-        self._make_dir([self._directory, "ansys", "nexus", "novnc", "vendor", "jQuery-contextMenu"])
+        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
+        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
+        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "novnc", "vendor", "jQuery-contextMenu"])
 
         # get the webpage html source
         resp = requests.get(self._url)
