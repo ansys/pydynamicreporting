@@ -28,10 +28,12 @@ report.
 # to an empty directory where to store the Ansys Dynamic Reporting database.
 #
 
+import os
+
 import ansys.fluent.core as pyfluent
 from ansys.pyensight.core import LocalLauncher
+
 import ansys.dynamicreporting.core as adr
-import os
 
 os.environ["AWP_ROOT241"] = r"""C:\Program Files\ANSYS Inc\v241"""
 
