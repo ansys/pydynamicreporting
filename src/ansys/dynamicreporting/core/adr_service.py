@@ -310,7 +310,9 @@ class Service:
         if self._url is not None:  # pragma: no cover
             self.logger.warning("Already connected to a dynamic reporting service.\n")
             return
-        self.serverobj = report_remote_server.Server(url=url, username=username, password=password)
+        self.serverobj = report_remote_server.Server(
+            url=url, username=username, password=password, ansys_version=self._ansys_version
+        )
         try:
             self.serverobj.validate()
         except Exception:
@@ -471,7 +473,10 @@ class Service:
                 self.logger.error(f"Service started on port {self._port}")
                 raise StartingServiceError
             self.serverobj = report_remote_server.Server(
-                url=f"http://127.0.0.1:{self._port}", username=username, password=password
+                url=f"http://127.0.0.1:{self._port}",
+                username=username,
+                password=password,
+                ansys_version=self._ansys_version,
             )
 
         else:  # pragma: no cover
