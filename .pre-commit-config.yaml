@@ -60,6 +60,7 @@ repos:
   - id: debug-statements
   - id: check-merge-conflict
   - id: trailing-whitespace
+    exclude: ^doc/source/_data
 
 - repo: https://github.com/PyCQA/docformatter
   rev: v1.6.3
