@@ -16,7 +16,7 @@ repos:
   rev: 5.11.5
   hooks:
   - id: isort
-    args: ["--skip", "doc/source/_data"]
+    args: ["--skip", "^doc/source/_data"]
 
 - repo: https://github.com/PyCQA/flake8
   rev: 5.0.4

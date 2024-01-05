@@ -29,6 +29,7 @@ report.
 #
 
 import os
+from threading import Thread
 
 import ansys.fluent.core as pyfluent
 from ansys.pyensight.core import LocalLauncher
@@ -135,13 +136,18 @@ flsession.tui.solve.set.transient_controls.number_of_time_steps(250)
 # generated.
 #
 
-from threading import Thread
 
-load_dvs = lambda: ensession.load_data(
-    os.path.join(os.getcwd(), "sample.dvs"),
-    monitor_new_timesteps=ensession.MONITOR_NEW_TIMESTEPS_STAY_AT_CURRENT,
-)
-solve_fluent = lambda: flsession.solution.run_calculation.calculate()
+def load_dvs():
+    return ensession.load_data(
+        os.path.join(os.getcwd(), "sample.dvs"),
+        monitor_new_timesteps=ensession.MONITOR_NEW_TIMESTEPS_STAY_AT_CURRENT,
+    )
+
+
+def solve_fluent():
+    return flsession.solution.run_calculation.calculate()
+
+
 threads = []
 for process in [solve_fluent, load_dvs]:
     threads.append(Thread(target=process))
