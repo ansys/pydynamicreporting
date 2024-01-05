@@ -75,7 +75,7 @@ with open("sample.dvs", "w") as dvsfile:
 #
 # We are now ready to run a parameter study with Ansys Fluent. This section
 # assumes you have an input stairmand_mphase_v19.cas file. You can download
-# a copy of the example file at 
+# a copy of the example file at
 # https://github.com/ansys/pydynamicreporting/tree/main/doc/source/_data.
 #
 
@@ -161,7 +161,7 @@ threads[0].start()
 #
 # Load a context file in Ansys EnSight to automatically postprocess the results
 # of the parameter study that is Ansys Fluent. You can find the context1a.ctx
-# and associated files at 
+# and associated files at
 # https://github.com/ansys/pydynamicreporting/tree/main/doc/source/_data.
 #
 
