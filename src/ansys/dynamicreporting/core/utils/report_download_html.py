@@ -11,11 +11,18 @@ import requests
 
 # TODO:
 #  Improve MathJax download
-ANSYS_VERSION_FALLBACK="242"
+ANSYS_VERSION_FALLBACK = "242"
+
 
 class ReportDownloadHTML:
     def __init__(
-        self, url=None, directory=None, debug=False, filename="index.html", no_inline_files=False, ansys_version=None
+        self,
+        url=None,
+        directory=None,
+        debug=False,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
     ):
         # Make sure that the print query has been specified.  Set it to html if not set
         if url:
@@ -194,14 +201,25 @@ class ReportDownloadHTML:
             "play.png",
         ]
         self._download_static_files(
-            images, f"/ansys{self._ansys_version}/nexus/images/", f"ansys{self._ansys_version}/nexus/images/", "viewer image"
+            images,
+            f"/ansys{self._ansys_version}/nexus/images/",
+            f"ansys{self._ansys_version}/nexus/images/",
+            "viewer image",
         )
         images = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._download_static_files(
-            images, f"/ansys{self._ansys_version}/nexus/utils/", f"ansys{self._ansys_version}/nexus/utils/", "viewer image"
+            images,
+            f"/ansys{self._ansys_version}/nexus/utils/",
+            f"ansys{self._ansys_version}/nexus/utils/",
+            "viewer image",
         )
         images = ["ANSYSViewer_min.js", "viewer-loader.js"]
-        self._download_static_files(images, f"/ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/", "viewer image")
+        self._download_static_files(
+            images,
+            f"/ansys{self._ansys_version}/nexus/",
+            f"ansys{self._ansys_version}/nexus/",
+            "viewer image",
+        )
         images = [
             "jquery.contextMenu.min.css",
             "jquery.contextMenu.min.js",
@@ -233,7 +251,9 @@ class ReportDownloadHTML:
                 '"/static/website/images/"',
                 r'document.URL.replace(/\\/g, "/").replace("index.html", "media/")',
             )
-            data = data.replace(f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/')
+            data = data.replace(
+                f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
+            )
             # this one is interesting.  by default, AVZ will throw an error if you attempt to read
             # a "file://" protocol src.  In offline mode, if we are not using data URIs, then we
             # need to lie to the AVZ core and tell it to go ahead and try.
@@ -242,7 +262,9 @@ class ReportDownloadHTML:
         # Special case for the AVZ viewer web component (loading proxy images and play arrow)
         elif filename.endswith("viewer-loader.js"):
             data = data.decode("utf-8")
-            data = data.replace(f'"/ansys{ansys_version}//nexus/images/', f'"./ansys{ansys_version}//nexus/images/')
+            data = data.replace(
+                f'"/ansys{ansys_version}//nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
+            )
             data = data.encode("utf-8")
         return data
 
@@ -255,7 +277,9 @@ class ReportDownloadHTML:
                 filename = self._directory + os.sep + target_path + os.sep + f
                 filename = os.path.normpath(filename)
                 try:
-                    data = self._fix_viewer_component_paths(str(filename), resp.content, self._ansys_version)
+                    data = self._fix_viewer_component_paths(
+                        str(filename), resp.content, self._ansys_version
+                    )
                     open(filename, "wb").write(data)
                 except Exception:
                     print(f"Unable to download {comment}: {f}")
@@ -337,7 +361,11 @@ class ReportDownloadHTML:
                 return -1, -1, ""
             idx2 += len(suffix)
             block = text[idx1:idx2]
-            if ("/media/" in block) or ("/static/" in block) or (re.match(r"/ansys([0-9]+)", block)):
+            if (
+                ("/media/" in block)
+                or ("/static/" in block)
+                or (re.match(r"/ansys([0-9]+)", block))
+            ):
                 return idx1, idx2, text[idx1:idx2]
             start = idx2
 
@@ -430,7 +458,16 @@ class ReportDownloadHTML:
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
-        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "novnc", "vendor", "jQuery-contextMenu"])
+        self._make_dir(
+            [
+                self._directory,
+                f"ansys{self._ansys_version}",
+                "nexus",
+                "novnc",
+                "vendor",
+                "jQuery-contextMenu",
+            ]
+        )
 
         # get the webpage html source
         resp = requests.get(self._url)
