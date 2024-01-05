@@ -1,0 +1,4012 @@
+VERSION 23.2 2023 R2
+command: delay_refresh ON
+#
+# EnSight context file version 2.0
+#
+# Uncomment the line below if you want to restore the graphics window
+# to the size that existed at the time the context was saved
+#ext: tools_utilities.resize_render size:[1319,911]
+#
+#
+# Existing Case Information
+#
+# Number Of Cases: 1
+# Case Name: Case 1
+#
+# File Information
+# File Information Begin
+# data: start_time 140.000000
+# data: binary_files_are native
+# data: format DVS
+# data: reader_option 'Verbosity level' 'Routine'
+# data: path .
+# data: geometry cyclone.dvs
+# data: shift_time 1.000000 0.000000 0.000000
+# data: read
+# File Information End
+#
+# Number Model Parts : 8
+# LPart Name         : fluid-1
+# Part Name          : fluid-1
+# Part Information Begin
+# part: select_default
+# part: modify_begin
+# part: elt_representation not_loaded
+# part: modify_end
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          1
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : pressure-outlet-6
+# Part Name          : pressure-outlet-6
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          2
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : pressure-outlet-7
+# Part Name          : pressure-outlet-7
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          3
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : velocity-inlet-1
+# Part Name          : velocity-inlet-1
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          4
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : wall-1
+# Part Name          : wall-1
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          5
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : wall-2
+# Part Name          : wall-2
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          6
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : wall-2-shadow
+# Part Name          : wall-2-shadow
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          7
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+# LPart Name         : wall-3
+# Part Name          : wall-3
+# Part Information Begin
+# data_partbuild: begin
+# data_partbuild: data_type unstructured
+# data_partbuild: group OFF
+# data_partbuild: select_begin
+#          8
+# data_partbuild: select_end
+# data_partbuild: description 
+# data_partbuild: create
+# data_partbuild: end
+# Part Information End
+#
+# Number Orig. Variables: 6
+# Variable Name         : Cell_Element_Type
+# Variable Name         : Volume_fraction__gas_
+# Variable Name         : Volume_fraction__solid_
+# Variable Name         : Velocity_gas
+# Variable Name         : Velocity_solid
+# Variable Name         : Analysis_Time
+#
+# Write out any model parts that were cloned
+#
+#
+#
+# Structured part i/j/k limits
+#
+#
+# Restore Transformation View State
+#
+test: restore_periodicity OFF
+view_transf: restore_view CMDKEYWORD_BASEDIR\context1a.ctx_view
+test: restore_periodicity ON
+#
+# Timeline control information
+#
+case: timeline_controller 'master'
+case: timeline_sync 'Case 1' none
+case: update_with_timechange 'Case 1' ON
+solution_time: use_custom_timeline OFF
+#
+# Global node/label filter/color information
+#
+annot_entlbl: node_thresholds none
+annot_entlbl: element_thresholds none
+annot_entlbl: node_threshold_low 1
+annot_entlbl: node_threshold_high 1000000
+annot_entlbl: element_threshold_low 1
+annot_entlbl: element_threshold_high 1000000
+annot_entlbl: node_rgb 0.000000 0.000000 0.000000
+annot_entlbl: element_rgb 0.000000 0.000000 0.000000
+#
+# Solution Time Information
+#
+solution_time: convergence_value 2.490000e-04
+solution_time: update_type discrete
+solution_time: show_as step
+solution_time: monitor_for_new_steps off
+solution_time: #_of_cycles 1
+solution_time: begin_step 0
+solution_time: current_step 140
+solution_time: end_step 498
+solution_time: update_to_current
+solution_time: increment 1
+#
+# Extended CFD Variables
+#
+varextcfd: modify_begin
+varextcfd: density 1
+varextcfd: ratio_of_spec_heat 1.39999998
+varextcfd: freestream_mach 1
+varextcfd: gas_constant 1
+varextcfd: freestream_density 1
+varextcfd: freestream_speed_sound 1
+varextcfd: modify_end
+varextcfd: show_extended OFF
+#
+# Activate Variables
+#
+variables: activate Cell_Element_Type
+variables: activate Volume_fraction__gas_
+variables: activate Volume_fraction__solid_
+variables: activate Velocity_gas
+variables: activate Velocity_solid
+variables: activate Analysis_Time
+variables: activate Coordinates
+variables: activate Time
+#
+# Frame Information
+#
+prefs: animate_model_axis on
+frame: select_begin
+0
+frame: select_end
+frame: modify_begin
+frame: visible OFF
+frame: type rectangular
+frame: len_x 0.161666721
+frame: len_y 0.161666721
+frame: len_z 0.161666721
+frame: #_of_labels_x 3
+frame: #_of_labels_y 3
+frame: #_of_labels_z 3
+frame: line_width 1
+frame: rgb 1 1 1
+frame: x_labels OFF
+frame: y_labels OFF
+frame: z_labels OFF
+frame: symmetry_axis z
+frame: modify_end
+frame: select_default
+frame: modify_begin
+frame: visible OFF
+frame: type rectangular
+frame: len_x 0.161666721
+frame: len_y 0.161666721
+frame: len_z 0.161666721
+frame: #_of_labels_x 3
+frame: #_of_labels_y 3
+frame: #_of_labels_z 3
+frame: line_width 1
+frame: rgb 1 1 1
+frame: x_labels OFF
+frame: y_labels OFF
+frame: z_labels OFF
+frame: symmetry_axis z
+frame: modify_end
+#
+# Lightsource Information
+#
+lightsource: select_begin
+1
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active ON
+lightsource: type at_viewer
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows OFF
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+2
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: type directional
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+3
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: type directional
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+4
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: type directional
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+5
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: type directional
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+6
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: type directional
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+7
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: type directional
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512499996 -0.485000014 0.599816978
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: modify_end
+lightsource: select_begin
+8
+lightsource: select_end
+lightsource: modify_begin
+lightsource: active OFF
+lightsource: direction_normal 0 0 -1
+lightsource: location 0.0512500107 -0.485000014 0.599816978
+lightsource: quad_size 1 1
+lightsource: spot_angle 25
+lightsource: spot_falloff 50
+lightsource: intensity 1
+lightsource: rgb 1 1 1
+lightsource: casts_shadows ON
+lightsource: visible OFF
+lightsource: glyph_size 0.0241797008
+lightsource: direction_intersect 0.0512499996 -0.485000014 -7.45058015e-09
+lightsource: direction_lock OFF
+lightsource: quad_xdir 1 0 0
+lightsource: modify_end
+#
+# Global View and Tool Settings
+#
+prefs: auto_contrast_foreground ON
+prefs: animate_model_axis ON
+prefs: plane_tool_type line
+view: hardware_line_offset ON
+view: use_gamma_correction ON
+view: pick_method hardware
+view: default_orientation +Z
+view: hidden_surface ON
+view: highlight_parts OFF
+view: hidden_line OFF
+view: scale OFF
+view: bounds OFF
+view: perspective ON
+view: clipping OFF
+view: fast_display OFF
+annotation: axis_model ON
+annotation: axis_local ON
+annotation: axis_global OFF
+annotation: element_labeling ON
+annotation: node_labeling ON
+annotation: legend ON
+annotation: text_display ON
+view: watermark ON
+annot_entlbl: node_threshold_low 1
+annot_entlbl: node_threshold_high 1000000
+annot_entlbl: element_threshold_low 1
+annot_entlbl: element_threshold_high 1000000
+annot_entlbl: node_rgb 0.000000 0.000000 0.000000
+annot_entlbl: element_rgb 0.000000 0.000000 0.000000
+annot_entlbl: node_thresholds none
+annot_entlbl: element_thresholds none
+tools: cursor OFF
+tools: line OFF
+tools: box OFF
+tools: plane OFF
+tools: quadric none
+tools: line_restricttosurface OFF
+tools: line_normal positive
+view: watermark ON
+case: case_linking_labels ON
+case: link_modelparts_byname OFF
+test: use_qbox_off
+#
+# Textures
+#
+texture: select 1
+texture: read C:\Users\kecolbur\.ensight241\texture_00.png
+texture: select 2
+texture: read C:\Users\kecolbur\.ensight241\texture_01.png
+texture: select 3
+texture: read C:\Users\kecolbur\.ensight241\texture_02.png
+texture: select 4
+texture: read C:\Users\kecolbur\.ensight241\texture_03.png
+texture: select 5
+texture: read C:\Users\kecolbur\.ensight241\texture_04.png
+texture: select 6
+texture: read C:\Users\kecolbur\.ensight241\texture_05.png
+texture: select 7
+texture: read C:\Users\kecolbur\.ensight241\texture_06.png
+texture: select 8
+texture: read C:\Users\kecolbur\.ensight241\texture_07.png
+texture: select 9
+texture: read C:\Users\kecolbur\.ensight241\texture_08.png
+texture: select 10
+texture: read C:\Users\kecolbur\.ensight241\texture_09.png
+texture: select 11
+texture: read C:\Users\kecolbur\.ensight241\texture_10.png
+texture: select 12
+texture: read C:\Users\kecolbur\.ensight241\texture_11.png
+texture: select 13
+texture: read C:\Users\kecolbur\.ensight241\texture_12.png
+texture: select 14
+texture: read C:\Users\kecolbur\.ensight241\texture_13.png
+texture: select 15
+texture: read C:\Users\kecolbur\.ensight241\texture_14.png
+texture: select 16
+texture: read C:\Users\kecolbur\.ensight241\texture_15.png
+texture: select 17
+texture: read C:\Users\kecolbur\.ensight241\texture_16.png
+texture: select 18
+texture: read C:\Users\kecolbur\.ensight241\texture_17.png
+texture: select 19
+texture: read C:\Users\kecolbur\.ensight241\texture_18.png
+texture: select 27
+texture: read C:\Users\kecolbur\.ensight241\texture_26.png
+texture: select 28
+texture: read C:\Users\kecolbur\.ensight241\texture_27.png
+texture: select 29
+texture: read C:\Users\kecolbur\.ensight241\texture_28.png
+texture: select 30
+texture: read C:\Users\kecolbur\.ensight241\texture_29.png
+texture: select 31
+texture: read C:\Users\kecolbur\.ensight241\texture_30.png
+texture: select 32
+texture: read C:\Users\kecolbur\.ensight241\texture_31.png
+#
+# Attributes To Restore Viewport Defaults
+#
+viewport: select_default
+viewport: view_dimension 3D
+viewport: auto_centering OFF
+viewport: border_visible ON
+viewport: border_rgb 0 0 0
+viewport: background_type blended
+viewport: blend_levels 3
+viewport: constant_rgb 0.953000009 0.953000009 0.953000009
+viewport: visible ON
+viewport: origin_x 0.300000012
+viewport: origin_y 0.300000012
+viewport: width 0.200000003
+viewport: height 0.200000003
+viewport: hidden_surface ON
+viewport: hidden_line ON
+viewport: perspective OFF
+viewport: track Off
+viewport: tracking_node_id -1
+viewport: light1_azimuth 0
+viewport: light1_elevation 0
+viewport: light1_position Relative
+viewport: light2_intensity 0
+viewport: global_axis_visible ON
+viewport: global_axis_location 0.125 0.125
+viewport: blend_editlevel 1
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0
+viewport: blend_editlevel 2
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0.330000013
+viewport: blend_editlevel 3
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 1
+viewport: global_axis_xlabel X
+viewport: global_axis_ylabel Y
+viewport: global_axis_zlabel Z
+viewport_bounds: dimension 3D
+viewport_bounds: visible ON
+viewport_bounds: transparency 1
+viewport_bounds: length rounded
+viewport_bounds: axis_linewidth 2
+viewport_bounds: axis_rgb 0 0 0
+viewport_bounds: grid_linewidth 1
+viewport_bounds: grid_linetype solid
+viewport_bounds: grid_rgb 0 0 0
+viewport_bounds: subgrid_linewidth 1
+viewport_bounds: subgrid_linetype solid
+viewport_bounds: subgrid_rgb 0.300000012 0.300000012 0.300000012
+viewport_bounds: label_size_3d 20
+viewport_bounds: tick_scale_factor 1
+viewport_bounds: subtick_scale_factor 0.5
+viewport_bounds: auto_size ON
+viewport_bounds: axis_x_min -99
+viewport_bounds: axis_x_max -99
+viewport_bounds: axis_x_numgrid 4
+viewport_bounds: axis_x_numsubgrid 2
+viewport_bounds: axis_x_gridtype tick
+viewport_bounds: axis_x_sgridtype tick
+viewport_bounds: axis_x_labelrgb 0 0 0
+viewport_bounds: axis_x_labelextentloc min
+viewport_bounds: axis_x_titlesize 20
+viewport_bounds: axis_x_tick ON
+viewport_bounds: axis_x_subtick ON
+viewport_bounds: axis_x_displayonedge ON
+viewport_bounds: axis_x_yminzmin OFF
+viewport_bounds: axis_x_yminzmax OFF
+viewport_bounds: axis_x_ymaxzmin ON
+viewport_bounds: axis_x_ymaxzmax OFF
+viewport_bounds: axis_x_labelfilter off
+viewport_bounds: axis_y_min -99
+viewport_bounds: axis_y_max -99
+viewport_bounds: axis_y_numgrid 4
+viewport_bounds: axis_y_numsubgrid 2
+viewport_bounds: axis_y_gridtype tick
+viewport_bounds: axis_y_sgridtype tick
+viewport_bounds: axis_y_labelrgb 0 0 0
+viewport_bounds: axis_y_labelextentloc min
+viewport_bounds: axis_y_titlesize 20
+viewport_bounds: axis_y_tick ON
+viewport_bounds: axis_y_subtick ON
+viewport_bounds: axis_y_displayonedge ON
+viewport_bounds: axis_y_yminzmin OFF
+viewport_bounds: axis_y_yminzmax ON
+viewport_bounds: axis_y_ymaxzmin OFF
+viewport_bounds: axis_y_ymaxzmax OFF
+viewport_bounds: axis_y_labelfilter off
+viewport_bounds: axis_z_min -99
+viewport_bounds: axis_z_max -99
+viewport_bounds: axis_z_numgrid 4
+viewport_bounds: axis_z_numsubgrid 2
+viewport_bounds: axis_z_gridtype tick
+viewport_bounds: axis_z_sgridtype tick
+viewport_bounds: axis_z_labelrgb 0 0 0
+viewport_bounds: axis_z_labelextentloc min
+viewport_bounds: axis_z_titlesize 20
+viewport_bounds: axis_z_tick ON
+viewport_bounds: axis_z_subtick ON
+viewport_bounds: axis_z_displayonedge ON
+viewport_bounds: axis_z_yminzmin OFF
+viewport_bounds: axis_z_yminzmax ON
+viewport_bounds: axis_z_ymaxzmin OFF
+viewport_bounds: axis_z_ymaxzmax OFF
+viewport_bounds: axis_z_labelfilter off
+viewport_bounds: label_size_2d 20
+viewport_bounds: face_xmin_grid OFF
+viewport_bounds: face_xmin_subgrid OFF
+viewport_bounds: face_xmin_gridfilter facing_back
+viewport_bounds: face_xmax_grid OFF
+viewport_bounds: face_xmax_subgrid OFF
+viewport_bounds: face_xmax_gridfilter facing_back
+viewport_bounds: face_ymin_grid OFF
+viewport_bounds: face_ymin_subgrid OFF
+viewport_bounds: face_ymin_gridfilter facing_back
+viewport_bounds: face_ymax_grid OFF
+viewport_bounds: face_ymax_subgrid OFF
+viewport_bounds: face_ymax_gridfilter facing_back
+viewport_bounds: face_zmin_grid OFF
+viewport_bounds: face_zmin_subgrid OFF
+viewport_bounds: face_zmin_gridfilter facing_back
+viewport_bounds: face_zmax_grid OFF
+viewport_bounds: face_zmax_subgrid OFF
+viewport_bounds: face_zmax_gridfilter facing_back
+viewport_bounds: axis_x_format %g
+viewport_bounds: axis_y_format %g
+viewport_bounds: axis_z_format %g
+viewport_bounds: axis_x_title X-Axis<\\units>
+viewport_bounds: axis_y_title Y-Axis<\\units>
+viewport_bounds: axis_z_title Z-Axis<\\units>
+viewport: select_begin
+ 0
+viewport: select_end
+#
+# Attributes To Restore Viewport Creation
+#
+viewport: new_or_mod 1
+viewport: new_or_mod 2
+#
+# Attributes To Restore Case Viewport Visibility
+#
+case: viewports  1 2 3
+#
+# Visual Part Attribute Settings for Model Parts
+#
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)fluid-1"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description fluid-1
+part: ref_frame 0
+part: visible OFF
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.814999998 0.688000023 0.808000028
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)pressure-outlet-6"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description pressure-outlet-6
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.750999987 0.814999998 0.688000023
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)pressure-outlet-7"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description pressure-outlet-7
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.688000023 0.688000023 0.814999998
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)velocity-inlet-1"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description velocity-inlet-1
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.814999998 0.750999987 0.688000023
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)wall-1"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description wall-1
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  2
+part: viewport_vis off  0 1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.688000023 0.989000022 0.814999998
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)wall-2"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description wall-2
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.814999998 0.688000023 0.750999987
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)wall-2-shadow"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description wall-2-shadow
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.688000023 0.814999998 0.688000023
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)wall-3"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description wall-3
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 2
+part: viewport_vis off  1
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 0.750999987 0.688000023 0.814999998
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality best
+part: ijk_axis OFF
+part: ijk_axis_scale 0.333332986
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+model: elt_defined_by input_dataset
+model: adjcoord_scale_factor 1
+model: adjcoord_varscale_factor 0
+model: adjcoord_x_variable none
+model: adjcoord_y_variable none
+model: adjcoord_z_variable none
+model: adjcoord_transvec 0 0 0
+model: elt_filter1_variable none
+model: elt_filter1_varcomp magnitude
+model: elt_filter1_logicalop and
+model: elt_filter1_testop <
+model: elt_filter1_testvalue 0
+model: elt_filter1_testvariable none
+model: elt_filter1_testvarcomp magnitude
+model: elt_filter1_active OFF
+model: elt_filter2_variable none
+model: elt_filter2_varcomp magnitude
+model: elt_filter2_logicalop and
+model: elt_filter2_testop <
+model: elt_filter2_testvalue 0
+model: elt_filter2_testvariable none
+model: elt_filter2_testvarcomp magnitude
+model: elt_filter2_active OFF
+model: elt_filter3_variable none
+model: elt_filter3_varcomp magnitude
+model: elt_filter3_logicalop and
+model: elt_filter3_testop <
+model: elt_filter3_testvalue 0
+model: elt_filter3_testvariable none
+model: elt_filter3_testvarcomp magnitude
+model: elt_filter3_active OFF
+model: elt_filter4_variable none
+model: elt_filter4_varcomp magnitude
+model: elt_filter4_logicalop and
+model: elt_filter4_testop <
+model: elt_filter4_testvalue 0
+model: elt_filter4_testvariable none
+model: elt_filter4_testvarcomp magnitude
+model: elt_filter4_active OFF
+model: elt_filter5_variable none
+model: elt_filter5_varcomp magnitude
+model: elt_filter5_logicalop and
+model: elt_filter5_testop <
+model: elt_filter5_testvalue 0
+model: elt_filter5_testvariable none
+model: elt_filter5_testvarcomp magnitude
+model: elt_filter5_active OFF
+model: elt_filter6_variable none
+model: elt_filter6_varcomp magnitude
+model: elt_filter6_logicalop and
+model: elt_filter6_testop <
+model: elt_filter6_testvalue 0
+model: elt_filter6_testvariable none
+model: elt_filter6_testvarcomp magnitude
+model: elt_filter6_active OFF
+part: modify_end
+#
+# Tool Locations
+#
+view_transf: select_tool 0.25 0.75 0.25 0.75
+#
+# Polyline commands
+#
+#
+# Attributes To Restore Created Parts and Created Variables
+#
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)fluid-1"
+part: select_byname_end
+clip: begin
+part: description Clip_plane
+part: ref_frame 0
+clip: mesh_plane Y
+clip: value -0.184100002
+clip: domain intersect
+clip: tool xyz
+clip: slider_x -0.102499999 0.204999998
+clip: slider_y -0.970000029 0
+clip: slider_z -0.102499999 0.102499999
+clip: slider_step 0.0485000014
+clip: end
+clip: create
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane"
+part: select_byname_end
+part: elt_representation 3D_feature_2D_full
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)fluid-1"
+part: select_byname_end
+clip: begin
+part: description Clip_plane ->> 0001
+part: ref_frame 0
+clip: mesh_plane Y
+clip: value -0.369100004
+clip: domain intersect
+clip: tool xyz
+clip: slider_x -0.102499999 0.204999998
+clip: slider_y -0.970000029 0
+clip: slider_z -0.102499999 0.102499999
+clip: slider_step 0.0485000014
+clip: end
+clip: create
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0001"
+part: select_byname_end
+part: elt_representation 3D_feature_2D_full
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)fluid-1"
+part: select_byname_end
+clip: begin
+part: description Clip_plane ->> 0002
+part: ref_frame 0
+clip: mesh_plane Y
+clip: value -0.554099977
+clip: domain intersect
+clip: tool xyz
+clip: slider_x -0.102499999 0.204999998
+clip: slider_y -0.970000029 0
+clip: slider_z -0.102499999 0.102499999
+clip: slider_step 0.0485000014
+clip: end
+clip: create
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0002"
+part: select_byname_end
+part: elt_representation 3D_feature_2D_full
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)fluid-1"
+part: select_byname_end
+clip: begin
+part: description Clip_plane ->> 0003
+part: ref_frame 0
+clip: mesh_plane Y
+clip: value -0.739099979
+clip: domain intersect
+clip: tool xyz
+clip: slider_x -0.102499999 0.204999998
+clip: slider_y -0.970000029 0
+clip: slider_z -0.102499999 0.102499999
+clip: slider_step 0.0485000014
+clip: end
+clip: create
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0003"
+part: select_byname_end
+part: elt_representation 3D_feature_2D_full
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)fluid-1"
+part: select_byname_end
+clip: begin
+part: description Clip_plane ->> 0004
+part: ref_frame 0
+clip: mesh_plane Y
+clip: value -0.924099982
+clip: domain intersect
+clip: tool xyz
+clip: slider_x -0.102499999 0.204999998
+clip: slider_y -0.970000029 0
+clip: slider_z -0.102499999 0.102499999
+clip: slider_step 0.0485000014
+clip: end
+clip: create
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0004"
+part: select_byname_end
+part: elt_representation 3D_feature_2D_full
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)pressure-outlet-6"
+part: select_byname_end
+variables: next_constant_isperpart OFF
+variables: evaluate IntegralSurface = IntegralSurface(plist,Volume_fraction__solid_,[],Compute_Per_case)
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)pressure-outlet-7"
+part: select_byname_end
+variables: next_constant_isperpart OFF
+variables: evaluate IntegralSurfaceBot = IntegralSurface(plist,Volume_fraction__solid_,[],Compute_Per_case)
+#
+# Case specific LIC Surface Texture commands
+#
+case: sft_variable none
+case: sft_normalize_vector ON
+case: sft_contrast OFF
+case: sft_density 9999
+case: sft_brightness 0.5
+case: sft_norm_length 0.439999998
+case: sft_norm_step 0.5
+case: sft_length 0.439999998
+case: sft_step 0.5
+#
+# Attributes To Restore Viewport Creation
+#
+viewport: select_begin
+ 0
+viewport: select_end
+viewport: view_dimension 3D
+viewport: auto_centering OFF
+viewport: border_visible OFF
+viewport: border_rgb 0 0 0
+viewport: background_type blended
+viewport: blend_levels 3
+viewport: constant_rgb 0.953000009 0.953000009 0.953000009
+viewport: visible ON
+viewport: origin_x 0
+viewport: origin_y 0
+viewport: width 1
+viewport: height 1
+viewport: hidden_surface ON
+viewport: hidden_line ON
+viewport: perspective ON
+viewport: track Off
+viewport: tracking_partbyname "(CASE:CMDKEYWORD_CURCASE)fluid-1"
+viewport: tracking_node_id -1
+viewport: light1_azimuth 0
+viewport: light1_elevation 0
+viewport: light1_position Relative
+viewport: light2_intensity 0
+viewport: global_axis_visible ON
+viewport: global_axis_location 0.125 0.125
+viewport: blend_editlevel 1
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0
+viewport: blend_editlevel 2
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0.330000013
+viewport: blend_editlevel 3
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 1
+viewport: global_axis_xlabel X
+viewport: global_axis_ylabel Y
+viewport: global_axis_zlabel Z
+viewport_bounds: dimension 3D
+viewport_bounds: visible ON
+viewport_bounds: transparency 1
+viewport_bounds: length rounded
+viewport_bounds: axis_linewidth 2
+viewport_bounds: axis_rgb 0 0 0
+viewport_bounds: grid_linewidth 1
+viewport_bounds: grid_linetype solid
+viewport_bounds: grid_rgb 0 0 0
+viewport_bounds: subgrid_linewidth 1
+viewport_bounds: subgrid_linetype solid
+viewport_bounds: subgrid_rgb 0.300000012 0.300000012 0.300000012
+viewport_bounds: label_size_3d 20
+viewport_bounds: tick_scale_factor 1
+viewport_bounds: subtick_scale_factor 0.5
+viewport_bounds: auto_size ON
+viewport_bounds: axis_x_min -99
+viewport_bounds: axis_x_max -99
+viewport_bounds: axis_x_numgrid 4
+viewport_bounds: axis_x_numsubgrid 2
+viewport_bounds: axis_x_gridtype tick
+viewport_bounds: axis_x_sgridtype tick
+viewport_bounds: axis_x_labelrgb 0 0 0
+viewport_bounds: axis_x_labelextentloc min
+viewport_bounds: axis_x_titlesize 20
+viewport_bounds: axis_x_tick ON
+viewport_bounds: axis_x_subtick ON
+viewport_bounds: axis_x_displayonedge ON
+viewport_bounds: axis_x_yminzmin OFF
+viewport_bounds: axis_x_yminzmax OFF
+viewport_bounds: axis_x_ymaxzmin ON
+viewport_bounds: axis_x_ymaxzmax OFF
+viewport_bounds: axis_x_labelfilter off
+viewport_bounds: axis_y_min -99
+viewport_bounds: axis_y_max -99
+viewport_bounds: axis_y_numgrid 4
+viewport_bounds: axis_y_numsubgrid 2
+viewport_bounds: axis_y_gridtype tick
+viewport_bounds: axis_y_sgridtype tick
+viewport_bounds: axis_y_labelrgb 0 0 0
+viewport_bounds: axis_y_labelextentloc min
+viewport_bounds: axis_y_titlesize 20
+viewport_bounds: axis_y_tick ON
+viewport_bounds: axis_y_subtick ON
+viewport_bounds: axis_y_displayonedge ON
+viewport_bounds: axis_y_yminzmin OFF
+viewport_bounds: axis_y_yminzmax ON
+viewport_bounds: axis_y_ymaxzmin OFF
+viewport_bounds: axis_y_ymaxzmax OFF
+viewport_bounds: axis_y_labelfilter off
+viewport_bounds: axis_z_min -99
+viewport_bounds: axis_z_max -99
+viewport_bounds: axis_z_numgrid 4
+viewport_bounds: axis_z_numsubgrid 2
+viewport_bounds: axis_z_gridtype tick
+viewport_bounds: axis_z_sgridtype tick
+viewport_bounds: axis_z_labelrgb 0 0 0
+viewport_bounds: axis_z_labelextentloc min
+viewport_bounds: axis_z_titlesize 20
+viewport_bounds: axis_z_tick ON
+viewport_bounds: axis_z_subtick ON
+viewport_bounds: axis_z_displayonedge ON
+viewport_bounds: axis_z_yminzmin OFF
+viewport_bounds: axis_z_yminzmax ON
+viewport_bounds: axis_z_ymaxzmin OFF
+viewport_bounds: axis_z_ymaxzmax OFF
+viewport_bounds: axis_z_labelfilter off
+viewport_bounds: label_size_2d 20
+viewport_bounds: face_xmin_grid OFF
+viewport_bounds: face_xmin_subgrid OFF
+viewport_bounds: face_xmin_gridfilter facing_back
+viewport_bounds: face_xmax_grid OFF
+viewport_bounds: face_xmax_subgrid OFF
+viewport_bounds: face_xmax_gridfilter facing_back
+viewport_bounds: face_ymin_grid OFF
+viewport_bounds: face_ymin_subgrid OFF
+viewport_bounds: face_ymin_gridfilter facing_back
+viewport_bounds: face_ymax_grid OFF
+viewport_bounds: face_ymax_subgrid OFF
+viewport_bounds: face_ymax_gridfilter facing_back
+viewport_bounds: face_zmin_grid OFF
+viewport_bounds: face_zmin_subgrid OFF
+viewport_bounds: face_zmin_gridfilter facing_back
+viewport_bounds: face_zmax_grid OFF
+viewport_bounds: face_zmax_subgrid OFF
+viewport_bounds: face_zmax_gridfilter facing_back
+viewport_bounds: axis_x_format %g
+viewport_bounds: axis_y_format %g
+viewport_bounds: axis_z_format %g
+viewport_bounds: axis_x_title X-Axis<\\units>
+viewport_bounds: axis_y_title Y-Axis<\\units>
+viewport_bounds: axis_z_title Z-Axis<\\units>
+viewport: new_or_mod 1
+viewport: select_begin
+ 1
+viewport: select_end
+viewport: view_dimension 3D
+viewport: auto_centering OFF
+viewport: border_visible ON
+viewport: border_rgb 0 0 0
+viewport: background_type blended
+viewport: blend_levels 3
+viewport: constant_rgb 0.953000009 0.953000009 0.953000009
+viewport: visible ON
+viewport: origin_x 0
+viewport: origin_y 0.314563006
+viewport: width 0.235714003
+viewport: height 0.685437024
+viewport: hidden_surface ON
+viewport: hidden_line ON
+viewport: perspective OFF
+viewport: track Off
+viewport: tracking_partbyname "(CASE:CMDKEYWORD_CURCASE)fluid-1"
+viewport: tracking_node_id -1
+viewport: light1_azimuth 0
+viewport: light1_elevation 0
+viewport: light1_position Relative
+viewport: light2_intensity 0
+viewport: global_axis_visible ON
+viewport: global_axis_location 0.125 0.125
+viewport: blend_editlevel 1
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0
+viewport: blend_editlevel 2
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0.330000013
+viewport: blend_editlevel 3
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 1
+viewport: global_axis_xlabel X
+viewport: global_axis_ylabel Y
+viewport: global_axis_zlabel Z
+viewport_bounds: dimension 3D
+viewport_bounds: visible ON
+viewport_bounds: transparency 1
+viewport_bounds: length rounded
+viewport_bounds: axis_linewidth 2
+viewport_bounds: axis_rgb 0 0 0
+viewport_bounds: grid_linewidth 1
+viewport_bounds: grid_linetype solid
+viewport_bounds: grid_rgb 0 0 0
+viewport_bounds: subgrid_linewidth 1
+viewport_bounds: subgrid_linetype solid
+viewport_bounds: subgrid_rgb 0.300000012 0.300000012 0.300000012
+viewport_bounds: label_size_3d 20
+viewport_bounds: tick_scale_factor 1
+viewport_bounds: subtick_scale_factor 0.5
+viewport_bounds: auto_size ON
+viewport_bounds: axis_x_min -99
+viewport_bounds: axis_x_max -99
+viewport_bounds: axis_x_numgrid 4
+viewport_bounds: axis_x_numsubgrid 2
+viewport_bounds: axis_x_gridtype tick
+viewport_bounds: axis_x_sgridtype tick
+viewport_bounds: axis_x_labelrgb 0 0 0
+viewport_bounds: axis_x_labelextentloc min
+viewport_bounds: axis_x_titlesize 20
+viewport_bounds: axis_x_tick ON
+viewport_bounds: axis_x_subtick ON
+viewport_bounds: axis_x_displayonedge ON
+viewport_bounds: axis_x_yminzmin OFF
+viewport_bounds: axis_x_yminzmax OFF
+viewport_bounds: axis_x_ymaxzmin ON
+viewport_bounds: axis_x_ymaxzmax OFF
+viewport_bounds: axis_x_labelfilter off
+viewport_bounds: axis_y_min -99
+viewport_bounds: axis_y_max -99
+viewport_bounds: axis_y_numgrid 4
+viewport_bounds: axis_y_numsubgrid 2
+viewport_bounds: axis_y_gridtype tick
+viewport_bounds: axis_y_sgridtype tick
+viewport_bounds: axis_y_labelrgb 0 0 0
+viewport_bounds: axis_y_labelextentloc min
+viewport_bounds: axis_y_titlesize 20
+viewport_bounds: axis_y_tick ON
+viewport_bounds: axis_y_subtick ON
+viewport_bounds: axis_y_displayonedge ON
+viewport_bounds: axis_y_yminzmin OFF
+viewport_bounds: axis_y_yminzmax ON
+viewport_bounds: axis_y_ymaxzmin OFF
+viewport_bounds: axis_y_ymaxzmax OFF
+viewport_bounds: axis_y_labelfilter off
+viewport_bounds: axis_z_min -99
+viewport_bounds: axis_z_max -99
+viewport_bounds: axis_z_numgrid 4
+viewport_bounds: axis_z_numsubgrid 2
+viewport_bounds: axis_z_gridtype tick
+viewport_bounds: axis_z_sgridtype tick
+viewport_bounds: axis_z_labelrgb 0 0 0
+viewport_bounds: axis_z_labelextentloc min
+viewport_bounds: axis_z_titlesize 20
+viewport_bounds: axis_z_tick ON
+viewport_bounds: axis_z_subtick ON
+viewport_bounds: axis_z_displayonedge ON
+viewport_bounds: axis_z_yminzmin OFF
+viewport_bounds: axis_z_yminzmax ON
+viewport_bounds: axis_z_ymaxzmin OFF
+viewport_bounds: axis_z_ymaxzmax OFF
+viewport_bounds: axis_z_labelfilter off
+viewport_bounds: label_size_2d 20
+viewport_bounds: face_xmin_grid OFF
+viewport_bounds: face_xmin_subgrid OFF
+viewport_bounds: face_xmin_gridfilter facing_back
+viewport_bounds: face_xmax_grid OFF
+viewport_bounds: face_xmax_subgrid OFF
+viewport_bounds: face_xmax_gridfilter facing_back
+viewport_bounds: face_ymin_grid OFF
+viewport_bounds: face_ymin_subgrid OFF
+viewport_bounds: face_ymin_gridfilter facing_back
+viewport_bounds: face_ymax_grid OFF
+viewport_bounds: face_ymax_subgrid OFF
+viewport_bounds: face_ymax_gridfilter facing_back
+viewport_bounds: face_zmin_grid OFF
+viewport_bounds: face_zmin_subgrid OFF
+viewport_bounds: face_zmin_gridfilter facing_back
+viewport_bounds: face_zmax_grid OFF
+viewport_bounds: face_zmax_subgrid OFF
+viewport_bounds: face_zmax_gridfilter facing_back
+viewport_bounds: axis_x_format %g
+viewport_bounds: axis_y_format %g
+viewport_bounds: axis_z_format %g
+viewport_bounds: axis_x_title X-Axis<\\units>
+viewport_bounds: axis_y_title Y-Axis<\\units>
+viewport_bounds: axis_z_title Z-Axis<\\units>
+viewport: new_or_mod 2
+viewport: select_begin
+ 2
+viewport: select_end
+viewport: view_dimension 3D
+viewport: auto_centering OFF
+viewport: border_visible ON
+viewport: border_rgb 0 0 0
+viewport: background_type blended
+viewport: blend_levels 3
+viewport: constant_rgb 0.953000009 0.953000009 0.953000009
+viewport: visible ON
+viewport: origin_x 0.235604003
+viewport: origin_y 0.314563006
+viewport: width 0.202747002
+viewport: height 0.685437024
+viewport: hidden_surface ON
+viewport: hidden_line ON
+viewport: perspective OFF
+viewport: track Off
+viewport: tracking_partbyname "(CASE:CMDKEYWORD_CURCASE)fluid-1"
+viewport: tracking_node_id -1
+viewport: light1_azimuth 0
+viewport: light1_elevation 0
+viewport: light1_position Relative
+viewport: light2_intensity 0
+viewport: global_axis_visible ON
+viewport: global_axis_location 0.125 0.125
+viewport: blend_editlevel 1
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0
+viewport: blend_editlevel 2
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 0.330000013
+viewport: blend_editlevel 3
+viewport: blend_rgb 0.953000009 0.953000009 0.953000009
+viewport: blend_position 1
+viewport: global_axis_xlabel X
+viewport: global_axis_ylabel Y
+viewport: global_axis_zlabel Z
+viewport_bounds: dimension 3D
+viewport_bounds: visible ON
+viewport_bounds: transparency 1
+viewport_bounds: length rounded
+viewport_bounds: axis_linewidth 2
+viewport_bounds: axis_rgb 0 0 0
+viewport_bounds: grid_linewidth 1
+viewport_bounds: grid_linetype solid
+viewport_bounds: grid_rgb 0 0 0
+viewport_bounds: subgrid_linewidth 1
+viewport_bounds: subgrid_linetype solid
+viewport_bounds: subgrid_rgb 0.300000012 0.300000012 0.300000012
+viewport_bounds: label_size_3d 20
+viewport_bounds: tick_scale_factor 1
+viewport_bounds: subtick_scale_factor 0.5
+viewport_bounds: auto_size ON
+viewport_bounds: axis_x_min -99
+viewport_bounds: axis_x_max -99
+viewport_bounds: axis_x_numgrid 4
+viewport_bounds: axis_x_numsubgrid 2
+viewport_bounds: axis_x_gridtype tick
+viewport_bounds: axis_x_sgridtype tick
+viewport_bounds: axis_x_labelrgb 0 0 0
+viewport_bounds: axis_x_labelextentloc min
+viewport_bounds: axis_x_titlesize 20
+viewport_bounds: axis_x_tick ON
+viewport_bounds: axis_x_subtick ON
+viewport_bounds: axis_x_displayonedge ON
+viewport_bounds: axis_x_yminzmin OFF
+viewport_bounds: axis_x_yminzmax OFF
+viewport_bounds: axis_x_ymaxzmin ON
+viewport_bounds: axis_x_ymaxzmax OFF
+viewport_bounds: axis_x_labelfilter off
+viewport_bounds: axis_y_min -99
+viewport_bounds: axis_y_max -99
+viewport_bounds: axis_y_numgrid 4
+viewport_bounds: axis_y_numsubgrid 2
+viewport_bounds: axis_y_gridtype tick
+viewport_bounds: axis_y_sgridtype tick
+viewport_bounds: axis_y_labelrgb 0 0 0
+viewport_bounds: axis_y_labelextentloc min
+viewport_bounds: axis_y_titlesize 20
+viewport_bounds: axis_y_tick ON
+viewport_bounds: axis_y_subtick ON
+viewport_bounds: axis_y_displayonedge ON
+viewport_bounds: axis_y_yminzmin OFF
+viewport_bounds: axis_y_yminzmax ON
+viewport_bounds: axis_y_ymaxzmin OFF
+viewport_bounds: axis_y_ymaxzmax OFF
+viewport_bounds: axis_y_labelfilter off
+viewport_bounds: axis_z_min -99
+viewport_bounds: axis_z_max -99
+viewport_bounds: axis_z_numgrid 4
+viewport_bounds: axis_z_numsubgrid 2
+viewport_bounds: axis_z_gridtype tick
+viewport_bounds: axis_z_sgridtype tick
+viewport_bounds: axis_z_labelrgb 0 0 0
+viewport_bounds: axis_z_labelextentloc min
+viewport_bounds: axis_z_titlesize 20
+viewport_bounds: axis_z_tick ON
+viewport_bounds: axis_z_subtick ON
+viewport_bounds: axis_z_displayonedge ON
+viewport_bounds: axis_z_yminzmin OFF
+viewport_bounds: axis_z_yminzmax ON
+viewport_bounds: axis_z_ymaxzmin OFF
+viewport_bounds: axis_z_ymaxzmax OFF
+viewport_bounds: axis_z_labelfilter off
+viewport_bounds: label_size_2d 20
+viewport_bounds: face_xmin_grid OFF
+viewport_bounds: face_xmin_subgrid OFF
+viewport_bounds: face_xmin_gridfilter facing_back
+viewport_bounds: face_xmax_grid OFF
+viewport_bounds: face_xmax_subgrid OFF
+viewport_bounds: face_xmax_gridfilter facing_back
+viewport_bounds: face_ymin_grid OFF
+viewport_bounds: face_ymin_subgrid OFF
+viewport_bounds: face_ymin_gridfilter facing_back
+viewport_bounds: face_ymax_grid OFF
+viewport_bounds: face_ymax_subgrid OFF
+viewport_bounds: face_ymax_gridfilter facing_back
+viewport_bounds: face_zmin_grid OFF
+viewport_bounds: face_zmin_subgrid OFF
+viewport_bounds: face_zmin_gridfilter facing_back
+viewport_bounds: face_zmax_grid OFF
+viewport_bounds: face_zmax_subgrid OFF
+viewport_bounds: face_zmax_gridfilter facing_back
+viewport_bounds: axis_x_format %g
+viewport_bounds: axis_y_format %g
+viewport_bounds: axis_z_format %g
+viewport_bounds: axis_x_title X-Axis<\\units>
+viewport_bounds: axis_y_title Y-Axis<\\units>
+viewport_bounds: axis_z_title Z-Axis<\\units>
+viewport: select_begin
+ 0
+viewport: select_end
+viewport: stacking_order 0
+viewport: select_begin
+ 1
+viewport: select_end
+viewport: stacking_order 1
+viewport: select_begin
+ 2
+viewport: select_end
+viewport: stacking_order 2
+viewport: select_begin
+ 0
+viewport: select_end
+#
+# Timeset Information
+#
+solution_time: timeset_select (CASE:CMDKEYWORD_CURCASE)1
+solution_time: master_timeline OFF
+solution_time: timeset_leftof nearest
+solution_time: timeset_between nearest
+solution_time: timeset_rightof nearest
+solution_time: timeset_select (CASE:CMDKEYWORD_CURCASE)2
+solution_time: master_timeline OFF
+solution_time: timeset_leftof nearest
+solution_time: timeset_between interpolate
+solution_time: timeset_rightof nearest
+#
+#  Restore the palette file
+#
+function: restore CMDKEYWORD_BASEDIR\context1a.ctx_palettes
+#
+# Attributes To Restore Created 'Client' and Copy Parts
+#
+#
+# Visual Part Attribute Settings for non model parts
+#
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description Clip_plane
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 1 2
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 1 1 1
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality medium
+part: ijk_axis OFF
+part: ijk_axis_scale 2.27724004
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0001"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description Clip_plane ->> 0001
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 1 2
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 1 1 1
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality medium
+part: ijk_axis OFF
+part: ijk_axis_scale 2.27724004
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0002"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description Clip_plane ->> 0002
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 1 2
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 1 1 1
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality medium
+part: ijk_axis OFF
+part: ijk_axis_scale 2.27724004
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0003"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description Clip_plane ->> 0003
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 1 2
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 1 1 1
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality medium
+part: ijk_axis OFF
+part: ijk_axis_scale 2.27724004
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+part: modify_end
+part: select_byname_begin
+"(CASE:CMDKEYWORD_CURCASE)Clip_plane ->> 0004"
+part: select_byname_end
+part: predefined_material Default
+part: modify_begin
+part: description Clip_plane ->> 0004
+part: ref_frame 0
+part: visible ON
+part: viewport_vis on  0 1 2
+part: mirror_original ON
+part: clip ON
+part: active ON
+part: visibility_node OFF
+part: visibility_line ON
+part: visibility_elt ON
+part: node_type dot
+part: node_scale 0.0299102999
+part: node_detail 4
+part: node_size_by constant
+part: node_variable Coordinates
+part: symmetry_mirror_z OFF
+part: symmetry_mirror_y OFF
+part: symmetry_mirror_x OFF
+part: symmetry_mirror_xy OFF
+part: symmetry_mirror_yz OFF
+part: symmetry_mirror_xz OFF
+part: symmetry_mirror_xyz OFF
+part: displace_by none
+part: displace_factor 1
+part: line_width 1
+part: line_style solid
+part: hidden_line ON
+part: hidden_surface ON
+part: shading gouraud
+part: light_ambient 0.200000003
+part: light_specular_shine 50
+part: light_specular_intensity 0.0199999996
+part: elt_representation 3D_feature_2D_full
+part: elt_feature_angle 10
+part: elt_shrink_factor 0
+part: entity_label_node OFF
+part: entity_label_elt OFF
+part: bounding_rep box
+part: colorby_palette Volume_fraction__solid_
+part: colorby_rgb 1 1 1
+part: opacity 1
+part: reduce_polygons OFF
+part: reduce_polygons_factor 2
+part: symmetry_type none
+part: symmetry_axis z
+part: periodic_sections 8
+part: symmetry_rinstances 2
+part: elt_blanking ON
+part: show_sft OFF
+part: double_sided ON
+part: reverse_normal OFF
+part: texture_object 0
+part: texture_mode decal
+part: texture_repeat_mode repeat
+part: texture_interpolation linear
+part: texture_origin 0 0 0
+part: texture_svector 1 0 0
+part: texture_tvector 0 1 0
+part: texture_coord_type projection
+part: texture_svariable none
+part: texture_tvariable none
+part: texture_origin_nodeid -1
+part: texture_origin_use absolute
+part: texture_sorigin_nodeid -1
+part: texture_torigin_nodeid -1
+part: cull_elements off
+part: elt_rep_pointsnormals OFF
+part: alpha_by_palette none
+part: volume_quality medium
+part: ijk_axis OFF
+part: ijk_axis_scale 2.27724004
+part: light_diffuse 0.800000012
+part: light_emissive 0
+part: light_specular_tint 0
+part: light_specular_reflection 0
+part: light_refraction 1
+part: specify_symmetry_origin OFF
+part: symmetry_origin 0 0 0
+part: symmetry_delta 0 0 1
+part: modify_end
+#
+# Attributes To Restore Animated Trace Settings
+#
+anim_traces: line_width 2
+anim_traces: particle_time 1
+anim_traces: delta_time 1
+anim_traces: start_time 0.00499999989
+anim_traces: set_max_time OFF
+anim_traces: max_time 2.49499989
+anim_traces: multiple_pulses OFF
+anim_traces: pulse_interval 1
+anim_traces: color_by calculated_color
+anim_traces: rgb 1 1 1
+anim_traces: sync_to_transient ON
+anim_traces: head_type none
+anim_traces: head_detail 3
+anim_traces: head_scale 1
+anim_traces: head_size_by constant
+#
+# Attributes To Restore Queries and Plotters
+#
+curve: select_begin
+ 0
+curve: select_end
+curve: desc continuity
+curve: visible ON
+curve: rgb 1 0 0
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title continuity
+curve: select_begin
+ 1
+curve: select_end
+curve: desc eps-gas
+curve: visible ON
+curve: rgb 0 1 0
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title eps-gas
+curve: select_begin
+ 2
+curve: select_end
+curve: desc k-gas
+curve: visible ON
+curve: rgb 0 0 1
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title k-gas
+curve: select_begin
+ 3
+curve: select_end
+curve: desc u-gas
+curve: visible ON
+curve: rgb 1 1 0
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title u-gas
+curve: select_begin
+ 4
+curve: select_end
+curve: desc u-solid
+curve: visible ON
+curve: rgb 1 0 1
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title u-solid
+curve: select_begin
+ 5
+curve: select_end
+curve: desc v-gas
+curve: visible ON
+curve: rgb 0 1 1
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title v-gas
+curve: select_begin
+ 6
+curve: select_end
+curve: desc v-solid
+curve: visible ON
+curve: rgb 1 0 0
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title v-solid
+curve: select_begin
+ 7
+curve: select_end
+curve: desc vf-solid
+curve: visible ON
+curve: rgb 0 1 0
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title vf-solid
+curve: select_begin
+ 8
+curve: select_end
+curve: desc w-gas
+curve: visible ON
+curve: rgb 0 0 1
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title w-gas
+curve: select_begin
+ 9
+curve: select_end
+curve: desc w-solid
+curve: visible ON
+curve: rgb 1 1 0
+curve: line_width 2
+curve: line_style solid
+curve: marker square
+curve: marker_scale 1
+curve: line_type connect_dots
+curve: smooth_subpoints 3
+curve: normalize_x OFF
+curve: normalize_y OFF
+curve: scale 1 1
+curve: offset 0 0
+curve: assign_to_y_axis left
+curve: legend_title w-solid
+#
+# Attributes To Restore Probe Queries
+#
+query_interact: select_varname_default
+query_interact: variable none
+query_interact: search exact
+query_interact: display_id ON
+query_interact: query none
+query_interact: request_method pick
+query_interact: label_visible ON
+query_interact: label_rgb 0 0 0
+query_interact: label_always_on_top OFF
+query_interact: vector_report_by_x OFF
+query_interact: vector_report_by_y OFF
+query_interact: vector_report_by_z OFF
+query_interact: vector_report_by_mag ON
+query_interact: coord_report_by_x ON
+query_interact: coord_report_by_y ON
+query_interact: coord_report_by_z ON
+query_interact: marker_visible ON
+query_interact: marker_size_normalized 1
+query_interact: marker_rgb 0.5 0.5 0.5
+query_interact: #_displayed 1
+query_interact: display_expansion_factor 0
+query_interact: label_format exponential
+query_interact: label_decimal_places 5
+#
+# Attributes To Restore Annotation
+#
+legend: select_palette_begin
+Coordinates
+legend: select_palette_end
+legend: title_name Coordinates<\\units>
+legend: visible OFF
+legend: location_x 0.959999979
+legend: location_y 0.0250000004
+legend: width 0.0199999996
+legend: height 0.150000006
+legend: type continuous
+legend: text_type off
+legend: text_size 25
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Coordinates[X]
+legend: select_palette_end
+legend: title_name Coordinates[X]<\\units>
+legend: visible OFF
+legend: location_x 0.959999979
+legend: location_y 0.0250000004
+legend: width 0.0199999996
+legend: height 0.150000006
+legend: type continuous
+legend: text_type off
+legend: text_size 25
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Coordinates[Y]
+legend: select_palette_end
+legend: title_name Coordinates[Y]<\\units>
+legend: visible OFF
+legend: location_x 0.959999979
+legend: location_y 0.0250000004
+legend: width 0.0199999996
+legend: height 0.150000006
+legend: type continuous
+legend: text_type off
+legend: text_size 25
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Coordinates[Z]
+legend: select_palette_end
+legend: title_name Coordinates[Z]<\\units>
+legend: visible OFF
+legend: location_x 0.959999979
+legend: location_y 0.0250000004
+legend: width 0.0199999996
+legend: height 0.150000006
+legend: type continuous
+legend: text_type off
+legend: text_size 25
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Time
+legend: select_palette_end
+legend: title_name Time<\\units>
+legend: visible OFF
+legend: location_x 0.959999979
+legend: location_y 0.0250000004
+legend: width 0.0199999996
+legend: height 0.150000006
+legend: type continuous
+legend: text_type off
+legend: text_size 25
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Cell_Element_Type
+legend: select_palette_end
+legend: title_name Cell_Element_Type<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Volume_fraction__gas_
+legend: select_palette_end
+legend: title_name Volume_fraction__gas_<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Volume_fraction__solid_
+legend: select_palette_end
+legend: title_name Volume_fraction__solid_<\\units>
+legend: visible ON
+legend: location_x 0.88628602
+legend: location_y 0.151359007
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 10
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker ON
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_gas
+legend: select_palette_end
+legend: title_name Velocity_gas<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_gas[X]
+legend: select_palette_end
+legend: title_name Velocity_gas[X]<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_gas[Y]
+legend: select_palette_end
+legend: title_name Velocity_gas[Y]<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_gas[Z]
+legend: select_palette_end
+legend: title_name Velocity_gas[Z]<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_solid
+legend: select_palette_end
+legend: title_name Velocity_solid<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_solid[X]
+legend: select_palette_end
+legend: title_name Velocity_solid[X]<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_solid[Y]
+legend: select_palette_end
+legend: title_name Velocity_solid[Y]<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+legend: select_palette_begin
+Velocity_solid[Z]
+legend: select_palette_end
+legend: title_name Velocity_solid[Z]<\\units>
+legend: visible OFF
+legend: location_x 0.972000003
+legend: location_y 0.0299999993
+legend: width 0.0199999996
+legend: height 0.720000029
+legend: type continuous
+legend: text_type off
+legend: text_size 20
+legend: rgb 0 0 0
+legend: text_position left
+legend: title_location above
+legend: orientation vertical
+legend: relative_to entire_view
+legend: relative_viewport 0
+legend: show_minmax_marker OFF
+legend: show_background OFF
+legend: shadow_offset 0
+legend: shadow_intensity 0.400000006
+legend: specify_label_count OFF
+legend: label_count 5
+
+legend: format %.3e
+text: new_or_mod_text 0 Analysis_Time = <\\cnst C1 "%.2f" Analysis_Time\\> [s]
+text: select_begin
+ 0
+text: select_end
+text: visible ON
+text: location_x 0.00486544007
+text: location_y 0.0161419995
+text: rgb 0 0 0
+text: rotational_angle 0
+text: size 24
+text: justification left
+text: relative_viewport 0
+text: relative_to entire_view
+text: shadow_offset 0
+text: shadow_intensity 0.400000006
+text: origin_by screen_coords
+text: origin 0 0 0
+text: origin_frame 0
+text: new_or_mod_text 1 IsoSurface of Volume_fraction_solid = <\\pval "%.3f" 16\\>
+text: select_begin
+ 1
+text: select_end
+text: visible OFF
+text: location_x 0.205494002
+text: location_y 0.966827989
+text: rgb 0 0 0
+text: rotational_angle 0
+text: size 24
+text: justification center
+text: relative_viewport 0
+text: relative_to entire_view
+text: shadow_offset 0
+text: shadow_intensity 0.400000006
+text: origin_by screen_coords
+text: origin 0 0 0
+text: origin_frame 0
+arrow: label_text 
+arrow: visible ON
+arrow: location -1 -1 -1
+arrow: normal 0 0 1
+arrow: size -1
+arrow: radius 0.100000001
+arrow: tip_length 0.25
+arrow: tip_radius 2
+arrow: offset 0
+arrow: rgb 1 0 0
+arrow: light_diff 0.200000003
+arrow: light_shin 8
+arrow: light_h_int 0.5
+arrow: label_offset 1
+arrow: label_rgb 1 1 1
+arrow: label_size 28
+arrow: viewport_vis on  0 1 2
+arrow: origin_by XYZ
+arrow: probe_number 0
+arrow: append_locationvalue OFF
+arrow: scale_by_locationvalue OFF
+arrow: scale_min_factor 0.5
+arrow: scale_min_value 0
+arrow: scale_max_factor 2
+arrow: scale_max_value 0
+arrow: use_annotation_text OFF
+arrow: annotation_text_id 0
+dial: location_x 0.850000024
+dial: location_y 0.150000006
+dial: minimum 0
+dial: big_hand_range 60
+dial: little_hand_range 60
+dial: little_hand ON
+dial: radius 0.0700000003
+dial: big_hand_rgb 0 1 0
+dial: little_hand_rgb 1 0 0
+dial: background ON
+dial: background_rgb 0.300000012 0.300000012 0.300000012
+dial: border ON
+dial: visible ON
+dial: value ON
+dial: value_location right
+dial: show_as revolutions
+dial: value_format floating point
+dial: value_decimal_places 1
+dial: value_size 20
+dial: value_rgb 1 1 1
+dial: tick_marks 12
+gauge: location_x 0.850000024
+gauge: location_y 0.150000006
+gauge: minimum 0
+gauge: maximum 1
+gauge: height 0.300000012
+gauge: width 0.0700000003
+gauge: level_rgb 0 0 1
+gauge: background ON
+gauge: background_rgb 0.300000012 0.300000012 0.300000012
+gauge: border ON
+gauge: visible ON
+gauge: orientation vertical
+gauge: value ON
+gauge: value_location right
+gauge: value_format floating point
+gauge: value_decimal_places 1
+gauge: value_size 20
+gauge: value_rgb 0 0 0
+shape: type rectangle
+shape: visible ON
+shape: rgb 0 0 0
+shape: fill ON
+shape: line_width 2
+shape: location_x 0.5
+shape: location_y 0.5
+shape: width 0.200000
+shape: height 0.100000
+shape: rotational_angle 0
+shape: arrow_tip_length 0.5
+shape: arrow_tip_size 0.75
+shape: texture_object 0
+#
+# Restore Transformation View State
+#
+view_transf: restore_view CMDKEYWORD_BASEDIR\context1a.ctx_view
+#
+# Part collection commands
+#
+#
+# Parttree groups and populate with parts
+#
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds expand '1'
+ext: treecmd.treecmds create_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds expand '1'
+ext: treecmd.treecmds create_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds rotation '[0.000000,0.000000,0.000000,1.000000]'
+ext: treecmd.treecmds translation '[0.000000,0.000000,0.000000]'
+ext: treecmd.treecmds scale '[1.000000,1.000000,1.000000]'
+ext: treecmd.treecmds polygon_offset '0'
+ext: treecmd.treecmds offset '[0.000000,0.000000,0.000000]'
+ext: treecmd.treecmds transform_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds part 'Clip_plane'
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds reparent_part
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds part 'Clip_plane ->> 0001'
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds reparent_part
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds part 'Clip_plane ->> 0002'
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds reparent_part
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds part 'Clip_plane ->> 0003'
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds reparent_part
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds part 'Clip_plane ->> 0004'
+ext: treecmd.treecmds case 'CMDKEYWORD_CURCASE'
+ext: treecmd.treecmds path 'Set of Clips'
+ext: treecmd.treecmds reparent_part
+#
+# vartree groups and populate with vars
+#
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var ''
+ext: treecmd.treecmds expand '1'
+ext: treecmd.treecmds create_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var ''
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds expand '1'
+ext: treecmd.treecmds create_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Cell_Element_Type'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Cell_Id'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Cell_Zone_Type'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Mass_Imbalance'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Molecular_Viscosity__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Molecular_Viscosity__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Skin_Friction_Coefficient__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Skin_Friction_Coefficient__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Static_Pressure'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Velocity_Magnitude__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Velocity_Magnitude__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Volume_fraction__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Volume_fraction__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Wall_Shear_Stress__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Wall_Shear_Stress__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'X_Velocity__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'X_Velocity__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'X_Wall_Shear_Stress__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'X_Wall_Shear_Stress__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Y_Velocity__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Y_Velocity__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Y_Wall_Shear_Stress__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Y_Wall_Shear_Stress__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Z_Velocity__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Z_Velocity__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Z_Wall_Shear_Stress__gas_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Z_Wall_Shear_Stress__solid_'
+ext: treecmd.treecmds path 'Scalars'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var ''
+ext: treecmd.treecmds path 'Vectors'
+ext: treecmd.treecmds expand '0'
+ext: treecmd.treecmds create_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Velocity_gas'
+ext: treecmd.treecmds path 'Vectors'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Velocity_solid'
+ext: treecmd.treecmds path 'Vectors'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var ''
+ext: treecmd.treecmds path 'Constants'
+ext: treecmd.treecmds expand '1'
+ext: treecmd.treecmds create_group
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Analysis_Time'
+ext: treecmd.treecmds path 'Constants'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'Analysis_Step'
+ext: treecmd.treecmds path 'Constants'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'IntegralSurface'
+ext: treecmd.treecmds path 'Constants'
+ext: treecmd.treecmds reparent_var
+ext: treecmd.treecmds begin
+ext: treecmd.treecmds var 'IntegralSurfaceBot'
+ext: treecmd.treecmds path 'Constants'
+ext: treecmd.treecmds reparent_var
+#
+# Constant variable override of annotation attributes
+#
+variables: select_byname_begin
+Analysis_Time
+variables: select_byname_end
+variables: override_lt_active OFF
+variables: override_lt_useabs OFF
+variables: override_lt_min 0
+variables: override_lt_rgb 0 0 1
+variables: override_range_active OFF
+variables: override_range_useabs OFF
+variables: override_range_min 0
+variables: override_range_max 0
+variables: override_range_rgb 0 0 1
+variables: override_gt_active OFF
+variables: override_gt_useabs OFF
+variables: override_gt_min 0
+variables: override_gt_rgb 1 0 0
+variables: select_byname_begin
+IntegralSurface
+variables: select_byname_end
+variables: override_lt_active OFF
+variables: override_lt_useabs OFF
+variables: override_lt_min 8.2061124e-05
+variables: override_lt_rgb 0 0 1
+variables: override_range_active OFF
+variables: override_range_useabs OFF
+variables: override_range_min 8.2061124e-05
+variables: override_range_max 8.2061124e-05
+variables: override_range_rgb 0 0 1
+variables: override_gt_active OFF
+variables: override_gt_useabs OFF
+variables: override_gt_min 8.2061124e-05
+variables: override_gt_rgb 1 0 0
+variables: select_byname_begin
+IntegralSurfaceBot
+variables: select_byname_end
+variables: override_lt_active OFF
+variables: override_lt_useabs OFF
+variables: override_lt_min 4.44173711e-05
+variables: override_lt_rgb 0 0 1
+variables: override_range_active OFF
+variables: override_range_useabs OFF
+variables: override_range_min 4.44173711e-05
+variables: override_range_max 4.44173711e-05
+variables: override_range_rgb 0 0 1
+variables: override_gt_active OFF
+variables: override_gt_useabs OFF
+variables: override_gt_min 4.44173711e-05
+variables: override_gt_rgb 1 0 0
+#
+# Viewport tranformation linking commands
+#
+viewport: select_begin
+ 1 2
+viewport: select_end
+view_transf: viewport_link ON
+#
+# Current viewport selection commands
+#
+viewport: select_begin
+ 0
+viewport: select_end
+#
+# Printer/image setting commands
+#
+file: image_format evo
+file: image_format_options Compression RLE Quality 75
+file: image_format gif
+file: image_format_options Loop 0 Interlace 0 TransRed -1 TransGreen -1 TransBlue -1
+file: image_format jpg
+file: image_format_options Quality 75
+file: image_format sm
+file: image_format_options Compression GZ Quality 75 Tilesize 0 Resolutions 0
+file: image_format avi
+file: image_format_options Compression MPEG4V2 BitRate 20000
+file: image_format bmp
+file: image_format_options 
+file: image_format mpeg4
+file: image_format_options Quality High Type 1
+file: image_format png
+file: image_format_options Compression Default
+file: image_format postscript
+file: image_format_options orient Portrait sfactor 1.000000 type Image pixels
+file: image_format ppm
+file: image_format_options Format Binary
+file: image_format mov
+file: image_format_options Compression MPEG4 BitRate 20000
+file: image_format sgi
+file: image_format_options 
+file: image_format tiff
+file: image_format_options Compression PackBits
+file: image_format xpm
+file: image_format_options TransRed -1 TransGreen -1 TransBlue -1
+file: image_format png
+file: image_format_options Compression Default
+file: image_to_file ON
+file: image_file imgout
+file: image_to_printer OFF
+file: image_window_size user_defined
+file: image_window_xy 1392 938
+file: image_color_type color
+file: image_saturation 1.000000
+file: image_frame_rate 30
+file: image_rend_offscreen ON
+file: image_numpasses 4
+file: image_stereo current
+file: image_screen_tiling 1 1
+file: image_raytrace_it OFF
+file: image_raytrace_external OFF
+#
+# Video recording setting commands
+#
+file: animation_format evo
+file: animation_format_options Compression RLE Quality 75
+file: animation_format gif
+file: animation_format_options Loop 0 Interlace 0 TransRed -1 TransGreen -1 TransBlue -1
+file: animation_format jpg
+file: animation_format_options Quality 75
+file: animation_format sm
+file: animation_format_options Compression GZ Quality 75 Tilesize 0 Resolutions 0
+file: animation_format avi
+file: animation_format_options Compression MPEG4V2 BitRate 20000
+file: animation_format bmp
+file: animation_format_options 
+file: animation_format mpeg4
+file: animation_format_options Quality High Type 1
+file: animation_format png
+file: animation_format_options Compression Default
+file: animation_format postscript
+file: animation_format_options orient Portrait sfactor 1.000000 type Image pixels
+file: animation_format ppm
+file: animation_format_options Format Binary
+file: animation_format mov
+file: animation_format_options Compression MPEG4 BitRate 20000
+file: animation_format sgi
+file: animation_format_options 
+file: animation_format tiff
+file: animation_format_options Compression PackBits
+file: animation_format xpm
+file: animation_format_options TransRed -1 TransGreen -1 TransBlue -1
+file: animation_format avi
+file: animation_window_size user_defined
+file: animation_window_xy 1392 938
+file: animation_color_type color
+file: animation_saturation 1.000000
+file: animation_frame_rate 30
+file: animation_rend_offscreen ON
+file: animation_numpasses 4
+file: animation_stereo current
+file: animation_screen_tiling 1 1
+file: animation_raytrace_it OFF
+#
+# Raytracer setting commands
+#
+file: raytracer Enray
+file: raytracer_options fgoverlay 1 imagedenoise 1 quality 0 
+#
+# VR initialization commands
+#
+view_transf: vr_scale 1
+view_transf: vr_worldcenter 0.0512500256 -0.485000163 -7.4505806e-09
+view_transf: vr_worlddiagonal 1.03801823
+#
+# Scene View Information
+#
+scene: modify_begin
+scene: active OFF
+scene: origin 0 0 0
+scene: scale 1
+scene: environment_map_name None
+scene: axis_visible OFF
+scene: ground_plane_visible OFF
+scene: ground_plane_blendscale 1
+scene: ground_plane_texscale 1
+scene: modify_end
+#
+# Object MetaData commands
+#
+ensight.objs.core.VARIABLES.find('Cell_Element_Type')[0].setmetatag('ENS_UNITS_LABEL','')
+ensight.objs.core.VARIABLES.find('Cell_Element_Type')[0].setmetatag('ENS_UNITS_DIMS','/')
+ensight.objs.core.VARIABLES.find('Velocity_gas')[0].setmetatag('ENS_UNITS_LABEL','')
+ensight.objs.core.VARIABLES.find('Velocity_gas')[0].setmetatag('ENS_UNITS_DIMS','L/T')
+ensight.objs.core.VARIABLES.find('Velocity_solid')[0].setmetatag('ENS_UNITS_LABEL','')
+ensight.objs.core.VARIABLES.find('Velocity_solid')[0].setmetatag('ENS_UNITS_DIMS','L/T')
+ensight.objs.core.VARIABLES.find('IntegralSurface')[0].setmetatag('ENS_UNITS_DIMS','LL/')
+ensight.objs.core.VARIABLES.find('IntegralSurfaceBot')[0].setmetatag('ENS_UNITS_DIMS','LL/')
+ensight.objs.core.VARIABLES.find('Coordinates')[0].setmetatag('ENS_UNITS_LABEL','')
+ensight.objs.core.VARIABLES.find('Coordinates')[0].setmetatag('ENS_UNITS_DIMS','L')
+ensight.objs.core.VARIABLES.find('Time')[0].setmetatag('ENS_UNITS_LABEL','')
+ensight.objs.core.VARIABLES.find('Time')[0].setmetatag('ENS_UNITS_DIMS','T')
+ensight.objs.core.CASES.find('CMDKEYWORD_CURCASE',attr="PATHNAME")[0].setmetatag('ENS_UNITS_LABEL',2.000000)
+ensight.objs.core.CASES.find('CMDKEYWORD_CURCASE',attr="PATHNAME")[0].setmetatag('ENS_UNITS_DIMS',1.000000)
+ensight.objs.core.CASES.find('CMDKEYWORD_CURCASE',attr="PATHNAME")[0].setmetatag('ENS_UNITS_SYSTEM',1.000000)
+ensight.objs.core.CASES.find('CMDKEYWORD_CURCASE',attr="PATHNAME")[0].setmetatag('DVS_GRPC_SERVERS','')
+ensight.objs.core.CASES.find('CMDKEYWORD_CURCASE',attr="PATHNAME")[0].setmetatag('ENS_UNITS_SYSTEM_NAME','SI')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('fluid-1')[0].setmetatag('ENS_KIND','cell')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('pressure-outlet-6')[0].setmetatag('ENS_KIND','pressure-outlet')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('pressure-outlet-7')[0].setmetatag('ENS_KIND','pressure-outlet')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('velocity-inlet-1')[0].setmetatag('ENS_KIND','velocity-inlet')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('wall-1')[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('wall-2')[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('wall-2-shadow')[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.CASES['Case 1'][0].LPARTS.find('wall-3')[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.GROUPS.find('CMDKEYWORD_CURCASE|Set of Clips',attr="PATHNAME")[0].setmetatag('ENS_KIND','')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|fluid-1',attr="PATHNAME")[0].setmetatag('ENS_KIND','cell')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|fluid-1',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|fluid-1',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|pressure-outlet-6',attr="PATHNAME")[0].setmetatag('ENS_KIND','pressure-outlet')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|pressure-outlet-6',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|pressure-outlet-6',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|pressure-outlet-7',attr="PATHNAME")[0].setmetatag('ENS_KIND','pressure-outlet')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|pressure-outlet-7',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|pressure-outlet-7',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|velocity-inlet-1',attr="PATHNAME")[0].setmetatag('ENS_KIND','velocity-inlet')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|velocity-inlet-1',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|velocity-inlet-1',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-1',attr="PATHNAME")[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-1',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-1',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-2',attr="PATHNAME")[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-2',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-2',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-2-shadow',attr="PATHNAME")[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-2-shadow',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-2-shadow',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-3',attr="PATHNAME")[0].setmetatag('ENS_KIND','wall')
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-3',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|wall-3',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0001',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0001',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0002',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0002',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0003',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0003',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0004',attr="PATHNAME")[0].setmetatag('ENS_SYMMETRY_COUNT',0)
+ensight.objs.core.PARTS.find('CMDKEYWORD_CURCASE|Set of Clips|Clip_plane ->> 0004',attr="PATHNAME")[0].HANDLES_ENABLED = 1
+ensight.objs.core.VPORTS.find('Main Viewport')[0].HANDLES_ENABLED = 1
+ensight.objs.core.VPORTS.find('Viewport 1')[0].HANDLES_ENABLED = 1
+ensight.objs.core.VPORTS.find('Viewport 2')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('continuity')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('eps-gas')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('k-gas')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('u-gas')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('u-solid')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('v-gas')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('v-solid')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('vf-solid')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('w-gas')[0].HANDLES_ENABLED = 1
+ensight.objs.core.QUERIES.find('w-solid')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Coordinates<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Coordinates[X]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Coordinates[Y]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Coordinates[Z]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Time<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Cell_Element_Type<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Volume_fraction__gas_<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Volume_fraction__solid_<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_gas<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_gas[X]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_gas[Y]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_gas[Z]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_solid<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_solid[X]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_solid[Y]<\\units>''')[0].HANDLES_ENABLED = 1
+ensight.objs.core.PALETTES.find(r'''Velocity_solid[Z]<\\units>''')[0].HANDLES_ENABLED = 1
+#
+# End Object MetaData commands
+#
+#
+# EnSight State view data
+#
+ensight.objs.core.states[0].read(r'CMDKEYWORD_BASEDIR/context1a.ctx_evs')
+part: select_default
+part: modify_begin
+part: elt_representation 3D_feature_2D_full
+part: modify_end
