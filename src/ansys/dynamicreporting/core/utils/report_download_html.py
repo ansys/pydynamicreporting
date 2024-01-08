@@ -201,15 +201,24 @@ class ReportDownloadHTML:
             "play.png",
         ]
         self._download_static_files(
-            images, f"/ansys{self._ansys_version}/nexus/images/", f"ansys{self._ansys_version}/nexus/images/", "viewer images II"
+            images,
+            f"/ansys{self._ansys_version}/nexus/images/",
+            f"ansys{self._ansys_version}/nexus/images/",
+            "viewer images II",
         )
         images = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._download_static_files(
-            images, f"/ansys{self._ansys_version}/nexus/utils/", f"ansys{self._ansys_version}/nexus/utils/", "viewer javascript support"
+            images,
+            f"/ansys{self._ansys_version}/nexus/utils/",
+            f"ansys{self._ansys_version}/nexus/utils/",
+            "viewer javascript support",
         )
         images = ["ANSYSViewer_min.js", "viewer-loader.js"]
         self._download_static_files(
-            images, f"/ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/", "ansys-nexus-viewer js"
+            images,
+            f"/ansys{self._ansys_version}/nexus/",
+            f"ansys{self._ansys_version}/nexus/",
+            "ansys-nexus-viewer js",
         )
         images = [
             "jquery.contextMenu.min.css",
@@ -231,7 +240,10 @@ class ReportDownloadHTML:
             "three.js",
         ]
         self._download_static_files(
-            image, f"/ansys{self._ansys_version}/nexus/threejs/", f"ansys{self._ansys_version}/nexus/threejs", "threejs core"
+            image,
+            f"/ansys{self._ansys_version}/nexus/threejs/",
+            f"ansys{self._ansys_version}/nexus/threejs",
+            "threejs core",
         )
 
         image = [
@@ -479,8 +491,27 @@ class ReportDownloadHTML:
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
-        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "threejs", "libs", "draco", "gltf"])
-        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "novnc", "vendor", "jQuery-contextMenu"])
+        self._make_dir(
+            [
+                self._directory,
+                f"ansys{self._ansys_version}",
+                "nexus",
+                "threejs",
+                "libs",
+                "draco",
+                "gltf",
+            ]
+        )
+        self._make_dir(
+            [
+                self._directory,
+                f"ansys{self._ansys_version}",
+                "nexus",
+                "novnc",
+                "vendor",
+                "jQuery-contextMenu",
+            ]
+        )
 
         # get the webpage html source
         resp = requests.get(self._url)
