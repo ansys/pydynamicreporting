@@ -168,7 +168,7 @@ class ReportDownloadHTML:
 
         # Additional files to be mapped to the media directory
         images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
-        self._download_static_files(images, "/static/website/images/", "media", "image")
+        self._download_static_files(images, "/static/website/images/", "media", "nexus images")
 
         # The old Ansys Nexus WebGL viewer
         images = [
@@ -183,7 +183,7 @@ class ReportDownloadHTML:
             "open.png",
             "Point.cur",
         ]
-        self._download_static_files(images, "/static/website/images/", "media", "viewer image")
+        self._download_static_files(images, "/static/website/images/", "media", "viewer images I")
 
         # The new Ansys Nexus WebGL viewer
         images = [
@@ -201,24 +201,15 @@ class ReportDownloadHTML:
             "play.png",
         ]
         self._download_static_files(
-            images,
-            f"/ansys{self._ansys_version}/nexus/images/",
-            f"ansys{self._ansys_version}/nexus/images/",
-            "viewer image",
+            images, f"/ansys{self._ansys_version}/nexus/images/", f"ansys{self._ansys_version}/nexus/images/", "viewer images II"
         )
         images = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._download_static_files(
-            images,
-            f"/ansys{self._ansys_version}/nexus/utils/",
-            f"ansys{self._ansys_version}/nexus/utils/",
-            "viewer image",
+            images, f"/ansys{self._ansys_version}/nexus/utils/", f"ansys{self._ansys_version}/nexus/utils/", "viewer javascript support"
         )
         images = ["ANSYSViewer_min.js", "viewer-loader.js"]
         self._download_static_files(
-            images,
-            f"/ansys{self._ansys_version}/nexus/",
-            f"ansys{self._ansys_version}/nexus/",
-            "viewer image",
+            images, f"/ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/", "ansys-nexus-viewer js"
         )
         images = [
             "jquery.contextMenu.min.css",
@@ -228,8 +219,38 @@ class ReportDownloadHTML:
         self._download_static_files(
             images,
             f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-            f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
-            "viewer image",
+            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
+            "ansys-nexus-viewer vnc js",
+        )
+
+        image = [
+            "ArcballControls.js",
+            "DRACOLoader.js",
+            "GLTFLoader.js",
+            "OrbitControls.js",
+            "three.js",
+        ]
+        self._download_static_files(
+            image, f"/ansys{self._ansys_version}/nexus/threejs/", f"ansys{self._ansys_version}/nexus/threejs", "threejs core"
+        )
+
+        image = [
+            "draco_decoder.js",
+            "draco_decoder.wasm",
+            "draco_encoder.js",
+            "draco_wasm_wrapper.js",
+        ]
+        self._download_static_files(
+            image,
+            f"/ansys{self._ansys_version}/nexus/threejs/libs/draco/",
+            f"ansys{self._ansys_version}/nexus/threejs/libs/draco",
+            "threejs draco",
+        )
+        self._download_static_files(
+            image,
+            f"/ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
+            f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
+            "threejs draco gltf",
         )
 
         # Fonts
@@ -240,7 +261,7 @@ class ReportDownloadHTML:
             "fa-solid-900.woff",
             "fa-solid-900.woff2",
         ]
-        self._download_static_files(fonts, "/static/website/webfonts/", "webfonts", "font")
+        self._download_static_files(fonts, "/static/website/webfonts/", "webfonts", "fonts")
 
     @staticmethod
     def _fix_viewer_component_paths(filename, data, ansys_version):
@@ -263,7 +284,7 @@ class ReportDownloadHTML:
         elif filename.endswith("viewer-loader.js"):
             data = data.decode("utf-8")
             data = data.replace(
-                f'"/ansys{ansys_version}//nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
+                f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
             )
             data = data.encode("utf-8")
         return data
@@ -458,16 +479,8 @@ class ReportDownloadHTML:
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
-        self._make_dir(
-            [
-                self._directory,
-                f"ansys{self._ansys_version}",
-                "nexus",
-                "novnc",
-                "vendor",
-                "jQuery-contextMenu",
-            ]
-        )
+        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "threejs", "libs", "draco", "gltf"])
+        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "novnc", "vendor", "jQuery-contextMenu"])
 
         # get the webpage html source
         resp = requests.get(self._url)
