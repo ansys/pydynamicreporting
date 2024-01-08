@@ -67,6 +67,9 @@ with open("sample.dvs", "w") as dvsfile:
     dvsfile.write("#!DVS_CASE 1.0\n")
     dvsfile.write(f"SERVER_PORT_BASE={port}\n")
     dvsfile.write("SERVER_PORT_MULT=1\n")
+    # It is not possible yet to set in Fluent a security token for the DVS EnSight-Fluent connection
+    # So, in the DVS file, it is set to the empty string
+    dvsfile.write("SERVER_SECURITY_SECRET=\n")
 
 
 ###############################################################################
@@ -80,7 +83,7 @@ with open("sample.dvs", "w") as dvsfile:
 #
 
 flsession.read_case("stairmand_mphase_v19.cas")
-flsession.execute_tui("def beta yes yes")
+flsession.tui.define.beta_feature_access("yes", "yes")
 settings = [
     "'cyclone'",
     "yes",
@@ -98,7 +101,7 @@ settings = [
     "gas-velocity-magnitude",
     "gas-wall-shear",
     "gas-x-velocity",
-    "gas-wall-shear",
+    "gas-x-wall-shear",
     "gas-y-velocity",
     "gas-y-wall-shear",
     "gas-z-velocity",
@@ -109,7 +112,7 @@ settings = [
     "solid-velocity-magnitude",
     "solid-wall-shear",
     "solid-x-velocity",
-    "solid-wall-shear",
+    "solid-x-wall-shear",
     "solid-y-velocity",
     "solid-y-wall-shear",
     "solid-z-velocity",
@@ -155,13 +158,17 @@ for process in [solve_fluent, load_dvs]:
 threads[1].start()
 threads[0].start()
 
+# To show the live post-processing session, you can always set up
+# an interactive EnSight renderable, with the command
+# ensession.show("remote")
+
 ###############################################################################
 # Postprocessing
 # --------------
 #
-# Load a context file in Ansys EnSight to automatically postprocess the results
-# of the parameter study that is Ansys Fluent. You can find the context1a.ctx
-# and associated files at
+# At the end of the simulation, load a context file in Ansys EnSight to automatically 
+# postprocess the results of the parameter study that is Ansys Fluent. 
+# You can find the context1a.ctx and associated files at
 # https://github.com/ansys/pydynamicreporting/tree/main/doc/source/_data.
 #
 
