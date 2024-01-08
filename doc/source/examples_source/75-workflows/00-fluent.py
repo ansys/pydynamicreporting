@@ -166,8 +166,8 @@ threads[0].start()
 # Postprocessing
 # --------------
 #
-# At the end of the simulation, load a context file in Ansys EnSight to automatically 
-# postprocess the results of the parameter study that is Ansys Fluent. 
+# At the end of the simulation, load a context file in Ansys EnSight to automatically
+# postprocess the results of the parameter study that is Ansys Fluent.
 # You can find the context1a.ctx and associated files at
 # https://github.com/ansys/pydynamicreporting/tree/main/doc/source/_data.
 #
