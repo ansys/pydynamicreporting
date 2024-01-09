@@ -215,6 +215,7 @@ class ReportDownloadHTML:
             "GLTFLoader.js",
             "OrbitControls.js",
             "three.js",
+            "VRButton.js",
         ]
         self._download_static_files(
             image, "/ansys/nexus/threejs/", "ansys/nexus/threejs", "threejs core"
