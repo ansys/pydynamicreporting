@@ -859,7 +859,13 @@ class Server:
         return url
 
     def export_report_as_html(
-        self, report_guid, directory_name, query=None, filename="index.html", no_inline_files=False
+        self,
+        report_guid,
+        directory_name,
+        query=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
     ):
         if query is None:
             query = {}
@@ -868,12 +874,15 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query)
+        _ansys_version = self._ansys_version
+        if ansys_version:
+            _ansys_version = ansys_version
         worker = ReportDownloadHTML(
             url=url,
             directory=directory_path,
             filename=filename,
             no_inline_files=no_inline_files,
-            ansys_version=self._ansys_version,
+            ansys_version=_ansys_version,
         )
         worker.download()
 
