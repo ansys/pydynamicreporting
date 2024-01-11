@@ -341,48 +341,13 @@ class ReportLinkTemplateEngine(LayoutEngine):
         if link_type >= 3:
             local_context['usemenus'] = 'off'
 
-        # we can be hosting a "service" (noVNC) or a report "ADR template"
-        size_attribute = None
-        base_url = ""
-        service_name = self.get_default(context, "service_name", '')
-        if len(service_name) > 0:
-            # build up the URL for the service
-            base_url = reverse('remote_applet_run')
-            base_url += "?applet_name={}".format(service_name)
-            # find any potential target file object
-            # simple, image button
-            for item in input_items:
-                if item.type == 'file':
-                    base_url += "&applet_target={}".format(item.guid)
-                    break
-            # GUI skin
-            service_skin = self.get_default(context, "service_skin", '')
-            if len(service_skin) > 0:
-                base_url += "&applet_skin={}".format(service_skin)
-            # Forced size
-            service_size = self.get_default(context, "service_size", '')
-            if len(service_size) > 0:
-                try:
-                    tmp = service_size.split('x')
-                    tmp_w = int(tmp[0])
-                    tmp_h = int(tmp[1])
-                    if (tmp_w > 10) and (tmp_h > 10):
-                        base_url += "&applet_size={}x{}".format(tmp_w, tmp_h)
-                except:
-                    size_attribute = "&applet_size="
-            else:
-                # we need to add the size to the URL (at runtime)
-                size_attribute = "&applet_size="
+        # Build up the target URL for a sub-report
+        report = self.get_target_template()
+        if report:
             # Button text
-            link_text = self.get_default(context, "link_text", service_name)
-        else:
-            # Build up the target URL for a sub-report
-            report = self.get_target_template()
-            if report:
-                # Button text
-                link_text = self.get_default(context, "link_text", report.name)
-                report_filter = self.template.item_filter
-                base_url = report.get_display_url(query=report_filter, context=local_context)
+            link_text = self.get_default(context, "link_text", report.name)
+            report_filter = self.template.item_filter
+            base_url = report.get_display_url(query=report_filter, context=local_context)
 
         if len(base_url) == 0:
             # TODO Error message about not being able to find the template target
