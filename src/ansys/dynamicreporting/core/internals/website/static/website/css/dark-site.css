@@ -1,0 +1,415 @@
+/*
+CSS variables for dark mode colors.
+*/
+html[data-color-mode=dark] {
+    --color-bg: #222;
+    --color-text-light: #eee;
+    --color-loading-bg: #000;
+    --color-bg-jumbotron: #303030;
+    --color-bg-card-header: #444;
+    --color-bg-card-header-no-alpha: #444;
+    --color-bg-table: #212529;
+    --color-table-hover: rgba(255, 255, 255, 0.075);
+    --color-table-selected: #0275d8;
+    --color-text-disabled: #adb5bd;
+    --color-focus-border: #80bdff;
+    --color-text-hover: var(--color-text-light);
+    --color-bg-hover: var(--color-table-hover);
+    --color-text-selected: var(--color-text-light);
+    --color-bg-selected: var(--color-table-selected);
+    --color-ph-bg: #444;
+}
+
+/*
+Note that it is not necessary to mention the data attribute
+selector in every single rule, but if we don't, the rule will
+apply during light mode as well, unless light mode is also
+given its own variables and rules. BUT, we use bootstrap and we
+don't have the need to manually specify each color variable for
+light mode, so we do that for dark mode instead.
+*/
+
+[data-color-mode=dark] body {
+    background-color: var(--color-bg);
+    color: var(--color-text-light);
+}
+
+[data-color-mode=dark] .jumbotron {
+    background-color: var(--color-bg-jumbotron);
+}
+
+[data-color-mode=dark] .text-muted {
+    color: inherit !important;
+}
+
+/*loading*/
+[data-color-mode=dark] .loading-overlay {
+    color: var(--color-text-light);
+    background-color: var(--color-loading-bg);
+}
+
+/*loading*/
+
+/*cards*/
+[data-color-mode=dark] .card {
+    background-color: var(--color-bg-jumbotron);
+    border-color: var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .card-header,
+[data-color-mode=dark] .card-footer {
+    background-color: var(--color-bg-card-header);
+}
+
+/*cards*/
+
+/*tables*/
+[data-color-mode=dark] caption {
+    color: var(--color-text-light);
+}
+
+[data-color-mode=dark] .table {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-table);
+}
+
+[data-color-mode=dark] .table.slider-table {
+    color: var(--color-text-light);
+    background-color: inherit;
+}
+
+[data-color-mode=dark] .table thead tr {
+    background-color: var(--color-bg-jumbotron);
+}
+
+[data-color-mode=dark] .table th,
+[data-color-mode=dark] .table td {
+    border-top-color: var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .table thead th {
+    border-bottom-color: var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .table tbody + tbody {
+    border-top-color: var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .table-hover tbody tr:hover {
+    background-color: var(--color-table-hover);
+    color: var(--color-text-light);
+}
+
+[data-color-mode=dark] .table-bordered {
+    border-color: var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .table-bordered th,
+[data-color-mode=dark] .table-bordered td {
+    border-color: var(--color-bg-card-header);
+}
+
+/*tables*/
+
+/*datatables*/
+[data-color-mode=dark] table.dataTable tbody tr.selected,
+[data-color-mode=dark] table.dataTable tbody th.selected,
+[data-color-mode=dark] table.dataTable tbody td.selected {
+    color: var(--color-text-light);
+}
+
+[data-color-mode=dark] table.dataTable tbody > tr.selected,
+[data-color-mode=dark] table.dataTable tbody > tr > .selected {
+    background-color: var(--color-table-selected);
+}
+
+/*datatables*/
+
+/*sliders*/
+[data-color-mode=dark] .slider-track {
+    background-color: var(--color-bg-card-header);
+    background-image: linear-gradient(to bottom, var(--color-bg-card-header), var(--color-bg-card-header));
+}
+
+/*sliders*/
+
+/*modals*/
+[data-color-mode=dark] .modal-header {
+    border-bottom: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .modal-content {
+    background-color: var(--color-bg-jumbotron);
+    border: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .modal-footer {
+    border-top: 1px solid var(--color-bg-card-header);
+}
+
+/*modals*/
+
+/*lines*/
+[data-color-mode=dark] hr {
+    background-color: var(--color-bg-card-header);
+}
+
+/*lines*/
+
+/*tags input*/
+[data-color-mode=dark] .bootstrap-tagsinput {
+    background-color: var(--color-bg-table);
+    border-color: var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .bootstrap-tagsinput:focus-within {
+    border-color: var(--color-bg-card-header);
+}
+
+/*tags input*/
+
+/*all input fields*/
+[data-color-mode=dark] input[type=date],
+[data-color-mode=dark] input[type=datetime-local],
+[data-color-mode=dark] input[type=file],
+[data-color-mode=dark] input[type=number],
+[data-color-mode=dark] input[type=password],
+[data-color-mode=dark] input[type=reset],
+[data-color-mode=dark] input[type=range],
+[data-color-mode=dark] input[type=search],
+[data-color-mode=dark] input[type=submit],
+[data-color-mode=dark] input[type=text],
+[data-color-mode=dark] input[type=url],
+[data-color-mode=dark] .custom-file-label, /*upload btn*/
+[data-color-mode=dark] .custom-file-label::after,
+[data-color-mode=dark] textarea {
+    background-color: var(--color-bg-table);
+    color: var(--color-text-light);
+    border-color: var(--color-bg-card-header) !important;
+}
+
+[data-color-mode=dark] input[type]:focus {
+    background-color: var(--color-bg-table);
+    color: var(--color-text-light);
+}
+
+[data-color-mode=dark] .input-group-text {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-card-header);
+    border-color: transparent;
+}
+
+/*all input fields*/
+
+/*select box*/
+[data-color-mode=dark] select,
+[data-color-mode=dark] select:focus,
+[data-color-mode=dark] select option {
+    background-color: var(--color-bg-table);
+    color: var(--color-text-light);
+    border-color: var(--color-bg-card-header);
+}
+
+/*select box*/
+
+/*bs-select*/
+[data-color-mode=dark] .bootstrap-select {
+    background-color: var(--color-bg-table);
+}
+
+/*bs-select*/
+
+/*autofill*/
+[data-color-mode=dark] input:-webkit-autofill,
+[data-color-mode=dark] input:-webkit-autofill:hover,
+[data-color-mode=dark] input:-webkit-autofill:focus,
+[data-color-mode=dark] input:-webkit-autofill:active,
+[data-color-mode=dark] textarea:-webkit-autofill,
+[data-color-mode=dark] textarea:-webkit-autofill:hover,
+[data-color-mode=dark] textarea:-webkit-autofill:focus,
+[data-color-mode=dark] select:-webkit-autofill,
+[data-color-mode=dark] select:-webkit-autofill:hover,
+[data-color-mode=dark] select:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-text-light);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-bg-table) inset;
+}
+
+/*autofill*/
+
+/*outlined btns*/
+[data-color-mode=dark] .btn-outline-primary:hover {
+    color: var(--color-text-light);
+    background-color: var(--color-btn-primary) !important;
+    border-color: var(--color-btn-primary);
+}
+
+/*outlined btns*/
+
+/*dropdown*/
+[data-color-mode=dark] .dropdown-menu {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-table);
+    border: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .dropdown-divider {
+    border-top: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .dropdown-item {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-table);
+}
+
+[data-color-mode=dark] .dropdown-item:focus,
+[data-color-mode=dark] .dropdown-item:hover {
+    color: var(--color-text-light);
+    background-color: var(--color-table-hover);
+}
+
+[data-color-mode=dark] .dropdown-item.active,
+[data-color-mode=dark] .dropdown-item:active {
+    color: var(--color-text-light);
+    background-color: var(--color-btn-primary);
+}
+
+[data-color-mode=dark] .dropdown-item.disabled,
+[data-color-mode=dark] .dropdown-item:disabled {
+    color: var(--color-text-disabled);
+}
+
+/*dropdown*/
+
+/*pagination links*/
+[data-color-mode=dark] .page-link {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-table);
+    border: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .page-link:hover {
+    color: var(--color-text-light);
+    background-color: var(--color-table-hover);
+    border: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .page-item.active .page-link {
+    color: var(--color-text-light);
+    background-color: var(--color-btn-primary);
+    border: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .page-item.disabled .page-link {
+    color: var(--color-text-disabled);
+    background-color: var(--color-bg-table);
+    border: 1px solid var(--color-bg-card-header);
+}
+
+/*pagination links*/
+
+/*tabs (nav-tab > nav-item > nav-link)*/
+[data-color-mode=dark] .nav-link.disabled {
+    color: var(--color-text-disabled);
+}
+
+[data-color-mode=dark] .nav-tabs {
+    border-bottom: 1px solid var(--color-bg-card-header);
+}
+
+[data-color-mode=dark] .nav-tabs .nav-link {
+    border: 1px solid transparent;
+}
+
+[data-color-mode=dark] .nav-tabs .nav-link:hover,
+[data-color-mode=dark] .nav-tabs .nav-link:focus {
+    border-color: var(--color-bg-card-header) var(--color-bg-card-header) transparent;
+}
+
+[data-color-mode=dark] .nav-tabs .nav-link.active,
+[data-color-mode=dark] .nav-tabs .nav-item.show .nav-link {
+    color: var(--color-text-light);
+    background-color: var(--color-bg);
+    border-color: var(--color-bg-card-header) var(--color-bg-card-header) transparent;
+}
+
+/*tabs*/
+
+/*carousels*/
+
+[data-color-mode=dark] .carousel-control-prev,
+[data-color-mode=dark] .carousel-control-next {
+    color: var(--color-text-light);
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+[data-color-mode=dark] .carousel-control-prev:hover,
+[data-color-mode=dark] .carousel-control-prev:focus,
+[data-color-mode=dark] .carousel-control-next:hover,
+[data-color-mode=dark] .carousel-control-next:focus {
+    color: var(--color-text-light);
+    text-decoration: none;
+    outline: 0;
+    opacity: 0.9;
+}
+
+[data-color-mode=dark] .carousel-indicators li {
+    background-color: var(--color-text-light);
+    background-clip: padding-box;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    opacity: .5;
+    transition: opacity 0.6s ease;
+}
+
+[data-color-mode=dark] .carousel-caption {
+    color: var(--color-text-light);
+}
+
+/*carousels*/
+
+/*ANSYS Viewer*/
+
+[data-color-mode=dark] .avz-viewer .view-man-panel {
+    background: var(--color-bg) !important;
+}
+
+[data-color-mode=dark] .avz-viewer .view-man-panel label,
+[data-color-mode=dark] .avz-viewer .view-man-panel a {
+    color: var(--color-text-light) !important;
+}
+
+[data-color-mode=dark] .avz-viewer .view-man-panel a:hover {
+    color: var(--color-table-selected) !important;
+}
+
+[data-color-mode=dark] .avz-viewer .view-man-panel label:hover {
+    color: var(--color-btn-primary-light) !important;
+}
+
+/* ANSYS Viewer */
+
+/*Babylon viewer*/
+
+[data-color-mode=dark] .babylon-viewer .part-panel,
+[data-color-mode=dark] .babylon-viewer .info-panel {
+    background-color: rgba(var(--color-bg), 0.5) !important;
+}
+
+/*Babylon viewer*/
+
+/*context menu*/
+[data-color-mode=dark] .context-menu-list,
+[data-color-mode=dark] .context-menu-item {
+    color: var(--color-text-light);
+    background-color: var(--color-bg-jumbotron);
+    border-color: var(--color-bg);
+}
+
+[data-color-mode=dark] .context-menu-item.context-menu-disabled {
+    color: #bbb;
+    cursor: default;
+    background-color: var(--color-bg-jumbotron);
+}
+
+/*context menu*/

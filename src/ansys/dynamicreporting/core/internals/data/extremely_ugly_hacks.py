@@ -10,7 +10,7 @@ import pickle
 
 from django.conf import settings
 
-from ceireports.exceptions import SafeUnpickleException
+from ..report_framework.exceptions import SafeUnpickleException
 
 
 def safe_unpickle(input_data):

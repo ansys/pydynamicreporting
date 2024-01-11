@@ -1,17 +1,3 @@
-# *************************************************************
-#  Copyright 2021 ANSYS, Inc.
-#  All Rights Reserved.
-#
-#  Restricted Rights Legend
-#
-#  Use, duplication, or disclosure of this
-#  software and its documentation by the
-#  Government is subject to restrictions as
-#  set forth in subdivision [(b)(3)(ii)] of
-#  the Rights in Technical Data and Computer
-#  Software clause at 52.227-7013.
-# *************************************************************
-
 import copy
 import numpy
 import math

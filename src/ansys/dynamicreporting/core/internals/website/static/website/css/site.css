@@ -1,0 +1,213 @@
+﻿html {
+    --color-bg: #fff;
+    --color-btn-primary: #007bff;
+    --color-btn-primary-light: #99caff;
+    --color-focus-box-shadow: rgba(0, 123, 255, .25);
+    --color-bg-card-header: rgba(0, 0, 0, .125);
+    --color-bg-card-header-no-alpha: #d8d8d8;
+    --color-text-hover: #212529;
+    --color-bg-hover: rgba(0, 0, 0, .075);
+    --color-text-selected: white;
+    --color-bg-selected: #0275d8;
+    --color-ph-bg: #f7f7f7;
+}
+
+body {
+    font-family: Helvetica, Arial, sans-serif, monospace;
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+.text-monospace {
+    font-family: "Courier New", Courier, monospace;
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+input,
+select,
+textarea {
+    max-width: 280px;
+}
+
+/* styles for validation helpers */
+.field-validation-error {
+    color: #b94a48;
+}
+
+.field-validation-valid {
+    display: none;
+}
+
+input.input-validation-error {
+    border: 1px solid #b94a48;
+}
+
+input[type="checkbox"].input-validation-error {
+    border: 0 none;
+}
+
+.validation-summary-errors {
+    color: #b94a48;
+}
+
+.validation-summary-valid {
+    display: none;
+}
+
+@keyframes cei_spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.cei_loader {
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    border: .25rem solid rgba(100, 100, 100, 51);
+    border-top-color: rgba(200, 200, 200, 255);
+    animation: cei_spinner 1.5s infinite linear;
+}
+
+th.dt-center, td.dt-center {
+    text-align: center;
+}
+
+#return_to_top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: none;
+    text-decoration: none;
+}
+
+/*break long words*/
+table.table-wrap tr td {
+    word-break: break-word;
+}
+
+/*fix the width to a minimum and turn off wrapping to appear condensed;
+content will decide the width beyond minimum width*/
+table.table-fit-head tr th, table.table-fit-body tr td {
+    width: 1px;
+    white-space: nowrap;
+}
+
+.custom-file {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    height: calc(2.25rem + 2px);
+    margin-bottom: 0;
+}
+
+.custom-file-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    height: calc(2.25rem + 2px);
+    padding: .375rem .75rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+}
+
+.custom-file-input {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: calc(2.25rem + 2px);
+    margin: 0;
+    opacity: 0;
+}
+
+/*bootstrap4 sets caption-side as bottom by default,
+so we override that*/
+caption {
+    caption-side: top;
+    text-align: center;
+}
+
+.no-click {
+    pointer-events: none !important;
+}
+
+.deep-num::-webkit-outer-spin-button,
+.deep-num::-webkit-inner-spin-button {
+    /* display: none; <- Crashes Chrome on hover */
+    -webkit-appearance: none;
+    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+.deep-num {
+    -moz-appearance: textfield; /* Firefox */
+}
+
+.f-1r {
+    font-size: 1rem;
+}
+
+.bootstrap-tagsinput:focus-within {
+    box-shadow: 0 0 0 .2rem var(--color-focus-box-shadow);
+}
+
+.avz-viewer .view-man-panel label:hover {
+    color: var(--color-btn-primary-light) !important;
+}
+
+/***Scrollbar theme****/
+
+/* Works on Firefox */
+* {
+    scrollbar-width: thin; /* "auto" or "thin" */
+    scrollbar-color: #888 var(--color-bg); /* scroll thumb and track */
+}
+
+/* Works on Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+    width: 6px; /*avoid scaling*/
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--color-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #888;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/***Scrollbar theme****/
+
+/*tree styling*/
+.treegrid-indent {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    position: relative;
+}
+
+table.tree-fit {
+    width: 1px;
+    white-space: nowrap;
+}
+
+/*tree styling*/

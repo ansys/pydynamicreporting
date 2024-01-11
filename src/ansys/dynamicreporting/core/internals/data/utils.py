@@ -23,12 +23,11 @@ import uuid
 import dateutil
 import numpy
 import pytz
-from ceireports import nexus_version
-from ceireports.exceptions import FileEncodingNotSupportedError, InvalidDateTimeException
+from ..report_framework import nexus_version
+from ..report_framework.exceptions import FileEncodingNotSupportedError, InvalidDateTimeException
 from django.conf import settings
 from django.core.files.base import File
 from django.utils import timezone
-from rest_framework import exceptions
 
 from .constants import SUPPORTED_FILE_ENCODINGS, BULK_QUERY_BATCH_SIZE, BULK_QUERY_BATCH_THRESHOLD
 
@@ -66,26 +65,6 @@ def is_using_sqlite():
     """
     from django.db import connection
     return connection.vendor.lower() == 'sqlite'
-
-
-def check_allow_bulk_and_raise(request):
-    """
-    There are 3 ways of specifying what to change/delete in a bulk operation:
-    1. A list of guids in the request body. eg: [{'guid': 'blah'}, {'guid': 'blah2'},...]
-    2. A query param named `query` to filter items used in get_queryset(). eg: {request_url}?query=
-    3. A list of guids through a query param named i_guid. eg: {request_url}?i_guid=guid1,guid2
-    #3 is not used that much. fyi
-    if we dont find any of these, its unfiltered and we could end up deleting everything in the db.
-    so if its an unfiltered request, we deny immediately to avoid deleting the entire queryset.
-
-    Args:
-        request:
-
-    Returns:
-
-    """
-    if not request.data and not request.query_params.get('query') and not request.query_params.get('i_guid'):
-        raise exceptions.ValidationError
 
 
 def get_bulk_batch_size(count):

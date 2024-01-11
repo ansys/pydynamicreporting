@@ -12,7 +12,7 @@ FILE_EXT_MAP = [
     {"name": "Images", "type": "image", "ext": ["png", "jpg", "tif", "tiff"]},
     {"name": "Movies", "type": "anim", "ext": ["mp4"]},
     {"name": "Tables", "type": "table", "ext": ["csv"]},
-    {"name": "Scenes", "type": "scene", "ext": ["stl", "ply", "csf", "avz", "scdoc"]},
+    {"name": "Scenes", "type": "scene", "ext": ["stl", "ply", "csf", "avz", "scdoc", "glb"]},
     {"name": "Strings", "type": "string", "ext": ["txt"]},
     {"name": "HTML", "type": "html", "ext": ["htm", "html"]},
     # WARNING !! the 'file' item MUST ALWAYS be last !!

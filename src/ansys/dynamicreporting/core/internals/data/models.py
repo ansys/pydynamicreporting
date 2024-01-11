@@ -19,6 +19,7 @@
 # {% url 'data_session_detail' item.session.guid %} instead of
 # {{ item.session.get_absolute_url }}
 #
+import sys
 
 import copy
 import datetime
@@ -29,11 +30,11 @@ import shlex
 import uuid
 
 import numpy
-from ceireports.acls import check_obj_perm
-from ceireports.base_model_managers import NexusQuerySet
-from ceireports.utils import get_render_error_html
-from data.geofile_rendering import render_scene, render_file
-from data.managers import SessionManager, DatasetManager, ItemManager, ItemCategoryManager
+from ..report_framework.acls import check_obj_perm
+from ..report_framework.base_model_managers import NexusQuerySet
+from ..report_framework.utils import get_render_error_html
+from ..data.geofile_rendering import render_scene, render_file
+from ..data.managers import SessionManager, DatasetManager, ItemManager, ItemCategoryManager
 from dateutil import parser
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -44,9 +45,9 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from guardian.models import UserObjectPermissionBase, GroupObjectPermissionBase
-from reports.engine import TemplateEngine
-from reports.models import Template
-from reports.template_generators import is_simple_number
+from ..reports.engine import TemplateEngine
+from ..reports.models import Template
+from ..reports.template_generators import is_simple_number
 
 from .acls import generate_media_auth_hash
 from .conditional_format import ConditionalFormattingHTMLStyle, TreeConditionalFormattingHTMLStyle
@@ -1059,414 +1060,356 @@ class Item(models.Model):
         # plot_type=1 : line
         # plot_type=2 : bar
         # plot_type=3 : pie
+        # plot_type=4 : heatmap
+        # plot_type=5 : parallel coordinates
+        # plot_type=6 : sankey graph
         plot_map = {
             'table': 0,
             'line': 1,
             'bar': 2,
-            'pie': 3
+            'pie': 3,
+            'heatmap': 4,
+            'parallel': 5,
+            'sankey': 6,
         }
         chosen_plot = ctx.get('plot', data.get('plot', 'table'))
         plot_type = plot_map.get(chosen_plot, 0)
 
+        if plot_type == 0:
+            # Display as a table ####################################
+            s += self.render_table_as_table(data, context, ctx)
+        else:
+            # Display as a plot.ly plot ################################
+            s += self.render_table_as_plot(plot_type, data, context, ctx)
+
+        return s
+
+    def render_table_as_plot(self, plot_type: int, data: dict, context: dict, ctx: dict) -> str:
+        # The HTML being built
+        s = ""
+
+        # number of rows and columns
         nrows, ncols = data['array'].shape
         # tags
         row_tags = self.get_row_tags(data, context)
         col_tags = self.get_column_tags(data, context)
-        # Display as a table ####################################
-        if plot_type == 0:
-            # if printing, the style will not be None
-            is_printing_pdf = TemplateEngine.get_print_style() == TemplateEngine.PrintStyle.PDF
-            added_column_to_mask_rowlbls = False
 
-            col_labels = self.get_column_labels(data, context)
-            row_labels = self.get_row_labels(data, context)
+        # plotly.js target div
+        s += '<div class="nexus-plot" id="plot_' + self.lcl_UUID + '" style="'
+        if 'width' in ctx:
+            s += 'width: ' + str(ctx['width']) + 'px;'
+        if 'height' in ctx:
+            s += 'height: ' + str(ctx['height']) + 'px;'
+        s += '"></div>'
+        # do we need to embed or locally reference plotly?
+        plotlyjs = self.get_default(None, ctx, 'plotly', default=0, force_int=True)
+        # can be referencedheader(0), embedded_payload(1), referenced_payload(2)
+        payload = ""
+        if plotlyjs == 1:
+            pathname = os.path.join(settings.BASE_DIR, 'website', 'static', 'website', 'scripts',
+                                    'plotly.min.js')
+            with open(pathname, "rt", encoding='utf-8') as f:
+                src = f.read()
+            payload += "<script>" + src + "</script>\n"
+        elif plotlyjs == 2:
+            s += '<script src="/static/website/scripts/plotly.min.js"></script>\n'
+        # different plot types:
+        # explicit x and y -> line plot with row labels as axis titles
+        # implicit x -> line/bar plot with each row as values.
+        #    row labels -> legends (if only 1, Y axis?)
+        #    col labels -> xaxis labels
+        default_row_labels = [None] * nrows
+        if plot_type == 4:
+            # for a heatmap, use the row range values
+            default_row_labels = list(range(nrows))
+        rowlbls = self.get_row_labels(data, context, default_row_labels)
+        collbls = self.get_column_labels(data, context, list(range(ncols)))
 
-            # we add fillers so that we have column labels always and
-            # the <thead> is rendered for all cases.
-            if col_labels is None:
-                # sometimes, if there's no column labels, the <thead> block is completely
-                # ignored out of the generated DOM, outputting an incomplete HTML table.
-                # so we add a 'filler' th to give a proper table.
-                # This is now controlled by a property: table_default_col_labels
-                table_default_col_labels = self.get_default(data, ctx, 'table_default_col_labels',
-                                                            default=1,
-                                                            force_int=True)
-                if table_default_col_labels == 1:
-                    col_labels = [f"Column-{i + 1}" for i in range(ncols)]
+        # get the plotter x and y ranges
+        x_range = self.get_default(data, ctx, 'xrange')
+        y_range = self.get_default(data, ctx, 'yrange')
+        if type(x_range) == str:
+            try:
+                _ = json.loads(x_range)
+            except ValueError:
+                x_range = None
+        if type(y_range) == str:
+            try:
+                _ = json.loads(y_range)
+            except ValueError:
+                y_range = None
 
-            has_row_labels = row_labels is not None
-            if not has_row_labels:
-                row_labels = [None] * nrows
-            else:
-                # only if col lbls is an existing valid list
-                if isinstance(col_labels, list):
-                    # there are row labels giving us an extra column at the start
-                    # so prepend '' to the column labels for a dummy column label.
-                    col_labels.insert(0, '')
-                    added_column_to_mask_rowlbls = True
+        # get the xaxis handler (and the yaxis maps)
+        xaxis_obj = XAxisObj(ctx, data, rowlbls, collbls, self)
+        xrows = xaxis_obj.x_row_indices()
+        xaxistitle = xaxis_obj.title()
+        # build up the array of Y values
+        ydata = []
+        xdata = []
+        ytitle = []
+        for j in xaxis_obj.y_row_indices():
+            xd = xaxis_obj.data(j)
+            xdata.append(xd)
+            yd = data['array'][j]
+            ydata.append(yd)
+            ytitle.append(rowlbls[j])
 
-            # Because of iteration limitations in templates,
-            # we compute a zip between row labels (or a list of None)
-            # and numpy array rows
-            ctx['array'] = list(zip(row_labels, data['array']))
-            table_title = self.get_default(data, ctx, 'table_title')
-            if table_title is None:
-                table_title = self.get_default(data, ctx, 'title')
+        # titles
+        yaxistitle = None
+        if len(ytitle) == 1:
+            yaxistitle = ytitle[0]
+        yaxistitle = ctx.get('ytitle', data.get('ytitle', yaxistitle))
 
-            # table cell conditional formatting rules
-            cell_formatting = None
-            formatting_rules = self.get_default(data, ctx, 'table_cond_format', default=None)
-            if formatting_rules is not None:
-                formatter = ConditionalFormattingHTMLStyle()
-                # if there is a row label, we insert an extra entry in col_labels we need to skip
-                trimmed_column_names = col_labels
-                if col_labels and added_column_to_mask_rowlbls:
-                    if len(col_labels):
-                        trimmed_column_names = col_labels[1:]
-                cell_formatting = formatter.compute_style_array(data['array'], formatting_rules,
-                                                                row_names=row_labels,
-                                                                col_names=trimmed_column_names)
-            # overall table styling
-            table_styling = ''
-            # table borders
-            table_bordered = self.get_default(data, ctx, 'table_bordered', default=1, force_int=True)
-            if table_bordered == 1:
-                table_styling += 'table-bordered '
+        # Convert titles to JavasScript use
+        if xaxistitle is not None:
+            xaxistitle = self.format_for_javascript(str(xaxistitle), latex=True)
+        if yaxistitle is not None:
+            yaxistitle = self.format_for_javascript(str(yaxistitle), latex=True)
 
-            table_wrap_content = self.get_default(data, ctx, 'table_wrap_content', default=0, force_int=True)
-            if table_wrap_content == 1:
-                table_styling += 'table-wrap '
-            else:
-                table_styling += 'nowrap '
+        # should there be a legend displayed
+        show_legend = self.get_default(data, ctx, 'show_legend', default=1, force_int=True)
+        if show_legend:
+            show_legend = 'true'
+        else:
+            show_legend = 'false'
+        legend_position = self.get_default(data, ctx, 'legend_position', None)
+        try:
+            # legend_position = json.loads(str(legend_position))
+            legend_position = eval(str(legend_position))
+            if (type(legend_position) is not list) and (len(legend_position) != 2):
+                legend_position = None
+        except:
+            legend_position = None
+        show_legend_border = self.get_default(data, ctx, 'show_legend_border', default=0,
+                                              force_int=True)
 
-            # table condensation(compact)
-            table_condensed = self.get_default(data, ctx, 'table_condensed', default=0, force_int=True)
-            if table_condensed == 1:
-                table_styling += 'table-sm table-fit-head '
-                # allow condensation in the body only if wrap is OFF, otherwise they'll conflict
-                if table_wrap_content == 0:
-                    table_styling += 'table-fit-body '
+        # get the core number format(s)
+        number_format = self.get_indexed_default(data, ctx, 0, 'format', default='scientific')
+        xaxis_number_format = self.get_default(data, ctx, 'xaxis_format', default=number_format)
+        yaxis_number_format = self.get_default(data, ctx, 'yaxis_format', default=number_format)
 
-            # add the table
-            s += f'<table id="table_{self.lcl_UUID}" class="table table-hover {table_styling}' \
-                 f'display" style="width: 100%">\n'
-            # other options
-            paging_option = self.get_default(data, ctx, 'table_page', default=0, force_int=True)
-            paging_menu = list()
-            paging_menu.append(list())
-            paging_menu.append(list())
-            table_pagemenu = str(self.get_default(data, ctx, 'table_pagemenu', default=""))
-            # if printing, no paging menu
-            if is_printing_pdf:
-                table_pagemenu = ""
-                paging_option = 0
-            table_pagemenu = table_pagemenu.replace('[', '').replace(']', '')
-            for menu in table_pagemenu.split(','):
+        # We only allow one colormap per plot
+        palette = self.get_default(data, ctx, 'palette', None)
+        if palette is not None:
+            reverse_palette = self.get_default(data, ctx, 'palette_reverse', default=0,
+                                               force_int=True)
+            if palette[0] == '-':
+                reverse_palette = True
+                palette = palette[1:]
+
+            legal_palettes = ['Greys', 'YlGnBu', 'Greens', 'YlOrRd', 'Bluered',
+                              'RdBu', 'Reds', 'Blues', 'Picnic', 'Rainbow', 'Portland',
+                              'Jet', 'Hot', 'Blackbody', 'Earth', 'Electric', 'Viridis']
+            if palette in legal_palettes:
+                palette_range = self.get_default(data, ctx, 'palette_range', None)
                 try:
-                    iv = int(menu)
-                    if iv < 0:
-                        paging_menu[0].append(-1)
-                        paging_menu[1].append("All")
-                    elif iv > 0:
-                        paging_menu[0].append(iv)
-                        paging_menu[1].append(iv)
-                except:
-                    pass
-
-            scrollx_option = self.get_default(data, ctx, 'table_scrollx', default=1, force_int=True)
-            scrolly_option = self.get_default(data, ctx, 'table_scrolly', default=0, force_int=True)
-            # if printing, scrolling
-            if is_printing_pdf:
-                scrollx_option = 0
-                scrolly_option = 0
-            if table_title is not None:
-                s += ' <caption><h5 style="word-wrap: normal;">{}</h5></caption>\n'.format(
-                    self.clean_label(table_title, allow_multiline=True))
+                    palette_range = json.loads(str(palette_range))
+                except ValueError:
+                    palette_range = None
+                palette_position = self.get_default(data, ctx, 'palette_position', None)
+                try:
+                    # palette_position = json.loads(str(palette_position))
+                    palette_position = eval(str(palette_position))
+                    if (type(palette_position) is not list) and (len(palette_position) != 2):
+                        palette_position = None
+                except Exception:
+                    palette_position = None
+                palette_show = self.get_default(data, ctx, 'palette_show', default=0,
+                                                force_int=True)
             else:
-                # so tables without titles don't look weird
-                s += ' <br>\n'
+                palette = None
+            palette_title = self.get_default(data, ctx, 'palette_title')
 
-            # if a column was added for row labels
-            if col_labels:
-                s += ' <thead>\n'
-                s += '  <tr>\n'
-                col_idx = -1 if added_column_to_mask_rowlbls else 0
-                for label in col_labels:
-                    if label is not None:
-                        col_label_format = None
-                        if col_idx >= 0:
-                            col_label_format = self.get_indexed_default(data, ctx, col_idx, 'format_column',
-                                                                        default='str')
-                        if col_label_format:
-                            label, _ = self.format_table_value(label.strip(), col_label_format, context=ctx, item=self)
+        # Should hoverinfo text include the rowname?
+        marker_text_rowname = self.get_default(data, ctx, 'marker_text_rowname',
+                                               default=-1, force_int=True)
+        # marker scaling (Mx+B) applied to the marker size
+        y_line_marker_scale = self.get_default(data, ctx, 'line_marker_scale', None)
+        try:
+            y_line_marker_scale = json.loads(str(y_line_marker_scale))
+            y_line_marker_scale = [float(x) for x in y_line_marker_scale]
+        except Exception:
+            y_line_marker_scale = [1., 0.]
 
-                    s += '   <th'
-                    if col_idx >= 0:
-                        tag = col_tags[col_idx] if col_tags else self.tags
-                        if tag:
-                            s += f' data-tags="{tag}"'
-                    s += f'>{label}</th>\n'
-                    col_idx += 1
-            else:
-                # if no col labels, add an empty thead to give a complete table.
-                # with empty <th>s as well, then collapse it
-                s += ' <thead style="visibility: collapse;">\n'
-                s += '  <tr>\n'
-                # if row labels form a column.
-                col_idx = 0
-                total_cols = ncols
-                if has_row_labels:
-                    col_idx = -1
-                    total_cols += 1
-                for _ in range(total_cols):
-                    s += '   <th'
-                    if col_idx >= 0:
-                        tag = col_tags[col_idx] if col_tags else self.tags
-                        if tag:
-                            s += f' data-tags="{tag}"'
-                    s += '></th>\n'
-                    col_idx += 1
-            s += '  </tr>\n'
-            s += ' </thead>\n'
+        # start the plotly.js script
+        plot = "<script>\n"
+        if plot_type == 4:
+            # Heatmap : table is a 2D array of 'Z' values (z=f(x,y))
+            number_format = self.get_default(data, ctx, 'format', default='scientific')
+            # Build the data object
+            dvar = f"var data_{self.lcl_UUID} = [{{"
+            dvar += "type: 'heatmap',\n"
 
-            s += ' <tbody>\n'
-            nan_display = self.get_default(data, ctx, 'nan_display', default='NaN')
-            row_idx = 0
-            is_string = data['array'].dtype.kind in "U"
-            is_float = data['array'].dtype.kind in "f"
-            column_max = 0
-            row_tags = self.get_row_tags(data, context, [])
-            col_tags = self.get_column_tags(data, context, [])
-            for lbl, row in ctx['array']:
-                s += f'  <tr'
-                tag = row_tags[row_idx] if row_tags else self.tags
-                if tag:
-                    s += f' data-tags="{tag}"'
-                s += f'>\n'
+            x_title = "x"
+            if xaxistitle is not None:
+                x_title = xaxistitle.strip("'")
+            y_title = "y"
+            if yaxistitle is not None:
+                y_title = yaxistitle.strip("'")
 
-                if lbl is not None:
-                    row_label_format = self.get_indexed_default(data, ctx, row_idx, 'format_row', default='str')
-                    lbl, dummy = self.format_table_value(lbl.strip(), row_label_format, context=ctx, item=self)
-                    s += '   <th>{}</th>\n'.format(lbl)
-                    if row_idx == 0:
-                        column_max += 1
-                column = 0
-                for i in row:
-                    if is_string:
-                        number_format = self.get_indexed_default(data, ctx, column, 'format', default='str')
-                        str_rep, sort_rep = self.format_table_value(i.strip(), number_format, context=ctx, item=self)
-                        sort_rep = sort_rep.replace('"', '')
-                    elif is_float:
-                        number_format = self.get_indexed_default(data, ctx, column, 'format', default='scientific')
-                        if numpy.isnan(i):
-                            str_rep = nan_display
-                            sort_rep = nan_display
-                        else:
-                            str_rep, sort_rep = format_value_general(i, number_format)
+            z_data = "z:["
+            z_text = "text:["
+            array = data['array']
+            for j in range(nrows):
+                z_text += "["
+                z_data += "["
+                for i in range(ncols):
+                    try:
+                        v = float(array[j, i])
+                    except ValueError:
+                        v = numpy.nan
+                    if numpy.isnan(v):
+                        v = "null"
+                        v_text = "Undefined"
                     else:
-                        str_rep = "Unknown:{}".format(data['array'].dtype.kind)
-                        sort_rep = "1"
-                    style_string = ""
-                    if cell_formatting is not None:
-                        conditional_style = cell_formatting[row_idx, column]
-                        if conditional_style is not None:
-                            style_string = 'style="{}"'.format(conditional_style)
-                    s += '   <td {} data-order="{}">{}</td>\n'.format(style_string, sort_rep.strip(), str_rep)
-                    column += 1
-                    if row_idx == 0:
-                        column_max += 1
-                s += '  </tr>\n'
-                row_idx += 1
-            s += ' </tbody>\n'
-            s += '</table>\n'
+                        v_text, _ = format_value_general(v, number_format)
+                    z_data += f"{v},"
+                    z_text += f"'{v_text}<br>{x_title}:{str(collbls[i])}<br>{y_title}:{str(rowlbls[j])}',"
+                z_data += "],\n"
+                z_text += "],\n"
+            z_data += "],\n"
+            z_text += "],\n"
 
-            # opts = "'scrollX': true, 'ordering': false, 'searching': false, 'select': true, 'paging':  false, 'info': false"
-            # opts = "'scrollY': '200px', 'scrollCollapse': true, 'pageLength': 50, 'lengthMenu': [10, 20, 50, -1], [10, 20, 50, 'All']]"
-            search_option = self.get_default(data, ctx, 'table_search', default=0, force_int=True)
-            if is_printing_pdf:
-                search_option = 0
-            # get the sorting option ['none', 'all', 'data'] '1'=data  For the present, 'data' == 'all'
-            sort_option = ctx.get('table_sort', data.get('table_sort', 'all'))
-            sort_option = sort_option in ['all', 'data', '1']
-            if is_printing_pdf:
-                sort_option = False
+            dvar += z_data
+            dvar += f"x:{str(collbls)},\n"
+            dvar += f"y:{str(rowlbls)},\n"
+            dvar += z_text
+            dvar += "hoverongaps: false,\n"
+            dvar += "hoverinfo: 'text',\n"
+            if self.get_default(data, ctx, 'show_border', default=0, force_int=True):
+                dvar += "xgap: 1, ygap: 1,\n"
+            if palette is not None:
+                dvar += f"colorscale: '{palette}',\n"
+                if palette_show:
+                    dvar += "showscale: true,\n"
+                else:
+                    dvar += "showscale: false,\n"
+                if palette_range is not None:
+                    dvar += f"zmin:{palette_range[0]},zmax:{palette_range[1]},\n"
+                if reverse_palette:
+                    dvar += "reversescale: true,\n"
+                dvar += "colorbar: {\n"
+                dvar += f"tickformat: '{format_plotly(number_format)}',\n"
+                dvar += "},\n"
+            dvar += "}];\n"
+            plot += dvar
 
-            opts = '"columnDefs": ['
-            for col in range(column_max):
-                align = self.get_indexed_default(data, ctx, col, 'align_column', default='right')
-                opts += '{{"className": "{}", "targets": {}, "cellType": "{}" }}, '.format(
-                    self.pick_alignment(align, "right"),
-                    col,
-                    "th" if has_row_labels and col == 0 else "td"
-                )
-            opts += '],'
-            opts += '"info": false,'
-            opts += '"orderClasses": false,'
+        elif plot_type == 5:
+            # Parallel coordinates : Columns are the coordinates, each row is an observation
+            dvar = f"var data_{self.lcl_UUID} = [{{"
+            dvar += "type: 'parcoords',\n"
 
-            if search_option == 0:
-                opts += '"searching": false,'
+            # color the lines via indexed value(s)
+            a_color = self.get_indexed_default(data, ctx, 0, 'line_color', default=None)
+            if a_color is not None:
+                dvar += "line: {\n"
+                dvar += f"color: {[x for x in range(nrows)]},\n"
+                dvar += "colorscale: [\n"
+                for j in range(nrows):
+                    a_color = self.get_indexed_default(data, ctx, j, 'line_color', default=None)
+                    v = float(j)/float(nrows-1)
+                    if isinstance(a_color, list):
+                        dvar += f"[{v}, {a_color}],\n"
+                    else:
+                        dvar += f"[{v}, '{a_color}'],\n"
+                dvar += "],\n"
+                dvar += "},\n"
 
-            if not sort_option:
-                opts += '"ordering": false,'
+            # Now the actual data
+            array = data['array']
+            dvar += "dimensions: [\n"
+            # Should the row labels be included as a column?
+            if yaxistitle is not None:
+                dvar += "{\n"
+                dvar += f"range: [1, {nrows}],\n"
+                dvar += f"values: {list(range(1,nrows+1))},\n"
+                dvar += f"ticktext: {rowlbls},\n"
+                dvar += f"tickvals: {list(range(1,nrows+1))},\n"
+                dvar += f"label: {yaxistitle},\n"
+                dvar += "},\n"
+            # Each column has a range and specific formatting
+            for i in range(ncols):
+                col_format = self.get_indexed_default(data, ctx, i, 'format', default=number_format)
+                dvar += "{\n"
+                dvar += f"tickformat: '{format_plotly(col_format)}',\n"
+                dvar += f"label: '{collbls[i]}',\n"
+                # All the observations of this label type
+                dvar += "values: ["
+                v_range = [sys.float_info.max, -sys.float_info.max]
+                for j in range(nrows):
+                    try:
+                        v = float(array[j, i])
+                        dvar += f"{v},"
+                    except ValueError:
+                        v = numpy.nan
+                        # This is not entirely correct, as it maps to 0.0,
+                        # but it is a limitation of plotly parallel coords for now
+                        # Note: if NaN is passed, the entire trace is skipped.
+                        dvar += "null,"
+                    v_range[0] = min(v, v_range[0])
+                    v_range[1] = max(v, v_range[1])
+                dvar += "],\n"
+                col_min = self.get_indexed_default(data, ctx, i, 'column_minimum',
+                                                   default=v_range[0])
+                col_max = self.get_indexed_default(data, ctx, i, 'column_maximum',
+                                                   default=v_range[1])
+                dvar += f"range: [{col_min},{col_max}],\n"
+                # end of dimension
+                dvar += "},\n"
+            # end of dimensions array
+            dvar += "],\n"
+            dvar += "}];\n"
+            plot += dvar
 
-            if scrollx_option != 0:
-                opts += '"scrollX": true,'
+        elif plot_type == 6:
+            # Sankey
+            # The interpretation here is as a dense matrix instead of a sparse node
+            # graph.  The row and column labels are the nodes (and must be the same).
+            # The row represents the "source" node and the column, the "target" node.
+            # The value in the matrix is the "size" of that flow connection.  While this
+            # is inefficient for sparse nodal flows, it has the advantage of allowing
+            # "self organizing" inter-node links.
+            #
+            dvar = f"var data_{self.lcl_UUID} = [{{"
+            dvar += "type: 'sankey',\n"
+            dvar += "orientation: 'h',\n"
+            dvar += f"valueformat: '{format_plotly(number_format)}',\n"
+            dvar += "node: {\n"
+            dvar += "pad: 15, thickness: 30,\n"
+            dvar += f"label: {str(collbls)},\n"
+            dvar += "},\n"
 
-            # disable pagination if 0.
-            # by default, its enabled.
-            if paging_option == 0:
-                opts += '"paging": false,'
-            # if the option is a bigger integer,
-            # we take that as the initial page length.
-            elif paging_option != 1:
-                opts += '"pageLength": {},'.format(paging_option)
+            link_sources = list()
+            link_targets = list()
+            link_values = list()
+            array = data['array']
+            for source in range(nrows):
+                for target in range(ncols):
+                    try:
+                        value = float(array[source, target])
+                    except ValueError:
+                        value = numpy.nan
+                    # if the source->target weight is > 0., treat it as a link
+                    if value > 0.:
+                        link_sources.append(source)
+                        link_targets.append(target)
+                        link_values.append(value)
 
-            if len(paging_menu[0]) > 0:
-                opts += '"lengthMenu": {},'.format(str(paging_menu))
-            else:
-                # add the default menu setup only if paging is not disabled.
-                # else, adding this will enable paging implicitly.
-                if paging_option != 0:
-                    opts += '"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],'
+            # record the links
+            dvar += "link: {\n"
+            dvar += f"    source: {link_sources},\n"
+            dvar += f"    target: {link_targets},\n"
+            dvar += f"    value: {link_values},\n"
+            dvar += "},\n"
 
-            # enable vertical scrolling and collapse any empty area
-            if scrolly_option > 0:
-                opts += '"scrollY": "{}pt", "scrollCollapse": true,'.format(scrolly_option)
-
-            # avoid datatables when printing PDF.
-            if not is_printing_pdf:
-                s += render_to_string('data/item_layouts/table_filter_template.html',
-                                      {'uuid': self.lcl_UUID, 'opts': opts})
+            dvar += "}];\n"
+            plot += dvar
 
         else:
-            # Display as a plot.ly plot ################################
-            # plotly.js target div
-            s += '<div class="nexus-plot" id="plot_' + self.lcl_UUID + '" style="'
-            if 'width' in ctx:
-                s += 'width: ' + str(ctx['width']) + 'px;'
-            if 'height' in ctx:
-                s += 'height: ' + str(ctx['height']) + 'px;'
-            s += '"></div>'
-            # do we need to embed or locally reference plotly?
-            plotlyjs = self.get_default(None, ctx, 'plotly', default=0, force_int=True)
-            # can be referencedheader(0), embedded_payload(1), referenced_payload(2)
-            payload = ""
-            if plotlyjs == 1:
-                pathname = os.path.join(settings.BASE_DIR, 'website', 'static', 'website', 'scripts',
-                                        'plotly.min.js')
-                with open(pathname, "rt", encoding='utf-8') as f:
-                    src = f.read()
-                payload += "<script>" + src + "</script>\n"
-            elif plotlyjs == 2:
-                s += '<script src="/static/website/scripts/plotly.min.js"></script>\n'
-            # different plot types:
-            # explicit x and y -> line plot with row labels as axis titles
-            # implicit x -> line/bar plot with each row as values.
-            #    row labels -> legends (if only 1, Y axis?)
-            #    col labels -> xaxis labels
-            rowlbls = self.get_row_labels(data, context, [None] * nrows)
-            collbls = self.get_column_labels(data, context, list(range(ncols)))
-
-            # get the plotter x and y ranges
-            x_range = self.get_default(data, ctx, 'xrange')
-            y_range = self.get_default(data, ctx, 'yrange')
-            if type(x_range) == str:
-                try:
-                    foo = json.loads(x_range)
-                except ValueError:
-                    x_range = None
-            if type(y_range) == str:
-                try:
-                    foo = json.loads(y_range)
-                except ValueError:
-                    y_range = None
-
-            # get the xaxis handler (and the yaxis maps)
-            xaxis_obj = XAxisObj(ctx, data, rowlbls, collbls, self)
-            xrows = xaxis_obj.x_row_indices()
-            xaxistitle = xaxis_obj.title()
-            # build up the array of Y values
-            ydata = []
-            xdata = []
-            ytitle = []
-            for j in xaxis_obj.y_row_indices():
-                xd = xaxis_obj.data(j)
-                xdata.append(xd)
-                yd = data['array'][j]
-                ydata.append(yd)
-                ytitle.append(rowlbls[j])
-
-            # titles
-            yaxistitle = None
-            if len(ytitle) == 1:
-                yaxistitle = ytitle[0]
-            yaxistitle = ctx.get('ytitle', data.get('ytitle', yaxistitle))
-
-            # should there be a legend displayed
-            show_legend = self.get_default(data, ctx, 'show_legend', default=1, force_int=True)
-            if show_legend:
-                show_legend = 'true'
-            else:
-                show_legend = 'false'
-            legend_position = self.get_default(data, ctx, 'legend_position', None)
-            try:
-                # legend_position = json.loads(str(legend_position))
-                legend_position = eval(str(legend_position))
-                if (type(legend_position) is not list) and (len(legend_position) != 2):
-                    legend_position = None
-            except:
-                legend_position = None
-            show_legend_border = self.get_default(data, ctx, 'show_legend_border', default=0, force_int=True)
-
-            # get the core number format(s)
-            number_format = self.get_indexed_default(data, ctx, 0, 'format', default='scientific')
-            xaxis_number_format = self.get_default(data, ctx, 'xaxis_format', default=number_format)
-            yaxis_number_format = self.get_default(data, ctx, 'yaxis_format', default=number_format)
-
-            # We only allow one colormapping per plot
-            palette = self.get_default(data, ctx, 'palette', None)
-            if palette is not None:
-                reverse_palette = (palette[0] == '-')
-                if reverse_palette:
-                    palette = palette[1:]
-                legal_palettes = ['Greys', 'YlGnBu', 'Greens', 'YlOrRd', 'Bluered',
-                                  'RdBu', 'Reds', 'Blues', 'Picnic', 'Rainbow', 'Portland',
-                                  'Jet', 'Hot', 'Blackbody', 'Earth', 'Electric', 'Viridis']
-                if palette in legal_palettes:
-                    palette_range = self.get_default(data, ctx, 'palette_range', None)
-                    try:
-                        palette_range = json.loads(str(palette_range))
-                    except ValueError:
-                        palette_range = None
-                    palette_position = self.get_default(data, ctx, 'palette_position', None)
-                    try:
-                        # palette_position = json.loads(str(palette_position))
-                        palette_position = eval(str(palette_position))
-                        if (type(palette_position) is not list) and (len(palette_position) != 2):
-                            palette_position = None
-                    except:
-                        palette_position = None
-                    palette_show = self.get_default(data, ctx, 'palette_show', default=0, force_int=True)
-                else:
-                    palette = None
-                palette_title = self.get_default(data, ctx, 'palette_title')
-
-            # Should hoverinfo text include the rowname?
-            marker_text_rowname = self.get_default(data, ctx, 'marker_text_rowname',
-                                                   default=-1, force_int=True)
-            # marker scaling (Mx+B) applied to the marker size
-            y_line_marker_scale = self.get_default(data, ctx, 'line_marker_scale', None)
-            try:
-                y_line_marker_scale = json.loads(str(y_line_marker_scale))
-                y_line_marker_scale = [float(x) for x in y_line_marker_scale]
-            except:
-                y_line_marker_scale = [1., 0.]
-
-            # start the plotly.js script
-            plot = "<script>\n"
-
+            # Line/Bar/Pie all use similar "trace" structure. Handle them all here.
+            # plot_type in [1,2,3]
             # define the axes: titles, ranges, ticking...
-            dvar = "var data_{} = [".format(self.lcl_UUID)
+            dvar = f"var data_{self.lcl_UUID} = ["
             if len(ydata) > 1:
                 chunk = 1.0 / (float(len(ydata)))
                 inset = chunk * 0.05
@@ -1479,11 +1422,13 @@ class Item(models.Model):
                 # line_color
                 y_color = self.get_indexed_default(data, ctx, j, 'line_color')
                 # line_marker_opacity
-                y_marker_opacity = self.get_indexed_default(data, ctx, j, 'line_marker_opacity', default="1.0")
+                y_marker_opacity = self.get_indexed_default(data, ctx, j, 'line_marker_opacity',
+                                                            default="1.0")
                 # line_style
                 y_line_style = self.get_indexed_default(data, ctx, j, 'line_style')
                 # line_marker
-                y_line_marker = self.convert_marker_to_plotly(self.get_indexed_default(data, ctx, j, 'line_marker'))
+                y_line_marker = self.convert_marker_to_plotly(
+                    self.get_indexed_default(data, ctx, j, 'line_marker'))
                 # line_marker_size
                 y_line_marker_size = self.get_indexed_default(data, ctx, j, 'line_marker_size')
                 # line_marker_text
@@ -1561,6 +1506,7 @@ class Item(models.Model):
                         tmp = y_clean
                     plot += "  y: {},\n".format(str(tmp))
                     plot += "  type: 'bar',\n"
+                    plot += "  textposition: 'none',\n"
                     plot += "  showlegend: {},\n".format(show_legend)
                     if ytitle[j] is not None:
                         data_name = str(self.clean_label(ytitle[j]))
@@ -1581,8 +1527,10 @@ class Item(models.Model):
                     hoverinfo = self.hoverinfo(data_name, marker_text_rowname)
                     plot += f"  hoverinfo: {hoverinfo},\n"
                     plot += self.generate_marker_text(y_line_marker_text, x_clean, y_clean, data_name,
-                                                      number_format, color=y_color, size=y_line_marker_size,
-                                                      error=y_line_error_bars, context=ctx, aux=y_line_aux)
+                                                      number_format, color=y_color,
+                                                      size=y_line_marker_size,
+                                                      error=y_line_error_bars, context=ctx,
+                                                      aux=y_line_aux)
                     plot += "  marker: {"
                     if y_color is not None:
                         if isinstance(y_color, list):
@@ -1617,7 +1565,8 @@ class Item(models.Model):
                     if marker_text_rowname == 0:
                         hoverinfo = "'label+text'"
                     plot += f"  hoverinfo: {hoverinfo},\n"
-                    plot += "  domain: {{ x: [{}, {}]}},\n".format(j * chunk + inset, (j + 1) * chunk - inset)
+                    plot += "  domain: {{ x: [{}, {}]}},\n".format(j * chunk + inset,
+                                                                   (j + 1) * chunk - inset)
                     if rowlbls[j] is not None:
                         plot += "  name: '{}',\n".format(str(self.clean_label(rowlbls[j])))
                     else:
@@ -1628,7 +1577,10 @@ class Item(models.Model):
                         colors = colors[1:-1].split(',')
                         tmp = ""
                         for c in colors:
-                            tmp += "'" + c + "',"
+                            if ("'" in c) or ('[' in c):
+                                tmp += f"{c},"
+                            else:
+                                tmp += f"'{c}',"
                         plot += "  marker: { colors: [" + tmp + "], }, \n"
                 else:  # Line chart (scatter plot, potentially with a cardinal X axis)
                     if xaxis_number_format.startswith('date'):
@@ -1656,9 +1608,12 @@ class Item(models.Model):
                     else:
                         data_name = "Row {}".format(j)
                     plot += "  name: '{}',".format(data_name)
-                    name_text = self.generate_marker_text(y_line_marker_text, x_clean, y_clean, data_name,
-                                                          number_format, color=y_color, size=y_line_marker_size,
-                                                          error=y_line_error_bars, context=ctx, aux=y_line_aux)
+                    name_text = self.generate_marker_text(y_line_marker_text, x_clean, y_clean,
+                                                          data_name,
+                                                          number_format, color=y_color,
+                                                          size=y_line_marker_size,
+                                                          error=y_line_error_bars, context=ctx,
+                                                          aux=y_line_aux)
                     hoverinfo = self.hoverinfo(name_text, marker_text_rowname)
                     if len(name_text) > 0:
                         plot += name_text
@@ -1761,222 +1716,508 @@ class Item(models.Model):
             dvar += "];\n"
             plot += dvar
 
-            # copy data to backup
-            plot += "var const_data_{} = JSON.parse(JSON.stringify(data_{}));\n".format(self.lcl_UUID, self.lcl_UUID)
+        # copy data to backup
+        plot += f"var const_data_{self.lcl_UUID} = JSON.parse(JSON.stringify(data_{self.lcl_UUID}));\n"
 
-            # get theme from color mode for now.
-            color_mode = ctx.get("color_mode")
-            if color_mode not in PLOTLY_THEMES:
-                color_mode = "light"
-            # get theme
-            theme_info = PLOTLY_THEMES[color_mode]
+        # get theme from color mode for now.
+        color_mode = ctx.get("color_mode")
+        if color_mode not in PLOTLY_THEMES:
+            color_mode = "light"
+        # get theme
+        theme_info = PLOTLY_THEMES[color_mode]
 
-            # build 'layout'
-            plot += " var layout = {\n"
-            # get colors
-            font_color = theme_info['layout']['font']['color']
-            paper_color = theme_info['layout']['paper_bgcolor']
-            plot_color = theme_info['layout']['plot_bgcolor']
-            # add
-            plot += f'   font: {{color: "{font_color}"}},\n'
-            plot += f'   paper_bgcolor: "{paper_color}",\n'
-            plot += f'   plot_bgcolor: "{plot_color}",\n'
-            # try the plot specific title, falling back to title if needed
-            plot_title = self.get_default(data, ctx, 'plot_title', self.get_default(data, ctx, 'title'))
-            if plot_title is not None:
-                plot_title = self.format_for_javascript(str(plot_title), latex=True)
-                plot += "   title: {},\n".format(plot_title)
-            plot += 'margin: { '
-            steps = ['l', 't', 'r', 'b']
-            for lbl in steps:
-                tmp = self.get_indexed_default(data, ctx, steps.index(lbl), 'plot_margins', default='')
-                if len(tmp):
-                    try:
-                        n = int(tmp)
-                        plot += '{}: {},'.format(lbl, n)
-                    except:
-                        pass
-            plot += '},\n'
-            if plot_type != 3:  # all but pie mode have "axes"
-                plot += "   xaxis: {\n"
-                plot += '     zeroline: true,\n'
+        # build 'layout'
+        plot += " var layout = {\n"
+        # get colors
+        font_color = theme_info['layout']['font']['color']
+        paper_color = theme_info['layout']['paper_bgcolor']
+        plot_color = theme_info['layout']['plot_bgcolor']
+        # add
+        plot += f'   font: {{color: "{font_color}"}},\n'
+        plot += f'   paper_bgcolor: "{paper_color}",\n'
+        plot += f'   plot_bgcolor: "{plot_color}",\n'
+        # try the plot specific title, falling back to title if needed
+        plot_title = self.get_default(data, ctx, 'plot_title', self.get_default(data, ctx, 'title'))
+        if plot_title is not None:
+            plot_title = self.format_for_javascript(str(plot_title), latex=True)
+            plot += "   title: {},\n".format(plot_title)
+        plot += 'margin: { '
+        steps = ['l', 't', 'r', 'b']
+        for lbl in steps:
+            tmp = self.get_indexed_default(data, ctx, steps.index(lbl), 'plot_margins', default='')
+            if len(tmp):
+                try:
+                    n = int(tmp)
+                    plot += '{}: {},'.format(lbl, n)
+                except:
+                    pass
+        plot += '},\n'
+        if plot_type != 3:  # all but pie mode have "axes"
+            plot += "   xaxis: {\n"
+            plot += '     zeroline: true,\n'
 
-                xaxis_theme = theme_info['layout']['xaxis']
-                grid_color = xaxis_theme['gridcolor']
-                zero_line_color = xaxis_theme['zerolinecolor']
-                plot += f'     gridcolor: "{grid_color}",\n' \
-                        f'     zerolinecolor: "{zero_line_color}",\n'
+            xaxis_theme = theme_info['layout']['xaxis']
+            grid_color = xaxis_theme['gridcolor']
+            zero_line_color = xaxis_theme['zerolinecolor']
+            plot += f'     gridcolor: "{grid_color}",\n' \
+                    f'     zerolinecolor: "{zero_line_color}",\n'
 
-                if self.get_default(data, ctx, 'show_border', default=0, force_int=True):
-                    plot += "     mirror: true, showline: true,\n"
-                    # add color
-                    line_color = xaxis_theme['linecolor']
-                    plot += f'     linecolor: "{line_color}",\n'
+            if self.get_default(data, ctx, 'show_border', default=0, force_int=True):
+                plot += "     mirror: true, showline: true,\n"
+                # add color
+                line_color = xaxis_theme['linecolor']
+                plot += f'     linecolor: "{line_color}",\n'
 
-                if xaxistitle is not None:
-                    xaxistitle = self.format_for_javascript(str(xaxistitle), latex=True)
-                    plot += "     title: {},\n".format(xaxistitle)
-                plot += "     tickformat: '{}',\n".format(format_plotly(xaxis_number_format))
-                if x_range:
-                    plot += "     range: {}, \n".format(str(x_range))
+
+            if xaxistitle is not None:
+                plot += "     title: {},\n".format(xaxistitle)
+            plot += "     tickformat: '{}',\n".format(format_plotly(xaxis_number_format))
+            if x_range:
+                plot += "     range: {}, \n".format(str(x_range))
+            else:
+                plot += "     autorange: true, \n"
+            tmp = ctx.get('plot_xaxis_type', data.get('plot_xaxis_type', None))
+            if tmp:
+                plot += "     type: '{}',\n".format(tmp)
+            plot += "   },\n"
+            # y axis
+            plot += "   yaxis: {\n"
+            plot += '     zeroline: true,\n'
+
+            yaxis_theme = theme_info['layout']['yaxis']
+            grid_color = yaxis_theme['gridcolor']
+            zero_line_color = yaxis_theme['zerolinecolor']
+            plot += f'     gridcolor: "{grid_color}",\n' \
+                    f'     zerolinecolor: "{zero_line_color}",\n'
+
+            if self.get_default(data, ctx, 'show_border', default=0, force_int=True):
+                plot += "     mirror: true, showline: true,\n"
+                # add color
+                line_color = yaxis_theme['linecolor']
+                plot += f'     linecolor: "{line_color}",\n'
+
+            if yaxistitle is not None:
+                plot += "     title: {},\n".format(yaxistitle)
+            plot += "     tickformat: '{}',\n".format(format_plotly(yaxis_number_format))
+            if y_range:
+                plot += "     range: {}, \n".format(str(y_range))
+            else:
+                plot += "     autorange: true, \n"
+            tmp = ctx.get('plot_yaxis_type', data.get('plot_yaxis_type', None))
+            if tmp:
+                plot += "     type: '" + tmp + "',\n"
+            plot += "   },\n"
+            if plot_type == 2:  # Bar mode supports stacked
+                if int(ctx.get('stacked', data.get('stacked', '0'))) != 0:
+                    plot += "   barmode: 'stack',\n"
+            plot += "     hovermode: 'closest',\n"
+        # set the legend options
+        plot += "  showlegend: {},\n".format(show_legend)
+        if show_legend == 'true':
+            plot += "   legend: {\n"
+            if legend_position is not None:
+                try:
+                    plot += "   x:{},y:{},\n".format(legend_position[0], legend_position[1])
+                except:
+                    pass
+            if show_legend_border > 0:
+                plot += "    borderwidth: {},\n".format(show_legend_border)
+            plot += "   },\n"
+        plot += " };\n"  # end 'layout'
+        # general options
+        image_save = ""
+        if int(ctx.get('save_plot_image', data.get('save_plot_image', '1'))) == 0:
+            image_save = ", 'toImage'"
+        plot += " var options = {\n"
+        plot += "    showLink: false,\n"
+        plot += "    displaylogo: false,\n"
+        plot += f"    modeBarButtonsToRemove: ['sendDataToCloud', 'select2d', 'lasso2d'{image_save}],\n"
+        # for backward compatibility, include these for the older plot types
+        if plot_type < 4:
+            plot += "    modeBarButtonsToAdd: ['toggleSpikelines', 'v1hovermode'],\n"
+        plot += " };\n"
+        # build the plot objects
+        plot += f" pobj_{self.lcl_UUID} = document.getElementById('plot_{self.lcl_UUID}');\n"
+        plot += f" Plotly.newPlot( pobj_{self.lcl_UUID}, data_{self.lcl_UUID}, layout, options);\n"
+        plot += f" window.addEventListener('resize', function() {{ Plotly.Plots.resize(pobj_{self.lcl_UUID});}});\n"
+
+        plot += f" pobj_{self.lcl_UUID}.addEventListener('filter_event', function(event) {{\n"
+        plot += f"   for (let [key, value] of Object.entries(const_data_{self.lcl_UUID})) {{\n"
+        plot += f"     data_{self.lcl_UUID}[key] = JSON.parse(JSON.stringify(value));\n"
+        plot += "   };\n"
+        plot += "   event.detail.forEach((filterDetail, key) => {\n"
+        plot += "     let tempData;\n"
+        plot += "     switch (key) {\n"
+        plot += "       case 'plot_range_x':\n"
+        plot += "         filterDetail.forEach((rangeObject, key) => {\n"
+        plot += "           tempData = JSON.parse(JSON.stringify(data_{}));\n".format(self.lcl_UUID)
+        plot += "           tempData.forEach((trace, index) => {\n"
+        plot += "             let min = rangeObject.min;\n"
+        plot += "             let max = rangeObject.max;\n"
+        plot += f"             data_{self.lcl_UUID}[index]['x'] = trace['x'].filter((value) =>"
+        plot += " value >= min && value <= max);\n"
+        plot += f"             data_{self.lcl_UUID}[index]['y'] = trace['y'].filter((value, index) =>"
+        plot += " trace['x'][index] >= min && trace['x'][index] <= max);\n"
+        plot += "           });\n"
+        plot += "         });\n"
+        plot += "         break;\n"
+        plot += "       case 'plot_range_y':\n"
+        plot += "         filterDetail.forEach((rangeObject, key) => {\n"
+        plot += f"           tempData = JSON.parse(JSON.stringify(data_{self.lcl_UUID}));\n"
+        plot += "           tempData.forEach((trace, index) => {\n"
+        plot += "             let min = rangeObject.min;\n"
+        plot += "             let max = rangeObject.max;\n"
+        plot += f"             data_{self.lcl_UUID}[index]['y'] = trace['y'].filter((value) =>"
+        plot += " value >= min && value <= max);\n"
+        plot += f"             data_{self.lcl_UUID}[index]['x'] = trace['x'].filter((value, index) =>"
+        plot += " trace['y'][index] >= min && trace['y'][index] <= max);\n"
+        plot += "           });\n"
+        plot += "         });\n"
+        plot += "         break;\n"
+        plot += "       case 'tag':\n"
+        plot += "         filterDetail.forEach((hiddenTags, key) => {\n"
+        plot += "           if (hiddenTags.min !== undefined) {\n"
+        plot += f"             data_{self.lcl_UUID}.forEach((trace, index) => {{\n"
+        plot += "               if (trace.tags[key] < hiddenTags.min || trace.tags[key] > hiddenTags.max) {\n"
+        plot += "                 trace.visible = 'hidden';\n"
+        plot += f"                 data_{self.lcl_UUID}[index]['x'] = [];\n"
+        plot += f"                 data_{self.lcl_UUID}[index]['y'] = [];\n"
+        plot += "               }\n"
+        plot += "             });\n"
+        plot += "           } else if (key === 'Other tags') {\n"
+        plot += "             hiddenTags.forEach((hiddenTag) => {\n"
+        plot += f"               data_{self.lcl_UUID}.forEach((trace, index) => {{\n"
+        plot += "                 if (trace.visible !== 'hidden' && trace.tags[hiddenTag] === 'True') {\n"
+        plot += "                   trace.visible = 'hidden';\n"
+        plot += f"                   data_{self.lcl_UUID}[index]['x'] = [];\n"
+        plot += f"                   data_{self.lcl_UUID}[index]['y'] = [];\n"
+        plot += "                 }\n"
+        plot += "               });\n"
+        plot += "             });\n"
+        plot += "           } else {\n"
+        plot += f"             data_{self.lcl_UUID}.forEach((trace, index) => {{\n"
+        plot += "               Object.entries(trace.tags).forEach(([tagKey,tagValue]) => {\n"
+        plot += "                 if (tagValue === 'True') {\n"
+        plot += "                   trace.tags[tagKey] = tagKey;\n"
+        plot += "                 }\n"
+        plot += "               });\n"
+        plot += "               if (hiddenTags.includes(trace.tags[key])) {\n"
+        plot += "                 trace.visible = 'hidden';\n"
+        plot += f"                 data_{self.lcl_UUID}[index]['x'] = [];\n"
+        plot += f"                 data_{self.lcl_UUID}[index]['y'] = [];\n"
+        plot += "               }\n"
+        plot += "             });\n"
+        plot += "           }\n"
+        plot += "         });\n"
+        plot += "         break;\n"
+        plot += "       case 'single-tag':\n"
+        plot += "         filterDetail.forEach((tags, key) => {\n"
+        plot += "           if (tags.length) {\n"
+        plot += "             let shownTag = tags[0];\n"
+        plot += f"             data_{self.lcl_UUID}.forEach((trace, index) => {{\n"
+        plot += "               let tagIsDefined = trace.tags[key] !== undefined;\n"
+        plot += "               if (!(tagIsDefined && trace.tags[key].includes(shownTag) ||"
+        plot += "                   trace.tags[shownTag] === 'True')) {\n"
+        plot += "                 trace.visible = 'hidden';\n"
+        plot += f"                 data_{self.lcl_UUID}[index]['x'] = [];\n"
+        plot += f"                 data_{self.lcl_UUID}[index]['y'] = [];\n"
+        plot += "               }\n"
+        plot += "             });\n"
+        plot += "           }\n"
+        plot += "         });\n"
+        plot += "         break;\n"
+        plot += "     }\n"
+        plot += "   });\n"
+        plot += f"   Plotly.redraw(pobj_{self.lcl_UUID});\n"
+        plot += " });\n"
+
+        plot += f" $(document).ready(function() {{ Plotly.Plots.resize(pobj_{self.lcl_UUID}); }});\n"
+        plot += "</script>\n"
+
+        s += payload + plot
+
+        return s
+
+    def render_table_as_table(self, data: dict, context: dict, ctx: dict) -> str:
+        # The HTML being built
+        s = ""
+
+        # Get the number of rows/columns
+        nrows, ncols = data['array'].shape
+        # tags
+        row_tags = self.get_row_tags(data, context)
+        col_tags = self.get_column_tags(data, context)
+
+        # if printing, the style will not be None
+        is_printing_pdf = TemplateEngine.get_print_style() == TemplateEngine.PrintStyle.PDF
+        added_column_to_mask_rowlbls = False
+
+        col_labels = self.get_column_labels(data, context)
+        row_labels = self.get_row_labels(data, context)
+
+        # we add fillers so that we have column labels always and
+        # the <thead> is rendered for all cases.
+        if col_labels is None:
+            # sometimes, if there's no column labels, the <thead> block is completely
+            # ignored out of the generated DOM, outputting an incomplete HTML table.
+            # so we add a 'filler' th to give a proper table.
+            # This is now controlled by a property: table_default_col_labels
+            table_default_col_labels = self.get_default(data, ctx, 'table_default_col_labels',
+                                                        default=1, force_int=True)
+            if table_default_col_labels == 1:
+                col_labels = [f"Column-{i + 1}" for i in range(ncols)]
+
+        has_row_labels = row_labels is not None
+        if not has_row_labels:
+            row_labels = [None] * nrows
+        else:
+            # only if col lbls is an existing valid list
+            if isinstance(col_labels, list):
+                # there are row labels giving us an extra column at the start
+                # so prepend '' to the column labels for a dummy column label.
+                col_labels.insert(0, '')
+                added_column_to_mask_rowlbls = True
+
+        # Because of iteration limitations in templates,
+        # we compute a zip between row labels (or a list of None)
+        # and numpy array rows
+        ctx['array'] = list(zip(row_labels, data['array']))
+        table_title = self.get_default(data, ctx, 'table_title')
+        if table_title is None:
+            table_title = self.get_default(data, ctx, 'title')
+
+        # table cell conditional formatting rules
+        cell_formatting = None
+        formatting_rules = self.get_default(data, ctx, 'table_cond_format', default=None)
+        if formatting_rules is not None:
+            formatter = ConditionalFormattingHTMLStyle()
+            # if there is a row label, we insert an extra entry in col_labels we need to skip
+            trimmed_column_names = col_labels
+            if col_labels and added_column_to_mask_rowlbls:
+                if len(col_labels):
+                    trimmed_column_names = col_labels[1:]
+            cell_formatting = formatter.compute_style_array(data['array'], formatting_rules,
+                                                            row_names=row_labels,
+                                                            col_names=trimmed_column_names)
+        # overall table styling
+        table_styling = ''
+        # table borders
+        table_bordered = self.get_default(data, ctx, 'table_bordered', default=1, force_int=True)
+        if table_bordered == 1:
+            table_styling += 'table-bordered '
+
+        table_wrap_content = self.get_default(data, ctx, 'table_wrap_content', default=0,
+                                              force_int=True)
+        if table_wrap_content == 1:
+            table_styling += 'table-wrap '
+        else:
+            table_styling += 'nowrap '
+
+        # table condensation(compact)
+        table_condensed = self.get_default(data, ctx, 'table_condensed', default=0, force_int=True)
+        if table_condensed == 1:
+            table_styling += 'table-sm table-fit-head '
+            # allow condensation in the body only if wrap is OFF, otherwise they'll conflict
+            if table_wrap_content == 0:
+                table_styling += 'table-fit-body '
+
+        # add the table
+        s += f'<table id="table_{self.lcl_UUID}" class="table table-hover {table_styling}' \
+             f'display" style="width: 100%">\n'
+        # other options
+        paging_option = self.get_default(data, ctx, 'table_page', default=0, force_int=True)
+        paging_menu = list()
+        paging_menu.append(list())
+        paging_menu.append(list())
+        table_pagemenu = str(self.get_default(data, ctx, 'table_pagemenu', default=""))
+        # if printing, no paging menu
+        if is_printing_pdf:
+            table_pagemenu = ""
+            paging_option = 0
+        table_pagemenu = table_pagemenu.replace('[', '').replace(']', '')
+        for menu in table_pagemenu.split(','):
+            try:
+                iv = int(menu)
+                if iv < 0:
+                    paging_menu[0].append(-1)
+                    paging_menu[1].append("All")
+                elif iv > 0:
+                    paging_menu[0].append(iv)
+                    paging_menu[1].append(iv)
+            except:
+                pass
+
+        scrollx_option = self.get_default(data, ctx, 'table_scrollx', default=1, force_int=True)
+        scrolly_option = self.get_default(data, ctx, 'table_scrolly', default=0, force_int=True)
+        # if printing, scrolling
+        if is_printing_pdf:
+            scrollx_option = 0
+            scrolly_option = 0
+        if table_title is not None:
+            s += ' <caption><h5 style="word-wrap: normal;">{}</h5></caption>\n'.format(
+                self.clean_label(table_title, allow_multiline=True))
+        else:
+            # so tables without titles don't look weird
+            s += ' <br>\n'
+
+        # if a column was added for row labels
+        if col_labels:
+            s += ' <thead>\n'
+            s += '  <tr>\n'
+            col_idx = -1 if added_column_to_mask_rowlbls else 0
+            for label in col_labels:
+                if label is not None:
+                    col_label_format = None
+                    if col_idx >= 0:
+                        col_label_format = self.get_indexed_default(data, ctx, col_idx,
+                                                                    'format_column', default='str')
+                    if col_label_format:
+                        label, _ = self.format_table_value(label.strip(), col_label_format,
+                                                           context=ctx, item=self)
+
+                s += '   <th'
+                if col_idx >= 0:
+                    tag = col_tags[col_idx] if col_tags else self.tags
+                    if tag:
+                        s += f' data-tags="{tag}"'
+                s += f'>{label}</th>\n'
+                col_idx += 1
+        else:
+            # if no col labels, add an empty thead to give a complete table.
+            # with empty <th>s as well, then collapse it
+            s += ' <thead style="visibility: collapse;">\n'
+            s += '  <tr>\n'
+            # if row labels form a column.
+            col_idx = 0
+            total_cols = ncols
+            if has_row_labels:
+                col_idx = -1
+                total_cols += 1
+            for _ in range(total_cols):
+                s += '   <th'
+                if col_idx >= 0:
+                    tag = col_tags[col_idx] if col_tags else self.tags
+                    if tag:
+                        s += f' data-tags="{tag}"'
+                s += '></th>\n'
+                col_idx += 1
+        s += '  </tr>\n'
+        s += ' </thead>\n'
+
+        s += ' <tbody>\n'
+        nan_display = self.get_default(data, ctx, 'nan_display', default='NaN')
+        row_idx = 0
+        is_string = data['array'].dtype.kind in "U"
+        is_float = data['array'].dtype.kind in "f"
+        column_max = 0
+        row_tags = self.get_row_tags(data, context, [])
+        col_tags = self.get_column_tags(data, context, [])
+        for lbl, row in ctx['array']:
+            s += f'  <tr'
+            tag = row_tags[row_idx] if row_tags else self.tags
+            if tag:
+                s += f' data-tags="{tag}"'
+            s += f'>\n'
+
+            if lbl is not None:
+                row_label_format = self.get_indexed_default(data, ctx, row_idx, 'format_row',
+                                                            default='str')
+                lbl, dummy = self.format_table_value(lbl.strip(), row_label_format, context=ctx,
+                                                     item=self)
+                s += '   <th>{}</th>\n'.format(lbl)
+                if row_idx == 0:
+                    column_max += 1
+            column = 0
+            for i in row:
+                if is_string:
+                    number_format = self.get_indexed_default(data, ctx, column, 'format',
+                                                             default='str')
+                    str_rep, sort_rep = self.format_table_value(i.strip(), number_format,
+                                                                context=ctx, item=self)
+                    sort_rep = sort_rep.replace('"', '')
+                elif is_float:
+                    number_format = self.get_indexed_default(data, ctx, column, 'format',
+                                                             default='scientific')
+                    if numpy.isnan(i):
+                        str_rep = nan_display
+                        sort_rep = nan_display
+                    else:
+                        str_rep, sort_rep = format_value_general(i, number_format)
                 else:
-                    plot += "     autorange: true, \n"
-                tmp = ctx.get('plot_xaxis_type', data.get('plot_xaxis_type', None))
-                if tmp:
-                    plot += "     type: '{}',\n".format(tmp)
-                plot += "   },\n"
-                # y axis
-                plot += "   yaxis: {\n"
-                plot += '     zeroline: true,\n'
+                    str_rep = f"Unknown:{data['array'].dtype.kind}"
+                    sort_rep = "1"
+                style_string = ""
+                if cell_formatting is not None:
+                    conditional_style = cell_formatting[row_idx, column]
+                    if conditional_style is not None:
+                        style_string = f'style="{conditional_style}"'
+                s += f'   <td {style_string} data-order="{sort_rep.strip()}">{str_rep}</td>\n'
+                column += 1
+                if row_idx == 0:
+                    column_max += 1
+            s += '  </tr>\n'
+            row_idx += 1
+        s += ' </tbody>\n'
+        s += '</table>\n'
 
-                yaxis_theme = theme_info['layout']['yaxis']
-                grid_color = yaxis_theme['gridcolor']
-                zero_line_color = yaxis_theme['zerolinecolor']
-                plot += f'     gridcolor: "{grid_color}",\n' \
-                        f'     zerolinecolor: "{zero_line_color}",\n'
+        # opts = "'scrollX': true, 'ordering': false, 'searching': false, 'select': true, 'paging':  false, 'info': false"
+        # opts = "'scrollY': '200px', 'scrollCollapse': true, 'pageLength': 50, 'lengthMenu': [10, 20, 50, -1], [10, 20, 50, 'All']]"
+        search_option = self.get_default(data, ctx, 'table_search', default=0, force_int=True)
+        if is_printing_pdf:
+            search_option = 0
+        # get the sorting option ['none', 'all', 'data'] '1'=data  For the present, 'data' == 'all'
+        sort_option = ctx.get('table_sort', data.get('table_sort', 'all'))
+        sort_option = sort_option in ['all', 'data', '1']
+        if is_printing_pdf:
+            sort_option = False
 
-                if self.get_default(data, ctx, 'show_border', default=0, force_int=True):
-                    plot += "     mirror: true, showline: true,\n"
-                    # add color
-                    line_color = yaxis_theme['linecolor']
-                    plot += f'     linecolor: "{line_color}",\n'
+        opts = '"columnDefs": ['
+        for col in range(column_max):
+            align = self.get_indexed_default(data, ctx, col, 'align_column', default='right')
+            opts += '{{"className": "{}", "targets": {}, "cellType": "{}" }}, '.format(
+                self.pick_alignment(align, "right"),
+                col,
+                "th" if has_row_labels and col == 0 else "td"
+            )
+        opts += '],'
+        opts += '"info": false,'
+        opts += '"orderClasses": false,'
 
-                if yaxistitle is not None:
-                    yaxistitle = self.format_for_javascript(str(yaxistitle), latex=True)
-                    plot += "     title: {},\n".format(yaxistitle)
-                plot += "     tickformat: '{}',\n".format(format_plotly(yaxis_number_format))
-                if y_range:
-                    plot += "     range: {}, \n".format(str(y_range))
-                else:
-                    plot += "     autorange: true, \n"
-                tmp = ctx.get('plot_yaxis_type', data.get('plot_yaxis_type', None))
-                if tmp:
-                    plot += "     type: '" + tmp + "',\n"
-                plot += "   },\n"
-                if plot_type == 2:  # Bar mode supports stacked
-                    if int(ctx.get('stacked', data.get('stacked', '0'))) != 0:
-                        plot += "   barmode: 'stack',\n"
-                plot += "     hovermode: 'closest',\n"
-            # set the legend options
-            plot += "  showlegend: {},\n".format(show_legend)
-            if show_legend == 'true':
-                plot += "   legend: {\n"
-                if legend_position is not None:
-                    try:
-                        plot += "   x:{},y:{},\n".format(legend_position[0], legend_position[1])
-                    except:
-                        pass
-                if show_legend_border > 0:
-                    plot += "    borderwidth: {},\n".format(show_legend_border)
-                plot += "   },\n"
-            plot += " };\n"  # end 'layout'
-            # general options
-            image_save = ""
-            if int(ctx.get('save_plot_image', data.get('save_plot_image', '1'))) == 0:
-                image_save = ", 'toImage'"
-            plot += " var options = {\n"
-            plot += "    showLink: false,\n"
-            plot += "    displaylogo: false, \n"
-            plot += f"    modeBarButtonsToRemove: ['sendDataToCloud', 'select2d', 'lasso2d'{image_save}], \n"
-            plot += " };\n"
-            # build the plot objects
-            plot += f" pobj_{self.lcl_UUID} = document.getElementById('plot_{self.lcl_UUID}');\n"
-            plot += f" Plotly.newPlot( pobj_{self.lcl_UUID}, data_{self.lcl_UUID}, layout, options);\n"
-            plot += f" window.addEventListener('resize', function() {{ Plotly.Plots.resize(pobj_{self.lcl_UUID});}});\n"
+        if search_option == 0:
+            opts += '"searching": false,'
 
-            plot += f" pobj_{self.lcl_UUID}.addEventListener('filter_event', function(event) {{\n"
-            plot += f"   for (let [key, value] of Object.entries(const_data_{self.lcl_UUID})) {{\n"
-            plot += f"     data_{self.lcl_UUID}[key] = JSON.parse(JSON.stringify(value));\n"
-            plot += "   };\n"
-            plot += "   event.detail.forEach((filterDetail, key) => {\n"
-            plot += "     let tempData;\n"
-            plot += "     switch (key) {\n"
-            plot += "       case 'plot_range_x':\n"
-            plot += "         filterDetail.forEach((rangeObject, key) => {\n"
-            plot += "           tempData = JSON.parse(JSON.stringify(data_{}));\n".format(self.lcl_UUID)
-            plot += "           tempData.forEach((trace, index) => {\n"
-            plot += "             let min = rangeObject.min;\n"
-            plot += "             let max = rangeObject.max;\n"
-            plot += "             data_{}[index]['x'] = trace['x'].filter((value) =>".format(self.lcl_UUID)
-            plot += " value >= min && value <= max);\n"
-            plot += "             data_{}[index]['y'] = trace['y'].filter((value, index) =>".format(self.lcl_UUID)
-            plot += " trace['x'][index] >= min && trace['x'][index] <= max);\n"
-            plot += "           });\n"
-            plot += "         });\n"
-            plot += "         break;\n"
-            plot += "       case 'plot_range_y':\n"
-            plot += "         filterDetail.forEach((rangeObject, key) => {\n"
-            plot += "           tempData = JSON.parse(JSON.stringify(data_{}));\n".format(self.lcl_UUID)
-            plot += "           tempData.forEach((trace, index) => {\n"
-            plot += "             let min = rangeObject.min;\n"
-            plot += "             let max = rangeObject.max;\n"
-            plot += "             data_{}[index]['y'] = trace['y'].filter((value) =>".format(self.lcl_UUID)
-            plot += " value >= min && value <= max);\n"
-            plot += "             data_{}[index]['x'] = trace['x'].filter((value, index) =>".format(self.lcl_UUID)
-            plot += " trace['y'][index] >= min && trace['y'][index] <= max);\n"
-            plot += "           });\n"
-            plot += "         });\n"
-            plot += "         break;\n"
-            plot += "       case 'tag':\n"
-            plot += "         filterDetail.forEach((hiddenTags, key) => {\n"
-            plot += "           if (hiddenTags.min !== undefined) {\n"
-            plot += "             data_{}.forEach((trace, index) => {{\n".format(self.lcl_UUID)
-            plot += "               if (trace.tags[key] < hiddenTags.min || trace.tags[key] > hiddenTags.max) {\n"
-            plot += "                 trace.visible = 'hidden';\n"
-            plot += "                 data_{}[index]['x'] = [];\n".format(self.lcl_UUID)
-            plot += "                 data_{}[index]['y'] = [];\n".format(self.lcl_UUID)
-            plot += "               }\n"
-            plot += "             });\n"
-            plot += "           } else if (key === 'Other tags') {\n"
-            plot += "             hiddenTags.forEach((hiddenTag) => {\n"
-            plot += "               data_{}.forEach((trace, index) => {{\n".format(self.lcl_UUID)
-            plot += "                 if (trace.visible !== 'hidden' && trace.tags[hiddenTag] === 'True') {\n"
-            plot += "                   trace.visible = 'hidden';\n"
-            plot += "                   data_{}[index]['x'] = [];\n".format(self.lcl_UUID)
-            plot += "                   data_{}[index]['y'] = [];\n".format(self.lcl_UUID)
-            plot += "                 }\n"
-            plot += "               });\n"
-            plot += "             });\n"
-            plot += "           } else {\n"
-            plot += "             data_{}.forEach((trace, index) => {{\n".format(self.lcl_UUID)
-            plot += "               Object.entries(trace.tags).forEach(([tagKey,tagValue]) => {\n"
-            plot += "                 if (tagValue === 'True') {\n"
-            plot += "                   trace.tags[tagKey] = tagKey;\n"
-            plot += "                 }\n"
-            plot += "               });\n"
-            plot += "               if (hiddenTags.includes(trace.tags[key])) {\n"
-            plot += "                 trace.visible = 'hidden';\n"
-            plot += "                 data_{}[index]['x'] = [];\n".format(self.lcl_UUID)
-            plot += "                 data_{}[index]['y'] = [];\n".format(self.lcl_UUID)
-            plot += "               }\n"
-            plot += "             });\n"
-            plot += "           }\n"
-            plot += "         });\n"
-            plot += "         break;\n"
-            plot += "       case 'single-tag':\n"
-            plot += "         filterDetail.forEach((tags, key) => {\n"
-            plot += "           if (tags.length) {\n"
-            plot += "             let shownTag = tags[0];\n"
-            plot += "             data_{}.forEach((trace, index) => {{\n".format(self.lcl_UUID)
-            plot += "               let tagIsDefined = trace.tags[key] !== undefined;\n"
-            plot += "               if (!(tagIsDefined && trace.tags[key].includes(shownTag) ||"
-            plot += "                   trace.tags[shownTag] === 'True')) {\n"
-            plot += "                 trace.visible = 'hidden';\n"
-            plot += "                 data_{}[index]['x'] = [];\n".format(self.lcl_UUID)
-            plot += "                 data_{}[index]['y'] = [];\n".format(self.lcl_UUID)
-            plot += "               }\n"
-            plot += "             });\n"
-            plot += "           }\n"
-            plot += "         });\n"
-            plot += "         break;\n"
-            plot += "     }\n"
-            plot += "   });\n"
-            plot += "   Plotly.redraw(pobj_{});\n".format(self.lcl_UUID)
-            plot += " });\n"
+        if not sort_option:
+            opts += '"ordering": false,'
 
-            plot += " $(document).ready(function() {{ Plotly.Plots.resize(pobj_{}); }});\n".format(self.lcl_UUID)
-            plot += "</script>\n"
-            s += payload + plot
+        if scrollx_option != 0:
+            opts += '"scrollX": true,'
+
+        # disable pagination if 0.
+        # by default, its enabled.
+        if paging_option == 0:
+            opts += '"paging": false,'
+        # if the option is a bigger integer,
+        # we take that as the initial page length.
+        elif paging_option != 1:
+            opts += '"pageLength": {},'.format(paging_option)
+
+        if len(paging_menu[0]) > 0:
+            opts += '"lengthMenu": {},'.format(str(paging_menu))
+        else:
+            # add the default menu setup only if paging is not disabled.
+            # else, adding this will enable paging implicitly.
+            if paging_option != 0:
+                opts += '"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],'
+
+        # enable vertical scrolling and collapse any empty area
+        if scrolly_option > 0:
+            opts += '"scrollY": "{}pt", "scrollCollapse": true,'.format(scrolly_option)
+
+        # avoid datatables when printing PDF.
+        if not is_printing_pdf:
+            s += render_to_string('data/item_layouts/table_filter_template.html',
+                                  {'uuid': self.lcl_UUID, 'opts': opts})
+
         return s
 
     def render_tree(self, context, ctx):

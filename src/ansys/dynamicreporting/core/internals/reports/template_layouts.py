@@ -18,134 +18,17 @@ import copy
 import math
 import os
 import re
-import uuid
 
 import numpy
-from ceireports.utils import get_render_error_html, get_unsupported_error_html
-from data.conditional_format import ConditionalFormatting
-from data.extremely_ugly_hacks import safe_unpickle
-from data.templatetags.data_tags import split_quoted_string_list
-from data.utils import decode_table_data, get_unique_id
+from ..report_framework.utils import get_render_error_html, get_unsupported_error_html
+from ..data.conditional_format import ConditionalFormatting
+from ..data.extremely_ugly_hacks import safe_unpickle
+from ..data.templatetags.data_tags import split_quoted_string_list
+from ..data.utils import decode_table_data, get_unique_id
 from django.template.loader import render_to_string
 from django.urls import reverse
 
 from .engine import LayoutEngine, TemplateEngine, context_macros
-from .pptx_gen import PPTXGenerator, PPTXManager
-
-
-class BasicTemplateEngine(LayoutEngine):
-    '''Template output handler for the 'basic' report type'''
-
-    ''' Attributes in _params (all inherited by other classes):
-    HTML - raw HTML text to insert before iterating on children/items
-    column_widths - array of fractional column widths (converted to 12ths before using)
-    column_count - number of equal size columns to use (column_widths trumps this)
-    transpose - if 1, rotate the input items 90degrees clockwise before placing in cells
-    '''
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:basic"
-
-
-# register it with the core
-TemplateEngine.register(BasicTemplateEngine)
-
-
-# Page header template: does not really do anything right now
-class HeaderTemplateEngine(LayoutEngine):
-    '''Template output handler for the 'header' report type'''
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:header"
-
-
-# register it with the core
-TemplateEngine.register(HeaderTemplateEngine)
-
-
-# Page footer template
-class FooterTemplateEngine(LayoutEngine):
-    '''Template output handler for the 'footer' report type'''
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:footer"
-
-    @context_macros
-    def render_template(self, items, context, **kwargs):
-        # simple case that avoids the <br> that the normal rendering pipeline injects
-        if (len(items) == 0) and (not self._params.get('HTML', '')):
-            template_tag = ' nexus_template="{}"'.format(str(self.template.guid))
-            s = f'<div {template_tag} style="break-after:page;"></div>\n'
-        else:
-            s = super().render_template(items, context, **kwargs)
-            # insert a page-break (via CSS)
-            s += '<div style="break-after:page;"></div>\n'
-        # move to the next page number
-        TemplateEngine.get_global_context()['page_number'] += 1
-        return s
-
-
-# register it with the core
-TemplateEngine.register(FooterTemplateEngine)
-
-
-# Box layout template
-class BoxTemplateEngine(LayoutEngine):
-    '''Template output handler for the 'box' report type.  If passed items, it will handle them as the
-    default template.  If passed template children, they will be rendered in boxes defined in the properties.'''
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:box"
-
-    @context_macros
-    def render_template(self, items, context, **kwargs):
-        if len(self.children) == 0:
-            return super().render_template(items, context, **kwargs)
-        s = self.parse_HTML(context)
-        s += self.parse_comments(context)
-        # boxes is a dictionary keyed by template guids of [x,y,width,height,clipping_rule]
-        # clipping_rule is one of: 'self', 'scroll', 'none'
-        boxes = self._params.get('boxes', 0)
-        # our size is the bounding box of our children
-        child_layouts = self.get_child_layouts()
-        dx = 0
-        dy = 0
-        for c in child_layouts:
-            child_rect = boxes.get(str(c.template.guid), [0, 0, 320, 240, 'self'])
-            dx = max(dx, child_rect[0] + child_rect[2])
-            dy = max(dy, child_rect[1] + child_rect[3])
-        name = 'box_template_' + str(TemplateEngine.get_unique_number(context))
-        style = "width:{0:d}px;height:{1:d}px;".format(int(dx), int(dy))
-        background = self.get_colorize_color()
-        if background:
-            style += background
-        s += '<div id="' + name + '" style="padding:0 0;margin:0 0;' + style + '">\n'
-        # by default, the browser increments the Y by the size of the div with each step
-        # we track the sum of these values so they can be adjusted for with each child.
-        prev = 0
-        for c in child_layouts:
-            child_rect = boxes.get(str(c.template.guid), [0, 0, 320, 240, 'self'])
-            child_rect[1] -= prev
-            prev += child_rect[3]
-            style = "top:{1:d}px;left:{0:d}px;width:{2:d}px;height:{3:d}px;".format(
-                int(child_rect[0]), int(child_rect[1]), int(child_rect[2]), int(child_rect[3]))
-            if child_rect[4] == 'scroll':
-                style += "overflow:scroll;"
-            elif child_rect[4] == 'self':
-                style += "overflow:hidden;"
-            s += '<div style="padding:0 0;margin:0 0;position:relative;' + style + '">\n'
-            s += c.render(items, context)
-            s += '</div>\n'
-        s += '</div>\n'
-        return s
-
-
-# register it with the core
-TemplateEngine.register(BoxTemplateEngine)
 
 
 # Carousel Layout
@@ -370,67 +253,6 @@ class PanelTemplateEngine(LayoutEngine):
 
 # register it with the core
 TemplateEngine.register(PanelTemplateEngine)
-
-
-# Tag properties
-class TagPropertyTemplateEngine(LayoutEngine):
-    '''For items selected by the filter this template does one thing:
-    (1) convert all of their tags into properties on the context
-    then it passes all items to the child templates with the updated context'''
-
-    def __init__(self, template_object):
-        super().__init__(template_object)
-        self._enable_toc_tracking = False
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:tagprops"
-
-    def render(self, input_items, context, **kwargs):
-        # filter the item list...
-        items = self.filter_items(input_items, context)
-
-        # sort the items (if need be)
-        rules = self._params.get("sort_fields", [])
-        if len(rules):
-            items = TemplateEngine.sort_items(rules, items)
-
-        # first, last, all selection
-        sort_selection = self._params.get("sort_selection", "all")
-        if sort_selection == 'first':
-            items = items[:1]
-        elif sort_selection == 'last':
-            items = items[-1:]
-
-        local_context = copy.copy(context)
-        # ok, walk the remaining items and push their tags into context properties
-        for i in items:
-            # force the building of the item tag dictionary
-            d = i.build_tag_dictionary()
-            for key, value in d.items():
-                local_context[key] = value
-
-        # suppress our local filter and sorting operations
-        tmp_filter = self.template.item_filter
-        self.template.item_filter = ""
-        tmp_sort_fields = self._params.get("sort_fields", [])
-        self._params["sort_fields"] = []
-        tmp_sort_selection = self._params.get("sort_selection", "all")
-        self._params["sort_selection"] = "all"
-
-        # do the actual rendering, passing the items on to the rendering engine
-        html = super().render(input_items, local_context, **kwargs)
-
-        # put the filter and sorting options back
-        self.template.item_filter = tmp_filter
-        self._params["sort_fields"] = tmp_sort_fields
-        self._params["sort_selection"] = tmp_sort_selection
-
-        return html
-
-
-# register it with the core
-TemplateEngine.register(TagPropertyTemplateEngine)
 
 
 # link to another report using the filter as the filter for the report
@@ -1259,212 +1081,6 @@ class SliderTemplateEngine(LayoutEngine):
 TemplateEngine.register(SliderTemplateEngine)
 
 
-class PPTXBaseTemplateEngine(LayoutEngine):
-    """
-    Parent template for the below PPTX based templates.
-    DO NOT REGISTER!
-    """
-
-    def setup_context(self, context):
-        # builds a context dict for the current template
-        # from the global context dict
-        local_context = copy.copy(context)
-        # template properties
-        template_props = self._params.get("properties", {})
-        if template_props:
-            local_context.update(template_props)
-        local_context['template_name'] = self.template.name
-
-        return local_context
-
-    def setup_items(self, context, input_items):
-        # filter the item list if requested
-        apply_item_filter = context.get("apply_item_filter", False)
-        if apply_item_filter:
-            items = self.filter_items(input_items, context)
-        else:
-            items = input_items
-
-        # Skip if no data items option
-        if self.skip_empty(items):
-            return None
-
-        # sort the items (if need be)
-        rules = self._params.get("sort_fields", [])
-        if rules:
-            items = TemplateEngine.sort_items(rules, items)
-
-        # first, last, all selection
-        sort_selection = self._params.get("sort_selection", "all")
-        if sort_selection == 'first':
-            items = items[:1]
-        elif sort_selection == 'last':
-            items = items[-1:]
-
-        return items
-
-    def setup_template(self, context, input_items):
-        ctx = self.setup_context(context)
-        return ctx, self.setup_items(ctx, input_items)
-
-    def _render(self, input_items, context, apply_item_filter=True, **kwargs):
-        return ""
-
-    def render(self, input_items, context, apply_item_filter=True, **kwargs):
-        # if trying to export, return an error
-        if TemplateEngine.get_print_style() is not None:
-            return get_unsupported_error_html('PPTX templates', TemplateEngine.get_print_style())
-        try:
-            return self._render(input_items, context, apply_item_filter, **kwargs)
-        except Exception as e:
-            return get_render_error_html(e, target='report', guid=self.template.guid)
-
-
-class PPTXTemplateEngine(PPTXBaseTemplateEngine):
-    """
-    Generate a pptx file of items from an input file.
-    """
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:pptx"
-
-    def add_child(self, engine):
-        # restrict to slide children for now.
-        if not isinstance(engine, PPTXSlideTemplateEngine):
-            raise Exception(f"PPTX Layout templates can only have children which are PPTX Slide Layout templates.")
-        super().add_child(engine)
-
-    @staticmethod
-    def _convert_to_query(input_string):
-        query = ""
-        if input_string:
-            # if its already a query
-            if input_string.startswith("query="):
-                query = input_string.replace("query=", "")
-            else:  # straight-up name match
-                query = f"A|i_name|eq|{input_string};"
-        return query
-
-    def _init_manager(self, ctx):
-        from data.models import Item
-        # get input pptx
-        input_filename = self.get_default(ctx, 'input_pptx')
-        # get the input item
-        if not input_filename:
-            raise Exception("PPTXTemplate does not have an input pptx file.")
-        # get item
-        input_file_item = Item.find(ctx['request'],
-                                    query=self._convert_to_query(input_filename),
-                                    sort_tag='date',
-                                    reverse=1).first()
-        if not input_file_item:
-            raise Exception(f"The input pptx file item '{input_filename}' does not exist.")
-        # get file
-        input_file = input_file_item.get_payload_server_pathname()
-        if not input_file.endswith(".pptx"):
-            raise Exception(f"The input pptx file '{input_filename}' is not of the .pptx type.")
-
-        # instantiate manager
-        return PPTXManager(input_file)
-
-    def render_pptx(self, input_items, context, apply_item_filter=True, **kwargs):
-        context["apply_item_filter"] = apply_item_filter
-        # filter and apply context
-        ctx, items = self.setup_template(context, input_items)
-        # skip if necessary
-        if items is None:
-            return b""
-
-        try:
-            pptx_mgr = self._init_manager(ctx)
-            if not len(pptx_mgr.slides):
-                raise Exception(f"The input pptx file does not have any slides")
-            # generator returns file bytestream
-            pptx_generator = PPTXGenerator(pptx_mgr)
-            pptx_generator.generate_report(self, items, ctx)
-            return pptx_generator.get_report_content()
-        except Exception as e:
-            raise Exception(f"PPTX render error: Failed to render the template '{self.name}': {e}")
-
-    def _render(self, input_items, context, apply_item_filter=True, **kwargs):
-        context["apply_item_filter"] = apply_item_filter
-        # filter and apply context
-        ctx = self.setup_context(context)
-        # validate
-        self._init_manager(ctx)
-        # get output path
-        default_output_filename = f"{self.name}_{uuid.uuid1()}.pptx"
-        out_file = self.get_default(ctx, 'output_pptx', default=default_output_filename)
-        if not out_file.endswith(".pptx"):
-            raise Exception("The output filename is not of the .pptx type.")
-        # CAVEAT: will not inherit items if used as a child template
-        # todo: pass item filter as query into URL somehow.
-        request = context["request"]
-        q_dict = request.GET.copy()
-        if self.parent is not None:
-            query = q_dict.get("query", "")
-            q_dict.clear()
-            q_dict["view"] = self.template.guid
-            q_dict["query"] = query
-        # specify format for targeted rendering.
-        q_dict["format"] = "pptx"
-        q_dict["filename"] = out_file
-        # return a url to a REST API that renders it as a downloadable file.
-        url = f"{request.scheme}://{request.get_host()}{reverse('report_gen_api')}?{q_dict.urlencode(safe='/')}"
-        # return html
-        return f"""
-                <p class="p-3 m-3">
-                    <em>Exported pptx :</em>
-                    <a class="btn btn-link" href="{url}" download="{out_file}">Download {out_file}</a>
-                </p>
-        """
-
-
-# register it with the core
-TemplateEngine.register(PPTXTemplateEngine)
-
-
-class PPTXSlideTemplateEngine(PPTXBaseTemplateEngine):
-    """
-    Generate a pptx slide from a template.
-
-    NOTE: Unlike other templates that render and return HTML,
-    PPTX Slide Layout templates are used to represent a slide
-    in a PPTX file and to get properties and filters specified
-    by the user to build the parent PPTX Layout template (above).
-    Hence, use of the render() method has been avoided here.
-    """
-
-    @classmethod
-    def report_type(cls):
-        return "Layout:pptxslide"
-
-    def add_child(self, engine):
-        # restrict to slide children for now.
-        if not isinstance(engine, PPTXSlideTemplateEngine):
-            raise Exception(f"PPTX Slide Layout templates can only have children which are other PPTX Slide Layout"
-                            f" templates.")
-        super().add_child(engine)
-
-    def set_parent(self, parent):
-        # restrict parents
-        if not isinstance(parent, PPTXTemplateEngine | PPTXSlideTemplateEngine):
-            raise Exception("PPTX Slide Layout templates can only be used as children of PPTX Layout templates"
-                            " or other PPTX Slide Layout templates.")
-        super().set_parent(parent)
-
-    def _render(self, input_items, context, apply_item_filter=True, **kwargs):
-        # this method is never actually called unless someone is trying to render
-        # as HTML, which is not supported.
-        raise Exception("PPTX Slide Layout templates can only be rendered as children of PPTX Layout templates"
-                        " or other PPTX Slide Layout templates.")
-
-
-# register it with the core
-TemplateEngine.register(PPTXSlideTemplateEngine)
-
-
 class DataFilterTemplateEngine(LayoutEngine):
     """
     Gives a filter sidebar on the report to dynamically filter
@@ -1486,7 +1102,7 @@ class DataFilterTemplateEngine(LayoutEngine):
     @staticmethod
     def _get_range_filters(tables, ctx, filter_params):
 
-        from data.models import Item, XAxisObj
+        from ..data.models import Item, XAxisObj
         range_filters = {}
         filter_step = ctx["filter_numeric_step"]
 
@@ -1563,7 +1179,7 @@ class DataFilterTemplateEngine(LayoutEngine):
             return dest_dict
 
         # filters
-        from data.models import Item
+        from ..data.models import Item
 
         tag_dict = {}
         for table_data in tables:
@@ -1750,3 +1366,4 @@ class DataFilterTemplateEngine(LayoutEngine):
 
 # register it with the core
 TemplateEngine.register(DataFilterTemplateEngine)
+

@@ -24,8 +24,8 @@ from django.middleware import csrf
 from django.urls import reverse
 from django.utils.timezone import now
 
-from reports.managers import TemplateManager
 from .engine import TemplateEngine
+from .managers import TemplateManager
 
 
 # Create your models here.
@@ -117,12 +117,12 @@ class Template(models.Model):
     def filter_items(self, items):
         if len(self.item_filter) == 0:
             return items
-        from data.models import object_filter, Item
+        from ..data.models import object_filter, Item
         return object_filter(self.item_filter, items, model=Item)
 
     @classmethod
     def find(cls, request, reverse=0, sort_tag="date"):
-        from data.models import object_filter
+        from ..data.models import object_filter
         # start a query
         queryset = Template.objects.all()
         # special case of an explicit GUID

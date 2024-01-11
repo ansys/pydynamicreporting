@@ -1,4 +1,4 @@
-from ceireports.base_model_managers import NexusModelManager
+from ..report_framework.base_model_managers import NexusModelManager
 
 
 class TemplateManager(NexusModelManager):

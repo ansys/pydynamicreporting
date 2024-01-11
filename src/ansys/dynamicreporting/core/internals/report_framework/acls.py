@@ -1,13 +1,12 @@
 import time
 
-from ceireports.utils import decrypt_hash
+from .utils import decrypt_hash
 from django.conf import settings
 from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Exists, OuterRef
 from django.db.models import QuerySet
 from guardian.shortcuts import assign_perm
-from rest_framework import filters
 
 
 def get_permission_codename(action, opts, codename_only=False):
@@ -504,13 +503,10 @@ def is_share_hash_valid(share_hash, request, obj_guid, perms=None):
     return True
 
 
-class ObjectPermsFilter(filters.BaseFilterBackend):
+class ObjectPermsFilter:
     """
     Filter backend to limit queryset based on user ACLs
     """
-
-    def filter_queryset(self, request, queryset, view):
-        return self.get_result_set(request, queryset)
 
     @staticmethod
     def get_result_set(request, queryset, perm=None):

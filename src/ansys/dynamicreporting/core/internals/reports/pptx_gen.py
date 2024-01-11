@@ -26,10 +26,10 @@ from pathlib import Path
 from xml.sax.saxutils import escape, unescape
 
 import numpy
-from ceireports.utils import IntEnum, StrEnum
-from data.extremely_ugly_hacks import safe_unpickle
-from data.templatetags.data_tags import format_value_general
-from data.utils import decode_table_data
+from ..report_framework.utils import IntEnum, StrEnum
+from ..data.extremely_ugly_hacks import safe_unpickle
+from ..data.templatetags.data_tags import format_value_general
+from ..data.utils import decode_table_data
 from django.conf import settings
 from django.template import engines
 from pptx import Presentation
@@ -719,7 +719,7 @@ class PPTXGenerator:
 
     @staticmethod
     def _process_html(item, ctx):
-        from data.templatetags.data_tags import convert_macro_slashes
+        from ..data.templatetags.data_tags import convert_macro_slashes
         payload = safe_unpickle(item.payloaddata)
         if not payload.strip():
             raise NoContentError
@@ -905,7 +905,7 @@ class PPTXGenerator:
             row_labels = item.get_row_labels(table_data, ctx, [None] * num_rows)
             col_labels = item.get_column_labels(table_data, ctx, list(range(num_cols)))
 
-            from data.models import XAxisObj
+            from ..data.models import XAxisObj
             xaxis_obj = XAxisObj(ctx, table_data, row_labels, col_labels, item)
 
             y_data = []
@@ -1182,7 +1182,7 @@ class PPTXGenerator:
 
     @staticmethod
     def _create_item_from_string(contents, i_type):
-        from data.models import Item
+        from ..data.models import Item
         item = Item()
         item.guid = uuid.uuid1()
         item.payloaddata = pickle.dumps(contents.strip(), protocol=0)
@@ -1295,7 +1295,7 @@ class PPTXGenerator:
         return processed_info
 
     def _process_slide(self, slide, items, ctx, as_toc=False):
-        from data.models import Item
+        from ..data.models import Item
         slide_id = f"{slide.slide_id}"
         # shape_info is a map of shapes and the item to be inserted into each shape, possibly split
         # into parts if an item exceeds a slide's limit.
@@ -1529,7 +1529,7 @@ class PPTXGenerator:
                         self._add_item(shape, data)
 
     def generate_report(self, parent, items, ctx):
-        from data.models import Item
+        from ..data.models import Item
         # check if we want to keep all slides
         use_all_slides = parent.get_default(ctx, "use_all_slides", 1, force_int=True) == 1
         # this ignores all children templates and their filters

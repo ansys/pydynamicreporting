@@ -1,5 +1,6 @@
-from ceireports.base_model_managers import NexusModelManager, NexusQuerySet
 from django.db.models import Count
+
+from ..report_framework.base_model_managers import NexusModelManager, NexusQuerySet
 
 
 class ItemManager(NexusModelManager):

@@ -26,8 +26,8 @@ import uuid
 
 from django.utils import timezone
 from .engine import GeneratorEngine, TemplateEngine
-from data.templatetags.data_tags import split_quoted_string_list, time_base
-from data.extremely_ugly_hacks import safe_unpickle
+from ..data.templatetags.data_tags import split_quoted_string_list, time_base
+from ..data.extremely_ugly_hacks import safe_unpickle
 from .simpletree import SimpleTree
 
 
@@ -207,7 +207,7 @@ class SimpleTable:
         if params is None:
             params = {}
         collision_tag = params.get("collision_tag", '')  # tag to use on row merges that need tag-base names
-        from data.models import Item
+        from ..data.models import Item
         data = safe_unpickle(item.payloaddata)
         self.array = data['array']
         row_lbls = Item.get_row_labels(data)
@@ -364,7 +364,7 @@ class SimpleTable:
         self.array = tmp
 
     def to_item(self, name, dataset=None, session=None):
-        from data.models import Item, Session, Dataset
+        from ..data.models import Item, Session, Dataset
         item = Item()
         item.guid = uuid.uuid4()
         if session:
@@ -1230,7 +1230,7 @@ class TreeMergeGeneratorEngine(GeneratorEngine):
                 header_value = item.search_tag(header_tag)
             # if we have found the first tree item, create the output items
             if output_item is None:
-                from data.models import Item
+                from ..data.models import Item
                 output_item = Item()
                 output_item.guid = uuid.uuid4()
                 # We will use the session/dataset for the initial tree item

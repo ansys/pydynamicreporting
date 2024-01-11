@@ -1,67 +1,169 @@
-import glob
+import json
 import os
-import platform
-import shutil
-import subprocess
+import urllib
+import urllib.parse
 
+import requests
 from ansys.dynamicreporting.core.utils import geofile_processing
 from django.conf import settings
-from reports.engine import TemplateEngine
+
+from ..reports.engine import TemplateEngine
 
 
-def do_geometry_update_check():
-    """
-    Verify/update the csf files in the media directory
-    """
-    # get the existing version
-    path = os.path.join(settings.MEDIA_ROOT, "csf_conversion_version")
-    try:
-        with open(path, "rt", encoding='utf-8') as f:
-            old_version = f.read()
-        old_version = old_version.strip()
-    except:
-        old_version = "unknown"
-    # get the new version
-    new_version = old_version
-    app = 'cei_apex{}_udrw2avz'.format(settings.CEI_APEX_SUFFIX)
-    create_flags = 0
-    # Note: should we be using a detached process (8) here?  It could lead to a race condition???
-    if platform.system().startswith("Win"):
-        app += '.bat'
-        create_flags = subprocess.CREATE_NO_WINDOW
-    cmd = [app, "-i"]
-    try:
-        new_version = subprocess.check_output(cmd, stdin=subprocess.DEVNULL, creationflags=create_flags).decode("utf-8")
-        new_version = new_version.strip()
-    except Exception as e:
-        pass
-    if old_version != new_version:
-        print(f"New version of the 3D geometry engine detected ('{old_version}' vs '{new_version}')")
-        print("Converting existing 3D geometry to new version...")
-        # get the files we need to process in some way
-        filenames = list()
-        for ext in ["*.csf", "*.ply", "*.stl", "*.avz", "*.scdoc", "*.evsn", "*.ens"]:
-            filenames.extend(glob.glob(os.path.join(settings.MEDIA_ROOT, ext)))
-        for filename in filenames:
-            root, ext = os.path.splitext(filename)
-            # remove old versions
-            try:
-                # a peer level .js file
-                os.remove(filename + ".js")
-            except:
-                pass
-            try:
-                # a subdirectory with the same name as the file w/o the extension
-                shutil.rmtree(root)
-            except:
-                pass
-            # Generate the new geometry representation
-            unique_id = os.path.basename(root)[:36]
-            unique_id = unique_id.replace("-", "")
-            geofile_processing.rebuild_3d_geometry(filename, unique_id)
-        print("3D Geometry conversion complete.")
-        with open(path, "wt", encoding='utf-8') as f:
-            f.write(new_version + "\n")
+class WebsocketServerInterface:
+    _instance = None
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = WebsocketServerInterface()
+        return cls._instance
+
+    def __init__(self):
+        # is websocketserver running at all?
+        settings.REMOTE_WEBSOCKETURL = os.environ.get('CEI_NEXUS_REMOTE_WEBSOCKETURL', '')
+        settings.REMOTE_VNCPASSWORD = os.environ.get('CEI_NEXUS_REMOTE_VNCPASSWORD', None)
+        settings.REMOTE_WS_PORT = os.environ.get('CEI_NEXUS_REMOTE_WS_PORT', None)
+        settings.REMOTE_HTML_PORT = os.environ.get('CEI_NEXUS_REMOTE_HTML_PORT', None)
+        self._base_url = settings.REMOTE_WEBSOCKETURL
+        self._html_port = settings.REMOTE_HTML_PORT
+        self._ws_port = settings.REMOTE_WS_PORT
+        # the current websocketserver state
+        self._current_state = []
+        # current_state is a list of dictionaries dict(name='', instances=[], common_options=dict())
+        # the common_options dict may include:  dict(file_ext=[], sizes=[], verbose=0|1), etc
+        # instances is an array of dictionaries dict(index=0, token='', timestamp=0.0, options=dict())
+
+    def has_desktop_sessions(self):
+        if not self.update_sessions():
+            return False
+        for service in self._current_state:
+            if 'file_ext' not in service.get('common_options', {}):
+                return True
+        return False
+
+    def get_service_by_name(self, name):
+        if not self.update_sessions():
+            return None
+        for service in self._current_state:
+            if service['name'] == name:
+                return service
+        return None
+
+    def get_services(self, file_ext=None):
+        services = []
+        if not self.update_sessions():
+            return services
+        for service in self._current_state:
+            ext_list = service.get('common_options', {}).get('file_ext', [])
+            # Return the service if a specific filename extension is specified and it matches
+            # or no filename extension is specified and there is no 'file_ext' list...
+            if file_ext in ext_list:
+                services.append(service)
+            elif (file_ext is None) and (len(ext_list) == 0):
+                services.append(service)
+        return services
+
+    def get_instance(self, token):
+        if not self.update_sessions():
+            return None, None
+        for service in self._current_state:
+            for instance in service['instances']:
+                if instance['token'] == token:
+                    return service, instance
+        return None, None
+
+    def update_sessions(self):
+        if not self._base_url:
+            return False
+        try:
+            if settings.WEBSOCKETSERVER_SECURITY_TOKEN:
+                url = self.build_url("/v1/status", {"security_token": settings.WEBSOCKETSERVER_SECURITY_TOKEN})
+            else:
+                url = self.build_url("/v1/status")
+            resp = requests.get(url)
+            if resp.status_code != requests.codes.ok:
+                return False
+            self._current_state = json.loads(resp.text)
+        except Exception:
+            self._current_state = []
+            return False
+        return True
+
+    def reserve(self, session_name, options=None):
+        if not self.update_sessions():
+            return None
+        # /v1/reserve/local_envision?target_pathname=D:/ANSYSDev/example_envision.evsn
+        url = self.build_url(f"/v1/reserve/{session_name}", options)
+        # do the work
+        resp = requests.get(url)
+        if resp.status_code != requests.codes.ok:
+            return None
+        # parse the returned token (if any)
+        # {"token": "5cd27076-db61-11eb-9e9f-3814288ef490"}
+        token = json.loads(resp.text).get("token", None)
+        self.update_sessions()
+        return token
+
+    # replace the path and query components of an existing URL
+    def build_url(self, path, query=None):
+        parts = list(urllib.parse.urlparse(self.url()))
+        parts[2] = path
+        if query:
+            parts[4] = urllib.parse.urlencode(query)
+        return urllib.parse.urlunparse(parts)
+
+    def url(self, ws=False):
+        url = self._base_url
+        if ws:
+            url += f":{self._ws_port}"
+        else:
+            url += f":{self._html_port}"
+        return url
+
+
+# Bootstrap the remote session system
+def get_remote_session_configuration():
+    return WebsocketServerInterface.instance()
+
+
+def valid_user_group(user, group, remote_desktop=False, embedded_applet=False):
+    # split up the string '{group}[:applet]'
+    tmp = group.split(':')
+    while len(tmp) < 2:
+        tmp.append('')
+
+    # remote_desktop:
+    #     it not authenticated -> False
+    #     if ':applet' qualifier -> False
+    #     if '' -> True
+    #     if 'user in group' -> True
+    if remote_desktop:
+        if not user.is_authenticated:
+            return False
+        if 'applet' in tmp[1]:
+            return False
+        if len(tmp[0]) == 0:
+            return True
+        if user.groups.filter(name=str(tmp[0])).exists():
+            return True
+
+    # embedded_applet:
+    #     it not authenticated -> False
+    #     if not ':applet' qualifier -> False
+    #     if '' -> True
+    #     if 'user in group' -> True
+    if embedded_applet:
+        if not user.is_authenticated:
+            return False
+        if 'applet' not in tmp[1]:
+            return False
+        if len(tmp[0]) == 0:
+            return True
+        if user.groups.filter(name=str(tmp[0])).exists():
+            return True
+
+    return False
 
 
 def get_ext_service_available(item, ctx):
@@ -73,8 +175,6 @@ def get_ext_service_available(item, ctx):
     ext_view = item.get_default(None, ctx, 'file_allow_ext_viewer', default=1, force_int=True) == 1
     if not ext_view:
         return False
-    from website.views import (get_remote_session_configuration,
-                               valid_user_group)
     config = get_remote_session_configuration()
     if config:
         request = ctx.get('request', {})
@@ -91,7 +191,8 @@ def get_ext_service_available(item, ctx):
             group_name = services[0].get('common_options', {}).get('group', '')
             if group_name and not valid_user_group(request.user, group_name,
                                                    embedded_applet=True):
-                ctx['error'] = f'The current user is not a member of the group required for the "{services[0]}" service.'
+                ctx[
+                    'error'] = f'The current user is not a member of the group required for the "{services[0]}" service.'
                 return False
             return True
         else:
@@ -114,7 +215,7 @@ def render_scene(item, context, ctx):
     # The scene file may either be a .avz file, a .scdoc file or there should be a
     # scene.avz file in a directory named the same as the uploaded file minus the extension
     base_url_name, ext = os.path.splitext(payload_url)
-    imported_by_udrw = ext.lower() not in ['.avz', '.scdoc']
+    imported_by_udrw = ext.lower() not in ['.avz', '.scdoc', '.glb']
     if imported_by_udrw:
         payload_url = base_url_name + '/scene.avz'
     # Is there a proxy image?  Note: it will always be in a subdirectory named by the item file.
@@ -184,7 +285,11 @@ def render_scene(item, context, ctx):
     if proxy_url is not None:
         active = f'proxy_img="{proxy_url}" active=false'
     source = f'src="{payload_url}"'
-    s += f'<ansys-nexus-viewer {active} {aspect} {source} id="avz_comp_{item.lcl_UUID}">'
+    # GLB uses the three.js renderer
+    renderer = ""
+    if ext.lower() == ".glb":
+        renderer = 'renderer="three"'
+    s += f'<ansys-nexus-viewer {renderer} {active} {aspect} {source} id="avz_comp_{item.lcl_UUID}">'
     s += '</ansys-nexus-viewer>\n'
     s += "</div>\n"
     return s
@@ -236,4 +341,3 @@ def render_file(item, context, ctx):
     else:
         ext_view_html = proxy_img
     return f'{ext_view_html}<p><em>File: <a href="{file_payload_url}">Download {str(item.name)}</a></em></p>\n'
-

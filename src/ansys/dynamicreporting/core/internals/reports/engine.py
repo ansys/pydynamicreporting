@@ -21,10 +21,11 @@ import copy
 import json
 import time
 
-from ceireports.utils import get_render_error_html, StrEnum
-from data.templatetags.data_tags import convert_macro_slashes, split_quoted_string_list
-from data.templatetags.data_tags import expand_string_context, expand_dictionary_context
 from django.template import engines
+
+from ..data.templatetags.data_tags import convert_macro_slashes, split_quoted_string_list
+from ..data.templatetags.data_tags import expand_string_context, expand_dictionary_context
+from ..report_framework.utils import get_render_error_html, StrEnum
 
 
 def context_macros(f):
@@ -528,7 +529,7 @@ class TemplateEngine:
         # 'root_replace' : apply the template filter to the entire database and return the result (discards user query)
         # 'root_append' : similar to above, except the results are appended to the (unfiltered) input items
         if filter_type.startswith('root'):
-            from data.models import Item, object_filter
+            from ..data.models import Item, object_filter
             # root queryset must be perm filtered.
             # context must always contain request.
             root_items = list(object_filter(self._template.item_filter,
@@ -632,9 +633,9 @@ class LayoutEngine(TemplateEngine):
         # get the user specified margin styling from the context
         style = ''
         for side in ['top', 'bottom', 'right', 'left']:
-            margin = self.get_default(context, 'margin_{}'.format(side), -1, force_int=True)
+            margin = self.get_default(context, f'margin_{side}', -1, force_int=True)
             if margin >= 0:
-                style += 'padding-{}: {}pt;'.format(side, margin)
+                style += f'padding-{side}: {margin}pt;'
         return style
 
     def get_margin_linebreak(self, context):
@@ -643,12 +644,15 @@ class LayoutEngine(TemplateEngine):
         return ''
 
     def block_header(self, items, context):
-        # start the output with any raw HTML
+        # start the output with an over-arching <div>
+        # set up margins/etc
+        # Optionally include HTML header
         out = self.get_margin_linebreak(context)
-        out += self.parse_HTML(context)
+        skip_html = self.get_default(context, "skip_html", False)
+        if not skip_html:
+            out += self.parse_HTML(context)
         out += self.parse_comments(context)
         # header for the children...
-        # Question: should HTML come before the div?
         style = self.get_margin_style(context)
         background = self.get_colorize_color()
         if background:
@@ -1012,10 +1016,8 @@ class GeneratorEngine(TemplateEngine):
         return []
 
 
-# We need to define all of the template classes and register them with the engine factory
-# To do this, we  import all of the modules that contain generator and layout template classes
+# We need to define all the template classes and register them with the engine factory
+# To do this, we  import all the modules that contain generator and layout template classes
 # here.  The individual classes are responsible for registering them with the factory.
 # For now, this takes the form of a simple import of a part of modules.  It could eventually
 # become a more automated system (e.g. user-defined, etc).
-from . import template_layouts
-from . import template_generators
