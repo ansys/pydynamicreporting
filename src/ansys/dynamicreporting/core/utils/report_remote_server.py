@@ -103,7 +103,7 @@ class Server:
     Implements REST protocols.
     """
 
-    def __init__(self, url=None, username=None, password=None):
+    def __init__(self, url=None, username=None, password=None, ansys_version=None):
         # Check on the validity of url formatting
         if url is not None:
             o = urlparse(url)
@@ -112,6 +112,7 @@ class Server:
                 if print_allowed():
                     print("Error: invalid URL. Setting it to None")
                 url = None
+        self._ansys_version = ansys_version
         self.cur_url = url
         self.cur_username = username
         self.cur_password = password
@@ -858,7 +859,13 @@ class Server:
         return url
 
     def export_report_as_html(
-        self, report_guid, directory_name, query=None, filename="index.html", no_inline_files=False
+        self,
+        report_guid,
+        directory_name,
+        query=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
     ):
         if query is None:
             query = {}
@@ -867,8 +874,15 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query)
+        _ansys_version = self._ansys_version
+        if ansys_version:
+            _ansys_version = ansys_version
         worker = ReportDownloadHTML(
-            url=url, directory=directory_path, filename=filename, no_inline_files=no_inline_files
+            url=url,
+            directory=directory_path,
+            filename=filename,
+            no_inline_files=no_inline_files,
+            ansys_version=_ansys_version,
         )
         worker.download()
 
@@ -1491,7 +1505,12 @@ def launch_local_database_server(
     # Check to see if there is already a server running on this URI
     # build a server and try it
 
-    tmp_server = Server(url=f"http://127.0.0.1:{port}", username=username, password=password)
+    tmp_server = Server(
+        url=f"http://127.0.0.1:{port}",
+        username=username,
+        password=password,
+        ansys_version=ansys_version,
+    )
     try:
         # validate will throw exceptions or return a float.
         _ = tmp_server.validate()
