@@ -35,6 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "django~=4.2",
+    "psycopg[binary]~=3.1",
     "django-guardian>=2.4.0",
     "python-pptx==0.6.19",
     "tzlocal>=5.2",
