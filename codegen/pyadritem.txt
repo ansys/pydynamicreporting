@@ -95,7 +95,7 @@ class Item:
         self.item_image = None
         """Image object (Image and PNG binary files)"""
         self.item_scene = None
-        """3D scene (AVZ, PLY, SCDOC, and STL files)"""
+        """3D scene (AVZ, PLY, SCDOC, GLB, and STL files)"""
         # Attributes for the table items
         self.table_attr = table_attr
         self.item_table = None

@@ -66,7 +66,7 @@ To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@a
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.7 through 3.11 on
+The ``pydynamicreporting`` package supports Python 3.9 through 3.12 on
 Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -203,7 +203,7 @@ PyDynamicReporting is licensed under the MIT license.
 
 PyDynamicReporting makes no commercial claim over Ansys whatsoever.
 This library extends the functionality of Ansys Dynamic Reporting by
-adding a Python interface to Ansys Dynamic Reproting without changing
+adding a Python interface to Ansys Dynamic Reporting without changing
 the core behavior or license of the original software. The use of
 PyDynamicReporting requires a legally licensed copy of an Ansys product
 that supports Ansys Dynamic Reporting.

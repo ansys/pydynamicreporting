@@ -310,7 +310,9 @@ class Service:
         if self._url is not None:  # pragma: no cover
             self.logger.warning("Already connected to a dynamic reporting service.\n")
             return
-        self.serverobj = report_remote_server.Server(url=url, username=username, password=password)
+        self.serverobj = report_remote_server.Server(
+            url=url, username=username, password=password, ansys_version=self._ansys_version
+        )
         try:
             self.serverobj.validate()
         except Exception:
@@ -471,7 +473,10 @@ class Service:
                 self.logger.error(f"Service started on port {self._port}")
                 raise StartingServiceError
             self.serverobj = report_remote_server.Server(
-                url=f"http://127.0.0.1:{self._port}", username=username, password=password
+                url=f"http://127.0.0.1:{self._port}",
+                username=username,
+                password=password,
+                ansys_version=self._ansys_version,
             )
 
         else:  # pragma: no cover
@@ -544,7 +549,7 @@ class Service:
         except Exception:
             pass
         if v is False:
-            self.logger.warning("Error validating the connected service. Can't shut it down.\n")
+            self.logger.error("Error validating the connected service. Can't shut it down.\n")
         else:
             # If coming from a docker image, clean that up
             try:
@@ -556,7 +561,7 @@ class Service:
                     self.logger.info("Told service to shutdown.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.warning(f"Problem shutting down service.\n{str(e)}\n")
+                self.logger.error(f"Problem shutting down service.\n{str(e)}\n")
                 pass
 
         if self._delete_db and self._db_directory:
@@ -793,10 +798,11 @@ class Service:
         ----------
         items : list
             List of objects to delete. The objects can be of one of these types:
-            ``"Item"``, ``"Session"``, or ``Dataset``.
+            ``"Item"``, ``Report``, ``"Session"`` or ``Dataset``.
 
             .. note:: Deleting a session or a dataset also deletes all items
-               associated with the session or dataset.
+               associated with the session or dataset. Deleting a Report also
+               deletes all its children.
 
         Examples
         --------
@@ -807,13 +813,21 @@ class Service:
             adr_service.connect(url='http://localhost:8020')
             all_items = adr_service.query(type='Item')
             adr_service.delete(all_items)
+            my_report = adr_service.get_report(report_name='My Report')
+            adr_service.delete([my_report])
         """
         if type(items) is not list:
             self.logger.error("Error: passed argument is not a list")
             raise TypeError
         items_to_delete = [x.item for x in items if type(x) is Item]
+        reports_to_delete = [x for x in items if type(x) is Report]
+        if reports_to_delete:
+            self.logger.warning(
+                "Warning: Report deletion will result in deletion of " "all its children templates"
+            )
+            items_to_delete.extend([x.report for x in reports_to_delete])
         # Check the input
-        not_items = [x for x in items if type(x) is not Item]
+        not_items = [x for x in items if (type(x) is not Item) and (type(x) is not Report)]
         if not_items:  # pragma: no cover
             session = [x for x in not_items if type(x) is report_objects.SessionREST]
             if session:
