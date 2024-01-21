@@ -20,7 +20,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# todo: force user to set this
 SECRET_KEY = os.environ['CEI_NEXUS_SECRET_KEY']
 
 # SECURITY WARNING: do not run with debug turned on in production!
@@ -124,8 +123,7 @@ STATICFILES_FINDERS = [
 # (STATICFILES_DIRS) in your settings file where Django will also look for static files.
 STATICFILES_DIRS = [
     # collect files from utils/remote under STATIC_ROOT: of form (prefix, path)
-    ("pyadr", os.path.join(BASE_DIR, "pyadr").replace('\\', '/')),  # todo
-    ("utils/remote", os.path.join(BASE_DIR, "utils", "remote").replace('\\', '/')),
+    # ("pyadr", os.path.join(BASE_DIR, "pyadr").replace('\\', '/')),  # todo
     ("ansys/nexus", os.path.abspath(os.path.join(BASE_DIR, "..", "ansys", "nexus")).replace('\\', '/')),
 ]
 
