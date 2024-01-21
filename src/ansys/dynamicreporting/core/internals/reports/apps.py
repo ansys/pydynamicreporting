@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class ReportsConfig(AppConfig):
-    name = 'reports'
+    name = "ansys.dynamicreporting.core.internals.reports"
+    label = "reports"
