@@ -109,9 +109,8 @@ MEDIA_URL = os.environ.get('CEI_NEXUS_MEDIA_URL_PREFIX', '/media/')
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static').replace('\\', '/')
-
 # relative URL to use when referring to static files located in STATIC_ROOT.
-STATIC_URL = '/static/'
+STATIC_URL = os.environ.get('CEI_NEXUS_STATIC_URL_PREFIX', '/static/')
 
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",

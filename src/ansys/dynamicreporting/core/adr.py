@@ -219,7 +219,7 @@ class ADR:
                 if created:
                     nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
-        # collecstatic
+        # collectstatic
         try:
             management.call_command('collectstatic', '--no-input')
         except Exception as e:
