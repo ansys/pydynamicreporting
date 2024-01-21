@@ -524,7 +524,7 @@ class ObjectPermsFilter:
 
         """
         # if ACLs is disabled
-        if not getattr(settings, 'ENABLE_ACLS', False):
+        if request is None or not getattr(settings, 'ENABLE_ACLS', False):
             return queryset
 
         opts = queryset.model._meta
