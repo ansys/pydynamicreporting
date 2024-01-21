@@ -34,7 +34,7 @@ from ..report_framework.acls import check_obj_perm
 from ..report_framework.base_model_managers import NexusQuerySet
 from ..report_framework.utils import get_render_error_html
 from ..data.geofile_rendering import render_scene, render_file
-from ..data.managers import SessionManager, DatasetManager, ItemManager, ItemCategoryManager
+from .managers import SessionManager, DatasetManager, ItemManager, ItemCategoryManager
 from dateutil import parser
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
