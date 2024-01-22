@@ -102,14 +102,14 @@ USE_I18N = True
 USE_TZ = True
 
 media_dir = os.environ.get('CEI_NEXUS_LOCAL_MEDIA_DIR', local_db_dir or BASE_DIR)
-MEDIA_ROOT = os.path.join(media_dir, "media").replace('\\', '/')
+MEDIA_ROOT = os.environ.get('CEI_NEXUS_MEDIA_ROOT', os.path.join(media_dir, "media").replace('\\', '/'))
 MEDIA_URL = os.environ.get('CEI_NEXUS_MEDIA_URL_PREFIX', '/media/')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static').replace('\\', '/')
 # relative URL to use when referring to static files located in STATIC_ROOT.
+STATIC_ROOT = os.environ.get('CEI_NEXUS_STATIC_ROOT', os.path.join(BASE_DIR, 'static').replace('\\', '/'))
 STATIC_URL = os.environ.get('CEI_NEXUS_STATIC_URL_PREFIX', '/static/')
 
 STATICFILES_FINDERS = [
@@ -122,7 +122,6 @@ STATICFILES_FINDERS = [
 # (STATICFILES_DIRS) in your settings file where Django will also look for static files.
 STATICFILES_DIRS = [
     # collect files from utils/remote under STATIC_ROOT: of form (prefix, path)
-    # ("pyadr", os.path.join(BASE_DIR, "pyadr").replace('\\', '/')),  # todo
     ("ansys/nexus", os.path.abspath(os.path.join(BASE_DIR, "..", "ansys", "nexus")).replace('\\', '/')),
 ]
 
