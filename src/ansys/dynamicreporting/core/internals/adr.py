@@ -37,7 +37,8 @@ class ADR:
 
     def __init__(
             self,
-            ansys_installation,
+            ansys_installation: str,
+            *,
             db_directory: str = None,
             media_directory: str = None,
             static_directory: str = None,
