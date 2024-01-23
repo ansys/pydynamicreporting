@@ -2,24 +2,16 @@ import os
 import re
 from typing import Optional
 
-from django.shortcuts import render
+from django.http import HttpRequest
 
-from .adr_utils import get_logger
-from .exceptions import (
+from ..adr_utils import get_logger
+from ..exceptions import (
     InvalidAnsysPath,
     AnsysVersionAbsentError,
     ImproperlyConfiguredError,
     DatabaseMigrationError,
     StaticFilesCollectionError
 )
-from django.http import HttpRequest
-from django.template.loader import render_to_string
-
-from .internals.reports.engine import TemplateEngine
-from django.core import management
-from django.contrib.auth.models import User
-from django.contrib.auth.models import Group
-from django.contrib.auth.models import Permission
 
 
 class BaseModel:
@@ -205,6 +197,8 @@ class ADR:
         except Exception as e:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
+
+        from django.core import management
         # migrations
         try:
             management.call_command('migrate')
@@ -212,6 +206,10 @@ class ADR:
             self._logger.error(f"{e}")
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
+            from django.contrib.auth.models import User
+            from django.contrib.auth.models import Group
+            from django.contrib.auth.models import Permission
+
             if not User.objects.filter(is_superuser=True).exists():
                 user = User.objects.create_superuser("nexus", "", "cei")
                 # include the nexus group (with all permissions)
@@ -258,4 +256,3 @@ class ADR:
 
     def export_report_as_pdf(self):
         ...
-
