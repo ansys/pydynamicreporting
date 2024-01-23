@@ -128,11 +128,12 @@ class ADR:
                     nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
         # collectstatic
-        try:
-            management.call_command('collectstatic', '--no-input')
-        except Exception as e:
-            self._logger.error(f"{e}")
-            raise StaticFilesCollectionError(extra_detail=str(e))
+        if self._static_directory is not None:
+            try:
+                management.call_command('collectstatic', '--no-input')
+            except Exception as e:
+                self._logger.error(f"{e}")
+                raise StaticFilesCollectionError(extra_detail=str(e))
 
     def put_objects(self):
         ...
