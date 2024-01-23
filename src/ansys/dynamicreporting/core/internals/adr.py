@@ -111,7 +111,7 @@ class ADR:
         from django.core import management
         # migrations
         try:
-            management.call_command('migrate')
+            management.call_command('migrate', verbosity=0)
         except Exception as e:
             self._logger.error(f"{e}")
             raise DatabaseMigrationError(extra_detail=str(e))
@@ -130,7 +130,7 @@ class ADR:
         # collectstatic
         if self._static_directory is not None:
             try:
-                management.call_command('collectstatic', '--no-input')
+                management.call_command('collectstatic', '--no-input', verbosity=0)
             except Exception as e:
                 self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
