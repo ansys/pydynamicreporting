@@ -71,3 +71,4 @@ venv/
 # Ignore Sphinx files
 doc/_build
 pip-wheel-metadata/
+src/ansys/dynamicreporting/core/internals/static/
