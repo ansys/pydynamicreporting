@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'guardian',
-    'ansys.dynamicreporting.core.internals.report_framework',
+    'ansys.dynamicreporting.core.internals.report_framework.apps.NexusStaticFilesConfig',
     'ansys.dynamicreporting.core.internals.website',
     'ansys.dynamicreporting.core.internals.data',
     'ansys.dynamicreporting.core.internals.reports',
