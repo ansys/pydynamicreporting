@@ -15,7 +15,8 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+ANSYS_INSTALLATION_DIR = os.environ['CEI_NEXUS_INSTALLATION_DIR']
+CEI_APEX_SUFFIX = "242"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -102,14 +103,14 @@ USE_I18N = True
 USE_TZ = True
 
 media_dir = os.environ.get('CEI_NEXUS_LOCAL_MEDIA_DIR', local_db_dir or BASE_DIR)
-MEDIA_ROOT = os.environ.get('CEI_NEXUS_MEDIA_ROOT', os.path.join(media_dir, "media").replace('\\', '/'))
+MEDIA_ROOT = os.path.join(media_dir, "media").replace('\\', '/')
 MEDIA_URL = os.environ.get('CEI_NEXUS_MEDIA_URL_PREFIX', '/media/')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-# relative URL to use when referring to static files located in STATIC_ROOT.
 STATIC_ROOT = os.environ.get('CEI_NEXUS_STATIC_ROOT', os.path.join(BASE_DIR, 'static').replace('\\', '/'))
+# relative URL to use when referring to static files located in STATIC_ROOT.
 STATIC_URL = os.environ.get('CEI_NEXUS_STATIC_URL_PREFIX', '/static/')
 
 STATICFILES_FINDERS = [
@@ -121,8 +122,15 @@ STATICFILES_FINDERS = [
 # In addition to using a static/ directory inside your apps, you can define a list of directories
 # (STATICFILES_DIRS) in your settings file where Django will also look for static files.
 STATICFILES_DIRS = [
-    # collect files from utils/remote under STATIC_ROOT: of form (prefix, path)
-    ("ansys/nexus", os.path.abspath(os.path.join(BASE_DIR, "..", "ansys", "nexus")).replace('\\', '/')),
+    os.path.abspath(
+            os.path.join(ANSYS_INSTALLATION_DIR, f"nexus{CEI_APEX_SUFFIX}", "django", "static")
+        ).replace('\\', '/'),
+    (
+        f"ansys{CEI_APEX_SUFFIX}/nexus",
+        os.path.abspath(
+            os.path.join(ANSYS_INSTALLATION_DIR, f"nexus{CEI_APEX_SUFFIX}", f"ansys{CEI_APEX_SUFFIX}", "nexus")
+        ).replace('\\', '/')
+    ),
 ]
 
 # https://docs.djangoproject.com/en/3.2/releases/3.2/#customizing-type-of-auto-created-primary-keys
@@ -137,4 +145,3 @@ GUARDIAN_MONKEY_PATCH = False
 # If ANONYMOUS_USER_NAME is set to None, anonymous user object permissions-are disabled.
 # Defaults to "AnonymousUser".
 ANONYMOUS_USER_NAME = None
-
