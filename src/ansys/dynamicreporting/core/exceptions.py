@@ -38,6 +38,12 @@ class InvalidAnsysPath(PyadrException):
     detail = "Invalid ANSYS installation path"
 
 
+class InvalidPath(PyadrException):
+    """Exception raised if ANSYS installation path is invalid."""
+
+    detail = "Invalid path provided"
+
+
 class AnsysVersionAbsentError(PyadrException):
     """Exception raised when ANSYS version is absent."""
 
@@ -89,10 +95,10 @@ class ImproperlyConfiguredError(PyadrException):
 class DatabaseMigrationError(PyadrException):
     """Exception raised if database migrations fails"""
 
-    detail = "The database setup failed to complete."
+    detail = "The database setup failed to complete"
 
 
 class StaticFilesCollectionError(PyadrException):
     """Exception raised if collectstatic fails"""
 
-    detail = "The collection of static files to the target directory failed."
+    detail = "The collection of static files to the target directory failed"
