@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Optional
+from pathlib import Path
 
 from django.http import HttpRequest
 
@@ -10,7 +10,8 @@ from ..exceptions import (
     AnsysVersionAbsentError,
     ImproperlyConfiguredError,
     DatabaseMigrationError,
-    StaticFilesCollectionError
+    StaticFilesCollectionError,
+    InvalidPath
 )
 
 
@@ -26,109 +27,6 @@ class BaseModel:
         return "%s object (%s)" % (self.__class__.__name__, self.guid)
 
 
-class Item(BaseModel):
-
-    @property
-    def tags(self):
-        ...
-
-    def set_tags(self):
-        ...
-
-    def get_tags(self):
-        ...
-
-    def add_tag(self):
-        ...
-
-    # todo: abstract or overrideable
-    def set_content(self):
-        ...
-
-    def create(self):
-        ...
-
-    def save(
-            self,
-            *args,
-    ):
-        ...
-
-    def delete(self):
-        ...
-
-    def visualize(self):  # or render()
-        ...
-
-
-class String(Item):
-    ...
-
-
-class Text(String):
-    ...
-
-
-class Table(Item):
-    ...
-
-
-class Plot(Table):
-    ...
-
-
-class Tree(Item):
-    ...
-
-
-class Scene(Item):
-    ...
-
-
-class Image(Item):
-    ...
-
-
-class HTML(Item):
-    ...
-
-
-class Animation(Item):
-    ...
-
-
-class File(Item):
-    ...
-
-
-class Session(BaseModel):
-    ...
-
-
-class Dataset(BaseModel):
-    ...
-
-
-class Template(BaseModel):
-    def visualize(self):
-        ...
-
-    def get_html(self):
-        ...
-
-    def render(self):
-        ...
-
-    def export(self):
-        ...
-
-    def set_filter(self):
-        ...
-
-    def set_params(self):
-        ...
-
-
 class ADR:
     """
     from ansys.dynamicreporting.core.adr import ADR
@@ -139,7 +37,7 @@ class ADR:
 
     def __init__(
             self,
-            ansys_installation: Optional[str] = None,
+            ansys_installation,
             db_directory: str = None,
             media_directory: str = None,
             static_directory: str = None,
@@ -147,43 +45,54 @@ class ADR:
             opts: dict = None,
             request: HttpRequest = None
     ) -> None:
-        self._db_directory = db_directory
-        self._media_directory = media_directory
-        self._static_directory = static_directory
+        self._db_directory = None
+        self._media_directory = None
+        self._static_directory = None
         self._logger = get_logger(logfile)
         self._request = request  # must be passed when used in the context of a webserver.
 
-        install_dir = ansys_installation
-        if install_dir is not None:
-            # Backward compatibility: if the path passed is only up to the version directory,
-            # append the CEI directory
-            if not install_dir.endswith("CEI"):
-                install_dir = os.path.join(install_dir, "CEI")
-                # verify new path
-                if not os.path.isdir(install_dir):
-                    # Option for local development build
-                    if "CEIDEVROOTDOS" in os.environ:
-                        install_dir = os.environ["CEIDEVROOTDOS"]
-                    else:
-                        raise InvalidAnsysPath(install_dir)
-            # try to get version from install path
-            matches = re.search(r".*v([0-9]{3}).*", install_dir)
-            if matches is None:
-                # Option for local development build
-                if os.environ.get("ANSYS_REL_INT_I") is not None:
-                    self._ansys_version = int(os.environ.get("ANSYS_REL_INT_I"))
-                else:
-                    raise AnsysVersionAbsentError
-            else:
-                try:
-                    self._ansys_version = int(matches.group(1))
-                except IndexError:
-                    raise AnsysVersionAbsentError
-
+        if ansys_installation is None:
+            raise InvalidAnsysPath(extra_detail="Please pass a Ansys Installation path")
+        # CAVEAT: note that "" will take the current directory
+        install_dir = Path(ansys_installation)
+        if not os.path.isdir(install_dir):
+            raise InvalidAnsysPath(extra_detail=str(install_dir))
+        if install_dir.stem != "CEI":
+            install_dir = install_dir / "CEI"
         self._ansys_installation = install_dir
+        os.environ['CEI_NEXUS_INSTALLATION_DIR'] = str(install_dir)
+
+        # try to get version from install path
+        matches = re.search(r".*v([0-9]{3}).*", ansys_installation)
+        if matches is None:
+            raise AnsysVersionAbsentError
+        try:
+            self._ansys_version = int(matches.group(1))
+        except IndexError:
+            raise AnsysVersionAbsentError
+
+        if db_directory is not None:
+            self._db_directory = self._check_dir(db_directory)
+            os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+
+        if media_directory is not None:
+            self._media_directory = self._check_dir(media_directory)
+            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+
+        if static_directory is not None:
+            self._static_directory = self._check_dir(static_directory)
+            os.environ["CEI_NEXUS_STATIC_ROOT"] = static_directory
+
         if opts is None:
             opts = {}
         self._configure(opts)
+
+    def _check_dir(self, dir_):
+        dir_path = Path(dir_)
+        if not dir_path.is_dir():
+            self._logger.error(f"Invalid directory path: {dir_}")
+            raise InvalidPath(extra_detail=dir_)
+        return dir_path
 
     def _configure(self, opts: dict) -> None:
         for opt, value in opts.items():
