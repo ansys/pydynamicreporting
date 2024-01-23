@@ -16,7 +16,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 ANSYS_INSTALLATION_DIR = os.environ['CEI_NEXUS_INSTALLATION_DIR']
-CEI_APEX_SUFFIX = "242"
+CEI_APEX_SUFFIX = os.environ['CEI_APEX_SUFFIX']
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -109,7 +109,7 @@ MEDIA_URL = os.environ.get('CEI_NEXUS_MEDIA_URL_PREFIX', '/media/')
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_ROOT = os.environ.get('CEI_NEXUS_STATIC_ROOT', os.path.join(BASE_DIR, 'static').replace('\\', '/'))
+STATIC_ROOT = os.environ.get('CEI_NEXUS_LOCAL_STATIC_DIR', os.path.join(BASE_DIR, 'static').replace('\\', '/'))
 # relative URL to use when referring to static files located in STATIC_ROOT.
 STATIC_URL = os.environ.get('CEI_NEXUS_STATIC_URL_PREFIX', '/static/')
 

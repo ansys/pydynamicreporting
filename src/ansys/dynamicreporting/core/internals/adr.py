@@ -2,6 +2,7 @@ import os
 import re
 from pathlib import Path
 
+from django.core import management
 from django.http import HttpRequest
 
 from ..adr_utils import get_logger
@@ -68,25 +69,37 @@ class ADR:
         if matches is None:
             raise AnsysVersionAbsentError
         try:
-            self._ansys_version = int(matches.group(1))
+            self._ansys_version = matches.group(1)
+            os.environ["CEI_APEX_SUFFIX"] = self._ansys_version
         except IndexError:
             raise AnsysVersionAbsentError
+
+        if opts is None:
+            opts = {}
+        os.environ.update(opts)
 
         if db_directory is not None:
             self._db_directory = self._check_dir(db_directory)
             os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+        else:
+            if "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
+                self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
             os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+        else:
+            if "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
+                self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
 
         if static_directory is not None:
             self._static_directory = self._check_dir(static_directory)
-            os.environ["CEI_NEXUS_STATIC_ROOT"] = static_directory
+            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
+        else:
+            if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
+                self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
-        if opts is None:
-            opts = {}
-        self._configure(opts)
+        self._configure()
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
@@ -95,9 +108,7 @@ class ADR:
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
-    def _configure(self, opts: dict) -> None:
-        for opt, value in opts.items():
-            os.environ[opt] = value
+    def _configure(self) -> None:
         os.environ.setdefault("DJANGO_SETTINGS_MODULE",
                               "ansys.dynamicreporting.core.internals.report_framework.settings")
         # django.setup() may only be called once.
@@ -108,25 +119,26 @@ class ADR:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
-        from django.core import management
-        # migrations
-        try:
-            management.call_command('migrate', verbosity=0)
-        except Exception as e:
-            self._logger.error(f"{e}")
-            raise DatabaseMigrationError(extra_detail=str(e))
-        else:
-            from django.contrib.auth.models import User
-            from django.contrib.auth.models import Group
-            from django.contrib.auth.models import Permission
+        if self._db_directory is not None:
+            # migrations
+            try:
+                management.call_command('migrate', verbosity=0)
+            except Exception as e:
+                self._logger.error(f"{e}")
+                raise DatabaseMigrationError(extra_detail=str(e))
+            else:
+                from django.contrib.auth.models import User
+                from django.contrib.auth.models import Group
+                from django.contrib.auth.models import Permission
 
-            if not User.objects.filter(is_superuser=True).exists():
-                user = User.objects.create_superuser("nexus", "", "cei")
-                # include the nexus group (with all permissions)
-                nexus_group, created = Group.objects.get_or_create(name='nexus')
-                if created:
-                    nexus_group.permissions.set(Permission.objects.all())
-                nexus_group.user_set.add(user)
+                if not User.objects.filter(is_superuser=True).exists():
+                    user = User.objects.create_superuser("nexus", "", "cei")
+                    # include the nexus group (with all permissions)
+                    nexus_group, created = Group.objects.get_or_create(name='nexus')
+                    if created:
+                        nexus_group.permissions.set(Permission.objects.all())
+                    nexus_group.user_set.add(user)
+
         # collectstatic
         if self._static_directory is not None:
             try:
