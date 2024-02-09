@@ -11,8 +11,9 @@ from typing import Any
 
 import pytz
 from django.core import management
-from django.http import HttpRequest
 from django.db.models import Model
+from django.http import HttpRequest
+from django.utils import timezone
 
 from ..adr_utils import get_logger, table_attr
 from ..exceptions import (
@@ -23,10 +24,6 @@ from ..exceptions import (
     StaticFilesCollectionError,
     InvalidPath
 )
-
-
-def get_date():
-    return datetime.now(pytz.utc)
 
 
 class BaseMetaclass(ABCMeta):
@@ -59,7 +56,7 @@ class BaseModel(metaclass=BaseMetaclass):
     _orm_instance: Model = field(init=False, default=None)  # tracks the corresponding ORM instance
     guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
-    date: datetime = field(compare=False, kw_only=True, default_factory=get_date)
+    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -316,9 +313,9 @@ class ADR:
             db_directory: str = None,
             media_directory: str = None,
             static_directory: str = None,
-            logfile: str = None,
             opts: dict = None,
-            request: HttpRequest = None
+            request: HttpRequest = None,
+            logfile: str = None
     ) -> None:
         self._db_directory = None
         self._media_directory = None
