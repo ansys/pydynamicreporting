@@ -56,7 +56,7 @@ class BaseMetaclass(ABCMeta):
 @dataclass(repr=False)
 class BaseModel(metaclass=BaseMetaclass):
     _saved: bool = field(init=False, default=False)  # tracks if the object is saved in the db
-    _orm_instance: Model = field(init=False, default=False)  # tracks the corresponding ORM instance
+    _orm_instance: Model = field(init=False, default=None)  # tracks the corresponding ORM instance
     guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=get_date)
