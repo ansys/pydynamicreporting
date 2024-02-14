@@ -1,15 +1,13 @@
-import datetime
 import os
 import re
 import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Type
 
-import pytz
 from django.core import management
 from django.db.models import Model
 from django.http import HttpRequest
@@ -52,11 +50,11 @@ class BaseMetaclass(ABCMeta):
 
 @dataclass(repr=False)
 class BaseModel(metaclass=BaseMetaclass):
-    _saved: bool = field(init=False, default=False)  # tracks if the object is saved in the db
-    _orm_instance: Model = field(init=False, default=None)  # tracks the corresponding ORM instance
     guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
+    _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
+    _orm_instance: Model = field(init=False, compare=False, default=None)  # tracks the corresponding ORM instance
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -105,78 +103,139 @@ class BaseModel(metaclass=BaseMetaclass):
                 tags.remove(tag)
         self._rebuild_tags(tags)
 
-    @abstractmethod
-    def create(self):
-        pass
+    def save(self):
+        self._orm_instance.save()
 
-    @abstractmethod
-    def save(self, *args):
-        pass
-
-    @abstractmethod
     def delete(self):
+        self._orm_instance.delete()
+
+    @abstractmethod
+    def create(self, **kwargs):
         pass
+
+    @abstractmethod
+    def post_init(self):
+        pass
+
+    def __post_init__(self):
+        self.post_init()
 
 
 class Validator(ABC):
-    ...
+    def __init__(self, *, default=None):
+        self._default = default
+
+    def __set_name__(self, owner, name):
+        self._name = "_" + name
+
+    def __get__(self, obj, obj_type=None):
+        if obj is None:
+            return self._default
+
+        return getattr(obj, self._name, self._default)
+
+    def __set__(self, obj, value):
+        self.validate(value)
+        setattr(obj, self._name, value)
+
+    @abstractmethod
+    def validate(self, value):
+        pass
 
 
 class StringContent(Validator):
-    ...
+    def validate(self, value):
+        pass
+
+
+class ImageContent(Validator):
+    def validate(self, value):
+        pass
+
+
+class AnimContent(Validator):
+    def validate(self, value):
+        pass
+
+
+class TableContent(Validator):
+    def validate(self, value):
+        pass
+
+
+class TreeContent(Validator):
+    def validate(self, value):
+        pass
+
+
+class SceneContent(Validator):
+    def validate(self, value):
+        pass
+
+
+class FileContent(Validator):
+    def validate(self, value):
+        pass
+
+
+class HTMLContent(Validator):
+    def validate(self, value):
+        pass
 
 
 @dataclass(repr=False)
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     source: str = field(compare=False, kw_only=True, default="")
-    type: str = field(compare=False, kw_only=True, default="")
+    sequence: int = field(compare=False, kw_only=True, default=0)
+    session: str = field(compare=False, kw_only=True, default="")
+    dataset: str = field(compare=False, kw_only=True, default="")
+    _type: str = field(init=False, compare=False, default="none")
 
-    @abstractmethod
-    def set_content(self):
+    @property
+    def type(self):
+        return self._type
+
+    def post_init(self):
+        from .data.models import Item as ItemModel
+        self._orm_instance = ItemModel()
+
+    def create(self, **kwargs):
+        pass
+
+    def save(self):
+        self._orm_instance.save()
+
+    def delete(self):
+        # todo: delete sessions, datasets
         pass
 
     @abstractmethod
     def render(self):
         pass
-
-    def create(self):
-        ...
-
-    def save(
-            self,
-            *args,
-    ):
-        ...
-
-    def delete(self):
-        ...
 
 
 @dataclass(repr=False)
 class String(Item):
-    content = StringContent()
+    _type: str = "string"
+    content: StringContent = StringContent()
 
     def render(self):
-        pass
-
-    def set_content(self):
         pass
 
 
 @dataclass(repr=False)
 class Text(String):
-    ...
+    pass
 
 
 @dataclass(repr=False)
 class Table(Item):
+    content: TableContent = TableContent()
+    _type: str = "table"
     _properties: list = field(init=False, default=table_attr)
 
     def render(self):
-        pass
-
-    def set_content(self):
         pass
 
 
@@ -185,101 +244,90 @@ class Plot(Table):
     def render(self):
         pass
 
-    def set_content(self):
-        pass
-
 
 @dataclass(repr=False)
 class Tree(Item):
-    def render(self):
-        pass
+    _type: str = "tree"
+    content: TreeContent = TreeContent()
 
-    def set_content(self):
+    def render(self):
         pass
 
 
 @dataclass(repr=False)
 class Scene(Item):
-    def render(self):
-        pass
+    _type: str = "scene"
+    content: SceneContent = SceneContent()
 
-    def set_content(self):
+    def render(self):
         pass
 
 
 @dataclass(repr=False)
 class Image(Item):
-    def render(self):
-        pass
+    _type: str = "image"
+    content: ImageContent = ImageContent()
 
-    def set_content(self):
+    def render(self):
         pass
 
 
 @dataclass(repr=False)
 class HTML(Item):
-    def render(self):
-        pass
+    _type: str = "html"
+    content: HTMLContent = HTMLContent()
 
-    def set_content(self):
+    def render(self):
         pass
 
 
 @dataclass(repr=False)
 class Animation(Item):
-    def render(self):
-        pass
+    _type: str = "anim"
+    content: AnimContent = AnimContent()
 
-    def set_content(self):
+    def render(self):
         pass
 
 
 @dataclass(repr=False)
 class File(Item):
-    def render(self):
-        pass
+    _type: str = "file"
+    content: FileContent = FileContent()
 
-    def set_content(self):
+    def render(self):
         pass
 
 
 @dataclass(repr=False)
 class Session(BaseModel):
-    def create(self):
-        pass
+    def post_init(self):
+        from .data.models import Session as SessionModel
+        self._orm_instance = SessionModel()
 
-    def save(self, *args):
+    def create(self, **kwargs):
         pass
-
-    def delete(self):
-        pass
-
-    ...
 
 
 @dataclass(repr=False)
 class Dataset(BaseModel):
-    def create(self):
-        pass
+    def post_init(self):
+        from .data.models import Dataset as DatasetModel
+        self._orm_instance = DatasetModel()
 
-    def save(self, *args):
+    def create(self, **kwargs):
         pass
-
-    def delete(self):
-        pass
-
-    ...
 
 
 @dataclass(repr=False)
 class Template(BaseModel):
-    def create(self):
-        pass
+    params: str = field(compare=False, kw_only=True, default="")
 
-    def save(self, *args):
-        pass
+    def post_init(self):
+        from .reports.models import Template as TemplateModel
+        self._orm_instance = TemplateModel()
 
-    def delete(self):
+    def create(self, **kwargs):
         pass
 
     def render(self):
@@ -297,13 +345,11 @@ class Template(BaseModel):
 
 class ADR:
     """
-        >>> from ansys.dynamicreporting.core import ADR
-        >>> opts = { "CEI_NEXUS_DEBUG" : "0",
-                     "CEI_NEXUS_SECRET_KEY":"h1kuvl)j#e6_7rbhr&f@_3%)$nle*b8t$82wta*e3wu-(5v$$o",
-                     "CEI_NEXUS_LOCAL_DB_DIR":r"C:\cygwin64\home\vrajendr\ogdocex" }
-        >>> adr = ADR(r"C:\Program Files (x86)\ANSYSv231", opts = opts)
-        >>> first_text = adr.create_item(content="<h1>My Title</h1>This is the first example")
-        >>> content = adr.get_report_content()
+        from ansys.dynamicreporting.core import ADR, Table
+        opts = { "CEI_NEXUS_DEBUG" : "0", "CEI_NEXUS_SECRET_KEY":"", "CEI_NEXUS_LOCAL_DB_DIR":r"C:\cygwin64\home\vrajendr\ogdocex" }
+        adr = ADR(r"C:\Program Files (x86)\ANSYSv231", opts = opts)
+        adr.configure()
+        table = adr.create_item(Table, name="table1", content={}, tags="dp=1 part=bumper")
     """
 
     def __init__(
@@ -369,8 +415,6 @@ class ADR:
             if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
-        self._configure()
-
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
         if not dir_path.is_dir():
@@ -378,7 +422,7 @@ class ADR:
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
-    def _configure(self) -> None:
+    def configure(self, collect_static=False) -> None:
         os.environ.setdefault("DJANGO_SETTINGS_MODULE",
                               "ansys.dynamicreporting.core.internals.report_framework.settings")
         # django.setup() may only be called once.
@@ -410,16 +454,26 @@ class ADR:
                     nexus_group.user_set.add(user)
 
         # collectstatic
-        if self._static_directory is not None:
+        if collect_static and self._static_directory is not None:
             try:
                 management.call_command('collectstatic', '--no-input', verbosity=0)
             except Exception as e:
                 self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
-    def create_item(self, type, content):
-        # pass in name, item type (Enum?), payload and tags
-        ...
+    def create_item(self, item_type: Type[Item], **kwargs: Any):
+        if not isinstance(item_type, Item):
+            raise TypeError(f"{item_type} is not valid")
+        item = item_type()
+        valid_fields = (f.name for f in fields(item_type) if not f.name.startswith("_"))
+        for kwarg, value in kwargs.items():
+            if kwarg not in valid_fields:
+                detail = f"{item_type.__name__} has no attribute {kwarg}"
+                self._logger.error(detail)
+                raise AttributeError(detail)
+            setattr(item, kwarg, value)
+        item.save()
+        return item
 
     def create_template(self):
         # pass in name, parent, template type (Enum), params, filters, properties, HTML header
@@ -441,7 +495,36 @@ class ADR:
     def render_report(self):  # replacement for visualize_report
         ...
 
-    def query(self, query_filter=""):
+    def query(self, query_type, query_filter=""):
+        """
+                Query the database.
+
+                .. _Query Expressions: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
+
+                Parameters
+                ----------
+                query_type : str, optional
+                    Type of objects to query. The default is ``"Item"``. Options are ``"Item"``,
+                    ``"Session"``, and ``"Dataset"``.
+                query_filter : str, optional
+                    Query string for filtering. The default is ``""``. The syntax corresponds
+                    to the syntax for Ansys Dynamic Reporting. For more information, see
+                    _Query Expressions in the documentation for Ansys Dynamic Reporting.
+
+                Returns
+                -------
+                list
+                    List of queried objects.
+
+                Examples
+                --------
+                ::
+
+                    import ansys.dynamicreporting.core as adr
+                    adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+                    ret = adr_service.connect()
+                    imgs = adr_service.query(query_type='Item', filter='A|i_type|cont|image;')
+        """
         ...
 
     def get_list_reports(self):
