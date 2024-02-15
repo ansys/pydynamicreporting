@@ -52,7 +52,6 @@ class BaseMetaclass(ABCMeta):
 class BaseModel(metaclass=BaseMetaclass):
     guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
-    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
     _orm_instance: Model = field(init=False, compare=False, default=None)  # tracks the corresponding ORM instance
 
@@ -186,6 +185,7 @@ class HTMLContent(Validator):
 @dataclass(repr=False)
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
+    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     source: str = field(compare=False, kw_only=True, default="")
     sequence: int = field(compare=False, kw_only=True, default=0)
     session: str = field(compare=False, kw_only=True, default="")
@@ -217,7 +217,7 @@ class Item(BaseModel):
 
 @dataclass(repr=False)
 class String(Item):
-    _type: str = "string"
+    _type: str = field(init=False, compare=False, default="string")
     content: StringContent = StringContent()
 
     def render(self):
@@ -232,7 +232,7 @@ class Text(String):
 @dataclass(repr=False)
 class Table(Item):
     content: TableContent = TableContent()
-    _type: str = "table"
+    _type: str = field(init=False, compare=False, default="table")
     _properties: list = field(init=False, default=table_attr)
 
     def render(self):
@@ -247,7 +247,7 @@ class Plot(Table):
 
 @dataclass(repr=False)
 class Tree(Item):
-    _type: str = "tree"
+    _type: str = field(init=False, compare=False, default="tree")
     content: TreeContent = TreeContent()
 
     def render(self):
@@ -265,7 +265,9 @@ class Scene(Item):
 
 @dataclass(repr=False)
 class Image(Item):
-    _type: str = "image"
+    _type: str = field(init=False, compare=False, default="image")
+    width: int = field(compare=False, kw_only=True, default=0)
+    height: int = field(compare=False, kw_only=True, default=0)
     content: ImageContent = ImageContent()
 
     def render(self):
@@ -274,7 +276,7 @@ class Image(Item):
 
 @dataclass(repr=False)
 class HTML(Item):
-    _type: str = "html"
+    _type: str = field(init=False, compare=False, default="html")
     content: HTMLContent = HTMLContent()
 
     def render(self):
@@ -283,7 +285,7 @@ class HTML(Item):
 
 @dataclass(repr=False)
 class Animation(Item):
-    _type: str = "anim"
+    _type: str = field(init=False, compare=False, default="anim")
     content: AnimContent = AnimContent()
 
     def render(self):
@@ -292,7 +294,7 @@ class Animation(Item):
 
 @dataclass(repr=False)
 class File(Item):
-    _type: str = "file"
+    _type: str = field(init=False, compare=False, default="file")
     content: FileContent = FileContent()
 
     def render(self):
@@ -301,6 +303,8 @@ class File(Item):
 
 @dataclass(repr=False)
 class Session(BaseModel):
+    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
+
     def post_init(self):
         from .data.models import Session as SessionModel
         self._orm_instance = SessionModel()
@@ -321,13 +325,32 @@ class Dataset(BaseModel):
 
 @dataclass(repr=False)
 class Template(BaseModel):
+    name: str = field(compare=False, kw_only=True, default="")
     params: str = field(compare=False, kw_only=True, default="")
+    item_filter: str = field(compare=False, kw_only=True, default="")
+    parent: Type['Template'] = field(compare=False, kw_only=True, default=None)
+    children: list = field(compare=False, kw_only=True, default_factory=list)
+    children_order: str = field(compare=False, kw_only=True, default="")
+    master: bool = field(compare=False, kw_only=True, default=True)
+    _type: str = field(init=False, compare=False, default="")
+
+    @property
+    def type(self):
+        return self._type
 
     def post_init(self):
         from .reports.models import Template as TemplateModel
         self._orm_instance = TemplateModel()
 
     def create(self, **kwargs):
+        pass
+
+    def save(self):
+        # todo
+        self._orm_instance.save()
+
+    def delete(self):
+        # todo: delete children, parents
         pass
 
     def render(self):
