@@ -304,6 +304,10 @@ class File(Item):
 @dataclass(repr=False)
 class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
+    hostname: str = field(compare=False, kw_only=True, default="")
+    platform: str = field(compare=False, kw_only=True, default="")
+    application: str = field(compare=False, kw_only=True, default="")
+    version: str = field(compare=False, kw_only=True, default="")
 
     def post_init(self):
         from .data.models import Session as SessionModel
@@ -315,6 +319,12 @@ class Session(BaseModel):
 
 @dataclass(repr=False)
 class Dataset(BaseModel):
+    filename: str = field(compare=False, kw_only=True, default="")
+    dirname: str = field(compare=False, kw_only=True, default="")
+    format: str = field(compare=False, kw_only=True, default="")
+    numparts: int = field(compare=False, kw_only=True, default=0)
+    numelements: int = field(compare=False, kw_only=True, default=0)
+
     def post_init(self):
         from .data.models import Dataset as DatasetModel
         self._orm_instance = DatasetModel()
