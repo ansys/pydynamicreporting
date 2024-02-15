@@ -19,22 +19,16 @@
 # {% url 'data_session_detail' item.session.guid %} instead of
 # {{ item.session.get_absolute_url }}
 #
-import sys
-
 import copy
 import datetime
 import json
 import os
 import os.path
 import shlex
+import sys
 import uuid
 
 import numpy
-from ..report_framework.acls import check_obj_perm
-from ..report_framework.base_model_managers import NexusQuerySet
-from ..report_framework.utils import get_render_error_html
-from ..data.geofile_rendering import render_scene, render_file
-from .managers import SessionManager, DatasetManager, ItemManager, ItemCategoryManager
 from dateutil import parser
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -45,13 +39,11 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from guardian.models import UserObjectPermissionBase, GroupObjectPermissionBase
-from ..reports.engine import TemplateEngine
-from ..reports.models import Template
-from ..reports.template_generators import is_simple_number
 
 from .acls import generate_media_auth_hash
 from .conditional_format import ConditionalFormattingHTMLStyle, TreeConditionalFormattingHTMLStyle
 from .extremely_ugly_hacks import safe_unpickle
+from .managers import SessionManager, DatasetManager, ItemManager, ItemCategoryManager
 from .templatetags.data_tags import (
     convert_datelist_to_plotly_datelist,
     expand_string_context,
@@ -62,6 +54,13 @@ from .templatetags.data_tags import (
 )
 from .themes import PLOTLY_THEMES
 from .utils import get_aware_datetime, decode_table_data, get_nexus_version, get_unique_id
+from ..data.geofile_rendering import render_scene, render_file
+from ..report_framework.acls import check_obj_perm
+from ..report_framework.base_model_managers import NexusQuerySet
+from ..report_framework.utils import get_render_error_html
+from ..reports.engine import TemplateEngine
+from ..reports.models import Template
+from ..reports.template_generators import is_simple_number
 
 
 class Session(models.Model):
@@ -1307,7 +1306,7 @@ class Item(models.Model):
                 dvar += "colorscale: [\n"
                 for j in range(nrows):
                     a_color = self.get_indexed_default(data, ctx, j, 'line_color', default=None)
-                    v = float(j)/float(nrows-1)
+                    v = float(j) / float(nrows - 1)
                     if isinstance(a_color, list):
                         dvar += f"[{v}, {a_color}],\n"
                     else:
@@ -1322,9 +1321,9 @@ class Item(models.Model):
             if yaxistitle is not None:
                 dvar += "{\n"
                 dvar += f"range: [1, {nrows}],\n"
-                dvar += f"values: {list(range(1,nrows+1))},\n"
+                dvar += f"values: {list(range(1, nrows + 1))},\n"
                 dvar += f"ticktext: {rowlbls},\n"
-                dvar += f"tickvals: {list(range(1,nrows+1))},\n"
+                dvar += f"tickvals: {list(range(1, nrows + 1))},\n"
                 dvar += f"label: {yaxistitle},\n"
                 dvar += "},\n"
             # Each column has a range and specific formatting
@@ -1767,7 +1766,6 @@ class Item(models.Model):
                 # add color
                 line_color = xaxis_theme['linecolor']
                 plot += f'     linecolor: "{line_color}",\n'
-
 
             if xaxistitle is not None:
                 plot += "     title: {},\n".format(xaxistitle)
