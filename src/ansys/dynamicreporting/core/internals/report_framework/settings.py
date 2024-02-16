@@ -115,12 +115,13 @@ STATIC_URL = os.environ.get('CEI_NEXUS_STATIC_URL_PREFIX', '/static/')
 
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    # "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 ]
 
 # In addition to using a static/ directory inside your apps, you can define a list of directories
 # (STATICFILES_DIRS) in your settings file where Django will also look for static files.
+# uses FileSystemFinder
 STATICFILES_DIRS = [
     os.path.abspath(
             os.path.join(ANSYS_INSTALLATION_DIR, f"nexus{CEI_APEX_SUFFIX}", "django", "static")
