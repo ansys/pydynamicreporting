@@ -87,13 +87,14 @@ class Session(models.Model):
     def find(cls, request, reverse=0, sort_tag="date"):
         # start a query
         queryset = Session.objects.all()
-        # special case of an explicit GUID
-        s_guid = request.GET.get('s_guid', None)
-        if s_guid is not None:
-            kwargs = {'guid__exact': s_guid}
-            queryset = queryset.filter(**kwargs)
-        else:
-            queryset = object_filter(request.GET.get('query', ''), queryset, model=Session)
+        if request is not None:
+            # special case of an explicit GUID
+            s_guid = request.GET.get('s_guid', None)
+            if s_guid is not None:
+                kwargs = {'guid__exact': s_guid}
+                queryset = queryset.filter(**kwargs)
+            else:
+                queryset = object_filter(request.GET.get('query', ''), queryset, model=Session)
 
         # pick the sort (we can only sort QuerySets for now)
         if isinstance(queryset, QuerySet):
@@ -127,13 +128,14 @@ class Dataset(models.Model):
     def find(cls, request, reverse=0, sort_tag="format"):
         # start a query
         queryset = Dataset.objects.all()
-        # special case of an explicit GUID
-        d_guid = request.GET.get('d_guid', None)
-        if d_guid is not None:
-            kwargs = {'guid__exact': d_guid}
-            queryset = queryset.filter(**kwargs)
-        else:
-            queryset = object_filter(request.GET.get('query', ''), queryset, model=Dataset)
+        if request is not None:
+            # special case of an explicit GUID
+            d_guid = request.GET.get('d_guid', None)
+            if d_guid is not None:
+                kwargs = {'guid__exact': d_guid}
+                queryset = queryset.filter(**kwargs)
+            else:
+                queryset = object_filter(request.GET.get('query', ''), queryset, model=Dataset)
 
         # pick the sort (we can only sort QuerySets for now)
         if isinstance(queryset, QuerySet):
@@ -286,16 +288,15 @@ class ItemCategory(models.Model):
     def find(cls, request, reverse=0, sort_tag="date", perm=None):
         # start a query
         queryset = ItemCategory.filtered_objects.with_perms(request, perm=perm)
-
-        # guid or list of guids
-        ic_guid = request.GET.get('ic_guid', None)
-        if ic_guid is not None:
-            ic_guid_list = ic_guid.split(",")
-            kwargs = {'guid__in': ic_guid_list}
-            queryset = queryset.filter(**kwargs)
-        else:
-            queryset = object_filter(request.GET.get('query', ''), queryset, model=ItemCategory)
-
+        if request is not None:
+            # guid or list of guids
+            ic_guid = request.GET.get('ic_guid', None)
+            if ic_guid is not None:
+                ic_guid_list = ic_guid.split(",")
+                kwargs = {'guid__in': ic_guid_list}
+                queryset = queryset.filter(**kwargs)
+            else:
+                queryset = object_filter(request.GET.get('query', ''), queryset, model=ItemCategory)
         # pick the sort (we can only sort QuerySets for now)
         if isinstance(queryset, QuerySet):
             if reverse:
@@ -356,28 +357,31 @@ class Item(models.Model):
             if not isinstance(queryset, NexusQuerySet):
                 raise Exception("The queryset passed is invalid")
             qs = queryset
-        # filter by perms
+
         qs = qs.with_perms(request, perm=perm)
-        # case of explicit guid(s)
-        item_guids = request.GET.get('i_guid', None)
-        if item_guids is not None:
-            # i_guid can be a list of guids
-            # separated by a comma, or just one guid
-            item_guid_list = item_guids.split(",")
-            kwargs = {'guid__in': item_guid_list}
-            qs = qs.filter(**kwargs)
-        else:
-            # use manually specified query if available
-            if not query:
-                if 'query' in request.GET:
-                    query = request.GET['query']
-                else:
-                    # allow reading params from other types of REST requests
-                    # too, not just GET.
-                    if hasattr(request, 'query_params'):
-                        query = request.query_params.get('query', '')
-            #  use the query expr to filter
-            qs = object_filter(query, qs, model=Item)
+
+        if request is not None:
+            # filter by perms
+            # case of explicit guid(s)
+            item_guids = request.GET.get('i_guid', None)
+            if item_guids is not None:
+                # i_guid can be a list of guids
+                # separated by a comma, or just one guid
+                item_guid_list = item_guids.split(",")
+                kwargs = {'guid__in': item_guid_list}
+                qs = qs.filter(**kwargs)
+            else:
+                # use manually specified query if available
+                if not query:
+                    if 'query' in request.GET:
+                        query = request.GET['query']
+                    else:
+                        # allow reading params from other types of REST requests
+                        # too, not just GET.
+                        if hasattr(request, 'query_params'):
+                            query = request.query_params.get('query', '')
+                #  use the query expr to filter
+                qs = object_filter(query, qs, model=Item)
 
         # pick the sort (we can only sort QuerySets for now)
         if isinstance(qs, QuerySet):
@@ -2325,7 +2329,9 @@ class Item(models.Model):
                     else:
                         # check perms before rendering.
                         # Just viewing a link to it don't need perms.
-                        check_obj_perm('view', ctx['request'].user, item, raise_exception=True)
+                        request = ctx.get("request")
+                        if request is not None:
+                            check_obj_perm('view', ctx['request'].user, item, raise_exception=True)
                         # render
                         formatted_val = item.render(ctx)
                 except PermissionDenied:

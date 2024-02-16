@@ -18,6 +18,7 @@ import copy
 import uuid
 from ..report_framework.utils import get_render_error_html, get_unsupported_error_html
 from django.urls import reverse
+from django.http.request import QueryDict
 
 from .engine import LayoutEngine, TemplateEngine
 from .pptx_gen import PPTXGenerator, PPTXManager
@@ -165,17 +166,26 @@ class PPTXTemplateEngine(PPTXBaseTemplateEngine):
         # CAVEAT: will not inherit items if used as a child template
         # todo: pass item filter as query into URL somehow.
         request = context["request"]
-        q_dict = request.GET.copy()
-        if self.parent is not None:
-            query = q_dict.get("query", "")
-            q_dict.clear()
-            q_dict["view"] = self.template.guid
-            q_dict["query"] = query
-        # specify format for targeted rendering.
-        q_dict["format"] = "pptx"
-        q_dict["filename"] = out_file
-        # return a url to a REST API that renders it as a downloadable file.
-        url = f"{request.scheme}://{request.get_host()}{reverse('report_gen_api')}?{q_dict.urlencode(safe='/')}"
+        if request is not None:
+            q_dict = request.GET.copy()
+            if self.parent is not None:
+                query = q_dict.get("query", "")
+                q_dict.clear()
+                q_dict["view"] = self.template.guid
+                q_dict["query"] = query
+            # specify format for targeted rendering.
+            q_dict["format"] = "pptx"
+            q_dict["filename"] = out_file
+            # return a url to a REST API that renders it as a downloadable file.
+            url = f"{request.scheme}://{request.get_host()}{reverse('report_gen_api')}?{q_dict.urlencode(safe='/')}"
+        else:
+            q_dict = QueryDict(mutable=True)
+            if self.parent is not None:
+                q_dict["view"] = self.template.guid
+            # specify format for targeted rendering.
+            q_dict["format"] = "pptx"
+            q_dict["filename"] = out_file
+            url = f"{reverse('report_gen_api')}?{q_dict.urlencode(safe='/')}"
         # return html
         return f"""
                 <p class="p-3 m-3">

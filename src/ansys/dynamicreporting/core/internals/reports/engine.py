@@ -532,8 +532,9 @@ class TemplateEngine:
             from ..data.models import Item, object_filter
             # root queryset must be perm filtered.
             # context must always contain request.
+            qs = Item.filtered_objects.with_perms(context['request'])
             root_items = list(object_filter(self._template.item_filter,
-                                            Item.filtered_objects.with_perms(context['request']),
+                                            qs,
                                             model=Item))
             if filter_type.endswith('append'):
                 root_items.extend(list(input_items))

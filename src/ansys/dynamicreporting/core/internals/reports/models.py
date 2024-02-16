@@ -125,13 +125,14 @@ class Template(models.Model):
         from ..data.models import object_filter
         # start a query
         queryset = Template.objects.all()
-        # special case of an explicit GUID
-        t_guid = request.GET.get('t_guid', None)
-        if t_guid is not None:
-            kwargs = {'guid__exact': t_guid}
-            queryset = queryset.filter(**kwargs)
-        else:
-            queryset = object_filter(request.GET.get('query', ''), queryset, model=Template)
+        if request is not None:
+            # special case of an explicit GUID
+            t_guid = request.GET.get('t_guid', None)
+            if t_guid is not None:
+                kwargs = {'guid__exact': t_guid}
+                queryset = queryset.filter(**kwargs)
+            else:
+                queryset = object_filter(request.GET.get('query', ''), queryset, model=Template)
 
         # pick the sort (we can only sort QuerySets for now)
         if isinstance(queryset, QuerySet):
