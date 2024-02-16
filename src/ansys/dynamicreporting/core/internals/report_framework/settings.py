@@ -116,7 +116,7 @@ STATIC_URL = os.environ.get('CEI_NEXUS_STATIC_URL_PREFIX', '/static/')
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     # "django.contrib.staticfiles.finders.AppDirectoriesFinder",
-    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',  # looks at default FileSystemStorage(used for media)
 ]
 
 # In addition to using a static/ directory inside your apps, you can define a list of directories
