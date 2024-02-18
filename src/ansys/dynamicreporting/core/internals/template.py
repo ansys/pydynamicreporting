@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Type
 
 from .base import BaseModel
+from .report_framework.utils import get_render_error_html
 
 
 @dataclass(repr=False)
@@ -23,8 +24,15 @@ class Template(BaseModel):
         from .reports.models import Template as TemplateModel
         self._orm_instance = TemplateModel()
 
-    def create(self, **kwargs):
-        pass
+    @staticmethod
+    def get(**kwargs):
+        from .reports.models import Template as TemplateModel
+        return TemplateModel.objects.get(**kwargs)
+
+    @staticmethod
+    def create(**kwargs):
+        from .reports.models import Template as TemplateModel
+        return TemplateModel.objects.create(**kwargs)
 
     def save(self):
         # todo
@@ -34,8 +42,13 @@ class Template(BaseModel):
         # todo: delete children, parents
         pass
 
-    def render(self):
-        ...
+    def render(self, ctx):
+        if "request" not in ctx:
+            ctx["request"] = None
+        try:
+            return self._orm_instance.render(ctx)
+        except Exception as e:
+            return get_render_error_html(e, target='report', guid=self.guid)
 
     def export(self):
         ...

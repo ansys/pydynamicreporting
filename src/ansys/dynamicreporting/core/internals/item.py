@@ -1,16 +1,28 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
+import numpy
 from django.utils import timezone
 
 from .base import BaseModel, Validator
 from ..adr_utils import table_attr
+from .report_framework.utils import get_render_error_html
 
 
 class StringContent(Validator):
-    def validate(self, value):
-        raise ValueError
+    def validate(self, string):
+        if not isinstance(string, str):
+            raise TypeError(f'Expected content to be a str')
+
+
+class TableContent(Validator):
+    def validate(self, array):
+        if not isinstance(array, numpy.ndarray) or array.dtype.kind not in ["S", "f"]:
+            raise TypeError("Expected content to be a numpy array of bytes or float type.")
+        if len(array.shape) != 2:
+            raise ValueError("Expected content to be a 2 dimensional numpy array.")
 
 
 class ImageContent(Validator):
@@ -19,11 +31,6 @@ class ImageContent(Validator):
 
 
 class AnimContent(Validator):
-    def validate(self, value):
-        pass
-
-
-class TableContent(Validator):
     def validate(self, value):
         pass
 
@@ -60,8 +67,15 @@ class Session(BaseModel):
         from .data.models import Session as SessionModel
         self._orm_instance = SessionModel()
 
-    def create(self, **kwargs):
-        pass
+    @staticmethod
+    def get(**kwargs):
+        from .data.models import Session as SessionModel
+        return SessionModel.objects.get(**kwargs)
+
+    @staticmethod
+    def create(**kwargs):
+        from .data.models import Session as SessionModel
+        return SessionModel.objects.create(**kwargs)
 
 
 @dataclass(repr=False)
@@ -76,8 +90,15 @@ class Dataset(BaseModel):
         from .data.models import Dataset as DatasetModel
         self._orm_instance = DatasetModel()
 
-    def create(self, **kwargs):
-        pass
+    @staticmethod
+    def get(**kwargs):
+        from .data.models import Dataset as DatasetModel
+        return DatasetModel.objects.get(**kwargs)
+
+    @staticmethod
+    def create(**kwargs):
+        from .data.models import Dataset as DatasetModel
+        return DatasetModel.objects.create(**kwargs)
 
 
 @dataclass(repr=False)
@@ -98,28 +119,33 @@ class Item(BaseModel):
         from .data.models import Item as ItemModel
         self._orm_instance = ItemModel()
 
-    def create(self, **kwargs):
-        pass
+    @staticmethod
+    def get(**kwargs):
+        from .data.models import Item as ItemModel
+        return ItemModel.objects.get(**kwargs)
 
-    def save(self):
-        self._orm_instance.save()
+    @staticmethod
+    def create(**kwargs):
+        from .data.models import Item as ItemModel
+        return ItemModel.objects.create(**kwargs)
 
     def delete(self):
         # todo: delete sessions, datasets
         pass
 
-    @abstractmethod
-    def render(self):
-        pass
+    def render(self, ctx):
+        if "request" not in ctx:
+            ctx["request"] = None
+        try:
+            return self._orm_instance.render(ctx)
+        except Exception as e:
+            return get_render_error_html(e, target='report item', guid=self.guid)
 
 
 @dataclass(repr=False)
 class String(Item):
     _type: str = field(init=False, compare=False, default="string")
     content: StringContent = StringContent()
-
-    def render(self):
-        pass
 
 
 @dataclass(repr=False)
@@ -133,14 +159,10 @@ class Table(Item):
     _type: str = field(init=False, compare=False, default="table")
     _properties: list = field(init=False, default=table_attr)
 
-    def render(self):
-        pass
-
 
 @dataclass(repr=False)
 class Plot(Table):
-    def render(self):
-        pass
+    pass
 
 
 @dataclass(repr=False)
@@ -148,17 +170,11 @@ class Tree(Item):
     _type: str = field(init=False, compare=False, default="tree")
     content: TreeContent = TreeContent()
 
-    def render(self):
-        pass
-
 
 @dataclass(repr=False)
 class Scene(Item):
     _type: str = "scene"
     content: SceneContent = SceneContent()
-
-    def render(self):
-        pass
 
 
 @dataclass(repr=False)
@@ -168,17 +184,11 @@ class Image(Item):
     height: int = field(compare=False, kw_only=True, default=0)
     content: ImageContent = ImageContent()
 
-    def render(self):
-        pass
-
 
 @dataclass(repr=False)
 class HTML(Item):
     _type: str = field(init=False, compare=False, default="html")
     content: HTMLContent = HTMLContent()
-
-    def render(self):
-        pass
 
 
 @dataclass(repr=False)
@@ -186,14 +196,8 @@ class Animation(Item):
     _type: str = field(init=False, compare=False, default="anim")
     content: AnimContent = AnimContent()
 
-    def render(self):
-        pass
-
 
 @dataclass(repr=False)
 class File(Item):
     _type: str = field(init=False, compare=False, default="file")
     content: FileContent = FileContent()
-
-    def render(self):
-        pass
