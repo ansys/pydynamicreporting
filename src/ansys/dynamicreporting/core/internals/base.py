@@ -2,7 +2,7 @@ import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Type
 
 from django.db.models import Model
 
@@ -35,8 +35,8 @@ class BaseMetaclass(ABCMeta):
 class BaseModel(metaclass=BaseMetaclass):
     guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
+    _orm_instance: Any = field(init=False, compare=False)  # tracks the corresponding ORM instance
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
-    _orm_instance: Model = field(init=False, compare=False, default=None)  # tracks the corresponding ORM instance
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -91,8 +91,14 @@ class BaseModel(metaclass=BaseMetaclass):
     def delete(self):
         self._orm_instance.delete()
 
+    @staticmethod
     @abstractmethod
-    def create(self, **kwargs):
+    def create(**kwargs):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get(**kwargs):
         pass
 
     @abstractmethod
