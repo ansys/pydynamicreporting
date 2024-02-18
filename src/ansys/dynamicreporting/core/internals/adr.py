@@ -7,7 +7,8 @@ from typing import Any, Type
 from django.core import management
 from django.http import HttpRequest
 
-from .item import Item
+from .item import Item, Session
+from .template import Template
 from ..adr_utils import get_logger
 from ..exceptions import (
     InvalidAnsysPath,
@@ -37,13 +38,12 @@ class ADR:
             static_directory: str = None,
             opts: dict = None,
             request: HttpRequest = None,
+            session: str | Session = None,
             logfile: str = None
     ) -> None:
         self._db_directory = None
         self._media_directory = None
         self._static_directory = None
-        self._logger = get_logger(logfile)
-        self._request = request  # must be passed when used in the context of a webserver.
 
         if ansys_installation is None:
             raise InvalidAnsysPath(extra_detail="Please pass a Ansys Installation path")
@@ -90,6 +90,14 @@ class ADR:
         else:
             if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+        self._request = request  # passed when used in the context of a webserver.
+
+        if session is not None and not isinstance(session, str | Session):
+            raise TypeError(f"Expected session to be a str or Session object")
+        self._session = session
+
+        self._logger = get_logger(logfile)
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
