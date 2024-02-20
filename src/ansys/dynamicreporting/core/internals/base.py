@@ -1,7 +1,7 @@
 import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any, Type
 
 from django.db.models import Model
@@ -35,7 +35,7 @@ class BaseMetaclass(ABCMeta):
 class BaseModel(metaclass=BaseMetaclass):
     guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
-    _orm_instance: Any = field(init=False, compare=False)  # tracks the corresponding ORM instance
+    _orm_instance: Model = field(init=False, compare=False)  # tracks the corresponding ORM instance
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
 
     def __repr__(self) -> str:
@@ -85,8 +85,29 @@ class BaseModel(metaclass=BaseMetaclass):
                 tags.remove(tag)
         self._rebuild_tags(tags)
 
-    def save(self):
-        self._orm_instance.save()
+    @classmethod
+    def get_fields(cls):
+        return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
+
+    def get_orm_fields(self):
+        return tuple(f.name for f in self._orm_instance._meta.fields)
+
+    @property
+    def saved(self):
+        return self._saved
+
+    def save(self, ignore_fields=None, **kwargs):
+        if ignore_fields is None:
+            ignore_fields = []
+        cls_fields = self.get_fields()
+        model_fields = self.get_orm_fields()
+        for field_ in cls_fields:
+            if field_ in model_fields and field_ not in ignore_fields:
+                value = getattr(self, field_, None)
+                if value is not None:
+                    setattr(self._orm_instance, field_, value)
+        self._orm_instance.save(**kwargs)
+        self._saved = True
 
     def delete(self):
         self._orm_instance.delete()
