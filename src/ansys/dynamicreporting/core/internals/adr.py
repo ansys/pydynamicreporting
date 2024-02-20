@@ -166,16 +166,15 @@ class ADR:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
     def create_item(self, item_type: Type[Item], **kwargs: Any):
-        if not isinstance(item_type, Item):
+        if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        item = item_type()
-        valid_fields = (f.name for f in fields(item_type) if not f.name.startswith("_"))
+        valid_fields = item_type.get_fields()
         for kwarg, value in kwargs.items():
             if kwarg not in valid_fields:
                 detail = f"{item_type.__name__} has no attribute {kwarg}"
                 self._logger.error(detail)
                 raise AttributeError(detail)
-            setattr(item, kwarg, value)
+        item = item_type(**kwargs)
         # save session and dataset before creating the relation
         if not self._session.saved:
             self._session.save()
