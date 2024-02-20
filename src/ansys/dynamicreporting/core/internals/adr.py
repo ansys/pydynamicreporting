@@ -7,8 +7,7 @@ from typing import Any, Type
 from django.core import management
 from django.http import HttpRequest
 
-from .item import Item, Session
-from .template import Template
+from .item import Item, Session, Dataset
 from ..adr_utils import get_logger
 from ..exceptions import (
     InvalidAnsysPath,
@@ -38,7 +37,8 @@ class ADR:
             static_directory: str = None,
             opts: dict = None,
             request: HttpRequest = None,
-            session: str | Session = None,
+            session: Session = None,
+            dataset: Dataset = None,
             logfile: str = None
     ) -> None:
         self._db_directory = None
@@ -93,11 +93,18 @@ class ADR:
 
         self._request = request  # passed when used in the context of a webserver.
 
-        if session is not None and not isinstance(session, str | Session):
-            raise TypeError(f"Expected session to be a str or Session object")
         self._session = session
+        self._dataset = dataset
 
         self._logger = get_logger(logfile)
+
+    @property
+    def session(self):
+        return self._session
+
+    @property
+    def dataset(self):
+        return self._dataset
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
@@ -116,6 +123,19 @@ class ADR:
         except Exception as e:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
+
+        # validate session and dataset
+        if self._session is not None:
+            if not isinstance(self._session, Session):
+                raise TypeError(f"Expected session to be a Session object")
+        else:
+            self._session = Session()
+
+        if self._dataset is not None:
+            if not isinstance(self._dataset, Dataset):
+                raise TypeError(f"Expected dataset to be a Dataset object")
+        else:
+            self._dataset = Dataset()
 
         # migrations
         if self._db_directory is not None:
@@ -156,6 +176,13 @@ class ADR:
                 self._logger.error(detail)
                 raise AttributeError(detail)
             setattr(item, kwarg, value)
+        # save session and dataset before creating the relation
+        if not self._session.saved:
+            self._session.save()
+        if not self._dataset.saved:
+            self._dataset.save()
+        item.session = self._session
+        item.dataset = self._dataset
         item.save()
         return item
 
