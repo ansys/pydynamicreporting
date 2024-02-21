@@ -3,6 +3,7 @@ import uuid
 from abc import ABC, abstractmethod, ABCMeta
 from dataclasses import dataclass, field, fields
 from typing import Any, Type
+from uuid import UUID
 
 from django.db.models import Model
 
@@ -33,8 +34,9 @@ class BaseMetaclass(ABCMeta):
 
 @dataclass(repr=False)
 class BaseModel(metaclass=BaseMetaclass):
-    guid: str = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
+    guid: UUID = field(init=False, compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
+    _orm_model: Type[Model] = None
     _orm_instance: Model = field(init=False, compare=False)  # tracks the corresponding ORM instance
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
 
@@ -43,6 +45,20 @@ class BaseModel(metaclass=BaseMetaclass):
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__} object {self.guid}"
+
+    def __post_init__(self):
+        self._validate()
+        self.post_init()
+        self._orm_instance = self._orm_model()
+
+    def _validate(self):
+        for field_ in self._get_fields():
+            value = getattr(self, field_.name, None)
+            if value is not None and not isinstance(value, field_.type):
+                raise TypeError(f"Expected {field_.name} to be of type {field_.type}.")
+
+    def _get_orm_field_names(self):
+        return tuple(f.name for f in self._orm_instance._meta.fields)
 
     @staticmethod
     def _add_quotes(input_str):
@@ -59,6 +75,47 @@ class BaseModel(metaclass=BaseMetaclass):
             else:
                 tags_list.append(self._add_quotes(tag_and_value[0]))
         self.set_tags(" ".join(tags_list))
+
+    def _get_fields(self):
+        return tuple(f for f in fields(self) if not f.name.startswith("_"))
+
+    @classmethod
+    def get_field_names(cls):
+        return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
+
+    @abstractmethod
+    def post_init(self):
+        pass
+
+    @property
+    def saved(self):
+        return self._saved
+
+    def save(self, **kwargs):
+        cls_fields = self.get_field_names()
+        model_fields = self._get_orm_field_names()
+        for field_ in cls_fields:
+            if field_ in model_fields:
+                value = getattr(self, field_, None)
+                if value is not None:
+                    if isinstance(value, BaseModel):
+                        value = value.__class__.get(guid=value.guid)
+                    setattr(self._orm_instance, field_, value)
+        self._orm_instance.save(**kwargs)
+        self._saved = True
+
+    def delete(self):
+        self._orm_instance.delete()
+
+    @classmethod
+    @abstractmethod
+    def create(cls, **kwargs):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get(cls, **kwargs):
+        pass
 
     def get_tags(self):
         return self.tags
@@ -84,50 +141,6 @@ class BaseModel(metaclass=BaseMetaclass):
             elif tag == tag:
                 tags.remove(tag)
         self._rebuild_tags(tags)
-
-    @classmethod
-    def get_fields(cls):
-        return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
-
-    def get_orm_fields(self):
-        return tuple(f.name for f in self._orm_instance._meta.fields)
-
-    @property
-    def saved(self):
-        return self._saved
-
-    def save(self, ignore_fields=None, **kwargs):
-        if ignore_fields is None:
-            ignore_fields = []
-        cls_fields = self.get_fields()
-        model_fields = self.get_orm_fields()
-        for field_ in cls_fields:
-            if field_ in model_fields and field_ not in ignore_fields:
-                value = getattr(self, field_, None)
-                if value is not None:
-                    setattr(self._orm_instance, field_, value)
-        self._orm_instance.save(**kwargs)
-        self._saved = True
-
-    def delete(self):
-        self._orm_instance.delete()
-
-    @staticmethod
-    @abstractmethod
-    def create(**kwargs):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get(**kwargs):
-        pass
-
-    @abstractmethod
-    def post_init(self):
-        pass
-
-    def __post_init__(self):
-        self.post_init()
 
 
 class Validator(ABC):

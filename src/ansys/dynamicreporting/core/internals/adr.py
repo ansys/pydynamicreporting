@@ -168,7 +168,7 @@ class ADR:
     def create_item(self, item_type: Type[Item], **kwargs: Any):
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        valid_fields = item_type.get_fields()
+        valid_fields = item_type.get_field_names()
         for kwarg, value in kwargs.items():
             if kwarg not in valid_fields:
                 detail = f"{item_type.__name__} has no attribute {kwarg}"
