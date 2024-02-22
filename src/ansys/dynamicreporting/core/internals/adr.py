@@ -1,10 +1,10 @@
 import os
 import re
-from dataclasses import fields
 from pathlib import Path
 from typing import Any, Type
 
 from django.core import management
+from django.db.models import Model
 from django.http import HttpRequest
 
 from .item import Item, Session, Dataset
@@ -15,7 +15,8 @@ from ..exceptions import (
     ImproperlyConfiguredError,
     DatabaseMigrationError,
     StaticFilesCollectionError,
-    InvalidPath
+    InvalidPath,
+    ObjectDoesNotExistError
 )
 
 
@@ -37,8 +38,8 @@ class ADR:
             static_directory: str = None,
             opts: dict = None,
             request: HttpRequest = None,
-            session: Session = None,
-            dataset: Dataset = None,
+            session: str = None,
+            dataset: str = None,
             logfile: str = None
     ) -> None:
         self._db_directory = None
@@ -124,19 +125,6 @@ class ADR:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
-        # validate session and dataset
-        if self._session is not None:
-            if not isinstance(self._session, Session):
-                raise TypeError(f"Expected session to be a Session object")
-        else:
-            self._session = Session()
-
-        if self._dataset is not None:
-            if not isinstance(self._dataset, Dataset):
-                raise TypeError(f"Expected dataset to be a Dataset object")
-        else:
-            self._dataset = Dataset()
-
         # migrations
         if self._db_directory is not None:
             try:
@@ -176,12 +164,25 @@ class ADR:
                 raise AttributeError(detail)
         item = item_type(**kwargs)
         # save session and dataset before creating the relation
-        if not self._session.saved:
-            self._session.save()
-        if not self._dataset.saved:
-            self._dataset.save()
-        item.session = self._session
-        item.dataset = self._dataset
+        try:
+            if self._session is None:
+                session = Session()
+                session.save()
+            else:
+                session = Session.get(guid=self._session)
+        except Model.DoesNotExist:
+            raise ObjectDoesNotExistError(f"Session '{self._session}' not found")
+        try:
+            if self._dataset is None:
+                dataset = Dataset()
+                dataset.save()
+            else:
+                dataset = Dataset.get(guid=self._dataset)
+        except Model.DoesNotExist:
+            raise ObjectDoesNotExistError(f"Dataset '{self._dataset}' not found")
+
+        item.session = session
+        item.dataset = dataset
         item.save()
         return item
 

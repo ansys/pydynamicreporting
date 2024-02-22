@@ -1,14 +1,17 @@
-from abc import abstractmethod
+import pickle
+import platform
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 import numpy
 from django.utils import timezone
 
-from .base import BaseModel, Validator
-from ..adr_utils import table_attr
+from .base import BaseModel, Validator, require_model_import
+from .data.extremely_ugly_hacks import safe_unpickle
+from .data.utils import delete_item_media
 from .report_framework.utils import get_render_error_html
+from ..adr_utils import table_attr
+from ..utils import report_utils
 
 
 class StringContent(Validator):
@@ -19,7 +22,9 @@ class StringContent(Validator):
 
 class TableContent(Validator):
     def validate(self, array):
-        if not isinstance(array, numpy.ndarray) or array.dtype.kind not in ["S", "f"]:
+        if not isinstance(array, numpy.ndarray):
+            raise TypeError("Expected content to be a numpy array")
+        if array.dtype.kind not in ["S", "f"]:
             raise TypeError("Expected content to be a numpy array of bytes or float type.")
         if len(array.shape) != 2:
             raise ValueError("Expected content to be a 2 dimensional numpy array.")
@@ -58,47 +63,21 @@ class HTMLContent(Validator):
 @dataclass(repr=False)
 class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
-    hostname: str = field(compare=False, kw_only=True, default="")
-    platform: str = field(compare=False, kw_only=True, default="")
-    application: str = field(compare=False, kw_only=True, default="")
-    version: str = field(compare=False, kw_only=True, default="")
-
-    def post_init(self):
-        from .data.models import Session as SessionModel
-        self._orm_instance = SessionModel()
-
-    @staticmethod
-    def get(**kwargs):
-        from .data.models import Session as SessionModel
-        return SessionModel.objects.get(**kwargs)
-
-    @staticmethod
-    def create(**kwargs):
-        from .data.models import Session as SessionModel
-        return SessionModel.objects.create(**kwargs)
+    hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
+    platform: str = field(compare=False, kw_only=True, default=str(report_utils.enve_arch))
+    application: str = field(compare=False, kw_only=True, default="Python API")
+    version: str = field(compare=False, kw_only=True, default="1.0")
+    _orm_model: str = "data.models.Session"
 
 
 @dataclass(repr=False)
 class Dataset(BaseModel):
-    filename: str = field(compare=False, kw_only=True, default="")
+    filename: str = field(compare=False, kw_only=True, default="none")
     dirname: str = field(compare=False, kw_only=True, default="")
-    format: str = field(compare=False, kw_only=True, default="")
+    format: str = field(compare=False, kw_only=True, default="none")
     numparts: int = field(compare=False, kw_only=True, default=0)
     numelements: int = field(compare=False, kw_only=True, default=0)
-
-    def post_init(self):
-        from .data.models import Dataset as DatasetModel
-        self._orm_instance = DatasetModel()
-
-    @staticmethod
-    def get(**kwargs):
-        from .data.models import Dataset as DatasetModel
-        return DatasetModel.objects.get(**kwargs)
-
-    @staticmethod
-    def create(**kwargs):
-        from .data.models import Dataset as DatasetModel
-        return DatasetModel.objects.create(**kwargs)
+    _orm_model: str = "data.models.Dataset"
 
 
 @dataclass(repr=False)
@@ -107,31 +86,19 @@ class Item(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     source: str = field(compare=False, kw_only=True, default="")
     sequence: int = field(compare=False, kw_only=True, default=0)
-    session: str = field(compare=False, kw_only=True, default="")
-    dataset: str = field(compare=False, kw_only=True, default="")
-    _type: str = field(init=False, compare=False, default="none")
+    session: Session = field(compare=False, kw_only=True, default_factory=Session)
+    dataset: Dataset = field(compare=False, kw_only=True, default_factory=Dataset)
+    _type: str = "none"
+    _orm_model: str = "data.models.Item"
 
     @property
     def type(self):
         return self._type
 
-    def post_init(self):
-        from .data.models import Item as ItemModel
-        self._orm_instance = ItemModel()
-
-    @staticmethod
-    def get(**kwargs):
-        from .data.models import Item as ItemModel
-        return ItemModel.objects.get(**kwargs)
-
-    @staticmethod
-    def create(**kwargs):
-        from .data.models import Item as ItemModel
-        return ItemModel.objects.create(**kwargs)
-
     def delete(self):
-        # todo: delete sessions, datasets
-        pass
+        # delete related sessions and datasets
+        super().delete()
+        delete_item_media(self._orm_instance.guid)
 
     def render(self, ctx):
         if "request" not in ctx:
@@ -144,8 +111,8 @@ class Item(BaseModel):
 
 @dataclass(repr=False)
 class String(Item):
-    _type: str = field(init=False, compare=False, default="string")
     content: StringContent = StringContent()
+    _type: str = "string"
 
 
 @dataclass(repr=False)
@@ -156,8 +123,34 @@ class Text(String):
 @dataclass(repr=False)
 class Table(Item):
     content: TableContent = TableContent()
-    _type: str = field(init=False, compare=False, default="table")
-    _properties: list = field(init=False, default=table_attr)
+    _type: str = "table"
+    _properties: tuple = table_attr
+
+    @classmethod
+    def get(cls, **kwargs):
+        obj = super().get(**kwargs)
+        # type specific deserialization of payload
+        payload = safe_unpickle(obj._orm_instance.payloaddata)
+        obj.content = payload.pop("array", None)
+        for prop in cls._properties:
+            if prop in payload:
+                setattr(obj, prop, payload[prop])
+        return obj
+
+    @require_model_import
+    def save(self, **kwargs):
+        payload = {
+            "array": self.content,
+        }
+        for prop in self._properties:
+            value = getattr(self, prop, None)
+            if value is not None:
+                payload[prop] = value
+        if self._orm_instance is None:
+            self._orm_instance = self._orm_model_cls()
+            self._orm_instance.type = self.type
+        self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
+        super().save(**kwargs)
 
 
 @dataclass(repr=False)
@@ -167,37 +160,36 @@ class Plot(Table):
 
 @dataclass(repr=False)
 class Tree(Item):
-    _type: str = field(init=False, compare=False, default="tree")
     content: TreeContent = TreeContent()
 
 
 @dataclass(repr=False)
 class Scene(Item):
-    _type: str = "scene"
     content: SceneContent = SceneContent()
+    _type: str = "scene"
 
 
 @dataclass(repr=False)
 class Image(Item):
-    _type: str = field(init=False, compare=False, default="image")
     width: int = field(compare=False, kw_only=True, default=0)
     height: int = field(compare=False, kw_only=True, default=0)
     content: ImageContent = ImageContent()
+    _type: str = "image"
 
 
 @dataclass(repr=False)
 class HTML(Item):
-    _type: str = field(init=False, compare=False, default="html")
     content: HTMLContent = HTMLContent()
+    _type: str = "html"
 
 
 @dataclass(repr=False)
 class Animation(Item):
-    _type: str = field(init=False, compare=False, default="anim")
     content: AnimContent = AnimContent()
+    _type: str = "anim"
 
 
 @dataclass(repr=False)
 class File(Item):
-    _type: str = field(init=False, compare=False, default="file")
     content: FileContent = FileContent()
+    _type: str = "file"

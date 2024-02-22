@@ -102,3 +102,15 @@ class StaticFilesCollectionError(PyadrException):
     """Exception raised if collectstatic fails"""
 
     detail = "The collection of static files to the target directory failed"
+
+
+class ObjectNotSavedError(PyadrException):
+    """Exception raised if an object is not saved"""
+
+    detail = "The operation failed because the object needs to be saved first"
+
+
+class ObjectDoesNotExistError(PyadrException):
+    """Exception raised if an object is not saved"""
+
+    detail = "The object does not exist in the database"

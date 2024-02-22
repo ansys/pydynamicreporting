@@ -1,3 +1,4 @@
+import importlib
 import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
@@ -6,6 +7,25 @@ from typing import Any, Type
 from uuid import UUID
 
 from django.db.models import Model
+
+from ..exceptions import ObjectNotSavedError
+
+
+def require_model_import(func):
+    def wrapper(*args, **kwargs):
+        arg = args[0]
+        if isinstance(arg, BaseModel):
+            cls = arg.__class__
+        else:
+            cls = arg
+        if cls._orm_model and cls._orm_model_cls is None:
+            module_name, class_name = cls._orm_model.rsplit(".", 1)
+            # relative import for ease (needs '.' and package=)
+            module = importlib.import_module("." + module_name, package=__package__)
+            cls._orm_model_cls = getattr(module, class_name)
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class BaseMetaclass(ABCMeta):
@@ -19,7 +39,6 @@ class BaseMetaclass(ABCMeta):
     ) -> type:
         super_new = super().__new__
         # ensure initialization is only performed for subclasses of BaseModel
-        # (excluding BaseModel class itself).
         parents = [b for b in bases if isinstance(b, BaseMetaclass)]
         if parents and "_properties" in namespace:
             dynamic_props_field = namespace["_properties"]
@@ -36,9 +55,10 @@ class BaseMetaclass(ABCMeta):
 class BaseModel(metaclass=BaseMetaclass):
     guid: UUID = field(init=False, compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
-    _orm_model: Type[Model] = None
-    _orm_instance: Model = field(init=False, compare=False)  # tracks the corresponding ORM instance
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
+    _orm_model: str = field(init=False, compare=False, default=None)
+    _orm_model_cls: Type[Model] = field(init=False, compare=False, default=None)
+    _orm_instance: Model = field(init=False, compare=False, default=None)  # tracks the corresponding ORM instance
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
@@ -48,17 +68,14 @@ class BaseModel(metaclass=BaseMetaclass):
 
     def __post_init__(self):
         self._validate()
-        self.post_init()
-        self._orm_instance = self._orm_model()
 
     def _validate(self):
         for field_ in self._get_fields():
+            if issubclass(field_.type, Validator):
+                continue
             value = getattr(self, field_.name, None)
             if value is not None and not isinstance(value, field_.type):
                 raise TypeError(f"Expected {field_.name} to be of type {field_.type}.")
-
-    def _get_orm_field_names(self):
-        return tuple(f.name for f in self._orm_instance._meta.fields)
 
     @staticmethod
     def _add_quotes(input_str):
@@ -79,42 +96,67 @@ class BaseModel(metaclass=BaseMetaclass):
     def _get_fields(self):
         return tuple(f for f in fields(self) if not f.name.startswith("_"))
 
+    @staticmethod
+    def _get_orm_field_names(orm_instance):
+        return tuple(f.name for f in orm_instance._meta.fields)
+
     @classmethod
     def get_field_names(cls):
         return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
-
-    @abstractmethod
-    def post_init(self):
-        pass
 
     @property
     def saved(self):
         return self._saved
 
+    @require_model_import
     def save(self, **kwargs):
+        if self._orm_instance is None:
+            self._orm_instance = self._orm_model_cls()
         cls_fields = self.get_field_names()
-        model_fields = self._get_orm_field_names()
+        model_fields = self._get_orm_field_names(self._orm_instance)
         for field_ in cls_fields:
             if field_ in model_fields:
                 value = getattr(self, field_, None)
+                # skip setting value if None
                 if value is not None:
                     if isinstance(value, BaseModel):
-                        value = value.__class__.get(guid=value.guid)
+                        value = value._orm_instance.__class__.objects.get(guid=value.guid)
                     setattr(self._orm_instance, field_, value)
         self._orm_instance.save(**kwargs)
         self._saved = True
 
     def delete(self):
+        if not self._saved:
+            raise ObjectNotSavedError(extra_detail="Delete failed")
         self._orm_instance.delete()
+        self._saved = False
 
     @classmethod
-    @abstractmethod
-    def create(cls, **kwargs):
-        pass
-
-    @classmethod
-    @abstractmethod
+    @require_model_import
     def get(cls, **kwargs):
+        obj = cls()
+        # todo: handle modelDoesNotExist here and raise own exception added to Metaclass.
+        orm_instance = cls._orm_model_cls.objects.get(**kwargs)
+        cls_fields = cls.get_field_names()
+        model_fields = cls._get_orm_field_names(orm_instance)
+
+        for field_ in model_fields:
+            if field_ in cls_fields:
+                value = getattr(orm_instance, field_, None)
+                # don't check for None here, we need everything as-is
+                if isinstance(value, Model):
+                    # todo: convert relation objects to BaseModel types
+                    #  get the corresponding field type from the dataclass and create objects
+                    value = ...
+                setattr(obj, field_, value)
+
+        obj._orm_instance = orm_instance
+        obj._saved = True
+        return obj
+
+    @classmethod
+    @require_model_import
+    def create(cls, **kwargs):
         pass
 
     def get_tags(self):
@@ -157,7 +199,8 @@ class Validator(ABC):
         return getattr(obj, self._name, self._default)
 
     def __set__(self, obj, value):
-        self.validate(value)
+        if value is not None:
+            self.validate(value)
         setattr(obj, self._name, value)
 
     @abstractmethod
