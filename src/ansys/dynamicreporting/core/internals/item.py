@@ -94,7 +94,6 @@ class Item(BaseModel):
 
     def delete(self):
         super().delete()
-        # delete related media
         delete_item_media(self._orm_instance.guid)
 
     def render(self, ctx):
@@ -126,6 +125,7 @@ class Table(Item):
     _properties: tuple = table_attr
 
     @classmethod
+    @require_model_import
     def get(cls, **kwargs):
         obj = super().get(**kwargs)
         # type specific deserialization of payload
@@ -159,6 +159,7 @@ class Plot(Table):
 @dataclass(repr=False)
 class Tree(Item):
     content: TreeContent = TreeContent()
+    type: str = "tree"
 
 
 @dataclass(repr=False)

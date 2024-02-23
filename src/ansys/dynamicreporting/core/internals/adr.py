@@ -114,7 +114,7 @@ class ADR:
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
-    def configure(self, collect_static=False) -> None:
+    def setup(self, collect_static=False) -> None:
         os.environ.setdefault("DJANGO_SETTINGS_MODULE",
                               "ansys.dynamicreporting.core.internals.report_framework.settings")
         # django.setup() may only be called once.
