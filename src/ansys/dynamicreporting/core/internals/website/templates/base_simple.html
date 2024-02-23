@@ -1,0 +1,47 @@
+﻿<div class="body-content m-1">
+    {% load tz %}
+    {% get_current_timezone as TIME_ZONE %}
+    {% load static %}
+
+    {#icons#}
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/fontawesome.min.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/solid.min.css' %}"/>
+
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/bootstrap.min.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/bootstrap-callout.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/datatables.min.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/site.css' %}"/>
+    {#    <link rel="stylesheet" type="text/css" href="{% static 'website/content/dark-site.css' %}"/>#}
+
+    {# the mathjax core needs some explicit configuration to load only bits shipped and enable ascimath & TeX #}
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          jax: ["input/TeX","input/MathML","input/AsciiMath"],
+          extensions: ["tex2jax.js","mml2jax.js","asciimath2jax.js","MathMenu.js","MathZoom.js"],
+          TeX: { extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"] },
+          tex2jax: { inlineMath:[['$','$'],["\\(","\\)"]], displayMath:[['$$','$$'],["\\[","\\]"]], processEscapes:true, processEnvironments:true},
+          asciimath2jax: { delimiters:[['`','`']] },
+        });
+    </script>
+    <script src="{% static 'website/scripts/mathjax/MathJax.js' %}?config=TeX-AMS-MML_SVG"></script>
+    <script src="{% static 'website/scripts/jquery-3.4.1.min.js' %}"></script>
+    <script src="{% static 'website/scripts/datatables.min.js' %}"></script>
+
+
+    <script src="{% static 'ansys/nexus/utils/js-unzip.js' %}"></script>
+    <script src="{% static 'ansys/nexus/utils/js-inflate.js' %}"></script>
+    <script src="{% static 'ansys/nexus/ANSYSViewer_min.js' %}"></script>
+
+    {# Once the document is loaded, have MathJax revisit the expressions, replacing them with SVG #}
+    <script>$(document).ready(function () {
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+    });</script>
+    {% block header %}{% endblock %}
+    {% block content %}{% endblock %}
+    {% if not hidemenus %}
+        <hr/>
+    {% endif %}
+    <script src="{% static 'website/scripts/hotkey.min.js' %}"></script>
+    <script src="{% static 'website/scripts/bootstrap.min.js' %}"></script>
+    {% block scripts %}{% endblock %}
+</div>
