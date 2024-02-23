@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 import numpy
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .base import BaseModel, Validator, require_model_import
@@ -88,23 +89,21 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     session: Session = field(compare=False, kw_only=True, default_factory=Session)
     dataset: Dataset = field(compare=False, kw_only=True, default_factory=Dataset)
-    _type: str = "none"
+    type: str = "none"
     _orm_model: str = "data.models.Item"
 
-    @property
-    def type(self):
-        return self._type
-
     def delete(self):
-        # delete related sessions and datasets
         super().delete()
+        # delete related media
         delete_item_media(self._orm_instance.guid)
 
     def render(self, ctx):
-        if "request" not in ctx:
-            ctx["request"] = None
+        template_context = {**ctx}
+        if "request" not in template_context:
+            template_context["request"] = None
         try:
-            return self._orm_instance.render(ctx)
+            template_context["HTML"] = self._orm_instance.render(template_context)
+            return render_to_string('data/item_detail_simple.html', template_context)
         except Exception as e:
             return get_render_error_html(e, target='report item', guid=self.guid)
 
@@ -112,7 +111,7 @@ class Item(BaseModel):
 @dataclass(repr=False)
 class String(Item):
     content: StringContent = StringContent()
-    _type: str = "string"
+    type: str = "string"
 
 
 @dataclass(repr=False)
@@ -123,7 +122,7 @@ class Text(String):
 @dataclass(repr=False)
 class Table(Item):
     content: TableContent = TableContent()
-    _type: str = "table"
+    type: str = "table"
     _properties: tuple = table_attr
 
     @classmethod
@@ -148,7 +147,6 @@ class Table(Item):
                 payload[prop] = value
         if self._orm_instance is None:
             self._orm_instance = self._orm_model_cls()
-            self._orm_instance.type = self.type
         self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
         super().save(**kwargs)
 
@@ -166,7 +164,7 @@ class Tree(Item):
 @dataclass(repr=False)
 class Scene(Item):
     content: SceneContent = SceneContent()
-    _type: str = "scene"
+    type: str = "scene"
 
 
 @dataclass(repr=False)
@@ -174,22 +172,22 @@ class Image(Item):
     width: int = field(compare=False, kw_only=True, default=0)
     height: int = field(compare=False, kw_only=True, default=0)
     content: ImageContent = ImageContent()
-    _type: str = "image"
+    type: str = "image"
 
 
 @dataclass(repr=False)
 class HTML(Item):
     content: HTMLContent = HTMLContent()
-    _type: str = "html"
+    type: str = "html"
 
 
 @dataclass(repr=False)
 class Animation(Item):
     content: AnimContent = AnimContent()
-    _type: str = "anim"
+    type: str = "anim"
 
 
 @dataclass(repr=False)
 class File(Item):
     content: FileContent = FileContent()
-    _type: str = "file"
+    type: str = "file"
