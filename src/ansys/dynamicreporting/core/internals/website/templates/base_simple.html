@@ -27,10 +27,15 @@
     <script src="{% static 'website/scripts/jquery-3.4.1.min.js' %}"></script>
     <script src="{% static 'website/scripts/datatables.min.js' %}"></script>
 
-
-    <script src="{% static 'ansys/nexus/utils/js-unzip.js' %}"></script>
-    <script src="{% static 'ansys/nexus/utils/js-inflate.js' %}"></script>
-    <script src="{% static 'ansys/nexus/ANSYSViewer_min.js' %}"></script>
+    {% with 'ansys'|add:ansys_version|add:'/nexus/utils/js-unzip.js' as unzip_static %}
+        <script src="{% static unzip_static %}"></script>
+    {% endwith %}
+    {% with 'ansys'|add:ansys_version|add:'/nexus/utils/js-inflate.js' as inflate_static %}
+        <script src="{% static inflate_static %}"></script>
+    {% endwith %}
+    {% with 'ansys'|add:ansys_version|add:'/nexus/viewer-loader.js' as viewer_static %}
+        <script src="{% static viewer_static %}"></script>
+    {% endwith %}
 
     {# Once the document is loaded, have MathJax revisit the expressions, replacing them with SVG #}
     <script>$(document).ready(function () {
@@ -38,9 +43,6 @@
     });</script>
     {% block header %}{% endblock %}
     {% block content %}{% endblock %}
-    {% if not hidemenus %}
-        <hr/>
-    {% endif %}
     <script src="{% static 'website/scripts/hotkey.min.js' %}"></script>
     <script src="{% static 'website/scripts/bootstrap.min.js' %}"></script>
     {% block scripts %}{% endblock %}
