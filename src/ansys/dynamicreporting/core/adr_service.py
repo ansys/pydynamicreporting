@@ -14,6 +14,7 @@ Examples::
 """
 
 import atexit
+import glob
 import os
 import re
 import shutil
@@ -125,14 +126,14 @@ class Service:
         Parameters
         ----------
         ansys_installation : str, optional
-            Locatation of the Ansys installation, including the version directory.
+            Location of the Ansys installation, including the version directory.
             For example, r'C:\\Program Files\\ANSYS Inc\\v232'. The default is
             ``None``. This parameter is needed only if the Service instance is
             to launch a dynamic Reporting service. It is not needed if connecting
             to an existing service. If there is no local Ansys installation and
             a Docker image is to be used instead, enter ``"docker"``.
         docker_image : str, optional
-            Location of the Docker image for Ansys Dynamic Reporting. The defaults
+            Location of the Docker image for Ansys Dynamic Reporting. The default
             is ghcr.io/ansys-internal/nexus. This parameter is used only if the
             value for the ``ansys_installation`` parameter is set to ``"docker"``.
             Default:
@@ -220,39 +221,85 @@ class Service:
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
                 raise e
 
-        elif ansys_installation:  # pragma: no cover
-            # verify path
-            if not os.path.isdir(ansys_installation):
-                raise InvalidAnsysPath(ansys_installation)
+        else:  # pragma: no cover
+            # Not using docker. Make a list of directory names to consider:
+            # 1) any passed ansys_installation directory
+            # 2) any passed ansys_installation directory with 'CEI' dir appended
+            # 3) the 'enve.home()' directory (if enve will load)
+            # 4) the latest ansys installation via AWP_ROOTxyz environmental variable
+            # 5) CEIDEVROOTDOS environmental variable
+            #
+            dirs_to_check = []
+            if ansys_installation:
+                dirs_to_check.append(ansys_installation)
+                dirs_to_check.append(os.path.join(ansys_installation, "CEI"))
 
-        if ansys_installation != "docker" and ansys_installation is not None:  # pragma: no cover
-            # Not using docker
-            # Backward compatibility: if the path passed is only up to the version directory,
-            # append the CEI directory
-            if ansys_installation.endswith("CEI") is False:
-                ansys_installation = os.path.join(ansys_installation, "CEI")
-                self._ansys_installation = ansys_installation
-                # verify new path
-                if not os.path.isdir(ansys_installation):
-                    # Option for local development build
-                    if os.environ.get("CEIDEVROOTDOS") is not None:
-                        self._ansys_installation = os.environ.get("CEIDEVROOTDOS")
+            # if we are running from a distro "EnSight" cpython, enve might be there
+            try:
+                import enve
+
+                dirs_to_check.append(enve.home())
+            except ModuleNotFoundError:
+                pass
+
+            # Find via AWP_ROOTxyz envvar...  Most recent version installed
+            env_name = "AWP_ROOT000"
+            for name in os.environ.keys():
+                if name.startswith("AWP_ROOT"):
+                    env_name = max(env_name, name)
+            if env_name in os.environ:
+                # add AWP_ROOT{max}/CEI to the list of directories to search
+                dirs_to_check.append(os.path.join(os.environ[env_name], "CEI"))
+
+            # Option for local development build
+            if os.environ.get("CEIDEVROOTDOS") is not None:
+                dirs_to_check.append(os.environ.get("CEIDEVROOTDOS"))
+
+            # Check all the potential local directories for the distro
+            # bin/cpython should be in the server distro
+            found = False
+            for install_dir in dirs_to_check:
+                cpython_name = os.path.join(install_dir, "bin", "cpython")
+                if os.path.isfile(cpython_name):
+                    self._ansys_installation = install_dir
+                    found = True
+                    break
+
+            # Should we raise an exception here?  If no ansys_installation was
+            # passed, then no but the user can only connect to existing servers
+            # as per docs.  If ansys_installation was passed, then there is an
+            # exception if the passed value is not the root of the installation.
+            # Basically, the passed install path was illegal.
+            if ansys_installation:
+                if not self._ansys_installation.startswith(ansys_installation):
+                    raise InvalidAnsysPath(ansys_installation)
+            if not found:
+                self._ansys_installation = None
+            else:
+                # populate the version number
+                if self._ansys_version is None:
+                    # An ansys distro include a v??? directory name.  This is the fallback.
+                    matches = re.search(r".*v([0-9]{3}).*", self._ansys_installation)
+                    # Try to get version from install path bin\cei_python??? name
+                    # Build the cpython path glob name:
+                    cpython_glob = os.path.join(
+                        self._ansys_installation, "bin", "cpython[0-9][0-9][0-9]"
+                    )
+                    cpython_name = glob.glob(cpython_glob)
+                    # is the file there (it should be...)
+                    if len(cpython_name):
+                        matches = re.search(r".*cpython([0-9]{3})", cpython_name[0])
+                    if matches is None:
+                        # Option for local development build
+                        if "ANSYS_REL_INT_I" in os.environ:
+                            self._ansys_version = int(os.environ.get("ANSYS_REL_INT_I"))
+                        else:
+                            raise AnsysVersionAbsentError
                     else:
-                        raise InvalidAnsysPath(ansys_installation)
-            if self._ansys_version is None:
-                # try to get version from install path
-                matches = re.search(r".*v([0-9]{3}).*", self._ansys_installation)
-                if matches is None:
-                    # Option for local development build
-                    if os.environ.get("ANSYS_REL_INT_I") is not None:
-                        self._ansys_version = int(os.environ.get("ANSYS_REL_INT_I"))
-                    else:
-                        raise AnsysVersionAbsentError
-                else:
-                    try:
-                        self._ansys_version = int(matches.group(1))
-                    except IndexError:
-                        raise AnsysVersionAbsentError
+                        try:
+                            self._ansys_version = int(matches.group(1))
+                        except IndexError:
+                            raise AnsysVersionAbsentError
 
     @property
     def session_guid(self):
