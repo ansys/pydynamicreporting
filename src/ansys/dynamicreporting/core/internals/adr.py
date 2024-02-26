@@ -8,6 +8,7 @@ from django.db.models import Model
 from django.http import HttpRequest
 
 from .item import Item, Session, Dataset
+from .template import Template
 from ..adr_utils import get_logger
 from ..exceptions import (
     InvalidAnsysPath,
@@ -153,15 +154,18 @@ class ADR:
                 self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
+    def _validate_kwargs(self, type_, kwargs):
+        valid_fields = type_.get_field_names()
+        for kwarg, value in kwargs.items():
+            if kwarg not in valid_fields:
+                detail = f"{type_.__name__} has no attribute {kwarg}"
+                self._logger.error(detail)
+                raise AttributeError(detail)
+
     def create_item(self, item_type: Type[Item], **kwargs: Any):
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        valid_fields = item_type.get_field_names()
-        for kwarg, value in kwargs.items():
-            if kwarg not in valid_fields:
-                detail = f"{item_type.__name__} has no attribute {kwarg}"
-                self._logger.error(detail)
-                raise AttributeError(detail)
+        self._validate_kwargs(item_type, kwargs)
         item = item_type(**kwargs)
         # save session and dataset before creating the relation
         try:
@@ -186,8 +190,20 @@ class ADR:
         item.save()
         return item
 
-    def create_template(self):
+    def create_template(self, template_type: Type[Template], **kwargs):
         # pass in name, parent, template type (Enum), params, filters, properties, HTML header
+        if not issubclass(template_type, Template):
+            raise TypeError(f"{template_type} is not valid")
+        self._validate_kwargs(template_type, kwargs)
+        template = template_type(**kwargs)
+        template.save()
+        # handle parents automatically
+        parent = kwargs.get("parent")
+        if parent is not None:
+            ...
+        return template
+
+    def render_report(self):  # replacement for visualize_report
         ...
 
     def put_objects(self):
@@ -202,9 +218,6 @@ class ADR:
     def get_report(self):
         #     take name or guid, return Template obj
         return
-
-    def render_report(self):  # replacement for visualize_report
-        ...
 
     def query(self, query_type, query_filter=""):
         """
