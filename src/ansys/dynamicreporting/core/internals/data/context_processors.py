@@ -6,4 +6,5 @@ def global_settings(request):
     return {
         'BETA_FLAG': settings.BETA_FLAG,
         'ENABLE_ACLS': settings.ENABLE_ACLS,
+        'ansys_version': settings.CEI_APEX_SUFFIX,
     }
