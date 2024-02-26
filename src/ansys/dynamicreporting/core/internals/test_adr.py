@@ -1,7 +1,7 @@
 from random import random as r
 
 import numpy as np
-from ansys.dynamicreporting.core import ADR, Table
+from ansys.dynamicreporting.core import ADR, Table, BasicLayout, PanelLayout
 
 opts = {"CEI_NEXUS_DEBUG": "0", "CEI_NEXUS_SECRET_KEY": "h1kuvl)j#e6_7rbhr&f@_3%)$nle*b8t$82wta*e3wu-(5v$$o",
         "CEI_NEXUS_LOCAL_DB_DIR": r"C:\cygwin64\home\vrajendr\ogdocex"}
@@ -9,7 +9,7 @@ adr = ADR(r"C:\Program Files (x86)\ANSYSv231",
           opts=opts,
           session="4ee905f0-f611-11e6-8901-ae3af682bb6a",
           dataset="fa473009-deee-34eb-b6b8-8326236ca9a6")
-adr.configure()
+adr.setup()
 
 ics = []
 ips = []
@@ -36,11 +36,21 @@ data_table.save()
 
 print(data_table.render({}))
 
-# template_1 = adr.create_template(
-#     BasicLayout, name="Simulation Report", parent=None
-# )
-# template_1.params = '{"HTML": "<h1>Simulation Report</h1>"}'
-# template_1.set_filter("A|i_tags|cont|dp=0;")
-# template_1.save()
-#
-# print(template_1.render())
+template_1 = adr.create_template(
+    BasicLayout, name="Simulation Report", parent=None
+)
+template_1.params = '{"HTML": "<h1>Simulation Report</h1>"}'
+template_1.set_filter("A|i_tags|cont|dp=0;")
+template_1.save()
+
+template_2 = adr.create_template(
+    PanelLayout, name="Results", parent=template_1
+)
+template_2.params = (
+    '{"HTML": "<h2>Results</h2>\\nYour simulation results."}'
+)
+template_2.set_filter("A|i_tags|cont|section=data;")
+template_2.save()
+template_1.save()
+
+print(template_1.render())
