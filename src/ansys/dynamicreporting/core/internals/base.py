@@ -125,10 +125,10 @@ class BaseModel(metaclass=BaseMetaclass):
         self._orm_instance.save(**kwargs)
         self._saved = True
 
-    def delete(self):
+    def delete(self, **kwargs):
         if not self._saved:
             raise ObjectNotSavedError(extra_detail="Delete failed")
-        self._orm_instance.delete()
+        self._orm_instance.delete(**kwargs)
         self._saved = False
 
     @classmethod
@@ -157,6 +157,11 @@ class BaseModel(metaclass=BaseMetaclass):
     @classmethod
     @require_model_import
     def create(cls, **kwargs):
+        pass
+
+    @classmethod
+    @require_model_import
+    def filter(cls, **kwargs):
         pass
 
     def get_tags(self):

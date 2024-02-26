@@ -92,8 +92,8 @@ class Item(BaseModel):
     type: str = "none"
     _orm_model: str = "data.models.Item"
 
-    def delete(self):
-        super().delete()
+    def delete(self, **kwargs):
+        super().delete(**kwargs)
         delete_item_media(self._orm_instance.guid)
 
     def render(self, ctx):
