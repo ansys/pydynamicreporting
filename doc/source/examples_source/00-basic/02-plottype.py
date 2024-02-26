@@ -214,5 +214,5 @@ sankey_plot.visualize()
 # Close the Ansys Dynamic Reporting service. The database with the items that
 # were created remains on disk.
 
-# sphinx_gallery_thumbnail_path = '_static/01_connect_3.png'
+# sphinx_gallery_thumbnail_path = '_static/heatmap.png'
 adr_service.stop()
