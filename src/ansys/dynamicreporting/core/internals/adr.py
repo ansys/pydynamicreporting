@@ -200,7 +200,8 @@ class ADR:
         # handle parents automatically
         parent = kwargs.get("parent")
         if parent is not None:
-            ...
+            parent.children.append(template)
+            parent.save()
         return template
 
     def render_report(self):  # replacement for visualize_report
