@@ -19,6 +19,7 @@ class StringContent(Validator):
     def validate(self, string):
         if not isinstance(string, str):
             raise TypeError(f'Expected content to be a string')
+        return string
 
 
 class TableContent(Validator):
@@ -29,6 +30,7 @@ class TableContent(Validator):
             raise TypeError("Expected content to be a numpy array of bytes or float type.")
         if len(array.shape) != 2:
             raise ValueError("Expected content to be a 2 dimensional numpy array.")
+        return array
 
 
 class ImageContent(Validator):
