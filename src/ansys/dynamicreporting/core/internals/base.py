@@ -1,4 +1,5 @@
 import importlib
+import inspect
 import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
@@ -104,6 +105,17 @@ class BaseModel(metaclass=BaseMetaclass):
     def get_field_names(cls):
         return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
 
+    @classmethod
+    def _get_all_field_names(cls):
+        """
+        Returns a list of all field names from a dataclass, including properties.
+        """
+        fields_ = []
+        for name, value in inspect.getmembers(cls):
+            if isinstance(value, property):
+                fields_.append(name)
+        return tuple(fields_) + cls.get_field_names()
+
     @property
     def saved(self):
         return self._saved
@@ -112,7 +124,7 @@ class BaseModel(metaclass=BaseMetaclass):
     def save(self, **kwargs):
         if self._orm_instance is None:
             self._orm_instance = self._orm_model_cls()
-        cls_fields = self.get_field_names()
+        cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
         for field_ in cls_fields:
             if field_ in model_fields:
@@ -144,8 +156,9 @@ class BaseModel(metaclass=BaseMetaclass):
             if field_ in cls_fields:
                 value = getattr(orm_instance, field_, None)
                 # don't check for None here, we need everything as-is
+                #  todo: also set private fields (like _master) - probably in the super class
                 if isinstance(value, Model):
-                    # todo: convert relation objects to BaseModel types
+                    #  todo: convert relation objects to BaseModel types
                     #  get the corresponding field type from the dataclass and create objects
                     value = ...
                 setattr(obj, field_, value)
