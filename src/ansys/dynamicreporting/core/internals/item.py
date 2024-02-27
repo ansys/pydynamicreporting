@@ -18,7 +18,7 @@ from ..utils import report_utils
 class StringContent(Validator):
     def validate(self, string):
         if not isinstance(string, str):
-            raise TypeError(f'Expected content to be a str')
+            raise TypeError(f'Expected content to be a string')
 
 
 class TableContent(Validator):
@@ -89,8 +89,12 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     session: Session = field(compare=False, kw_only=True, default_factory=Session)
     dataset: Dataset = field(compare=False, kw_only=True, default_factory=Dataset)
-    type: str = "none"
+    _type: str = "none"
     _orm_model: str = "data.models.Item"
+
+    @property
+    def type(self):
+        return self._type
 
     def delete(self, **kwargs):
         super().delete(**kwargs)
@@ -110,7 +114,11 @@ class Item(BaseModel):
 @dataclass(repr=False)
 class String(Item):
     content: StringContent = StringContent()
-    type: str = "string"
+    _type: str = "string"
+
+    @property
+    def type(self):
+        return self._type
 
 
 @dataclass(repr=False)
@@ -121,8 +129,12 @@ class Text(String):
 @dataclass(repr=False)
 class Table(Item):
     content: TableContent = TableContent()
-    type: str = "table"
+    _type: str = "table"
     _properties: tuple = table_attr
+
+    @property
+    def type(self):
+        return self._type
 
     @classmethod
     @require_model_import
@@ -159,13 +171,13 @@ class Plot(Table):
 @dataclass(repr=False)
 class Tree(Item):
     content: TreeContent = TreeContent()
-    type: str = "tree"
+    _type: str = "tree"
 
 
 @dataclass(repr=False)
 class Scene(Item):
     content: SceneContent = SceneContent()
-    type: str = "scene"
+    _type: str = "scene"
 
 
 @dataclass(repr=False)
@@ -173,22 +185,22 @@ class Image(Item):
     width: int = field(compare=False, kw_only=True, default=0)
     height: int = field(compare=False, kw_only=True, default=0)
     content: ImageContent = ImageContent()
-    type: str = "image"
+    _type: str = "image"
 
 
 @dataclass(repr=False)
 class HTML(Item):
     content: HTMLContent = HTMLContent()
-    type: str = "html"
+    _type: str = "html"
 
 
 @dataclass(repr=False)
 class Animation(Item):
     content: AnimContent = AnimContent()
-    type: str = "anim"
+    _type: str = "anim"
 
 
 @dataclass(repr=False)
 class File(Item):
     content: FileContent = FileContent()
-    type: str = "file"
+    _type: str = "file"
