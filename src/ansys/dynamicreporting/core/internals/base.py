@@ -29,7 +29,8 @@ def require_model_import(func):
     return wrapper
 
 
-class BaseMetaclass(ABCMeta):
+class BaseMeta(ABCMeta):
+    cls_registry: dict[str, 'BaseModel'] = {}
 
     def __new__(
             mcs,
@@ -40,20 +41,26 @@ class BaseMetaclass(ABCMeta):
     ) -> type:
         super_new = super().__new__
         # ensure initialization is only performed for subclasses of BaseModel
-        parents = [b for b in bases if isinstance(b, BaseMetaclass)]
-        if parents and "_properties" in namespace:
-            dynamic_props_field = namespace["_properties"]
-            if hasattr(dynamic_props_field, "default"):
-                props = dynamic_props_field.default
-                new_namespace = {**namespace}
-                for prop in props:
-                    new_namespace[prop] = None
-                return super_new(mcs, cls_name, bases, new_namespace, **kwargs)
-        return super_new(mcs, cls_name, bases, namespace)
+        new_cls = super_new(mcs, cls_name, bases, namespace)
+        parents = [b for b in bases if isinstance(b, BaseMeta)]
+        if parents:
+            # dynamically make the properties listed into class attrs
+            if "_properties" in namespace:
+                dynamic_props_field = namespace["_properties"]
+                if hasattr(dynamic_props_field, "default"):
+                    props = dynamic_props_field.default
+                    new_namespace = {**namespace}
+                    for prop in props:
+                        new_namespace[prop] = None
+                    new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
+            # save every class extending BaseModel
+            mcs.cls_registry[cls_name] = new_cls
+        # all classes must be dataclasses
+        return new_cls
 
 
 @dataclass(repr=False)
-class BaseModel(metaclass=BaseMetaclass):
+class BaseModel(metaclass=BaseMeta):
     guid: UUID = field(init=False, compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
@@ -72,7 +79,10 @@ class BaseModel(metaclass=BaseMetaclass):
 
     def _validate(self):
         for field_ in self._get_fields():
-            if issubclass(field_.type, Validator):
+            type_ = field_.type
+            if isinstance(type_, str):
+                type_ = BaseMeta.cls_registry[type_]
+            if issubclass(type_, Validator):
                 continue
             value = getattr(self, field_.name, None)
             if value is not None and not isinstance(value, field_.type):
@@ -156,7 +166,6 @@ class BaseModel(metaclass=BaseMetaclass):
             if field_ in cls_fields:
                 value = getattr(orm_instance, field_, None)
                 # don't check for None here, we need everything as-is
-                #  todo: also set private fields (like _master) - probably in the super class
                 if isinstance(value, Model):
                     #  todo: convert relation objects to BaseModel types
                     #  get the corresponding field type from the dataclass and create objects
