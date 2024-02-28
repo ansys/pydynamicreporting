@@ -1,7 +1,5 @@
-from random import random as r
-
-import numpy as np
-from ansys.dynamicreporting.core import ADR, Table, BasicLayout, PanelLayout
+# Configure
+from ansys.dynamicreporting.core import ADR
 
 opts = {"CEI_NEXUS_DEBUG": "0", "CEI_NEXUS_SECRET_KEY": "h1kuvl)j#e6_7rbhr&f@_3%)$nle*b8t$82wta*e3wu-(5v$$o",
         "CEI_NEXUS_LOCAL_DB_DIR": r"C:\cygwin64\home\vrajendr\ogdocex"}
@@ -11,6 +9,10 @@ adr = ADR(r"C:\Program Files (x86)\ANSYSv231",
           dataset="fa473009-deee-34eb-b6b8-8326236ca9a6")
 adr.setup()
 
+# Items
+from random import random as r
+import numpy as np
+
 ics = []
 ips = []
 zet = []
@@ -19,11 +21,13 @@ for i in range(30):
     ips.append(np.sin((i + 6 * 0) * np.pi / 10.0) + r() * 0.1)
     zet.append(np.cos((i + 6 * 0) * np.pi / 10.0) + r() * 0.1)
 
+from ansys.dynamicreporting.core import Table
+
 data_table = adr.create_item(Table, name="table1", content=np.array([ics, ips, zet], dtype="|S20"),
                              tags="dp=0 type=hex8")
 print(data_table.saved)
 data_table.labels_row = ["X", "Sin", "Cos"]
-data_table.set_tags("dp=dp0 section=data")
+data_table.set_tags("dp=0 section=data")
 data_table.plot = "line"
 data_table.xaxis = "X"
 data_table.yaxis = ["Sin", "Cos"]
@@ -35,6 +39,9 @@ data_table.xtitle = "X"
 data_table.save()
 
 print(data_table.render({}))
+
+# Templates/reports
+from ansys.dynamicreporting.core import BasicLayout, PanelLayout
 
 template_1 = adr.create_template(
     BasicLayout, name="Simulation Report", parent=None
@@ -51,6 +58,5 @@ template_2.params = (
 )
 template_2.set_filter("A|i_tags|cont|section=data;")
 template_2.save()
-template_1.save()
 
 print(template_1.render())
