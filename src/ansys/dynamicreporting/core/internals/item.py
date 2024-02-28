@@ -63,7 +63,6 @@ class HTMLContent(Validator):
         pass
 
 
-@dataclass(repr=False)
 class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
@@ -73,7 +72,6 @@ class Session(BaseModel):
     _orm_model: str = "data.models.Session"
 
 
-@dataclass(repr=False)
 class Dataset(BaseModel):
     filename: str = field(compare=False, kw_only=True, default="none")
     dirname: str = field(compare=False, kw_only=True, default="")
@@ -83,7 +81,6 @@ class Dataset(BaseModel):
     _orm_model: str = "data.models.Dataset"
 
 
-@dataclass(repr=False)
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
@@ -113,7 +110,6 @@ class Item(BaseModel):
             return get_render_error_html(e, target='report item', guid=self.guid)
 
 
-@dataclass(repr=False)
 class String(Item):
     content: StringContent = StringContent()
     _type: str = "string"
@@ -123,12 +119,10 @@ class String(Item):
         return self._type
 
 
-@dataclass(repr=False)
 class Text(String):
     pass
 
 
-@dataclass(repr=False)
 class Table(Item):
     content: TableContent = TableContent()
     _type: str = "table"
@@ -165,24 +159,20 @@ class Table(Item):
         super().save(**kwargs)
 
 
-@dataclass(repr=False)
 class Plot(Table):
     pass
 
 
-@dataclass(repr=False)
 class Tree(Item):
     content: TreeContent = TreeContent()
     _type: str = "tree"
 
 
-@dataclass(repr=False)
 class Scene(Item):
     content: SceneContent = SceneContent()
     _type: str = "scene"
 
 
-@dataclass(repr=False)
 class Image(Item):
     width: int = field(compare=False, kw_only=True, default=0)
     height: int = field(compare=False, kw_only=True, default=0)
@@ -190,19 +180,16 @@ class Image(Item):
     _type: str = "image"
 
 
-@dataclass(repr=False)
 class HTML(Item):
     content: HTMLContent = HTMLContent()
     _type: str = "html"
 
 
-@dataclass(repr=False)
 class Animation(Item):
     content: AnimContent = AnimContent()
     _type: str = "anim"
 
 
-@dataclass(repr=False)
 class File(Item):
     content: FileContent = FileContent()
     _type: str = "file"

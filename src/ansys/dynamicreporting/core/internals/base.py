@@ -56,10 +56,10 @@ class BaseMeta(ABCMeta):
             # save every class extending BaseModel
             mcs.cls_registry[cls_name] = new_cls
         # all classes must be dataclasses
+        new_cls = dataclass(repr=False)(new_cls)
         return new_cls
 
 
-@dataclass(repr=False)
 class BaseModel(metaclass=BaseMeta):
     guid: UUID = field(init=False, compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")

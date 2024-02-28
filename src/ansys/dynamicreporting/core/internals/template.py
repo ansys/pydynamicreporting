@@ -1,234 +1,269 @@
+import json
 from dataclasses import dataclass, field
-from typing import Type
+from datetime import datetime
 
-from .base import BaseModel
+from django.template.loader import render_to_string
+from django.utils import timezone
+
+from .base import BaseModel, require_model_import
 from .report_framework.utils import get_render_error_html
+from ..exceptions import ObjectNotSavedError
 
 
-@dataclass(repr=False)
 class Template(BaseModel):
+    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     name: str = field(compare=False, kw_only=True, default="")
     params: str = field(compare=False, kw_only=True, default="")
     item_filter: str = field(compare=False, kw_only=True, default="")
-    parent: Type['Template'] = field(compare=False, kw_only=True, default=None)
+    parent: 'Template' = field(compare=False, kw_only=True, default=None)
+    # todo: check if this is writable.
     children: list = field(compare=False, kw_only=True, default_factory=list)
-    children_order: str = field(compare=False, kw_only=True, default="")
-    master: bool = field(compare=False, kw_only=True, default=True)
-    _type: str = field(init=False, compare=False, default="")
+    _children_order: str = field(compare=False, init=False, default="")  # computed from self.children
+    _master: bool = field(compare=False, init=False, default=True)  # computed from self.parent
+    _report_type: str = ""
+    _properties: tuple = tuple()
+    _orm_model: str = "reports.models.Template"
+
+    @property
+    def report_type(self):
+        return self._report_type
 
     @property
     def type(self):
-        return self._type
+        return self._report_type
 
-    def post_init(self):
-        from .reports.models import Template as TemplateModel
-        self._orm_instance = TemplateModel()
+    @property
+    def children_order(self):
+        return self._children_order
 
-    @staticmethod
-    def get(**kwargs):
-        from .reports.models import Template as TemplateModel
-        return TemplateModel.objects.get(**kwargs)
+    @property
+    def master(self):
+        return self._master
 
-    @staticmethod
-    def create(**kwargs):
-        from .reports.models import Template as TemplateModel
-        return TemplateModel.objects.create(**kwargs)
+    def get_filter(self):
+        return self.item_filter
 
-    def save(self):
-        # todo
-        self._orm_instance.save()
+    def set_filter(self, filter_str):
+        if not isinstance(filter_str, str):
+            raise TypeError("Error: filter value should be a string")
+        self.item_filter = filter_str
 
-    def delete(self):
-        # todo: delete children, parents
-        pass
+    def add_filter(self, filter_str=""):
+        if not isinstance(filter_str, str):
+            raise TypeError("Error: filter value should be a string")
+        self.item_filter += filter_str
+
+    def get_params(self) -> dict:
+        return json.loads(self.params)
+
+    def set_params(self, new_params: dict) -> None:
+        if new_params is None:
+            new_params = {}
+        if not isinstance(new_params, dict):
+            raise TypeError("Error: input must be a dictionary")
+        self.params = json.dumps(new_params)
+
+    def add_params(self, new_params: dict):
+        if new_params is None:
+            new_params = {}
+        if not isinstance(new_params, dict):
+            raise TypeError("Error: input must be a dictionary")
+        curr_params = json.loads(self.params)
+        self.params = json.dumps(curr_params | new_params)
+
+    def get_property(self):
+        params = json.loads(self.params)
+        return params.get("properties", {})
+
+    def set_property(self, new_props: dict):
+        if new_props is None:
+            new_props = {}
+        if not isinstance(new_props, dict):
+            raise TypeError("Error: input must be a dictionary")
+        params = json.loads(self.params)
+        params["properties"] = new_props
+        self.params = json.dumps(params)
+
+    def add_property(self, new_props: dict):
+        if new_props is None:
+            new_props = {}
+        if not isinstance(new_props, dict):
+            raise TypeError("Error: input must be a dictionary")
+        params = json.loads(self.params)
+        curr_props = params.get("properties", {})
+        params["properties"] = curr_props | new_props
+        self.params = json.dumps(params)
+
+    @require_model_import
+    def save(self, **kwargs):
+        import ipdb
+        ipdb.set_trace()
+        if self.parent is not None and not self.parent.saved:
+            raise ObjectNotSavedError(extra_detail="Failed to save template because its parent is not saved")
+        child_objs = []
+        for child in self.children:
+            if not child.saved:
+                raise ObjectNotSavedError(extra_detail="Failed to save template because its children are not saved")
+            self._children_order += str(child.guid) + ","
+            child_objs.append(child._orm_instance)
+        self._master = self.parent is None
+        # set properties
+        prop_dict = {}
+        for prop in self._properties:
+            value = getattr(self, prop, None)
+            if value is not None:
+                prop_dict[prop] = value
+        if prop_dict:
+            self.add_property(prop_dict)
+        # # TODO: add orm objects from self.children
+        # if self._orm_instance is None:
+        #     self._orm_instance = self._orm_model_cls()
+        # self._orm_instance.children.add(child_objs)
+        super().save(**kwargs)
+
+    @classmethod
+    @require_model_import
+    def get(cls, **kwargs):
+        obj = super().get(**kwargs)
+        props = obj.get_property()
+        for prop in cls._properties:
+            if prop in props:
+                setattr(obj, prop, props[prop])
+        return obj
+
+    def delete(self, **kwargs):
+        # del_children = kwargs.pop("children", False)  # deletes current children
+        # del_recursive = kwargs.get("recursive", False)  # deletes all descendants recursively
+        # if del_children or del_recursive:
+        #     # delete children if asked
+        #     for child in self.children:
+        #         if del_recursive:
+        #             child.delete(**kwargs)
+        #         else:
+        #             child.delete()
+        super().delete(**kwargs)
 
     def render(self, ctx):
-        if "request" not in ctx:
-            ctx["request"] = None
+        template_context = {**ctx}
+        if "request" not in template_context:
+            template_context["request"] = None
         try:
-            return self._orm_instance.render(ctx)
+            template_context["HTML"] = self._orm_instance.render(template_context)
+            return render_to_string('data/report_display_simple.html', template_context)
         except Exception as e:
             return get_render_error_html(e, target='report', guid=self.guid)
 
-    def export(self):
-        ...
 
-    def set_filter(self):
-        ...
-
-    def set_params(self):
-        ...
-
-
-@dataclass(repr=False)
 class Layout(Template):
-
-    def render(self):
-        pass
+    pass
 
 
-@dataclass(repr=False)
 class BasicLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:basic"
 
 
-@dataclass(repr=False)
 class PanelLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class BoxLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class TabLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class CarouselLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class SliderLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class FooterLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class HeaderLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class IteratorLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class TagPropertyLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class TOCLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class ReportLinkLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class PPTXLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class PPTXSlideLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class DataFilterLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class UserDefinedLayout(Layout):
-
-    def render(self):
-        pass
+    _report_type: str = "Layout:panel"
 
 
-@dataclass(repr=False)
 class Generator(Template):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class TableMergeGenerator(Generator):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class TableReduceGenerator(Generator):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class TableMergeRCFilterGenerator(Generator):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class TableMergeValueFilterGenerator(Generator):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class TableSortFilterGenerator(Generator):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class TreeMergeGenerator(Generator):
 
     def render(self):
         pass
 
 
-@dataclass(repr=False)
 class SQLQueryGenerator(Generator):
 
     def render(self):
