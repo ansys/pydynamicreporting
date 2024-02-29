@@ -61,3 +61,6 @@ template_2.save()
 
 ctx = {}
 print(template_1.render(context=ctx))
+
+data_table.delete()
+template_2.delete()

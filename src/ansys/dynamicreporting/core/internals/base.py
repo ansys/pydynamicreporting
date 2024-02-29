@@ -85,7 +85,7 @@ class BaseModel(metaclass=BaseMeta):
             if issubclass(type_, Validator):
                 continue
             value = getattr(self, field_.name, None)
-            if value is not None and not isinstance(value, field_.type):
+            if value is not None and not isinstance(value, type_):
                 raise TypeError(f"Expected {field_.name} to be of type {field_.type}.")
 
     @staticmethod
@@ -150,8 +150,9 @@ class BaseModel(metaclass=BaseMeta):
     def delete(self, **kwargs):
         if not self._saved:
             raise ObjectNotSavedError(extra_detail="Delete failed")
-        self._orm_instance.delete(**kwargs)
         self._saved = False
+        count, _ = self._orm_instance.delete(**kwargs)
+        return count
 
     @classmethod
     @require_model_import
