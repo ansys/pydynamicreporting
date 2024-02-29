@@ -109,7 +109,7 @@ class BaseModel(metaclass=BaseMeta):
 
     @staticmethod
     def _get_orm_field_names(orm_instance):
-        return tuple(f.name for f in orm_instance._meta.fields)
+        return tuple(f.name for f in orm_instance._meta.get_fields())
 
     @classmethod
     def get_field_names(cls):
@@ -139,11 +139,17 @@ class BaseModel(metaclass=BaseMeta):
         for field_ in cls_fields:
             if field_ in model_fields:
                 value = getattr(self, field_, None)
-                # skip setting value if None
                 if value is not None:
-                    if isinstance(value, BaseModel):
-                        value = value._orm_instance.__class__.objects.get(guid=value.guid)
-                    setattr(self._orm_instance, field_, value)
+                    if isinstance(value, list):
+                        obj_list = []
+                        for obj in value:
+                            obj_list.append(obj._orm_instance)
+                        if obj_list:
+                            getattr(self._orm_instance, field_).add(*obj_list)
+                    else:
+                        if isinstance(value, BaseModel):
+                            value = value._orm_instance.__class__.objects.get(guid=value.guid)
+                        setattr(self._orm_instance, field_, value)
         self._orm_instance.save(**kwargs)
         self._saved = True
 

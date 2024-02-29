@@ -13,6 +13,8 @@ adr.setup()
 from random import random as r
 import numpy as np
 
+from ansys.dynamicreporting.core import Table
+
 ics = []
 ips = []
 zet = []
@@ -20,8 +22,6 @@ for i in range(30):
     ics.append(i / 5.0)
     ips.append(np.sin((i + 6 * 0) * np.pi / 10.0) + r() * 0.1)
     zet.append(np.cos((i + 6 * 0) * np.pi / 10.0) + r() * 0.1)
-
-from ansys.dynamicreporting.core import Table
 
 data_table = adr.create_item(Table, name="table1", content=np.array([ics, ips, zet], dtype="|S20"),
                              tags="dp=0 type=hex8")
@@ -63,4 +63,4 @@ ctx = {}
 print(template_1.render(context=ctx))
 
 data_table.delete()
-template_2.delete()
+template_1.delete()

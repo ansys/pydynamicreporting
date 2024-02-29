@@ -94,18 +94,13 @@ class Template(BaseModel):
         params["properties"] = curr_props | new_props
         self.params = json.dumps(params)
 
-    @require_model_import
     def save(self, **kwargs):
-        import ipdb
-        ipdb.set_trace()
-        if self.parent is not None and not self.parent.saved:
+        if self.parent is not None and not self.parent._saved:
             raise ObjectNotSavedError(extra_detail="Failed to save template because its parent is not saved")
-        child_objs = []
         for child in self.children:
-            if not child.saved:
+            if not child._saved:
                 raise ObjectNotSavedError(extra_detail="Failed to save template because its children are not saved")
             self._children_order += str(child.guid) + ","
-            child_objs.append(child._orm_instance)
         self._master = self.parent is None
         # set properties
         prop_dict = {}
@@ -115,14 +110,9 @@ class Template(BaseModel):
                 prop_dict[prop] = value
         if prop_dict:
             self.add_property(prop_dict)
-        # # TODO: add orm objects from self.children
-        # if self._orm_instance is None:
-        #     self._orm_instance = self._orm_model_cls()
-        # self._orm_instance.children.add(child_objs)
         super().save(**kwargs)
 
     @classmethod
-    @require_model_import
     def get(cls, **kwargs):
         obj = super().get(**kwargs)
         props = obj.get_property()
