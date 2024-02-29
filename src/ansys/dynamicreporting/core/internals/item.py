@@ -99,8 +99,10 @@ class Item(BaseModel):
         super().delete(**kwargs)
         delete_item_media(self._orm_instance.guid)
 
-    def render(self, ctx):
-        template_context = {**ctx}
+    def render(self, context=None):
+        if context is None:
+            context = {}
+        template_context = {**context}
         if "request" not in template_context:
             template_context["request"] = None
         try:

@@ -131,20 +131,10 @@ class Template(BaseModel):
                 setattr(obj, prop, props[prop])
         return obj
 
-    def delete(self, **kwargs):
-        # del_children = kwargs.pop("children", False)  # deletes current children
-        # del_recursive = kwargs.get("recursive", False)  # deletes all descendants recursively
-        # if del_children or del_recursive:
-        #     # delete children if asked
-        #     for child in self.children:
-        #         if del_recursive:
-        #             child.delete(**kwargs)
-        #         else:
-        #             child.delete()
-        super().delete(**kwargs)
-
-    def render(self, ctx):
-        template_context = {**ctx}
+    def render(self, context=None):
+        if context is None:
+            context = {}
+        template_context = {**context}
         if "request" not in template_context:
             template_context["request"] = None
         try:
