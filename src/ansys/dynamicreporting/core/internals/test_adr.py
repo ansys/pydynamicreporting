@@ -38,7 +38,7 @@ data_table.xtitle = "X"
 
 data_table.save()
 
-print(data_table.render({}))
+print(data_table.render())
 
 # Templates/reports
 from ansys.dynamicreporting.core import BasicLayout, PanelLayout
@@ -59,4 +59,5 @@ template_2.params = (
 template_2.set_filter("A|i_tags|cont|section=data;")
 template_2.save()
 
-print(template_1.render())
+ctx = {}
+print(template_1.render(context=ctx))
