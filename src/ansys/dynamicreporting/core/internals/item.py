@@ -10,6 +10,7 @@ from django.utils import timezone
 from .base import BaseModel, Validator, require_model_import
 from .data.extremely_ugly_hacks import safe_unpickle
 from .data.utils import delete_item_media
+from .report_framework.context_processors import global_settings
 from .report_framework.utils import get_render_error_html
 from ..adr_utils import table_attr
 from ..utils import report_utils
@@ -99,17 +100,16 @@ class Item(BaseModel):
         super().delete(**kwargs)
         delete_item_media(self._orm_instance.guid)
 
-    def render(self, context=None):
+    def render(self, context=None, request=None):
         if context is None:
             context = {}
-        template_context = {**context}
-        if "request" not in template_context:
-            template_context["request"] = None
+        ctx = {**context, **global_settings(request), "request": request}
         try:
-            template_context["HTML"] = self._orm_instance.render(template_context)
-            return render_to_string('data/item_detail_simple.html', template_context)
+            ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:
-            return get_render_error_html(e, target='report item', guid=self.guid)
+            ctx["HTML"] = get_render_error_html(e, target='report item', guid=self.guid)
+
+        return render_to_string('data/item_detail_simple.html', context=ctx, request=request)
 
 
 class String(Item):

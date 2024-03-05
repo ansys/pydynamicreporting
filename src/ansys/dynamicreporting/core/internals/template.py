@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .base import BaseModel, require_model_import
 from .report_framework.utils import get_render_error_html, value_to_bool
+from .report_framework.context_processors import global_settings
 from .reports.engine import TemplateEngine
 from ..exceptions import ObjectNotSavedError
 
@@ -17,7 +18,6 @@ class Template(BaseModel):
     params: str = field(compare=False, kw_only=True, default="")
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: 'Template' = field(compare=False, kw_only=True, default=None)
-    # todo: check if this is writable.
     children: list = field(compare=False, kw_only=True, default_factory=list)
     _children_order: str = field(compare=False, init=False, default="")  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)  # computed from self.parent
@@ -123,12 +123,10 @@ class Template(BaseModel):
         return obj
 
     @require_model_import
-    def render(self, context=None, query=None):
+    def render(self, context=None, request=None, query=None):
         if context is None:
             context = {}
-        ctx = {**context}
-        if "request" not in ctx:
-            ctx["request"] = None
+        ctx = {**context, **global_settings(request), "request": request}
         try:
             from .data.models import Item
             template_obj = self._orm_instance
@@ -143,7 +141,8 @@ class Template(BaseModel):
             ctx['HTML'] += TemplateEngine.end_toc_session()
         except Exception as e:
             ctx["HTML"] = get_render_error_html(e, target='report', guid=self.guid)
-        return render_to_string('reports/report_display_simple.html', ctx)
+
+        return render_to_string('reports/report_display_simple.html', context=ctx, request=request)
 
 
 class Layout(Template):

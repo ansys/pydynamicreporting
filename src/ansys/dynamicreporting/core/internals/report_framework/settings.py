@@ -52,7 +52,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.media',
-                'ansys.dynamicreporting.core.internals.data.context_processors.global_settings',
+                'ansys.dynamicreporting.core.internals.report_framework.context_processors.global_settings',
             ],
         },
     },
