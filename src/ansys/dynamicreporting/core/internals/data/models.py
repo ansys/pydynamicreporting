@@ -349,7 +349,7 @@ class Item(models.Model):
         return str(self.guid).replace("-", "")
 
     @classmethod
-    def find(cls, request, reverse=0, sort_tag="date", perm=None, query='', queryset=None):
+    def find(cls, request=None, reverse=0, sort_tag="date", perm=None, query='', queryset=None):
         # start a query
         qs = Item.filtered_objects.all()
         # if an initial queryset is provided, start with it
@@ -358,9 +358,9 @@ class Item(models.Model):
                 raise Exception("The queryset passed is invalid")
             qs = queryset
 
-        qs = qs.with_perms(request, perm=perm)
-
+        req_query = ""
         if request is not None:
+            qs = qs.with_perms(request, perm=perm)
             # filter by perms
             # case of explicit guid(s)
             item_guids = request.GET.get('i_guid', None)
@@ -371,17 +371,15 @@ class Item(models.Model):
                 kwargs = {'guid__in': item_guid_list}
                 qs = qs.filter(**kwargs)
             else:
-                # use manually specified query if available
-                if not query:
-                    if 'query' in request.GET:
-                        query = request.GET['query']
-                    else:
-                        # allow reading params from other types of REST requests
-                        # too, not just GET.
-                        if hasattr(request, 'query_params'):
-                            query = request.query_params.get('query', '')
-                #  use the query expr to filter
-                qs = object_filter(query, qs, model=Item)
+                if 'query' in request.GET:
+                    req_query = request.GET['query']
+                else:
+                    # allow reading params from other types of REST requests
+                    # too, not just GET.
+                    if hasattr(request, 'query_params'):
+                        req_query = request.query_params.get('query', '')
+        #  use the query expr to filter
+        qs = object_filter(query or req_query, qs, model=Item)
 
         # pick the sort (we can only sort QuerySets for now)
         if isinstance(qs, QuerySet):

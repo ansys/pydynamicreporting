@@ -1364,7 +1364,7 @@ class PPTXGenerator:
                 query = params.pop("query", None)
                 # go ahead and query now
                 if query is not None:
-                    items_to_insert = list(Item.find(ctx['request'], query=query, queryset=items))
+                    items_to_insert = list(Item.find(request=ctx['request'], query=query, queryset=items))
 
                 # handle certain shapes later
                 if shape.placeholder_format.type == PP_PLACEHOLDER.TITLE or self.Param.HTML_HEADER in params:  # titles

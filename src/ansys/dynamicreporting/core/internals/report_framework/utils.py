@@ -121,3 +121,8 @@ class IntEnum(int, Enum):
 
     def __int__(self):
         return self.value
+
+
+# convert a (web) string to a Python boolean
+def value_to_bool(v):
+    return v not in [False, 0, 'off', 'Off', 'False', 'false', '0']

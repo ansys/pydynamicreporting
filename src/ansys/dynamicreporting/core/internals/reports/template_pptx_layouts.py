@@ -119,7 +119,7 @@ class PPTXTemplateEngine(PPTXBaseTemplateEngine):
         if not input_filename:
             raise Exception("PPTXTemplate does not have an input pptx file.")
         # get item
-        input_file_item = Item.find(ctx['request'],
+        input_file_item = Item.find(request=ctx['request'],
                                     query=self._convert_to_query(input_filename),
                                     sort_tag='date',
                                     reverse=1).first()
