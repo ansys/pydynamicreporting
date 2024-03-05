@@ -7,6 +7,7 @@ adr = ADR(r"C:\Program Files (x86)\ANSYSv231",
           opts=opts,
           session="4ee905f0-f611-11e6-8901-ae3af682bb6a",
           dataset="fa473009-deee-34eb-b6b8-8326236ca9a6")
+
 adr.setup()
 
 # Items
@@ -35,7 +36,6 @@ data_table.xaxis_format = "floatdot0"
 data_table.yaxis_format = "floatdot1"
 data_table.ytitle = "Values"
 data_table.xtitle = "X"
-
 data_table.save()
 
 print(data_table.render())

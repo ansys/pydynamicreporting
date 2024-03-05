@@ -6,7 +6,8 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .base import BaseModel, require_model_import
-from .report_framework.utils import get_render_error_html
+from .report_framework.utils import get_render_error_html, value_to_bool
+from .reports.engine import TemplateEngine
 from ..exceptions import ObjectNotSavedError
 
 
@@ -121,17 +122,28 @@ class Template(BaseModel):
                 setattr(obj, prop, props[prop])
         return obj
 
-    def render(self, context=None):
+    @require_model_import
+    def render(self, context=None, query=None):
         if context is None:
             context = {}
-        template_context = {**context}
-        if "request" not in template_context:
-            template_context["request"] = None
+        ctx = {**context}
+        if "request" not in ctx:
+            ctx["request"] = None
         try:
-            template_context["HTML"] = self._orm_instance.render(template_context)
-            return render_to_string('data/report_display_simple.html', template_context)
+            from .data.models import Item
+            template_obj = self._orm_instance
+            engine = template_obj.get_engine()
+            items = Item.find(query=query)
+            # properties that can change during iteration need to go on the class as well as globals
+            TemplateEngine.set_global_context({'page_number': 1, 'root_template': template_obj})
+            TemplateEngine.start_toc_session()
+            # Render the report
+            ctx['HTML'] = engine.render(items, ctx)
+            # fill in any TOC entries
+            ctx['HTML'] += TemplateEngine.end_toc_session()
         except Exception as e:
-            return get_render_error_html(e, target='report', guid=self.guid)
+            ctx["HTML"] = get_render_error_html(e, target='report', guid=self.guid)
+        return render_to_string('reports/report_display_simple.html', ctx)
 
 
 class Layout(Template):
