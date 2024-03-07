@@ -196,6 +196,14 @@ class ADR:
             parent.save()
         return template
 
+    def get_report(self, **kwargs):
+        self._validate_kwargs(Template, kwargs)
+        return Template.filter(master=True).get(**kwargs)
+
+    def render_report(self, context=None, query=None, **kwargs):
+        self._validate_kwargs(Template, kwargs)
+        return Template.get(**kwargs).render(request=self._request, context=context, query=query)
+
     def put_objects(self):
         ...
 
