@@ -168,22 +168,16 @@ class ADR:
         self._validate_kwargs(item_type, kwargs)
         item = item_type(**kwargs)
         # save session and dataset before creating the relation
-        try:
-            if self._session is None:
-                session = Session()
-                session.save()
-            else:
-                session = Session.get(guid=self._session)
-        except Model.DoesNotExist:
-            raise ObjectDoesNotExistError(f"Session '{self._session}' not found")
-        try:
-            if self._dataset is None:
-                dataset = Dataset()
-                dataset.save()
-            else:
-                dataset = Dataset.get(guid=self._dataset)
-        except Model.DoesNotExist:
-            raise ObjectDoesNotExistError(f"Dataset '{self._dataset}' not found")
+        if self._session is None:
+            session = Session()
+            session.save()
+        else:
+            session = Session.get(guid=self._session)
+        if self._dataset is None:
+            dataset = Dataset()
+            dataset.save()
+        else:
+            dataset = Dataset.get(guid=self._dataset)
 
         item.session = session
         item.dataset = dataset
@@ -191,21 +185,16 @@ class ADR:
         return item
 
     def create_template(self, template_type: Type[Template], **kwargs):
-        # pass in name, parent, template type (Enum), params, filters, properties, HTML header
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
         self._validate_kwargs(template_type, kwargs)
         template = template_type(**kwargs)
         template.save()
-        # handle parents automatically
         parent = kwargs.get("parent")
         if parent is not None:
             parent.children.append(template)
             parent.save()
         return template
-
-    def render_report(self):  # replacement for visualize_report
-        ...
 
     def put_objects(self):
         ...
@@ -216,40 +205,7 @@ class ADR:
     def create_dataset(self):
         ...
 
-    def get_report(self):
-        #     take name or guid, return Template obj
-        return
-
-    def query(self, query_type, query_filter=""):
-        """
-                Query the database.
-
-                .. _Query Expressions: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
-
-                Parameters
-                ----------
-                query_type : str, optional
-                    Type of objects to query. The default is ``"Item"``. Options are ``"Item"``,
-                    ``"Session"``, and ``"Dataset"``.
-                query_filter : str, optional
-                    Query string for filtering. The default is ``""``. The syntax corresponds
-                    to the syntax for Ansys Dynamic Reporting. For more information, see
-                    _Query Expressions in the documentation for Ansys Dynamic Reporting.
-
-                Returns
-                -------
-                list
-                    List of queried objects.
-
-                Examples
-                --------
-                ::
-
-                    import ansys.dynamicreporting.core as adr
-                    adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
-                    ret = adr_service.connect()
-                    imgs = adr_service.query(query_type='Item', filter='A|i_type|cont|image;')
-        """
+    def query(self, query_type, query):
         ...
 
     def get_list_reports(self):

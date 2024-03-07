@@ -8,8 +8,9 @@ from typing import Any, Type
 from uuid import UUID
 
 from django.db.models import Model
+from django.db.models.base import subclass_exception
 
-from ..exceptions import ObjectNotSavedError
+from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError
 
 
 def require_model_import(func):
@@ -55,6 +56,14 @@ class BaseMeta(ABCMeta):
                     new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
             # save every class extending BaseModel
             mcs.cls_registry[cls_name] = new_cls
+            # add exception class
+            exception_cls = subclass_exception(
+                "DoesNotExist",
+                tuple(p.DoesNotExist for p in parents) or (ObjectDoesNotExistError,),  # bases
+                namespace.pop("__module__"),
+                attached_to=new_cls
+            )
+            setattr(new_cls, "DoesNotExist", exception_cls)
         # all classes must be dataclasses
         new_cls = dataclass(repr=False)(new_cls)
         return new_cls
@@ -163,12 +172,15 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @require_model_import
     def get(cls, **kwargs):
-        obj = cls()
-        # todo: handle modelDoesNotExist here and raise own exception added to Metaclass.
-        orm_instance = cls._orm_model_cls.objects.get(**kwargs)
+        try:
+            orm_instance = cls._orm_model_cls.objects.get(**kwargs)
+        except Model.DoesNotExist:
+            raise cls.DoesNotExist
+
         cls_fields = cls.get_field_names()
         model_fields = cls._get_orm_field_names(orm_instance)
 
+        obj = cls()
         for field_ in model_fields:
             if field_ in cls_fields:
                 value = getattr(orm_instance, field_, None)
@@ -186,11 +198,6 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @require_model_import
     def create(cls, **kwargs):
-        pass
-
-    @classmethod
-    @require_model_import
-    def filter(cls, **kwargs):
         pass
 
     def get_tags(self):
