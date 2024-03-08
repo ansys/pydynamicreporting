@@ -197,6 +197,12 @@ class BaseModel(metaclass=BaseMeta):
         obj._saved = True
         return obj
 
+    @classmethod
+    def create(cls, **kwargs):
+        obj = cls(**kwargs)
+        obj.save(force_insert=True)
+        return obj
+
     def get_tags(self):
         return self.tags
 
