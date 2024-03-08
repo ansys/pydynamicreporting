@@ -13,21 +13,15 @@ from django.db.models.base import subclass_exception
 from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError
 
 
-def require_model_import(func):
-    def wrapper(*args, **kwargs):
-        arg = args[0]
-        if isinstance(arg, BaseModel):
-            cls = arg.__class__
-        else:
-            cls = arg
-        if cls._orm_model and cls._orm_model_cls is None:
-            module_name, class_name = cls._orm_model.rsplit(".", 1)
-            # relative import for ease (needs '.' and package=)
-            module = importlib.import_module("." + module_name, package=__package__)
-            cls._orm_model_cls = getattr(module, class_name)
-        return func(*args, **kwargs)
-
-    return wrapper
+def add_exception_to_cls(name, base, cls, parents, module):
+    base_exceptions = tuple(getattr(p, name) for p in parents if hasattr(p, name))
+    exception_cls = subclass_exception(
+        name,
+        base_exceptions or (base,),  # bases
+        module,
+        attached_to=cls
+    )
+    setattr(cls, name, exception_cls)
 
 
 class BaseMeta(ABCMeta):
@@ -56,17 +50,27 @@ class BaseMeta(ABCMeta):
                     new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
             # save every class extending BaseModel
             mcs.cls_registry[cls_name] = new_cls
-            # add exception class
-            exception_cls = subclass_exception(
-                "DoesNotExist",
-                tuple(p.DoesNotExist for p in parents) or (ObjectDoesNotExistError,),  # bases
-                namespace.pop("__module__"),
-                attached_to=new_cls
-            )
-            setattr(new_cls, "DoesNotExist", exception_cls)
+            # add exceptions
+            add_exception_to_cls("DoesNotExist", ObjectDoesNotExistError, new_cls, parents, namespace.get("__module__"))
+            add_exception_to_cls("NotSaved", ObjectNotSavedError, new_cls, parents, namespace.get("__module__"))
         # all classes must be dataclasses
         new_cls = dataclass(repr=False)(new_cls)
         return new_cls
+
+    def __getattribute__(cls, name):
+        # applies only for class attrs
+        # lazy load ORM model upon access
+        attr = super().__getattribute__(name)
+        if name == "_orm_model_cls":
+            # for subclasses of BaseModel
+            parents = [b for b in cls.__bases__ if isinstance(b, BaseMeta)]
+            model_str = cls._orm_model
+            if parents and attr is None and model_str:
+                module_name, class_name = model_str.rsplit(".", 1)
+                # relative import for ease (needs '.' and package=)
+                module = importlib.import_module("." + module_name, package=__package__)
+                return getattr(module, class_name)
+        return attr
 
 
 class BaseModel(metaclass=BaseMeta):
@@ -139,10 +143,9 @@ class BaseModel(metaclass=BaseMeta):
     def saved(self):
         return self._saved
 
-    @require_model_import
     def save(self, **kwargs):
         if self._orm_instance is None:
-            self._orm_instance = self._orm_model_cls()
+            self._orm_instance = self.__class__._orm_model_cls()
         cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
         for field_ in cls_fields:
@@ -164,13 +167,12 @@ class BaseModel(metaclass=BaseMeta):
 
     def delete(self, **kwargs):
         if not self._saved:
-            raise ObjectNotSavedError(extra_detail="Delete failed")
+            raise self.__class__.NotSaved(extra_detail="Delete failed")
         self._saved = False
         count, _ = self._orm_instance.delete(**kwargs)
         return count
 
     @classmethod
-    @require_model_import
     def get(cls, **kwargs):
         try:
             orm_instance = cls._orm_model_cls.objects.get(**kwargs)
@@ -194,11 +196,6 @@ class BaseModel(metaclass=BaseMeta):
         obj._orm_instance = orm_instance
         obj._saved = True
         return obj
-
-    @classmethod
-    @require_model_import
-    def create(cls, **kwargs):
-        pass
 
     def get_tags(self):
         return self.tags

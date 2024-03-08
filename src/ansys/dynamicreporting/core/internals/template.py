@@ -5,7 +5,7 @@ from datetime import datetime
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .base import BaseModel, require_model_import
+from .base import BaseModel
 from .report_framework.utils import get_render_error_html, value_to_bool
 from .report_framework.context_processors import global_settings
 from .reports.engine import TemplateEngine
@@ -97,10 +97,10 @@ class Template(BaseModel):
 
     def save(self, **kwargs):
         if self.parent is not None and not self.parent._saved:
-            raise ObjectNotSavedError(extra_detail="Failed to save template because its parent is not saved")
+            raise self.__class__.NotSaved(extra_detail="Failed to save template because its parent is not saved")
         for child in self.children:
             if not child._saved:
-                raise ObjectNotSavedError(extra_detail="Failed to save template because its children are not saved")
+                raise self.__class__.NotSaved(extra_detail="Failed to save template because its children are not saved")
             self._children_order += str(child.guid) + ","
         self._master = self.parent is None
         # set properties
@@ -122,7 +122,6 @@ class Template(BaseModel):
                 setattr(obj, prop, props[prop])
         return obj
 
-    @require_model_import
     def render(self, context=None, request=None, query=None):
         if context is None:
             context = {}

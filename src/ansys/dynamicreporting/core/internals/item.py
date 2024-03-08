@@ -7,7 +7,7 @@ import numpy
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .base import BaseModel, Validator, require_model_import
+from .base import BaseModel, Validator
 from .data.extremely_ugly_hacks import safe_unpickle
 from .data.utils import delete_item_media
 from .report_framework.context_processors import global_settings
@@ -135,7 +135,6 @@ class Table(Item):
         return self._type
 
     @classmethod
-    @require_model_import
     def get(cls, **kwargs):
         obj = super().get(**kwargs)
         # type specific deserialization of payload
@@ -146,7 +145,6 @@ class Table(Item):
                 setattr(obj, prop, payload[prop])
         return obj
 
-    @require_model_import
     def save(self, **kwargs):
         payload = {
             "array": self.content,
@@ -156,7 +154,7 @@ class Table(Item):
             if value is not None:
                 payload[prop] = value
         if self._orm_instance is None:
-            self._orm_instance = self._orm_model_cls()
+            self._orm_instance = self.__class__._orm_model_cls()
         self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
         super().save(**kwargs)
 
