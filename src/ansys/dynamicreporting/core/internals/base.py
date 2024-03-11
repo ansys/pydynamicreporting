@@ -4,7 +4,7 @@ import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
 from dataclasses import dataclass, field, fields
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from django.db.models import Model
@@ -25,7 +25,8 @@ def add_exception_to_cls(name, base, cls, parents, module):
 
 
 class BaseMeta(ABCMeta):
-    cls_registry: dict[str, 'BaseModel'] = {}
+    _cls_registry: dict[str, type['BaseModel']] = {}
+    _model_cls_registry: dict[str, type[Model]] = {}
 
     def __new__(
             mcs,
@@ -49,7 +50,7 @@ class BaseMeta(ABCMeta):
                         new_namespace[prop] = None
                     new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
             # save every class extending BaseModel
-            mcs.cls_registry[cls_name] = new_cls
+            mcs._cls_registry[cls_name] = new_cls
             # add exceptions
             add_exception_to_cls("DoesNotExist", ObjectDoesNotExistError, new_cls, parents, namespace.get("__module__"))
             add_exception_to_cls("NotSaved", ObjectNotSavedError, new_cls, parents, namespace.get("__module__"))
@@ -66,10 +67,13 @@ class BaseMeta(ABCMeta):
             parents = [b for b in cls.__bases__ if isinstance(b, BaseMeta)]
             model_str = cls._orm_model
             if parents and attr is None and model_str:
-                module_name, class_name = model_str.rsplit(".", 1)
+                module_name, cls_name = model_str.rsplit(".", 1)
+                if cls_name in cls._model_cls_registry:
+                    return cls._model_cls_registry[cls_name]
                 # relative import for ease (needs '.' and package=)
                 module = importlib.import_module("." + module_name, package=__package__)
-                return getattr(module, class_name)
+                attr = getattr(module, cls_name)
+                cls._model_cls_registry[cls_name] = attr
         return attr
 
 
@@ -78,7 +82,7 @@ class BaseModel(metaclass=BaseMeta):
     tags: str = field(compare=False, kw_only=True, default="")
     _saved: bool = field(init=False, compare=False, default=False)  # tracks if the object is saved in the db
     _orm_model: str = field(init=False, compare=False, default=None)
-    _orm_model_cls: Type[Model] = field(init=False, compare=False, default=None)
+    _orm_model_cls: type[Model] = field(init=False, compare=False, default=None)
     _orm_instance: Model = field(init=False, compare=False, default=None)  # tracks the corresponding ORM instance
 
     def __repr__(self) -> str:
@@ -94,7 +98,7 @@ class BaseModel(metaclass=BaseMeta):
         for field_ in self._get_fields():
             type_ = field_.type
             if isinstance(type_, str):
-                type_ = BaseMeta.cls_registry[type_]
+                type_ = self.__class__._cls_registry[type_]
             if issubclass(type_, Validator):
                 continue
             value = getattr(self, field_.name, None)
