@@ -183,18 +183,13 @@ class ADR:
     def create_item(self, item_type: Type[Item], **kwargs: Any):
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        item = item_type(**kwargs)
-        item.session = self._session
-        item.dataset = self._dataset
-        item.save()
-        return item
+        return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
 
     def create_template(self, template_type: Type[Template], **kwargs):
         if not issubclass(template_type, Template):
             self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
-        template = template_type(**kwargs)
-        template.save()
+        template = template_type.create(**kwargs)
         parent = kwargs.get("parent")
         if parent is not None:
             parent.children.append(template)
@@ -218,14 +213,8 @@ class ADR:
     def put_objects(self):
         ...
 
-    def create_session(self):
-        ...
-
-    def create_dataset(self):
-        ...
-
     def query(self, query_type, query):
         ...
 
-    def get_list_reports(self):
+    def get_list_reports(self, *fields):
         ...
