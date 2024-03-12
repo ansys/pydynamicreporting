@@ -97,10 +97,10 @@ class Template(BaseModel):
 
     def save(self, **kwargs):
         if self.parent is not None and not self.parent._saved:
-            raise self.__class__.NotSaved(extra_detail="Failed to save template because its parent is not saved")
+            raise Template.NotSaved(extra_detail="Failed to save template because its parent is not saved")
         for child in self.children:
             if not child._saved:
-                raise self.__class__.NotSaved(extra_detail="Failed to save template because its children are not saved")
+                raise Template.NotSaved(extra_detail="Failed to save template because its children are not saved")
             self._children_order += str(child.guid) + ","
         self._master = self.parent is None
         # set properties
