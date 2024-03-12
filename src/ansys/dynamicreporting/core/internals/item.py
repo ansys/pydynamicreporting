@@ -13,7 +13,26 @@ from .data.utils import delete_item_media
 from .report_framework.context_processors import global_settings
 from .report_framework.utils import get_render_error_html
 from ..adr_utils import table_attr
+from ..exceptions import PyadrException
 from ..utils import report_utils
+
+
+class Session(BaseModel):
+    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
+    hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
+    platform: str = field(compare=False, kw_only=True, default=str(report_utils.enve_arch))
+    application: str = field(compare=False, kw_only=True, default="Python API")
+    version: str = field(compare=False, kw_only=True, default="1.0")
+    _orm_model: str = "data.models.Session"
+
+
+class Dataset(BaseModel):
+    filename: str = field(compare=False, kw_only=True, default="none")
+    dirname: str = field(compare=False, kw_only=True, default="")
+    format: str = field(compare=False, kw_only=True, default="none")
+    numparts: int = field(compare=False, kw_only=True, default=0)
+    numelements: int = field(compare=False, kw_only=True, default=0)
+    _orm_model: str = "data.models.Dataset"
 
 
 class StringContent(Validator):
@@ -64,37 +83,28 @@ class HTMLContent(Validator):
         pass
 
 
-class Session(BaseModel):
-    date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
-    hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
-    platform: str = field(compare=False, kw_only=True, default=str(report_utils.enve_arch))
-    application: str = field(compare=False, kw_only=True, default="Python API")
-    version: str = field(compare=False, kw_only=True, default="1.0")
-    _orm_model: str = "data.models.Session"
-
-
-class Dataset(BaseModel):
-    filename: str = field(compare=False, kw_only=True, default="none")
-    dirname: str = field(compare=False, kw_only=True, default="")
-    format: str = field(compare=False, kw_only=True, default="none")
-    numparts: int = field(compare=False, kw_only=True, default=0)
-    numelements: int = field(compare=False, kw_only=True, default=0)
-    _orm_model: str = "data.models.Dataset"
-
-
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     source: str = field(compare=False, kw_only=True, default="")
     sequence: int = field(compare=False, kw_only=True, default=0)
-    session: Session = field(compare=False, kw_only=True, default_factory=Session)
-    dataset: Dataset = field(compare=False, kw_only=True, default_factory=Dataset)
+    session: Session = field(compare=False, kw_only=True, default=None)
+    dataset: Dataset = field(compare=False, kw_only=True, default=None)
     _type: str = "none"
     _orm_model: str = "data.models.Item"
 
     @property
     def type(self):
         return self._type
+
+    def save(self, **kwargs):
+        if self.session is None or self.dataset is None:
+            raise PyadrException(extra_detail="A session and a dataset are required to save an item")
+        if not self.session.saved:
+            raise Session.NotSaved(extra_detail="Failed to save item because the session is not saved")
+        if not self.dataset.saved:
+            raise Dataset.NotSaved(extra_detail="Failed to save item because the dataset is not saved")
+        super().save(**kwargs)
 
     def delete(self, **kwargs):
         super().delete(**kwargs)
@@ -153,8 +163,6 @@ class Table(Item):
             value = getattr(self, prop, None)
             if value is not None:
                 payload[prop] = value
-        if self._orm_instance is None:
-            self._orm_instance = self.__class__._orm_model_cls()
         self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
         super().save(**kwargs)
 

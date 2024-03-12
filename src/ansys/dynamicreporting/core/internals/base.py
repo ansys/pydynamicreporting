@@ -7,7 +7,7 @@ from dataclasses import dataclass, field, fields
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Model
+from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
 
 from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError
@@ -55,7 +55,7 @@ class BaseMeta(ABCMeta):
             add_exception_to_cls("DoesNotExist", ObjectDoesNotExistError, new_cls, parents, namespace.get("__module__"))
             add_exception_to_cls("NotSaved", ObjectNotSavedError, new_cls, parents, namespace.get("__module__"))
         # all classes must be dataclasses
-        new_cls = dataclass(repr=False)(new_cls)
+        new_cls = dataclass(eq=False, order=False, repr=False)(new_cls)
         return new_cls
 
     def __getattribute__(cls, name):
@@ -92,9 +92,10 @@ class BaseModel(metaclass=BaseMeta):
         return f"{self.__class__.__name__} object {self.guid}"
 
     def __post_init__(self):
-        self._validate()
+        self._validate_field_types()
+        self._orm_instance = self.__class__._orm_model_cls()
 
-    def _validate(self):
+    def _validate_field_types(self):
         for field_ in self._get_fields():
             type_ = field_.type
             if isinstance(type_, str):
@@ -104,6 +105,13 @@ class BaseModel(metaclass=BaseMeta):
             value = getattr(self, field_.name, None)
             if value is not None and not isinstance(value, type_):
                 raise TypeError(f"Expected {field_.name} to be of type {field_.type}.")
+
+    # TODO
+    def _validate_kwargs(self, kwargs):
+        valid_fields = self.get_field_names()
+        for kwarg, value in kwargs.items():
+            if kwarg not in valid_fields:
+                raise AttributeError(f"{self.__class__.__name__} has no attribute {kwarg}")
 
     @staticmethod
     def _add_quotes(input_str):
@@ -129,7 +137,9 @@ class BaseModel(metaclass=BaseMeta):
         return tuple(f.name for f in orm_instance._meta.get_fields())
 
     @classmethod
-    def get_field_names(cls):
+    def get_field_names(cls, with_types=False):
+        if with_types:
+            return tuple((f.name, f.type) for f in fields(cls) if not f.name.startswith("_"))
         return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
 
     @classmethod
@@ -148,8 +158,6 @@ class BaseModel(metaclass=BaseMeta):
         return self._saved
 
     def save(self, **kwargs):
-        if self._orm_instance is None:
-            self._orm_instance = self.__class__._orm_model_cls()
         cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
         for field_ in cls_fields:
@@ -177,35 +185,48 @@ class BaseModel(metaclass=BaseMeta):
         return count
 
     @classmethod
+    def _serialize_obj_from_orm(cls, instance):
+        cls_fields = dict(cls.get_field_names(with_types=True))
+        model_fields = cls._get_orm_field_names(instance)
+        obj = cls()
+        for field_ in model_fields:
+            if field_ in cls_fields:
+                value = getattr(instance, field_, None)
+                # don't check for None here, we need everything as-is
+                if isinstance(value, Model):
+                    type_ = cls_fields[field_]
+                    value = type_._serialize_obj_from_orm(value)
+                setattr(obj, field_, value)
+
+        obj._orm_instance = instance
+        obj._saved = True
+        return obj
+
+    @classmethod
+    def _fetch_from_orm(cls, instance_or_queryset):
+        if isinstance(instance_or_queryset, QuerySet):
+            return [cls._serialize_obj_from_orm(instance) for instance in instance_or_queryset]
+        else:
+            return cls._serialize_obj_from_orm(instance_or_queryset)
+
+    @classmethod
     def get(cls, **kwargs):
         try:
             orm_instance = cls._orm_model_cls.objects.get(**kwargs)
         except Model.DoesNotExist:
             raise cls.DoesNotExist
-
-        cls_fields = cls.get_field_names()
-        model_fields = cls._get_orm_field_names(orm_instance)
-
-        obj = cls()
-        for field_ in model_fields:
-            if field_ in cls_fields:
-                value = getattr(orm_instance, field_, None)
-                # don't check for None here, we need everything as-is
-                if isinstance(value, Model):
-                    #  todo: convert relation objects to BaseModel types
-                    #  get the corresponding field type from the dataclass and create objects
-                    value = ...
-                setattr(obj, field_, value)
-
-        obj._orm_instance = orm_instance
-        obj._saved = True
-        return obj
+        return cls._fetch_from_orm(orm_instance)
 
     @classmethod
     def create(cls, **kwargs):
         obj = cls(**kwargs)
         obj.save(force_insert=True)
         return obj
+
+    @classmethod
+    def filter(cls, **kwargs):
+        qs = cls._orm_model_cls.objects.filter(**kwargs)
+        return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self):
         return self.tags
@@ -231,6 +252,48 @@ class BaseModel(metaclass=BaseMeta):
             elif tag == tag:
                 tags.remove(tag)
         self._rebuild_tags(tags)
+
+
+@dataclass(eq=False, order=False, repr=False)
+class ObjectSet:
+    _model: type[BaseModel] = field(compare=False, default=None)
+    _orm_model: type[Model] = field(compare=False, default=None)
+    _orm_queryset: QuerySet = field(compare=False, default=None)
+    _obj_set: list[BaseModel] = field(init=True, compare=False, default_factory=list)
+    _saved: bool = field(init=False, compare=False, default=False)
+
+    def __post_init__(self):
+        if self._orm_queryset is not None:
+            self._saved = True
+            self._obj_set = self._model._fetch_from_orm(self._orm_queryset)
+
+    def __repr__(self):
+        return f"<{self.__class__}  {self._obj_set}>"
+
+    def __str__(self):
+        return str(self._obj_set)
+
+    def __len__(self):
+        return len(self._obj_set)
+
+    def __iter__(self):
+        return iter(self._obj_set)
+
+    def __bool__(self):
+        return bool(self._obj_set)
+
+    def __getitem__(self, k):
+        return self._obj_set.__getitem__(k)
+
+    @property
+    def saved(self):
+        return self._saved
+
+    def delete(self):
+        self._obj_set = []
+        self._saved = False
+        count, _ = self._orm_queryset.delete()
+        return count
 
 
 class Validator(ABC):

@@ -39,8 +39,6 @@ class ADR:
             static_directory: str = None,
             opts: dict = None,
             request: HttpRequest = None,
-            session: str = None,
-            dataset: str = None,
             logfile: str = None
     ) -> None:
         self._db_directory = None
@@ -94,19 +92,9 @@ class ADR:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
         self._request = request  # passed when used in the context of a webserver.
-
-        self._session = session
-        self._dataset = dataset
-
+        self._session = None
+        self._dataset = None
         self._logger = get_logger(logfile)
-
-    @property
-    def session(self):
-        return self._session
-
-    @property
-    def dataset(self):
-        return self._dataset
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
@@ -125,6 +113,13 @@ class ADR:
         except Exception as e:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
+
+        # create session and dataset w/ defaults if not provided.
+        if self._session is None:
+            self._session = Session.create()
+
+        if self._dataset is None:
+            self._dataset = Dataset.create()
 
         # migrations
         if self._db_directory is not None:
@@ -154,40 +149,50 @@ class ADR:
                 self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
-    def _validate_kwargs(self, type_, kwargs):
-        valid_fields = type_.get_field_names()
-        for kwarg, value in kwargs.items():
-            if kwarg not in valid_fields:
-                detail = f"{type_.__name__} has no attribute {kwarg}"
-                self._logger.error(detail)
-                raise AttributeError(detail)
+    @property
+    def session(self):
+        return self._session
+
+    @property
+    def dataset(self):
+        return self._dataset
+
+    @session.setter
+    def session(self, session: Session):
+        if not isinstance(session, Session):
+            raise TypeError("Must be an instance of type 'Session'")
+        self._session = session
+
+    @dataset.setter
+    def dataset(self, dataset: Dataset):
+        if not isinstance(dataset, Dataset):
+            raise TypeError("Must be an instance of type 'Dataset'")
+        self._dataset = dataset
+
+    def set_default_session(self, session: Session):
+        self.session = session
+
+    def set_default_dataset(self, dataset: Dataset):
+        self.dataset = dataset
+
+    @property
+    def session_guid(self):
+        """GUID of the session associated with the service."""
+        return self._session.guid
 
     def create_item(self, item_type: Type[Item], **kwargs: Any):
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        self._validate_kwargs(item_type, kwargs)
         item = item_type(**kwargs)
-        # save session and dataset before creating the relation
-        if self._session is None:
-            session = Session()
-            session.save()
-        else:
-            session = Session.get(guid=self._session)
-        if self._dataset is None:
-            dataset = Dataset()
-            dataset.save()
-        else:
-            dataset = Dataset.get(guid=self._dataset)
-
-        item.session = session
-        item.dataset = dataset
+        item.session = self._session
+        item.dataset = self._dataset
         item.save()
         return item
 
     def create_template(self, template_type: Type[Template], **kwargs):
         if not issubclass(template_type, Template):
+            self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
-        self._validate_kwargs(template_type, kwargs)
         template = template_type(**kwargs)
         template.save()
         parent = kwargs.get("parent")
@@ -197,12 +202,18 @@ class ADR:
         return template
 
     def get_report(self, **kwargs):
-        self._validate_kwargs(Template, kwargs)
-        return Template.filter(master=True).get(**kwargs)
+        try:
+            return Template.filter(master=True).get(**kwargs)
+        except Exception as e:
+            self._logger.error(f"{e}")
+            raise e
 
     def render_report(self, context=None, query=None, **kwargs):
-        self._validate_kwargs(Template, kwargs)
-        return Template.get(**kwargs).render(request=self._request, context=context, query=query)
+        try:
+            return Template.get(**kwargs).render(request=self._request, context=context, query=query)
+        except Exception as e:
+            self._logger.error(f"{e}")
+            raise e
 
     def put_objects(self):
         ...
