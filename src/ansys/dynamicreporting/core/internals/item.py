@@ -110,6 +110,16 @@ class Item(BaseModel):
         super().delete(**kwargs)
         delete_item_media(self._orm_instance.guid)
 
+    @classmethod
+    def filter(cls, **kwargs):
+        new_kwargs = {"type": cls._type, **kwargs} if cls._type != "none" else kwargs
+        return super().filter(**new_kwargs)
+
+    @classmethod
+    def get(cls, **kwargs):
+        new_kwargs = {"type": cls._type, **kwargs} if cls._type != "none" else kwargs
+        return super().get(**new_kwargs)
+
     def render(self, context=None, request=None):
         if context is None:
             context = {}

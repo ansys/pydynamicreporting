@@ -9,6 +9,7 @@ from uuid import UUID
 
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
+from django.core.exceptions import ObjectDoesNotExist
 
 from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError
 
@@ -96,19 +97,20 @@ class BaseModel(metaclass=BaseMeta):
         self._orm_instance = self.__class__._orm_model_cls()
 
     def _validate_field_types(self):
-        for field_ in self._get_fields():
-            type_ = field_.type
-            if isinstance(type_, str):
-                type_ = self.__class__._cls_registry[type_]
+        for field_name, field_type in self._get_field_names(with_types=True):
+            if isinstance(field_type, str):
+                type_ = self.__class__._cls_registry[field_type]
+            else:
+                type_ = field_type
             if issubclass(type_, Validator):
                 continue
-            value = getattr(self, field_.name, None)
+            value = getattr(self, field_name, None)
             if value is not None and not isinstance(value, type_):
-                raise TypeError(f"Expected {field_.name} to be of type {field_.type}.")
+                raise TypeError(f"Expected {field_name} to be of type {type_}.")
 
     # TODO
     def _validate_kwargs(self, kwargs):
-        valid_fields = self.get_field_names()
+        valid_fields = self._get_field_names()
         for kwarg, value in kwargs.items():
             if kwarg not in valid_fields:
                 raise AttributeError(f"{self.__class__.__name__} has no attribute {kwarg}")
@@ -129,29 +131,29 @@ class BaseModel(metaclass=BaseMeta):
                 tags_list.append(self._add_quotes(tag_and_value[0]))
         self.set_tags(" ".join(tags_list))
 
-    def _get_fields(self):
-        return tuple(f for f in fields(self) if not f.name.startswith("_"))
-
     @staticmethod
     def _get_orm_field_names(orm_instance):
         return tuple(f.name for f in orm_instance._meta.get_fields())
 
     @classmethod
-    def get_field_names(cls, with_types=False):
-        if with_types:
-            return tuple((f.name, f.type) for f in fields(cls) if not f.name.startswith("_"))
-        return tuple(f.name for f in fields(cls) if not f.name.startswith("_"))
+    def _get_field_names(cls, with_types=False, include_private=False):
+        fields_ = []
+        for f in fields(cls):
+            if not include_private and f.name.startswith("_"):
+                continue
+            fields_.append((f.name, f.type) if with_types else f.name)
+        return tuple(fields_)
 
     @classmethod
     def _get_all_field_names(cls):
         """
         Returns a list of all field names from a dataclass, including properties.
         """
-        fields_ = []
+        property_fields = []
         for name, value in inspect.getmembers(cls):
             if isinstance(value, property):
-                fields_.append(name)
-        return tuple(fields_) + cls.get_field_names()
+                property_fields.append(name)
+        return tuple(property_fields) + cls._get_field_names()
 
     @property
     def saved(self):
@@ -177,26 +179,39 @@ class BaseModel(metaclass=BaseMeta):
         self._orm_instance.save(**kwargs)
         self._saved = True
 
+    @classmethod
+    def create(cls, **kwargs):
+        obj = cls(**kwargs)
+        obj.save(force_insert=True)
+        return obj
+
     def delete(self, **kwargs):
         if not self._saved:
             raise self.__class__.NotSaved(extra_detail="Delete failed")
-        self._saved = False
         count, _ = self._orm_instance.delete(**kwargs)
+        self._saved = False
         return count
 
     @classmethod
     def _serialize_obj_from_orm(cls, instance):
-        cls_fields = dict(cls.get_field_names(with_types=True))
+        cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(instance)
         obj = cls()
         for field_ in model_fields:
             if field_ in cls_fields:
-                value = getattr(instance, field_, None)
-                # don't check for None here, we need everything as-is
-                if isinstance(value, Model):
-                    type_ = cls_fields[field_]
-                    value = type_._serialize_obj_from_orm(value)
-                setattr(obj, field_, value)
+                attr = field_
+            elif f"_{field_}" in cls_fields:
+                # serialize some private fields as well.
+                attr = f"_{field_}"
+            else:
+                continue
+            value = getattr(instance, field_, None)
+            # don't check for None here, we need everything as-is
+            # We must also serialize 'related' fields
+            if isinstance(value, Model):
+                type_ = cls_fields[attr]
+                value = type_._serialize_obj_from_orm(value)
+            setattr(obj, attr, value)
 
         obj._orm_instance = instance
         obj._saved = True
@@ -213,15 +228,9 @@ class BaseModel(metaclass=BaseMeta):
     def get(cls, **kwargs):
         try:
             orm_instance = cls._orm_model_cls.objects.get(**kwargs)
-        except Model.DoesNotExist:
+        except ObjectDoesNotExist:
             raise cls.DoesNotExist
         return cls._fetch_from_orm(orm_instance)
-
-    @classmethod
-    def create(cls, **kwargs):
-        obj = cls(**kwargs)
-        obj.save(force_insert=True)
-        return obj
 
     @classmethod
     def filter(cls, **kwargs):
@@ -268,7 +277,7 @@ class ObjectSet:
             self._obj_set = self._model._fetch_from_orm(self._orm_queryset)
 
     def __repr__(self):
-        return f"<{self.__class__}  {self._obj_set}>"
+        return f"<{self.__class__.__name__}  {self._obj_set}>"
 
     def __str__(self):
         return str(self._obj_set)

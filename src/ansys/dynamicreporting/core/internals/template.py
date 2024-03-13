@@ -1,15 +1,14 @@
 import json
-from dataclasses import dataclass, field
+from dataclasses import field
 from datetime import datetime
 
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .base import BaseModel
-from .report_framework.utils import get_render_error_html, value_to_bool
 from .report_framework.context_processors import global_settings
+from .report_framework.utils import get_render_error_html
 from .reports.engine import TemplateEngine
-from ..exceptions import ObjectNotSavedError
 
 
 class Template(BaseModel):
@@ -115,12 +114,18 @@ class Template(BaseModel):
 
     @classmethod
     def get(cls, **kwargs):
-        obj = super().get(**kwargs)
+        new_kwargs = {"report_type": cls._report_type, **kwargs} if cls._report_type else kwargs
+        obj = super().get(**new_kwargs)
         props = obj.get_property()
         for prop in cls._properties:
             if prop in props:
                 setattr(obj, prop, props[prop])
         return obj
+
+    @classmethod
+    def filter(cls, **kwargs):
+        new_kwargs = {"report_type": cls._report_type, **kwargs} if cls._report_type else kwargs
+        return super().filter(**new_kwargs)
 
     def render(self, context=None, request=None, query=None):
         if context is None:

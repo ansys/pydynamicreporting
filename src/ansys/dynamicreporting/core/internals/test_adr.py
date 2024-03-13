@@ -38,8 +38,6 @@ data_table.ytitle = "Values"
 data_table.xtitle = "X"
 data_table.save()
 
-print(data_table.render())
-
 data_table2 = Table.create(
     name="data_table2",
     content=np.array([ics, ips, zet], dtype="|S20"),
@@ -48,8 +46,10 @@ data_table2 = Table.create(
     dataset=dataset
 )
 
+print(data_table.render())
+
 # Templates/reports
-from ansys.dynamicreporting.core import BasicLayout, PanelLayout
+from ansys.dynamicreporting.core import Template, BasicLayout, PanelLayout
 
 template_1 = adr.create_template(
     BasicLayout, name="Simulation Report", parent=None
@@ -70,5 +70,11 @@ template_2.save()
 ctx = {}
 print(template_1.render(context=ctx))
 
+print(Table.filter(name="data_table1").delete())
+print(Table.filter(name="data_table2").delete())
+
 data_table.delete()
+data_table2.delete()
 template_1.delete()
+
+print(Template.get(master=True, name="Simulation Report").delete())
