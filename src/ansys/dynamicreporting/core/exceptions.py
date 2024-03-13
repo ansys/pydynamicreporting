@@ -8,7 +8,7 @@ class PyadrException(Exception):
     All other exceptions inherit from this base class.
     """
 
-    detail: str = "An error occurred."
+    detail: str = "An error occurred"
 
     def __init__(self, extra_detail: str = None) -> None:
         super().__init__()

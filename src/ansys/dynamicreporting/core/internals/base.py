@@ -9,9 +9,9 @@ from uuid import UUID
 
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, FieldError, ValidationError, FieldDoesNotExist
 
-from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError
+from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError, PyadrException
 
 
 def add_exception_to_cls(name, base, cls, parents, module):
@@ -23,6 +23,16 @@ def add_exception_to_cls(name, base, cls, parents, module):
         attached_to=cls
     )
     setattr(cls, name, exception_cls)
+
+
+def handle_field_errors(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (FieldError, ValidationError, FieldDoesNotExist) as e:
+            raise PyadrException(extra_detail="One or more fields passed or accessed are invalid")
+
+    return wrapper
 
 
 class BaseMeta(ABCMeta):
@@ -108,13 +118,6 @@ class BaseModel(metaclass=BaseMeta):
             if value is not None and not isinstance(value, type_):
                 raise TypeError(f"Expected {field_name} to be of type {type_}.")
 
-    # TODO
-    def _validate_kwargs(self, kwargs):
-        valid_fields = self._get_field_names()
-        for kwarg, value in kwargs.items():
-            if kwarg not in valid_fields:
-                raise AttributeError(f"{self.__class__.__name__} has no attribute {kwarg}")
-
     @staticmethod
     def _add_quotes(input_str):
         if " " in input_str and input_str[0] != "'":
@@ -155,43 +158,6 @@ class BaseModel(metaclass=BaseMeta):
                 property_fields.append(name)
         return tuple(property_fields) + cls._get_field_names()
 
-    @property
-    def saved(self):
-        return self._saved
-
-    def save(self, **kwargs):
-        cls_fields = self._get_all_field_names()
-        model_fields = self._get_orm_field_names(self._orm_instance)
-        for field_ in cls_fields:
-            if field_ in model_fields:
-                value = getattr(self, field_, None)
-                if value is not None:
-                    if isinstance(value, list):
-                        obj_list = []
-                        for obj in value:
-                            obj_list.append(obj._orm_instance)
-                        if obj_list:
-                            getattr(self._orm_instance, field_).add(*obj_list)
-                    else:
-                        if isinstance(value, BaseModel):
-                            value = value._orm_instance.__class__.objects.get(guid=value.guid)
-                        setattr(self._orm_instance, field_, value)
-        self._orm_instance.save(**kwargs)
-        self._saved = True
-
-    @classmethod
-    def create(cls, **kwargs):
-        obj = cls(**kwargs)
-        obj.save(force_insert=True)
-        return obj
-
-    def delete(self, **kwargs):
-        if not self._saved:
-            raise self.__class__.NotSaved(extra_detail="Delete failed")
-        count, _ = self._orm_instance.delete(**kwargs)
-        self._saved = False
-        return count
-
     @classmethod
     def _serialize_obj_from_orm(cls, instance):
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
@@ -224,7 +190,46 @@ class BaseModel(metaclass=BaseMeta):
         else:
             return cls._serialize_obj_from_orm(instance_or_queryset)
 
+    @property
+    def saved(self):
+        return self._saved
+
+    def save(self, **kwargs):
+        cls_fields = self._get_all_field_names()
+        model_fields = self._get_orm_field_names(self._orm_instance)
+        for field_ in cls_fields:
+            if field_ in model_fields:
+                value = getattr(self, field_, None)
+                if value is not None:
+                    if isinstance(value, list):
+                        obj_list = []
+                        for obj in value:
+                            obj_list.append(obj._orm_instance)
+                        if obj_list:
+                            getattr(self._orm_instance, field_).add(*obj_list)
+                    else:
+                        if isinstance(value, BaseModel):
+                            value = value._orm_instance.__class__.objects.get(guid=value.guid)
+                        setattr(self._orm_instance, field_, value)
+        self._orm_instance.save(**kwargs)
+        self._saved = True
+
     @classmethod
+    @handle_field_errors
+    def create(cls, **kwargs):
+        obj = cls(**kwargs)
+        obj.save(force_insert=True)
+        return obj
+
+    def delete(self, **kwargs):
+        if not self._saved:
+            raise self.__class__.NotSaved(extra_detail="Delete failed")
+        count, _ = self._orm_instance.delete(**kwargs)
+        self._saved = False
+        return count
+
+    @classmethod
+    @handle_field_errors
     def get(cls, **kwargs):
         try:
             orm_instance = cls._orm_model_cls.objects.get(**kwargs)
@@ -233,6 +238,7 @@ class BaseModel(metaclass=BaseMeta):
         return cls._fetch_from_orm(orm_instance)
 
     @classmethod
+    @handle_field_errors
     def filter(cls, **kwargs):
         qs = cls._orm_model_cls.objects.filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
