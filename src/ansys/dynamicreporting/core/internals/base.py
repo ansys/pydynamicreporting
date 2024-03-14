@@ -3,7 +3,8 @@ import inspect
 import shlex
 import uuid
 from abc import ABC, abstractmethod, ABCMeta
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields as dataclass_fields
+from itertools import chain
 from typing import Any
 from uuid import UUID
 
@@ -141,7 +142,7 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     def _get_field_names(cls, with_types=False, include_private=False):
         fields_ = []
-        for f in fields(cls):
+        for f in dataclass_fields(cls):
             if not include_private and f.name.startswith("_"):
                 continue
             fields_.append((f.name, f.type) if with_types else f.name)
@@ -310,6 +311,17 @@ class ObjectSet:
         self._saved = False
         count, _ = self._orm_queryset.delete()
         return count
+
+    def values_list(self, *fields, flat=False):
+        if flat and len(fields) > 1:
+            raise TypeError(
+                "'flat' is not valid when values_list is called with more than one "
+                "field."
+            )
+        ret = []
+        for obj in self._obj_set:
+            ret.append(tuple(getattr(obj, f, None) for f in fields))
+        return chain.from_iterable(ret) if flat else ret
 
 
 class Validator(ABC):

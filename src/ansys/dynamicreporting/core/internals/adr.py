@@ -185,7 +185,7 @@ class ADR:
             raise TypeError(f"{item_type} is not valid")
         return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
 
-    def create_template(self, template_type: Type[Template], **kwargs):
+    def create_template(self, template_type: Type[Template], **kwargs: Any):
         if not issubclass(template_type, Template):
             self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
@@ -198,10 +198,26 @@ class ADR:
 
     def get_report(self, **kwargs):
         try:
-            return Template.filter(master=True).get(**kwargs)
+            return Template.get(master=True, **kwargs)
         except Exception as e:
             self._logger.error(f"{e}")
             raise e
+
+    def get_reports(self, fields=None, flat=False):
+        # return list of reports by default.
+        # if fields are mentioned, return value list
+        try:
+            out = Template.filter(master=True)
+            if fields:
+                out = out.values_list(*fields, flat=flat)
+        except Exception as e:
+            self._logger.error(f"{e}")
+            raise e
+
+        return list(out)
+
+    def get_list_reports(self, *fields):
+        return self.get_reports(*fields)
 
     def render_report(self, context=None, query=None, **kwargs):
         try:
@@ -214,7 +230,4 @@ class ADR:
         ...
 
     def query(self, query_type, query):
-        ...
-
-    def get_list_reports(self, *fields):
         ...
