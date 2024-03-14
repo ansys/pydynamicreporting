@@ -1,4 +1,5 @@
 import json
+from abc import abstractmethod
 from dataclasses import field
 from datetime import datetime
 
@@ -162,104 +163,88 @@ class PanelLayout(Layout):
 
 
 class BoxLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:box"
 
 
 class TabLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:tabs"
 
 
 class CarouselLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:carousel"
 
 
 class SliderLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:slider"
 
 
 class FooterLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:footer"
 
 
 class HeaderLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:header"
 
 
 class IteratorLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:iterator"
 
 
 class TagPropertyLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:tagprops"
 
 
 class TOCLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:toc"
 
 
 class ReportLinkLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:reportlink"
 
 
 class PPTXLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:pptx"
 
 
 class PPTXSlideLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:pptxslide"
 
 
 class DataFilterLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:datafilter"
 
 
 class UserDefinedLayout(Layout):
-    _report_type: str = "Layout:panel"
+    _report_type: str = "Layout:userdefined"
 
 
 class Generator(Template):
-
-    def render(self):
-        pass
+    pass
 
 
 class TableMergeGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:tablemerge"
 
 
 class TableReduceGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:tablereduce"
 
 
 class TableMergeRCFilterGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:tablerowcolumnfilter"
 
 
 class TableMergeValueFilterGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:tablevaluefilter"
 
 
 class TableSortFilterGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:tablesortfilter"
 
 
 class TreeMergeGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:treemerge"
 
 
 class SQLQueryGenerator(Generator):
-
-    def render(self):
-        pass
+    _report_type: str = "Generator:sqlqueries"
