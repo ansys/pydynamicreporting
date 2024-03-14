@@ -29,8 +29,8 @@ def handle_field_errors(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, ValidationError, FieldDoesNotExist) as e:
-            raise PyadrException(extra_detail="One or more fields passed or accessed are invalid")
+        except (FieldError, ValidationError, FieldDoesNotExist):
+            raise PyadrException(extra_detail="One or more fields set or accessed are invalid")
 
     return wrapper
 
@@ -194,6 +194,7 @@ class BaseModel(metaclass=BaseMeta):
     def saved(self):
         return self._saved
 
+    @handle_field_errors
     def save(self, **kwargs):
         cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
