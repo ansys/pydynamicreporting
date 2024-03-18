@@ -1,10 +1,9 @@
 import os
 import re
 from pathlib import Path
-from typing import Any, Type
+from typing import Any, Type, Optional
 
 from django.core import management
-from django.db.models import Model
 from django.http import HttpRequest
 
 from .item import Item, Session, Dataset
@@ -16,8 +15,7 @@ from ..exceptions import (
     ImproperlyConfiguredError,
     DatabaseMigrationError,
     StaticFilesCollectionError,
-    InvalidPath,
-    ObjectDoesNotExistError
+    InvalidPath
 )
 
 
@@ -226,8 +224,11 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-    def put_objects(self):
+    def query(self, query_type: str = "Item", filter: Optional[str] = "") -> list:
         ...
 
-    def query(self, query_type, query):
+    def create(self, objects: list) -> None:
+        ...
+
+    def delete(self, objects: list) -> None:
         ...

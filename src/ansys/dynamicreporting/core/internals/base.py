@@ -160,9 +160,9 @@ class BaseModel(metaclass=BaseMeta):
         return tuple(property_fields) + cls._get_field_names()
 
     @classmethod
-    def _serialize_obj_from_orm(cls, instance):
+    def serialize_from_orm(cls, orm_instance):
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
-        model_fields = cls._get_orm_field_names(instance)
+        model_fields = cls._get_orm_field_names(orm_instance)
         obj = cls()
         for field_ in model_fields:
             if field_ in cls_fields:
@@ -172,24 +172,17 @@ class BaseModel(metaclass=BaseMeta):
                 attr = f"_{field_}"
             else:
                 continue
-            value = getattr(instance, field_, None)
+            value = getattr(orm_instance, field_, None)
             # don't check for None here, we need everything as-is
             # We must also serialize 'related' fields
             if isinstance(value, Model):
                 type_ = cls_fields[attr]
-                value = type_._serialize_obj_from_orm(value)
+                value = type_.serialize_from_orm(value)
             setattr(obj, attr, value)
 
-        obj._orm_instance = instance
+        obj._orm_instance = orm_instance
         obj._saved = True
         return obj
-
-    @classmethod
-    def _fetch_from_orm(cls, instance_or_queryset):
-        if isinstance(instance_or_queryset, QuerySet):
-            return [cls._serialize_obj_from_orm(instance) for instance in instance_or_queryset]
-        else:
-            return cls._serialize_obj_from_orm(instance_or_queryset)
 
     @property
     def saved(self):
@@ -237,7 +230,7 @@ class BaseModel(metaclass=BaseMeta):
             orm_instance = cls._orm_model_cls.objects.get(**kwargs)
         except ObjectDoesNotExist:
             raise cls.DoesNotExist
-        return cls._fetch_from_orm(orm_instance)
+        return cls.serialize_from_orm(orm_instance)
 
     @classmethod
     @handle_field_errors
@@ -274,15 +267,15 @@ class BaseModel(metaclass=BaseMeta):
 @dataclass(eq=False, order=False, repr=False)
 class ObjectSet:
     _model: type[BaseModel] = field(compare=False, default=None)
-    _orm_model: type[Model] = field(compare=False, default=None)
-    _orm_queryset: QuerySet = field(compare=False, default=None)
     _obj_set: list[BaseModel] = field(init=True, compare=False, default_factory=list)
     _saved: bool = field(init=False, compare=False, default=False)
+    _orm_model: type[Model] = field(compare=False, default=None)
+    _orm_queryset: QuerySet = field(compare=False, default=None)
 
     def __post_init__(self):
         if self._orm_queryset is not None:
             self._saved = True
-            self._obj_set = self._model._fetch_from_orm(self._orm_queryset)
+            self._obj_set = [self._model.serialize_from_orm(instance) for instance in self._orm_queryset]
 
     def __repr__(self):
         return f"<{self.__class__.__name__}  {self._obj_set}>"

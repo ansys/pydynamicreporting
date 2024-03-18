@@ -7,7 +7,7 @@ import numpy
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .base import BaseModel, Validator
+from .base import BaseModel, Validator, ObjectSet
 from .data.extremely_ugly_hacks import safe_unpickle
 from .data.utils import delete_item_media
 from .report_framework.context_processors import global_settings
@@ -90,6 +90,7 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     session: Session = field(compare=False, kw_only=True, default=None)
     dataset: Dataset = field(compare=False, kw_only=True, default=None)
+    content: type[Validator] = field(compare=False, kw_only=True, default=None)
     _type: str = "none"
     _orm_model: str = "data.models.Item"
 
@@ -155,9 +156,8 @@ class Table(Item):
         return self._type
 
     @classmethod
-    def get(cls, **kwargs):
-        obj = super().get(**kwargs)
-        # type specific deserialization of payload
+    def serialize_from_orm(cls, orm_instance):
+        obj = super().serialize_from_orm(orm_instance)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
