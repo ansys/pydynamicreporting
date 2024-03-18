@@ -1,13 +1,14 @@
 import pickle
 import platform
-from dataclasses import dataclass, field
+from dataclasses import field
 from datetime import datetime
+from html.parser import HTMLParser as BaseHTMLParser
 
 import numpy
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .base import BaseModel, Validator, ObjectSet
+from .base import BaseModel, Validator
 from .data.extremely_ugly_hacks import safe_unpickle
 from .data.utils import delete_item_media
 from .report_framework.context_processors import global_settings
@@ -40,6 +41,35 @@ class StringContent(Validator):
         if not isinstance(string, str):
             raise TypeError(f'Expected content to be a string')
         return string
+
+
+class HTMLParser(BaseHTMLParser):
+
+    def __init__(self):
+        super().__init__()
+        self._start_tags = []
+
+    def handle_starttag(self, tag, attrs):
+        self._start_tags.append(tag)
+
+    def validate(self, string):
+        self.feed(string)
+        for tag in self._start_tags:
+            if tag:
+                return True
+        return False
+
+    def reset(self):
+        super().reset()
+        self._start_tags = []
+
+
+class HTMLContent(StringContent):
+    def validate(self, string):
+        html_str = super().validate(string)
+        if not HTMLParser().validate(html_str):
+            raise ValueError(f'Expected content to contain valid HTML')
+        return html_str
 
 
 class TableContent(Validator):
@@ -78,11 +108,6 @@ class FileContent(Validator):
         pass
 
 
-class HTMLContent(Validator):
-    def validate(self, value):
-        pass
-
-
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
@@ -105,6 +130,8 @@ class Item(BaseModel):
             raise Session.NotSaved(extra_detail="Failed to save item because the session is not saved")
         if not self.dataset.saved:
             raise Dataset.NotSaved(extra_detail="Failed to save item because the dataset is not saved")
+        if self.content is None:
+            raise PyadrException(extra_detail=f"The item {self.guid} must have some content to save")
         super().save(**kwargs)
 
     def delete(self, **kwargs):
@@ -137,13 +164,24 @@ class String(Item):
     content: StringContent = StringContent()
     _type: str = "string"
 
-    @property
-    def type(self):
-        return self._type
+    @classmethod
+    def serialize_from_orm(cls, orm_instance):
+        obj = super().serialize_from_orm(orm_instance)
+        obj.content = safe_unpickle(obj._orm_instance.payloaddata)
+        return obj
+
+    def save(self, **kwargs):
+        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)
+        super().save(**kwargs)
 
 
 class Text(String):
     pass
+
+
+class HTML(String):
+    content: HTMLContent = HTMLContent()
+    _type: str = "html"
 
 
 class Table(Item):
@@ -196,11 +234,6 @@ class Image(Item):
     height: int = field(compare=False, kw_only=True, default=0)
     content: ImageContent = ImageContent()
     _type: str = "image"
-
-
-class HTML(Item):
-    content: HTMLContent = HTMLContent()
-    _type: str = "html"
 
 
 class Animation(Item):
