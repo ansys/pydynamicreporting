@@ -1,5 +1,6 @@
 import pickle
 import platform
+import uuid
 from dataclasses import field
 from datetime import datetime
 from html.parser import HTMLParser as BaseHTMLParser
@@ -39,7 +40,7 @@ class Dataset(BaseModel):
 class StringContent(Validator):
     def validate(self, string):
         if not isinstance(string, str):
-            raise TypeError(f'Expected content to be a string')
+            raise TypeError("Expected content to be a string")
         return string
 
 
@@ -83,17 +84,47 @@ class TableContent(Validator):
         return array
 
 
+class TreeContent(Validator):
+    ALLOWED_VALUE_TYPES = (float, int, datetime, str, bool, uuid.UUID, type(None))
+
+    def _validate_tree_value(self, value):
+        # if it's a list of values, validate them recursively.
+        if isinstance(value, list):
+            for v in value:
+                self._validate_tree_value(v)
+        else:
+            type_ = type(value)
+            if type_ not in self.ALLOWED_VALUE_TYPES:
+                raise ValueError(f"{str(type_)} is not a valid 'value' type in a tree")
+
+    def _validate_tree(self, tree):
+        if not isinstance(tree, list):
+            raise ValueError("The tree content must be a list of dictionaries")
+        for elem in tree:
+            if not isinstance(elem, dict):
+                raise ValueError("The tree content must be a list of dictionaries")
+            if "key" not in elem:
+                raise ValueError("Tree content dictionaries must have a 'key' key")
+            if "name" not in elem:
+                raise ValueError("Tree content dictionaries must have a 'name' key")
+            if "value" not in elem:
+                raise ValueError("Tree content dictionaries must have a 'value' key")
+            if "children" in elem:
+                self._validate_tree(elem["children"])
+            # validate tree value
+            self._validate_tree_value(elem["value"])
+
+    def validate(self, tree):
+        self._validate_tree(tree)
+        return tree
+
+
 class ImageContent(Validator):
     def validate(self, value):
         pass
 
 
 class AnimContent(Validator):
-    def validate(self, value):
-        pass
-
-
-class TreeContent(Validator):
     def validate(self, value):
         pass
 
@@ -224,11 +255,6 @@ class Tree(Item):
     _type: str = "tree"
 
 
-class Scene(Item):
-    content: SceneContent = SceneContent()
-    _type: str = "scene"
-
-
 class Image(Item):
     width: int = field(compare=False, kw_only=True, default=0)
     height: int = field(compare=False, kw_only=True, default=0)
@@ -239,6 +265,11 @@ class Image(Item):
 class Animation(Item):
     content: AnimContent = AnimContent()
     _type: str = "anim"
+
+
+class Scene(Item):
+    content: SceneContent = SceneContent()
+    _type: str = "scene"
 
 
 class File(Item):
