@@ -19,6 +19,39 @@ from ..exceptions import PyadrException
 from ..utils import report_utils
 
 
+class HTMLParser(BaseHTMLParser):
+
+    def __init__(self):
+        super().__init__()
+        self._start_tags = []
+
+    def handle_starttag(self, tag, attrs):
+        self._start_tags.append(tag)
+
+    def validate(self, string):
+        self.feed(string)
+        for tag in self._start_tags:
+            if tag:
+                return True
+        return False
+
+    def reset(self):
+        super().reset()
+        self._start_tags = []
+
+
+class SimplePayloadMixin:
+    @classmethod
+    def serialize_from_orm(cls, orm_instance):
+        obj = super().serialize_from_orm(orm_instance)
+        obj.content = safe_unpickle(obj._orm_instance.payloaddata)
+        return obj
+
+    def save(self, **kwargs):
+        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)
+        super().save(**kwargs)
+
+
 class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
@@ -42,27 +75,6 @@ class StringContent(Validator):
         if not isinstance(string, str):
             raise TypeError("Expected content to be a string")
         return string
-
-
-class HTMLParser(BaseHTMLParser):
-
-    def __init__(self):
-        super().__init__()
-        self._start_tags = []
-
-    def handle_starttag(self, tag, attrs):
-        self._start_tags.append(tag)
-
-    def validate(self, string):
-        self.feed(string)
-        for tag in self._start_tags:
-            if tag:
-                return True
-        return False
-
-    def reset(self):
-        super().reset()
-        self._start_tags = []
 
 
 class HTMLContent(StringContent):
@@ -191,19 +203,9 @@ class Item(BaseModel):
         return render_to_string('data/item_detail_simple.html', context=ctx, request=request)
 
 
-class String(Item):
+class String(SimplePayloadMixin, Item):
     content: StringContent = StringContent()
     _type: str = "string"
-
-    @classmethod
-    def serialize_from_orm(cls, orm_instance):
-        obj = super().serialize_from_orm(orm_instance)
-        obj.content = safe_unpickle(obj._orm_instance.payloaddata)
-        return obj
-
-    def save(self, **kwargs):
-        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)
-        super().save(**kwargs)
 
 
 class Text(String):
@@ -250,7 +252,7 @@ class Plot(Table):
     pass
 
 
-class Tree(Item):
+class Tree(SimplePayloadMixin, Item):
     content: TreeContent = TreeContent()
     _type: str = "tree"
 
