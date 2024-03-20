@@ -967,7 +967,7 @@ def create_new_local_database(
     parent,
     directory="",
     return_info=None,
-    run_local=False,
+    run_local=True,
     raise_exception=False,
     exec_basis=None,
     ansys_version=None,
@@ -1079,9 +1079,6 @@ def create_new_local_database(
                 group.user_set.add(user)
                 group.save()
                 os.makedirs(os.path.join(db_dir, "media"))
-                from ansys.nexus.core.geofile_processing import do_geometry_update_check
-
-                do_geometry_update_check()
             except Exception:
                 error = True
             if parent and has_qt:
