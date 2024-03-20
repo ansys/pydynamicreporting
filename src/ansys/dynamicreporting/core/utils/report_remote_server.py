@@ -967,7 +967,7 @@ def create_new_local_database(
     parent,
     directory="",
     return_info=None,
-    run_local=True,
+    run_local=False,
     raise_exception=False,
     exec_basis=None,
     ansys_version=None,
