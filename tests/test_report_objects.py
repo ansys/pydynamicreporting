@@ -1726,6 +1726,17 @@ def test_datafilter() -> bool:
 
 
 @pytest.mark.ado_test
+def test_userdefined() -> bool:
+    a = ro.userdefinedREST()
+    a.interactive_only = 1
+    assert a.interactive_only == 1
+    a.before_children = 1
+    assert a.before_children == 1
+    a.userdef_name = "Hello"
+    assert a.userdef_name == "Hello"
+
+
+@pytest.mark.ado_test
 def test_unit_template() -> bool:
     a = ro.Template()
     succ = a.get_template_object(guid="a") is None
