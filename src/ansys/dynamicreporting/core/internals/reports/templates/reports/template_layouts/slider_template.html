@@ -1,0 +1,2405 @@
+<style>
+    .panzoom-parent-{{ parent_num }} {
+        width: 100%;
+        height: 100%;
+        user-select: none;
+        touch-action: none;
+    }
+
+    .img-{{ parent_num }},
+    .deep-img-{{ parent_num }} {
+        width: 100%;
+        height: 100%;
+        vertical-align: top;
+    }
+
+    .deep-img-{{ parent_num }} {
+        display: none;
+        background-color: #fff;
+    }
+
+    {% if image_controls %}
+        .grid-overlay-{{ parent_num }} {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, grey 1px, transparent 1px),
+            linear-gradient(to bottom, grey 1px, transparent 1px);
+            position: absolute;
+            top: 0;
+            left: 0;
+            user-select: none;
+            touch-action: none;
+            pointer-events: none;
+        }
+        .crosshairs-{{ parent_num }} {
+            display: none;
+            pointer-events: none;
+            user-select: none;
+            touch-action: none;
+            z-index: 10;
+            position: absolute;
+            background-color: rgb(255, 183, 27);
+        }
+        .pin-{{ parent_num }} {
+            display: none;
+            pointer-events: none;
+            user-select: none;
+            touch-action: none;
+            z-index: 9;
+            position: absolute;
+            background-color: rgb(255, 183, 27);
+        }
+    {% endif %}
+
+    {% if image_comparison %}
+        .ph-item-{{ parent_num }} {
+            max-width: 100%;
+            /* we dont really know the height of the image until
+             it finishes loading so we use a sensible(?) initial default
+             after which it switches to the current image's dimensions */
+            min-height: 400px;
+            overflow: hidden;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center; /* Vertically center */
+            position: relative;
+            z-index: 11; /* must always be higher than the rest */
+            background-color: var(--color-ph-bg);
+            vertical-align: top;
+            pointer-events: none;
+            user-select: none;
+            touch-action: none;
+        }
+    {% endif %}
+
+    {% if deep_image_comparison %}
+        .palette-{{ parent_num }},
+        .default-palette-{{ parent_num }} {
+            width: 350px;
+            height: 25px;
+            border: 1px solid #d3d3d3;
+        }
+
+        .default-palette-{{ parent_num }} {
+            background-image: linear-gradient(to right, rgb(255, 255, 255), rgb(255, 255, 255));
+        }
+
+        [data-color-mode=dark] .default-palette-{{ parent_num }} {
+            background-image: linear-gradient(to right, rgb(34, 34, 34), rgb(34, 34, 34));
+        }
+    {% endif %}
+</style>
+{{ param_html | safe }}
+<div class='container-fluid mx-auto text-center' id='{{ parent_container_id }}'>
+    <div class="row">
+        {% if image_controls %}
+            <!-- image_controls -->
+            <div class="col">
+                <div class="row justify-content-between mb-1">
+                    <div class="ml-1">
+                        <input type="checkbox" id="img_pan_check_{{ parent_num }}" checked="checked"
+                               data-hotkey="A" autocomplete="off" class="img-ctrl-{{ parent_num }}">
+                        <label for="img_pan_check_{{ parent_num }}" class="mr-2" title="Pan (Shift+a)">
+                            <a href="#" class="no-click"><i class="fas fa-arrows-alt"></i></a>
+                        </label>
+                        <input type="checkbox" id="img_grid_check_{{ parent_num }}" autocomplete="off"
+                               data-hotkey="G" class="img-ctrl-{{ parent_num }}">
+                        <label for="img_grid_check_{{ parent_num }}" class="mr-2" title="Grid (Shift+g)">
+                            <a href="#" class="no-click"><i class="fas fa-border-all"></i></a>
+                        </label>
+                        <input type="checkbox" id="img_probe_check_{{ parent_num }}" autocomplete="off"
+                               data-hotkey="P" class="img-ctrl-{{ parent_num }}"
+                               {% if html_export %}disabled{% endif %}>
+                        <label for="img_probe_check_{{ parent_num }}" class="mr-2"
+                               title="Probe: Enable and move mouse over image to view (Shift+p)">
+                            <a href="#" class="no-click"><i class="fas fa-crosshairs"></i></a>
+                        </label>
+                        <input type="checkbox" id="img_pin_check_{{ parent_num }}" disabled="disabled"
+                               autocomplete="off" data-hotkey="I" class="img-ctrl-{{ parent_num }}"
+                               {% if html_export %}disabled{% endif %}>
+                        <label id="img_pin_check_lbl_{{ parent_num }}" for="img_pin_check_{{ parent_num }}"
+                               title="Pin: Enable Probe and double click image to enable (Shift+i)">
+                            <a href="#" class="no-click"><i class="fas fa-thumbtack"></i></a>
+                        </label>
+                    </div>
+                    <div class="mr-1">
+                        <a id="img_zoom_in_{{ parent_num }}" href="#" title="Zoom in (Shift+=)" data-hotkey="Shift++"
+                           class="img-ctrl-{{ parent_num }}">
+                            <i class="fas fa-plus mr-2"></i>
+                        </a>
+                        <a id="img_zoom_out_{{ parent_num }}" href="#" title="Zoom out (Shift+-)" data-hotkey="Shift+_"
+                           class="img-ctrl-{{ parent_num }}">
+                            <i class="fas fa-minus mr-2"></i>
+                        </a>
+                        <a id="img_reset_{{ parent_num }}" href="#" title="Reset (Shift+r)" data-hotkey="R"
+                           class="img-ctrl-{{ parent_num }}">
+                            <i class="fas fa-undo-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="w-100"></div>
+            <!-- /image_controls -->
+        {% endif %}
+
+        {% for section in slider_sections %}
+            <!-- section -->
+            <div class="col-sm">
+                <!-- var select -->
+                {% if image_comparison %}
+                    {% if deep_image_comparison %}
+                        <div class="col">
+                            <div class="form-group row ml-1 justify-content-start">
+                                <button id="{{ section.name }}_deep_img_settings"
+                                        data-toggle="modal"
+                                        data-target="#{{ section.name }}_deep_img_set_modal"
+                                        type="button"
+                                        class="btn btn-outline-primary mr-2"
+                                        style="display: none;">
+                                    <i class="fas fa-sliders-h fa-lg"></i>
+                                </button>
+                                <select id="{{ section.name }}_img_var_select"
+                                        class="form-control mr-2 col-md-5">
+                                    <option value="rgb" selected>RGB</option>
+                                </select>
+                                <select id="{{ section.name }}_deep_diff_select"
+                                        class="form-control col-md-5">
+                                    <option value="{{ deep_views.CURRENT }}" selected>
+                                        {% if forloop.first %}Left{% else %}Right{% endif %} image
+                                    </option>
+                                    <option value="{{ deep_views.CURRENT_MINUS_OTHER }}">
+                                        {% if forloop.first %}Left - Right{% else %}Right - Left{% endif %} image
+                                    </option>
+                                    <option value="{{ deep_views.OTHER_MINUS_CURRENT }}">
+                                        {% if forloop.first %}Right - Left{% else %}Left - Right{% endif %} image
+                                    </option>
+                                    <option value="{{ deep_views.ABSOLUTE_VALUE }}">
+                                        Abs({% if forloop.first %}Left - Right{% else %}Right - Left{% endif %} image)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="w-100"></div>
+                    {% endif %}
+
+                    {% if rgb_diff_comparison %}
+                        <div class="col">
+                            <div class="form-group row ml-1 justify-content-start">
+                                <select id="{{ section.name }}_deep_diff_select"
+                                        class="form-control col-md-5"
+                                        {% if html_export %}disabled{% endif %}>
+                                    <option value="{{ deep_views.CURRENT }}" selected>
+                                        {% if forloop.first %}Left{% else %}Right{% endif %} image
+                                    </option>
+                                    <option value="{{ deep_views.ABSOLUTE_VALUE }}">
+                                        Abs({% if forloop.first %}Left - Right{% else %}Right - Left{% endif %} image)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="w-100"></div>
+                    {% endif %}
+
+                    {% if deep_image_comparison %}
+                        <!--- deep_img_set_modal --->
+                        <div id="{{ section.name }}_deep_img_set_modal" class="modal fade" tabindex="-1" role="dialog"
+                         aria-labelledby="{{ section.name }}_deep_img_set_modal_label"
+                         aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="{{ section.name }}_deep_img_set_modal_label">
+                                        Settings for <span class="{{ section.name }}_chosen_var_h"></span>
+                                        ({% if forloop.first %}Left{% else %}Right{% endif %} section)
+                                    </h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <!--sample-->
+                                    <div class="container-fluid mb-4">
+                                        <div class="d-flex flex-row mt-3 justify-content-center">
+                                            <div id="{{ section.name }}_deep_palette_sample"
+                                                 class="palette-{{ parent_num }}"></div>
+                                        </div>
+                                        <div class="d-flex flex-row justify-content-center">
+                                            <div>
+                                                <span id="{{ section.name }}_deep_img_min_sample"></span>
+                                                <span class="{{ section.name }}-deep-var-unit"></span>
+                                            </div>
+                                            <div style="width: 300px;"></div>
+                                            <div>
+                                                <span id="{{ section.name }}_deep_img_max_sample"></span>
+                                                <span class="{{ section.name }}-deep-var-unit"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!--min/max-->
+                                    <div class="container-fluid">
+                                        <h6 class="mb-3">Min & max values</h6>
+                                        <div class="row">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Max</span>
+                                                </div>
+                                                <input type="number" class="form-control tag-input deep-num col-md-3"
+                                                       id="{{ section.name }}_deep_img_var_max"/>
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text {{ section.name }}-deep-var-unit"></span>
+                                                </div>
+                                            </div>
+                                            <p>
+                                                <small>Highest value in the current image is
+                                                    <span id="{{ section.name }}_deep_img_var_high"></span>
+                                                    <span class="{{ section.name }}-deep-var-unit"></span>
+                                                    <span>
+                                                        <a id="{{ section.name }}_deep_img_var_max_fill" href="#">
+                                                            <i class="fas fa-paste"></i>
+                                                        </a>
+                                                    </span>
+                                                </small>
+                                            </p>
+                                        </div>
+                                        <div class="row">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Min</span>
+                                                </div>
+                                                <input type="number" class="form-control tag-input deep-num col-md-3"
+                                                       id="{{ section.name }}_deep_img_var_min"/>
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text {{ section.name }}-deep-var-unit"></span>
+                                                </div>
+                                            </div>
+                                            <p>
+                                                <small>Lowest value in the current image is
+                                                    <span id="{{ section.name }}_deep_img_var_low"></span>
+                                                    <span class="{{ section.name }}-deep-var-unit"></span>
+                                                    <span>
+                                                        <a id="{{ section.name }}_deep_img_var_min_fill" href="#">
+                                                            <i class="fas fa-paste"></i>
+                                                        </a>
+                                                    </span>
+                                                </small>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!--color-->
+                                    <div class="container-fluid mb-3">
+                                        <h6 class="mb-3">Colors</h6>
+                                        <div class="row mb-3">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Palette</span>
+                                                </div>
+                                                <select id="{{ section.name }}_deep_palette"
+                                                        class="form-control">
+                                                    {% for palette in color_palettes %}
+                                                        <option value="{{ palette }}"
+                                                                {% if forloop.first %}selected{% endif %}
+                                                        >{{ palette }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       id="{{ section.name }}_deep_palette_inv">
+                                                <label class="form-check-label"
+                                                       for="{{ section.name }}_deep_palette_inv">
+                                                    Invert color scale
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       id="{{ section.name }}_deep_hide_bg">
+                                                <label class="form-check-label"
+                                                       for="{{ section.name }}_deep_hide_bg">
+                                                    Hide remaining pixels
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div id="{{ section.name }}_deep_bg" class="row mb-1 mt-1" style="display: none;">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Background</span>
+                                                </div>
+                                                <input type="number" min="0" max="1" step="0.01"
+                                                       value="{{ default_bg_opacity }}"
+                                                       class="form-control tag-input col-md-2 mr-2"
+                                                       id="{{ section.name }}_deep_img_var_opacity"/>
+                                                <span class="mt-1"><small>Must be between 0(white) and 1(black).</small></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning"
+                                            id="{{ section.name }}_deep_img_set_reset">Reset
+                                    </button>
+                                    <button type="button" class="btn btn-primary"
+                                            id="{{ section.name }}_deep_img_set_save">Apply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+
+                <!-- image -->
+                <div class="col">
+                    {% if image_controls %}
+                        <!-- begin tooltip parent for img/canvas --->
+                        <div class="probe-display-{{ parent_num }}"
+                             data-toggle="tooltip"
+                             data-placement="top"
+                             data-html="true"
+                             data-container="body"
+                             data-boundary="viewport"
+                             data-animation="false"
+                             data-trigger="manual"
+                             data-title='<span class="f-1r">
+                                            <span>X, Y : <span id="{{ section.name }}_probe_xy">0, 0</span></span>
+                                            <br>
+                                            <span id="{{ section.name }}_probe_result"></span>
+                                        </span>'
+                        >
+                    {% endif %}
+
+                    {% if image_comparison %}
+                        <div id="{{ section.name }}_ph"
+                             class="ph-item-{{ parent_num }} justify-content-center"
+                        >
+                            <div class="spinner-border text-primary"
+                                 role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div id="{{ section.name }}_panzoom_parent" class="panzoom-parent-{{ parent_num }}">
+                        <!-- actual pan/zoom element -->
+                        <div id="{{ section.name }}_panzoom" class="panzoom-div"
+                             data-parent-id="{{ parent_num }}"
+                             data-section-name="{{ section.name }}"
+                        >
+                        {% if image_controls or image_comparison %}
+                                {% if image_controls %}
+                                    <!-- pin and crosshairs --->
+                                    <!-- includes classes for probing crosshairs used from jquery--->
+                                    <div class='x-line-{{ parent_num }} crosshairs-{{ parent_num }}'
+                                         style='width: 100%; height: 1px;'></div>
+                                    <div class='y-line-{{ parent_num }} crosshairs-{{ parent_num }}'
+                                         style='height: 100%; width: 1px;'></div>
+                                    <!-- pinning marker --->
+                                    <div class='x-pin-{{ parent_num }} pin-{{ parent_num }}'
+                                         style='width: 100%; height: 1px; max-width: 21px;'></div>
+                                    <div class='y-pin-{{ parent_num }} pin-{{ parent_num }}'
+                                         style='height: 100%; width: 1px; max-height: 21px;'></div>
+                                {% endif %}
+
+                                <img id="{{ section.name }}"
+                                        {{ section.image_class | safe }}
+                                        {{ section.image_style | safe }}
+                                >
+                                <canvas id="{{ section.name }}_canvas"
+                                        class="img-disp-{{ parent_num }} deep-img-{{ parent_num }}">
+                                </canvas>
+                                {% if image_controls %}
+                                    <!-- grid --->
+                                    <div class="grid-overlay-{{ parent_num }}"></div>
+                                {% endif %}
+                            {% else %}
+                                <a id="{{ section.name }}_link"
+                                        {% if section.image_link == 2 or section.image_link == 3 %}
+                                   target="_blank"
+                                        {% elif section.image_link == 1 %}
+                                   target="_self"
+                                        {% endif %}
+                                >
+                                    <img id="{{ section.name }}"
+                                        {{ section.image_class | safe }}
+                                        {{ section.image_style | safe }}
+                                        {{ section.image_scale | safe }}
+                                    >
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if image_controls %}
+                        </div> <!-- end tooltip parent for img/canvas --->
+                    {% endif %}
+                </div>
+                <div class="w-100"></div>
+                <!-- /image -->
+
+                <!-- image title -->
+                <div class='col'>
+                    <var id='{{ section.name }}_image_title'>{{ section.image_title | safe }}</var>
+                </div>
+                <div class="w-100"></div>
+                <!-- /image title -->
+
+                <!--- palettes --->
+                {% if deep_image_comparison %}
+                    <!--- main palette --->
+                    <div class="col" id="{{ section.name }}_deep_pal_main_container" style="display: none;">
+                        <div class="container-fluid mb-2">
+                            <div class="d-flex flex-row mt-3 justify-content-center">
+                                <div id="{{ section.name }}_deep_palette_main"
+                                     class="palette-{{ parent_num }}">
+                                </div>
+                            </div>
+                            <div class="d-flex flex-row justify-content-center f-1r">
+                                <div>
+                                    <span id="{{ section.name }}_deep_img_min_main"
+                                          class="p-1 main-palette-minmax-{{ section.name }}
+                                          main-palette-minmax-{{ parent_num }}">
+                                    </span>
+                                    <span class="{{ section.name }}-deep-var-unit-main"></span>
+                                </div>
+                                <div style="width: 300px;"></div>
+                                <div>
+                                        <span id="{{ section.name }}_deep_img_max_main"
+                                              class="p-1 main-palette-minmax-{{ section.name }}
+                                               main-palette-minmax-{{ parent_num }}">
+                                        </span>
+                                    <span class="{{ section.name }}-deep-var-unit-main"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--- default palette --->
+                    <div class="col" id="{{ section.name }}_deep_pal_default_container">
+                        <div class="container-fluid mb-2">
+                            <div class="d-flex flex-row mt-3 justify-content-center">
+                                <div id="{{ section.name }}_deep_palette_default"
+                                     class="default-palette-{{ parent_num }}">
+                                    <small class="text-center text-muted">
+                                        Choose variable to enable palette
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-row justify-content-center f-1r">
+                                <div>
+                                    <span class="p-1"></span>
+                                    <span></span>
+                                </div>
+                                <div style="width: 300px;"></div>
+                                <div>
+                                    <span class="p-1"></span>
+                                    <span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-100"></div>
+                {% endif %}
+
+                {% if image_controls %}
+                    <!-- pin display -->
+                    <div class="row justify-content-center mt-2 f-1r">
+                        <div class='col pin-display-{{ parent_num }}' id='{{ section.name }}_pixel_pin'
+                        style="display: none;">
+                            <div>
+                                <div class="container row justify-content-md-center">
+                                    <a href="#" class="no-click"><i class="fas fa-thumbtack"></i></a>
+                                </div>
+                                <div class="container row justify-content-md-center">
+                                    <div id="{{ section.name }}_cursor_pin" class="mr-2">X, Y : <span
+                                            id="{{ section.name }}_pin_xy">0, 0</span>
+                                    </div>
+                                </div>
+                                <div class="container row justify-content-md-center">
+                                    <div id="{{ section.name }}_pin_result"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-100"></div>
+                {% endif %}
+
+                <!-- slider table -->
+                <div class="col">
+                    <div class='table-responsive'>
+                        <table class='table slider-table'>
+                            <thead>
+                            <tr>
+                                <th style='width:{{ section.bar_width }}%;border:none;'></th>
+                                {% if section.value_width %}
+                                    <th style='width:{{ section.value_width }}%;border:none;'></th>
+                                {% endif %}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for tag, tag_info in section.slider_info.items %}
+                                {% if common_sliders %}
+                                    {% if tag not in common_sliders.keys %}
+                                        <tr id='slider_bar_p_{{ section.unique_id }}_{{ tag_info.index }}'>
+                                            <td style='border:none;'>
+                                                <input id='slider_bar_{{ section.unique_id }}_{{ tag_info.index }}'
+                                                       data-slider-id='slider_bar2_{{ section.unique_id }}_{{ tag_info.index }}'
+                                                       style='width:{{ section.bar_width }}%' type='text'
+                                                       data-provide='slider'
+                                                       data-slider-min='0' data-slider-max='{{ tag_info.max }}'
+                                                       data-slider-step='1' data-slider-value='{{ tag_info.start }}'
+                                                        {% if tag_info.ticks %}
+                                                       data-slider-ticks='{{ tag_info.ticks }}'
+                                                        {% endif %}
+                                                       data-slider-selection='none'
+                                                       data-slider-tooltip='hide'/>
+                                            </td>
+                                            {% if section.value_width %}
+                                                <td style='border:none;'
+                                                    id='slider_bar_lbl_{{ section.unique_id }}_{{ tag_info.index }}'
+                                                    align='{{ section.slider_title_justification }}'>0
+                                                </td>
+                                            {% endif %}
+                                        </tr>
+                                    {% endif %}
+                                {% else %}
+                                    <tr id='slider_bar_p_{{ section.unique_id }}_{{ tag_info.index }}'>
+                                        <td style='border:none;'>
+                                            <input id='slider_bar_{{ section.unique_id }}_{{ tag_info.index }}'
+                                                   data-slider-id='slider_bar2_{{ section.unique_id }}_{{ tag_info.index }}'
+                                                   style='width:{{ section.bar_width }}%' type='text'
+                                                   data-provide='slider'
+                                                   data-slider-min='0' data-slider-max='{{ tag_info.max }}'
+                                                   data-slider-step='1' data-slider-value='{{ tag_info.start }}'
+                                                    {% if tag_info.ticks %}
+                                                   data-slider-ticks='{{ tag_info.ticks }}'
+                                                    {% endif %}
+                                                   data-slider-selection='none'
+                                                   data-slider-tooltip='hide'/>
+                                        </td>
+                                        {% if section.value_width %}
+                                            <td style='border:none;'
+                                                id='slider_bar_lbl_{{ section.unique_id }}_{{ tag_info.index }}'
+                                                align='{{ section.slider_title_justification }}'>0
+                                            </td>
+                                        {% endif %}
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if section.has_multiple_values %}
+                                <tr id='slider_bar_p_{{ section.unique_id }}_catchall'>
+                                    <td style='border:none;'>
+                                        <input id='slider_bar_{{ section.unique_id }}_catchall'
+                                               data-slider-id='slider_bar2_{{ section.unique_id }}_catchall'
+                                               style='width:{{ section.bar_width }}%' type='text'
+                                               data-provide='slider' data-slider-min='0' data-slider-max='100'
+                                               data-slider-step='1' data-slider-value='0' data-slider-selection='none'
+                                               data-slider-tooltip='hide'/>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if not image_comparison %}
+                    {% for section in slider_sections %}
+                        <div id="adr-customui-slider-{{ section.unique_id}}" class="col"></div>
+                    {% endfor %}
+                {% endif %}
+                <div class="w-100"></div>
+                <!-- /slider table -->
+            </div>
+            <!-- /section -->
+        {% endfor %}
+        {# break the row of sections to the next one #}
+        <div class="w-100"></div>
+
+        {% if common_sliders %}
+            <!-- common_sliders -->
+            <div class="col">
+                <div class='table-responsive'>
+                    <table class='table slider-table'>
+                        <thead>
+                        <tr>
+                            <th style='width:{{ common_slider_bar_width }}%;border:none;'></th>
+                            {% if common_slider_value_width %}
+                                <th style='width:{{ common_slider_value_width }}%;border:none;'></th>
+                            {% endif %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for tag, tag_info in common_sliders.items %}
+                            <tr id='slider_bar_p_common_{{ parent_num }}_{{ tag_info.index }}'>
+                                <td style='border:none;'>
+                                    <input id='slider_bar_common_{{ parent_num }}_{{ tag_info.index }}'
+                                           data-slider-id='slider_bar2_common_{{ parent_num }}_{{ tag_info.index }}'
+                                           style='width:{{ common_slider_bar_width }}%' type='text'
+                                           data-provide='slider'
+                                           data-slider-min='0' data-slider-max='{{ tag_info.max }}'
+                                           data-slider-step='1' data-slider-value='{{ tag_info.start }}'
+                                            {% if tag_info.ticks %}
+                                           data-slider-ticks='{{ tag_info.ticks }}'
+                                            {% endif %}
+                                           data-slider-selection='none'
+                                           data-slider-tooltip='hide'/>
+                                </td>
+                                {% if common_slider_value_width %}
+                                    <td style='border:none;'
+                                        id='slider_bar_lbl_common_{{ parent_num }}_{{ tag_info.index }}'
+                                        align='{{ common_slider_title_justification }}'>0
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="w-100"></div>
+            <!-- /common_sliders -->
+        {% endif %}
+        {% if image_comparison %}
+            <div id="adr-customui-slider-{{ parent_num}}" class="col"></div>
+        {% endif %}
+    </div>
+</div>
+<script type='text/javascript'>
+    $(document).ready(function () {
+        // list of sections
+        let sliderSections = [];
+
+        // init pan/zoom UI element tracker
+        let panZoomUI_{{ parent_num }} = {
+            img: $('.img-{{ parent_num }}'),
+            imgDisp: $('.img-disp-{{ parent_num }}'),
+            getOtherImg: function (currentImg) {
+                let secOther = sliderSections.filter(name => {
+                    return name !== currentImg.id;
+                })[0];
+                return document.getElementById(secOther);
+            },
+            hasDeepData: function (img) {
+                return 'nexus_pick_buffer' in img && 'nexus_var_buffer' in img;
+            },
+            // part info
+            getPartInfo: function (img, bufferIdx) {
+                let partInfo = null;
+                let partId = img.nexus_pick_buffer[bufferIdx * 4] + 256 * img.nexus_pick_buffer[bufferIdx * 4 + 1];
+                if (partId in img.nexus_metadata) {
+                    partInfo = img.nexus_metadata[partId];
+                }
+                return partInfo;
+            },
+            generateCanvas: function (img) {
+                let canvas = document.getElementById(`${img.id}_canvas`);
+                let ctx = canvas.getContext('2d');
+
+                let origWidth, origHeight;
+
+                if (this.hasDeepData(img)) {
+                    // get original dimensions from the tiff / enhanced image
+                    origWidth = img.nexus_width;
+                    origHeight = img.nexus_height;
+                } else {
+                    // original image dimensions for PNG / non-enhanced images
+                    origWidth = $(img).prop('naturalWidth');
+                    origHeight = $(img).prop('naturalHeight');
+                }
+                // set current as well as original dimensions
+                canvas.origWidth = origWidth;
+                canvas.origHeight = origHeight;
+                canvas.width = origWidth;
+                canvas.height = origHeight;
+
+                // draw
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // retain original canvas in memory for later use.
+                if (!img.hasOwnProperty('canvas')) {
+                    let origCanvas = document.createElement('canvas');
+                    let origCtx = origCanvas.getContext('2d');
+                    origCanvas.width = canvas.width;
+                    origCanvas.height = canvas.height;
+                    origCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    // assign
+                    img.canvas = origCanvas;
+                }
+
+                // return
+                return canvas;
+            }
+        };
+
+        {% for section in slider_sections %}
+            // update sections list
+            sliderSections.push('{{ section.name }}');
+
+            var slider_loader_{{ section.unique_id }} = new Image();
+            slider_loader_{{ section.unique_id }}.target_image = document.getElementById('{{ section.name }}');
+            {% if section.image_title %}
+                slider_loader_{{ section.unique_id }}.image_title = '{{ section.image_title | safe }}';
+            {% endif %}
+
+            slider_loader_{{ section.unique_id }}.slider_title = [{% for title in slider_titles %}'{{ title }}', {% endfor %}];
+
+            // todo: chain promises and make this predictable
+            async function tiff_image_{{ section.unique_id }}_loader(src_url) {
+                const response = await fetch(src_url);
+                const arrayBuffer = await response.arrayBuffer();
+                const tiff_promise_{{ section.unique_id }} = GeoTIFF.fromArrayBuffer(arrayBuffer);
+                tiff_promise_{{ section.unique_id }}.then(nexus_image_load_tiff_image.bind(null, "{{ section.name }}"), nexus_image_general_error);
+            }
+
+            // If image controls and compare are disabled, allow image dragging slider features.
+            {% if not image_controls and not image_comparison %}
+                slider_loader_{{ section.unique_id }}.mouse_start = [0., 0.];
+                slider_loader_{{ section.unique_id }}.index_start = [0, 0];
+
+                slider_loader_{{ section.unique_id }}.target_image.ondragstart = function () {
+                    return false;
+                };
+
+                slider_loader_{{ section.unique_id }}.target_image.onmousemove = function (event) {
+                    if (event.buttons === 1) {
+                        var rect = event.target.getBoundingClientRect();
+                        var x = event.clientX - rect.left;
+                        var y = event.clientY - rect.top;
+                        x = x / rect.width;
+                        y = y / rect.height;
+                        if (slider_loader_{{ section.unique_id }}.mouse_start[0] >= 0.) {
+                            var xfrac = (x - slider_loader_{{ section.unique_id }}.mouse_start[0]) * {{ section.slider_xaxis_scale }};
+                            var yfrac = (y - slider_loader_{{ section.unique_id }}.mouse_start[1]) * {{ section.slider_yaxis_scale }};
+
+                            {% if section.slide_xaxis_tag_index is not None %}
+                                xfrac = (xfrac * {{ section.slide_xaxis_tag_value_count }}) | 0;
+                                {% if section.slider_xaxis_clamp %}
+                                    slider_loader_{{ section.unique_id }}.cur_values[{{ section.slide_xaxis_tag_index }}] = Math.max(0, Math.min({{ section.slide_xaxis_tag_value_count|add:"-1" }}, slider_loader_{{ section.unique_id }}.index_start[0] + xfrac));
+                                {% else %}
+                                    slider_loader_{{ section.unique_id }}.cur_values[{{ section.slide_xaxis_tag_index }}] = (slider_loader_{{ section.unique_id }}.index_start[0] + xfrac + {{ section.slider_xaxis_scale_total }}) % {{ section.slide_xaxis_tag_value_count }};
+                                {% endif %}
+                            {% endif %}
+
+                            {% if section.slide_yaxis_tag_index is not None %}
+                                yfrac = (yfrac * {{ section.slide_yaxis_tag_value_count }}) | 0;
+                                {% if section.slider_yaxis_clamp %}
+                                    slider_loader_{{ section.unique_id }}.cur_values[{{ section.slide_yaxis_tag_index }}] = Math.max(0, Math.min({{ section.slide_yaxis_tag_value_count|add:"-1" }}, slider_loader_{{ section.unique_id }}.index_start[1] - yfrac));
+                                {% else %}
+                                    slider_loader_{{ section.unique_id }}.cur_values[{{ section.slide_yaxis_tag_index }}] = (slider_loader_{{ section.unique_id }}.index_start[1] - yfrac + {{ section.slider_yaxis_scale_total }}) % {{ section.slide_yaxis_tag_value_count }};
+                                {% endif %}
+                            {% endif %}
+
+                            slider_loader_{{ section.unique_id }}.update();
+                        }
+                    }
+                };
+
+                slider_loader_{{ section.unique_id }}.target_image.onmousedown = function (event) {
+                    if (event.buttons === 1) {
+                        var rect = event.target.getBoundingClientRect();
+                        var x = event.clientX - rect.left;
+                        var y = event.clientY - rect.top;
+                        x = x / rect.width;
+                        y = y / rect.height;
+                        slider_loader_{{ section.unique_id }}.mouse_start = [x, y];
+
+                        {% if section.slide_xaxis_tag_index is not None %}
+                            slider_loader_{{ section.unique_id }}.index_start[0] = slider_loader_{{ section.unique_id }}.cur_values[{{ section.slide_xaxis_tag_index }}];
+                        {% endif %}
+
+                        {% if section.slide_yaxis_tag_index is not None %}
+                            slider_loader_{{ section.unique_id }}.index_start[1] = slider_loader_{{ section.unique_id }}.cur_values[{{ section.slide_yaxis_tag_index }}];
+                        {% endif %}
+                    }
+                };
+
+                slider_loader_{{ section.unique_id }}.target_image.onmouseup = function (event) {
+                    slider_loader_{{ section.unique_id }}.mouse_start = [-1., -1.];
+                };
+            {% endif %}
+
+            slider_loader_{{ section.unique_id }}.showPlaceHolder = function () {
+                let imgPh = $("#{{ section.name }}_ph");
+                // placeholder height, width
+                let phHeight = 0;
+                let phWidth = 0;
+                // choose canvas if present or the image
+                const source = $('#{{ section.name }}_canvas').length ?
+                    $('#{{ section.name }}_canvas'): $('#{{ section.name }}');
+                // set placeholder height, width from a previous load if available.
+                phHeight = source.prop('scrollHeight');
+                phWidth = source.prop('scrollWidth');
+                if (phHeight !== 0) {
+                    imgPh.css('min-height', `${phHeight}px`);
+                }
+                if (phWidth !== 0) {
+                    imgPh.css('max-width', `${phWidth}px`);
+                }
+                // show placeholder
+                imgPh.show();
+            };
+
+            slider_loader_{{ section.unique_id }}.update = function (slideEvt = null) {
+                // update specific slider labels
+                {% if section.value_width %}
+                    {% for tag_idx in section.title_tag_indices %}
+                        var s_title = slider_loader_{{ section.unique_id }}.slider_title[{{ tag_idx }}];
+                        {% for tag in tags_and_values.keys %}
+                            var tag = '{{ tag }}';
+                            {# ignore rendering braces for our own tags, using verbatim block #}
+                            tag = {% verbatim %}"{{" + tag + "}}"{% endverbatim %};
+                            s_title = s_title.replace(tag, slider_loader_{{ section.unique_id }}.tag_values['{{ tag }}'][slider_loader_{{ section.unique_id }}.cur_values[{{ forloop.counter0 }}]]);
+                        {% endfor %}
+                        document.getElementById('slider_bar_lbl_{{ section.unique_id }}_{{ tag_idx }}').innerHTML = s_title;
+                    {% endfor %}
+                {% endif %}
+
+                // update common_slider labels.
+                {% if common_sliders and common_slider_value_width %}
+                    {% for tag, tag_info in common_sliders.items %}
+                        var commonSliderTitle = slider_loader_{{ section.unique_id }}.slider_title[{{ tag_info.index }}];
+                        {% for tag in tags_and_values.keys %}
+                            var newTag = '{{ tag }}';
+                            {# ignore rendering braces for our own tags, using verbatim block #}
+                            newTag = {% verbatim %}"{{" + newTag + "}}"{% endverbatim %};
+                            commonSliderTitle = commonSliderTitle.replace(newTag, slider_loader_{{ section.unique_id }}.tag_values['{{ tag }}'][slider_loader_{{ section.unique_id }}.cur_values[{{ forloop.counter0 }}]]);
+                        {% endfor %}
+                        document.getElementById('slider_bar_lbl_common_{{ parent_num }}_{{ tag_info.index }}').innerHTML = commonSliderTitle;
+                    {% endfor %}
+                {% endif %}
+
+                // build key to fetch image
+                let key = ''{% for tag in tags_and_values.keys %}{% if forloop.first %} + {% else %} + '_' + {% endif %}slider_loader_{{ section.unique_id }}.tag_values['{{ tag }}'][slider_loader_{{ section.unique_id }}.cur_values[{{ forloop.counter0 }}]] {% endfor %};
+
+                if (slider_loader_{{ section.unique_id }}.prev_key !== key) {
+                    slider_loader_{{ section.unique_id }}.prev_key = key;
+                    slider_loader_{{ section.unique_id }}.cur_values[{{ tags_and_values | length }}] = 0;
+
+                    {% if section.has_multiple_values %}
+                        if (slider_loader_{{ section.unique_id }}.key_images[key].length > 1) {
+                            document.getElementById('slider_bar_p_{{ section.unique_id }}_catchall').style.visibility = 'visible';
+                            $('#slider_bar_{{ section.unique_id }}_catchall').slider({
+                                value: 0,
+                                max: slider_loader_{{ section.unique_id }}.key_images[key].length - 1
+                            });
+                            $('#slider_bar_{{ section.unique_id }}_catchall').slider('refresh');
+                        } else {
+                            document.getElementById('slider_bar_p_{{ section.unique_id }}_catchall').style.visibility = 'hidden';
+                        }
+                    {% endif %}
+                }
+
+                // set image title
+                {% if section.image_title %}
+                    var imageTitle = slider_loader_{{ section.unique_id }}.image_title;
+                    {% for tag in tags_and_values.keys %}
+                        var tag = '{{ tag }}';
+                        {#ignore rendering braces for our own tags, using verbatim block#}
+                        tag = {% verbatim %}"{{" + tag + "}}"{% endverbatim %};
+                        imageTitle = imageTitle.replace(tag, slider_loader_{{ section.unique_id }}.tag_values['{{ tag }}'][slider_loader_{{ section.unique_id }}.cur_values[{{ forloop.counter0 }}]]);
+                    {% endfor %}
+                    document.getElementById('{{ section.name }}_image_title').innerHTML = imageTitle;
+                {% endif %}
+
+                // get the image, set it and its links
+                let matching_images = slider_loader_{{ section.unique_id }}.key_images[key];
+                let curr_img_idx = slider_loader_{{ section.unique_id }}.cur_values[{{ tags_and_values | length }}];
+                let the_image = '';
+                if (matching_images && matching_images.length > 0) {
+                    the_image = matching_images[curr_img_idx];
+                }
+
+                // add new src
+                if (the_image) {
+                    {% if image_comparison %}
+                        // if we aren't comparing, there are features like image-dragging,
+                        // with which this can interfere. Also a single image load is quick,
+                        // so the animation would be redundant.
+                        // Show placeholder
+                        this.showPlaceHolder();
+                        // hide img
+                        $('#{{ section.name }}').hide();
+                    {% else %}
+                        // show img
+                        $('#{{ section.name }}').show();
+                    {% endif %}
+
+                    // clear out in-memory canvas of previous image before loading new one.
+                    delete slider_loader_{{ section.unique_id }}.target_image.canvas;
+
+                    // hide canvas initially
+                    if ($('#{{ section.name }}_canvas').length) {
+                        $('#{{ section.name }}_canvas').hide();
+                    }
+
+                    // check for deep images and load appropriately
+                    if (the_image.endsWith('.tif') || the_image.endsWith('.tiff')) {
+                        // unhide palettes
+                        if ($('#{{ section.name }}_deep_pal_default_container').length > 0) {
+                            $('#{{ section.name }}_deep_pal_default_container').show();
+                        }
+                        if ($('#{{ section.name }}_deep_pal_main_container').length > 0) {
+                            $('#{{ section.name }}_deep_pal_main_container').hide();
+                        }
+                        // load img async-ly
+                        tiff_image_{{ section.unique_id }}_loader(the_image);
+                    } else {
+                        // normal images w/ url
+                        slider_loader_{{ section.unique_id }}.target_image.src = the_image;
+                    }
+
+                    // linking
+                    {% if not image_controls and not image_comparison %}
+                        {% if section.image_link > 0 %}
+                            {% if section.image_link == 3 %}
+                                {# little bit of a hack here, but we grab the GUID from the string and build this URL #}
+                                {#                # http://localhost:8000/item/detail/{guid} for the complete URL...#}
+                                var g_start = the_image.lastIndexOf('/') + 1;
+                                var g_last = the_image.lastIndexOf('_image');
+                                document.getElementById('{{ section.name }}_link').href = '/item/detail/' + the_image.substr(g_start, g_last - g_start);
+                            {% else %}
+                                document.getElementById('{{ section.name }}_link').href = the_image;
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                } else {
+                    baseUtils.notify('Image not available for selected sliders', 'error', 1500, {
+                        onClose: function () {
+                            // if there's a slider event, and the previous image had an src,
+                            // switch back to the previous position.
+                            if (slideEvt !== null && slider_loader_{{ section.unique_id }}.target_image.src) {
+                                // args 'true, true' triggers slide event and change event
+                                $(slideEvt.target).slider().slider('setValue', slideEvt.value.oldValue, true, true);
+                            }
+                        }
+                    });
+                }
+
+                if (slideEvt !== null) {
+                    let target = slideEvt.target;
+
+                    target.dispatchEvent(new CustomEvent('adr.slidertemplate.update', {
+                        detail: {
+                            sectionId: '{{ section.unique_id }}',
+                            sliderPositions: slider_loader_{{ section.unique_id }}.cur_values
+                        },
+                        bubbles: true
+                    }));
+                }
+            };
+
+            // this is the vector of current slider values
+            slider_loader_{{ section.unique_id }}.cur_values = [{% for value in section.start_value_indices %}{{ value }}, {% endfor %}];
+            slider_loader_{{ section.unique_id }}.cur_values.push(0);
+
+            // init key
+            slider_loader_{{ section.unique_id }}.prev_key = '__key__';
+
+            // set onChange methods for each tag's slider.
+            {% for tag, tag_info in section.slider_info.items %}
+                $('#slider_bar_{{ section.unique_id }}_{{ tag_info.index }}').on('change', function (slideEvt) {
+                    slider_loader_{{ section.unique_id }}.cur_values[{{ tag_info.index }}] = slideEvt.value.newValue;
+                    slider_loader_{{ section.unique_id }}.update(slideEvt);
+                });
+            {% endfor %}
+
+            {% if section.has_multiple_values %}
+                // on change for catchall
+                $('#slider_bar_{{ section.unique_id }}_catchall').on('change', function (slideEvt) {
+                    slider_loader_{{ section.unique_id }}.cur_values[{{ tags_and_values | length }}] = slideEvt.value.newValue;
+                    slider_loader_{{ section.unique_id }}.update(slideEvt);
+                });
+            {% endif %}
+
+            // build tag+tag_values dict
+            slider_loader_{{ section.unique_id }}.tag_values = {
+                {% for tag, values in tags_and_values.items %}
+                    '{{ tag }}': [{% for value in values %}'{{ value }}', {% endfor %}],
+                {% endfor %}
+            };
+
+            // build image map
+            slider_loader_{{ section.unique_id }}.key_images = {
+                {% for key, url_list in slider_image_map.items %}
+                    '{{ key }}': [{% for url in url_list %}'{{ url }}', {% endfor %}],
+                {% endfor %}
+            };
+
+            // initial update.
+            slider_loader_{{ section.unique_id }}.update();
+        {% endfor %}
+
+        {% if common_sliders %}
+            // common sliders
+            {% for tag, tag_info in common_sliders.items %}
+                {% if tag_info.index != section.slide_xaxis_tag_index or tag_info.index != section.slide_yaxis_tag_index %}
+                    $('#slider_bar_common_{{ parent_num }}_{{ tag_info.index }}').on('change', function (slideEvt) {
+                        {% for section in slider_sections %}
+                            slider_loader_{{ section.unique_id }}.cur_values[{{ tag_info.index }}] = slideEvt.value.newValue;
+                            slider_loader_{{ section.unique_id }}.update(slideEvt);
+                        {% endfor %}
+                    });
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        {% if image_controls %}
+            // attrs, functions, event handlers for image_controls
+            // attach refs for every element
+            panZoomUI_{{ parent_num }}.zoomInBtn = $('#img_zoom_in_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.zoomOutBtn = $('#img_zoom_out_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.resetBtn = $('#img_reset_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.panCheck = $('#img_pan_check_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.gridCheck = $('#img_grid_check_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.probeCheck = $('#img_probe_check_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.pinCheck = $('#img_pin_check_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.pinCheckLbl = $('#img_pin_check_lbl_{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.gridOverlay = $('.grid-overlay-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.probeDisplay = $('.probe-display-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.pinDisplay = $('.pin-display-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.xLine = $('.x-line-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.yLine = $('.y-line-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.crosshairs = $('.crosshairs-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.xPin = $('.x-pin-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.yPin = $('.y-pin-{{ parent_num }}');
+            panZoomUI_{{ parent_num }}.pin = $('.pin-{{ parent_num }}');
+
+            panZoomUI_{{ parent_num }}.imgCtrlCache = {
+                pin: {
+                    x: null,
+                    y: null,
+                    xNorm: null,
+                    yNorm: null
+                },
+                panZoom: {
+                    x: null,
+                    y: null,
+                    scale: null,
+                    disablePan: false
+                }
+            };
+
+            panZoomUI_{{ parent_num }}.initPZOpts = {
+                startX: 0,
+                startY: 0,
+                startScale: 1,
+                maxScale: 4,
+                step: 0.2,
+                contain: "outside",
+                disablePan: false,
+                silent: false,
+            };
+
+            panZoomUI_{{ parent_num }}.installHotKeys = function () {
+                for (const el of document.querySelectorAll('.img-ctrl-{{ parent_num }}[data-hotkey]')) {
+                    install(el);
+                }
+            };
+            panZoomUI_{{ parent_num }}.removeHotKeys = function () {
+                for (const el of document.querySelectorAll('.img-ctrl-{{ parent_num }}[data-hotkey]')) {
+                    uninstall(el);
+                }
+            };
+
+            // probe & display values
+            panZoomUI_{{ parent_num }}.displayValues = function (sourceElem, x, y, isPin = false) {
+                // calculate the scaled x,y from the width and height.
+                // one common calculation because this will be the same for both images.
+                // assumes dimensions are same for both images.
+                let currWidth, currHeight, origWidth, origHeight, newX, newY;
+
+                origWidth = sourceElem.origWidth;
+                origHeight = sourceElem.origHeight;
+                // in the case of a canvas, the width, height attributes
+                // give the original values and not the current resized
+                // client/browser values. So we use scrollWidth/Height
+                currWidth = sourceElem.scrollWidth;
+                currHeight = sourceElem.scrollHeight;
+
+                // normalize x,y, use bitwise OR to floor values
+                newX = (x * (origWidth / currWidth)) | 0;
+                newY = (y * (origHeight / currHeight)) | 0;
+                newX = newX >= origWidth ? origWidth - 1 : newX;
+                newX = newX < 0 ? 0 : newX;
+                newY = newY >= origHeight ? origHeight - 1 : newY;
+                newY = newY < 0 ? 0 : newY;
+
+                // get all canvases and display all probe results at the same time.
+                const deepImgComparison = {{ deep_image_comparison|yesno:"true,false" }};
+                const imgComparison = {{ image_comparison|yesno:"true,false" }};
+
+                {% for section in slider_sections %}
+                    let {{ section.name }}_img = document.getElementById('{{ section.name }}');
+
+                    // check if the image has a src before doing stuff.
+                    if ({{ section.name }}_img.src) {
+                        // begin probe
+                        let {{ section.name }}_probe_result = '';
+
+                        let deepProbe = false;
+                        let isDeepImg = this.hasDeepData({{ section.name }}_img);
+                        const chosenVar = $('#{{ section.name }}_img_var_select option:selected').val();
+
+                        // conditions to display probe values
+                        if (imgComparison) {
+                            deepProbe = deepImgComparison && isDeepImg && chosenVar !== 'rgb';
+                        } else {
+                            // single deep img
+                            deepProbe = isDeepImg;
+                        }
+
+                        if (deepProbe) {
+                            let idx = newY * origWidth + newX;
+                            let partName = '', varName = '', unitData = '', varData = null;
+
+                            let partInfo = this.getPartInfo({{ section.name }}_img, idx);
+                            if (partInfo !== null) {
+                                // get part name
+                                if ('name' in partInfo) {
+                                    partName = partInfo.name;
+                                }
+                                // get var info
+                                if ('variable' in partInfo) {
+                                    const varInfo = {{ section.name }}_img.nexus_varinfo[partInfo.variable];
+                                    if ('name' in varInfo) {
+                                        varName = varInfo.name;
+                                        varData = {{ section.name }}_img.nexus_var_buffer[idx];
+
+                                        if ('unit_label' in varInfo) {
+                                            unitData = varInfo.unit_label;
+                                        }
+
+                                        // get current view
+                                        const chosenView = $('#{{ section.name }}_deep_diff_select option:selected').val();
+                                        if (typeof chosenView !== 'undefined') {
+                                            // compute difference on the fly, if asked for,
+                                            // and only for the chosen variable
+                                            if (chosenView !== DEEP_VIEWS_{{ parent_num }}.CURRENT && varName === chosenVar) {
+                                                let imgOther = this.getOtherImg({{ section.name }}_img);
+                                                if (this.allowDiff(imgOther, idx, varName, unitData)) {
+                                                    varData = this.computeDiffData(chosenView, {{ section.name }}_img, imgOther, idx);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // honor hidden pixels
+                            let hidePixelValue = false;
+                            // only for deep comparison
+                            if (deepImgComparison) {
+                                if (chosenVar && chosenVar in this.varSettingsCache["{{ section.name }}"]) {
+                                    const varSettings = this.varSettingsCache["{{ section.name }}"][chosenVar];
+                                    if ('hideBG' in varSettings) {
+                                        hidePixelValue = varSettings.hideBG && varName !== chosenVar;
+                                    }
+                                }
+                            }
+                            // build display finally
+                            if (hidePixelValue || (partName === '' && varData === null)) {
+                                {{ section.name }}_probe_result += "<span>Part : None</span><br>";
+                            } else {
+                                if (partName !== '') {
+                                    {{ section.name }}_probe_result += "<span>Part : '" + partName + "'</span><br>";
+                                }
+                                if (varName !== '' && varData !== null) {
+                                    {{ section.name }}_probe_result += "<span>Var : '" + varName + "' " + varData.toExponential(3);
+                                    if (unitData !== '' && unitData.length > 0) {
+                                        {{ section.name }}_probe_result += "[" + unitData + "]";
+                                    }
+                                    {{ section.name }}_probe_result += "</span>";
+                                }
+                            }
+                        } else {
+                            let {{ section.name }}_canvas = document.getElementById('{{ section.name }}_canvas');
+                            let {{ section.name }}_canvas_data = {{ section.name }}_canvas
+                                .getContext("2d")
+                                .getImageData(newX, newY, 1, 1)
+                                .data;
+                            {{ section.name }}_probe_result = '<span>R, G, B : ' +
+                                {{ section.name }}_canvas_data[0] + ', ' +
+                                {{ section.name }}_canvas_data[1] + ', ' +
+                                {{ section.name }}_canvas_data[2] + '</span><br>';
+                        }
+
+                        if (isPin) {
+                            this.imgCtrlCache.pin = {x: x, y: y, xNorm: newX, yNorm: newY};
+                            // display coordinates
+                            $('#{{ section.name }}_pin_xy').text(`${newX}, ${newY}`);
+                            // display rgb/deep values
+                            $('#{{ section.name }}_pin_result').html({{ section.name }}_probe_result);
+                        } else {
+                            // display coordinates
+                            $('#{{ section.name }}_probe_xy').text(`${newX}, ${newY}`);
+                            // display rgb/deep values
+                            $('#{{ section.name }}_probe_result').html({{ section.name }}_probe_result);
+                        }
+                    }
+                {% endfor %}
+            };
+
+            // panzoom elements in each section
+            {% for section in slider_sections %}
+                panZoomUI_{{ parent_num }}.panzoom_elem_{{ section.name }} =
+                    document.getElementById('{{ section.name }}_panzoom');
+            {% endfor %}
+
+            // init panzoom on demand
+            panZoomUI_{{ parent_num }}.initPanzoom = function (sectionName, force = false) {
+                if (!this[`panzoom_${sectionName}`] || force) {
+                    const opts = {...this.initPZOpts};
+                    // force if needed
+                    if (force) {
+                        if (this[`panzoom_${sectionName}`])
+                            this[`panzoom_${sectionName}`].destroy();
+                        // get cache
+                        const cache = this.imgCtrlCache.panZoom;
+                        if (cache.scale !== null) {
+                            opts["startScale"] = cache.scale;
+                        }
+                        if (cache.x !== null) {
+                            opts["startX"] = cache.x;
+                        }
+                        if (cache.y !== null) {
+                            opts["startY"] = cache.y;
+                        }
+                        opts["disablePan"] = cache.disablePan;
+                    }
+                    // init
+                    this[`panzoom_${sectionName}`] = Panzoom(
+                        this[`panzoom_elem_${sectionName}`],
+                        opts
+                    );
+                }
+            };
+
+            panZoomUI_{{ parent_num }}.getPanzoom = function (sectionName) {
+                return this[`panzoom_${sectionName}`];
+            };
+
+            // pin
+            panZoomUI_{{ parent_num }}.togglePin = function (status, x = null, y = null) {
+                if (status) {
+                    // unhide
+                    this.pin.show();
+                    // different from probe in that pin can
+                    // still be shown without new x,y.
+                    if (x && y) {
+                        let xTrans = 'translateY(' + y + 'px)';
+                        let yTrans = 'translateX(' + x + 'px)';
+                        // set line pos and alignments/sizes for the +
+                        this.xPin.css({
+                            'transform': xTrans,
+                            'margin-left': `${x - 10}px`
+                        });
+                        this.yPin.css({
+                            'transform': yTrans,
+                            'margin-top': `${y - 10}px`
+                        });
+                    }
+                } else {
+                    // hide
+                    this.pin.hide();
+                }
+            };
+
+            panZoomUI_{{ parent_num }}.showPin = function (status, x = null, y = null, img = null) {
+                if (status) {
+                    this.togglePin(true, x, y);
+                    this.pinDisplay.show();
+                    // update if needed
+                    if (x && y && img) {
+                        this.displayValues(img, x, y, true);
+                    }
+                } else {
+                    this.pinDisplay.hide();
+                    this.togglePin(false);
+                }
+            };
+
+            // update pin
+            panZoomUI_{{ parent_num }}.updatePin = function (imageElem) {
+                // display
+                if (!this.pinCheck.is(':disabled')) {
+                    this.displayValues(
+                        imageElem,
+                        this.imgCtrlCache.pin.x,
+                        this.imgCtrlCache.pin.y,
+                        true
+                    );
+                }
+            };
+
+            // reset pin
+            panZoomUI_{{ parent_num }}.resetPin = function () {
+                this.imgCtrlCache.pin = {x: null, y: null, xNorm: null, yNorm: null};
+                this.xPin.css({
+                    'transform': 'translateY(0px)',
+                    'margin-left': '0px'
+                });
+                this.yPin.css({
+                    'transform': 'translateX(0px)',
+                    'margin-top': '0px'
+                });
+                this.showPin(false);
+                this.pinCheck.prop('disabled', true);
+                this.pinCheck.prop('checked', false);
+            };
+
+            // pinning toggle
+            panZoomUI_{{ parent_num }}.enablePin = function (status) {
+                this.showPin(status);
+            };
+
+            // probe
+            panZoomUI_{{ parent_num }}.toggleCrosshairs = function (status, x = null, y = null) {
+                if (status) {
+                    // unhide
+                    this.crosshairs.show();
+                    let xTrans = 'translateY(' + y + 'px)';
+                    let yTrans = 'translateX(' + x + 'px)';
+                    // transforms to set line pos
+                    this.xLine.css('transform', xTrans);
+                    this.yLine.css('transform', yTrans);
+                } else {
+                    // else hide
+                    this.crosshairs.hide();
+                }
+            };
+
+            panZoomUI_{{ parent_num }}.showProbe = function (status, x = null, y = null, img = null) {
+                if (status) {
+                    if (x && y && img) {
+                        this.toggleCrosshairs(true, x, y);
+                        // dispose first so it doesn't use tooltips created previously
+                        this.probeDisplay.tooltip('dispose');
+                        this.probeDisplay.tooltip('show');
+                        this.displayValues(img, x, y);
+                    }
+                } else {
+                    // hide and dispose existing tooltips
+                    this.probeDisplay.tooltip('hide');
+                    this.probeDisplay.tooltip('dispose');
+                    this.toggleCrosshairs(false);
+                }
+            };
+
+            // probe toggle
+            panZoomUI_{{ parent_num }}.enableProbe = function (status) {
+                const UI = this;
+                if (status) {
+                    // re-enable pointer events
+                    UI.imgDisp.css('pointer-events', 'auto');
+                    // turn off pan and grid
+                    UI.disablePan(true);
+                    UI.enableGrid(false);
+                    UI.panCheck.prop('checked', false);
+                    UI.gridCheck.prop('checked', false);
+                    // xy, rgb, probe toggling on mousemove
+                    UI.imgDisp.on('mousemove', function (e) {
+                        UI.showProbe(true, e.offsetX, e.offsetY, this);
+                    });
+                    // bind dblclick event for pinning
+                    UI.imgDisp.on('dblclick', function (e) {
+                        if (UI.pinCheck.is(':disabled')) {
+                            UI.pinCheck.prop('disabled', false);
+                        }
+                        if (!UI.pinCheck.is(':checked')) {
+                            UI.pinCheck.prop('checked', true);
+                        }
+                        UI.showPin(true, e.offsetX, e.offsetY, this);
+                    });
+                    UI.imgDisp.on('mouseout', function () {
+                        UI.showProbe(false);
+                    });
+                } else {
+                    UI.showProbe(false);
+                    UI.imgDisp.off("mousemove");
+                    UI.imgDisp.off("dblclick");
+                    UI.imgDisp.off("mouseout");
+                }
+            };
+
+            // pan toggle
+            panZoomUI_{{ parent_num }}.disablePan = function (status) {
+                // cache
+                this.imgCtrlCache.panZoom.disablePan = status;
+                // set
+                {% for section in slider_sections %}
+                    this.getPanzoom("{{ section.name }}").setOptions({disablePan: status});
+                {% endfor %}
+                if (status) {
+                    // reset cursor
+                    this.imgDisp.css('cursor', 'default');
+                } else {
+                    // disable probe
+                    this.probeCheck.prop('checked', false);
+                    this.enableProbe(false);
+                    // switch cursor
+                    this.imgDisp.css('pointer-events', 'auto');
+                    this.imgDisp.css('cursor', 'all-scroll');
+                }
+            };
+
+            // grid toggle
+            panZoomUI_{{ parent_num }}.enableGrid = function (status) {
+                if (status) {
+                    // disable probe
+                    this.probeCheck.prop('checked', false);
+                    this.enableProbe(false);
+                    // unhide grid
+                    this.gridOverlay.css('display', 'block');
+                } else {
+                    this.gridOverlay.css('display', 'none');
+                }
+            };
+
+            /***** Event listeners that talk to both image elements.****/
+            panZoomUI_{{ parent_num }}.zoomInBtn.click(function (e) {
+                e.preventDefault();
+                {% for section in slider_sections %}
+                    panZoomUI_{{ parent_num }}.getPanzoom("{{ section.name }}").zoomIn();
+                {% endfor %}
+            });
+
+            panZoomUI_{{ parent_num }}.zoomOutBtn.click(function (e) {
+                e.preventDefault();
+                {% for section in slider_sections %}
+                    panZoomUI_{{ parent_num }}.getPanzoom("{{ section.name }}").zoomOut();
+                {% endfor %}
+            });
+
+            panZoomUI_{{ parent_num }}.resetBtn.click(function (e) {
+                e.preventDefault();
+                const {startX, startY, startScale} = panZoomUI_{{ parent_num }}.initPZOpts;
+                {% for section in slider_sections %}
+                    panZoomUI_{{ parent_num }}.getPanzoom("{{ section.name }}").reset({
+                        startX: startX,
+                        startY: startY,
+                        startScale: startScale
+                    });
+                {% endfor %}
+                // reset cache
+                panZoomUI_{{ parent_num }}.imgCtrlCache.panZoom = {
+                    ...panZoomUI_{{ parent_num }}.imgCtrlCache.panZoom,
+                    ...{
+                        x: startX,
+                        y: startY,
+                        scale: startScale
+                    }
+                };
+            });
+
+            // pan enable/disable
+            panZoomUI_{{ parent_num }}.panCheck.change(function (e) {
+                panZoomUI_{{ parent_num }}.disablePan(!this.checked);
+            });
+
+            // grid enable/disable
+            panZoomUI_{{ parent_num }}.gridCheck.change(function (e) {
+                panZoomUI_{{ parent_num }}.enableGrid(this.checked);
+            });
+
+            // probe check.
+            panZoomUI_{{ parent_num }}.probeCheck.change(function (e) {
+                panZoomUI_{{ parent_num }}.enableProbe(this.checked);
+            });
+
+            // pin check.
+            panZoomUI_{{ parent_num }}.pinCheck.change(function (e) {
+                panZoomUI_{{ parent_num }}.enablePin(this.checked);
+            });
+
+            // reset pin when the window is resized.
+            $(window).resize(function (e) {
+                panZoomUI_{{ parent_num }}.resetPin();
+            });
+
+            // key handling.. should not bubble up the hierarchy
+            // so use mouseenter, mouseleave instead of over/out
+            panZoomUI_{{ parent_num }}.imgDisp.on('mouseenter', () => {
+                panZoomUI_{{ parent_num }}.installHotKeys();
+            });
+            panZoomUI_{{ parent_num }}.imgDisp.on('mouseleave', () => {
+                panZoomUI_{{ parent_num }}.removeHotKeys();
+            });
+        {% endif %}
+
+        {% if image_comparison %}
+            const DEEP_VIEWS_{{ parent_num }} = {{ deep_views | safe }};
+
+            // rgb diffs
+            panZoomUI_{{ parent_num }}.generateRGBImage = function (sectionName) {
+                // get the current rgb canvas
+                let img = document.getElementById(sectionName);
+                let canvas = this.generateCanvas(img);
+
+                {% if rgb_diff_comparison %}
+                    // get the diff type
+                    const chosenView = $(`#${sectionName}_deep_diff_select option:selected`).val();
+                    if (chosenView === DEEP_VIEWS_{{ parent_num }}.ABSOLUTE_VALUE) {
+                        let ctx = canvas.getContext("2d");
+                        let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        let data = imgData.data;
+                        // get the other image's rgb canvas
+                        let imgOther = this.getOtherImg(img);
+                        // get the original canvas, not the current.
+                        let canvasOther = imgOther.canvas;
+                        let ctxOther = canvasOther.getContext("2d");
+                        let dataOther = ctxOther.getImageData(0, 0, canvasOther.width, canvasOther.height).data;
+                        // 'i' loops through RGBA of each pixel
+                        for (let i = 0; i < data.length; i += 4) {
+                            // R
+                            data[i] = Math.abs(data[i] - dataOther[i]);
+                            // G
+                            data[i + 1] = Math.abs(data[i + 1] - dataOther[i + 1]);
+                            // B
+                            data[i + 2] = Math.abs(data[i + 2] - dataOther[i + 2]);
+                        }
+                        // apply coloring
+                        imgData.data = data;
+                        ctx.putImageData(imgData, 0, 0);
+                    }
+                {% endif %}
+
+                {% if image_controls %}
+                    //update pin in the end
+                    this.updatePin(canvas);
+                {% endif %}
+            };
+
+            {% for section in slider_sections %}
+                // diff type on change
+                $('#{{ section.name }}_deep_diff_select').on('change', function (e) {
+                    {% if deep_image_comparison %}
+                        panZoomUI_{{ parent_num }}.generateVarImage('{{ section.name }}');
+                    {% else %}
+                        panZoomUI_{{ parent_num }}.generateRGBImage('{{ section.name }}');
+                    {% endif %}
+                });
+            {% endfor %}
+        {% endif %}
+
+        {% if deep_image_comparison %}
+            // deep comparison attrs, functions, event handlers
+            // init cache
+            panZoomUI_{{ parent_num }}.imgInfoCache = {};
+            panZoomUI_{{ parent_num }}.varSettingsCache = {};
+
+            panZoomUI_{{ parent_num }}.imgLoadTracker = new Set();
+
+            {% if presets %}
+                // save presets in cache first
+                panZoomUI_{{ parent_num }}.presets = {};
+                {% for section, preset in presets.items %}
+                    panZoomUI_{{ parent_num }}.presets['{{ section }}'] = {
+                    {% for key, value in preset.items %}
+                        {% if key in 'var,view' %}
+                            '{{ key | safe }}': '{{ value | safe }}',
+                        {% elif key == 'palette' %}
+                            {% if value in color_palettes %}
+                                '{{ key | safe }}': '{{ value | safe }}',
+                            {% else %}
+                                '{{ key | safe }}': 'greys',
+                            {% endif %}
+                        {% else %}
+                            '{{ key | safe }}': {{ value | safe }},
+                        {% endif %}
+                    {% endfor %}
+                    };
+                {% endfor %}
+            {% endif %}
+
+            // build color palette map.
+            panZoomUI_{{ parent_num }}.deepPalette = {
+                {% for name, palette in color_palettes.items %}
+                    '{{ name }}': [{% for color in palette %}[{% for item in color %}{{ item }}, {% endfor %}], {% endfor %}],
+                {% endfor %}
+            };
+
+            // find rgb from normalized var value.
+            panZoomUI_{{ parent_num }}.getColorsFromValue = function (palette, normValue) {
+                const paletteColors = this.deepPalette[palette];
+                for (let i = 0; i < paletteColors.length - 1; i++) {
+                    if (normValue >= paletteColors[i][0] && normValue <= paletteColors[i + 1][0]) {
+                        let newVal = (normValue - paletteColors[i][0]) / (paletteColors[i + 1][0] - paletteColors[i][0]);
+                        return [
+                            (1. - newVal) * paletteColors[i][1] + newVal * paletteColors[i + 1][1],
+                            (1. - newVal) * paletteColors[i][2] + newVal * paletteColors[i + 1][2],
+                            (1. - newVal) * paletteColors[i][3] + newVal * paletteColors[i + 1][3]
+                        ]
+                    }
+                }
+            };
+
+            // draws a sample palette from selection
+            panZoomUI_{{ parent_num }}.drawPalette = function (sectionName, palette, invert, isMain) {
+                // get colors
+                const paletteColors = this.deepPalette[palette];
+                let paletteDir = invert ? 'to left' : 'to right'; // draw direction
+
+                let bgColors = '';
+                for (let i = 0; i < paletteColors.length; i++) {
+                    bgColors += `rgba(${paletteColors[i][1]},${paletteColors[i][2]},${paletteColors[i][3]},1)`;
+                    // because css can't handle an unnecessary , at the end
+                    if (i !== paletteColors.length - 1) {
+                        bgColors += ', ';
+                    }
+                }
+                //apply
+                let display = $(`#${sectionName}_deep_palette_${isMain ? 'main' : 'sample'}`);
+                display.css('background-image', `linear-gradient(${paletteDir}, ${bgColors})`);
+            };
+
+            panZoomUI_{{ parent_num }}.drawSamplePalette = function (sectionName, palette, invert) {
+                this.drawPalette(sectionName, palette, invert, false);
+            };
+
+            panZoomUI_{{ parent_num }}.drawMainPalette = function (sectionName, palette, invert) {
+                this.drawPalette(sectionName, palette, invert, true);
+            };
+
+            // clear settings dialog
+            panZoomUI_{{ parent_num }}.clearModal = function (sectionName) {
+                $(`.${sectionName}-deep-var-unit`).text('');
+                $(`#${sectionName}_deep_img_var_low`).text(0);
+                $(`#${sectionName}_deep_img_var_high`).text(0);
+                $(`#${sectionName}_deep_img_var_min`).val(0).trigger('change');
+                $(`#${sectionName}_deep_img_var_max`).val(0).trigger('change');
+                $(`#${sectionName}_deep_palette`).val('greys').change();
+                $(`#${sectionName}_deep_palette_inv`).prop('checked', false).trigger('change');
+                $(`#${sectionName}_deep_hide_bg`).prop('checked', false).trigger('change');
+                $(`#${sectionName}_deep_img_var_opacity`).val({{ default_bg_opacity }});
+            };
+
+            // populate modal
+            panZoomUI_{{ parent_num }}.populateModal = function(sectionName, settings) {
+                if ('unit' in settings) {
+                    $(`.${sectionName}-deep-var-unit`).text(settings.unit);
+                }
+
+                if ('min' in settings) {
+                    $(`#${sectionName}_deep_img_var_low`).text(settings.min);
+                    const min = parseFloat(settings.min);
+                    $(`#${sectionName}_deep_img_var_min`).val(min).trigger('change');
+                }
+
+                if ('max' in settings) {
+                    $(`#${sectionName}_deep_img_var_high`).text(settings.max);
+                    const max = parseFloat(settings.max);
+                    $(`#${sectionName}_deep_img_var_max`).val(max).trigger('change');
+                }
+
+                if ('userMin' in settings && settings.userMin !== null) {
+                    $(`#${sectionName}_deep_img_var_min`).val(settings.userMin).trigger('change');
+                } else {
+                    if ('subpalMin' in settings) {
+                        $(`#${sectionName}_deep_img_var_min`).val(settings.subpalMin).trigger('change');
+                    }
+                }
+
+                if ('userMax' in settings && settings.userMax !== null) {
+                    $(`#${sectionName}_deep_img_var_max`).val(settings.userMax).trigger('change');
+                } else {
+                    if ('subpalMax' in settings) {
+                        $(`#${sectionName}_deep_img_var_max`).val(settings.subpalMax).trigger('change');
+                    }
+                }
+
+                if ('palette' in settings) {
+                    $(`#${sectionName}_deep_palette`).val(settings.palette).trigger('change');
+                    if ('invertColors' in settings) {
+                        $(`#${sectionName}_deep_palette_inv`).prop('checked',
+                            settings.invertColors).trigger('change');
+                    }
+                }
+
+                if ('hideBG' in settings) {
+                    $(`#${sectionName}_deep_hide_bg`).prop('checked',
+                        settings.hideBG).trigger('change');
+                }
+
+                if ('bgOpacity' in settings) {
+                    $(`#${sectionName}_deep_img_var_opacity`).val(settings.bgOpacity);
+                }
+            };
+
+            // conditions to diff
+            panZoomUI_{{ parent_num }}.allowDiff = function (imgOther, idx, varName, unitData) {
+                if (this.hasDeepData(imgOther)) {
+                    let partInfoOther = this.getPartInfo(imgOther, idx);
+                    if (partInfoOther !== null) {
+                        if ('variable' in partInfoOther) {
+                            const varInfo = imgOther.nexus_varinfo[partInfoOther.variable];
+                            if ('name' in varInfo && 'unit_label' in varInfo) {
+                                return varInfo.name === varName && varInfo.unit_label === unitData;
+                            }
+                        }
+                    }
+                }
+                return false;
+            };
+
+            // compute diff
+            panZoomUI_{{ parent_num }}.computeDiffData = function (chosenDiff, img, imgOther, index) {
+                let varData = null;
+                switch (chosenDiff) {
+                    case DEEP_VIEWS_{{ parent_num }}.CURRENT_MINUS_OTHER:
+                        // must be the same variable, same unit, different parts are fine
+                        varData = img.nexus_var_buffer[index] - imgOther.nexus_var_buffer[index];
+                        break;
+
+                    case DEEP_VIEWS_{{ parent_num }}.OTHER_MINUS_CURRENT:
+                        varData = imgOther.nexus_var_buffer[index] - img.nexus_var_buffer[index];
+                        break;
+
+                    case DEEP_VIEWS_{{ parent_num }}.ABSOLUTE_VALUE:
+                        varData = Math.abs(img.nexus_var_buffer[index] - imgOther.nexus_var_buffer[index]);
+                        break;
+                }
+                return varData;
+            };
+
+            // check if any of the listed settings have changed
+            panZoomUI_{{ parent_num }}.settingsChanged = function(cachedSettings, updatedSettings) {
+                for (let setting in updatedSettings) {
+                    if (cachedSettings !== null && typeof cachedSettings !== 'undefined') {
+                        if (cachedSettings[setting] !== updatedSettings[setting]) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+
+            // gen image w/ var
+            panZoomUI_{{ parent_num }}.generateVarImage = function (sectionName) {
+                // other elements
+                let deepSettingsBtn = $(`#${sectionName}_deep_img_settings`);
+                let deepDiffSelect = $(`#${sectionName}_deep_diff_select`);
+
+                const chosenVar = $(`#${sectionName}_img_var_select option:selected`).val();
+
+                if (chosenVar !== 'rgb') {
+                    let img = document.getElementById(sectionName);
+                    // Sanity check
+                    if (!this.hasDeepData(img)) {
+                        baseUtils.notify('The image does not have any data associated with it.', 'error');
+                        return;
+                    }
+
+                    // regen the rgb canvas
+                    let canvas = this.generateCanvas(img);
+                    // get data to modify
+                    let ctx = canvas.getContext('2d');
+                    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let data = imgData.data;
+
+                    // get the diff type
+                    const chosenView = $(`#${sectionName}_deep_diff_select option:selected`).val();
+                    // init
+                    let varSettings = null, min = null, max = null, unit = null,
+                        userMin = null, userMax = null, subpalMin = null, subpalMax = null,
+                        paletteMin = null, paletteMax = null,
+                        palette = 'greys', invertColors = false,
+                        hideBG = false, bgOpacity = parseFloat('{{ default_bg_opacity }}'),
+                        hasVarData = false;
+
+                    // get var specific settings
+                    if (chosenVar in this.varSettingsCache[sectionName]) {
+                        varSettings = this.varSettingsCache[sectionName][chosenVar];
+                        if ('userMin' in varSettings) {
+                            userMin = varSettings.userMin;
+                        }
+                        if ('userMax' in varSettings) {
+                            userMax = varSettings.userMax;
+                        }
+                        if ('palette' in varSettings) {
+                            palette = varSettings.palette;
+                        }
+                        if ('invertColors' in varSettings) {
+                            invertColors = varSettings.invertColors;
+                        }
+                        if ('hideBG' in varSettings) {
+                            hideBG = varSettings.hideBG;
+                        }
+                        if ('bgOpacity' in varSettings) {
+                            bgOpacity = varSettings.bgOpacity;
+                        }
+                    }
+
+                    // 'i' loops through RGBA for each pixel, 'j' loops through each pixel's buffer info
+                    for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+                        let red = null, green = null, blue = null, alpha = null;
+                        // hide?
+                        if (hideBG) {
+                            red = 0;
+                            green = 0;
+                            blue = 0;
+                            // configurable background opacity
+                            alpha = 255 * bgOpacity;
+                        }
+
+                        const partInfo = this.getPartInfo(img, j);
+                        if (partInfo !== null) {
+                            if ('variable' in partInfo) {
+                                const varInfo = img.nexus_varinfo[partInfo.variable];
+                                if ('name' in varInfo) {
+                                    let varName = varInfo.name;
+                                    // does the part contain the var?
+                                    // only color parts with the var that was chosen
+                                    if (varName === chosenVar) {
+                                        let varData = null, unitData = null;
+                                        if ('unit_label' in varInfo) {
+                                            unitData = varInfo.unit_label;
+                                        }
+
+                                        if (chosenView === DEEP_VIEWS_{{ parent_num }}.CURRENT) {
+                                            varData = img.nexus_var_buffer[j];
+                                        } else {
+                                            let imgOther = this.getOtherImg(img);
+                                            if (this.allowDiff(imgOther, j, varName, unitData)) {
+                                                // get diff value
+                                                varData = this.computeDiffData(chosenView, img, imgOther, j);
+                                            }
+                                        }
+
+                                        if (varData) {
+                                            hasVarData = true;
+                                            // get the unit to use in settings
+                                            // this assumes that one part has only one variable associated,
+                                            // hence only one unit.
+                                            if (unit === null && unitData !== null) {
+                                                unit = unitData;
+                                            }
+                                            // obtain min/max.
+                                            if (min === null && max === null) {
+                                                // init the first time.
+                                                min = varData;
+                                                max = varData;
+                                            } else {
+                                                // find the min, max among all pixels
+                                                if (varData < min)
+                                                    min = varData;
+                                                if (varData > max)
+                                                    max = varData;
+                                            }
+
+                                            // get subpal minmax only if varData is valid
+                                            // when no color by var happens, these will remain null,
+                                            // which means there is nothing to show in the image
+                                            // and usermin/max presets will be null as well.
+                                            if (subpalMin === null && subpalMax === null) {
+                                                // set only once
+                                                if ('subpal_minmax' in varInfo) {
+                                                    [subpalMin, subpalMax] = varInfo.subpal_minmax;
+                                                }
+                                            }
+                                            // compute user defined color scale w/ user settings
+                                            if (userMin !== null && userMax !== null) {
+                                                paletteMin = userMin;
+                                                paletteMax = userMax;
+                                            } else {
+                                                // else use embedded minmax
+                                                if (subpalMin !== null && subpalMax !== null) {
+                                                    paletteMin = subpalMin;
+                                                    paletteMax = subpalMax;
+                                                } else {
+                                                    // final fallback to zero
+                                                    paletteMin = 0.0;
+                                                    paletteMax = 0.0;
+                                                }
+                                            }
+
+                                            let normValue = paletteMin === paletteMax ? 1.0 : (varData - paletteMin) / (paletteMax - paletteMin);
+                                            // clamp
+                                            normValue = normValue < 0.0 ? 0.0 : normValue;
+                                            normValue = normValue > 1.0 ? 1.0 : normValue;
+                                            // inversion
+                                            if (invertColors) {
+                                                normValue = 1 - normValue;
+                                            }
+                                            // compute rgb based on chosen palette.
+                                            [red, green, blue] = this.getColorsFromValue(palette, normValue);
+                                            alpha = 255; // full opacity for parts in action
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        //RGBA
+                        if (red !== null && green !== null && blue !== null && alpha !== null) {
+                            data[i] = red;
+                            data[i + 1] = green;
+                            data[i + 2] = blue;
+                            data[i + 3] = alpha;
+                        }
+                    }
+
+                    if (!hasVarData) {
+                        baseUtils.notify(
+                            `No data for ${chosenVar} available in the displayed image(s).`,
+                            'warning',
+                            3000
+                        );
+                    }
+
+                    // apply coloring
+                    imgData.data = data;
+                    ctx.putImageData(imgData, 0, 0);
+
+                    //init
+                    if (varSettings === null) {
+                        this.varSettingsCache[sectionName][chosenVar] = {
+                            'userMin': userMin,
+                            'userMax': userMax,
+                            'palette': palette,
+                            'invertColors': invertColors,
+                            'hideBG': hideBG,
+                            'bgOpacity': bgOpacity,
+                        };
+                    }
+
+                    // add/update cache
+                    this.imgInfoCache[sectionName] = {
+                        'min': min,
+                        'max': max,
+                        'unit': unit,
+                        'subpalMin': subpalMin,
+                        'subpalMax': subpalMax
+                    };
+
+                    // draw main palette.
+                    if (paletteMin !== null && paletteMax !== null) {
+                        $(`#${sectionName}_deep_img_min_main`).prop('contenteditable', 'true').attr(
+                            'data-orig', paletteMin).text(paletteMin.toExponential(3));
+                        $(`#${sectionName}_deep_img_max_main`).prop('contenteditable', 'true').attr(
+                            'data-orig', paletteMax).text(paletteMax.toExponential(3));
+                    } else {
+                        $(`.main-palette-minmax-${sectionName}`).prop('contenteditable', 'false').text('');
+                    }
+                    $(`.${sectionName}-deep-var-unit-main`).text(unit);
+
+                    // switch to main palette and draw
+                    $(`#${sectionName}_deep_pal_default_container`).hide();
+                    $(`#${sectionName}_deep_pal_main_container`).show();
+                    this.drawMainPalette(sectionName, palette, invertColors);
+
+                    // unhide settings
+                    deepSettingsBtn.show();
+                    deepDiffSelect.show();
+
+                    {% if image_controls %}
+                        //update pin in the end
+                        this.updatePin(canvas);
+                    {% endif %}
+                } else {
+                    // hide
+                    deepSettingsBtn.hide();
+                    deepDiffSelect.hide();
+                    // gen RGB image canvas
+                    this.generateRGBImage(sectionName);
+                    // placeholder palette
+                    $(`.main-palette-minmax-${sectionName}`).prop('contenteditable', 'false').text('');
+                    $(`.${sectionName}-deep-var-unit-main`).text('');
+                    // switch to default palette
+                    $(`#${sectionName}_deep_pal_main_container`).hide();
+                    $(`#${sectionName}_deep_pal_default_container`).show();
+                }
+            };
+
+            // event handlers
+            {% for section in slider_sections %}
+                // var select on change
+                $('#{{ section.name }}_img_var_select').on('change', function (e) {
+                    panZoomUI_{{ parent_num }}.generateVarImage('{{ section.name }}');
+                });
+
+                // on input change update sample scale
+                $('#{{ section.name }}_deep_img_var_min').on('change paste keyup select focusout', function (e) {
+                    let val = $(this).val();
+                    $(`#{{ section.name }}_deep_img_min_sample`).text(
+                        val !== '' ? parseFloat(val).toExponential(3) : val
+                    );
+                });
+
+                // on input change update sample scale
+                $('#{{ section.name }}_deep_img_var_max').on('change paste keyup select focusout', function (e) {
+                    let val = $(this).val();
+                    $(`#{{ section.name }}_deep_img_max_sample`).text(
+                        val !== '' ? parseFloat(val).toExponential(3) : val
+                    );
+                });
+
+                // input fill
+                $('#{{ section.name }}_deep_img_var_min_fill').on('click', function (e) {
+                    e.preventDefault();
+                    const min = $(`#{{ section.name }}_deep_img_var_low`).text();
+                    $(`#{{ section.name }}_deep_img_var_min`).val(min).trigger('change');
+                });
+
+                $('#{{ section.name }}_deep_img_var_max_fill').on('click', function (e) {
+                    e.preventDefault();
+                    const max = $(`#{{ section.name }}_deep_img_var_high`).text();
+                    $(`#{{ section.name }}_deep_img_var_max`).val(max).trigger('change');
+                });
+
+                // palette select on change
+                $('#{{ section.name }}_deep_palette').on('change', function (e) {
+                    let palette = $(`#${this.id} option:selected`).val();
+                    panZoomUI_{{ parent_num }}.drawSamplePalette(
+                        '{{ section.name }}',
+                        palette,
+                        $("#{{ section.name }}_deep_palette_inv").is(':checked')
+                    );
+                });
+
+                // main palette min-max click to edit
+                $('.main-palette-minmax-{{ section.name }}').focus(function (e) {
+                    $(this).text($(this).attr('data-orig'));
+                });
+                $('.main-palette-minmax-{{ section.name }}').blur(function (e) {
+                    const userMin = parseFloat($('#{{ section.name }}_deep_img_min_main').text());
+                    const userMax = parseFloat($('#{{ section.name }}_deep_img_max_main').text());
+                    if (!Number.isNaN(userMin) && !Number.isNaN(userMax)) {
+                        if (userMin <= userMax) {
+                            const chosenVar = $('#{{ section.name }}_img_var_select option:selected').val();
+                            const varSettings = panZoomUI_{{ parent_num }}.varSettingsCache['{{ section.name }}'][chosenVar];
+                            if (varSettings.userMin !== userMin || varSettings.userMax !== userMax) {
+                                // update
+                                panZoomUI_{{ parent_num }}.varSettingsCache['{{ section.name }}'][chosenVar]['userMin'] = userMin;
+                                panZoomUI_{{ parent_num }}.varSettingsCache['{{ section.name }}'][chosenVar]['userMax'] = userMax;
+                                // regen
+                                panZoomUI_{{ parent_num }}.generateVarImage('{{ section.name }}');
+                                return true;
+                            }
+                        } else {
+                            baseUtils.notify('Min must be less than or equal to max.', 'error');
+                        }
+                    } else {
+                        baseUtils.notify('Please enter a number.', 'error');
+                    }
+                    // reset
+                    $(this).text(parseFloat($(this).attr('data-orig')).toExponential(3));
+                });
+
+                // palette invert checkbox on change
+                $("#{{ section.name }}_deep_palette_inv").on('change', function (e) {
+                    let palette = $(`#{{ section.name }}_deep_palette option:selected`).val();
+                    panZoomUI_{{ parent_num }}.drawSamplePalette(
+                        '{{ section.name }}',
+                        palette,
+                        $(this).is(':checked')
+                    );
+                });
+
+                // hide remaining
+                $("#{{ section.name }}_deep_hide_bg").on('change', function (e) {
+                    if ($(this).is(':checked')) {
+                        $("#{{ section.name }}_deep_bg").css('display', 'block');
+                    } else {
+                        $("#{{ section.name }}_deep_bg").css('display', 'none');
+                    }
+                });
+
+                // set cached values for display if available, else fall to defaults
+                $("#{{ section.name }}_deep_img_set_modal").on('show.bs.modal', function (e) {
+                    // reset
+                    panZoomUI_{{ parent_num }}.clearModal('{{ section.name }}');
+                    const chosenVar = $('#{{ section.name }}_img_var_select option:selected').val();
+                    // header
+                    $('.{{ section.name }}_chosen_var_h').text(chosenVar);
+                    // from cache
+                    panZoomUI_{{ parent_num }}.populateModal(
+                        '{{ section.name }}',
+                        {
+                            ...panZoomUI_{{ parent_num }}.varSettingsCache['{{ section.name }}'][chosenVar],
+                            ...panZoomUI_{{ parent_num }}.imgInfoCache['{{ section.name }}']
+                        }
+                    );
+                });
+
+                // save values in cache on submit
+                $("#{{ section.name }}_deep_img_set_save").on('click', function (e) {
+                    let userMin = $("#{{ section.name }}_deep_img_var_min").val().trim();
+                    let userMax = $("#{{ section.name }}_deep_img_var_max").val().trim();
+                    let bgOpacity = $("#{{ section.name }}_deep_img_var_opacity").val().trim();
+
+                    // validation
+                    if (userMin === '' || userMax === '') {
+                        baseUtils.notify('Please specify both a min and max value.', 'error');
+                        return false;
+                    } else {
+                        userMin = parseFloat(userMin);
+                        userMax = parseFloat(userMax);
+                        if (userMin > userMax) {
+                            baseUtils.notify('Min must be less than or equal to max.', 'error');
+                            return false;
+                        }
+                    }
+
+                    if (bgOpacity === '') {
+                        baseUtils.notify('Please specify an opacity for the background', 'error');
+                        return false;
+                    } else {
+                        bgOpacity = parseFloat(bgOpacity);
+                        if (bgOpacity < 0 || bgOpacity > 1) {
+                            baseUtils.notify('Background opacity has to be between 0 and 1', 'error');
+                            return false;
+                        }
+                    }
+
+                    const palette = $('#{{ section.name }}_deep_palette option:selected').val();
+                    const invertColors = $("#{{ section.name }}_deep_palette_inv").is(':checked');
+                    const hideBG = $("#{{ section.name }}_deep_hide_bg").is(':checked');
+
+                    const chosenVar = $('#{{ section.name }}_img_var_select option:selected').val();
+                    const currVarSettings = panZoomUI_{{ parent_num }}.varSettingsCache['{{ section.name }}'][chosenVar];
+
+                    const updatedVarSettings = {
+                        'userMin': userMin,
+                        'userMax': userMax,
+                        'palette': palette,
+                        'invertColors': invertColors,
+                        'hideBG': hideBG,
+                        'bgOpacity': bgOpacity,
+                    };
+
+                    // regen only if needed.
+                    if (panZoomUI_{{ parent_num }}.settingsChanged(currVarSettings, updatedVarSettings)) {
+                        // update cache
+                        panZoomUI_{{ parent_num }}.varSettingsCache['{{ section.name }}'][chosenVar] =
+                            {...currVarSettings, ...updatedVarSettings};
+                        // regen
+                        panZoomUI_{{ parent_num }}.generateVarImage('{{ section.name }}');
+                    }
+
+                    // exit
+                    $("#{{ section.name }}_deep_img_set_modal").modal('hide');
+                });
+
+                // reset to original values
+                $("#{{ section.name }}_deep_img_set_reset").on('click', function (e) {
+                    // reset
+                    panZoomUI_{{ parent_num }}.clearModal('{{ section.name }}');
+                    // from cache
+                    const imgInfo = panZoomUI_{{ parent_num }}.imgInfoCache['{{ section.name }}'];
+                    $('.{{ section.name }}-deep-var-unit').text(imgInfo.unit);
+                    $('#{{ section.name }}_deep_img_var_low').text(imgInfo.min);
+                    $('#{{ section.name }}_deep_img_var_high').text(imgInfo.max);
+                    if ('subpalMin' in imgInfo && 'subpalMax' in imgInfo) {
+                        $('#{{ section.name }}_deep_img_var_min').val(imgInfo.subpalMin).trigger('change');
+                        $('#{{ section.name }}_deep_img_var_max').val(imgInfo.subpalMax).trigger('change');
+                    } else {
+                        $('#{{ section.name }}_deep_img_var_min').val(0).trigger('change');
+                        $('#{{ section.name }}_deep_img_var_max').val(0).trigger('change');
+                    }
+                });
+            {% endfor %}
+
+            // main palette blur on enter keypress
+            $('.main-palette-minmax-{{ parent_num }}').keypress(function (e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    $(this).blur();
+                }
+            });
+        {% endif %}
+
+        {% if image_comparison or image_controls %}
+            // stuff to do after the image has finished loading.
+            panZoomUI_{{ parent_num }}.img.on('load', function () {
+                // hide image
+                $(this).hide();
+
+                {% if image_comparison %}
+                    {% if deep_image_comparison %}
+                        let presets = {};
+
+                        {% if presets %}
+                            if (typeof panZoomUI_{{ parent_num }}.presets !== 'undefined') {
+                                if (typeof panZoomUI_{{ parent_num }}.presets[this.id] !== 'undefined') {
+                                    // read presets into local var and then dump it.
+                                    presets = panZoomUI_{{ parent_num }}.presets[this.id];
+                                    delete panZoomUI_{{ parent_num }}.presets[this.id];
+                                    if (Object.keys(panZoomUI_{{ parent_num }}.presets).length === 0) {
+                                        delete panZoomUI_{{ parent_num }}.presets;
+                                    }
+                                }
+                            }
+                        {% endif %}
+
+                        let presetVar, presetView;
+                        // per-var settings cache
+                        if (!(this.id in panZoomUI_{{ parent_num }}.varSettingsCache)) {
+                            panZoomUI_{{ parent_num }}.varSettingsCache[this.id] = {};
+                            if ('var' in presets) {
+                                presetVar = presets['var'];
+                                delete presets.var;
+                            }
+                            if ('view' in presets) {
+                                presetView = presets['view'];
+                                delete presets.view;
+                            }
+                            // save presets to settings cache
+                            if (presetVar && Object.keys(presets).length > 0) {
+                                panZoomUI_{{ parent_num }}.varSettingsCache[this.id][presetVar] = {
+                                    ...presets
+                                };
+                            }
+                        }
+
+                        // reset var <select>.
+                        const varSelect = $(`#${this.id}_img_var_select`);
+                        if (varSelect.length) {
+                            // unhide
+                            varSelect.css('display', 'block');
+                            // maintain a vars set.
+                            let newVarSet = new Set();
+                            // add vars when discovered
+                            for (const varId in this.nexus_varinfo) {
+                                if ('name' in this.nexus_varinfo[varId]) {
+                                    const name = this.nexus_varinfo[varId]['name'];
+                                    newVarSet.add(name);
+                                }
+                            }
+
+                            // scrape from the current select
+                            let currOptions = $(`#${this.id}_img_var_select option`);
+                            for (let i = 0; i < currOptions.length; i++) {
+                                const val = currOptions[i].value;
+                                // if a discovered var has already been listed
+                                // in select, remove it from the set.
+                                if (newVarSet.has(val)) {
+                                    newVarSet.delete(val)
+                                }
+                            }
+
+                            // add new vars to dropdown
+                            if (newVarSet.size > 0) {
+                                // build the <select> dropdown html
+                                let optionsHtml = '';
+                                newVarSet.forEach(function (value, key, set) {
+                                    optionsHtml += `<option value="${value}">${value}</option>`;
+                                });
+                                // get the currently selected var
+                                const currVar = $(`#${this.id}_img_var_select option:selected`).val();
+                                // populate
+                                if (optionsHtml) {
+                                    varSelect.append(optionsHtml);
+                                    // first priority for presets
+                                    if (presetVar) {
+                                        varSelect.val(presetVar);
+                                    } else {
+                                        // reset var selection to the currently selected var
+                                        // if available or the default 'rgb'
+                                        if (currVar) {
+                                            varSelect.val(currVar);
+                                        } else {
+                                            varSelect.val('rgb');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // reset view
+                        const viewSelect = $(`#${this.id}_deep_diff_select`);
+                        if (viewSelect.length) {
+                            if (presetView) {
+                                viewSelect.val(presetView);
+                            }
+                        }
+
+                        // start initial generation only when both images are done loading.
+                        // this is needed mainly to apply preset transformations/views.
+                        if (typeof panZoomUI_{{ parent_num }}.imgLoadTracker !== 'undefined') {
+                            panZoomUI_{{ parent_num }}.imgLoadTracker.add(this.id);
+                            if (panZoomUI_{{ parent_num }}.imgLoadTracker.size === sliderSections.length) {
+                                panZoomUI_{{ parent_num }}.imgLoadTracker.forEach((value, key, set) => {
+                                    panZoomUI_{{ parent_num }}.generateVarImage(value);
+                                });
+                                // get rid of it
+                                delete panZoomUI_{{ parent_num }}.imgLoadTracker;
+                            }
+                        } else {
+                            // if not tracking, these are subsequent loads.
+                            panZoomUI_{{ parent_num }}.generateVarImage(this.id);
+                        }
+                    {% else %}
+                        // normal image comparison
+                        panZoomUI_{{ parent_num }}.generateRGBImage(this.id);
+                    {% endif %}
+
+                    // get the other image.
+                    let imgOther = panZoomUI_{{ parent_num }}.getOtherImg(this);
+                    // if the other section has a diff going on, regenerate the diff.
+                    const viewOther = $(`#${imgOther.id}_deep_diff_select option:selected`).val();
+                    // if the select exists and diffing is used.
+                    if (typeof viewOther !== 'undefined' && viewOther !== DEEP_VIEWS_{{ parent_num }}.CURRENT) {
+                        {% if deep_image_comparison %}
+                            panZoomUI_{{ parent_num }}.generateVarImage(imgOther.id);
+                        {% else %}
+                            panZoomUI_{{ parent_num }}.generateRGBImage(imgOther.id);
+                        {% endif %}
+                    }
+
+                    // unbind previous listener.
+                    $(panZoomUI_{{ parent_num }}[`panzoom_elem_${this.id}`]).off('panzoompan');
+                    $(panZoomUI_{{ parent_num }}[`panzoom_elem_${this.id}`]).off('panzoomzoom');
+                    // bind listener to sync pan and zoom between sections
+                    $(panZoomUI_{{ parent_num }}[`panzoom_elem_${this.id}`]).on('panzoompan', (event) => {
+                        // if you do an init, it maybe made before the other image loads & might end up a dud
+                        // because the width and height will be zero. For Panzoom to instantiate properly,
+                        // the div's width, height must be non zero and not be hidden.
+                        const pz = panZoomUI_{{ parent_num }}.getPanzoom(imgOther.id);
+                        // if the other element was never instantiated, do nothing
+                        const {x, y} = event.detail;
+                        if (pz && (x || y)) {
+                            // suppress event fire from manual panning
+                            pz.pan(x, y, {silent: true});
+                            // cache
+                            panZoomUI_{{ parent_num }}.imgCtrlCache.panZoom.x = x;
+                            panZoomUI_{{ parent_num }}.imgCtrlCache.panZoom.y = y;
+                        }
+                    });
+
+                    // record zoom
+                    $(panZoomUI_{{ parent_num }}[`panzoom_elem_${this.id}`]).on('panzoomzoom', (event) => {
+                        // ignore initial event fired from creation
+                        if (event.detail.scale)
+                            panZoomUI_{{ parent_num }}.imgCtrlCache.panZoom.scale = event.detail.scale;
+                    });
+
+                    // hide placeholder
+                    $(`#${this.id}_ph`).hide();
+                {% else %}
+                    // single images also depend on a canvas for things like probing
+                    panZoomUI_{{ parent_num }}.generateCanvas(this);
+                {% endif %}
+
+                // rgb canvas
+                let canvas = document.getElementById(`${this.id}_canvas`);
+                // make canvas visible
+                $(canvas).show();
+
+                {% if image_controls %}
+                    // do these after everything else
+                    panZoomUI_{{ parent_num }}.initPanzoom(this.id);
+                    panZoomUI_{{ parent_num }}.updatePin(canvas);
+                {% endif %}
+            });
+        {% endif %}
+
+        // expose panzoom to other contexts
+        window["panZoomUI_{{ parent_num }}"] = panZoomUI_{{ parent_num }};
+    });
+</script>

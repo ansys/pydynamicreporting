@@ -1,0 +1,94 @@
+{{ param_html | safe }}
+{% if is_deep_image %}
+    <script>
+        function updatepick_{{ item_id }}(e) {
+            let x = e.offsetX;
+            let y = e.offsetY;
+            let image_elem = document.getElementById('nexus_image_{{ item_id }}');
+            const origWidth = image_elem.nexus_width;
+            const origHeight = image_elem.nexus_height;
+            x = (x * (origWidth / image_elem.width)) | 0;
+            y = (y * (origHeight / image_elem.height)) | 0;
+            x = x >= origWidth ? origWidth - 1 : x;
+            x = x < 0 ? 0 : x;
+            y = y >= origHeight ? origHeight - 1 : y;
+            y = y < 0 ? 0 : y;
+            let idx = y * origWidth + x;
+
+            let probeResult = "";
+            if ('nexus_pick_buffer' in image_elem) {
+                let partid = image_elem.nexus_pick_buffer[idx * 4] + 256 * image_elem.nexus_pick_buffer[idx * 4 + 1];
+                if (partid in image_elem.nexus_metadata) {
+                    let partinfo = image_elem.nexus_metadata[partid];
+                    probeResult += " Part: '" + partinfo.name + "'";
+                    if ('variable' in partinfo) {
+                        if ('nexus_var_buffer' in image_elem) {
+                            let vardata = image_elem.nexus_var_buffer[idx];
+                            let varinfo = image_elem.nexus_varinfo[partinfo.variable];
+                            probeResult += " Var: '" + varinfo.name + "' " + vardata.toExponential(5);
+                            if (varinfo.unit_label.length) {
+                                probeResult += " [" + varinfo.unit_label + "]";
+                            }
+                        }
+                    }
+                } else {
+                    probeResult += "Part: None";
+                }
+            }
+
+            let probeDisplay = $('#probe_display_{{ item_id }}');
+            // dispose first so it doesn't use tooltips created previously
+            probeDisplay.tooltip('dispose');
+            probeDisplay.tooltip('show');
+            // display coordinates
+            $("#probe_xy_{{ item_id }}").text(`${x}, ${y}`);
+            // display values
+            $("#probe_result_{{ item_id }}").html(probeResult);
+        }
+
+        function clearpick_{{ item_id }}() {
+            let probeDisplay = $('#probe_display_{{ item_id }}');
+            // hide and dispose existing tooltips
+            probeDisplay.tooltip('hide');
+            probeDisplay.tooltip('dispose');
+        }
+
+        async function tiff_image_{{ item_id }}_loader() {
+            const response = await fetch("{{ media_payload_url }}");
+            const arrayBuffer = await response.arrayBuffer();
+            const tiff_promise_{{ item_id }} = GeoTIFF.fromArrayBuffer(arrayBuffer);
+            tiff_promise_{{ item_id }}.then(nexus_image_load_tiff_image.bind(null, "nexus_image_{{ item_id }}"), nexus_image_general_error);
+        }
+
+        tiff_image_{{ item_id }}_loader();
+
+    </script>
+    {% autoescape off %}
+        <div {{ image_style }}>
+            <!-- tooltip parent for img --->
+            <div id="probe_display_{{ item_id }}"
+                 data-toggle="tooltip"
+                 data-placement="top"
+                 data-html="true"
+                 data-container="body"
+                 data-boundary="viewport"
+                 data-animation="false"
+                 data-trigger="manual"
+                 data-title='<span class="f-1r">
+                                            <span>X, Y : <span id="probe_xy_{{ item_id }}">0, 0</span></span>
+                                            <br>
+                                            <span id="probe_result_{{ item_id }}"></span>
+                                        </span>'
+            >
+                <img id="nexus_image_{{ item_id }}" onmousemove="updatepick_{{ item_id }}(event)"
+                     onmouseout="clearpick_{{ item_id }}()" {{ image_class }} {{ image_scale }}><br>
+            </div>
+        </div>
+    {% endautoescape %}
+{% else %}
+    <img src="{{ media_payload_url }}"
+            {% autoescape off %}
+                {{ image_class }} {{ image_style }} {{ image_scale }}
+            {% endautoescape %}
+         alt="Image file not found">
+{% endif %}

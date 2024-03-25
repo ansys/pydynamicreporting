@@ -1,0 +1,18 @@
+{% extends parent_template|default:"base_simple.html" %}
+{% load static %}
+{% block header %}
+    {% if plotly == 0 %}
+        <script src="{% static 'website/scripts/plotly.min.js' %}"></script>
+    {% endif %}
+    <script src="{% static 'website/scripts/geotiff.js' %}"></script>
+    <script src="{% static 'website/scripts/geotiff_nexus.js' %}"></script>
+{% endblock %}
+{% block content %}
+        <div class="container">
+            {{ HTML|safe }}
+        </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'website/scripts/report_item.js' %}"></script>
+{% endblock %}

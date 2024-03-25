@@ -8,7 +8,7 @@ class PyadrException(Exception):
     All other exceptions inherit from this base class.
     """
 
-    detail: str = "An error occurred."
+    detail: str = "An error occurred"
 
     def __init__(self, extra_detail: str = None) -> None:
         super().__init__()
@@ -36,6 +36,12 @@ class InvalidAnsysPath(PyadrException):
     """Exception raised if ANSYS installation path is invalid."""
 
     detail = "Invalid ANSYS installation path"
+
+
+class InvalidPath(PyadrException):
+    """Exception raised if ANSYS installation path is invalid."""
+
+    detail = "Invalid path provided"
 
 
 class AnsysVersionAbsentError(PyadrException):
@@ -78,3 +84,33 @@ class MissingReportError(PyadrException):
     """Exception raised if there is no report."""
 
     detail = "Can not find the corresponding report."
+
+
+class ImproperlyConfiguredError(PyadrException):
+    """Exception raised if ADR is not properly configured"""
+
+    detail = "Some required configuration may be missing"
+
+
+class DatabaseMigrationError(PyadrException):
+    """Exception raised if database migrations fails"""
+
+    detail = "The database setup failed to complete"
+
+
+class StaticFilesCollectionError(PyadrException):
+    """Exception raised if collectstatic fails"""
+
+    detail = "The collection of static files to the target directory failed"
+
+
+class ObjectNotSavedError(PyadrException):
+    """Exception raised if an object is not saved"""
+
+    detail = "The operation failed because the object needs to be saved first"
+
+
+class ObjectDoesNotExistError(PyadrException):
+    """Exception raised if an object is not saved"""
+
+    detail = "The object does not exist in the database"

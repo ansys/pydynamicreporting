@@ -1,0 +1,146 @@
+<style>
+    {% include 'reports/css/data_filter_template.css' %}
+</style>
+<div class='container-fluid mx-auto text-center' id='{{ parent_container_id }}'>
+    <div class="flex-container">
+        <div id="accordion" class="show text-left">
+
+            <div id="filter-header" class="card btn card-header text-left">
+                <i class="fas fa-bars"></i>
+                <span class="filter-header-text">Filters</span>
+            </div>
+
+            <div id="filters-container">
+                {% for key, filter in filters.items %}
+                    <div class="card">
+                        <button class="btn card-header text-left collapsed" data-toggle="collapse"
+                                data-target="#range-filter-{{ key }}_{{ parent_container_id }}" aria-expanded="false"
+                                aria-controls="range-filter-{{ key }}_{{ parent_container_id }}">
+                            {{ filter.name }}
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div id="range-filter-{{ key }}_{{ parent_container_id }}"
+                             class="collapse" aria-labelledby="headingTwo">
+                            <div class="card-body">
+                                {% if filter.type == 'slider' %}
+                                    <div class="range-slider">
+                                        <div>
+                                            <label id="left-value-{{ key }}_{{ parent_container_id }}"
+                                                   for="slider_bar_{{ key }}_{{ parent_container_id }}">
+                                                {{ filter.min }}
+                                            </label>
+                                            <label id="right-value-{{ key }}_{{ parent_container_id }}"
+                                                   for="slider_bar_{{ key }}_{{ parent_container_id }}">
+                                                {{ filter.max }}
+                                            </label>
+                                        </div>
+                                        <input id="slider_bar_{{ key }}_{{ parent_container_id }}"
+                                               data-slider-id="slider_bar_{{ key }}_{{ parent_container_id }}"
+                                               type="text"/>
+                                    </div>
+                                {% elif filter.type == 'dropdown' %}
+                                    <div class="row">
+                                        <div class="col">
+                                            <label for="range-select-min-{{ key }}_{{ parent_container_id }}">
+                                                Min
+                                            </label>
+                                            <select class="form-control range-dropdown"
+                                                    id="range-select-min-{{ key }}_{{ parent_container_id }}">
+                                                {% for value in filter.values %}
+                                                    {% if forloop.first %}
+                                                        <option value="{{ value }}" selected>{{ value }}</option>
+                                                    {% else %}
+                                                        <option value="{{ value }}">{{ value }}</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col text-right">
+                                            <label for="range-select-max-{{ key }}_{{ parent_container_id }}">
+                                                Max
+                                            </label>
+                                            <select class="form-control range-dropdown"
+                                                    id="range-select-max-{{ key }}_{{ parent_container_id }}">
+                                                {% for value in filter.values %}
+                                                    {% if forloop.last %}
+                                                        <option value="{{ value }}" selected>{{ value }}</option>
+                                                    {% else %}
+                                                        <option value="{{ value }}">{{ value }}</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                {% elif filter.type == 'input' %}
+                                    <div class="row">
+                                        <div class="col">
+                                            <label for="range-input-min-{{ key }}_{{ parent_container_id }}">
+                                                Min
+                                            </label>
+                                            <input class="form-control range-input" type="number"
+                                                   value="{{ filter.min }}" step="{{ filter.step }}"
+                                                   id="range-input-min-{{ key }}_{{ parent_container_id }}" />
+                                        </div>
+                                        <div class="col text-right">
+                                            <label for="range-input-max-{{ key }}_{{ parent_container_id }}">
+                                                Max
+                                            </label>
+                                            <input class="form-control range-input right" type="number"
+                                                   value="{{ filter.max }}" step="{{ filter.step }}"
+                                                   id="range-input-max-{{ key }}_{{ parent_container_id }}" />
+                                        </div>
+                                    </div>
+                                {% elif filter.type == 'checkbox' %}
+                                    <div id="checkbox-form-{{ key }}-container">
+                                        <div class="select-buttons text-center">
+                                            <span class="select-all">Select All</span>
+                                            <span class="deselect-all">Deselect All</span>
+                                        </div>
+                                        {% for value in filter.values %}
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       id="{{ key }}-{{ forloop.counter }}_{{ parent_container_id }}"
+                                                       value="{{ value }}" checked>
+                                                <label class="form-check-label"
+                                                       for="{{ key }}-{{ forloop.counter }}_{{ parent_container_id }}">
+                                                    {{ value }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% elif filter.type == 'single_dropdown' %}
+                                    <div class="row">
+                                        <div class="col">
+                                            <select class="form-control single-dropdown"
+                                                    id="dropdown-select-{{ key }}_{{ parent_container_id }}">
+                                                <option value="Any" selected>Any</option>
+                                                {% for value in filter.values %}
+                                                    <option value="{{ value }}">{{ value }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div id="content-column" class="d-flex flex-column text-left">
+            <div id="filter-chips-container" class="">
+                <div id="filter-chips" class=""></div>
+                <div id="close-all-filters" class="filter-chip">Remove All</div>
+            </div>
+            <div class="data-filter-content">
+                {{ param_html | safe }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type='text/javascript'>
+    $(document).ready(function () {
+        {% include 'reports/js/data_filter_template.js' %}
+    });
+</script>

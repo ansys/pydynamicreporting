@@ -1,0 +1,26 @@
+{% extends parent_template|default:"reports/base_reports.html" %}
+{% load static %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'website/content/bootstrap-slider.min.css' %}"/>
+    {% if plotly == 0 %}
+        {% load static %}
+        <script src="{% static 'website/scripts/plotly.min.js' %}"></script>
+    {% endif %}
+    <script src="{% static 'ansys/nexus/viewer-loader.js' %}"></script>
+    <script src="{% static 'website/scripts/geotiff.js' %}"></script>
+    <script src="{% static 'website/js/geotiff_nexus.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <div id="report_root" class="container-fluid w-100" style="padding: 0; margin: 0;">
+        {{ HTML|safe }}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'website/scripts/bootstrap-slider.min.js' %}"></script>
+    <script src="{% static 'website/scripts/panzoom.min.js' %}"></script>
+    <script src="{% static 'website/js/report_item.js' %}"></script>
+    <script src="{% static 'website/js/report_display.js' %}"></script>
+{% endblock %}
