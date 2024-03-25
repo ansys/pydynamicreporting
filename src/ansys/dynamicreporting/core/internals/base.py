@@ -8,9 +8,10 @@ from itertools import chain
 from typing import Any
 from uuid import UUID
 
+from django.core.exceptions import ObjectDoesNotExist, FieldError, ValidationError, FieldDoesNotExist
+from django.db import DatabaseError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
-from django.core.exceptions import ObjectDoesNotExist, FieldError, ValidationError, FieldDoesNotExist
 
 from ..exceptions import ObjectNotSavedError, ObjectDoesNotExistError, PyadrException
 
@@ -30,8 +31,8 @@ def handle_field_errors(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, ValidationError, FieldDoesNotExist):
-            raise PyadrException(extra_detail="One or more fields set or accessed are invalid")
+        except (FieldError, FieldDoesNotExist, ValidationError, DatabaseError) as e:
+            raise PyadrException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
 
     return wrapper
 
@@ -333,9 +334,9 @@ class Validator(ABC):
     def __set__(self, obj, value):
         cleaned_value = None
         if value is not None:
-            cleaned_value = self.validate(value)
+            cleaned_value = self.process(value, obj)
         setattr(obj, self._name, cleaned_value)
 
     @abstractmethod
-    def validate(self, value):
+    def process(self, value, obj):
         pass

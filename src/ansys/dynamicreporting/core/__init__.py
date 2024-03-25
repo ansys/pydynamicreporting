@@ -17,6 +17,26 @@ ansys_version = "2024R1"
 from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.adr_report import Report
 from ansys.dynamicreporting.core.adr_service import Service
+# serverless
 from ansys.dynamicreporting.core.internals.adr import ADR
-from ansys.dynamicreporting.core.internals.item import Item, Session, Dataset, Table
-from ansys.dynamicreporting.core.internals.template import Template, BasicLayout, PanelLayout
+from ansys.dynamicreporting.core.internals.item import (
+    Session,
+    Dataset,
+    Item,
+    String,
+    Text,
+    HTML,
+    Table,
+    Plot,
+    Tree,
+    Image,
+    Animation,
+    Movie,
+    Scene,
+    File
+)
+from ansys.dynamicreporting.core.internals.template import (
+    Template,
+    BasicLayout,
+    PanelLayout
+)
