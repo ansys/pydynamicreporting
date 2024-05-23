@@ -243,6 +243,8 @@ def test_create_table(adr_service_create) -> bool:
     my_table.table_wrap_content = 0
     my_table.table_default_col_labels = 1
     my_table.table_cond_format = ""
+    my_table.row_tags = ["dp=0", "dp=2"]
+    my_table.col_tags = ['a', 'b', 'c', 'd', 'e', 'f']
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
