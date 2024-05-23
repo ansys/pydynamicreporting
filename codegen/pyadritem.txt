@@ -103,6 +103,10 @@ class Item:
         self.item_table = None
         """Table values (Must be in a numpy array)"""
         self.table_dict = {}
+        self.row_tags = []
+        """List of tags for each table row"""
+        self.col_tags = []
+        """List of tags for each table column"""
         self.item = self.serverobj.create_item(name=self.obj_name, source=self.source)
 
     @property
