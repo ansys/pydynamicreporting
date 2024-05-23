@@ -28,7 +28,9 @@ def generate() -> None:
                         for i_attr, name_attr in enumerate(list_table_attr):
                             if i_attr == (len(list_table_attr) - 1):
                                 # row_tags and col_tags are not exposed in the template editor
-                                new_file.write('    "' + name_attr + '",\n    "row_tags",\n    "col_tags"\n')
+                                new_file.write(
+                                    '    "' + name_attr + '",\n    "row_tags",\n    "col_tags"\n'
+                                )
                             else:
                                 new_file.write('    "' + name_attr + '",\n')
 
