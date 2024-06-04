@@ -1772,6 +1772,17 @@ def test_unit_base() -> bool:
     assert succ_two and succ_three and succ_four
 
 
+@pytest.mark.ado_test
+def test_comparison_generator() -> bool:
+    a = ro.itemsComparisonREST()
+    a.chunk_size = 4
+    succ = a.chunk_size == 4
+    filters_table_str = '{"arr": [["dp=dp0", "dp=dp1", "dp=dp0", "dp=dp2"], ["var=temperature", "var=temperature", "var=temperature", "var=pressure"]], "rowlbls": ["i_tags|cont", "i_tags|cont"]}'
+    a.filters_table = filters_table_str
+    succ_two = a.filters_table == filters_table_str
+    assert succ and succ_two
+
+
 def test_item_payload(adr_service_query) -> bool:
     try:
         for i in adr_service_query.query():
