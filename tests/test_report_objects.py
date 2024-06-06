@@ -1774,7 +1774,7 @@ def test_unit_base() -> bool:
 
 @pytest.mark.ado_test
 def test_comparison_generator() -> bool:
-    a = ro.itemsComparisonREST()
+    a = ro.itemscomparisonREST()
     a.chunk_size = 4
     succ = a.chunk_size == 4
     filters_table_str = '{"arr": [["dp=dp0", "dp=dp1", "dp=dp0", "dp=dp2"], ["var=temperature", "var=temperature", "var=temperature", "var=pressure"]], "rowlbls": ["i_tags|cont", "i_tags|cont"]}'
