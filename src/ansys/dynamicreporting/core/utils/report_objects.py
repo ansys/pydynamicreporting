@@ -3437,7 +3437,7 @@ class userdefinedREST(LayoutREST):
         self.set_property(props)
 
 
-class itemsComparisonREST(GeneratorREST):
+class itemscomparisonREST(GeneratorREST):
     """
     Representation of an items comparison generator.
 
