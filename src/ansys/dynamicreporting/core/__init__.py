@@ -13,7 +13,10 @@ ansys_version = "2024R1"
 # Ease imports
 # ------------------------------------------------------------------------------
 
-
 from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.adr_report import Report
 from ansys.dynamicreporting.core.adr_service import Service
+
+# serverless
+from ansys.dynamicreporting.core.adr import ADR
+
