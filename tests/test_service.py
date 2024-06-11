@@ -16,7 +16,7 @@ from ansys.dynamicreporting.core.exceptions import (
     MissingReportError,
     MissingSession,
     NotValidServer,
-    PyadrException,
+    ADRException,
 )
 from ansys.dynamicreporting.core.utils import report_remote_server
 
