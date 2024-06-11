@@ -3435,3 +3435,36 @@ class userdefinedREST(LayoutREST):
         props = self.get_property()
         props["userdef_name"] = value
         self.set_property(props)
+
+
+class itemscomparisonREST(GeneratorREST):
+    """
+    Representation of an items comparison generator.
+
+    Defines getters and setters for chunk_size and filters_table.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def chunk_size(self) -> int:
+        props = self.get_property()
+        chunk_size = int(props["chunk_size"])
+        return chunk_size
+
+    @chunk_size.setter
+    def chunk_size(self, value: int) -> None:
+        props = self.get_property()
+        props["chunk_size"] = value
+        self.set_property(props)
+
+    @property
+    def filters_table(self) -> str:
+        return self.get_property().get("filters_table")
+
+    @filters_table.setter
+    def filters_table(self, input_table: str) -> None:
+        props = self.get_property()
+        props["filters_table"] = input_table
+        self.set_property(props)
