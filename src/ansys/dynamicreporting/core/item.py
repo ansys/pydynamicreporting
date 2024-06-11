@@ -8,21 +8,20 @@ import platform
 import uuid
 
 from PIL import Image as PILImage
+from ceireports.context_processors import global_settings
+from ceireports.utils import get_render_error_html
+from data.extremely_ugly_hacks import safe_unpickle
+from data.utils import delete_item_media
 from django.core.files import File as DjangoFile
 from django.template.loader import render_to_string
 from django.utils import timezone
 import numpy
 
 from .adr_utils import table_attr
+from .base import BaseModel, Validator
 from .exceptions import ADRException
 from .utils import report_utils
 from .utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
-from .base import BaseModel, Validator
-
-from data.extremely_ugly_hacks import safe_unpickle
-from data.utils import delete_item_media
-from ceireports.context_processors import global_settings
-from ceireports.utils import get_render_error_html
 
 
 class Session(BaseModel):
@@ -74,7 +73,7 @@ class HTMLContent(StringContent):
     def process(self, value, obj):
         html_str = super().process(value, obj)
         if not HTMLParser().validate(html_str):
-            raise ValueError(f"Expected content to contain valid HTML")
+            raise ValueError("Expected content to contain valid HTML")
         return html_str
 
 
@@ -220,9 +219,7 @@ class Item(BaseModel):
 
     def save(self, **kwargs):
         if self.session is None or self.dataset is None:
-            raise ADRException(
-                extra_detail="A session and a dataset are required to save an item"
-            )
+            raise ADRException(extra_detail="A session and a dataset are required to save an item")
         if not self.session.saved:
             raise Session.NotSaved(
                 extra_detail="Failed to save item because the session is not saved"
@@ -232,9 +229,7 @@ class Item(BaseModel):
                 extra_detail="Failed to save item because the dataset is not saved"
             )
         if self.content is None:
-            raise ADRException(
-                extra_detail=f"The item {self.guid} must have some content to save"
-            )
+            raise ADRException(extra_detail=f"The item {self.guid} must have some content to save")
         super().save(**kwargs)
 
     def delete(self, **kwargs):

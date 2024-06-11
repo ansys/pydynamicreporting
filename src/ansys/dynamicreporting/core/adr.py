@@ -1,7 +1,7 @@
 import os
-import sys
 from pathlib import Path
 import re
+import sys
 from typing import Any, Optional, Type
 
 from django.core import management
@@ -67,7 +67,7 @@ class ADR:
         sys.path.append(str(install_dir / f"nexus{self._ansys_version}" / "django"))
 
         try:
-            from .item import Dataset, Session, Item
+            from .item import Dataset, Item, Session
             from .template import Template
         except ImportError as e:
             raise ImportError(f"Failed to import from the Ansys installation: {e}")
@@ -170,21 +170,21 @@ class ADR:
         return self._dataset
 
     @session.setter
-    def session(self, session: 'Session'):
+    def session(self, session: "Session"):
         if not isinstance(session, self._session_cls):
             raise TypeError("Must be an instance of type 'Session'")
         self._session = session
 
     @dataset.setter
-    def dataset(self, dataset: 'Dataset'):
+    def dataset(self, dataset: "Dataset"):
         if not isinstance(dataset, self._dataset_cls):
             raise TypeError("Must be an instance of type 'Dataset'")
         self._dataset = dataset
 
-    def set_default_session(self, session: 'Session'):
+    def set_default_session(self, session: "Session"):
         self.session = session
 
-    def set_default_dataset(self, dataset: 'Dataset'):
+    def set_default_dataset(self, dataset: "Dataset"):
         self.dataset = dataset
 
     @property
@@ -192,12 +192,12 @@ class ADR:
         """GUID of the session associated with the service."""
         return self._session.guid
 
-    def create_item(self, item_type: Type['Item'], **kwargs: Any):
+    def create_item(self, item_type: Type["Item"], **kwargs: Any):
         if not issubclass(item_type, self._item_cls):
             raise TypeError(f"{item_type} is not valid")
         return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
 
-    def create_template(self, template_type: Type['Template'], **kwargs: Any):
+    def create_template(self, template_type: Type["Template"], **kwargs: Any):
         if not issubclass(template_type, self._template_cls):
             self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")

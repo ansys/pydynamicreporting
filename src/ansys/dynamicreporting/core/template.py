@@ -3,13 +3,13 @@ from dataclasses import field
 from datetime import datetime
 import json
 
-from django.template.loader import render_to_string
-from django.utils import timezone
-
-from .base import BaseModel
 from ceireports.context_processors import global_settings
 from ceireports.utils import get_render_error_html
+from django.template.loader import render_to_string
+from django.utils import timezone
 from reports.engine import TemplateEngine
+
+from .base import BaseModel
 
 
 # todo: prevent instantiation
