@@ -63,8 +63,6 @@ class ADR:
         except IndexError:
             raise AnsysVersionAbsentError
 
-        import ipdb
-        ipdb.set_trace()
         # import hack
         sys.path.append(str(install_dir / f"nexus{self._ansys_version}" / "django"))
 
