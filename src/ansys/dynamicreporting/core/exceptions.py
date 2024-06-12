@@ -44,12 +44,6 @@ class InvalidPath(ADRException):
     detail = "Invalid path provided"
 
 
-class AnsysVersionAbsentError(ADRException):
-    """Exception raised when ANSYS version is absent."""
-
-    detail = "The ANSYS installation version has not been provided."
-
-
 class MissingSession(ADRException):
     """Exception raised when the ADR session absent."""
 

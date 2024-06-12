@@ -19,7 +19,7 @@ from django.db import DatabaseError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
 
-from .exceptions import ADRException, ObjectDoesNotExistError, ObjectNotSavedError
+from ..exceptions import ADRException, ObjectDoesNotExistError, ObjectNotSavedError
 
 
 def add_exception_to_cls(name, base, cls, parents, module):

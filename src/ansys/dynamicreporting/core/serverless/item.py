@@ -17,11 +17,11 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 import numpy
 
-from .adr_utils import table_attr
+from ..adr_utils import table_attr
+from ..exceptions import ADRException
+from ..utils import report_utils
+from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import BaseModel, Validator
-from .exceptions import ADRException
-from .utils import report_utils
-from .utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 
 
 class Session(BaseModel):

@@ -1,14 +1,17 @@
 import os
 from pathlib import Path
+import platform
 import re
 import sys
 from typing import Any, Optional, Type
 
+import django
 from django.core import management
 from django.http import HttpRequest
 
-from .adr_utils import get_logger
-from .exceptions import (
+from .. import DEFAULT_ANSYS_VERSION
+from ..adr_utils import get_logger
+from ..exceptions import (
     AnsysVersionAbsentError,
     DatabaseMigrationError,
     ImproperlyConfiguredError,
@@ -19,14 +22,6 @@ from .exceptions import (
 
 
 class ADR:
-    """
-    >> from ansys.dynamicreporting.core import ADR, Table
-    >> opts = { "CEI_NEXUS_DEBUG" : "0", "CEI_NEXUS_SECRET_KEY":"", "CEI_NEXUS_LOCAL_DB_DIR":r"C:\\cygwin64\\home\vrajendr\\ogdocex" }
-    >> adr = ADR(r"C:\\Program Files (x86)\\ANSYSv231", opts = opts)
-    >> adr.configure()
-    >> table = adr.create_item(Table, name="table1", content={}, tags="dp=1 part=bumper")
-    """
-
     def __init__(
         self,
         ansys_installation: str,
@@ -42,31 +37,17 @@ class ADR:
         self._media_directory = None
         self._static_directory = None
 
-        if ansys_installation is None:
-            raise InvalidAnsysPath(extra_detail="Please pass an Ansys Installation path")
-        # CAVEAT: note that "" will take the current directory
-        install_dir = Path(ansys_installation)
-        if not os.path.isdir(install_dir):
-            raise InvalidAnsysPath(extra_detail=str(install_dir))
-        if install_dir.stem != "CEI":
-            install_dir = install_dir / "CEI"
-        self._ansys_installation = install_dir
-        os.environ["CEI_NEXUS_INSTALLATION_DIR"] = str(install_dir)
+        self._ansys_version = DEFAULT_ANSYS_VERSION
+        os.environ["CEI_APEX_SUFFIX"] = self._ansys_version
 
-        # try to get version from install path
-        matches = re.search(r".*v([0-9]{3}).*", ansys_installation)
-        if matches is None:
-            raise AnsysVersionAbsentError
-        try:
-            self._ansys_version = matches.group(1)
-            os.environ["CEI_APEX_SUFFIX"] = self._ansys_version
-        except IndexError:
-            raise AnsysVersionAbsentError
-
-        # import hack
-        sys.path.append(str(install_dir / f"nexus{self._ansys_version}" / "django"))
+        self._ansys_installation = self._get_install_directory(ansys_installation)
+        os.environ["CEI_NEXUS_INSTALLATION_DIR"] = str(self._ansys_installation)
 
         try:
+            # import hack
+            sys.path.append(
+                str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
+            )
             from .item import Dataset, Item, Session
             from .template import Template
         except ImportError as e:
@@ -107,6 +88,38 @@ class ADR:
         self._dataset = None
         self._logger = get_logger(logfile)
 
+    def _get_install_directory(self, ansys_installation: Optional[str]) -> Path:
+        dirs_to_check = []
+        if ansys_installation:
+            # User passed directory
+            dirs_to_check.extend([Path(ansys_installation) / "CEI", Path(ansys_installation)])
+        else:
+            # Environmental variable
+            if "PYADR_ANSYS_INSTALLATION" in os.environ:
+                env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
+                dirs_to_check.append(env_inst)
+                # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
+                # where there is no CEI directory, but for folks using it in other
+                # ways, we'll add that one too, just in case.
+                dirs_to_check.append(env_inst / "CEI")
+            # Look for Ansys install using target version number
+            if f"AWP_ROOT{self._ansys_version}" in os.environ:
+                dirs_to_check.append(Path(os.environ[f"AWP_ROOT{self._ansys_version}"]) / "CEI")
+            # Common, default install locations
+            if platform.system().startswith("Wind"):
+                install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{self._ansys_version}\CEI")
+            else:
+                install_loc = Path(f"/ansys_inc/v{self._ansys_version}/CEI")
+
+            dirs_to_check.append(install_loc)
+
+        for install_dir in dirs_to_check:
+            launch_file = install_dir / "bin" / "adr_template_editor"
+            if launch_file.exists():
+                return install_dir
+
+        raise InvalidAnsysPath(f"Unable to detect an installation in: {','.join(dirs_to_check)}")
+
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
         if not dir_path.is_dir():
@@ -121,9 +134,7 @@ class ADR:
         )
         # django.setup() may only be called once.
         try:
-            import django as dj
-
-            dj.setup()
+            django.setup()
         except Exception as e:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
