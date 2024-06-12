@@ -19,7 +19,7 @@ from django.db import DatabaseError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
 
-from ..exceptions import ADRException, ObjectDoesNotExistError, ObjectNotSavedError
+from ..exceptions import ObjectDoesNotExistError, ObjectNotSavedError, PyadrException
 
 
 def add_exception_to_cls(name, base, cls, parents, module):
@@ -35,7 +35,9 @@ def handle_field_errors(func):
         try:
             return func(*args, **kwargs)
         except (FieldError, FieldDoesNotExist, ValidationError, DatabaseError) as e:
-            raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
+            raise PyadrException(
+                extra_detail=f"One or more fields set or accessed are invalid: {e}"
+            )
 
     return wrapper
 

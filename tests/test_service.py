@@ -9,7 +9,6 @@ import pytest
 from ansys.dynamicreporting.core import Report, Service, docker_support
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import (
-    ADRException,
     AlreadyConnectedError,
     CannotCreateDatabaseError,
     ConnectionToServiceError,
@@ -17,6 +16,7 @@ from ansys.dynamicreporting.core.exceptions import (
     MissingReportError,
     MissingSession,
     NotValidServer,
+    PyadrException,
 )
 from ansys.dynamicreporting.core.utils import report_remote_server
 

@@ -18,7 +18,7 @@ from django.utils import timezone
 import numpy
 
 from ..adr_utils import table_attr
-from ..exceptions import ADRException
+from ..exceptions import PyadrException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import BaseModel, Validator
@@ -158,7 +158,7 @@ class ImageContent(FileValidator):
         if file_ext in (".tif", ".tiff"):
             metadata = report_utils.is_enhanced(image)
             if not metadata:
-                raise ADRException("The enhanced image is empty")
+                raise PyadrException("The enhanced image is empty")
         obj._width, obj._height = image.size
         return file_str
 
@@ -219,7 +219,9 @@ class Item(BaseModel):
 
     def save(self, **kwargs):
         if self.session is None or self.dataset is None:
-            raise ADRException(extra_detail="A session and a dataset are required to save an item")
+            raise PyadrException(
+                extra_detail="A session and a dataset are required to save an item"
+            )
         if not self.session.saved:
             raise Session.NotSaved(
                 extra_detail="Failed to save item because the session is not saved"
@@ -229,7 +231,9 @@ class Item(BaseModel):
                 extra_detail="Failed to save item because the dataset is not saved"
             )
         if self.content is None:
-            raise ADRException(extra_detail=f"The item {self.guid} must have some content to save")
+            raise PyadrException(
+                extra_detail=f"The item {self.guid} must have some content to save"
+            )
         super().save(**kwargs)
 
     def delete(self, **kwargs):

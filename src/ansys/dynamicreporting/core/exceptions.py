@@ -1,7 +1,7 @@
 """DynamicReporting custom exceptions."""
 
 
-class ADRException(Exception):
+class PyadrException(Exception):
     """
     Provides base exceptions.
 
@@ -20,91 +20,97 @@ class ADRException(Exception):
         return self.detail
 
 
-class DatabaseDirNotProvidedError(ADRException):
+class DatabaseDirNotProvidedError(PyadrException):
     """Exception raised when the database directory is not provided."""
 
     detail = "db_directory must be provided when using Docker"
 
 
-class CannotCreateDatabaseError(ADRException):
+class CannotCreateDatabaseError(PyadrException):
     """Exception raised when unable to create database directory."""
 
     detail = "The database directory could not be created"
 
 
-class InvalidAnsysPath(ADRException):
+class InvalidAnsysPath(PyadrException):
     """Exception raised if ANSYS installation path is invalid."""
 
     detail = "Invalid ANSYS installation path"
 
 
-class InvalidPath(ADRException):
+class InvalidPath(PyadrException):
     """Exception raised if ANSYS installation path is invalid."""
 
     detail = "Invalid path provided"
 
 
-class MissingSession(ADRException):
+class AnsysVersionAbsentError(PyadrException):
+    """Exception raised when ANSYS version is absent."""
+
+    detail = "The ANSYS installation version has not been provided."
+
+
+class MissingSession(PyadrException):
     """Exception raised when the ADR session absent."""
 
     detail = "There is no session attached to this ADR instance."
 
 
-class NotValidServer(ADRException):
+class NotValidServer(PyadrException):
     """Exception raised if the ADR server can not be validated."""
 
     detail = "Can not validate dynamic reporting server."
 
 
-class AlreadyConnectedError(ADRException):
+class AlreadyConnectedError(PyadrException):
     """Exception raised if the ADR service is already connected to a service."""
 
     detail = "Already connected to a service."
 
 
-class StartingServiceError(ADRException):
+class StartingServiceError(PyadrException):
     """Exception raised if the ADR service can not be started."""
 
     detail = "Error starting the ADR service."
 
 
-class ConnectionToServiceError(ADRException):
+class ConnectionToServiceError(PyadrException):
     """Exception raised if can not connect to ADR service."""
 
     detail = "Can not connect to ADR service."
 
 
-class MissingReportError(ADRException):
+class MissingReportError(PyadrException):
     """Exception raised if there is no report."""
 
     detail = "Can not find the corresponding report."
 
 
-class ImproperlyConfiguredError(ADRException):
+class ImproperlyConfiguredError(PyadrException):
     """Exception raised if ADR is not properly configured."""
 
     detail = "Some required configuration may be missing"
 
 
-class DatabaseMigrationError(ADRException):
+class DatabaseMigrationError(PyadrException):
     """Exception raised if database migrations fails."""
 
     detail = "The database setup failed to complete"
 
 
-class StaticFilesCollectionError(ADRException):
+class StaticFilesCollectionError(PyadrException):
     """Exception raised if collectstatic fails."""
 
     detail = "The collection of static files to the target directory failed"
 
 
-class ObjectNotSavedError(ADRException):
+class ObjectNotSavedError(PyadrException):
     """Exception raised if an object is not saved."""
 
     detail = "The operation failed because the object needs to be saved first"
 
 
-class ObjectDoesNotExistError(ADRException):
+class ObjectDoesNotExistError(PyadrException):
     """Exception raised if an object is not saved."""
 
     detail = "The object does not exist in the database"
