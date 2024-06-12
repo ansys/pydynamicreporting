@@ -2,19 +2,23 @@
 # ------------------------------------------------------------------------------
 
 try:
-    import importlib.metadata as importlib_metadata
+    import importlib.metadata as importlib_metadata  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover
     import importlib_metadata  # type: ignore
+__version__ = importlib_metadata.version(__name__.replace(".", "-"))
 
-__version__ = importlib_metadata.version("ansys-dynamicreporting-core")
+VERSION = __version__
+DEFAULT_ANSYS_VERSION = "242"
 
-ansys_version = "2024R1"
+# Ansys version number that this release is associated with
+__ansys_version__ = DEFAULT_ANSYS_VERSION
+__ansys_version_str__ = f"{2000+(int(__ansys_version__) // 10)} R{int(__ansys_version__) % 10}"
 
 # Ease imports
 # ------------------------------------------------------------------------------
 
-# serverless
-from ansys.dynamicreporting.core.adr import ADR
 from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.adr_report import Report
 from ansys.dynamicreporting.core.adr_service import Service
+# serverless
+from ansys.dynamicreporting.core.serverless.adr import ADR
