@@ -351,7 +351,9 @@ class ReportDownloadHTML:
                 # 4/3 is roughly the expansion factor of base64 encoding (3bytes encode to 4)
                 # Note: we will also inline any "scene" 3D file.  This can happen when processing
                 # a slider view "key_image" array.
-                if (inline or self._is_scene_file(pathname)) and self._should_use_data_uri(len(tmp) * (4.0 / 3.0)):
+                if (inline or self._is_scene_file(pathname)) and self._should_use_data_uri(
+                    len(tmp) * (4.0 / 3.0)
+                ):
                     # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
                     results = "data:application/octet-stream;base64," + base64.b64encode(
                         tmp
