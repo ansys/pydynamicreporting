@@ -874,9 +874,11 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query)
-        _ansys_version = self._ansys_version
+        # ask the server for the Ansys version number. It will generally know it.
+        _ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
         if ansys_version:
             _ansys_version = ansys_version
+
         worker = ReportDownloadHTML(
             url=url,
             directory=directory_path,
