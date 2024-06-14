@@ -42,7 +42,7 @@ latest ``pydynamicreporting`` package with this code:
    pip install virtualenv
    virtualenv venv  # create virtual environment. If on Windows, use virtualenv.exe venv
    source venv/bin/activate # If on Windows, use  .\venv\Scripts\activate
-   pip install -r requirements/dev.txt  # install dependencies
+   pip install .[dev]  # install dependencies
    make install-dev  # install pydynamicreporting in editable mode
 
 

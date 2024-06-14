@@ -93,6 +93,7 @@ dev = [
     "Sphinx==7.2.6",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.14.0",
+    "pre-commit>=3.3.3",
 ]
 
 [tool.pytest.ini_options]

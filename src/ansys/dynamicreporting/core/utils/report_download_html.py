@@ -1,8 +1,6 @@
 import base64
 import os
 import os.path
-import pathlib
-import platform
 import re
 from typing import Optional
 import urllib.parse
@@ -327,6 +325,16 @@ class ReportDownloadHTML:
         self._collision_count += 1
         return f"{str(self._collision_count)}_{name}"
 
+    @staticmethod
+    def _is_scene_file(name: str) -> bool:
+        if name.upper().endswith(".AVZ"):
+            return True
+        if name.upper().endswith(".SCDOC"):
+            return True
+        if name.upper().endswith(".GLB"):
+            return True
+        return False
+
     def _get_file(self, path_plus_queries: str, pathname: str, inline: bool = False) -> str:
         if pathname in self._filemap:
             return self._filemap[pathname]
@@ -341,7 +349,11 @@ class ReportDownloadHTML:
             try:
                 tmp = resp.content
                 # 4/3 is roughly the expansion factor of base64 encoding (3bytes encode to 4)
-                if inline and self._should_use_data_uri(len(tmp) * (4.0 / 3.0)):
+                # Note: we will also inline any "scene" 3D file.  This can happen when processing
+                # a slider view "key_image" array.
+                if (inline or self._is_scene_file(pathname)) and self._should_use_data_uri(
+                    len(tmp) * (4.0 / 3.0)
+                ):
                     # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
                     results = "data:application/octet-stream;base64," + base64.b64encode(
                         tmp
