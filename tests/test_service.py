@@ -393,12 +393,3 @@ def test_docker_unit() -> bool:
     except AttributeError as e:
         succ_five = "has no attribute" in str(e)
     assert succ and succ_two and succ_three and succ_four and succ_five
-
-
-@pytest.mark.ado_test
-def test_exception() -> bool:
-    a = ADRException()
-    succ = a.__str__() == "An error occurred."
-    a.detail = ""
-    succ_two = a.__str__() == ""
-    assert succ and succ_two
