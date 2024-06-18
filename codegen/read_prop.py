@@ -54,7 +54,10 @@ def generate() -> None:
                                 "        self." + subelem.attrib["attribute"] + " = None\n"
                             )
                             comment_str = '        """' + subelem.attrib["attrname"] + "\n"
-                            desc_str = subelem.text.replace("'", "")
+                            if subelem.text:
+                                desc_str = subelem.text.replace("'", "")
+                            else:
+                                desc_str = ""
                             if len(desc_str) > 92:
                                 idx = desc_str[: (92 - len(desc_str))].rfind(" ")
                                 desc_str = desc_str[0:idx] + "\n        " + desc_str[idx + 1 :]

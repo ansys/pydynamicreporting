@@ -287,6 +287,8 @@ class Item:
                     height = 400
                 if self.item.height > 0:
                     height = min(self.item.height * 1.1, height)
+            if self._url is None:
+                _ = self.url
             iframe = IFrame(src=self._url, width=width, height=height)
         else:
             iframe = None
