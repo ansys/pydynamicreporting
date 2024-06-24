@@ -94,7 +94,7 @@ class BaseMeta(ABCMeta):
                 module_name, cls_name = model_str.rsplit(".", 1)
                 if cls_name in cls._model_cls_registry:
                     return cls._model_cls_registry[cls_name]
-                # relative import for ease (needs '.' and package=)
+                # import on demand
                 module = importlib.import_module(module_name, package=__package__)
                 attr = getattr(module, cls_name)
                 cls._model_cls_registry[cls_name] = attr

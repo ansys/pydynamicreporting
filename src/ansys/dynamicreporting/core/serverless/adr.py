@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import platform
-import re
 import sys
 from typing import Any, Optional, Type
 
@@ -12,13 +11,14 @@ from django.http import HttpRequest
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
 from ..exceptions import (
-    AnsysVersionAbsentError,
     DatabaseMigrationError,
     ImproperlyConfiguredError,
     InvalidAnsysPath,
     InvalidPath,
     StaticFilesCollectionError,
 )
+from .item import Dataset, Item, Session
+from .template import Template
 
 
 class ADR:
@@ -42,21 +42,6 @@ class ADR:
 
         self._ansys_installation = self._get_install_directory(ansys_installation)
         os.environ["CEI_NEXUS_INSTALLATION_DIR"] = str(self._ansys_installation)
-
-        try:
-            # import hack
-            sys.path.append(
-                str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
-            )
-            from .item import Dataset, Item, Session
-            from .template import Template
-        except ImportError as e:
-            raise ImportError(f"Failed to import from the Ansys installation: {e}")
-        else:
-            self._dataset_cls = Dataset
-            self._session_cls = Session
-            self._item_cls = Item
-            self._template_cls = Template
 
         if opts is None:
             opts = {}
@@ -97,11 +82,10 @@ class ADR:
             # Environmental variable
             if "PYADR_ANSYS_INSTALLATION" in os.environ:
                 env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
-                dirs_to_check.append(env_inst)
                 # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
                 # where there is no CEI directory, but for folks using it in other
                 # ways, we'll add that one too, just in case.
-                dirs_to_check.append(env_inst / "CEI")
+                dirs_to_check.extend([env_inst, env_inst / "CEI"])
             # Look for Ansys install using target version number
             if f"AWP_ROOT{self._ansys_version}" in os.environ:
                 dirs_to_check.append(Path(os.environ[f"AWP_ROOT{self._ansys_version}"]) / "CEI")
@@ -128,6 +112,14 @@ class ADR:
         return dir_path
 
     def setup(self, collect_static=False) -> None:
+        try:
+            # import hack
+            sys.path.append(
+                str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
+            )
+        except ImportError as e:
+            raise ImportError(f"Failed to import from the Ansys installation: {e}")
+
         os.environ.setdefault(
             "DJANGO_SETTINGS_MODULE",
             "ceireports.settings_serverless",
@@ -141,10 +133,10 @@ class ADR:
 
         # create session and dataset w/ defaults if not provided.
         if self._session is None:
-            self._session = self._session_cls.create()
+            self._session = Session.create()
 
         if self._dataset is None:
-            self._dataset = self._dataset_cls.create()
+            self._dataset = Dataset.create()
 
         # migrations
         if self._db_directory is not None:
@@ -181,21 +173,21 @@ class ADR:
         return self._dataset
 
     @session.setter
-    def session(self, session: "Session"):
-        if not isinstance(session, self._session_cls):
+    def session(self, session: Session):
+        if not isinstance(session, Session):
             raise TypeError("Must be an instance of type 'Session'")
         self._session = session
 
     @dataset.setter
-    def dataset(self, dataset: "Dataset"):
-        if not isinstance(dataset, self._dataset_cls):
+    def dataset(self, dataset: Dataset):
+        if not isinstance(dataset, Dataset):
             raise TypeError("Must be an instance of type 'Dataset'")
         self._dataset = dataset
 
-    def set_default_session(self, session: "Session"):
+    def set_default_session(self, session: Session):
         self.session = session
 
-    def set_default_dataset(self, dataset: "Dataset"):
+    def set_default_dataset(self, dataset: Dataset):
         self.dataset = dataset
 
     @property
@@ -203,13 +195,13 @@ class ADR:
         """GUID of the session associated with the service."""
         return self._session.guid
 
-    def create_item(self, item_type: Type["Item"], **kwargs: Any):
-        if not issubclass(item_type, self._item_cls):
+    def create_item(self, item_type: Type[Item], **kwargs: Any):
+        if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
         return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
 
-    def create_template(self, template_type: Type["Template"], **kwargs: Any):
-        if not issubclass(template_type, self._template_cls):
+    def create_template(self, template_type: Type[Template], **kwargs: Any):
+        if not issubclass(template_type, Template):
             self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
         template = template_type.create(**kwargs)
@@ -221,7 +213,7 @@ class ADR:
 
     def get_report(self, **kwargs):
         try:
-            return self._template_cls.get(master=True, **kwargs)
+            return Template.get(master=True, **kwargs)
         except Exception as e:
             self._logger.error(f"{e}")
             raise e
@@ -230,7 +222,7 @@ class ADR:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
-            out = self._template_cls.filter(master=True)
+            out = Template.filter(master=True)
             if fields:
                 out = out.values_list(*fields, flat=flat)
         except Exception as e:
@@ -244,14 +236,14 @@ class ADR:
 
     def render_report(self, context=None, query=None, **kwargs):
         try:
-            return self._template_cls.get(**kwargs).render(
+            return Template.get(**kwargs).render(
                 request=self._request, context=context, query=query
             )
         except Exception as e:
             self._logger.error(f"{e}")
             raise e
 
-    def query(self, query_type: str = "Item", filter: Optional[str] = "") -> list:
+    def query(self, query_type: str = Item, filter: Optional[str] = "") -> list:
         ...
 
     def create(self, objects: list) -> None:

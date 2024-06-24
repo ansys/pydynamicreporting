@@ -1,13 +1,9 @@
-from abc import abstractmethod
 from dataclasses import field
 from datetime import datetime
 import json
 
-from ceireports.context_processors import global_settings
-from ceireports.utils import get_render_error_html
 from django.template.loader import render_to_string
 from django.utils import timezone
-from reports.engine import TemplateEngine
 
 from .base import BaseModel
 
@@ -132,9 +128,12 @@ class Template(BaseModel):
     def render(self, context=None, request=None, query=None):
         if context is None:
             context = {}
+        from ceireports.context_processors import global_settings
+
         ctx = {**context, **global_settings(request), "request": request}
         try:
-            from .data.models import Item
+            from data.models import Item
+            from reports.engine import TemplateEngine
 
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
@@ -147,6 +146,8 @@ class Template(BaseModel):
             # fill in any TOC entries
             ctx["HTML"] += TemplateEngine.end_toc_session()
         except Exception as e:
+            from ceireports.utils import get_render_error_html
+
             ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)

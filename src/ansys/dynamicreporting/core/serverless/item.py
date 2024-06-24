@@ -8,10 +8,6 @@ import platform
 import uuid
 
 from PIL import Image as PILImage
-from ceireports.context_processors import global_settings
-from ceireports.utils import get_render_error_html
-from data.extremely_ugly_hacks import safe_unpickle
-from data.utils import delete_item_media
 from django.core.files import File as DjangoFile
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -178,6 +174,8 @@ class FileContent(FileValidator):
 class SimplePayloadMixin:
     @classmethod
     def serialize_from_orm(cls, orm_instance):
+        from data.extremely_ugly_hacks import safe_unpickle
+
         obj = super().serialize_from_orm(orm_instance)
         obj.content = safe_unpickle(obj._orm_instance.payloaddata)
         return obj
@@ -233,6 +231,8 @@ class Item(BaseModel):
         super().save(**kwargs)
 
     def delete(self, **kwargs):
+        from data.utils import delete_item_media
+
         delete_item_media(self._orm_instance.guid)
         return super().delete(**kwargs)
 
@@ -247,12 +247,16 @@ class Item(BaseModel):
         return super().get(**new_kwargs)
 
     def render(self, context=None, request=None):
+        from ceireports.context_processors import global_settings
+
         if context is None:
             context = {}
         ctx = {**context, **global_settings(request), "request": request}
         try:
             ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:
+            from ceireports.utils import get_render_error_html
+
             ctx["HTML"] = get_render_error_html(e, target="report item", guid=self.guid)
 
         return render_to_string("data/item_detail_simple.html", context=ctx, request=request)
@@ -279,6 +283,8 @@ class Table(Item):
 
     @classmethod
     def serialize_from_orm(cls, orm_instance):
+        from data.extremely_ugly_hacks import safe_unpickle
+
         obj = super().serialize_from_orm(orm_instance)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
