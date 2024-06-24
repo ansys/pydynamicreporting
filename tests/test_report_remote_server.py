@@ -307,29 +307,30 @@ def test_export_pdf(adr_service_query, get_exec) -> bool:
 
 
 @pytest.mark.ado_test
-def test_export_pptx(adr_service_query) -> bool:
+def test_export_pptx_error(adr_service_query) -> bool:
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+    s = adr_service_query.serverobj
     success = False
     try:
-        my_report = adr_service_query.get_report(report_name="My Top Report")
+        # exports the root report instead of the pptx link.
+        s.export_report_as_pptx(report_guid=my_report.report.guid, file_name="mypresentation")
+    except Exception:
         success = True
-    except SyntaxError:
-        success = False
-    s = adr_service_query.serverobj
-    s.export_report_as_pptx(report_guid=my_report.report.guid, file_name="mypresentation")
     adr_service_query.stop()
     assert success is True
 
 
 def test_get_pptx(adr_service_query, request) -> bool:
     db_dir = join(request.fspath.dirname, "test_data")
-    success = False
-    try:
-        my_report = adr_service_query.get_report(report_name="My Top Report")
-        success = True
-    except SyntaxError:
-        success = False
+    my_report = adr_service_query.get_report(report_name="My Top Report")
     s = adr_service_query.serverobj
-    s.get_pptx_from_report(report_guid=my_report.report.guid, directory_name=db_dir, query=None)
+    try:
+        # scrape all pptx reports from root report
+        s.get_pptx_from_report(report_guid=my_report.report.guid, directory_name=db_dir, query=None)
+    except Exception:
+        success = False
+    else:
+        success = True
     adr_service_query.stop()
     cleanup_docker(request)
     assert success is True
