@@ -22,6 +22,3 @@ __ansys_version_str__ = f"{2000+(int(__ansys_version__) // 10)} R{int(__ansys_ve
 from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.adr_report import Report
 from ansys.dynamicreporting.core.adr_service import Service
-
-# serverless
-from ansys.dynamicreporting.core.serverless.adr import ADR
