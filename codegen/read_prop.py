@@ -16,7 +16,7 @@ def generate() -> None:
     new_file = open(new_filename, "w")
     with open(orig_file) as prop_file:
         for line in prop_file:
-            if "table_attr = [" not in line:
+            if "table_attr = (" not in line:
                 new_file.write(line)
             else:
                 new_file.write(line)

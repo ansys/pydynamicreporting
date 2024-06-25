@@ -107,7 +107,7 @@ PyDynamicReporting at the same time.
 
 User installation
 ^^^^^^^^^^^^^^^^^
-To build and create a production-like installation for use, run this code:
+To build and create a production-like installation:
 
 .. code::
 
@@ -120,58 +120,17 @@ To build and create a production-like installation for use, run this code:
    make smoketest  # test import
 
 
-Pre-commit setup
-^^^^^^^^^^^^^^^^
-
-`pre-commit <https://pre-commit.com/>`_ is a framework for managing and
-maintaining multi-language pre-commit hooks.
-
-To install the ``pre-commit`` package into your Git hooks, run this command:
-
-.. code::
-
-   pre-commit install
-
-
-``pre-commit`` now runs on every commit.
-
-Each time you clone a project, installing the ``pre-commit`` package
-should always be the first thing that you do.
-
-If you want to manually run all pre-commit hooks on a repository, run
-this command:
-
-.. code::
-
-   pre-commit run --all-files
-
-
-The preceding command runs a bunch of formatters on your source files.
-
-To run an individual hook, obtain the hook ID from the project's
-``.pre-commit-config.yaml`` file and then run this code,
-where ``<hook_id>`` is the obtained ID:
-
-.. code::
-
-   pre-commit run <hook_id>
-
-
-The first time ``pre-commit`` runs on a file, it automatically downloads,
-installs, and runs the hook.
-
-
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
 To run GitHub Actions on your local desktop (recommended), install the
 `act <https://github.com/nektos/act#readme>`_ package.
 
-To run a job, such as the ``docs`` job from the ``ci_cd.yml`` file, use
-this command, where ``docs`` is the job name:
+To run a job, such as the ``style`` job from the ``ci_cd.yml`` file, use
+this command, where ``style`` is the job name:
 
 .. code::
 
-   act -j docs
+   act -W '.github/workflows/ci_cd.yml' -j style --bind
 
 
 Deploy and upload steps **must always** be ignored. If they are not ignored,
