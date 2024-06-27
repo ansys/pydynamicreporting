@@ -179,6 +179,25 @@ parallel.visualize()
 #
 # .. image:: /_static/parallel_coord.png
 #
+# Visualize a histogram
+# ---------------------
+#
+# Now, let us create a gaussian distribution via numpy and display
+# it as an histogram. Let us set the histogram to be normalized, and
+# play with the bin size and gaps.
+
+histo_data = adr_service.create_item()
+histo_data.item_table = np.random.normal(0, 0.1, 100)
+histo_data.plot = "histogram"
+histo_data.histogram_normalized = 1
+histo_data.histogram_bin_size = 0.03
+histo_data.histogram_bin_gap = 0.1
+
+
+###############################################################################
+#
+# .. image:: /_static/histo.png
+#
 # Visualize a Sankey diagram
 # --------------------------
 #
