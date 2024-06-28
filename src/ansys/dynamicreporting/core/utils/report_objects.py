@@ -1465,7 +1465,6 @@ class TemplateREST(BaseRESTObject):
         d = super().get_json_key_limits()
         d["name"] = 255
         d["report_type"] = 50
-        d["params"] = 4096
         d["filter"] = 1024
         return d
 
