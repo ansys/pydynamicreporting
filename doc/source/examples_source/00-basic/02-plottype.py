@@ -191,6 +191,7 @@ histo_data.item_table = np.random.normal(0, 0.1, 100)
 histo_data.plot = "histogram"
 histo_data.histogram_normalized = 1
 histo_data.histogram_bin_size = 0.03
+histo_data.visualize()
 
 
 ###############################################################################
