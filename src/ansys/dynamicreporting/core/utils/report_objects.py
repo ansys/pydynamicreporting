@@ -3467,3 +3467,56 @@ class itemscomparisonREST(GeneratorREST):
         props = self.get_property()
         props["filters_table"] = input_table
         self.set_property(props)
+
+
+class statisticalREST(GeneratorREST):
+    """
+    Representation of a statistical analysis generator.
+
+    Defines getters and setters for analysis type, predictor variables,
+    response variables, and intercept.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def analysis_type(self) -> str:
+        return self.get_property().get("analysis_type")
+
+    @analysis_type.setter
+    def analysis_type(self, value: str) -> None:
+        props = self.get_property()
+        props["analysis_type"] = value
+        self.set_property(props)
+
+    @property
+    def predictor_variables(self):
+        return self.get_property().get("predictor_variables")
+    
+    @predictor_variables.setter
+    def predictor_variables(self, value):
+        props = self.get_property()
+        props["predictor_variables"] = value
+        self.set_property(props)
+
+    @property
+    def response_variables(self):
+        return self.get_property().get("response_variables")
+    
+    @response_variables.setter
+    def response_variables(self, value):
+        props = self.get_property()
+        props["response_variables"] = value
+        self.set_property(props)
+
+    @property
+    def intercept(self):
+        return self.get_property().get("intercept")
+    
+    @intercept.setter
+    def intercept(self, value):
+        props = self.get_property()
+        props["intercept"] = value
+        self.set_property(props)
+        
