@@ -3519,5 +3519,3 @@ class statisticalREST(GeneratorREST):
         props = self.get_property()
         props["intercept"] = value
         self.set_property(props)
-
-        
