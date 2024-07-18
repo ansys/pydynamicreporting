@@ -3473,8 +3473,8 @@ class statisticalREST(GeneratorREST):
     """
     Representation of a statistical analysis generator.
 
-    Defines getters and setters for analysis type, predictor variables,
-    response variables, and intercept.
+    Defines getters and setters for analysis type, predictor variables, response
+    variables, and intercept.
     """
 
     def __init__(self):
@@ -3493,7 +3493,7 @@ class statisticalREST(GeneratorREST):
     @property
     def predictor_variables(self):
         return self.get_property().get("predictor_variables")
-    
+
     @predictor_variables.setter
     def predictor_variables(self, value):
         props = self.get_property()
@@ -3503,7 +3503,7 @@ class statisticalREST(GeneratorREST):
     @property
     def response_variables(self):
         return self.get_property().get("response_variables")
-    
+
     @response_variables.setter
     def response_variables(self, value):
         props = self.get_property()
@@ -3513,7 +3513,7 @@ class statisticalREST(GeneratorREST):
     @property
     def intercept(self):
         return self.get_property().get("intercept")
-    
+
     @intercept.setter
     def intercept(self, value):
         props = self.get_property()
