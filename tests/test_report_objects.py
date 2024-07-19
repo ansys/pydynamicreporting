@@ -1783,6 +1783,24 @@ def test_comparison_generator() -> bool:
     assert succ and succ_two
 
 
+@pytest.mark.ado_test
+def test_statistical_generator() -> bool:
+    a = ro.statisticalREST()
+    analysis_type = "linear_regression"
+    a.analysis_type = analysis_type
+    succ = a.analysis_type == analysis_type
+    predictor_variables = '["pressure", "temperature"]'
+    a.predictor_variables = predictor_variables
+    succ_two = a.predictor_variables == predictor_variables
+    response_variables = '["velocity", "misalignment"]'
+    a.response_variables = response_variables
+    succ_three = a.response_variables == response_variables
+    intercept = "1.0"
+    a.intercept = intercept
+    succ_four = a.intercept == intercept
+    assert succ and succ_two and succ_three and succ_four
+
+
 def test_item_payload(adr_service_query) -> bool:
     try:
         for i in adr_service_query.query():
