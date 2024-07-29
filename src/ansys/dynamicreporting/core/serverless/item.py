@@ -247,11 +247,9 @@ class Item(BaseModel):
         return super().get(**new_kwargs)
 
     def render(self, context=None, request=None):
-        from ceireports.context_processors import global_settings
-
         if context is None:
             context = {}
-        ctx = {**context, **global_settings(request), "request": request}
+        ctx = {**context, "request": request}
         try:
             ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:

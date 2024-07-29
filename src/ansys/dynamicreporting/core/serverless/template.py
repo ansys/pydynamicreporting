@@ -128,9 +128,8 @@ class Template(BaseModel):
     def render(self, context=None, request=None, query=None):
         if context is None:
             context = {}
-        from ceireports.context_processors import global_settings
 
-        ctx = {**context, **global_settings(request), "request": request}
+        ctx = {**context, "request": request}
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
