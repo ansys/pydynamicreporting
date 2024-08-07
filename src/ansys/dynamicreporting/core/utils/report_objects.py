@@ -3482,13 +3482,12 @@ class statisticalREST(GeneratorREST):
         super().__init__()
 
     def get_analysis_type(self):
-        if "stats_params" in json.loads(self.params):
-            if "analysis_type" in json.loads(self.params)["stats_params"]:
+        if "stats_params" in json.loads(self.params) and "analysis_type" in json.loads(self.params)["stats_params"]:
                 return json.loads(self.params)["stats_params"]["analysis_type"]
         return ""
 
     def set_analysis_type(self, value=""):
-        if type(value) is not str:
+        if not isinstance(value, str):
             raise ValueError("Error: analysis type should be a string")
         # supported analysis types array to be expanded
         analysis_types = ["Linear Regression"]
@@ -3503,48 +3502,42 @@ class statisticalREST(GeneratorREST):
             d["stats_params"] = {}
         d["stats_params"]["analysis_type"] = value
         self.params = json.dumps(d)
-        return
 
     def get_table_name(self):
-        if "stats_params" in json.loads(self.params):
-            if "table_name" in json.loads(self.params)["stats_params"]:
+        if "stats_params" in json.loads(self.params) and "table_name" in json.loads(self.params)["stats_params"]:
                 return json.loads(self.params)["stats_params"]["table_name"]
         return ""
 
     def set_table_name(self, value=""):
-        if type(value) is not str:
+        if not isinstance(value, str):
             raise ValueError("Error: input should be a string")
         d = json.loads(self.params)
         if "stats_params" not in d:
             d["stats_params"] = {}
         d["stats_params"]["table_name"] = value
         self.params = json.dumps(d)
-        return
 
     def get_tree_name(self):
-        if "stats_params" in json.loads(self.params):
-            if "tree_name" in json.loads(self.params)["stats_params"]:
+        if "stats_params" in json.loads(self.params) and "tree_name" in json.loads(self.params)["stats_params"]:
                 return json.loads(self.params)["stats_params"]["tree_name"]
         return ""
 
     def set_tree_name(self, value=""):
-        if type(value) is not str:
+        if not isinstance(value, str):
             raise ValueError("Error: input should be a string")
         d = json.loads(self.params)
         if "stats_params" not in d:
             d["stats_params"] = {}
         d["stats_params"]["tree_name"] = value
         self.params = json.dumps(d)
-        return
 
     def get_predictor_variables(self):
-        if "stats_params" in json.loads(self.params):
-            if "predictor_variables" in json.loads(self.params)["stats_params"]:
+        if "stats_params" in json.loads(self.params) and "predictor_variables" in json.loads(self.params)["stats_params"]:
                 return json.loads(self.params)["stats_params"]["predictor_variables"]
         return []
 
     def set_predictor_variables(self, value):
-        if type(value) is not list:
+        if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
         # standard input format is a 2d array with a subarray length of 3
         if len(value[0]) != 3:
@@ -3556,16 +3549,14 @@ class statisticalREST(GeneratorREST):
             d["stats_params"] = {}
         d["stats_params"]["predictor_variables"] = json.dumps(value)
         self.params = json.dumps(d)
-        return
 
     def get_response_variables(self):
-        if "stats_params" in json.loads(self.params):
-            if "response_variables" in json.loads(self.params)["stats_params"]:
+        if "stats_params" in json.loads(self.params) and "response_variables" in json.loads(self.params)["stats_params"]:
                 return json.loads(self.params)["stats_params"]["response_variables"]
-        return ""
+        return []
 
     def set_response_variables(self, value=""):
-        if type(value) is not list:
+        if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
         # standard input format is a 2d array with a subarray length of 2
         if len(value[0]) != 2:
@@ -3577,16 +3568,14 @@ class statisticalREST(GeneratorREST):
             d["stats_params"] = {}
         d["stats_params"]["response_variables"] = json.dumps(value)
         self.params = json.dumps(d)
-        return
 
     def get_analysis_params(self):
-        if "stats_params" in json.loads(self.params):
-            if "analysis_parameters" in json.loads(self.params)["stats_params"]:
+        if "stats_params" in json.loads(self.params) and "analysis_parameters" in json.loads(self.params)["stats_params"]:
                 return json.loads(self.params)["stats_params"]["analysis_parameters"]
-        return ""
+        return []
 
     def set_analysis_params(self, value=""):
-        if type(value) is not list:
+        if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
             # standard input format is a 2d array with a subarray length of 2
         if len(value[0]) != 2:
@@ -3598,4 +3587,3 @@ class statisticalREST(GeneratorREST):
             d["stats_params"] = {}
         d["stats_params"]["analysis_parameters"] = json.dumps(value)
         self.params = json.dumps(d)
-        return
