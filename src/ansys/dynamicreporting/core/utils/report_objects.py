@@ -3482,8 +3482,11 @@ class statisticalREST(GeneratorREST):
         super().__init__()
 
     def get_analysis_type(self):
-        if "stats_params" in json.loads(self.params) and "analysis_type" in json.loads(self.params)["stats_params"]:
-                return json.loads(self.params)["stats_params"]["analysis_type"]
+        if (
+            "stats_params" in json.loads(self.params)
+            and "analysis_type" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["analysis_type"]
         return ""
 
     def set_analysis_type(self, value=""):
@@ -3504,8 +3507,11 @@ class statisticalREST(GeneratorREST):
         self.params = json.dumps(d)
 
     def get_table_name(self):
-        if "stats_params" in json.loads(self.params) and "table_name" in json.loads(self.params)["stats_params"]:
-                return json.loads(self.params)["stats_params"]["table_name"]
+        if (
+            "stats_params" in json.loads(self.params)
+            and "table_name" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["table_name"]
         return ""
 
     def set_table_name(self, value=""):
@@ -3518,8 +3524,11 @@ class statisticalREST(GeneratorREST):
         self.params = json.dumps(d)
 
     def get_tree_name(self):
-        if "stats_params" in json.loads(self.params) and "tree_name" in json.loads(self.params)["stats_params"]:
-                return json.loads(self.params)["stats_params"]["tree_name"]
+        if (
+            "stats_params" in json.loads(self.params)
+            and "tree_name" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["tree_name"]
         return ""
 
     def set_tree_name(self, value=""):
@@ -3532,8 +3541,11 @@ class statisticalREST(GeneratorREST):
         self.params = json.dumps(d)
 
     def get_predictor_variables(self):
-        if "stats_params" in json.loads(self.params) and "predictor_variables" in json.loads(self.params)["stats_params"]:
-                return json.loads(self.params)["stats_params"]["predictor_variables"]
+        if (
+            "stats_params" in json.loads(self.params)
+            and "predictor_variables" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["predictor_variables"]
         return []
 
     def set_predictor_variables(self, value):
@@ -3551,8 +3563,11 @@ class statisticalREST(GeneratorREST):
         self.params = json.dumps(d)
 
     def get_response_variables(self):
-        if "stats_params" in json.loads(self.params) and "response_variables" in json.loads(self.params)["stats_params"]:
-                return json.loads(self.params)["stats_params"]["response_variables"]
+        if (
+            "stats_params" in json.loads(self.params)
+            and "response_variables" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["response_variables"]
         return []
 
     def set_response_variables(self, value=""):
@@ -3570,8 +3585,11 @@ class statisticalREST(GeneratorREST):
         self.params = json.dumps(d)
 
     def get_analysis_params(self):
-        if "stats_params" in json.loads(self.params) and "analysis_parameters" in json.loads(self.params)["stats_params"]:
-                return json.loads(self.params)["stats_params"]["analysis_parameters"]
+        if (
+            "stats_params" in json.loads(self.params)
+            and "analysis_parameters" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["analysis_parameters"]
         return []
 
     def set_analysis_params(self, value=""):
