@@ -1786,19 +1786,25 @@ def test_comparison_generator() -> bool:
 @pytest.mark.ado_test
 def test_statistical_generator() -> bool:
     a = ro.statisticalREST()
-    analysis_type = "linear_regression"
-    a.analysis_type = analysis_type
-    succ = a.analysis_type == analysis_type
-    predictor_variables = '["pressure", "temperature"]'
-    a.predictor_variables = predictor_variables
-    succ_two = a.predictor_variables == predictor_variables
-    response_variables = '["velocity", "misalignment"]'
-    a.response_variables = response_variables
-    succ_three = a.response_variables == response_variables
-    intercept = "1.0"
-    a.intercept = intercept
-    succ_four = a.intercept == intercept
-    assert succ and succ_two and succ_three and succ_four
+    analysis_type = "Linear Regression"
+    a.set_analysis_type(analysis_type)
+    succ = a.get_analysis_type() == analysis_type
+    table_name = "Linear Regression Results Table"
+    a.set_table_name(table_name)
+    succ_two = a.get_table_name() == table_name
+    tree_name = "Linear Regression Results Coefficients Tree"
+    a.set_tree_name(tree_name)
+    succ_three = a.get_tree_name() == tree_name
+    predictor_variables = [["row", "pressure", "pressure coeff"], ["tag", "displ", "displ coeff"]]
+    a.set_predictor_variables(predictor_variables)
+    succ_four = a.get_predictor_variables() == predictor_variables
+    response_variables = [["velocity", "fitted velocity"], ["misalignment", "fitted misalignment"]]
+    a.set_response_variables(response_variables)
+    succ_five = a.get_response_variables() == response_variables
+    analysis_params = [["intercept", "1.0"]]
+    a.set_analysis_params(analysis_params)
+    succ_six = a.get_analysis_params() == analysis_params
+    assert succ and succ_two and succ_three and succ_four and succ_five and succ_six
 
 
 def test_item_payload(adr_service_query) -> bool:
