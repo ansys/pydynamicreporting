@@ -3545,7 +3545,7 @@ class statisticalREST(GeneratorREST):
             "stats_params" in json.loads(self.params)
             and "predictor_variables" in json.loads(self.params)["stats_params"]
         ):
-            return json.loads(self.params)["stats_params"]["predictor_variables"]
+            return json.loads(json.loads(self.params)["stats_params"]["predictor_variables"])
         return []
 
     def set_predictor_variables(self, value):
@@ -3567,7 +3567,7 @@ class statisticalREST(GeneratorREST):
             "stats_params" in json.loads(self.params)
             and "response_variables" in json.loads(self.params)["stats_params"]
         ):
-            return json.loads(self.params)["stats_params"]["response_variables"]
+            return json.loads(json.loads(self.params)["stats_params"]["response_variables"])
         return []
 
     def set_response_variables(self, value=""):
@@ -3589,7 +3589,7 @@ class statisticalREST(GeneratorREST):
             "stats_params" in json.loads(self.params)
             and "analysis_parameters" in json.loads(self.params)["stats_params"]
         ):
-            return json.loads(self.params)["stats_params"]["analysis_parameters"]
+            return json.loads(json.loads(self.params)["stats_params"]["analysis_parameters"])
         return []
 
     def set_analysis_params(self, value=""):
