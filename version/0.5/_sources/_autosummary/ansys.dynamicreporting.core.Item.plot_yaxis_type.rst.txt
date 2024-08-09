@@ -1,0 +1,6 @@
+plot\_yaxis\_type
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.plot_yaxis_type
