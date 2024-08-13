@@ -88,7 +88,6 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
-        
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
 
