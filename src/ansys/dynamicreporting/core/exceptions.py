@@ -114,3 +114,9 @@ class ObjectDoesNotExistError(ADRException):
     """Exception raised if an object is not saved."""
 
     detail = "The object does not exist in the database"
+
+
+class MultipleObjectsReturnedError(ADRException):
+    """Exception raised if only one object was expected, but multiple were returned."""
+
+    detail = "get() returned more than one object."

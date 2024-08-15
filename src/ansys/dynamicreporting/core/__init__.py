@@ -8,9 +8,9 @@ except ModuleNotFoundError:  # pragma: no cover
 __version__ = importlib_metadata.version(__name__.replace(".", "-"))
 
 VERSION = __version__
-DEFAULT_ANSYS_VERSION = "241"
+DEFAULT_ANSYS_VERSION = "251"
 
-ansys_version = "2024R1"
+ansys_version = "2025R1"
 
 # Ansys version number that this release is associated with
 __ansys_version__ = DEFAULT_ANSYS_VERSION
