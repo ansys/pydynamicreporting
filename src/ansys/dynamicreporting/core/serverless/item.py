@@ -6,6 +6,7 @@ from pathlib import Path
 import pickle
 import platform
 import uuid
+from typing import Optional
 
 from PIL import Image as PILImage
 from django.core.files import File as DjangoFile
@@ -246,10 +247,10 @@ class Item(BaseModel):
         new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
         return super().get(**new_kwargs)
 
-    def render(self, context=None, request=None):
+    def render(self, context=None, request=None) -> Optional[str]:
         if context is None:
             context = {}
-        ctx = {**context, "request": request}
+        ctx = {**context, "request": request, "ansys_version": None}
         try:
             ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:

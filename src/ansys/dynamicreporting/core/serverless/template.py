@@ -1,6 +1,7 @@
+import json
 from dataclasses import field
 from datetime import datetime
-import json
+from typing import Optional
 
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -125,11 +126,10 @@ class Template(BaseModel):
         new_kwargs = {"report_type": cls.type, **kwargs} if cls.type else kwargs
         return super().filter(**new_kwargs)
 
-    def render(self, context=None, request=None, query=None):
+    def render(self, context=None, request=None, query=None) -> Optional[str]:
         if context is None:
             context = {}
-
-        ctx = {**context, "request": request}
+        ctx = {**context, "request": request, "ansys_version": None}
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
