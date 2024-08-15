@@ -12,6 +12,7 @@ from uuid import UUID
 from django.core.exceptions import (
     FieldDoesNotExist,
     FieldError,
+    MultipleObjectsReturned,
     ObjectDoesNotExist,
     ValidationError,
 )
@@ -19,7 +20,12 @@ from django.db import DatabaseError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
 
-from ..exceptions import ADRException, ObjectDoesNotExistError, ObjectNotSavedError
+from ..exceptions import (
+    ADRException,
+    MultipleObjectsReturnedError,
+    ObjectDoesNotExistError,
+    ObjectNotSavedError,
+)
 
 
 def add_exception_to_cls(name, base, cls, parents, module):
@@ -77,6 +83,13 @@ class BaseMeta(ABCMeta):
             )
             add_exception_to_cls(
                 "NotSaved", ObjectNotSavedError, new_cls, parents, namespace.get("__module__")
+            )
+            add_exception_to_cls(
+                "MultipleObjectsReturned",
+                MultipleObjectsReturnedError,
+                new_cls,
+                parents,
+                namespace.get("__module__"),
             )
         # all classes must be dataclasses
         new_cls = dataclass(eq=False, order=False, repr=False)(new_cls)
@@ -246,6 +259,9 @@ class BaseModel(metaclass=BaseMeta):
             orm_instance = cls._orm_model_cls.objects.get(**kwargs)
         except ObjectDoesNotExist:
             raise cls.DoesNotExist
+        except MultipleObjectsReturned:
+            raise cls.MultipleObjectsReturned
+
         return cls.serialize_from_orm(orm_instance)
 
     @classmethod
