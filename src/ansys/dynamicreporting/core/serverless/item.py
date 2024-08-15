@@ -5,8 +5,8 @@ import io
 from pathlib import Path
 import pickle
 import platform
-import uuid
 from typing import Optional
+import uuid
 
 from PIL import Image as PILImage
 from django.core.files import File as DjangoFile
