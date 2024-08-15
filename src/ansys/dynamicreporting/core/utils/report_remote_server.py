@@ -1,5 +1,7 @@
 import urllib
 
+from requests import JSONDecodeError
+
 try:
     from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -835,6 +837,12 @@ class Server:
 
     def _download_report(self, url, file_name, directory_name=None):
         resp = requests.get(url, allow_redirects=True)
+        if resp.status_code != requests.codes.ok:
+            try:
+                detail = resp.json()["detail"]
+            except (JSONDecodeError, KeyError):
+                detail = f"Failed to export the PPTX report {file_name} at {url}: error {resp.status_code}"
+            raise Exception(detail)
         # get abs path
         if directory_name:
             file_path = (Path(directory_name) / Path(file_name)).resolve()

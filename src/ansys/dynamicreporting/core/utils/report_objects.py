@@ -1465,7 +1465,6 @@ class TemplateREST(BaseRESTObject):
         d = super().get_json_key_limits()
         d["name"] = 255
         d["report_type"] = 50
-        d["params"] = 4096
         d["filter"] = 1024
         return d
 
@@ -3468,3 +3467,141 @@ class itemscomparisonREST(GeneratorREST):
         props = self.get_property()
         props["filters_table"] = input_table
         self.set_property(props)
+
+
+class statisticalREST(GeneratorREST):
+    """
+    Representation of a statistical analysis generator.
+
+    Defines getters and setters for analysis type, table name, tree name, predictor
+    variables, response variables, and analysis_parameters. For variables the standard
+    input format is 2D array to support multiple variables.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def get_analysis_type(self):
+        if (
+            "stats_params" in json.loads(self.params)
+            and "analysis_type" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["analysis_type"]
+        return ""
+
+    def set_analysis_type(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("Error: analysis type should be a string")
+        # supported analysis types array to be expanded
+        analysis_types = ["Linear Regression"]
+        if value not in analysis_types:
+            raise ValueError(
+                "Error: input does not belong to the set of supported analysis types. Must be one of [{a_types}].".format(
+                    a_types=", ".join(analysis_types)
+                )
+            )
+        d = json.loads(self.params)
+        if "stats_params" not in d:
+            d["stats_params"] = {}
+        d["stats_params"]["analysis_type"] = value
+        self.params = json.dumps(d)
+
+    def get_table_name(self):
+        if (
+            "stats_params" in json.loads(self.params)
+            and "table_name" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["table_name"]
+        return ""
+
+    def set_table_name(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        d = json.loads(self.params)
+        if "stats_params" not in d:
+            d["stats_params"] = {}
+        d["stats_params"]["table_name"] = value
+        self.params = json.dumps(d)
+
+    def get_tree_name(self):
+        if (
+            "stats_params" in json.loads(self.params)
+            and "tree_name" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(self.params)["stats_params"]["tree_name"]
+        return ""
+
+    def set_tree_name(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        d = json.loads(self.params)
+        if "stats_params" not in d:
+            d["stats_params"] = {}
+        d["stats_params"]["tree_name"] = value
+        self.params = json.dumps(d)
+
+    def get_predictor_variables(self):
+        if (
+            "stats_params" in json.loads(self.params)
+            and "predictor_variables" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(json.loads(self.params)["stats_params"]["predictor_variables"])
+        return []
+
+    def set_predictor_variables(self, value):
+        if not isinstance(value, list):
+            raise ValueError("Error: input should be an array")
+        # standard input format is a 2d array with a subarray length of 3
+        if len(value[0]) != 3:
+            raise ValueError(
+                "Error: input format should be an array of subarrays each of length 3. With Type, Predictor, Output Name."
+            )
+        d = json.loads(self.params)
+        if "stats_params" not in d:
+            d["stats_params"] = {}
+        d["stats_params"]["predictor_variables"] = json.dumps(value)
+        self.params = json.dumps(d)
+
+    def get_response_variables(self):
+        if (
+            "stats_params" in json.loads(self.params)
+            and "response_variables" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(json.loads(self.params)["stats_params"]["response_variables"])
+        return []
+
+    def set_response_variables(self, value=""):
+        if not isinstance(value, list):
+            raise ValueError("Error: input should be an array")
+        # standard input format is a 2d array with a subarray length of 2
+        if len(value[0]) != 2:
+            raise ValueError(
+                "Error: input format should be an array of subarrays each of length 2. With Response, Output Name."
+            )
+        d = json.loads(self.params)
+        if "stats_params" not in d:
+            d["stats_params"] = {}
+        d["stats_params"]["response_variables"] = json.dumps(value)
+        self.params = json.dumps(d)
+
+    def get_analysis_params(self):
+        if (
+            "stats_params" in json.loads(self.params)
+            and "analysis_parameters" in json.loads(self.params)["stats_params"]
+        ):
+            return json.loads(json.loads(self.params)["stats_params"]["analysis_parameters"])
+        return []
+
+    def set_analysis_params(self, value=""):
+        if not isinstance(value, list):
+            raise ValueError("Error: input should be an array")
+            # standard input format is a 2d array with a subarray length of 2
+        if len(value[0]) != 2:
+            raise ValueError(
+                "Error: input format should be an array of subarrays each of length 2. With Parameter Name, Value."
+            )
+        d = json.loads(self.params)
+        if "stats_params" not in d:
+            d["stats_params"] = {}
+        d["stats_params"]["analysis_parameters"] = json.dumps(value)
+        self.params = json.dumps(d)

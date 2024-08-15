@@ -265,7 +265,6 @@ def test_create_histo(adr_service_create) -> bool:
     my_table.histogram_cumulative = 1
     my_table.histogram_normalized = 1
     my_table.histogram_bin_size = 0.5
-    my_table.histogram_bin_gap = 0.001
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
