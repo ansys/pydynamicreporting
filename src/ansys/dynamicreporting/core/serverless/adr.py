@@ -141,7 +141,7 @@ class ADR:
         # migrations
         if self._db_directory is not None:
             try:
-                management.call_command("migrate", verbosity=0)
+                management.call_command("migrate", "--no-input", verbosity=0)
             except Exception as e:
                 self._logger.error(f"{e}")
                 raise DatabaseMigrationError(extra_detail=str(e))

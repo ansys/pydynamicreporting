@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 import pickle
 import platform
+from typing import Optional
 import uuid
 
 from PIL import Image as PILImage
@@ -246,12 +247,10 @@ class Item(BaseModel):
         new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
         return super().get(**new_kwargs)
 
-    def render(self, context=None, request=None):
-        from ceireports.context_processors import global_settings
-
+    def render(self, context=None, request=None) -> Optional[str]:
         if context is None:
             context = {}
-        ctx = {**context, **global_settings(request), "request": request}
+        ctx = {**context, "request": request, "ansys_version": None}
         try:
             ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:
