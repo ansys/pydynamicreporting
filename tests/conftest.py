@@ -66,6 +66,7 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
             data_directory=tmp_docker_dir,
             port=8000 + int(random() * 4000),
         )
+        tmp_service._container.save_config()
     return tmp_service
 
 
@@ -89,5 +90,7 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
         data_directory=tmp_docker_dir,
         port=8000 + int(random() * 4000),
     )
+    if not use_local:
+        tmp_service._container.save_config()
     tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)
     return tmp_service
