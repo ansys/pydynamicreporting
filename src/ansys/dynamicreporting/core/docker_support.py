@@ -154,13 +154,13 @@ class DockerLauncher:
         }
 
         # get a unique name for the container to run
-        #existing_names = [x.name for x in self._docker_client.from_env().containers.list()]
-        #container_name = "nexus"
-        #while container_name in existing_names:
+        # existing_names = [x.name for x in self._docker_client.from_env().containers.list()]
+        # container_name = "nexus"
+        # while container_name in existing_names:
         #    container_name += random.choice(string.ascii_letters)
         #    if len(container_name) > 500:
         #        raise RuntimeError("Can't determine a unique Docker container name.")
-        #self._container_name = container_name
+        # self._container_name = container_name
 
         # Start the container in detached mode and override
         # the default entrypoint so multiple commands can be
