@@ -66,7 +66,6 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
             data_directory=tmp_docker_dir,
             port=8000 + int(random() * 4000),
         )
-        tmp_service._container.save_config()
     return tmp_service
 
 

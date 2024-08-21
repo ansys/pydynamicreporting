@@ -403,7 +403,6 @@ class DockerLauncher:
         nexus_cmd += " --db_directory /db_directory"
         nexus_cmd += " save_config"
         ret = self.run_in_container(nexus_cmd)
-        print(ret)
         return ret
 
     def launch_nexus_server(
