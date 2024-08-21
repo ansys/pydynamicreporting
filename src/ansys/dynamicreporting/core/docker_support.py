@@ -402,8 +402,8 @@ class DockerLauncher:
         nexus_cmd = self._cei_home + "/bin/nexus_launcher start"
         nexus_cmd += " --db_directory /db_directory"
         nexus_cmd += " save_config"
-        nexus_cmd += " &"
         ret = self.run_in_container(nexus_cmd)
+        print(ret)
         return ret
 
     def launch_nexus_server(
