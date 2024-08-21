@@ -58,7 +58,6 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
             port=8000 + int(random() * 4000),
         )
     else:
-        cleanup_docker(request)
         tmp_service = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
@@ -80,7 +79,6 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     if use_local:
         ansys_installation = pytestconfig.getoption("install_path")
     else:
-        cleanup_docker(request)
         ansys_installation = "docker"
     tmp_service = Service(
         ansys_installation=ansys_installation,
