@@ -399,7 +399,7 @@ class DockerLauncher:
         ------
         RuntimeError
         """
-        nexus_cmd = self._cei_home + "/bin/nexus_launcher start"
+        nexus_cmd = self._cei_home + "/bin/nexus_launcher"
         nexus_cmd += " --db_directory /db_directory"
         nexus_cmd += " save_config"
         ret = self.run_in_container(nexus_cmd)
