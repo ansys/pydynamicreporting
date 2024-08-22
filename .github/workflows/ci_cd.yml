@@ -88,9 +88,6 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: Run pytest
         uses: ansys/actions/tests-pytest@v4
         env:
