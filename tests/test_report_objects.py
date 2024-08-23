@@ -1807,6 +1807,58 @@ def test_statistical_generator() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five and succ_six
 
 
+@pytest.mark.ado_test
+def test_generator_iterator() -> bool:
+    a = ro.iteratorGeneratorREST()
+    succ = a.get_iteration_tags() == ["", ""]
+    a.set_iteration_tags()
+    succ_two = False
+    try:
+        a.set_iteration_tags(value=1)
+    except ValueError as e:
+        succ_two = "Error: input needs to be a list" in str(e)
+    succ_three = False
+    try:
+        a.set_iteration_tags(value=[])
+    except ValueError as e:
+        succ_three = "needs to contain 2 elements" in str(e)
+    succ_four = False
+    try:
+        a.set_iteration_tags(value=[1, 1])
+    except ValueError as e:
+        succ_four = "need to be strings" in str(e)
+    a.set_iteration_tags(value=["tag", "a"])
+    succ_five = a.get_iteration_tags() == ["tag", "a"]
+    a.set_iteration_tags(value=["", ""])
+    succ_six = a.get_iteration_tags() == ["", ""]
+    a.set_iteration_tags(value=["tag", "a"])
+    succ_seven = a.get_sort_tag() == [True, False]
+    a.set_iteration_tags(value=["sort", "reverse_sort"])
+    succ_eight = a.get_sort_tag() == [True, False]
+    a.set_sort_tag()
+    succ_nine = False
+    try:
+        a.set_sort_tag(value=1)
+    except ValueError as e:
+        succ_nine = "input needs to be a list" in str(e)
+    succ_ten = False
+    try:
+        a.set_sort_tag(value=[1])
+    except ValueError as e:
+        succ_ten = "contain 2 elements" in str(e)
+    succ_eleven = False
+    try:
+        a.set_sort_tag(value=[1, 1])
+    except ValueError as e:
+        succ_eleven = "need to be True/False" in str(e)
+    a.set_sort_tag(value=[False, True])
+    succ_twelve = a.get_sort_tag() == [False, False]
+    succ_a = succ and succ_two + succ_three + succ_four + succ_five
+    succ_b = succ_six + succ_seven + succ_eight + succ_nine
+    succ_c = succ_ten + succ_eleven + succ_twelve
+    assert succ_a and succ_b and succ_c
+
+
 def test_item_payload(adr_service_query) -> bool:
     try:
         for i in adr_service_query.query():
