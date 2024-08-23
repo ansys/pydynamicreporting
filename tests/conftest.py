@@ -104,7 +104,8 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     if not use_local:
         tmp_service._container.save_config()
         tmp_service._container.status()
-        tmp_service._container.run_in_container("ls /db_directory/")
-        tmp_service._container.run_in_container("cat /db_directory/nexus.log")
+        print(tmp_service._container.run_in_container("ls /db_directory/"))
+        print(tmp_service._container.run_in_container("cat /db_directory/nexus.log"))
     tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)
+    tmp_service._container.status()
     return tmp_service
