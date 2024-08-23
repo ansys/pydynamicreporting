@@ -424,8 +424,8 @@ class DockerLauncher:
         nexus_cmd += " status"
         ret = self.run_in_container(nexus_cmd)
         print(ret)
-        return ret    
-    
+        return ret
+
     def launch_nexus_server(
         self,
         username: str,
