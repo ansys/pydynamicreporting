@@ -162,7 +162,7 @@ class Report:
     def get_guid(self) -> str:
         return self.report.guid
     
-    def get_report_component_define(self) -> str:
+    def get_report_define(self) -> str:
         # helper fn to load <script> <link> & <style> on report fetch 
         loadScript = f"""
             loadDependencies(tgtList, createTgt="", appendTgt = ''){{
@@ -318,7 +318,7 @@ class Report:
 
                         }}).then(deferScripts => {{
                             // append & load all nested <script> inside <adr-report-root>
-                            return this.loadDependencies(deferScripts, 'script', 'adr-report-root')
+                            return this.loadDependencies(deferScripts, 'script', 'adr-report')
                         }})
 
                     }})
@@ -369,7 +369,9 @@ class Report:
         return component_logic
     
     def get_report_component(self, prefix) -> str:
+        # fetch method using predefined prefix rules in proxy server OR using traditional <iframe>
         fetchMethod = f'prefix="{prefix}" guid="{self.get_guid()}"' if prefix else f'reportURL="{self.get_url()}"'
+        # create the custom web component for report fetching
         component = f"<adr-report {fetchMethod}></adr-report>"
         return component
 
