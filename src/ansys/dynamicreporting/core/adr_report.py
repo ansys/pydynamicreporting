@@ -21,7 +21,7 @@ import sys
 from typing import Optional
 import webbrowser
 
-from ansys.dynamicreporting.core.adr_utils import in_ipynb
+from ansys.dynamicreporting.core.adr_utils import in_ipynb, build_query_url
 from ansys.dynamicreporting.core.utils import report_objects
 
 try:
@@ -75,7 +75,7 @@ class Report:
                 success = True
         return success
 
-    def visualize(self, new_tab: bool = False) -> None:
+    def visualize(self, new_tab: bool = False, filter: str = "") -> None:
         """
         Render the report.
 
@@ -86,6 +86,10 @@ class Report:
             is a Jupyter notebook. The default is ``False``, in which case the
             report is rendered in the current location. If the environment is
             not a Jupyter notebook, the report is always rendered in a new tab.
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
@@ -110,15 +114,22 @@ class Report:
             else:
                 display(iframe)
         else:
-            url = self.get_url()
+            url = self.get_url(filter=filter)
             if url == "":  # pragma: no cover
                 self.service.logger.error("Error: could not obtain url for report")
             else:
                 webbrowser.open_new(url)
 
-    def get_url(self) -> str:
+    def get_url(self, filter: str = "") -> str:
         """
         Get the URL corresponding to the report.
+
+        Parameters
+        ----------
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
@@ -157,9 +168,10 @@ class Report:
                 )
                 return ""
         url += "usemenus=off"
+        url += build_query_url(self.service.logger, filter)
         return url
 
-    def get_iframe(self, width: int = 1000, height: int = 800):
+    def get_iframe(self, width: int = 1000, height: int = 800, filter: str = ""):
         """
         Get the iframe object corresponding to the report.
 
@@ -169,6 +181,10 @@ class Report:
             Width of the iframe object. The default is ``1000``.
         height : int, optional
             Height of the iframe object. The default is ``800``.
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
@@ -187,7 +203,7 @@ class Report:
             report_iframe = my_report.get_iframe()
         """
         if "IPython.display" in sys.modules:
-            url = self.get_url()
+            url = self.get_url(filter=filter)
             iframe = IFrame(src=url, width=width, height=height)
         else:
             iframe = None
