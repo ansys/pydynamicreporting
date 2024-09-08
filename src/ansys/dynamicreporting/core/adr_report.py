@@ -21,7 +21,7 @@ import sys
 from typing import Optional
 import webbrowser
 
-from ansys.dynamicreporting.core.adr_utils import in_ipynb, build_query_url
+from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
 from ansys.dynamicreporting.core.utils import report_objects
 
 try:

@@ -35,7 +35,7 @@ from ansys.dynamicreporting.core.utils import report_objects, report_remote_serv
 
 from .adr_item import Item
 from .adr_report import Report
-from .adr_utils import dict_items, get_logger, in_ipynb, type_maps, check_filter, build_query_url
+from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
 from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
 from .docker_support import DockerLauncher
 from .exceptions import (
