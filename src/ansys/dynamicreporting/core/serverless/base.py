@@ -270,6 +270,12 @@ class BaseModel(metaclass=BaseMeta):
         qs = cls._orm_model_cls.objects.filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
+    @classmethod
+    @handle_field_errors
+    def find(cls, query="", reverse=False, sort_tag="date"):
+        qs = cls._orm_model_cls.find(query=query, reverse=reverse, sort_tag=sort_tag)
+        return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
+
     def get_tags(self):
         return self.tags
 
