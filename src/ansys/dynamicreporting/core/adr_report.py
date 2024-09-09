@@ -202,7 +202,7 @@ class Report:
 
         return guid
 
-    def get_report_define(self) -> str:
+    def get_report_script(self) -> str:
         """
         A block of JavaScript script to define the web component for report fetching.
 
