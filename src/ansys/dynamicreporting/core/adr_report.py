@@ -25,7 +25,7 @@ from ansys.dynamicreporting.core.adr_utils import in_ipynb
 from ansys.dynamicreporting.core.utils import report_objects
 
 try:
-    from IPython.display import IFrame
+    from IPython.display import HTML, IFrame, display
 except ImportError:
     pass
 
@@ -158,97 +158,97 @@ class Report:
                 return ""
         url += "usemenus=off"
         return url
-      
+
     def get_guid(self) -> str:
         return self.report.guid
-    
-    def get_report_define(self) -> str:
-        # helper fn to load <script> <link> & <style> on report fetch 
-        loadScript = f"""
-            loadDependencies(tgtList, createTgt="", appendTgt = ''){{
-                const promiseQueue = [];
-                for(let tgt of tgtList){{
-                    promiseQueue.push(
-                        (function(){{
 
-                            return new Promise((resolve, reject)=>{{
+    def get_report_define(self) -> str:
+        # helper fn to load <script> <link> & <style> on report fetch
+        loadScript = """
+            loadDependencies(tgtList, createTgt="", appendTgt = ""){
+                const promiseQueue = [];
+                for(let tgt of tgtList){
+                    promiseQueue.push(
+                        (function(){
+
+                            return new Promise((resolve, reject)=>{
                                 let ele = document.createElement(createTgt);
 
-                                ele.addEventListener('load', () => {{
+                                ele.addEventListener("load", () => {
                                     return resolve(true)
-                                }}, {{once:true}});
+                                }, {once:true});
 
-                                if(ele.tagName === 'SCRIPT'){{
+                                if(ele.tagName === "SCRIPT"){
                                     tgt.src ?
-                                        ele.setAttribute('src', `${{tgt.getAttribute('src')}}`)
+                                        ele.setAttribute("src", `${tgt.getAttribute("src")}`)
                                         :
                                         ele.innerHTML = tgt.innerHTML;
-                                    ele.type = 'text/javascript';
+                                    ele.type = "text/javascript";
                                     ele.async = false;
 
-                                }}else if(ele.tagName === 'LINK'){{
-                                    ele.type = 'text/css';
+                                }else if(ele.tagName === "LINK"){
+                                    ele.type = "text/css";
                                     ele.rel = tgt.rel;
-                                    ele.setAttribute('href', `${tgt.getAttribute('href')}`);
-                                }}else{{
+                                    ele.setAttribute("href", `${tgt.getAttribute("href")}`);
+                                }else{
                                     ele.innerHTML = tgt.innerHTML;
-                                }}
+                                }
 
-                                if(appendTgt){{
+                                if(appendTgt){
                                     document.querySelector(appendTgt).appendChild(ele);
-                                }}
+                                }
 
-                                if(tgt.tagName === 'STYLE' || !tgt.src){{
+                                if(tgt.tagName === "STYLE" || !tgt.src){
                                     resolve(true)
-                                }}
+                                }
 
-                                ele.addEventListener('error', () => {{
-                                    return reject(new Error(`${{this}} failed to load.`))
-                                }}, {{once:true}})
+                                ele.addEventListener("error", () => {
+                                    return reject(new Error(`${this} failed to load.`))
+                                }, {once:true})
 
-                            }})
+                            })
 
-                        }})()
+                        })()
                     )
-                }}
+                }
 
                 return Promise.all(promiseQueue)
-            }}
+            }
         """
         # helper fn to remove duplicated <script> on report fetch
-        removeDuplicates = f"""
-            removeScript(root){{
-                return new Promise((resolve, reject)=>{{
-                    try{{
-                        const scriptList = root.querySelectorAll(' script')
-                        for(let i = 0; i < scriptList.length; i++){{
+        removeDuplicates = """
+            removeScript(root){
+                return new Promise((resolve, reject)=>{
+                    try{
+                        const scriptList = root.querySelectorAll(" script")
+                        for(let i = 0; i < scriptList.length; i++){
                             // loop thru the script list and remove <script> one by one
                             scriptList[i].remove()
-                            if(i === scriptList.length-1){{
+                            if(i === scriptList.length-1){
                                 // once reach and remove the final <script>, then resolve
                                 resolve(true)
-                            }}
-                        }}
-                    }}catch(err){{
+                            }
+                        }
+                    }catch(err){
                         reject(err)
-                    }}
-                }})
-            }}
+                    }
+                })
+            }
         """
         # report fetch main fn
-        reportFetch = f"""
-            reportFetch(prefix, guid, query){{
-                return new Promise((resolve, reject)=>{{
-                    fetch(`/${{prefix}}/${{guid}}/${{query}}`)
-                    .then(res=>{{
+        reportFetch = """
+            reportFetch(prefix, guid, query){
+                return new Promise((resolve, reject)=>{
+                    fetch(`/${prefix}/${guid}/${query}`)
+                    .then(res=>{
                         // get the html text first
                         return res.text();
-                    }})
-                    .then(report=>{{
+                    })
+                    .then(report=>{
                         // convert the html text to DOM object (for querySelector... later)
                         return new DOMParser().parseFromString(report, 'text/html')
-                    }})
-                    .then(reportHTML=>{{
+                    })
+                    .then(reportHTML=>{
                         // get the <adr-report-root>'s children & back_to_top button
                         // since "return_to_top btn" is not inside <adr-report-root>
                         const reportRoot = reportHTML.querySelector('adr-report-root');
@@ -265,23 +265,23 @@ class Report:
                         // under <head> & <body>, included nested <script> inside <adr-report-root> as a variable
                         // (*Note base/report_item/report_display.js depend on report HTML elements, so need to
                         //  append AFTER report body is mounted)
-                        const asyncScripts = [...reportHTML.querySelectorAll(`head>script[src], body script[src]`)].filter(el=>{{
+                        const asyncScripts = [...reportHTML.querySelectorAll(`head>script[src], body script[src]`)].filter(el=>{
                             return !el.src.endsWith('base.js') &&
                                 !el.src.endsWith('report_item.js') &&
                                 !el.src.endsWith('report_display.js')
-                        }});
+                        });
                         const asyncScriptsInLine = [...reportHTML.querySelectorAll('head>script')].filter(el=>!el.src);
 
                         // defer loaded script (append and load AFTER report body mounted in the DOM)
                         // Store all inline <script> & base/report_item/report_display.js under <body>,
                         // included nested script inside <adr-report-root> as a variable.
                         // (we'll remove these scripts later and then append/load/run all over again
-                        const deferScripts = [...reportHTML.querySelectorAll('body script')].filter(el=>{{
+                        const deferScripts = [...reportHTML.querySelectorAll('body script')].filter(el=>{
                             return !el.src ||
                                 el.src.endsWith('base.js') ||
                                 el.src.endsWith('report_item.js') ||
                                 el.src.endsWith('report_display.js');
-                        }});
+                        });
 
                         // promise chain: ORDER MATTERS!!
                         Promise.all([
@@ -289,90 +289,98 @@ class Report:
                             this.loadDependencies(asyncLinks, 'link', 'head'),
                             this.loadDependencies(asyncStyles, 'style', 'head'),
                             this.loadDependencies(asyncScripts, 'script', 'head')
-                        ]).then(()=>{{
+                        ]).then(()=>{
                             // after resolved, then load async inline script
                             // (*Order matters!! as inline script may depend on the async <script> with src)
                             return this.loadDependencies(asyncScriptsInLine, 'script', 'head')
 
-                        }}).then(()=>{{
+                        }).then(()=>{
                             // Start handling the report contents...
-                            return new Promise((resolve, reject)=>{{
+                            return new Promise((resolve, reject)=>{
                                 // append core report <section>
-                                try{{
+                                try{
                                     // remove all nested <script> first under <adr-report-root> as we'll append all these
                                     // <script> later, load, and run again, thus, need to clean up the duplicated scripts
                                     this.removeScript(reportRoot)
                                         // Once remove the script then append the report body (Now no nested <script>)
                                         .then(()=>this.innerHTML = reportRoot.innerHTML + returnToTop.outerHTML)
-                                        .then(()=>{{
+                                        .then(()=>{
                                             // once report children > 0, namely...done appending then resolve and return
                                             // the scripts stored initially as a variable (deferScripts) for append & load
-                                            if(this.childElementCount > 0){{
+                                            if(this.childElementCount > 0){
                                                 return resolve(deferScripts)
-                                            }}
-                                        }})
-                                }}catch(err){{
+                                            }
+                                        })
+                                }catch(err){
                                     reject(err)
-                                }}
-                            }})
+                                }
+                            })
 
-                        }}).then(deferScripts => {{
+                        }).then(deferScripts => {
                             // append & load all nested <script> inside <adr-report-root>
                             return this.loadDependencies(deferScripts, 'script', 'adr-report')
-                        }})
+                        })
 
-                    }})
-                    .catch(function (err) {{
+                    })
+                    .catch(function (err) {
                         // There was an error
                         console.warn('Something went wrong.', err);
                         reject(err);
-                    }});
-                }})
-            }}
+                    });
+                })
+            }
         """
         # component logic define
-        component_logic = f"""
-            <script>
-                class ReportFetchComponent extends HTMLElement {{
-                    constructor() {{
-                        super();
-                    }}
-                    
-                    {loadScript}
-                    {removeDuplicates}
-                    {reportFetch}
+        component_logic = display(
+            HTML(
+                f"""
+                    <script>
+                        class ReportFetchComponent extends HTMLElement {{
+                            constructor() {{
+                                super();
+                            }}
 
-                    connectedCallback(){{
-                        const prefix = this.getAttribute('prefix') || "";
-                        const guid = this.getAttribute('guid') || "";
-                        const query = this.getAttribute('query') || "";
+                            {loadScript}
+                            {removeDuplicates}
+                            {reportFetch}
 
-                        query.replaceAll("|", "%7C").replaceAll(";", "%3B");
-                        const reportPath = this.getAttribute('reportURL') || "";
+                            connectedCallback(){{
+                                const prefix = this.getAttribute('prefix') || "";
+                                const guid = this.getAttribute('guid') || "";
+                                const query = this.getAttribute('query') || "";
 
-                        if(prefix && guid){{
-                            return this.reportFetch(prefix, guid, query);
+                                query.replaceAll("|", "%7C").replaceAll(";", "%3B");
+                                const reportPath = this.getAttribute('reportURL') || "";
+
+                                if(prefix && guid){{
+                                    return this.reportFetch(prefix, guid, query);
+                                }}
+
+                                if(reportPath){{
+                                    const iframeEle = document.createElement("iframe");
+                                    iframeEle.src = reportPath;
+                                    return this.appendChild(iframeEle);
+                                }}
+                            }}
                         }}
 
-                        if(reportPath){{
-                            const iframeEle = document.createElement('iframe');
-                            iframeEle.src = reportPath;
-                            return this.appendChild(iframeEle);
-                        }}
-                    }}
-                }}
+                        customElements.define("adr-report", ReportFetchComponent);
 
-                customElements.define("adr-report", ReportFetchComponent);
-
-            </script>
-        """
+                    </script>
+                """
+            )
+        )
         return component_logic
-    
+
     def get_report_component(self, prefix) -> str:
         # fetch method using predefined prefix rules in proxy server OR using traditional <iframe>
-        fetchMethod = f'prefix="{prefix}" guid="{self.get_guid()}"' if prefix else f'reportURL="{self.get_url()}"'
+        fetchMethod = (
+            f'prefix="{prefix}" guid="{self.get_guid()}"'
+            if prefix
+            else f'reportURL="{self.get_url()}"'
+        )
         # create the custom web component for report fetching
-        component = f"<adr-report {fetchMethod}></adr-report>"
+        component = display(HTML(f"<adr-report {fetchMethod}></adr-report>"))
         return component
 
     def get_iframe(self, width: int = 1000, height: int = 800):
