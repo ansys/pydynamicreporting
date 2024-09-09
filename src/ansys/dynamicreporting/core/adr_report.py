@@ -172,9 +172,55 @@ class Report:
         return url
 
     def get_guid(self) -> str:
-        return self.report.guid
+        """
+        Get the guid corresponding to the report.
+
+        Returns
+        -------
+        str
+            guid corresponding to the report. If no guid exists, an empty string is returned.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            my_report = adr_service.get_report(report_name = 'Top report')
+            report_url = my_report.get_guid()
+        """
+        guid = ""
+        if self.report:
+            guid = self.report.guid
+        else:  # pragma: no cover
+            success = self.__find_report_obj__()
+            if success:
+                guid = self.report.guid
+            else:
+                self.service.logger.error("Error: can not obtain the report guid")
+
+        return guid
 
     def get_report_define(self) -> str:
+        """
+        A block of JavaScript script to define the web component for report fetching.
+
+        Returns
+        -------
+        str
+            a string of JavaScript code that will get embedded in the HTML page
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            my_report = adr_service.get_report(report_name = 'Top report')
+            report_url = my_report.get_report_define()
+        """
         # helper fn to load <script> <link> & <style> on report fetch
         loadScript = """
             loadDependencies(tgtList, createTgt="", appendTgt = ""){
@@ -384,10 +430,42 @@ class Report:
         )
         return component_logic
 
-    def get_report_component(self, prefix) -> str:
+    def get_report_component(self, prefix: str = "", filter: str = "") -> str:
+        """
+        A HTML code of the web component for report fetching. By default, the web
+        component uses iframe to embed the report. If users have provided additional
+        configuration settings on their application server or on another proxy server,
+        the web component will use fetch API to embed the report directly in the
+        application.
+
+        Parameters
+        ----------
+        prefix : str, optional
+            A user defined key in the server to reroute and fetch the report from ADR server. If not provided,
+            the web component will use the default iframe to embed the report in the application.
+        filter : str, optional
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+
+        Returns
+        -------
+        str
+            The web component HTML code that will get embedded in the HTML page
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            ret = adr_service.connect()
+            my_report = adr_service.get_report(report_name = 'Top report')
+            report_url = my_report.get_report_component()
+        """
         # fetch method using predefined prefix rules in proxy server OR using traditional <iframe>
         fetchMethod = (
-            f'prefix="{prefix}" guid="{self.get_guid()}"'
+            f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}"'
             if prefix
             else f'reportURL="{self.get_url()}"'
         )
