@@ -73,3 +73,58 @@ def get_logger(logfile=None):
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     return logger
+
+
+def check_filter(filter: str = ""):
+    """
+    Verify validity of the query string for filtering.
+
+    Parameters
+    ----------
+    filter : str, optional
+        Query string for filtering. The default is ``""``. The syntax corresponds
+        to the syntax for Ansys Dynamic Reporting. For more information, see
+        _Query Expressions in the documentation for Ansys Dynamic Reporting.
+
+    Returns
+    -------
+    bool
+        ``True`` if the query string is valid, ``False`` otherwise.
+    """
+    for query_stanza in filter.split(";"):
+        if len(query_stanza) > 0:
+            if len(query_stanza.split("|")) != 4:
+                return False
+            if query_stanza.split("|")[0] not in ["A", "O"]:
+                return False
+            if query_stanza.split("|")[1][0:2] not in ["i_", "s_", "d_", "t_"]:
+                return False
+    return True
+
+
+def build_query_url(logger = None, filter: str = "") -> str:
+    """
+    Build the query section of report url.
+
+    Parameters
+    ----------
+    logger: logging.logger
+        The logger object.
+
+    filter : str, optional
+        Query string for filtering. The default is ``""``. The syntax corresponds
+        to the syntax for Ansys Dynamic Reporting. For more information, see
+        _Query Expressions in the documentation for Ansys Dynamic Reporting.
+
+    Returns
+    -------
+    str
+        query section of the report url corresponding to the query string.
+    """
+    valid = check_filter(filter)
+    if valid is False:
+        logger.warning("Warning: filter string is not valid. Will be ignored.")
+        return ""
+    else:
+        query_str = "&query={}".format(filter.replace("|", "%7C").replace(";", "%3B").replace("&", "%2C"))
+        return query_str
