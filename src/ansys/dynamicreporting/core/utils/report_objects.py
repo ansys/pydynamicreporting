@@ -34,7 +34,6 @@ try:
 except ImportError:
     has_numpy = False
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -3605,3 +3604,55 @@ class statisticalREST(GeneratorREST):
             d["stats_params"] = {}
         d["stats_params"]["analysis_parameters"] = json.dumps(value)
         self.params = json.dumps(d)
+
+
+class iteratorGeneratorREST(GeneratorREST):
+    """Representation of Iterator Generator Template."""
+
+    def __init__(self):
+        super().__init__()
+
+    def get_iteration_tags(self):
+        params = json.loads(self.params)
+        return [params.get("tag", ""), params.get("secondary_tag", "")]
+
+    def set_iteration_tags(self, value=None):
+        if value is None:
+            value = ["", ""]
+        if not isinstance(value, list):
+            raise ValueError("Error: input needs to be a list")
+        if len(value) != 2:
+            raise ValueError(
+                "Error: input list needs to contain 2 elements: iteration tag and secondary sorting tag"
+            )
+        for val in value:
+            if not isinstance(val, str):
+                raise ValueError("Error: input tags need to be strings")
+        params = json.loads(self.params)
+        params["tag"] = value[0]
+        params["secondary_tag"] = value[1]
+        self.params = json.dumps(params)
+
+    def get_sort_tag(self):
+        params = json.loads(self.params)
+        return [params.get("sort", True), params.get("reverse_sort", False)]
+
+    def set_sort_tag(self, value=None):
+        if value is None:
+            value = [True, False]
+        if not isinstance(value, list):
+            raise ValueError("Error: input needs to be a list")
+        if len(value) != 2:
+            raise ValueError(
+                "Error: input list needs to contain 2 elements: sort items by tag and reverse the sort"
+            )
+        for val in value:
+            if not isinstance(val, bool):
+                raise ValueError("Error: input tags need to be True/False values")
+        params = json.loads(self.params)
+        params["sort"] = value[0]
+        if value[0] is False:
+            params["reverse_sort"] = False
+        else:
+            params["reverse_sort"] = value[1]
+        self.params = json.dumps(params)

@@ -384,6 +384,27 @@ class DockerLauncher:
         nexus_cmd = self._cei_home + "/bin/nexus_launcher create --db_directory /db_directory/ "
         return self.run_in_container(nexus_cmd)
 
+    def save_config(self) -> str:
+        """
+        Run the ``nexus_launcher save_config ...`` command in the Docker container.
+
+        This command runs on the previously specified database directory.
+
+        Returns
+        -------
+        str
+            Output from the command.
+
+        Raises
+        ------
+        RuntimeError
+        """
+        nexus_cmd = self._cei_home + "/bin/nexus_launcher"
+        nexus_cmd += " --db_directory /db_directory"
+        nexus_cmd += " save_config"
+        ret = self.run_in_container(nexus_cmd)
+        return ret
+
     def launch_nexus_server(
         self,
         username: str,
