@@ -133,7 +133,7 @@ class FileValidator(StringContent):
 
         # check file type
         file_ext = Path(file.name).suffix.lower()
-        if file_ext.replace(".", "") not in self.ALLOWED_EXT:
+        if self.ALLOWED_EXT is not None and file_ext.replace(".", "") not in self.ALLOWED_EXT:
             raise ValueError(f"File type {file_ext} is not supported by {obj.__class__}")
         # check for empty files
         if file.size == 0:
@@ -169,7 +169,7 @@ class SceneContent(FileValidator):
 
 
 class FileContent(FileValidator):
-    ALLOWED_EXT = ("ens", "enc", "evsn")
+    ALLOWED_EXT = None
 
 
 class SimplePayloadMixin:
@@ -205,7 +205,6 @@ class FilePayloadMixin:
         super().save(**kwargs)
 
 
-# todo: prevent instantiation
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
@@ -238,14 +237,26 @@ class Item(BaseModel):
         return super().delete(**kwargs)
 
     @classmethod
+    def get(cls, **kwargs):
+        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
+        return super().get(**new_kwargs)
+
+    @classmethod
     def filter(cls, **kwargs):
         new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
         return super().filter(**new_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().get(**new_kwargs)
+    def find(cls, **kwargs):
+        if cls.type == "none":
+            return super().find(**kwargs)
+        query = kwargs.pop("query", "")
+        if "i_type|cont" in query:
+            raise ADRException(
+                extra_detail="The 'i_type' filter is not required if using a subclass of Item"
+            )
+        new_kwargs = {**kwargs, "query": f"A|i_type|cont|{cls.type};{query}"}
+        return super().find(**new_kwargs)
 
     def render(self, context=None, request=None) -> Optional[str]:
         if context is None:

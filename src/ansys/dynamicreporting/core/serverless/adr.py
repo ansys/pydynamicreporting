@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import platform
 import sys
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, Union
 
 import django
 from django.core import management
@@ -243,11 +243,12 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-    def query(self, query_type: str = Item, filter: Optional[str] = "") -> list:
-        ...
-
-    def create(self, objects: list) -> None:
-        ...
-
-    def delete(self, objects: list) -> None:
-        ...
+    def query(
+        self,
+        query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        filter: Optional[str] = "",
+    ) -> list:
+        if not issubclass(query_type, (Item, Template, Session, Dataset)):
+            self._logger.error(f"{query_type} is not valid")
+            raise TypeError(f"{query_type} is not valid")
+        return query_type.find(query=filter)

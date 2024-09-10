@@ -6,10 +6,10 @@ from typing import Optional
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from ..exceptions import ADRException
 from .base import BaseModel
 
 
-# todo: prevent instantiation
 class Template(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     name: str = field(compare=False, kw_only=True, default="")
@@ -125,6 +125,18 @@ class Template(BaseModel):
     def filter(cls, **kwargs):
         new_kwargs = {"report_type": cls.type, **kwargs} if cls.type else kwargs
         return super().filter(**new_kwargs)
+
+    @classmethod
+    def find(cls, **kwargs):
+        if not cls.type:
+            return super().find(**kwargs)
+        query = kwargs.pop("query", "")
+        if "t_types|cont" in query:
+            raise ADRException(
+                extra_detail="The 't_types' filter is not required if using a subclass of Template"
+            )
+        new_kwargs = {**kwargs, "query": f"A|t_types|cont|{cls.type};{query}"}
+        return super().find(**new_kwargs)
 
     def render(self, context=None, request=None, query=None) -> Optional[str]:
         if context is None:
