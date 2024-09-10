@@ -205,7 +205,11 @@ class BaseModel(metaclass=BaseMeta):
             # don't check for None here, we need everything as-is
             # We must also serialize 'related' fields
             if isinstance(value, Model):
-                type_ = cls_fields[attr]
+                field_type = cls_fields[attr]
+                if isinstance(field_type, str):
+                    type_ = cls._cls_registry[field_type]
+                else:
+                    type_ = field_type
                 value = type_.serialize_from_orm(value)
             setattr(obj, attr, value)
 
