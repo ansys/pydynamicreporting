@@ -1,11 +1,12 @@
 from abc import ABC, ABCMeta, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
 import importlib
 import inspect
 from itertools import chain
 import shlex
-from typing import Any
+from typing import Any, get_args, get_origin
 import uuid
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from django.core.exceptions import (
 from django.db import DatabaseError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
+from django.db.models.manager import Manager
 
 from ..exceptions import (
     ADRException,
@@ -142,11 +144,33 @@ class BaseModel(metaclass=BaseMeta):
                 type_ = self.__class__._cls_registry[field_type]
             else:
                 type_ = field_type
+            # Validators will validate by themselves, so this can be ignored.
             if issubclass(type_, Validator):
                 continue
             value = getattr(self, field_name, None)
-            if value is not None and not isinstance(value, type_):
-                raise TypeError(f"Expected {field_name} to be of type {type_}.")
+            if value is None:
+                return
+            # 'Generic' class types
+            if get_origin(type_) is not None:
+                # get any args
+                args = get_args(type_)
+                # update with the origin type
+                type_ = get_origin(type_)
+                # validate with the 'arg' type:
+                # eg: 'Template' in list['Template']
+                if args:
+                    content_type = args[0]
+                    if isinstance(content_type, str):
+                        content_type = self.__class__._cls_registry[content_type]
+                    if isinstance(value, Iterable):
+                        for elem in value:
+                            if not isinstance(elem, content_type):
+                                raise TypeError(
+                                    f"Expected {field_name} to contain items of type '{content_type}'."
+                                )
+
+            if not isinstance(value, type_):
+                raise TypeError(f"Expected {field_name} to be of type '{type_}'.")
 
     @staticmethod
     def _add_quotes(input_str):
@@ -201,16 +225,38 @@ class BaseModel(metaclass=BaseMeta):
                 attr = f"_{field_}"
             else:
                 continue
-            value = getattr(orm_instance, field_, None)
             # don't check for None here, we need everything as-is
+            value = getattr(orm_instance, field_, None)
             # We must also serialize 'related' fields
+            field_type = cls_fields[attr]
             if isinstance(value, Model):
-                field_type = cls_fields[attr]
+                # convert the value to a type supported by the proxy
+                # for string definitions of the dataclass type, example - parent: 'Template'
                 if isinstance(field_type, str):
                     type_ = cls._cls_registry[field_type]
                 else:
                     type_ = field_type
                 value = type_.serialize_from_orm(value)
+            elif isinstance(value, Manager):
+                # todo: test both list and list['Template']
+                type_ = get_origin(field_type)
+                args = get_args(field_type)
+                if type_ is None or not args:
+                    raise TypeError(
+                        f"The type of {attr} in the dataclass must be declared as a generic with the type"
+                        f" of the content. Eg: list['Template']"
+                    )
+                if not issubclass(type_, Iterable):
+                    raise TypeError(
+                        f"'{attr}' is an Iterable but the type declaration is {field_type}"
+                    )
+                content_type = args[0]
+                if isinstance(content_type, str):
+                    content_type = cls._cls_registry[content_type]
+                qs = value.all()
+                # todo content_type must match orm model class
+                value = type_(ObjectSet(_model=content_type, _orm_model=qs.model, _orm_queryset=qs))
+            # set the orm value on the proxy object
             setattr(obj, attr, value)
 
         obj._orm_instance = orm_instance

@@ -16,7 +16,7 @@ class Template(BaseModel):
     params: str = field(compare=False, kw_only=True, default="")
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
-    children: list = field(compare=False, kw_only=True, default_factory=list)
+    children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
     _children_order: str = field(
         compare=False, init=False, default=None
     )  # computed from self.children
