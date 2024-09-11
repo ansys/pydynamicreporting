@@ -32,6 +32,7 @@ class ADR:
         opts: dict = None,
         request: HttpRequest = None,
         logfile: str = None,
+        debug: bool = None,
     ) -> None:
         self._db_directory = None
         self._media_directory = None
@@ -67,6 +68,13 @@ class ADR:
         else:
             if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+        if debug is not None:
+            self._debug = debug
+            os.environ["CEI_NEXUS_DEBUG"] = str(int(debug))
+        else:
+            if "CEI_NEXUS_DEBUG" in os.environ:
+                self._debug = bool(int(os.environ["CEI_NEXUS_DEBUG"]))
 
         self._request = request  # passed when used in the context of a webserver.
         self._session = None
