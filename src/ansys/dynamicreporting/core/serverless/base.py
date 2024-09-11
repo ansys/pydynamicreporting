@@ -241,21 +241,20 @@ class BaseModel(metaclass=BaseMeta):
                 # todo: test both list and list['Template']
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
-                if type_ is None or not args:
+                if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
                     raise TypeError(
-                        f"The type of {attr} in the dataclass must be declared as a generic with the type"
-                        f" of the content. Eg: list['Template']"
-                    )
-                if not issubclass(type_, Iterable):
-                    raise TypeError(
-                        f"'{attr}' is an Iterable but the type declaration is {field_type}"
+                        f"The type of '{attr}' in the dataclass must be a generic iterable class "
+                        f"including a single type of the content. Eg: list['Template']"
                     )
                 content_type = args[0]
                 if isinstance(content_type, str):
                     content_type = cls._cls_registry[content_type]
                 qs = value.all()
-                # todo content_type must match orm model class
-                value = type_(ObjectSet(_model=content_type, _orm_model=qs.model, _orm_queryset=qs))
+                # content_type must match orm model class
+                if content_type._orm_model_cls != qs.model:
+                    raise TypeError(f"The declared type of '{attr}' is '{field_type}' but the "
+                                    f"actual content is of type '{qs.model}'")
+                value = type_(ObjectSet(_model=content_type, _orm_model=qs.model, _orm_queryset=qs)) if qs else type_()
             # set the orm value on the proxy object
             setattr(obj, attr, value)
 
@@ -361,11 +360,12 @@ class ObjectSet:
     _orm_queryset: QuerySet = field(compare=False, default=None)
 
     def __post_init__(self):
-        if self._orm_queryset is not None:
-            self._saved = True
-            self._obj_set = [
-                self._model.serialize_from_orm(instance) for instance in self._orm_queryset
-            ]
+        if self._orm_queryset is None:
+            return
+        self._saved = True
+        self._obj_set = [
+            self._model.serialize_from_orm(instance) for instance in self._orm_queryset
+        ]
 
     def __repr__(self):
         return f"<{self.__class__.__name__}  {self._obj_set}>"
