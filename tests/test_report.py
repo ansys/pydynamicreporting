@@ -234,7 +234,7 @@ def test_get_report(adr_service_query) -> bool:
                     node_process.wait()
                     # once the server is successfully launch, flip the success flag
                     success = True
-                # if users type "Ctrl + C" or the ADR service stopped, then terminate the node.js server
+                # if users type "Ctrl + C" or success = True, then terminate the node.js server
                 except KeyboardInterrupt or success:
                     node_process.terminate()
                     print("Node.js server stopped.")

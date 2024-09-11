@@ -191,6 +191,15 @@ class Report:
             report_url = my_report.get_guid()
         """
         guid = ""
+        if self.service is None:  # pragma: no cover
+            self.service.logger.error("No connection to any report")
+            return guid
+        if self.service.serverobj is None:  # pragma: no cover
+            self.service.logger.error("No connection to any server")
+            return guid
+        if self.service.url is None:
+            self.service.logger.error("No connection to any server")
+            return guid
         if self.report:
             guid = self.report.guid
         else:  # pragma: no cover
