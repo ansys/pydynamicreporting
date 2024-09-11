@@ -133,3 +133,182 @@ def test_save_as_html(adr_service_query) -> bool:
         success = False
     adr_service_query.stop()
     assert success is True
+
+def test_get_guid(adr_service_query) -> bool:
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+    guid = my_report.get_guid()
+    adr_service_query.stop()
+    assert len(guid) > 0
+
+def test_get_report(adr_service_query) -> bool:
+    success = False
+    # main fn to run node.js server using python
+    def launch_proxy_server(adr_report):
+        # Run a node.js proxy server using python subprocess module
+        import subprocess
+
+        # Find and specify the full path to npm executable
+        def find_npm_path():
+            """Find the path to the npm executable."""
+            try:
+                # Run the 'where npm' command to find Node.js path
+                result = subprocess.run(['where', 'npm'], capture_output=True, text=True, check=True)
+                
+                # Get the path from the command output
+                npm_path = result.stdout.strip()
+                
+                if npm_path:
+                    print(f"npm executable found at: {npm_path}")
+                    return npm_path
+                else:
+                    print("npm executable not found in PATH.")
+            
+            except subprocess.CalledProcessError as e:
+                print(f"Error finding Node.js path: {e}")
+                print("npm may not be installed or not in PATH.")
+
+        # the string returned will have 2 duplicates, clean up the path so it returns only one path
+        npm_path = find_npm_path().split('\n')[1]
+
+        # Using py to run "npm init"
+        def npm_init(server_directory):
+            """Run npm init in the specified directory."""
+            original_directory = os.getcwd()  # Save the original working directory
+            try:
+                # Change to the directory where server.js is located
+                os.chdir(server_directory)
+                
+                print(f"Running 'npm init' in {server_directory}...")
+                # Run npm init with the -y flag to automatically accept defaults
+                subprocess.run([npm_path, 'init', '-y'], check=True)
+                print("'npm init' completed successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error running 'npm init': {e}")
+            finally:
+                # Change back to the original directory
+                os.chdir(original_directory)
+        
+        # Using py to install essential dependencies (= run "npm install request path express" in the terminal)
+        def install_npm_packages(server_directory):
+            """Install the required npm packages in the correct directory."""
+            # List of packages to install
+            packages = ['express', 'request', 'path']
+            
+            # Change to the directory where server.js is located
+            original_directory = os.getcwd()
+            os.chdir(server_directory)
+            
+            # Install each package using npm
+            for package in packages:
+                try:
+                    print(f"Installing {package} in {server_directory}...")
+                    subprocess.run([npm_path, 'install', package], check=True)
+                    print(f"{package} installed successfully.")
+                except subprocess.CalledProcessError as e:
+                    print(f"Error installing {package}: {e}")
+                    # Return to the original directory
+                    os.chdir(original_directory)
+                    return False
+
+            # Return to the original directory after installation
+            os.chdir(original_directory)
+            return True
+
+        # Run node.js server
+        def run_node_server(server_directory):
+            """Run the Node.js server located in a different directory."""
+            try:
+                # Use the full path to server.js
+                server_js_path = os.path.join(server_directory, "index.js")
+                print(f"Starting the Node.js server from {server_js_path}...")
+
+                # Run the Node.js server using subprocess
+                node_process = subprocess.Popen(["node", server_js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                # Print the Node.js server output
+                for line in node_process.stdout:
+                    print(line.decode("utf-8").strip())
+
+                # Handle server shutdown (if needed)
+                try:
+                    node_process.wait()
+                    # once the server is successfully launch, flip the success flag
+                    success = True
+                # if users type "Ctrl + C" or the ADR service stopped, then terminate the node.js server
+                except KeyboardInterrupt or success:
+                    node_process.terminate()
+                    print("Node.js server stopped.")
+            except Exception as e:
+                print(f"Error starting Node.js server: {e}")
+
+        # create index.html file (if not exist) and add <adr-report> component script & tag to fetch the ADR report
+        # (assuming running at docker default port 8000)
+        def create_or_modify_index_html(directory, html_content):
+            """Create an index.html file or insert content if it exists."""
+            file_path = os.path.join(directory, 'index.html')
+            
+            # Check if the index.html file already exists
+            if os.path.exists(file_path):
+                print(f"'index.html' already exists in {directory}. Modifying it.")
+            else:
+                print(f"Creating a new 'index.html' in {directory}.")
+            
+            # Open the file in 'w' mode to clear its content before write in, or create file if it doesn't exist
+            with open(file_path, 'w') as file:
+                file.write(html_content)
+                print(f"Inserted the following HTML content:\n{html_content}")
+
+        # Define the path to the directory containing index.js
+        server_directory = os.getcwd() + '\\tests\\test_data\\simple_proxy_server_test'
+
+        # HTML content to insert into the index.html file
+        html_tag = f'''
+            <!DOCTYPE html>
+                <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Report fetch test</title>
+                    </head>
+                    <body>
+                        <style>
+                            iframe{{
+                                width: 100vw;
+                                height: 50vh;
+                            }}
+                            main{{
+                                width: 95vw;
+                                height: auto;
+                                margin: 0 auto;
+                            }}
+                        </style>
+                        <h1>Report fetch test</h1>
+                        <main>
+                            {adr_report.get_report_component("report")}
+                        </main>
+                        {adr_report.get_report_script()}
+                    </body>
+                </html>
+        '''
+
+        # Create or modify the index.html file
+        create_or_modify_index_html(server_directory, html_tag)
+
+        # Step 1: Initialize npm project in the server directory
+        npm_init(server_directory)
+
+        # Step 2: Install npm packages in the server directory
+        if install_npm_packages(server_directory):
+            # Step 3: Run the Node.js server from the correct directory
+            run_node_server(server_directory)
+    
+    try:
+        my_report = adr_service_query.get_report(report_name="My Top Report")
+        launch_proxy_server(my_report)
+        # if the node.js server launch successfully, success var = True, then stop adr server
+        if success:
+            adr_service_query.stop()
+    except SyntaxError:
+        success = False
+
+    assert success
