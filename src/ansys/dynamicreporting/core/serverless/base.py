@@ -48,6 +48,10 @@ def handle_field_errors(func):
     return wrapper
 
 
+def is_generic_class(cls):
+    return not isinstance(cls, type) or get_origin(cls) is not None
+
+
 class BaseMeta(ABCMeta):
     _cls_registry: dict[str, type["BaseModel"]] = {}
     _model_cls_registry: dict[str, type[Model]] = {}
@@ -151,7 +155,7 @@ class BaseModel(metaclass=BaseMeta):
                 type_cls = field_type
             # Validators will validate by themselves, so this can be ignored.
             # Will only work when the type is a proper class
-            if isinstance(type_cls, type) and issubclass(type_cls, Validator):
+            if not is_generic_class(type_cls) and issubclass(type_cls, Validator):
                 continue
             # 'Generic' class types
             if get_origin(type_cls) is not None:
@@ -169,7 +173,7 @@ class BaseModel(metaclass=BaseMeta):
                         for elem in value:
                             if not isinstance(elem, content_type):
                                 raise TypeError(
-                                    f"Expected {field_name} to contain items of type '{content_type}'."
+                                    f"Expected '{field_name}' to contain items of type '{content_type}'."
                                 )
             if not isinstance(value, type_cls):
                 raise TypeError(f"Expected '{field_name}' to be of type '{type_cls}'.")
@@ -249,7 +253,7 @@ class BaseModel(metaclass=BaseMeta):
                 if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
                     raise TypeError(
                         f"The field '{attr}' in the dataclass must be a generic iterable"
-                        f" containing exactly one type argument. For example: "
+                        f" class containing exactly one type argument. For example: "
                         f"list['Template'] or tuple['Template']."
                     )
                 content_type = args[0]
