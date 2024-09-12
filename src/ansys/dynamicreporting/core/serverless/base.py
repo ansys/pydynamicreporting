@@ -140,22 +140,25 @@ class BaseModel(metaclass=BaseMeta):
 
     def _validate_field_types(self):
         for field_name, field_type in self._get_field_names(with_types=True):
-            if isinstance(field_type, str):
-                type_ = self.__class__._cls_registry[field_type]
-            else:
-                type_ = field_type
-            # Validators will validate by themselves, so this can be ignored.
-            if issubclass(type_, Validator):
-                continue
             value = getattr(self, field_name, None)
             if value is None:
-                return
+                continue
+            # Type inference
+            # convert strings to classes
+            if isinstance(field_type, str):
+                type_cls = self.__class__._cls_registry[field_type]
+            else:
+                type_cls = field_type
+            # Validators will validate by themselves, so this can be ignored.
+            # Will only work when the type is a proper class
+            if isinstance(type_cls, type) and issubclass(type_cls, Validator):
+                continue
             # 'Generic' class types
-            if get_origin(type_) is not None:
+            if get_origin(type_cls) is not None:
                 # get any args
-                args = get_args(type_)
+                args = get_args(type_cls)
                 # update with the origin type
-                type_ = get_origin(type_)
+                type_cls = get_origin(type_cls)
                 # validate with the 'arg' type:
                 # eg: 'Template' in list['Template']
                 if args:
@@ -168,9 +171,8 @@ class BaseModel(metaclass=BaseMeta):
                                 raise TypeError(
                                     f"Expected {field_name} to contain items of type '{content_type}'."
                                 )
-
-            if not isinstance(value, type_):
-                raise TypeError(f"Expected {field_name} to be of type '{type_}'.")
+            if not isinstance(value, type_cls):
+                raise TypeError(f"Expected '{field_name}' to be of type '{type_cls}'.")
 
     @staticmethod
     def _add_quotes(input_str):
@@ -213,7 +215,7 @@ class BaseModel(metaclass=BaseMeta):
         return tuple(property_fields) + cls._get_field_names()
 
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
+    def from_db(cls, orm_instance, parent=None):
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(orm_instance)
         obj = cls()
@@ -227,8 +229,9 @@ class BaseModel(metaclass=BaseMeta):
                 continue
             # don't check for None here, we need everything as-is
             value = getattr(orm_instance, field_, None)
-            # We must also serialize 'related' fields
             field_type = cls_fields[attr]
+
+            # We must also serialize 'related' fields
             if isinstance(value, Model):
                 # convert the value to a type supported by the proxy
                 # for string definitions of the dataclass type, example - parent: 'Template'
@@ -236,15 +239,18 @@ class BaseModel(metaclass=BaseMeta):
                     type_ = cls._cls_registry[field_type]
                 else:
                     type_ = field_type
-                value = type_.serialize_from_orm(value)
+                if issubclass(type_, cls):
+                    value = parent
+                else:
+                    value = type_.from_db(value)
             elif isinstance(value, Manager):
-                # todo: test both list and list['Template']
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
                 if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
                     raise TypeError(
-                        f"The type of '{attr}' in the dataclass must be a generic iterable class "
-                        f"including a single type of the content. Eg: list['Template']"
+                        f"The field '{attr}' in the dataclass must be a generic iterable"
+                        f" containing exactly one type argument. For example: "
+                        f"list['Template'] or tuple['Template']."
                     )
                 content_type = args[0]
                 if isinstance(content_type, str):
@@ -252,9 +258,18 @@ class BaseModel(metaclass=BaseMeta):
                 qs = value.all()
                 # content_type must match orm model class
                 if content_type._orm_model_cls != qs.model:
-                    raise TypeError(f"The declared type of '{attr}' is '{field_type}' but the "
-                                    f"actual content is of type '{qs.model}'")
-                value = type_(ObjectSet(_model=content_type, _orm_model=qs.model, _orm_queryset=qs)) if qs else type_()
+                    raise TypeError(
+                        f"The field '{attr}' is of '{field_type}' but the "
+                        f"actual content is of type '{qs.model}'"
+                    )
+                if qs:
+                    obj_set = ObjectSet(
+                        _model=content_type, _orm_model=qs.model, _orm_queryset=qs, _parent=obj
+                    )
+                    value = type_(obj_set)
+                else:
+                    value = type_()
+
             # set the orm value on the proxy object
             setattr(obj, attr, value)
 
@@ -311,7 +326,7 @@ class BaseModel(metaclass=BaseMeta):
         except MultipleObjectsReturned:
             raise cls.MultipleObjectsReturned
 
-        return cls.serialize_from_orm(orm_instance)
+        return cls.from_db(orm_instance)
 
     @classmethod
     @handle_field_errors
@@ -358,13 +373,14 @@ class ObjectSet:
     _saved: bool = field(init=False, compare=False, default=False)
     _orm_model: type[Model] = field(compare=False, default=None)
     _orm_queryset: QuerySet = field(compare=False, default=None)
+    _parent: BaseModel = field(compare=False, default=None)
 
     def __post_init__(self):
         if self._orm_queryset is None:
             return
         self._saved = True
         self._obj_set = [
-            self._model.serialize_from_orm(instance) for instance in self._orm_queryset
+            self._model.from_db(instance, parent=self._parent) for instance in self._orm_queryset
         ]
 
     def __repr__(self):

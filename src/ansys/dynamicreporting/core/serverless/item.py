@@ -174,10 +174,10 @@ class FileContent(FileValidator):
 
 class SimplePayloadMixin:
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
+    def from_db(cls, orm_instance, **kwargs):
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().serialize_from_orm(orm_instance)
+        obj = super().from_db(orm_instance)
         obj.content = safe_unpickle(obj._orm_instance.payloaddata)
         return obj
 
@@ -190,8 +190,8 @@ class FilePayloadMixin:
     _file: DjangoFile = field(init=False, compare=False, default=None)
 
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
-        obj = super().serialize_from_orm(orm_instance)
+    def from_db(cls, orm_instance, **kwargs):
+        obj = super().from_db(orm_instance)
         obj.content = obj._orm_instance.payloadfile.path
         return obj
 
@@ -292,10 +292,10 @@ class Table(Item):
     _properties: tuple = table_attr
 
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
+    def from_db(cls, orm_instance, **kwargs):
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().serialize_from_orm(orm_instance)
+        obj = super().from_db(orm_instance)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
