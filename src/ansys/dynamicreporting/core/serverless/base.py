@@ -234,7 +234,6 @@ class BaseModel(metaclass=BaseMeta):
             # don't check for None here, we need everything as-is
             value = getattr(orm_instance, field_, None)
             field_type = cls_fields[attr]
-
             # We must also serialize 'related' fields
             if isinstance(value, Model):
                 # convert the value to a type supported by the proxy
