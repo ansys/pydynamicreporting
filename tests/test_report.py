@@ -14,6 +14,14 @@ def test_geturl_report(adr_service_query) -> bool:
     assert "http:" in url
 
 
+@pytest.mark.ado_test
+def test_geturl_report_with_filter(adr_service_query) -> bool:
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+    url = my_report.get_url(filter='"A|b_type|cont|image;"')
+    adr_service_query.stop()
+    assert "http:" in url
+
+
 def test_visualize_report(adr_service_query) -> bool:
     success = False
     try:

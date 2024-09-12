@@ -100,20 +100,6 @@ def test_unit_query() -> bool:
 
 
 @pytest.mark.ado_test
-def test_unit_invalidqueryone() -> bool:
-    a = Service()
-    valid = a.__check_filter__("F|i_type|cont|html;")
-    assert valid is False
-
-
-@pytest.mark.ado_test
-def test_unit_invalidquerytwo() -> bool:
-    a = Service()
-    valid = a.__check_filter__("A|b_type|cont|html;")
-    assert valid is False
-
-
-@pytest.mark.ado_test
 def test_unit_delete_invalid(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_4.txt")
     a = Service(logfile=logfile)
