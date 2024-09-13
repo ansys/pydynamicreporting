@@ -213,7 +213,9 @@ class Report:
 
     def get_report_script(self) -> str:
         """
-        A block of JavaScript script to define the web component for report fetching.
+        A block of JavaScript script to define the web component for report fetching. Note that
+        the function return a block of string that stands for JavaScript codes and need to be
+        wrapped in a <script>...</script> HTML tag.
 
         Returns
         -------
@@ -400,46 +402,44 @@ class Report:
         """
         # component logic define
         component_logic = f"""
-            <script>
-                class ReportFetchComponent extends HTMLElement {{
-                    constructor() {{
-                        super();
-                    }}
-
-                    {loadScript}
-                    {removeDuplicates}
-                    {reportFetch}
-
-                    connectedCallback(){{
-                        const prefix = this.getAttribute('prefix') || "";
-                        const guid = this.getAttribute('guid') || "";
-                        const query = this.getAttribute('query').replaceAll("|", "%7C").replaceAll(";", "%3B") || "";
-                        const reportPath = this.getAttribute('reportURL') || "";
-                        const width = this.getAttribute('width') || "";
-                        const height = this.getAttribute('height') || "";
-
-                        if(prefix && guid){{
-                            // fetch report
-                            return this.reportFetch(prefix, guid, query);
-                        }}
-                        
-                        if(reportPath){{
-                            // use <iframe> instead
-                            const iframeEle = document.createElement('iframe');
-                            iframeEle.src = reportPath;
-                            iframeEle.width = width;
-                            iframeEle.height = height;
-                            return this.appendChild(iframeEle);
-                        }}
-                    }}
+            class ReportFetchComponent extends HTMLElement {{
+                constructor() {{
+                    super();
                 }}
 
-                customElements.define("adr-report", ReportFetchComponent);
-            </script>
+                {loadScript}
+                {removeDuplicates}
+                {reportFetch}
+
+                connectedCallback(){{
+                    const prefix = this.getAttribute('prefix') || "";
+                    const guid = this.getAttribute('guid') || "";
+                    const query = this.getAttribute('query').replaceAll("|", "%7C").replaceAll(";", "%3B") || "";
+                    const reportPath = this.getAttribute('reportURL') || "";
+                    const width = this.getAttribute('width') || "";
+                    const height = this.getAttribute('height') || "";
+
+                    if(prefix && guid){{
+                        // fetch report
+                        return this.reportFetch(prefix, guid, query);
+                    }}
+                    
+                    if(reportPath){{
+                        // use <iframe> instead
+                        const iframeEle = document.createElement('iframe');
+                        iframeEle.src = reportPath;
+                        iframeEle.width = width;
+                        iframeEle.height = height;
+                        return this.appendChild(iframeEle);
+                    }}
+                }}
+            }}
+
+            customElements.define("adr-report", ReportFetchComponent);
         """
         return component_logic
 
-    def get_report_component(self, prefix: str = "", filter: str = "", width: int = 1000, height: int = 800) -> str:
+    def get_report_component(self, prefix: str = "", filter: str = "", style_path: str = "", width: int = 1000, height: int = 800) -> str:
         """
         A HTML code of the web component for report fetching. By default, the web
         component uses iframe to embed the report. If users have provided additional
@@ -456,6 +456,9 @@ class Report:
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        style_path: str, optional
+            The hosting app's stylesheet path. The default is ``""``. The syntax is used to overwrite report
+            styling using an external CSS file.
         width : int, optional
             Width of the iframe if the web component uses <iframe> to embed report. The default is ``1000``.
         height : int, optional
@@ -482,7 +485,9 @@ class Report:
             if prefix else 
             f'reportURL="{self.get_url()}" width="{width}" height="{height}"'
         )
-        component = f"<adr-report {fetchMethod}></adr-report>"
+        # add host-style-path attribute if specified
+        host_style_path = 'host-style-path="{style_path}"' if style_path else ''
+        component = f'<adr-report {fetchMethod} {host_style_path}></adr-report>'
         return component
 
     def get_iframe(self, width: int = 1000, height: int = 800, filter: str = ""):
