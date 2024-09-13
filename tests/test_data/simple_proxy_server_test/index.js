@@ -28,7 +28,7 @@ app.get('/report/:guid/:query?', (req, res) => {
 // get static directory assets
 app.get('/static*', (req, res) => {
   request(
-    { 
+    {
       url: `${API_URL}${req.originalUrl}`,
       encoding: null
      },
@@ -37,7 +37,7 @@ app.get('/static*', (req, res) => {
       if (error || response.statusCode !== 200) {
         return res.status(500).json({ type: 'error', message: error });
       }
-      
+
       if(req.originalUrl.match('.css$')){
         res.set('Content-Type', 'text/css');
         res.send(Buffer.from(body));
@@ -45,19 +45,19 @@ app.get('/static*', (req, res) => {
       }else if(req.originalUrl.match('.js$')){
         res.set('Content-Type', 'text/js');
         res.send(Buffer.from(body));
-        
+
       }else if(req.originalUrl.match('.woff$')){
         res.set('Content-Type', 'font/woff');
         res.send(Buffer.from(response.body));
-        
+
       }else if(req.originalUrl.match('.woff2$')){
         res.set('Content-Type', 'font/woff2');
         res.send(Buffer.from(response.body));
-        
+
       }else if(req.originalUrl.match('.tff$')){
         res.set('Content-Type', 'font/ttf');
         res.send(Buffer.from(response.body));
-        
+
       }else if(req.originalUrl.match('.png$')){
         // res.redirect(`${API_URL}${req.originalUrl}`);
         res.set('Content-Type', 'image/jpeg');
@@ -74,9 +74,9 @@ app.get('/static*', (req, res) => {
 // get media directory assets
 app.get('/media*', (req, res) => {
   request(
-    { 
+    {
       url: `${API_URL}${req.originalUrl}`,
-      encoding: null 
+      encoding: null
     },
     (error, response, body) => {
       if (error || response.statusCode !== 200) {
@@ -90,7 +90,7 @@ app.get('/media*', (req, res) => {
       }else if(req.originalUrl.match('.js$')){
         res.set('Content-Type', 'text/js');
         res.send(Buffer.from(body));
-        
+
       }else{
         res.send(Buffer.from(body));
       }

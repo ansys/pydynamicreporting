@@ -213,14 +213,14 @@ class Report:
 
     def get_report_script(self) -> str:
         """
-        A block of JavaScript script to define the web component for report fetching. Note that
-        the function return a block of string that stands for JavaScript codes and need to be
-        wrapped in a <script>...</script> HTML tag.
+        A block of JavaScript script to define the web component for report fetching.
+        Note that the function return a block of string that stands for JavaScript codes
+        and need to be wrapped in a <script>...</script> HTML tag.
 
         Returns
         -------
         str
-            JavaScript code to define the report fetching web component (as a block of string) 
+            JavaScript code to define the report fetching web component (as a block of string)
             that will get embedded in the HTML page
 
         Examples
@@ -423,7 +423,7 @@ class Report:
                         // fetch report
                         return this.reportFetch(prefix, guid, query);
                     }}
-                    
+
                     if(reportPath){{
                         // use <iframe> instead
                         const iframeEle = document.createElement('iframe');
@@ -439,7 +439,14 @@ class Report:
         """
         return component_logic
 
-    def get_report_component(self, prefix: str = "", filter: str = "", style_path: str = "", width: int = 1000, height: int = 800) -> str:
+    def get_report_component(
+        self,
+        prefix: str = "",
+        filter: str = "",
+        style_path: str = "",
+        width: int = 1000,
+        height: int = 800,
+    ) -> str:
         """
         A HTML code of the web component for report fetching. By default, the web
         component uses iframe to embed the report. If users have provided additional
@@ -482,12 +489,12 @@ class Report:
         # fetch method using predefined prefix rules in the proxy server OR using traditional <iframe>
         fetchMethod = (
             f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}"'
-            if prefix else 
-            f'reportURL="{self.get_url()}" width="{width}" height="{height}"'
+            if prefix
+            else f'reportURL="{self.get_url()}" width="{width}" height="{height}"'
         )
         # add host-style-path attribute if specified
-        host_style_path = 'host-style-path="{style_path}"' if style_path else ''
-        component = f'<adr-report {fetchMethod} {host_style_path}></adr-report>'
+        host_style_path = 'host-style-path="{style_path}"' if style_path else ""
+        component = f"<adr-report {fetchMethod} {host_style_path}></adr-report>"
         return component
 
     def get_iframe(self, width: int = 1000, height: int = 800, filter: str = ""):
