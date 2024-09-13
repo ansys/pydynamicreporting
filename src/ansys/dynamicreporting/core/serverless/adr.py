@@ -29,14 +29,15 @@ class ADR:
         db_directory: str = None,
         media_directory: str = None,
         static_directory: str = None,
+        debug: bool = None,
         opts: dict = None,
         request: HttpRequest = None,
         logfile: str = None,
-        debug: bool = None,
     ) -> None:
         self._db_directory = None
         self._media_directory = None
         self._static_directory = None
+        self._debug = None
 
         self._ansys_version = DEFAULT_ANSYS_VERSION
         os.environ["CEI_APEX_SUFFIX"] = self._ansys_version
