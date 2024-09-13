@@ -293,7 +293,9 @@ def test_get_report(adr_service_query) -> bool:
                         <main>
                             {adr_report.get_report_component("report")}
                         </main>
-                        {adr_report.get_report_script()}
+                        <script>
+                            {adr_report.get_report_script()}
+                        </script>
                     </body>
                 </html>
         """
