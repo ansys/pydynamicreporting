@@ -27,6 +27,7 @@ class ADR:
         ansys_installation: str,
         *,
         db_directory: str = None,
+        databases: dict = None,
         media_directory: str = None,
         static_directory: str = None,
         debug: bool = None,
@@ -35,6 +36,7 @@ class ADR:
         logfile: str = None,
     ) -> None:
         self._db_directory = None
+        self._databases = databases or {}
         self._media_directory = None
         self._static_directory = None
         self._debug = None
@@ -49,12 +51,16 @@ class ADR:
             opts = {}
         os.environ.update(opts)
 
-        if db_directory is not None:
-            self._db_directory = self._check_dir(db_directory)
-            os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
-        else:
-            if "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
-                self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
+        if not self._databases:
+            if db_directory is not None:
+                self._db_directory = self._check_dir(db_directory)
+                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+            else:
+                if "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
+                    self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
+            if not self._db_directory:
+                raise ImproperlyConfiguredError("A database must be specified using either the 'db_directory'"
+                                                " or the 'databases' keyword argument.")
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
@@ -124,22 +130,54 @@ class ADR:
         from django.conf import settings
 
         if settings.configured:
-            return
+            raise RuntimeError("ADR has already been configured. setup() can be called only once.")
 
         try:
             # import hack
             sys.path.append(
                 str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
             )
+            from ceireports import settings_serverless
         except ImportError as e:
             raise ImportError(f"Failed to import from the Ansys installation: {e}")
 
-        os.environ.setdefault(
-            "DJANGO_SETTINGS_MODULE",
-            "ceireports.settings_serverless",
-        )
-        # django.setup() may only be called once.
+        overrides = {}
+        for setting in dir(settings_serverless):
+            if setting.isupper():
+                overrides[setting] = getattr(settings_serverless, setting)
+
+        if self._databases:
+            if "default" not in self._databases:
+                raise ImproperlyConfiguredError(
+                    f""" The database configuration must be a dict of the following format with
+                    a "default" database specified.
+                {
+                    "default": {
+                    "ENGINE": "sqlite3",
+                        "NAME": os.path.join(local_db_dir, "db.sqlite3"),
+                        "USER": "user",
+                        "PASSWORD": "adr",
+                        "HOST": "",
+                        "PORT": "",
+                    }
+                    "remote": {
+                    "ENGINE": "postgresql",
+                        "NAME": "my_database",
+                        "USER": "user",
+                        "PASSWORD": "adr",
+                        "HOST": "127.0.0.1",
+                        "PORT": "5432",
+                    }
+                }
+            """)
+            for db in self._databases:
+                engine = self._databases[db]["ENGINE"]
+                self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"
+            # replace the database config
+            overrides["DATABASES"] = self._databases
+
         try:
+            settings.configure(**overrides)
             django.setup()
         except Exception as e:
             self._logger.error(f"{e}")
@@ -154,7 +192,7 @@ class ADR:
 
         # migrations
         if self._db_directory is not None:
-            try:
+            try:  # upgrades all databases
                 management.call_command("migrate", "--no-input", verbosity=0)
             except Exception as e:
                 self._logger.error(f"{e}")
