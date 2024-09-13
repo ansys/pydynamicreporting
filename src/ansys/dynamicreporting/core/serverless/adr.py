@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import platform
 import sys
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, Union
 
 import django
 from django.core import management
@@ -32,6 +32,7 @@ class ADR:
         opts: dict = None,
         request: HttpRequest = None,
         logfile: str = None,
+        debug: bool = None,
     ) -> None:
         self._db_directory = None
         self._media_directory = None
@@ -67,6 +68,13 @@ class ADR:
         else:
             if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+        if debug is not None:
+            self._debug = debug
+            os.environ["CEI_NEXUS_DEBUG"] = str(int(debug))
+        else:
+            if "CEI_NEXUS_DEBUG" in os.environ:
+                self._debug = bool(int(os.environ["CEI_NEXUS_DEBUG"]))
 
         self._request = request  # passed when used in the context of a webserver.
         self._session = None
@@ -243,11 +251,12 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-    def query(self, query_type: str = Item, filter: Optional[str] = "") -> list:
-        ...
-
-    def create(self, objects: list) -> None:
-        ...
-
-    def delete(self, objects: list) -> None:
-        ...
+    def query(
+        self,
+        query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        filter: Optional[str] = "",
+    ) -> list:
+        if not issubclass(query_type, (Item, Template, Session, Dataset)):
+            self._logger.error(f"{query_type} is not valid")
+            raise TypeError(f"{query_type} is not valid")
+        return list(query_type.find(query=filter))
