@@ -121,6 +121,11 @@ class ADR:
         return dir_path
 
     def setup(self, collect_static=False) -> None:
+        from django.conf import settings
+
+        if settings.configured:
+            return
+
         try:
             # import hack
             sys.path.append(
