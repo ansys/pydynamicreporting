@@ -53,26 +53,30 @@ class ADR:
             if db_directory is not None:
                 self._db_directory = self._check_dir(db_directory)
                 os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+            elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
+                self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
             else:
-                if "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
-                    self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
-            if not self._db_directory:
-                raise ImproperlyConfiguredError("A database must be specified using either the 'db_directory'"
-                                                " or the 'databases' keyword argument.")
+                raise ImproperlyConfiguredError(
+                    "A database must be specified using either the 'db_directory'"
+                    " or the 'databases' keyword argument."
+                )
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
             os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+        elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
+            self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
         else:
-            if "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
-                self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
+            raise ImproperlyConfiguredError(
+                "A media directory must be specified using either the 'db_directory'"
+                " or the 'media_directory' keyword argument."
+            )
 
         if static_directory is not None:
             self._static_directory = self._check_dir(static_directory)
             os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
-        else:
-            if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
-                self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+        elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
+            self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
         self._debug = debug
         self._request = request  # passed when used in the context of a webserver.
@@ -164,7 +168,8 @@ class ADR:
                         "PORT": "5432",
                     }
                 }
-            """)
+            """
+                )
             for db in self._databases:
                 engine = self._databases[db]["ENGINE"]
                 self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"

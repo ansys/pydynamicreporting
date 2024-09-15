@@ -127,7 +127,10 @@ class FileValidator(StringContent):
         file_str = super().process(value, obj)
         file_path = Path(file_str)
         if not file_path.is_file():
-            raise ValueError("Expected content to be a file path")
+            raise ValueError(
+                f"Expected content to be a file path. "
+                f"'{file_path.name}' does not exist or is not a file."
+            )
 
         file = DjangoFile(file_path.open(mode="rb"))
 
