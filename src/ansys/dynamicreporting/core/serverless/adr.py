@@ -42,10 +42,8 @@ class ADR:
         self._debug = None
 
         self._ansys_version = DEFAULT_ANSYS_VERSION
-        os.environ["CEI_APEX_SUFFIX"] = self._ansys_version
 
         self._ansys_installation = self._get_install_directory(ansys_installation)
-        os.environ["CEI_NEXUS_INSTALLATION_DIR"] = str(self._ansys_installation)
 
         if opts is None:
             opts = {}
@@ -76,13 +74,7 @@ class ADR:
             if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
-        if debug is not None:
-            self._debug = debug
-            os.environ["CEI_NEXUS_DEBUG"] = str(int(debug))
-        else:
-            if "CEI_NEXUS_DEBUG" in os.environ:
-                self._debug = bool(int(os.environ["CEI_NEXUS_DEBUG"]))
-
+        self._debug = debug
         self._request = request  # passed when used in the context of a webserver.
         self._session = None
         self._dataset = None
@@ -145,6 +137,9 @@ class ADR:
         for setting in dir(settings_serverless):
             if setting.isupper():
                 overrides[setting] = getattr(settings_serverless, setting)
+
+        if self._debug is not None:
+            overrides["DEBUG"] = self._debug
 
         if self._databases:
             if "default" not in self._databases:
