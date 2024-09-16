@@ -99,7 +99,7 @@ jobs:
 
       - name: Install npm dependencies
         working-directory: ./tests/test_data/simple_proxy_server_test
-        run: npm install express request path    
+        run: npm install express request path
 
       - name: Run pytest
         uses: ansys/actions/tests-pytest@v4
