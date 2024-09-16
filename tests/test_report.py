@@ -183,6 +183,7 @@ def test_get_report(adr_service_query) -> bool:
         def create_or_modify_index_html(directory, html_content):
             """Create an index.html file or insert content if it exists."""
             file_path = os.path.join(directory, "index.html")
+            print(f"adding html content at file path: {file_path}")
 
             # Check if the index.html file already exists
             if os.path.exists(file_path):
@@ -195,8 +196,7 @@ def test_get_report(adr_service_query) -> bool:
                 with open(file_path, "w") as file:
                     print(f"Opening '{file_path}' for writing.")
                     file.write(html_content)
-                    print(f"Inserted the following HTML content:\n{html_content}")
-                    print(f"Inserted the following HTML content.")
+                    print("Inserted the following HTML content.")
                 print("file done writing")
             except Exception as e:
                 print(f"Error occurred: {e}")
