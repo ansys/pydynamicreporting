@@ -88,6 +88,16 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install testing dependencies
+        working-directory: ./tests/test_data/simple_proxy_server_test
+        run: npm init -y
+             npm install express request path
+
       - name: Run pytest
         uses: ansys/actions/tests-pytest@v4
         env:
