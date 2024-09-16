@@ -155,11 +155,9 @@ def test_get_report(adr_service_query) -> bool:
             """Find the path to the npm executable."""
             try:
                 # Use 'where' on Windows, 'which' on other platforms
-                syntax = 'where' if os.name == 'nt' else 'which'
+                syntax = "where" if os.name == "nt" else "which"
                 # Run the 'where npm' command to find Node.js path
-                result = subprocess.run(
-                    [syntax, "npm"], capture_output=True, text=True, check=True
-                )
+                result = subprocess.run([syntax, "npm"], capture_output=True, text=True, check=True)
 
                 # Get the path from the command output
                 npm_path = result.stdout.strip()
