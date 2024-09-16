@@ -154,9 +154,11 @@ def test_get_report(adr_service_query) -> bool:
         def find_npm_path():
             """Find the path to the npm executable."""
             try:
+                # Use 'where' on Windows, 'which' on other platforms
+                syntax = 'where' if os.name == 'nt' else 'which'
                 # Run the 'where npm' command to find Node.js path
                 result = subprocess.run(
-                    ["where", "npm"], capture_output=True, text=True, check=True
+                    [syntax, "npm"], capture_output=True, text=True, check=True
                 )
 
                 # Get the path from the command output
@@ -169,7 +171,7 @@ def test_get_report(adr_service_query) -> bool:
                     print("npm executable not found in PATH.")
 
             except subprocess.CalledProcessError as e:
-                print(f"Error finding Node.js path: {e}")
+                print(f"Cannot find Node.js path: {e}")
                 print("npm may not be installed or not in PATH.")
 
         # the string returned will have 2 duplicates, clean up the path so it returns only one path
