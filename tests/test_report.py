@@ -234,13 +234,8 @@ def test_get_report(adr_service_query) -> bool:
         # Create or modify the index.html file
         create_or_modify_index_html(server_directory, html_tag)
 
-        # Step 1: Initialize npm project in the server directory
-        npm_init(server_directory)
-
-        # Step 2: Install npm packages in the server directory
-        if install_npm_packages(server_directory):
-            # Step 3: Run the Node.js server from the correct directory
-            run_node_server(server_directory)
+        # Run the Node.js server from the correct directory
+        run_node_server(server_directory)
 
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
