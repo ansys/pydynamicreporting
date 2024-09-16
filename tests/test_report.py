@@ -197,7 +197,7 @@ def test_get_report(adr_service_query) -> bool:
                 print(f"Inserted the following HTML content:\n{html_content}")
 
         # Define the path to the directory containing index.js
-        server_directory = os.getcwd() + "\\tests\\test_data\\simple_proxy_server_test"
+        server_directory = os.getcwd() + "/tests/test_data/simple_proxy_server_test"
 
         # HTML content to insert into the index.html file
         html_tag = f"""
