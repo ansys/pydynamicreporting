@@ -153,7 +153,6 @@ def test_get_report(adr_service_query) -> bool:
         # Run node.js server
         def run_node_server(server_directory):
             """Run the Node.js server located in a different directory."""
-            print("run node server start...")
             try:
                 # access success var
                 global success
@@ -192,11 +191,16 @@ def test_get_report(adr_service_query) -> bool:
                 print(f"Creating a new 'index.html' in {directory}.")
 
             # Open the file in 'w' mode to clear its content before write in, or create file if it doesn't exist
-            with open(file_path, "w") as file:
-                file.write(html_content)
+            try:
+                with open(file_path, "w") as file:
+                    print(f"Opening '{file_path}' for writing.")
+                    file.write(html_content)
+                    print(f"Inserted the following HTML content:\n{html_content}")
+            except Exception as e:
+                print(f"Error occurred: {e}")
 
         # Define the path to the directory containing index.js
-        server_directory = os.getcwd() + "/tests/test_data/simple_proxy_server_test"
+        server_directory = os.getcwd() + "//tests//test_data//simple_proxy_server_test"
 
         # HTML content to insert into the index.html file
         html_tag = f"""
@@ -239,11 +243,7 @@ def test_get_report(adr_service_query) -> bool:
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
         launch_proxy_server(my_report)
-        # if the node.js server launch successfully, success var = True, then stop adr server
-        print("test running")
-        if success:
-            print("test finish")
-            adr_service_query.stop()
+        adr_service_query.stop()
     except SyntaxError:
         success = False
         print(f"Launching proxy server unsuccessful: {SyntaxError}")
