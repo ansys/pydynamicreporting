@@ -94,7 +94,7 @@ jobs:
           node-version: 20
 
       - name: Install testing dependencies
-        working-directory: ./tests/test_data/simple_proxy_server_test
+        working-directory: /tests/test_data/simple_proxy_server_test
         run: npm init -y
              npm install express request path
 
