@@ -196,6 +196,8 @@ def test_get_report(adr_service_query) -> bool:
                     print(f"Opening '{file_path}' for writing.")
                     file.write(html_content)
                     print(f"Inserted the following HTML content:\n{html_content}")
+                    print(f"Inserted the following HTML content.")
+                print("file done writing")
             except Exception as e:
                 print(f"Error occurred: {e}")
 
