@@ -154,6 +154,8 @@ def test_get_report(adr_service_query) -> bool:
         def run_node_server(server_directory):
             """Run the Node.js server located in a different directory."""
             try:
+                # access success var
+                global success
                 # Use the full path to server.js
                 server_js_path = os.path.join(server_directory, "index.js")
                 print(f"Starting the Node.js server from {server_js_path}...")
@@ -167,15 +169,12 @@ def test_get_report(adr_service_query) -> bool:
                 for line in node_process.stdout:
                     print(line.decode("utf-8").strip())
 
-                # Handle server shutdown (if needed)
-                try:
-                    node_process.wait()
-                    # once the server is successfully launch, flip the success flag
-                    success = True
-                # if users type "Ctrl + C" or success = True, then terminate the node.js server
-                except KeyboardInterrupt or success:
-                    node_process.terminate()
-                    print("Node.js server stopped.")
+                # Handle server shutdown
+                node_process.wait()
+                # once the server is successfully launch, flip the success flag
+                success = True
+                node_process.terminate()
+                print("Node.js server stopped.")
             except Exception as e:
                 print(f"Error starting Node.js server: {e}")
 
@@ -192,9 +191,13 @@ def test_get_report(adr_service_query) -> bool:
                 print(f"Creating a new 'index.html' in {directory}.")
 
             # Open the file in 'w' mode to clear its content before write in, or create file if it doesn't exist
-            with open(file_path, "w") as file:
-                file.write(html_content)
-                print(f"Inserted the following HTML content:\n{html_content}")
+            try:
+                with open(file_path, "w") as file:
+                    print(f"Opening '{file_path}' for writing.")
+                    file.write(html_content)
+                    print(f"Inserted the following HTML content:\n{html_content}")
+            except Exception as e:
+                print(f"Error occurred: {e}")
 
         # Define the path to the directory containing index.js
         server_directory = os.getcwd() + "/tests/test_data/simple_proxy_server_test"
@@ -241,9 +244,12 @@ def test_get_report(adr_service_query) -> bool:
         my_report = adr_service_query.get_report(report_name="My Top Report")
         launch_proxy_server(my_report)
         # if the node.js server launch successfully, success var = True, then stop adr server
+        print("test running")
         if success:
+            print("test finish")
             adr_service_query.stop()
     except SyntaxError:
         success = False
+        print(f"Launching proxy server unsuccessful: {SyntaxError}")
 
-    assert success
+    assert success is True
