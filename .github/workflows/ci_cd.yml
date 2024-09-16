@@ -93,10 +93,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install testing dependencies
-        working-directory: /tests/test_data/simple_proxy_server_test
+      - name: Npm init
+        working-directory: ./tests/test_data/simple_proxy_server_test
         run: npm init -y
-             npm install express request path
+
+      - name: Install npm dependencies
+        working-directory: ./tests/test_data/simple_proxy_server_test
+        run: npm install express request path    
 
       - name: Run pytest
         uses: ansys/actions/tests-pytest@v4
