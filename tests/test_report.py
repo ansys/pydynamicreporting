@@ -208,7 +208,6 @@ def test_get_report(adr_service_query) -> bool:
                 with open(file_path, "w") as file:
                     print(f"Opening '{file_path}' for writing.")
                     file.write(html_content)
-                    print(f"Inserted the following HTML content:\n{html_content}")
                     file.flush()
                 print("file done writing")
             except Exception as e:
@@ -255,12 +254,8 @@ def test_get_report(adr_service_query) -> bool:
         # Run the Node.js server from the correct directory
         run_node_server(server_directory)
 
-    try:
-        my_report = adr_service_query.get_report(report_name="My Top Report")
-        launch_proxy_server(my_report)
-        adr_service_query.stop()
-    except SyntaxError:
-        success = False
-        print(f"Launching proxy server unsuccessful: {SyntaxError}")
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+    launch_proxy_server(my_report)
+    adr_service_query.stop()
 
     assert success is True
