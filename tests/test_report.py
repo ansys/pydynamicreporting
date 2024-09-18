@@ -143,111 +143,106 @@ def test_get_guid(adr_service_query) -> bool:
 
 
 def test_get_report(adr_service_query) -> bool:
-    success = False
-
-    # main fn to run node.js server using python
-    def launch_proxy_server(adr_report):
+    # Run node.js server
+    def run_node_server(server_directory):
+        """Run the Node.js server located in a different directory."""
         # Run a node.js proxy server using python subprocess module
         import subprocess
 
-        # Run node.js server
-        def run_node_server(server_directory):
-            """Run the Node.js server located in a different directory."""
-            try:
-                # access success var
-                global success
-                # Use the full path to server.js
-                server_js_path = os.path.join(server_directory, "index.js")
-                print(f"Starting the Node.js server from {server_js_path}...")
+        try:
+            # access success var
+            global success
+            # Use the full path to server.js
+            server_js_path = os.path.join(server_directory, "index.js")
+            print(f"Starting the Node.js server from {server_js_path}...")
 
-                # Run the Node.js server using subprocess
-                node_process = subprocess.Popen(
-                    ["node", server_js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
+            # Run the Node.js server using subprocess
+            node_process = subprocess.Popen(
+                ["node", server_js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
 
-                # Check for exit code
-                if node_process.returncode == 0:
-                    print("Pytest finished successfully")
-                else:
-                    print(f"Pytest failed with exit code {node_process.returncode}")
-
-                # Print the Node.js server output
-                for line in node_process.stdout:
-                    print(line.decode("utf-8").strip())
-
-                # once the server is successfully launch, flip the success flag
-                success = True
-                node_process.kill()
-                print("Node.js server stopped.")
-            except Exception as e:
-                print(f"Error starting Node.js server: {e}")
-
-        # create index.html file (if not exist) and add <adr-report> component script & tag to fetch the ADR report
-        # (assuming running at docker default port 8000)
-        def create_or_modify_index_html(directory, html_content):
-            """Create an index.html file or insert content if it exists."""
-            file_path = os.path.join(directory, "index.html")
-
-            # Check if the index.html file already exists
-            if os.path.exists(file_path):
-                print(f"'index.html' already exists in {directory}. Modifying it.")
+            # Check for exit code
+            if node_process.returncode == 0:
+                print("Pytest finished successfully")
             else:
-                print(f"Creating a new 'index.html' in {directory}.")
+                print(f"Pytest failed with exit code {node_process.returncode}")
 
-            # Open the file in 'w' mode to clear its content before write in, or create file if it doesn't exist
-            try:
-                with open(file_path, "w") as file:
-                    print(f"Opening '{file_path}' for writing.")
-                    file.write(html_content)
-                    print(f"Inserted the following HTML content:\n{html_content}")
-                    file.flush()
-                print("file done writing")
-            except Exception as e:
-                print(f"Error occurred: {e}")
+            # Print the Node.js server output
+            for line in node_process.stdout:
+                print(line.decode("utf-8").strip())
 
-        # Define the path to the directory containing index.js
-        server_directory = os.getcwd() + "//tests//test_data//simple_proxy_server_test"
+            # once the server is successfully launch, flip the success flag
+            node_process.wait()
+            success = True
+            node_process.kill()
+            print("Node.js server stopped.")
+        except Exception as e:
+            print(f"Error starting Node.js server: {e}")
 
-        # HTML content to insert into the index.html file
-        html_tag = f"""
-            <!DOCTYPE html>
-                <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>Report fetch test</title>
-                    </head>
-                    <body>
-                        <style>
-                            iframe{{
-                                width: 100vw;
-                                height: 50vh;
-                            }}
-                            main{{
-                                width: 95vw;
-                                height: auto;
-                                margin: 0 auto;
-                            }}
-                        </style>
-                        <h1>Report fetch test</h1>
-                        <main>
-                            {adr_report.get_report_component("report")}
-                        </main>
-                        <script>
-                            {adr_report.get_report_script()}
-                        </script>
-                    </body>
-                </html>
-        """
+    # create index.html file (if not exist) and add <adr-report> component script & tag to fetch the ADR report
+    # (assuming running at docker default port 8000)
+    def create_or_modify_index_html(directory, html_content):
+        """Create an index.html file or insert content if it exists."""
+        file_path = os.path.join(directory, "index.html")
 
-        # Create or modify the index.html file
-        create_or_modify_index_html(server_directory, html_tag)
+        # Check if the index.html file already exists
+        if os.path.exists(file_path):
+            print(f"'index.html' already exists in {directory}. Modifying it.")
+        else:
+            print(f"Creating a new 'index.html' in {directory}.")
 
-        # Run the Node.js server from the correct directory
-        run_node_server(server_directory)
+        # Open the file in 'w' mode to clear its content before write in, or create file if it doesn't exist
+        try:
+            with open(file_path, "w") as file:
+                print(f"Opening '{file_path}' for writing.")
+                file.write(html_content)
+                print(f"Inserted the following HTML content:\n{html_content}")
+            print("file done writing")
+        except Exception as e:
+            print(f"Error occurred: {e}")
+
+    success = False
 
     my_report = adr_service_query.get_report(report_name="My Top Report")
-    launch_proxy_server(my_report)
+
+    # Define the path to the directory containing index.js
+    server_directory = os.path.join(os.getcwd(), "tests", "test_data", "simple_proxy_server_test")
+    # HTML content to insert into the index.html file
+    html_tag = f"""
+        <!DOCTYPE html>
+            <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Report fetch test</title>
+                </head>
+                <body>
+                    <style>
+                        iframe{{
+                            width: 100vw;
+                            height: 50vh;
+                        }}
+                        main{{
+                            width: 95vw;
+                            height: auto;
+                            margin: 0 auto;
+                        }}
+                    </style>
+                    <h1>Report fetch test</h1>
+                    <main>
+                        {my_report.get_report_component("report")}
+                    </main>
+                    <script>
+                        {my_report.get_report_script()}
+                    </script>
+                </body>
+            </html>
+    """
+    # Create or modify the index.html file
+    create_or_modify_index_html(server_directory, html_tag)
+    # Run the Node.js server from the correct directory
+    run_node_server(server_directory)
+
     adr_service_query.stop()
 
     assert success is True
