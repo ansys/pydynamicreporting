@@ -487,14 +487,14 @@ class Report:
             my_report.get_report_component()
         """
         # fetch method using predefined prefix rules in the proxy server OR using traditional <iframe>
+        # add host-style-path attribute if specified (can only work when prefix is provided)
+        host_style_path = 'host-style-path="{style_path}"' if style_path else ""
         fetchMethod = (
-            f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}"'
+            f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}" {host_style_path}'
             if prefix
             else f'reportURL="{self.get_url()}" width="{width}" height="{height}"'
         )
-        # add host-style-path attribute if specified
-        host_style_path = 'host-style-path="{style_path}"' if style_path else ""
-        component = f"<adr-report {fetchMethod} {host_style_path}></adr-report>"
+        component = f"<adr-report {fetchMethod}></adr-report>"
         return component
 
     def get_iframe(self, width: int = 1000, height: int = 800, filter: str = ""):

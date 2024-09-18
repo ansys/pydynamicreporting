@@ -142,108 +142,217 @@ def test_get_guid(adr_service_query) -> bool:
     assert len(guid) > 0
 
 
-def test_get_report(adr_service_query) -> bool:
-    # Run node.js server
-    def run_node_server(server_directory):
-        """Run the Node.js server located in a different directory."""
-        # Run a node.js proxy server using python subprocess module
-        import subprocess
-
-        try:
-            # access success var
-            global success
-            # Use the full path to server.js
-            server_js_path = os.path.join(server_directory, "index.js")
-            print(f"Starting the Node.js server from {server_js_path}...")
-
-            # Run the Node.js server using subprocess
-            node_process = subprocess.Popen(
-                ["node", server_js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-
-            # Check for exit code
-            if node_process.returncode == 0:
-                print("Pytest finished successfully")
-            else:
-                print(f"Pytest failed with exit code {node_process.returncode}")
-
-            # Print the Node.js server output
-            for line in node_process.stdout:
-                print(line.decode("utf-8").strip())
-
-            # once the server is successfully launch, flip the success flag
-            node_process.wait()
-            success = True
-            node_process.kill()
-            print("Node.js server stopped.")
-        except Exception as e:
-            print(f"Error starting Node.js server: {e}")
-
-    # create index.html file (if not exist) and add <adr-report> component script & tag to fetch the ADR report
-    # (assuming running at docker default port 8000)
-    def create_or_modify_index_html(directory, html_content):
-        """Create an index.html file or insert content if it exists."""
-        file_path = os.path.join(directory, "index.html")
-
-        # Check if the index.html file already exists
-        if os.path.exists(file_path):
-            print(f"'index.html' already exists in {directory}. Modifying it.")
-        else:
-            print(f"Creating a new 'index.html' in {directory}.")
-
-        # Open the file in 'w' mode to clear its content before write in, or create file if it doesn't exist
-        try:
-            file = open(file_path, "w")
-            print(f"Opening '{file_path}' for writing.")
-            file.write(html_content)
-            print(f"Inserted the following HTML content:\n{html_content}")
-            file.close()
-            print("file done writing")
-        except Exception as e:
-            print(f"Error occurred: {e}")
-
-    success = False
-
+def test_get_report_script(adr_service_query) -> bool:
     my_report = adr_service_query.get_report(report_name="My Top Report")
 
-    # Define the path to the directory containing index.js
-    server_directory = os.path.join(os.getcwd(), "tests", "test_data", "simple_proxy_server_test")
-    # HTML content to insert into the index.html file
-    html_tag = f"""
-        <!DOCTYPE html>
-            <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Report fetch test</title>
-                </head>
-                <body>
-                    <style>
-                        iframe{{
-                            width: 100vw;
-                            height: 50vh;
-                        }}
-                        main{{
-                            width: 95vw;
-                            height: auto;
-                            margin: 0 auto;
-                        }}
-                    </style>
-                    <h1>Report fetch test</h1>
-                    <main>
-                        {my_report.get_report_component("report")}
-                    </main>
-                    <script>
-                        {my_report.get_report_script()}
-                    </script>
-                </body>
-            </html>
+    # call web component <script> & defined expected output
+    expected_script = """
+        class ReportFetchComponent extends HTMLElement {
+            constructor() {
+                super();
+            }
+
+            loadDependencies(tgtList, createTgt="", appendTgt = ""){
+                const promiseQueue = [];
+                for(let tgt of tgtList){
+                    promiseQueue.push(
+                        (function(){
+                            return new Promise((resolve, reject)=>{
+                                let ele = document.createElement(createTgt);
+                                ele.addEventListener("load", () => {
+                                    return resolve(true)
+                                }, {once:true});
+                                if(ele.tagName === "SCRIPT"){
+                                    tgt.src ?
+                                        ele.setAttribute("src", `${tgt.getAttribute("src")}`)
+                                        :
+                                        ele.innerHTML = tgt.innerHTML;
+                                    ele.type = "text/javascript";
+                                    ele.async = false;
+                                }else if(ele.tagName === "LINK"){
+                                    ele.type = "text/css";
+                                    ele.rel = tgt.rel;
+                                    ele.setAttribute("href", `${tgt.getAttribute("href")}`);
+                                }else{
+                                    ele.innerHTML = tgt.innerHTML;
+                                }
+                                if(appendTgt){
+                                    document.querySelector(appendTgt).appendChild(ele);
+                                }
+                                if(tgt.tagName === "STYLE" || !tgt.src){
+                                    resolve(true)
+                                }
+                                ele.addEventListener("error", () => {
+                                    return reject(new Error(`${this} failed to load.`))
+                                }, {once:true})
+                            })
+                        })()
+                    )
+                }
+                return Promise.all(promiseQueue)
+            }
+
+
+            removeScript(root){
+                return new Promise((resolve, reject)=>{
+                    try{
+                        const scriptList = root.querySelectorAll(" script")
+                        for(let i = 0; i < scriptList.length; i++){
+                            // loop thru the script list and remove <script> one by one
+                            scriptList[i].remove()
+                            if(i === scriptList.length-1){
+                                // once reach and remove the final <script>, then resolve
+                                resolve(true)
+                            }
+                        }
+                    }catch(err){
+                        reject(err)
+                    }
+                })
+            }
+
+
+            reportFetch(prefix, guid, query){
+                return new Promise((resolve, reject)=>{
+                    fetch(`/${prefix}/${guid}/${query}`)
+                    .then(res=>{
+                        // get the html text first
+                        return res.text();
+                    })
+                    .then(report=>{
+                        // convert the html text to DOM object (for querySelector... later)
+                        return new DOMParser().parseFromString(report, 'text/html')
+                    })
+                    .then(reportHTML=>{
+                        // get the <adr-report-root>'s children & back_to_top button
+                        // since "return_to_top btn" is not inside <adr-report-root>
+                        const reportRoot = reportHTML.querySelector('adr-report-root');
+                        const returnToTop = reportHTML.querySelector('a#return_to_top');
+                        // async loaded script/link/style (append and load BEFORE report body mounted in the DOM)
+                        const asyncLinks = reportHTML.querySelectorAll('head>link');
+                        const asyncStyles = reportHTML.querySelectorAll('head>style, body>style');
+                        // :not(...) in querySelector is not support in Chrome v87 (Qt Web Engine)
+                        // thus, use .filter() for backward compatibility
+                        // Store all <script> with src path that are not base/report_item/report_display.js
+                        // under <head> & <body>, included nested <script> inside <adr-report-root> as a variable
+                        // (*Note base/report_item/report_display.js depend on report HTML elements, so need to
+                        //  append AFTER report body is mounted)
+                        const asyncScripts = [...reportHTML.querySelectorAll(`head>script[src], body script[src]`)].filter(el=>{
+                            return !el.src.endsWith('base.js') &&
+                                !el.src.endsWith('report_item.js') &&
+                                !el.src.endsWith('report_display.js')
+                        });
+                        const asyncScriptsInLine = [...reportHTML.querySelectorAll('head>script')].filter(el=>!el.src);
+                        // defer loaded script (append and load AFTER report body mounted in the DOM)
+                        // Store all inline <script> & base/report_item/report_display.js under <body>,
+                        // included nested script inside <adr-report-root> as a variable.
+                        // (we'll remove these scripts later and then append/load/run all over again
+                        const deferScripts = [...reportHTML.querySelectorAll('body script')].filter(el=>{
+                            return !el.src ||
+                                el.src.endsWith('base.js') ||
+                                el.src.endsWith('report_item.js') ||
+                                el.src.endsWith('report_display.js');
+                        });
+                        // promise chain: ORDER MATTERS!!
+                        Promise.all([
+                            // load async dependencies first
+                            this.loadDependencies(asyncLinks, 'link', 'head'),
+                            this.loadDependencies(asyncStyles, 'style', 'head'),
+                            this.loadDependencies(asyncScripts, 'script', 'head')
+                        ]).then(()=>{
+                            // after resolved, then load async inline script
+                            // (*Order matters!! as inline script may depend on the async <script> with src)
+                            return this.loadDependencies(asyncScriptsInLine, 'script', 'head')
+                        }).then(()=>{
+                            // Start handling the report contents...
+                            return new Promise((resolve, reject)=>{
+                                // append core report <section>
+                                try{
+                                    // remove all nested <script> first under <adr-report-root> as we'll append all these
+                                    // <script> later, load, and run again, thus, need to clean up the duplicated scripts
+                                    this.removeScript(reportRoot)
+                                        // Once remove the script then append the report body (Now no nested <script>)
+                                        .then(()=>this.innerHTML = reportRoot.innerHTML + returnToTop.outerHTML)
+                                        .then(()=>{
+                                            // once report children > 0, namely...done appending then resolve and return
+                                            // the scripts stored initially as a variable (deferScripts) for append & load
+                                            if(this.childElementCount > 0){
+                                                return resolve(deferScripts)
+                                            }
+                                        })
+                                }catch(err){
+                                    reject(err)
+                                }
+                            })
+                        }).then(deferScripts => {
+                            // append & load all nested <script> inside <adr-report-root>
+                            return this.loadDependencies(deferScripts, 'script', 'adr-report')
+                        })
+                    })
+                    .catch(function (err) {
+                        // There was an error
+                        console.warn('Something went wrong.', err);
+                        reject(err);
+                    });
+                })
+            }
+
+            connectedCallback(){
+                const prefix = this.getAttribute('prefix') || "";
+                const guid = this.getAttribute('guid') || "";
+                const query = this.getAttribute('query').replaceAll("|", "%7C").replaceAll(";", "%3B") || "";
+                const reportPath = this.getAttribute('reportURL') || "";
+                const width = this.getAttribute('width') || "";
+                const height = this.getAttribute('height') || "";
+                if(prefix && guid){
+                    // fetch report
+                    return this.reportFetch(prefix, guid, query);
+                }
+                if(reportPath){
+                    // use <iframe> instead
+                    const iframeEle = document.createElement('iframe');
+                    iframeEle.src = reportPath;
+                    iframeEle.width = width;
+                    iframeEle.height = height;
+                    return this.appendChild(iframeEle);
+                }
+            }
+        }
+        customElements.define("adr-report", ReportFetchComponent);
+
     """
-    # Create or modify the index.html file
-    create_or_modify_index_html(server_directory, html_tag)
-    # Run the Node.js server from the correct directory
-    run_node_server(server_directory)
+    clean_script = " ".join(my_report.get_report_script().split())
+    clean_expected_script = " ".join(expected_script.split())
+    # check script content
+    script_check = clean_script == clean_expected_script
 
     adr_service_query.stop()
+    assert script_check
 
-    assert success is True
+
+def test_get_report_component(adr_service_query) -> bool:
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+
+    # call web component <adr-report> & define expected output
+    # check 1: with prefix & host-style-path
+    clean_web_component_prefix = " ".join(
+        my_report.get_report_component("report", "", "style.css").split()
+    )
+    expected_prefix_attr = (
+        f'prefix="report" guid="{my_report.get_guid()}" query="" host-style-path="style.css"'
+    )
+    clean_expected_web_component_prefix = " ".join(
+        f"<adr-report {expected_prefix_attr}></adr-report>"
+    )
+    web_component_prefix_check = clean_web_component_prefix == clean_expected_web_component_prefix
+
+    # check 2: NO prefix & host-style-path
+    clean_web_component_iframe = " ".join(my_report.get_report_component().split())
+    expected_iframe_attr = f'reportURL="{my_report.get_url()}" width="1000" height="800"'
+    clean_expected_web_component_iframe = " ".join(
+        f"<adr-report {expected_iframe_attr}></adr-report>"
+    )
+    web_component_iframe_check = clean_web_component_iframe == clean_expected_web_component_iframe
+
+    adr_service_query.stop()
+    assert web_component_prefix_check and web_component_iframe_check
