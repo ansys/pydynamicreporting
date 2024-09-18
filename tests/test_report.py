@@ -342,7 +342,7 @@ def test_get_report_component(adr_service_query) -> bool:
         f'prefix="report" guid="{my_report.get_guid()}" query="" host-style-path="style.css"'
     )
     clean_expected_web_component_prefix = " ".join(
-        f"<adr-report {expected_prefix_attr}></adr-report>"
+        f"<adr-report {expected_prefix_attr}></adr-report>".split()
     )
     web_component_prefix_check = clean_web_component_prefix == clean_expected_web_component_prefix
 
@@ -350,7 +350,7 @@ def test_get_report_component(adr_service_query) -> bool:
     clean_web_component_iframe = " ".join(my_report.get_report_component().split())
     expected_iframe_attr = f'reportURL="{my_report.get_url()}" width="1000" height="800"'
     clean_expected_web_component_iframe = " ".join(
-        f"<adr-report {expected_iframe_attr}></adr-report>"
+        f"<adr-report {expected_iframe_attr}></adr-report>".split()
     )
     web_component_iframe_check = clean_web_component_iframe == clean_expected_web_component_iframe
 

@@ -488,7 +488,7 @@ class Report:
         """
         # fetch method using predefined prefix rules in the proxy server OR using traditional <iframe>
         # add host-style-path attribute if specified (can only work when prefix is provided)
-        host_style_path = 'host-style-path="{style_path}"' if style_path else ""
+        host_style_path = f'host-style-path="{style_path}"' if style_path else ""
         fetchMethod = (
             f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}" {host_style_path}'
             if prefix
