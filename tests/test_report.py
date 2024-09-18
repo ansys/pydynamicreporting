@@ -165,13 +165,6 @@ def test_get_report(adr_service_query) -> bool:
                     ["node", server_js_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
 
-                # Use communicate to handle stdout and stderr
-                stdout, stderr = node_process.communicate()
-
-                # Print the output
-                print("stdout:", stdout)
-                print("stderr:", stderr)
-
                 # Check for exit code
                 if node_process.returncode == 0:
                     print("Pytest finished successfully")
@@ -182,11 +175,9 @@ def test_get_report(adr_service_query) -> bool:
                 for line in node_process.stdout:
                     print(line.decode("utf-8").strip())
 
-                # Handle server shutdown
-                node_process.wait()
                 # once the server is successfully launch, flip the success flag
                 success = True
-                node_process.terminate()
+                node_process.kill()
                 print("Node.js server stopped.")
             except Exception as e:
                 print(f"Error starting Node.js server: {e}")
@@ -208,6 +199,7 @@ def test_get_report(adr_service_query) -> bool:
                 with open(file_path, "w") as file:
                     print(f"Opening '{file_path}' for writing.")
                     file.write(html_content)
+                    print(f"Inserted the following HTML content:\n{html_content}")
                     file.flush()
                 print("file done writing")
             except Exception as e:
