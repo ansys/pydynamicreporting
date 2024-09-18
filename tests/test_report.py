@@ -143,13 +143,12 @@ def test_get_guid(adr_service_query) -> bool:
 
 
 def test_get_report(adr_service_query) -> bool:
-
     # Run node.js server
     def run_node_server(server_directory):
         """Run the Node.js server located in a different directory."""
         # Run a node.js proxy server using python subprocess module
         import subprocess
-        
+
         try:
             # access success var
             global success
@@ -179,6 +178,7 @@ def test_get_report(adr_service_query) -> bool:
             print("Node.js server stopped.")
         except Exception as e:
             print(f"Error starting Node.js server: {e}")
+
     # create index.html file (if not exist) and add <adr-report> component script & tag to fetch the ADR report
     # (assuming running at docker default port 8000)
     def create_or_modify_index_html(directory, html_content):
