@@ -6,28 +6,34 @@ from typing import Optional
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from ..exceptions import ADRException
 from .base import BaseModel
 
 
-# todo: prevent instantiation
 class Template(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     name: str = field(compare=False, kw_only=True, default="")
     params: str = field(compare=False, kw_only=True, default="")
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
-    children: list = field(compare=False, kw_only=True, default_factory=list)
+    children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
     _children_order: str = field(
         compare=False, init=False, default=None
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=None)  # computed from self.parent
-    type: str = ""
+    report_type: str = ""
     _properties: tuple = tuple()
     _orm_model: str = "reports.models.Template"
 
     @property
-    def report_type(self):
-        return self.type
+    def type(self):
+        return self.report_type
+
+    @type.setter
+    def type(self, value):
+        if not isinstance(value, str):
+            raise ValueError(f"{value} must be a string")
+        self.report_type = value
 
     @property
     def children_order(self):
@@ -113,7 +119,7 @@ class Template(BaseModel):
 
     @classmethod
     def get(cls, **kwargs):
-        new_kwargs = {"report_type": cls.type, **kwargs} if cls.type else kwargs
+        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
         obj = super().get(**new_kwargs)
         props = obj.get_property()
         for prop in cls._properties:
@@ -123,8 +129,20 @@ class Template(BaseModel):
 
     @classmethod
     def filter(cls, **kwargs):
-        new_kwargs = {"report_type": cls.type, **kwargs} if cls.type else kwargs
+        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
         return super().filter(**new_kwargs)
+
+    @classmethod
+    def find(cls, **kwargs):
+        if not cls.report_type:
+            return super().find(**kwargs)
+        query = kwargs.pop("query", "")
+        if "t_types|cont" in query:
+            raise ADRException(
+                extra_detail="The 't_types' filter is not required if using a subclass of Template"
+            )
+        new_kwargs = {**kwargs, "query": f"A|t_types|cont|{cls.report_type};{query}"}
+        return super().find(**new_kwargs)
 
     def render(self, context=None, request=None, query=None) -> Optional[str]:
         if context is None:
@@ -157,67 +175,67 @@ class Layout(Template):
 
 
 class BasicLayout(Layout):
-    type: str = "Layout:basic"
+    report_type: str = "Layout:basic"
 
 
 class PanelLayout(Layout):
-    type: str = "Layout:panel"
+    report_type: str = "Layout:panel"
 
 
 class BoxLayout(Layout):
-    type: str = "Layout:box"
+    report_type: str = "Layout:box"
 
 
 class TabLayout(Layout):
-    type: str = "Layout:tabs"
+    report_type: str = "Layout:tabs"
 
 
 class CarouselLayout(Layout):
-    type: str = "Layout:carousel"
+    report_type: str = "Layout:carousel"
 
 
 class SliderLayout(Layout):
-    type: str = "Layout:slider"
+    report_type: str = "Layout:slider"
 
 
 class FooterLayout(Layout):
-    type: str = "Layout:footer"
+    report_type: str = "Layout:footer"
 
 
 class HeaderLayout(Layout):
-    type: str = "Layout:header"
+    report_type: str = "Layout:header"
 
 
 class IteratorLayout(Layout):
-    type: str = "Layout:iterator"
+    report_type: str = "Layout:iterator"
 
 
 class TagPropertyLayout(Layout):
-    type: str = "Layout:tagprops"
+    report_type: str = "Layout:tagprops"
 
 
 class TOCLayout(Layout):
-    type: str = "Layout:toc"
+    report_type: str = "Layout:toc"
 
 
 class ReportLinkLayout(Layout):
-    type: str = "Layout:reportlink"
+    report_type: str = "Layout:reportlink"
 
 
 class PPTXLayout(Layout):
-    type: str = "Layout:pptx"
+    report_type: str = "Layout:pptx"
 
 
 class PPTXSlideLayout(Layout):
-    type: str = "Layout:pptxslide"
+    report_type: str = "Layout:pptxslide"
 
 
 class DataFilterLayout(Layout):
-    type: str = "Layout:datafilter"
+    report_type: str = "Layout:datafilter"
 
 
 class UserDefinedLayout(Layout):
-    type: str = "Layout:userdefined"
+    report_type: str = "Layout:userdefined"
 
 
 class Generator(Template):
@@ -225,28 +243,28 @@ class Generator(Template):
 
 
 class TableMergeGenerator(Generator):
-    type: str = "Generator:tablemerge"
+    report_type: str = "Generator:tablemerge"
 
 
 class TableReduceGenerator(Generator):
-    type: str = "Generator:tablereduce"
+    report_type: str = "Generator:tablereduce"
 
 
 class TableMergeRCFilterGenerator(Generator):
-    type: str = "Generator:tablerowcolumnfilter"
+    report_type: str = "Generator:tablerowcolumnfilter"
 
 
 class TableMergeValueFilterGenerator(Generator):
-    type: str = "Generator:tablevaluefilter"
+    report_type: str = "Generator:tablevaluefilter"
 
 
 class TableSortFilterGenerator(Generator):
-    type: str = "Generator:tablesortfilter"
+    report_type: str = "Generator:tablesortfilter"
 
 
 class TreeMergeGenerator(Generator):
-    type: str = "Generator:treemerge"
+    report_type: str = "Generator:treemerge"
 
 
 class SQLQueryGenerator(Generator):
-    type: str = "Generator:sqlqueries"
+    report_type: str = "Generator:sqlqueries"
