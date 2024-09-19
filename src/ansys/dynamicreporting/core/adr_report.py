@@ -194,10 +194,7 @@ class Report:
         if self.service is None:  # pragma: no cover
             self.service.logger.error("No connection to any report")
             return guid
-        if self.service.serverobj is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
-            return guid
-        if self.service.url is None:
+        if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
             return guid
         if self.report:
@@ -489,12 +486,12 @@ class Report:
         # fetch method using predefined prefix rules in the proxy server OR using traditional <iframe>
         # add host-style-path attribute if specified (can only work when prefix is provided)
         host_style_path = f'host-style-path="{style_path}"' if style_path else ""
-        fetchMethod = (
+        fetch_method = (
             f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}" {host_style_path}'
             if prefix
             else f'reportURL="{self.get_url()}" width="{width}" height="{height}"'
         )
-        component = f"<adr-report {fetchMethod}></adr-report>"
+        component = f"<adr-report {fetch_method}></adr-report>"
         return component
 
     def get_iframe(self, width: int = 1000, height: int = 800, filter: str = ""):
