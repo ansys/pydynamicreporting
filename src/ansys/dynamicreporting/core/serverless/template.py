@@ -37,11 +37,21 @@ class Template(BaseModel):
 
     @property
     def children_order(self):
-        return ",".join([str(child.guid) for child in self.children])
+        return self._children_order
 
     @property
     def master(self):
         return self.parent is None
+
+    def reorder_children(self) -> None:
+        guid_to_child = {str(child.guid): child for child in self.children}
+        sorted_guids = self.children_order.lower().split(",")
+        # return the children based on the order of guids in children_order
+        reordered = []
+        for guid in sorted_guids:
+            if guid in guid_to_child:
+                reordered.append(guid_to_child[guid])
+        self.children = reordered
 
     def get_filter(self):
         return self.item_filter
