@@ -68,6 +68,8 @@ tests = [
     "psutil==5.9.5",
     "pytest==7.4.2",
     "pytest-cov==4.1.0",
+    "pytest-xdist==1.31.0",
+    "pytest-rerunfailures~=14.0",
 ]
 doc = [
     "ansys-sphinx-theme==0.11.2",
@@ -101,7 +103,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--capture=tee-sys --tb=native -p no:warnings"
+addopts = "-n 4 --reruns 3 --capture=tee-sys --tb=native -p no:warnings"
 markers =[
     "integration:Run integration tests",
     "smoke:Run the smoke tests",
