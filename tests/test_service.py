@@ -391,4 +391,3 @@ def test_same_port(request) -> bool:
     a.stop()
     b.stop()
     assert a._port != b._port
-    
