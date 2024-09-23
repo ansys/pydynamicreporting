@@ -16,7 +16,8 @@ dir_list.extend(
         "tests/test_data/webfonts/",
         "htmltest/",
         "htmltest_again/",
-        "sameport/" "sameport_again/",
+        "sameport/"
+        "sameport_again/"
     ]
 )
 dir_list.append("tests/test_data/create_delete/")
