@@ -386,7 +386,7 @@ def test_same_port(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_10.txt")
     a = Service(logfile=logfile, db_directory="sameport")
     _ = a.start(create_db=True)
-    b = Service(logfile=logfile, db_directory="sameport_again", port = a._port)
+    b = Service(logfile=logfile, db_directory="sameport_again", port=a._port)
     _ = b.start(create_db=True)
     a.stop()
     b.stop()
