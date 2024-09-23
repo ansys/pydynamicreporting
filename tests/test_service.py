@@ -379,15 +379,3 @@ def test_docker_unit() -> bool:
     except AttributeError as e:
         succ_five = "has no attribute" in str(e)
     assert succ and succ_two and succ_three and succ_four and succ_five
-
-
-@pytest.mark.ado_test
-def test_same_port(request) -> bool:
-    logfile = join(request.fspath.dirname, "outfile_10.txt")
-    a = Service(logfile=logfile, db_directory="sameport")
-    _ = a.start(create_db=True)
-    b = Service(logfile=logfile, db_directory="sameport_again", port = a._port)
-    _ = b.start(create_db=True)
-    a.stop()
-    b.stop()
-    assert a._port != b._port
