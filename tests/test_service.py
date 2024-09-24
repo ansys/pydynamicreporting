@@ -225,7 +225,7 @@ def test_create_on_existing(request, get_exec) -> bool:
         )
     success = False
     try:
-        _ = tmp_adr.start(create_db=True)
+        _ = tmp_adr.start(create_db=True, error_if_create_db_exists=True)
     except CannotCreateDatabaseError:
         success = True
     assert success
@@ -384,9 +384,11 @@ def test_docker_unit() -> bool:
 @pytest.mark.ado_test
 def test_same_port(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_10.txt")
-    a = Service(logfile=logfile, db_directory="sameport")
+    db_dir = join(join(request.fspath.dirname, "test_data"), "sameport")
+    db_dir_again = join(join(request.fspath.dirname, "test_data"), "sameport_again")
+    a = Service(logfile=logfile, db_directory=db_dir)
     _ = a.start(create_db=True)
-    b = Service(logfile=logfile, db_directory="sameport_again", port=a._port)
+    b = Service(logfile=logfile, db_directory=db_dir_again, port=a._port)
     _ = b.start(create_db=True)
     a.stop()
     b.stop()
