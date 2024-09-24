@@ -382,13 +382,27 @@ def test_docker_unit() -> bool:
 
 
 @pytest.mark.ado_test
-def test_same_port(request) -> bool:
+def test_same_port(request, get_exec) -> bool:
     logfile = join(request.fspath.dirname, "outfile_10.txt")
     db_dir = join(join(request.fspath.dirname, "test_data"), "sameport")
     db_dir_again = join(join(request.fspath.dirname, "test_data"), "sameport_again")
-    a = Service(logfile=logfile, db_directory=db_dir)
+    if get_exec != "":
+        a = Service(ansys_installation=get_exec, logfile=logfile, db_directory=db_dir)
+        b = Service(
+            ansys_installation=get_exec, logfile=logfile, db_directory=db_dir_again, port=a._port
+        )
+    else:
+        cleanup_docker(request)
+        a = Service(
+            ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
+        )
+        b = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir_again,
+            port=a._port,
+        )
     _ = a.start(create_db=True)
-    b = Service(logfile=logfile, db_directory=db_dir_again, port=a._port)
     _ = b.start(create_db=True)
     a.stop()
     b.stop()
