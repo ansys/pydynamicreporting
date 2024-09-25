@@ -973,7 +973,6 @@ class Service:
         Parameters
         ----------
         None
-
         Returns
         -------
         None
