@@ -1937,7 +1937,7 @@ class sliderREST(LayoutREST):
                 "numeric_up",
                 "numeric_down",
                 "natural_up",
-                "natural_down"
+                "natural_down",
                 "none",
             ]:
                 raise ValueError("Error: the input sorting parameter is not supported")
