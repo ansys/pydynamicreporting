@@ -307,4 +307,3 @@ class ADR:
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query)
-
