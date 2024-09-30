@@ -207,11 +207,7 @@ class Service:
             try:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
-                if report_utils.is_port_in_use(self._port):
-                    self.logger.warning(
-                        f"Warning: port {self._port} is already in use. Replace with a new port\n"
-                    )
-                    self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
+                self.__checkport__()
                 self._container.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
@@ -378,7 +374,7 @@ class Service:
         username: str = "nexus",
         password: str = "cei",
         create_db: bool = False,
-        error_if_create_db_exists: bool = True,
+        error_if_create_db_exists: bool = False,
         exit_on_close: bool = False,
         delete_db: bool = False,
     ) -> str:
@@ -529,6 +525,7 @@ class Service:
         else:  # pragma: no cover
             # we're not using docker
             self.serverobj = report_remote_server.Server()
+            self.__checkport__()
             launched = False
             launch_kwargs = {
                 "directory": self._db_directory,
@@ -967,3 +964,21 @@ class Service:
         else:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
+
+    def __checkport__(self):
+        """
+        Internal method to check if a port is already being used and if yes, change
+        self._port to an other free port.
+
+        Parameters
+        ----------
+        None
+        Returns
+        -------
+        None
+        """
+        if report_utils.is_port_in_use(self._port):
+            self.logger.warning(
+                f"Warning: port {self._port} is already in use. Replace with a new port\n"
+            )
+            self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
