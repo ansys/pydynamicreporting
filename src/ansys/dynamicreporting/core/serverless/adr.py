@@ -1,22 +1,27 @@
+from collections.abc import Iterable
 import os
 from pathlib import Path
 import platform
 import sys
 from typing import Any, Optional, Type, Union
+import uuid
 
 import django
 from django.core import management
+from django.db import IntegrityError, connection, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
 from ..exceptions import (
+    ADRException,
     DatabaseMigrationError,
     ImproperlyConfiguredError,
     InvalidAnsysPath,
     InvalidPath,
     StaticFilesCollectionError,
 )
+from .base import ObjectSet
 from .item import Dataset, Item, Session
 from .template import Template
 
@@ -27,59 +32,60 @@ class ADR:
         ansys_installation: str,
         *,
         db_directory: str = None,
+        databases: dict = None,
         media_directory: str = None,
         static_directory: str = None,
+        debug: bool = None,
         opts: dict = None,
         request: HttpRequest = None,
         logfile: str = None,
-        debug: bool = None,
     ) -> None:
         self._db_directory = None
+        self._databases = databases or {}
         self._media_directory = None
         self._static_directory = None
-
+        self._debug = debug
+        self._request = request  # passed when used in the context of a webserver.
+        self._session = None
+        self._dataset = None
+        self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
-        os.environ["CEI_APEX_SUFFIX"] = self._ansys_version
-
         self._ansys_installation = self._get_install_directory(ansys_installation)
-        os.environ["CEI_NEXUS_INSTALLATION_DIR"] = str(self._ansys_installation)
 
         if opts is None:
             opts = {}
         os.environ.update(opts)
 
-        if db_directory is not None:
-            self._db_directory = self._check_dir(db_directory)
-            os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
-        else:
-            if "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
+        if not self._databases:
+            if db_directory is not None:
+                self._db_directory = self._check_dir(db_directory)
+                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+            elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
                 self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
+            else:
+                raise ImproperlyConfiguredError(
+                    "A database must be specified using either the 'db_directory'"
+                    " or the 'databases' option."
+                )
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
             os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+        elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
+            self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
+        elif self._db_directory is not None:  # fallback to the db dir
+            self._media_directory = self._db_directory
         else:
-            if "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
-                self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
+            raise ImproperlyConfiguredError(
+                "A media directory must be specified using either the 'media_directory'"
+                " or the 'db_directory' option."
+            )
 
         if static_directory is not None:
             self._static_directory = self._check_dir(static_directory)
             os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
-        else:
-            if "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
-                self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
-
-        if debug is not None:
-            self._debug = debug
-            os.environ["CEI_NEXUS_DEBUG"] = str(int(debug))
-        else:
-            if "CEI_NEXUS_DEBUG" in os.environ:
-                self._debug = bool(int(os.environ["CEI_NEXUS_DEBUG"]))
-
-        self._request = request  # passed when used in the context of a webserver.
-        self._session = None
-        self._dataset = None
-        self._logger = get_logger(logfile)
+        elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
+            self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
     def _get_install_directory(self, ansys_installation: Optional[str]) -> Path:
         dirs_to_check = []
@@ -119,21 +125,62 @@ class ADR:
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
-    def setup(self, collect_static=False) -> None:
+    def setup(self, collect_static: bool = False) -> None:
+        from django.conf import settings
+
+        if settings.configured:
+            raise RuntimeError("ADR has already been configured. setup() can be called only once.")
+
         try:
             # import hack
             sys.path.append(
                 str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
             )
+            from ceireports import settings_serverless
         except ImportError as e:
             raise ImportError(f"Failed to import from the Ansys installation: {e}")
 
-        os.environ.setdefault(
-            "DJANGO_SETTINGS_MODULE",
-            "ceireports.settings_serverless",
-        )
-        # django.setup() may only be called once.
+        overrides = {}
+        for setting in dir(settings_serverless):
+            if setting.isupper():
+                overrides[setting] = getattr(settings_serverless, setting)
+
+        if self._debug is not None:
+            overrides["DEBUG"] = self._debug
+
+        if self._databases:
+            if "default" not in self._databases:
+                raise ImproperlyConfiguredError(
+                    """ The database configuration must be a dictionary of the following format with
+                    a "default" database specified.
+                {
+                    "default": {
+                        "ENGINE": "sqlite3",
+                        "NAME": os.path.join(local_db_dir, "db.sqlite3"),
+                        "USER": "user",
+                        "PASSWORD": "adr",
+                        "HOST": "",
+                        "PORT": "",
+                    }
+                    "remote": {
+                        "ENGINE": "postgresql",
+                        "NAME": "my_database",
+                        "USER": "user",
+                        "PASSWORD": "adr",
+                        "HOST": "127.0.0.1",
+                        "PORT": "5432",
+                    }
+                }
+            """
+                )
+            for db in self._databases:
+                engine = self._databases[db]["ENGINE"]
+                self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"
+            # replace the database config
+            overrides["DATABASES"] = self._databases
+
         try:
+            settings.configure(**overrides)
             django.setup()
         except Exception as e:
             self._logger.error(f"{e}")
@@ -148,7 +195,7 @@ class ADR:
 
         # migrations
         if self._db_directory is not None:
-            try:
+            try:  # upgrades all databases
                 management.call_command("migrate", "--no-input", verbosity=0)
             except Exception as e:
                 self._logger.error(f"{e}")
@@ -173,42 +220,42 @@ class ADR:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
     @property
-    def session(self):
+    def session(self) -> Session:
         return self._session
 
     @property
-    def dataset(self):
+    def dataset(self) -> Dataset:
         return self._dataset
 
     @session.setter
-    def session(self, session: Session):
+    def session(self, session: Session) -> None:
         if not isinstance(session, Session):
             raise TypeError("Must be an instance of type 'Session'")
         self._session = session
 
     @dataset.setter
-    def dataset(self, dataset: Dataset):
+    def dataset(self, dataset: Dataset) -> None:
         if not isinstance(dataset, Dataset):
             raise TypeError("Must be an instance of type 'Dataset'")
         self._dataset = dataset
 
-    def set_default_session(self, session: Session):
+    def set_default_session(self, session: Session) -> None:
         self.session = session
 
-    def set_default_dataset(self, dataset: Dataset):
+    def set_default_dataset(self, dataset: Dataset) -> None:
         self.dataset = dataset
 
     @property
-    def session_guid(self):
+    def session_guid(self) -> uuid.UUID:
         """GUID of the session associated with the service."""
         return self._session.guid
 
-    def create_item(self, item_type: Type[Item], **kwargs: Any):
+    def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
         return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
 
-    def create_template(self, template_type: Type[Template], **kwargs: Any):
+    def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
@@ -219,14 +266,14 @@ class ADR:
             parent.save()
         return template
 
-    def get_report(self, **kwargs):
+    def get_report(self, **kwargs) -> Template:
         try:
             return Template.get(master=True, **kwargs)
         except Exception as e:
             self._logger.error(f"{e}")
             raise e
 
-    def get_reports(self, fields=None, flat=False):
+    def get_reports(self, fields: list = None, flat: bool = False) -> ObjectSet:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -237,12 +284,12 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-        return list(out)
+        return out
 
-    def get_list_reports(self, *fields):
+    def get_list_reports(self, *fields) -> ObjectSet:
         return self.get_reports(*fields)
 
-    def render_report(self, context=None, query=None, **kwargs):
+    def render_report(self, context: dict = None, query: str = None, **kwargs: Any) -> str:
         try:
             return Template.get(**kwargs).render(
                 request=self._request, context=context, query=query
@@ -254,9 +301,9 @@ class ADR:
     def query(
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
-        filter: Optional[str] = "",
-    ) -> list:
+        query: Optional[str] = "",
+    ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
-        return list(query_type.find(query=filter))
+        return query_type.find(query=query)
