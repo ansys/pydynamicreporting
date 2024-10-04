@@ -22,6 +22,8 @@ dir_list.append("tests/test_data/create_delete/")
 dir_list.append("tests/test_data/create_twice/")
 dir_list.append("tests/test_data/newcopytemp/")
 dir_list.append("tests/test_data/newcopy/")
+dir_list.append("tests/test_data/sameport/")
+dir_list.append("tests/test_data/sameport_again/")
 for i_dir in dir_list:
     try:
         shutil.rmtree(i_dir)

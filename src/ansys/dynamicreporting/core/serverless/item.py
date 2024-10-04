@@ -127,13 +127,16 @@ class FileValidator(StringContent):
         file_str = super().process(value, obj)
         file_path = Path(file_str)
         if not file_path.is_file():
-            raise ValueError("Expected content to be a file path")
+            raise ValueError(
+                f"Expected content to be a file path. "
+                f"'{file_path.name}' does not exist or is not a file."
+            )
 
         file = DjangoFile(file_path.open(mode="rb"))
 
         # check file type
         file_ext = Path(file.name).suffix.lower()
-        if file_ext.replace(".", "") not in self.ALLOWED_EXT:
+        if self.ALLOWED_EXT is not None and file_ext.replace(".", "") not in self.ALLOWED_EXT:
             raise ValueError(f"File type {file_ext} is not supported by {obj.__class__}")
         # check for empty files
         if file.size == 0:
@@ -169,15 +172,15 @@ class SceneContent(FileValidator):
 
 
 class FileContent(FileValidator):
-    ALLOWED_EXT = ("ens", "enc", "evsn")
+    ALLOWED_EXT = None
 
 
 class SimplePayloadMixin:
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
+    def from_db(cls, orm_instance, **kwargs):
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().serialize_from_orm(orm_instance)
+        obj = super().from_db(orm_instance)
         obj.content = safe_unpickle(obj._orm_instance.payloaddata)
         return obj
 
@@ -190,8 +193,8 @@ class FilePayloadMixin:
     _file: DjangoFile = field(init=False, compare=False, default=None)
 
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
-        obj = super().serialize_from_orm(orm_instance)
+    def from_db(cls, orm_instance, **kwargs):
+        obj = super().from_db(orm_instance)
         obj.content = obj._orm_instance.payloadfile.path
         return obj
 
@@ -205,7 +208,6 @@ class FilePayloadMixin:
         super().save(**kwargs)
 
 
-# todo: prevent instantiation
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
@@ -238,14 +240,26 @@ class Item(BaseModel):
         return super().delete(**kwargs)
 
     @classmethod
+    def get(cls, **kwargs):
+        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
+        return super().get(**new_kwargs)
+
+    @classmethod
     def filter(cls, **kwargs):
         new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
         return super().filter(**new_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().get(**new_kwargs)
+    def find(cls, **kwargs):
+        if cls.type == "none":
+            return super().find(**kwargs)
+        query = kwargs.pop("query", "")
+        if "i_type|cont" in query:
+            raise ADRException(
+                extra_detail="The 'i_type' filter is not required if using a subclass of Item"
+            )
+        new_kwargs = {**kwargs, "query": f"A|i_type|cont|{cls.type};{query}"}
+        return super().find(**new_kwargs)
 
     def render(self, context=None, request=None) -> Optional[str]:
         if context is None:
@@ -281,10 +295,10 @@ class Table(Item):
     _properties: tuple = table_attr
 
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
+    def from_db(cls, orm_instance, **kwargs):
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().serialize_from_orm(orm_instance)
+        obj = super().from_db(orm_instance)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:

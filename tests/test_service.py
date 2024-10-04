@@ -100,20 +100,6 @@ def test_unit_query() -> bool:
 
 
 @pytest.mark.ado_test
-def test_unit_invalidqueryone() -> bool:
-    a = Service()
-    valid = a.__check_filter__("F|i_type|cont|html;")
-    assert valid is False
-
-
-@pytest.mark.ado_test
-def test_unit_invalidquerytwo() -> bool:
-    a = Service()
-    valid = a.__check_filter__("A|b_type|cont|html;")
-    assert valid is False
-
-
-@pytest.mark.ado_test
 def test_unit_delete_invalid(request) -> bool:
     logfile = join(request.fspath.dirname, "outfile_4.txt")
     a = Service(logfile=logfile)
@@ -239,7 +225,7 @@ def test_create_on_existing(request, get_exec) -> bool:
         )
     success = False
     try:
-        _ = tmp_adr.start(create_db=True)
+        _ = tmp_adr.start(create_db=True, error_if_create_db_exists=True)
     except CannotCreateDatabaseError:
         success = True
     assert success
@@ -393,3 +379,31 @@ def test_docker_unit() -> bool:
     except AttributeError as e:
         succ_five = "has no attribute" in str(e)
     assert succ and succ_two and succ_three and succ_four and succ_five
+
+
+@pytest.mark.ado_test
+def test_same_port(request, get_exec) -> bool:
+    logfile = join(request.fspath.dirname, "outfile_10.txt")
+    db_dir = join(join(request.fspath.dirname, "test_data"), "sameport")
+    db_dir_again = join(join(request.fspath.dirname, "test_data"), "sameport_again")
+    if get_exec != "":
+        a = Service(ansys_installation=get_exec, logfile=logfile, db_directory=db_dir)
+        b = Service(
+            ansys_installation=get_exec, logfile=logfile, db_directory=db_dir_again, port=a._port
+        )
+    else:
+        cleanup_docker(request)
+        a = Service(
+            ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
+        )
+        b = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir_again,
+            port=a._port,
+        )
+    _ = a.start(create_db=True)
+    _ = b.start(create_db=True)
+    a.stop()
+    b.stop()
+    assert a._port != b._port

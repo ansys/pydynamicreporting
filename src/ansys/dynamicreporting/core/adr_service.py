@@ -35,7 +35,7 @@ from ansys.dynamicreporting.core.utils import report_objects, report_remote_serv
 
 from .adr_item import Item
 from .adr_report import Report
-from .adr_utils import dict_items, get_logger, in_ipynb, type_maps
+from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
 from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -207,11 +207,7 @@ class Service:
             try:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
-                if report_utils.is_port_in_use(self._port):
-                    self.logger.warning(
-                        f"Warning: port {self._port} is already in use. Replace with a new port\n"
-                    )
-                    self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
+                self.__checkport__()
                 self._container.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
@@ -378,7 +374,7 @@ class Service:
         username: str = "nexus",
         password: str = "cei",
         create_db: bool = False,
-        error_if_create_db_exists: bool = True,
+        error_if_create_db_exists: bool = False,
         exit_on_close: bool = False,
         delete_db: bool = False,
     ) -> str:
@@ -529,6 +525,7 @@ class Service:
         else:  # pragma: no cover
             # we're not using docker
             self.serverobj = report_remote_server.Server()
+            self.__checkport__()
             launched = False
             launch_kwargs = {
                 "directory": self._db_directory,
@@ -636,32 +633,6 @@ class Service:
         self.serverobj = None
         self._url = None
 
-    def __check_filter__(self, filter: str = ""):
-        """
-        Verify validity of the query string for filtering.
-
-        Parameters
-        ----------
-        filter : str, optional
-            Query string for filtering. The default is ``""``. The syntax corresponds
-            to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
-
-        Returns
-        -------
-        bool
-            ``True`` if the query string is valid, ``False`` otherwise.
-        """
-        for query_stanza in filter.split(";"):
-            if len(query_stanza) > 0:
-                if len(query_stanza.split("|")) != 4:
-                    return False
-                if query_stanza.split("|")[0] not in ["A", "O"]:
-                    return False
-                if query_stanza.split("|")[1][0:2] not in ["i_", "s_", "d_", "t_"]:
-                    return False
-        return True
-
     def visualize_report(
         self,
         report_name: Optional[str] = "",
@@ -724,17 +695,9 @@ class Service:
         url += "usemenus=off"
         query_str = ""
         if filter:
-            valid = self.__check_filter__(filter)
-            if valid is False:
-                self.logger.warning("Warning: filter string is not valid. Will be ignored.")
-            else:
-                query_str = "&query="
-                for q_stanza in filter.split(";"):
-                    if len(q_stanza) > 1:
-                        each_item = q_stanza.split("|")
-                        query_str += each_item[-4] + "%7C" + each_item[-3]
-                        query_str += "%7C" + each_item[-2]
-                        query_str += "%7C" + each_item[-1]
+            query_str = build_query_url(self.logger, filter)
+        else:
+            query_str = ""
         url += query_str
         if in_ipynb() and not new_tab:
             display(IFrame(src=url, width=1000, height=800))
@@ -803,7 +766,7 @@ class Service:
             imgs = adr_service.query(query_type='Item', filter='A|i_type|cont|image;')
         """
         queried_items = []
-        valid = self.__check_filter__(filter)
+        valid = check_filter(filter)
         if valid is False:
             self.logger.warning("Warning: filter string is not valid. Will be ignored.")
             filter = ""
@@ -1001,3 +964,21 @@ class Service:
         else:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
+
+    def __checkport__(self):
+        """
+        Internal method to check if a port is already being used and if yes, change
+        self._port to an other free port.
+
+        Parameters
+        ----------
+        None
+        Returns
+        -------
+        None
+        """
+        if report_utils.is_port_in_use(self._port):
+            self.logger.warning(
+                f"Warning: port {self._port} is already in use. Replace with a new port\n"
+            )
+            self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]

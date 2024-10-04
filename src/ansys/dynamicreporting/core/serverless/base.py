@@ -1,11 +1,12 @@
 from abc import ABC, ABCMeta, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
 import importlib
 import inspect
 from itertools import chain
 import shlex
-from typing import Any
+from typing import Any, get_args, get_origin
 import uuid
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from django.core.exceptions import (
 from django.db import DatabaseError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
+from django.db.models.manager import Manager
 
 from ..exceptions import (
     ADRException,
@@ -44,6 +46,10 @@ def handle_field_errors(func):
             raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
 
     return wrapper
+
+
+def is_generic_class(cls):
+    return not isinstance(cls, type) or get_origin(cls) is not None
 
 
 class BaseMeta(ABCMeta):
@@ -138,15 +144,39 @@ class BaseModel(metaclass=BaseMeta):
 
     def _validate_field_types(self):
         for field_name, field_type in self._get_field_names(with_types=True):
-            if isinstance(field_type, str):
-                type_ = self.__class__._cls_registry[field_type]
-            else:
-                type_ = field_type
-            if issubclass(type_, Validator):
-                continue
             value = getattr(self, field_name, None)
-            if value is not None and not isinstance(value, type_):
-                raise TypeError(f"Expected {field_name} to be of type {type_}.")
+            if value is None:
+                continue
+            # Type inference
+            # convert strings to classes
+            if isinstance(field_type, str):
+                type_cls = self.__class__._cls_registry[field_type]
+            else:
+                type_cls = field_type
+            # Validators will validate by themselves, so this can be ignored.
+            # Will only work when the type is a proper class
+            if not is_generic_class(type_cls) and issubclass(type_cls, Validator):
+                continue
+            # 'Generic' class types
+            if get_origin(type_cls) is not None:
+                # get any args
+                args = get_args(type_cls)
+                # update with the origin type
+                type_cls = get_origin(type_cls)
+                # validate with the 'arg' type:
+                # eg: 'Template' in list['Template']
+                if args:
+                    content_type = args[0]
+                    if isinstance(content_type, str):
+                        content_type = self.__class__._cls_registry[content_type]
+                    if isinstance(value, Iterable):
+                        for elem in value:
+                            if not isinstance(elem, content_type):
+                                raise TypeError(
+                                    f"Expected '{field_name}' to contain items of type '{content_type}'."
+                                )
+            if not isinstance(value, type_cls):
+                raise TypeError(f"Expected '{field_name}' to be of type '{type_cls}'.")
 
     @staticmethod
     def _add_quotes(input_str):
@@ -189,7 +219,7 @@ class BaseModel(metaclass=BaseMeta):
         return tuple(property_fields) + cls._get_field_names()
 
     @classmethod
-    def serialize_from_orm(cls, orm_instance):
+    def from_db(cls, orm_instance, parent=None):
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(orm_instance)
         obj = cls()
@@ -201,12 +231,49 @@ class BaseModel(metaclass=BaseMeta):
                 attr = f"_{field_}"
             else:
                 continue
-            value = getattr(orm_instance, field_, None)
             # don't check for None here, we need everything as-is
+            value = getattr(orm_instance, field_, None)
+            field_type = cls_fields[attr]
             # We must also serialize 'related' fields
             if isinstance(value, Model):
-                type_ = cls_fields[attr]
-                value = type_.serialize_from_orm(value)
+                # convert the value to a type supported by the proxy
+                # for string definitions of the dataclass type, example - parent: 'Template'
+                if isinstance(field_type, str):
+                    type_ = cls._cls_registry[field_type]
+                else:
+                    type_ = field_type
+                if issubclass(type_, cls):
+                    value = parent
+                else:
+                    value = type_.from_db(value)
+            elif isinstance(value, Manager):
+                type_ = get_origin(field_type)
+                args = get_args(field_type)
+                if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
+                    raise TypeError(
+                        f"The field '{attr}' in the dataclass must be a generic iterable"
+                        f" class containing exactly one type argument. For example: "
+                        f"list['Template'] or tuple['Template']."
+                    )
+                content_type = args[0]
+                if isinstance(content_type, str):
+                    content_type = cls._cls_registry[content_type]
+                qs = value.all()
+                # content_type must match orm model class
+                if content_type._orm_model_cls != qs.model:
+                    raise TypeError(
+                        f"The field '{attr}' is of '{field_type}' but the "
+                        f"actual content is of type '{qs.model}'"
+                    )
+                if qs:
+                    obj_set = ObjectSet(
+                        _model=content_type, _orm_model=qs.model, _orm_queryset=qs, _parent=obj
+                    )
+                    value = type_(obj_set)
+                else:
+                    value = type_()
+
+            # set the orm value on the proxy object
             setattr(obj, attr, value)
 
         obj._orm_instance = orm_instance
@@ -262,12 +329,18 @@ class BaseModel(metaclass=BaseMeta):
         except MultipleObjectsReturned:
             raise cls.MultipleObjectsReturned
 
-        return cls.serialize_from_orm(orm_instance)
+        return cls.from_db(orm_instance)
 
     @classmethod
     @handle_field_errors
     def filter(cls, **kwargs):
         qs = cls._orm_model_cls.objects.filter(**kwargs)
+        return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
+
+    @classmethod
+    @handle_field_errors
+    def find(cls, query="", reverse=False, sort_tag="date"):
+        qs = cls._orm_model_cls.find(query=query, reverse=reverse, sort_tag=sort_tag)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self):
@@ -303,13 +376,15 @@ class ObjectSet:
     _saved: bool = field(init=False, compare=False, default=False)
     _orm_model: type[Model] = field(compare=False, default=None)
     _orm_queryset: QuerySet = field(compare=False, default=None)
+    _parent: BaseModel = field(compare=False, default=None)
 
     def __post_init__(self):
-        if self._orm_queryset is not None:
-            self._saved = True
-            self._obj_set = [
-                self._model.serialize_from_orm(instance) for instance in self._orm_queryset
-            ]
+        if self._orm_queryset is None:
+            return
+        self._saved = True
+        self._obj_set = [
+            self._model.from_db(instance, parent=self._parent) for instance in self._orm_queryset
+        ]
 
     def __repr__(self):
         return f"<{self.__class__.__name__}  {self._obj_set}>"

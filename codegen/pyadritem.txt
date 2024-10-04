@@ -23,6 +23,7 @@ import sys
 from typing import Optional
 
 from .adr_utils import in_ipynb, table_attr, type_maps
+from .utils.report_utils import PIL_image_to_data
 import webbrowser
 
 try:
@@ -139,8 +140,14 @@ class Item:
             # If the image is passed as a file, first open it. Otherwise, directly
             # pass it as a payload value
             if os.path.exists(value):
-                with open(value, "rb") as fb:
-                    img = fb.read()
+                # if PNG image, then simply read it.
+                if value.capitalize().endswith('png'):
+                    with open(value, "rb") as fb:
+                        img = fb.read()
+                elif value.capitalize().endswith('jpg') or value.capitalize().endswith('jpeg'):
+                # If jpg, then convert to png buffer first
+                    tmp_img = PIL_image_to_data(value)
+                    img = tmp_img['file_data']
             else:
                 img = value
             self.item.set_payload_image(img)
