@@ -12,11 +12,12 @@ enhanced image.
 import io
 import json
 from typing import Dict, Tuple, Union
+import numpy as np
+import vtk
 
 from PIL import Image, TiffImagePlugin
 from ansys.dpf import core as dpf
-import numpy as np
-import vtk
+from ansys.dpf.core import vtk_helper
 from vtk.util.numpy_support import vtk_to_numpy
 
 
@@ -425,7 +426,7 @@ def form_enhanced_image_in_memory(json_data, rgb_buffer, pick_buffer, var_buffer
 
 
 def generate_components_for_enhanced_image(
-    model: dpf.Model, var_field: dpf.Field
+    model: dpf.Model, var_field: dpf.Field, part_name: str
 ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
     """
     Esstential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -438,6 +439,8 @@ def generate_components_for_enhanced_image(
     var_field: dpf.Field
         A DPF field object that comes from the given model. The field is essentially
         the variable in interest to visualize in an enhanced image.
+    part_name: str
+        The name of the part. It will showed on the interactive enhanced image in ADR.
 
     Returns
     -------
@@ -485,7 +488,7 @@ def generate_components_for_enhanced_image(
     json_data = {
         "parts": [
             {
-                "name": "DPF sample",  # hardcode
+                "name": part_name,
                 "id": str(mats.data[0]),
                 "colorby_var": "1.0",  # colorby_var
             }
@@ -505,7 +508,8 @@ def generate_components_for_enhanced_image(
     return json_data, rgb_buffer, pick_buffer, var_buffer
 
 
-def generate_enhanced_image_as_tiff(model: dpf.Model, var_field: dpf.Field, output_file_name: str):
+def generate_enhanced_image_as_tiff(model: dpf.Model, var_field: dpf.Field,
+                                    part_name: str, output_file_name: str):
     """
     Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
 
@@ -516,16 +520,18 @@ def generate_enhanced_image_as_tiff(model: dpf.Model, var_field: dpf.Field, outp
     var_field: dpf.Field
         A DPF field object that comes from the given model. The field is essentially
         the variable in interest to visualize in an enhanced image.
+    part_name: str
+        The name of the part. It will showed on the interactive enhanced image in ADR.
     output_file_name: str
         output TIFF file name with extension of .tiff or .tif
     """
     json_data, rgb_buffer, pick_buffer, var_buffer = generate_components_for_enhanced_image(
-        model, var_field
+        model, var_field, part_name
     )
     form_enhanced_image_as_tiff(json_data, rgb_buffer, pick_buffer, var_buffer, output_file_name)
 
 
-def generate_enhanced_image_in_memory(model: dpf.Model, var_field: dpf.Field) -> Image:
+def generate_enhanced_image_in_memory(model: dpf.Model, var_field: dpf.Field, part_name: str) -> Image:
     """
     Generate an enhanced image as a PIL Image object given DPF inputs.
 
@@ -536,6 +542,8 @@ def generate_enhanced_image_in_memory(model: dpf.Model, var_field: dpf.Field) ->
     var_field: dpf.Field
         A DPF field object that comes from the given model. The field is essentially
         the variable in interest to visualize in an enhanced image.
+    part_name: str
+        The name of the part. It will showed on the interactive enhanced image in ADR.
 
     Returns
     -------
@@ -543,6 +551,6 @@ def generate_enhanced_image_in_memory(model: dpf.Model, var_field: dpf.Field) ->
         A PIL Image object that represents the enhanced image.
     """
     json_data, rgb_buffer, pick_buffer, var_buffer = generate_components_for_enhanced_image(
-        model, var_field
+        model, var_field, part_name
     )
     return form_enhanced_image_in_memory(json_data, rgb_buffer, pick_buffer, var_buffer)
