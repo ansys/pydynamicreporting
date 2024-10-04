@@ -255,7 +255,7 @@ def render_var_data(
     return np_buffer
 
 
-def form_multipage_image(
+def form_enhanced_image(
     json_data: Dict,
     rgb_buffer: np.ndarray,
     pick_buffer: np.ndarray,
@@ -263,7 +263,7 @@ def form_multipage_image(
     output: Union[str, io.BytesIO],
 ) -> None:
     """
-    A helper function. Build up a multipage image and output to either a TIFF file on
+    A helper function. Build up an enhanced image and output to either a TIFF file on
     disk or to a byte buffer.
 
     Parameters
@@ -279,7 +279,7 @@ def form_multipage_image(
     output: Union[str, io.BytesIo]
         Specify the output to be either a file name or a byte buffer.
     """
-    # json_data as metadata called image_description to store in the multipage image
+    # json_data as metadata called image_description to store in the enhanced image
     image_description = json.dumps(json_data)
 
     # Create 3 images for each page
@@ -300,56 +300,8 @@ def form_multipage_image(
     )
 
 
-def form_enhanced_image_as_tiff(json_data, rgb_buffer, pick_buffer, var_buffer, output_file_name):
-    """
-    Generate a tiff file on disk.
-
-    Parameters
-    ----------
-    json_data: Dict
-        A dictionary that contains "parts" and "variables" sections.
-    rgb_buffer: np.ndarray
-        A int8 buffer with RGB values. Its dimension is [height, width, 3].
-    pick_buffer: np.ndarray
-        A int8 buffer with pick data. Its dimension is [height, width, 3].
-    var_buffer: np.ndarray
-        A float32 buffer with variable data. Its dimension is [height, width].
-    output_file_name: str
-        The output TIFF file name.
-    """
-    form_multipage_image(json_data, rgb_buffer, pick_buffer, var_buffer, output_file_name)
-
-
-def form_enhanced_image_in_memory(json_data, rgb_buffer, pick_buffer, var_buffer) -> Image:
-    """
-    Generate a multipage image in a byte buffer in memory.
-
-    Parameters
-    ----------
-    json_data: Dict
-        A dictionary that contains "parts" and "variables" sections.
-    rgb_buffer: np.ndarray
-        A int8 buffer with RGB values. Its dimension is [height, width, 3].
-    pick_buffer: np.ndarray
-        A int8 buffer with pick data. Its dimension is [height, width, 3].
-    var_buffer: np.ndarray
-        A float32 buffer with variable data. Its dimension is [height, width].
-
-    Returns
-    -------
-    Image
-        A PIL Image object.
-    """
-    # Create an in-memory bytes buffer
-    buffer = io.BytesIO()
-    form_multipage_image(json_data, rgb_buffer, pick_buffer, var_buffer, buffer)
-    buffer.seek(0)
-    image = Image.open(buffer)
-    return image
-
-
-def generate_components_for_enhanced_image(
-    model: dpf.Model, var_field: dpf.Field, part_name: str
+def generate_enhanced_image(
+    model: dpf.Model, var_field: dpf.Field, part_name: str, output: Union[str, io.BytesIO]
 ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
     """
     Esstential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -428,7 +380,7 @@ def generate_components_for_enhanced_image(
         ],
     }
 
-    return json_data, rgb_buffer, pick_buffer, var_buffer
+    form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffer, output)
 
 
 def generate_enhanced_image_as_tiff(
@@ -449,10 +401,7 @@ def generate_enhanced_image_as_tiff(
     output_file_name: str
         output TIFF file name with extension of .tiff or .tif
     """
-    json_data, rgb_buffer, pick_buffer, var_buffer = generate_components_for_enhanced_image(
-        model, var_field, part_name
-    )
-    form_enhanced_image_as_tiff(json_data, rgb_buffer, pick_buffer, var_buffer, output_file_name)
+    generate_enhanced_image(model, var_field, part_name, output_file_name)
 
 
 def generate_enhanced_image_in_memory(
@@ -476,7 +425,9 @@ def generate_enhanced_image_in_memory(
     Image
         A PIL Image object that represents the enhanced image.
     """
-    json_data, rgb_buffer, pick_buffer, var_buffer = generate_components_for_enhanced_image(
-        model, var_field, part_name
-    )
-    return form_enhanced_image_in_memory(json_data, rgb_buffer, pick_buffer, var_buffer)
+    # Create an in-memory bytes buffer
+    buffer = io.BytesIO()
+    generate_enhanced_image(model, var_field, part_name, buffer)
+    buffer.seek(0)
+    image = Image.open(buffer)
+    return image
