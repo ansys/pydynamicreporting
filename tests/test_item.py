@@ -22,6 +22,22 @@ def test_create_img(adr_service_create, request) -> bool:
     assert len(new_img_items) == (len(img_items) + 1)
 
 
+@pytest.mark.ado_test
+def test_create_img_jpg(adr_service_create, request) -> bool:
+    _ = adr_service_create.start(
+        create_db=True,
+        exit_on_close=True,
+        delete_db=True,
+    )
+    filter_str = "A|i_type|cont|image"
+    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    my_img = adr_service_create.create_item()
+    my_img.item_image = join(join(request.fspath.dirname, "test_data"), "car_crash.jpg")
+    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    adr_service_create.stop()
+    assert len(new_img_items) == (len(img_items) + 1)
+
+
 def test_create_scene(adr_service_create, request) -> bool:
     _ = adr_service_create.start(
         create_db=True,
