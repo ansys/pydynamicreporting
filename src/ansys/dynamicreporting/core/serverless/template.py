@@ -295,3 +295,15 @@ class TreeMergeGenerator(Generator):
 
 class SQLQueryGenerator(Generator):
     report_type: str = "Generator:sqlqueries"
+
+
+class ItemsComparisonGenerator(Generator):
+    report_type: str = "Generator:itemscomparison"
+
+
+class StatisticalGenerator(Generator):
+    report_type: str = "Generator:statistical"
+
+
+class IteratorGenerator(Generator):
+    report_type: str = "Generator:iterator"
