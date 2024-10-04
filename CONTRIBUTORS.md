@@ -16,4 +16,4 @@
 * [Visesh Rajendraprasad](https://github.com/viseshrp)
 * [Phillip Chen](https://github.com/phchen95)
 * [Mario Ostieri](https://github.com/mariostieriansys)
-* [Phillip Chen](https://github.com/cadeyansys)
+* [Cadey Chen](https://github.com/cadeyansys)
