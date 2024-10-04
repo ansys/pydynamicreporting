@@ -25,7 +25,7 @@ class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
     platform: str = field(compare=False, kw_only=True, default=str(report_utils.enve_arch))
-    application: str = field(compare=False, kw_only=True, default="Python API")
+    application: str = field(compare=False, kw_only=True, default="Serverless ADR Python API")
     version: str = field(compare=False, kw_only=True, default="1.0")
     _orm_model: str = "data.models.Session"
 
