@@ -297,10 +297,6 @@ class String(SimplePayloadMixin, Item):
     type: str = "string"
 
 
-class Text(String):
-    pass
-
-
 class HTML(String):
     content: HTMLContent = HTMLContent()
     type: str = "html"
@@ -335,10 +331,6 @@ class Table(Item):
         super().save(**kwargs)
 
 
-class Plot(Table):
-    pass
-
-
 class Tree(SimplePayloadMixin, Item):
     content: TreeContent = TreeContent()
     type: str = "tree"
@@ -362,10 +354,6 @@ class Image(FilePayloadMixin, Item):
 class Animation(FilePayloadMixin, Item):
     content: AnimContent = AnimContent()
     type: str = "anim"
-
-
-class Movie(Animation):
-    pass
 
 
 class Scene(FilePayloadMixin, Item):
