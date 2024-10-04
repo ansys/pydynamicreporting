@@ -302,11 +302,13 @@ class BaseModel(metaclass=BaseMeta):
                 if obj_list:
                     getattr(self._orm_instance, field_).add(*obj_list)
             elif isinstance(value, BaseModel):
-                # todo: handle absence during get()
-                value = value._orm_instance.__class__.objects.using(
-                    kwargs.get("using", "default")
-                ).get(guid=value.guid)
-                setattr(self._orm_instance, field_, value)
+                try:
+                    value = value._orm_instance.__class__.objects.using(
+                        kwargs.get("using", "default")
+                    ).get(guid=value.guid)
+                except ObjectDoesNotExist:
+                    raise value.__class__.DoesNotExist
+            setattr(self._orm_instance, field_, value)
         self._orm_instance.save(**kwargs)
         self._saved = True
 
