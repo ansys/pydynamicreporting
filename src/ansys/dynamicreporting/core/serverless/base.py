@@ -344,6 +344,13 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     @handle_field_errors
+    def bulk_create(cls, **kwargs):
+        objs = cls._orm_model_cls.objects.bulk_create(**kwargs)
+        qs = cls._orm_model_cls.objects.filter(pk__in=[obj.pk for obj in objs])
+        return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
+
+    @classmethod
+    @handle_field_errors
     def find(cls, query="", reverse=False, sort_tag="date"):
         qs = cls._orm_model_cls.find(query=query, reverse=reverse, sort_tag=sort_tag)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
