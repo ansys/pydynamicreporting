@@ -70,3 +70,6 @@ venv/
 
 # Ignore Sphinx files
 doc/_build
+
+# TIFF files
+*.tiff
