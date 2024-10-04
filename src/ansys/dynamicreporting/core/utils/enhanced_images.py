@@ -12,90 +12,13 @@ enhanced image.
 import io
 import json
 from typing import Dict, Tuple, Union
-import numpy as np
-import vtk
 
 from PIL import Image, TiffImagePlugin
 from ansys.dpf import core as dpf
 from ansys.dpf.core import vtk_helper
+import numpy as np
+import vtk
 from vtk.util.numpy_support import vtk_to_numpy
-
-
-def create_sample_sphere():
-    sphere = vtk.vtkSphereSource()
-    print(type(sphere))
-    sphere.Update()
-    add_var_as_cell_data(sphere.GetOutput(), "Pick Data", lambda i: 3456)
-    add_var_as_cell_data(sphere.GetOutput(), "Temperature", lambda i: i % 10000)
-
-    return sphere
-
-
-def create_unstructured_grid():
-    # Create the points
-    points = vtk.vtkPoints()
-    points.InsertNextPoint(0.0, 0.0, 0.0)
-    points.InsertNextPoint(1.0, 0.0, 0.0)
-    points.InsertNextPoint(1.0, 1.0, 0.0)
-    points.InsertNextPoint(0.0, 1.0, 0.0)
-    points.InsertNextPoint(0.0, 0.0, 1.0)
-    points.InsertNextPoint(1.0, 0.0, 1.0)
-    points.InsertNextPoint(1.0, 1.0, 1.0)
-    points.InsertNextPoint(0.0, 1.0, 1.0)
-    points.InsertNextPoint(2.0, 0.0, 0.0)
-    points.InsertNextPoint(2.0, 1.0, 0.0)
-
-    # Create an unstructured grid
-    unstructured_grid = vtk.vtkUnstructuredGrid()
-    unstructured_grid.SetPoints(points)
-
-    # Create a hexahedron cell (cube)
-    hexahedron = vtk.vtkHexahedron()
-    for i in range(8):
-        hexahedron.GetPointIds().SetId(i, i)  # Add the first 8 points to form a hexahedron
-
-    # Create a tetrahedron cell
-    tetra = vtk.vtkTetra()
-    tetra.GetPointIds().SetId(0, 0)
-    tetra.GetPointIds().SetId(1, 1)
-    tetra.GetPointIds().SetId(2, 8)
-    tetra.GetPointIds().SetId(3, 9)
-
-    # Add the cells to the grid
-    unstructured_grid.InsertNextCell(hexahedron.GetCellType(), hexahedron.GetPointIds())
-    unstructured_grid.InsertNextCell(tetra.GetCellType(), tetra.GetPointIds())
-
-    add_var_as_cell_data(unstructured_grid, "Pick Data", lambda i: 3456)
-    add_var_as_point_data(unstructured_grid, "Temperature", lambda i: i % 10000)
-
-    return unstructured_grid
-
-
-def add_var_as_cell_data(poly_data, var_name, val_calculator):
-    arr = vtk.vtkFloatArray()
-    arr.SetName(var_name)
-    arr.SetNumberOfComponents(1)
-    num_cells = poly_data.GetNumberOfCells()
-    arr.SetNumberOfTuples(num_cells)
-
-    for i in range(num_cells):
-        arr.SetValue(i, val_calculator(i))
-
-    poly_data.GetCellData().AddArray(arr)
-
-
-def add_var_as_point_data(poly_data, var_name, val_calculator):
-    arr = vtk.vtkFloatArray()
-    arr.SetName(var_name)
-    arr.SetNumberOfComponents(1)
-    num_points = poly_data.GetNumberOfPoints()
-    arr.SetNumberOfTuples(num_points)
-
-    for i in range(num_points):
-        arr.SetValue(i, val_calculator(i))
-
-    poly_data.GetPointData().AddArray(arr)
-    # poly_data.GetOutput().GetPointData().SetActiveScalars(var_name)
 
 
 def setup_render_routine(poly_data: vtk.vtkPolyData) -> Tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
@@ -508,8 +431,9 @@ def generate_components_for_enhanced_image(
     return json_data, rgb_buffer, pick_buffer, var_buffer
 
 
-def generate_enhanced_image_as_tiff(model: dpf.Model, var_field: dpf.Field,
-                                    part_name: str, output_file_name: str):
+def generate_enhanced_image_as_tiff(
+    model: dpf.Model, var_field: dpf.Field, part_name: str, output_file_name: str
+):
     """
     Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
 
@@ -531,7 +455,9 @@ def generate_enhanced_image_as_tiff(model: dpf.Model, var_field: dpf.Field,
     form_enhanced_image_as_tiff(json_data, rgb_buffer, pick_buffer, var_buffer, output_file_name)
 
 
-def generate_enhanced_image_in_memory(model: dpf.Model, var_field: dpf.Field, part_name: str) -> Image:
+def generate_enhanced_image_in_memory(
+    model: dpf.Model, var_field: dpf.Field, part_name: str
+) -> Image:
     """
     Generate an enhanced image as a PIL Image object given DPF inputs.
 
