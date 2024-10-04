@@ -22,7 +22,7 @@ class Template(BaseModel):
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=None)  # computed from self.parent
     report_type: str = ""
-    _properties: tuple = tuple()
+    _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
     _type_registry = {}
@@ -38,9 +38,35 @@ class Template(BaseModel):
         if cls is Template:
             # Get the class based on the type attribute
             templ_cls = cls._type_registry[orm_instance.report_type]
-            return templ_cls.from_db(orm_instance, **kwargs)
+            obj = templ_cls.from_db(orm_instance, **kwargs)
+        else:
+            obj = super().from_db(orm_instance, **kwargs)
+        # add relevant props from property dict.
+        props = obj.get_property()
+        for prop in cls._properties:
+            if prop in props:
+                setattr(obj, prop, props[prop])
+        return obj
 
-        return super().from_db(orm_instance, **kwargs)
+    def save(self, **kwargs):
+        if self.parent is not None and not self.parent._saved:
+            raise Template.NotSaved(
+                extra_detail="Failed to save template because its parent is not saved"
+            )
+        for child in self.children:
+            if not child._saved:
+                raise Template.NotSaved(
+                    extra_detail="Failed to save template because its children are not saved"
+                )
+        # set properties
+        prop_dict = {}
+        for prop in self._properties:
+            value = getattr(self, prop, None)
+            if value is not None:
+                prop_dict[prop] = value
+        if prop_dict:
+            self.add_property(prop_dict)
+        super().save(**kwargs)
 
     @property
     def type(self):
@@ -124,35 +150,10 @@ class Template(BaseModel):
         params["properties"] = curr_props | new_props
         self.params = json.dumps(params)
 
-    def save(self, **kwargs):
-        if self.parent is not None and not self.parent._saved:
-            raise Template.NotSaved(
-                extra_detail="Failed to save template because its parent is not saved"
-            )
-        for child in self.children:
-            if not child._saved:
-                raise Template.NotSaved(
-                    extra_detail="Failed to save template because its children are not saved"
-                )
-        # set properties
-        prop_dict = {}
-        for prop in self._properties:
-            value = getattr(self, prop, None)
-            if value is not None:
-                prop_dict[prop] = value
-        if prop_dict:
-            self.add_property(prop_dict)
-        super().save(**kwargs)
-
     @classmethod
     def get(cls, **kwargs):
         new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        obj = super().get(**new_kwargs)
-        props = obj.get_property()
-        for prop in cls._properties:
-            if prop in props:
-                setattr(obj, prop, props[prop])
-        return obj
+        return super().get(**new_kwargs)
 
     @classmethod
     def filter(cls, **kwargs):
