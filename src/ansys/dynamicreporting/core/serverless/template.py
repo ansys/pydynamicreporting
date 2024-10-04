@@ -24,6 +24,23 @@ class Template(BaseModel):
     report_type: str = ""
     _properties: tuple = tuple()
     _orm_model: str = "reports.models.Template"
+    # Class-level registry of subclasses keyed by type
+    _type_registry = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Automatically register the subclass based on its type attribute
+        Template._type_registry[cls.report_type] = cls
+
+    @classmethod
+    def from_db(cls, orm_instance, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Template:
+            # Get the class based on the type attribute
+            templ_cls = cls._type_registry[orm_instance.report_type]
+            return templ_cls.from_db(orm_instance, **kwargs)
+
+        return super().from_db(orm_instance, **kwargs)
 
     @property
     def type(self):
