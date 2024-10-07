@@ -4,6 +4,7 @@ requires = [
     "setuptools>=45.0",
     "setuptools-scm",
     "wheel>=0.37.0",
+    "pre-commit>=3.3.3",
 ]
 
 [project]
@@ -68,6 +69,7 @@ tests = [
     "psutil==5.9.5",
     "pytest==7.4.2",
     "pytest-cov==4.1.0",
+    "pre-commit>=3.3.3",
 ]
 doc = [
     "ansys-sphinx-theme==0.11.2",
@@ -77,6 +79,7 @@ doc = [
     "Sphinx==7.2.6",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.14.0",
+    "pre-commit>=3.3.3",
 ]
 dev = [
     "build",
