@@ -25,7 +25,7 @@ class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     hostname: str = field(compare=False, kw_only=True, default=str(platform.node))
     platform: str = field(compare=False, kw_only=True, default=str(report_utils.enve_arch))
-    application: str = field(compare=False, kw_only=True, default="Python API")
+    application: str = field(compare=False, kw_only=True, default="Serverless ADR Python API")
     version: str = field(compare=False, kw_only=True, default="1.0")
     _orm_model: str = "data.models.Session"
 
@@ -180,7 +180,7 @@ class SimplePayloadMixin:
     def from_db(cls, orm_instance, **kwargs):
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().from_db(orm_instance)
+        obj = super().from_db(orm_instance, **kwargs)
         obj.content = safe_unpickle(obj._orm_instance.payloaddata)
         return obj
 
@@ -194,7 +194,7 @@ class FilePayloadMixin:
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
-        obj = super().from_db(orm_instance)
+        obj = super().from_db(orm_instance, **kwargs)
         obj.content = obj._orm_instance.payloadfile.path
         return obj
 
@@ -217,6 +217,23 @@ class Item(BaseModel):
     dataset: Dataset = field(compare=False, kw_only=True, default=None)
     type: str = "none"
     _orm_model: str = "data.models.Item"
+    # Class-level registry of subclasses keyed by type
+    _type_registry = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Automatically register the subclass based on its type attribute
+        Item._type_registry[cls.type] = cls
+
+    @classmethod
+    def from_db(cls, orm_instance, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Item:
+            # Get the class based on the type attribute
+            item_cls = cls._type_registry[orm_instance.type]
+            return item_cls.from_db(orm_instance, **kwargs)
+
+        return super().from_db(orm_instance, **kwargs)
 
     def save(self, **kwargs):
         if self.session is None or self.dataset is None:
@@ -280,10 +297,6 @@ class String(SimplePayloadMixin, Item):
     type: str = "string"
 
 
-class Text(String):
-    pass
-
-
 class HTML(String):
     content: HTMLContent = HTMLContent()
     type: str = "html"
@@ -298,7 +311,7 @@ class Table(Item):
     def from_db(cls, orm_instance, **kwargs):
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().from_db(orm_instance)
+        obj = super().from_db(orm_instance, **kwargs)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
@@ -316,10 +329,6 @@ class Table(Item):
                 payload[prop] = value
         self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
         super().save(**kwargs)
-
-
-class Plot(Table):
-    pass
 
 
 class Tree(SimplePayloadMixin, Item):
@@ -345,10 +354,6 @@ class Image(FilePayloadMixin, Item):
 class Animation(FilePayloadMixin, Item):
     content: AnimContent = AnimContent()
     type: str = "anim"
-
-
-class Movie(Animation):
-    pass
 
 
 class Scene(FilePayloadMixin, Item):
