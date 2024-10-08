@@ -18,7 +18,7 @@ class Template(BaseModel):
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
     _children_order: str = field(
-        compare=False, init=False, default=None
+        compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=None)  # computed from self.parent
     report_type: str = ""
