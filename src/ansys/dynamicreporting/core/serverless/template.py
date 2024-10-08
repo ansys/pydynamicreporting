@@ -80,7 +80,7 @@ class Template(BaseModel):
 
     @property
     def children_order(self):
-        return self._children_order
+        return ",".join([str(child.guid) for child in self.children])
 
     @property
     def master(self):
