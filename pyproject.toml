@@ -78,7 +78,7 @@ doc = [
     "docker>=7.1.0",
     "Sphinx==7.2.6",
     "sphinx-copybutton==0.5.2",
-    "sphinx-gallery==0.14.0",
+    "sphinx-gallery==0.17.1",
 ]
 dev = [
     "build",
@@ -97,7 +97,7 @@ dev = [
     "pytest-cov==4.1.0",
     "Sphinx==7.2.6",
     "sphinx-copybutton==0.5.2",
-    "sphinx-gallery==0.14.0",
+    "sphinx-gallery==0.17.1",
     "pre-commit==3.3.3",
 ]
 
