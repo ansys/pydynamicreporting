@@ -104,7 +104,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Microsoft Teams Notification
-        uses: jdcargile/ms-teams-notification@v1.3
+        uses: jdcargile/ms-teams-notification@v1.4
         with:
           github-token: ${{ github.token }}
           ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
