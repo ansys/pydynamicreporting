@@ -294,21 +294,22 @@ class BaseModel(metaclass=BaseMeta):
             value = getattr(self, field_, None)
             if value is None:
                 continue
-            # todo: handle template parent and children saving.
             if isinstance(value, list):
                 obj_list = []
                 for obj in value:
                     obj_list.append(obj._orm_instance)
-                if obj_list:
-                    getattr(self._orm_instance, field_).add(*obj_list)
-            elif isinstance(value, BaseModel):
-                try:
-                    value = value._orm_instance.__class__.objects.using(
-                        kwargs.get("using", "default")
-                    ).get(guid=value.guid)
-                except ObjectDoesNotExist:
-                    raise value.__class__.DoesNotExist
-            setattr(self._orm_instance, field_, value)
+                getattr(self._orm_instance, field_).add(*obj_list)
+            else:
+                if isinstance(value, BaseModel):  # relations
+                    try:
+                        value = value._orm_instance.__class__.objects.using(
+                            kwargs.get("using", "default")
+                        ).get(guid=value.guid)
+                    except ObjectDoesNotExist:
+                        raise value.__class__.DoesNotExist
+                # for all others
+                setattr(self._orm_instance, field_, value)
+
         self._orm_instance.save(**kwargs)
         self._saved = True
 
