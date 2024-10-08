@@ -26,6 +26,7 @@ env:
 
 jobs:
   style:
+
     name: Code style
     runs-on: ubuntu-latest
     steps:
