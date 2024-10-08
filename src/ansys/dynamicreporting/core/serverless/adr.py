@@ -273,7 +273,7 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-    def get_reports(self, fields: list = None, flat: bool = False) -> ObjectSet:
+    def get_reports(self, fields: list = None, flat: bool = False) -> Union[ObjectSet, list]:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -286,8 +286,14 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, *fields) -> ObjectSet:
-        return self.get_reports(*fields)
+    def get_list_reports(self, r_type: Optional[str] = "name") -> Union[ObjectSet, list]:
+        supported_types = ["name", "report"]
+        if r_type not in supported_types:
+            raise ADRException(f"r_type must be one of {supported_types}")
+        if r_type == "name":
+            return self.get_reports([r_type], flat=True)
+        else:
+            return self.get_reports()
 
     def render_report(self, context: dict = None, query: str = None, **kwargs: Any) -> str:
         try:
