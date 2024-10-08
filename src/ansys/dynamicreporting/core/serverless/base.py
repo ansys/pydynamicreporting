@@ -437,7 +437,7 @@ class ObjectSet:
         ret = []
         for obj in self._obj_set:
             ret.append(tuple(getattr(obj, f, None) for f in fields))
-        return chain.from_iterable(ret) if flat else ret
+        return list(chain.from_iterable(ret)) if flat else ret
 
 
 class Validator(ABC):
