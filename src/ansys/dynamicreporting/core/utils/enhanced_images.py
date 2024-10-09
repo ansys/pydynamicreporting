@@ -14,11 +14,78 @@ import json
 from typing import Dict, Tuple, Union
 
 from PIL import Image, TiffImagePlugin
-from ansys.dpf import core as dpf
-from ansys.dpf.core import vtk_helper
 import numpy as np
-import vtk
-from vtk.util.numpy_support import vtk_to_numpy
+
+# import vtk
+# from vtk.util.numpy_support import vtk_to_numpy
+# from ansys.dpf import core as dpf
+# from ansys.dpf.core import vtk_helper
+
+try:
+    import vtk
+    from vtk.util.numpy_support import vtk_to_numpy
+
+    HAS_VTK = True
+except ModuleNotFoundError:
+    HAS_VTK = False
+
+try:
+    from ansys.dpf import core as dpf
+    from ansys.dpf.core import vtk_helper
+
+    HAS_DPF = True
+except ModuleNotFoundError:
+    HAS_DPF = False
+
+if HAS_VTK and HAS_DPF:
+
+    def generate_enhanced_image_as_tiff(
+        model: dpf.Model, var_field: dpf.Field, part_name: str, output_file_name: str
+    ):
+        """
+        Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
+
+        Parameters
+        ----------
+        model: dpf.Model
+            A DPF model object.
+        var_field: dpf.Field
+            A DPF field object that comes from the given model. The field is essentially
+            the variable in interest to visualize in an enhanced image.
+        part_name: str
+            The name of the part. It will showed on the interactive enhanced image in ADR.
+        output_file_name: str
+            output TIFF file name with extension of .tiff or .tif
+        """
+        _generate_enhanced_image(model, var_field, part_name, output_file_name)
+
+    def generate_enhanced_image_in_memory(
+        model: dpf.Model, var_field: dpf.Field, part_name: str
+    ) -> Image:
+        """
+        Generate an enhanced image as a PIL Image object given DPF inputs.
+
+        Parameters
+        ----------
+        model: dpf.Model
+            A DPF model object.
+        var_field: dpf.Field
+            A DPF field object that comes from the given model. The field is essentially
+            the variable in interest to visualize in an enhanced image.
+        part_name: str
+            The name of the part. It will showed on the interactive enhanced image in ADR.
+
+        Returns
+        -------
+        Image
+            A PIL Image object that represents the enhanced image.
+        """
+        # Create an in-memory bytes buffer
+        buffer = io.BytesIO()
+        _generate_enhanced_image(model, var_field, part_name, buffer)
+        buffer.seek(0)
+        image = Image.open(buffer)
+        return image
 
 
 def _setup_render_routine(
@@ -383,53 +450,3 @@ def _generate_enhanced_image(
     }
 
     _form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffer, output)
-
-
-def generate_enhanced_image_as_tiff(
-    model: dpf.Model, var_field: dpf.Field, part_name: str, output_file_name: str
-):
-    """
-    Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
-
-    Parameters
-    ----------
-    model: dpf.Model
-        A DPF model object.
-    var_field: dpf.Field
-        A DPF field object that comes from the given model. The field is essentially
-        the variable in interest to visualize in an enhanced image.
-    part_name: str
-        The name of the part. It will showed on the interactive enhanced image in ADR.
-    output_file_name: str
-        output TIFF file name with extension of .tiff or .tif
-    """
-    _generate_enhanced_image(model, var_field, part_name, output_file_name)
-
-
-def generate_enhanced_image_in_memory(
-    model: dpf.Model, var_field: dpf.Field, part_name: str
-) -> Image:
-    """
-    Generate an enhanced image as a PIL Image object given DPF inputs.
-
-    Parameters
-    ----------
-    model: dpf.Model
-        A DPF model object.
-    var_field: dpf.Field
-        A DPF field object that comes from the given model. The field is essentially
-        the variable in interest to visualize in an enhanced image.
-    part_name: str
-        The name of the part. It will showed on the interactive enhanced image in ADR.
-
-    Returns
-    -------
-    Image
-        A PIL Image object that represents the enhanced image.
-    """
-    # Create an in-memory bytes buffer
-    buffer = io.BytesIO()
-    _generate_enhanced_image(model, var_field, part_name, buffer)
-    buffer.seek(0)
-    image = Image.open(buffer)
-    return image
