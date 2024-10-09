@@ -21,7 +21,9 @@ import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
 
-def setup_render_routine(poly_data: vtk.vtkPolyData) -> Tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
+def _setup_render_routine(
+    poly_data: vtk.vtkPolyData,
+) -> Tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
     """
     Set up VTK render routine, including mapper, actor, renderer and render window.
 
@@ -57,7 +59,7 @@ def setup_render_routine(poly_data: vtk.vtkPolyData) -> Tuple[vtk.vtkRenderer, v
     return renderer, render_window  # , render_windowdow_interactor
 
 
-def get_vtk_scalar_mode(poly_data: vtk.vtkPolyData, var_name: str) -> int:
+def _get_vtk_scalar_mode(poly_data: vtk.vtkPolyData, var_name: str) -> int:
     """
     Given the var_name, get the scalar mode this var_name belongs to.
 
@@ -91,7 +93,7 @@ def get_vtk_scalar_mode(poly_data: vtk.vtkPolyData, var_name: str) -> int:
     raise ValueError(f"{var_name} does not belong to point data, nor cell data")
 
 
-def setup_value_pass(
+def _setup_value_pass(
     poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, var_name: str
 ) -> vtk.vtkValuePass:
     """
@@ -114,7 +116,7 @@ def setup_value_pass(
         VTK_SCALAR_MODE_USE_POINT_FIELD_DATA or VTK_SCALAR_MODE_USE_CELL_FIELD_DATA.
     """
     value_pass = vtk.vtkValuePass()
-    vtk_scalar_mode = get_vtk_scalar_mode(poly_data, var_name)
+    vtk_scalar_mode = _get_vtk_scalar_mode(poly_data, var_name)
     value_pass.SetInputArrayToProcess(vtk_scalar_mode, var_name)
     value_pass.SetInputComponentToProcess(0)
 
@@ -131,7 +133,7 @@ def setup_value_pass(
     return value_pass
 
 
-def get_rgb_value(render_window: vtk.vtkRenderWindow) -> np.ndarray:
+def _get_rgb_value(render_window: vtk.vtkRenderWindow) -> np.ndarray:
     """
     Get the RGB value from the render window. It starts from explicitly calling render
     window's Render function.
@@ -172,7 +174,7 @@ def get_rgb_value(render_window: vtk.vtkRenderWindow) -> np.ndarray:
     return np_array
 
 
-def render_pick_data(
+def _render_pick_data(
     poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, render_window: vtk.vtkRenderWindow
 ) -> np.ndarray:
     """
@@ -194,7 +196,7 @@ def render_pick_data(
         Specifically, R channel stores the lower 8 bits of the pick data; G channel
         stores the higher 8.
     """
-    value_pass = setup_value_pass(poly_data, renderer, "Pick Data")
+    value_pass = _setup_value_pass(poly_data, renderer, "Pick Data")
 
     render_window.Render()
 
@@ -218,7 +220,7 @@ def render_pick_data(
     return pick_buffer
 
 
-def render_var_data(
+def _render_var_data(
     poly_data: vtk.vtkPolyData,
     renderer: vtk.vtkRenderer,
     render_window: vtk.vtkRenderWindow,
@@ -244,7 +246,7 @@ def render_var_data(
     np.ndarray
         A numpy array as float32 format. Each value represents the variable data on a pixel.
     """
-    value_pass = setup_value_pass(poly_data, renderer, var_name)
+    value_pass = _setup_value_pass(poly_data, renderer, var_name)
 
     render_window.Render()
 
@@ -255,7 +257,7 @@ def render_var_data(
     return np_buffer
 
 
-def form_enhanced_image(
+def _form_enhanced_image(
     json_data: Dict,
     rgb_buffer: np.ndarray,
     pick_buffer: np.ndarray,
@@ -300,7 +302,7 @@ def form_enhanced_image(
     )
 
 
-def generate_enhanced_image(
+def _generate_enhanced_image(
     model: dpf.Model, var_field: dpf.Field, part_name: str, output: Union[str, io.BytesIO]
 ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -346,10 +348,10 @@ def generate_enhanced_image(
     geometry_filter.Update()
     poly_data = geometry_filter.GetOutput()
 
-    renderer, render_window = setup_render_routine(poly_data)
-    rgb_buffer = get_rgb_value(render_window)
-    pick_buffer = render_pick_data(grid, renderer, render_window)
-    var_buffer = render_var_data(grid, renderer, render_window, var_name)
+    renderer, render_window = _setup_render_routine(poly_data)
+    rgb_buffer = _get_rgb_value(render_window)
+    pick_buffer = _render_pick_data(grid, renderer, render_window)
+    var_buffer = _render_var_data(grid, renderer, render_window, var_name)
 
     # Todo: automatic colorby_var support
     # global colorby_var_id
@@ -380,7 +382,7 @@ def generate_enhanced_image(
         ],
     }
 
-    form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffer, output)
+    _form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffer, output)
 
 
 def generate_enhanced_image_as_tiff(
@@ -401,7 +403,7 @@ def generate_enhanced_image_as_tiff(
     output_file_name: str
         output TIFF file name with extension of .tiff or .tif
     """
-    generate_enhanced_image(model, var_field, part_name, output_file_name)
+    _generate_enhanced_image(model, var_field, part_name, output_file_name)
 
 
 def generate_enhanced_image_in_memory(
@@ -427,7 +429,7 @@ def generate_enhanced_image_in_memory(
     """
     # Create an in-memory bytes buffer
     buffer = io.BytesIO()
-    generate_enhanced_image(model, var_field, part_name, buffer)
+    _generate_enhanced_image(model, var_field, part_name, buffer)
     buffer.seek(0)
     image = Image.open(buffer)
     return image
