@@ -6,7 +6,7 @@ repos:
   - id: black
 
 - repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.13.0
+  rev: 1.18.0
   hooks:
   - id: blacken-docs
     additional_dependencies: [ black==23.3.0 ]
@@ -49,7 +49,7 @@ repos:
     args: [ --py37-plus ]
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.6.0
   hooks:
   - id: check-added-large-files
   - id: check-yaml
@@ -58,11 +58,13 @@ repos:
   - id: check-merge-conflict
   - id: trailing-whitespace
 
-- repo: https://github.com/PyCQA/docformatter
-  rev: v1.6.3
-  hooks:
-  - id: docformatter
-    additional_dependencies: [ "tomli" ]
+# Currently not working till docformatter works with latest pre-commit
+#
+#- repo: https://github.com/PyCQA/docformatter
+#  rev: v1.7.4
+#  hooks:
+#  - id: docformatter
+#    additional_dependencies: [ "tomli" ]
 
 # TO BE ACTIVATED EVENTUALLY - FORCES PROPER DOCSTRINGS
 #
