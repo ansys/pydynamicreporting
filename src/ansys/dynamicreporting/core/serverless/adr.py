@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+# from collections.abc import Iterable
 import os
 from pathlib import Path
 import platform
@@ -8,7 +8,7 @@ import uuid
 
 import django
 from django.core import management
-from django.db import IntegrityError, connection, connections
+# from django.db import IntegrityError, connection, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
@@ -31,14 +31,14 @@ class ADR:
         self,
         ansys_installation: str,
         *,
-        db_directory: str = None,
-        databases: dict = None,
-        media_directory: str = None,
-        static_directory: str = None,
-        debug: bool = None,
-        opts: dict = None,
-        request: HttpRequest = None,
-        logfile: str = None,
+        db_directory: Optional[str] = None,
+        databases: Optional[dict] = None,
+        media_directory: Optional[str] = None,
+        static_directory: Optional[str] = None,
+        debug: Optional[bool] = None,
+        opts: Optional[dict] = None,
+        request: Optional[HttpRequest] = None,
+        logfile: Optional[str] = None,
     ) -> None:
         self._db_directory = None
         self._databases = databases or {}
@@ -87,7 +87,7 @@ class ADR:
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
-    def _get_install_directory(self, ansys_installation: Optional[str]) -> Path:
+    def _get_install_directory(self, ansys_installation: str) -> Path:
         dirs_to_check = []
         if ansys_installation:
             # User passed directory
@@ -273,7 +273,7 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-    def get_reports(self, fields: list = None, flat: bool = False) -> Union[ObjectSet, list]:
+    def get_reports(self, fields: Optional[list] = None, flat: bool = False) -> Union[ObjectSet, list]:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -286,7 +286,7 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, r_type: Optional[str] = "name") -> Union[ObjectSet, list]:
+    def get_list_reports(self, r_type: str = "name") -> Union[ObjectSet, list]:
         supported_types = ["name", "report"]
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
@@ -295,7 +295,7 @@ class ADR:
         else:
             return self.get_reports()
 
-    def render_report(self, context: dict = None, query: str = None, **kwargs: Any) -> str:
+    def render_report(self, context: Optional[dict] = None, query: str = "", **kwargs: Any) -> str:
         try:
             return Template.get(**kwargs).render(
                 request=self._request, context=context, query=query
@@ -307,9 +307,10 @@ class ADR:
     def query(
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
-        query: Optional[str] = "",
+        query: str = "",
     ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query)
+
