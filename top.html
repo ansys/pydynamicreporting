@@ -1,0 +1,396 @@
+﻿<div class="body-content m-1">
+
+
+
+
+
+    <link rel="stylesheet" type="text/css" href="/static/website/content/fontawesome.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/solid.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/adr-web-components.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/bootstrap-callout.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/site.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/website/content/dark-site.css"/>
+
+
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          jax: ["input/TeX","input/MathML","input/AsciiMath"],
+          extensions: ["tex2jax.js","mml2jax.js","asciimath2jax.js","MathMenu.js","MathZoom.js"],
+          TeX: { extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"] },
+          tex2jax: { inlineMath:[['$','$'],["\\(","\\)"]], displayMath:[['$$','$$'],["\\[","\\]"]], processEscapes:true, processEnvironments:true},
+          asciimath2jax: { delimiters:[['`','`']] },
+        });
+    </script>
+    <script src="/static/website/scripts/mathjax/MathJax.js?config=TeX-AMS-MML_SVG"></script>
+    <script src="/static/website/scripts/jquery.min.js"></script>
+    <script src="/static/website/scripts/datatables.min.js"></script>
+
+
+
+
+                <script src="/static/ansys251/nexus/utils/js-unzip.js"></script>
+
+
+                <script src="/static/ansys251/nexus/utils/js-inflate.js"></script>
+
+
+                <script src="/static/ansys251/nexus/viewer-loader.js"></script>
+
+
+
+
+
+
+    <script>$(document).ready(function () {
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+    });</script>
+
+
+    <link rel="stylesheet" type="text/css" href="/static/website/content/bootstrap-slider.min.css"/>
+    <script src="/static/website/scripts/geotiff.js"></script>
+    <script src="/static/website/scripts/geotiff_nexus.js"></script>
+
+
+    <adr-report-root>
+        <template shadowrootmode="open">
+            <section id="report_root" class="container-fluid w-100" style="padding: 0; margin: 0;">
+                <slot></slot>
+            </section>
+        </template>
+
+            <div  nexus_template="7bef6ee2-8600-11ef-8094-010101010000" >
+        <br><h1>Serverless Simulation Report</h1><div class="container-fluid mx-auto" id="7bef6ee2-8600-11ef-8094-010101010000" >
+
+            <div  nexus_template="7bf350b8-8600-11ef-a0a1-010101010000" >
+        <br><h2>Table of Content</h2><div class="container-fluid mx-auto" id="7bf350b8-8600-11ef-a0a1-010101010000" >
+</div>
+<div id='TOC_item_list_0'></div>
+            </div>
+
+            <div  nexus_template="7bf79e02-8600-11ef-90fe-010101010000" >
+        <a id="TOC_item_tgt_1"></a><br>
+                <adr-panel id="7bf79e02-8600-11ef-90fe-010101010000_1" type='default'>
+                    <template shadowrootmode="open">
+                        <link rel="stylesheet" href="/static/website/content/adr-web-components.css" />
+                        <section class="adr-panel" >
+                            <header class='adr-panel-header'><h2>Introduction</h2></header>
+                            <section class="adr-panel-body" id="7bf79e02-8600-11ef-90fe-010101010000_1-adr-panel-body" >
+                                <slot></slot>
+                            </section>
+                        </section>
+                    </template>
+
+            <div  nexus_template="7bfa7261-8600-11ef-ae30-010101010000" >
+        <br><div class="container-fluid mx-auto" id="7bfa7261-8600-11ef-ae30-010101010000" >
+
+                <adr-data-item type="string" >
+                    <template shadowrootmode="open">
+                        <link rel="stylesheet" href="/static/website/content/adr-web-components.css" />
+                        <section class="adr-data-item-container">
+                            <slot></slot>
+                        </section>
+                    </template>
+                    <div class="text-center"><p>This section describes the settings for the simulation: initial conditions, solver settings, and such.</p></div>
+
+                </adr-data-item>
+            </div>
+
+            </div>
+
+            <div  nexus_template="7bfcab55-8600-11ef-be88-010101010000" >
+        <br><div class="container-fluid mx-auto" id="7bfcab55-8600-11ef-be88-010101010000" >
+
+                <adr-data-item type="tree" >
+                    <template shadowrootmode="open">
+                        <link rel="stylesheet" href="/static/website/content/adr-web-components.css" />
+                        <section class="adr-data-item-container">
+                            <slot></slot>
+                        </section>
+                    </template>
+                    <div style="display:block;overflow-x:auto;white-space:nowrap;"><table id='treeroot_c1cc5fe82e614155bf36a7a374a3747d' class='table tree table-bordered table-striped' style='margin:0;padding:0;'>
+<tr id='treenode_c1cc5fe82e614155bf36a7a374a3747d-1' data-parent='0' data-tree='treeroot_c1cc5fe82e614155bf36a7a374a3747d' class='tree-row tree-leaf ' style=''>
+<td><span class='treegrid-indent me-1 '  style='cursor:pointer'></span>Solver</td><td >My Solver</td></tr>
+<tr id='treenode_c1cc5fe82e614155bf36a7a374a3747d-2' data-parent='0' data-tree='treeroot_c1cc5fe82e614155bf36a7a374a3747d' class='tree-row tree-leaf ' style=''>
+<td><span class='treegrid-indent me-1 '  style='cursor:pointer'></span>Number cells</td><td >10000000.00</td></tr>
+<tr id='treenode_c1cc5fe82e614155bf36a7a374a3747d-3' data-parent='0' data-tree='treeroot_c1cc5fe82e614155bf36a7a374a3747d' class='tree-row tree-leaf ' style=''>
+<td><span class='treegrid-indent me-1 '  style='cursor:pointer'></span>Mesh Size</td><td >1.0 mm^3</td></tr>
+<tr id='treenode_c1cc5fe82e614155bf36a7a374a3747d-4' data-parent='0' data-tree='treeroot_c1cc5fe82e614155bf36a7a374a3747d' class='tree-row tree-leaf ' style=''>
+<td><span class='treegrid-indent me-1 '  style='cursor:pointer'></span>Mesh Type</td><td >Hex8</td></tr>
+</table>
+</div>
+
+                </adr-data-item>
+            </div>
+
+            </div>
+
+            </adr-panel>
+
+            </div>
+
+            <div  nexus_template="7bffdf96-8600-11ef-aef4-010101010000" >
+        <a id="TOC_item_tgt_2"></a><br>
+                <adr-panel id="7bffdf96-8600-11ef-aef4-010101010000_2" type='default'>
+                    <template shadowrootmode="open">
+                        <link rel="stylesheet" href="/static/website/content/adr-web-components.css" />
+                        <section class="adr-panel" >
+                            <header class='adr-panel-header'><h2>Results</h2>
+Your simulation results.</header>
+                            <section class="adr-panel-body" id="7bffdf96-8600-11ef-aef4-010101010000_2-adr-panel-body" >
+                                <slot></slot>
+                            </section>
+                        </section>
+                    </template>
+
+                <adr-data-item type="table" >
+                    <template shadowrootmode="open">
+                        <link rel="stylesheet" href="/static/website/content/adr-web-components.css" />
+                        <section class="adr-data-item-container">
+                            <slot></slot>
+                        </section>
+                    </template>
+
+            <section class="nexus-plot" id="plot_744bb6fb198a495585b2b31d208980e9" >
+                <section class="adr-spinner-loader-container">
+                    <div id="plot_744bb6fb198a495585b2b31d208980e9_loader" class="adr-spinner-loader" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                </section>
+            </section>
+        <script>
+ var data_0 = {
+ tags: {
+     'dp': 'dp0',
+     'section': 'data',
+  },
+  x: ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0', '1.2', '1.4', '1.6', '1.8', '2.0', '2.2', '2.4', '2.6', '2.8', '3.0', '3.2', '3.4', '3.6', '3.8', '4.0', '4.2', '4.4', '4.6', '4.8', '5.0', '5.2', '5.4', '5.6', '5.8'],
+  y: ['0.05405300096888779', '0.3152883261107488', '0.6387392108103715', '0.8819722488526874', '0.9922966099564992', '1.0708616924518741', '0.9549029988953056', '0.8316283923054428', '0.5935297454873504', '0.38483067956342737', '0.08855808964674632', '-0.2512643333552577', '-0.49795861900833494', '-0.803007612867081', '-0.9184929751010933', '-0.9392673770811113', '-0.8543260142891852', '-0.7513904808805045', '-0.4993299202333197', '-0.2851019624113008', '0.08631698801626511', '0.36178111464407126', '0.6783833354689668', '0.8838193207617998', '1.0485264893586905', '1.0962539769416881', '1.0170785754509666', '0.8380823696160267', '0.6483939246957882', '0.33407656037231026'],
+  name: 'Sin',  text: ['(0, 0.1)', '(0, 0.3)', '(0, 0.6)', '(1, 0.9)', '(1, 1.0)', '(1, 1.1)', '(1, 1.0)', '(1, 0.8)', '(2, 0.6)', '(2, 0.4)', '(2, 0.1)', '(2, -0.3)', '(2, -0.5)', '(3, -0.8)', '(3, -0.9)', '(3, -0.9)', '(3, -0.9)', '(3, -0.8)', '(4, -0.5)', '(4, -0.3)', '(4, 0.1)', '(4, 0.4)', '(4, 0.7)', '(5, 0.9)', '(5, 1.0)', '(5, 1.1)', '(5, 1.0)', '(5, 0.8)', '(6, 0.6)', '(6, 0.3)'],
+  hoverinfo: 'text',
+  type: 'scatter',
+  showlegend: true,
+  mode: 'lines+markers',
+  marker: {
+opacity: 1.0,
+ },
+  line: {
+ },
+ };
+ var data_1 = {
+ tags: {
+     'dp': 'dp0',
+     'section': 'data',
+  },
+  x: ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0', '1.2', '1.4', '1.6', '1.8', '2.0', '2.2', '2.4', '2.6', '2.8', '3.0', '3.2', '3.4', '3.6', '3.8', '4.0', '4.2', '4.4', '4.6', '4.8', '5.0', '5.2', '5.4', '5.6', '5.8'],
+  y: ['1.0123601489233705', '1.0423530048323957', '0.8633939071179494', '0.5939215987262682', '0.3783164022729487', '0.015619252719215122', '-0.26876165323620416', '-0.49150355589190226', '-0.7457964773369855', '-0.9140309616658702', '-0.9628366995199109', '-0.8640967871554719', '-0.7812641303351939', '-0.561537967579782', '-0.29783137738779675', '0.013604508339703354', '0.37736303077699207', '0.6321755100722469', '0.8257584172241088', '0.9787606052537784', '1.0320443441686415', '0.9973101598562373', '0.8838208145044208', '0.6402839849987694', '0.3690865671897903', '0.07643102099231905', '-0.29525758879203595', '-0.5097359205382054', '-0.7517687087699386', '-0.9257653442678694'],
+  name: 'Cos',  text: ['(0, 1.0)', '(0, 1.0)', '(0, 0.9)', '(1, 0.6)', '(1, 0.4)', '(1, 0.0)', '(1, -0.3)', '(1, -0.5)', '(2, -0.7)', '(2, -0.9)', '(2, -1.0)', '(2, -0.9)', '(2, -0.8)', '(3, -0.6)', '(3, -0.3)', '(3, 0.0)', '(3, 0.4)', '(3, 0.6)', '(4, 0.8)', '(4, 1.0)', '(4, 1.0)', '(4, 1.0)', '(4, 0.9)', '(5, 0.6)', '(5, 0.4)', '(5, 0.1)', '(5, -0.3)', '(5, -0.5)', '(6, -0.8)', '(6, -0.9)'],
+  hoverinfo: 'text',
+  type: 'scatter',
+  showlegend: true,
+  mode: 'lines+markers',
+  marker: {
+opacity: 1.0,
+ },
+  line: {
+ },
+ };
+var data_744bb6fb198a495585b2b31d208980e9 = [data_0,data_1,];
+var const_data_744bb6fb198a495585b2b31d208980e9 = JSON.parse(JSON.stringify(data_744bb6fb198a495585b2b31d208980e9));
+ var layout = {
+   font: {color: "#2a3f5f"},
+   paper_bgcolor: "white",
+   plot_bgcolor: "white",
+margin: { },
+   xaxis: {
+     zeroline: true,
+     gridcolor: "#EBF0F8",
+     zerolinecolor: "#EBF0F8",
+     title: 'X',
+     tickformat: '.0f',
+     autorange: true,
+   },
+   yaxis: {
+     zeroline: true,
+     gridcolor: "#EBF0F8",
+     zerolinecolor: "#EBF0F8",
+     title: 'Values',
+     tickformat: '.1f',
+     autorange: true,
+   },
+     hovermode: 'closest',
+  showlegend: true,
+   legend: {
+   },
+ };
+ var options = {
+    showLink: false,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['sendDataToCloud', 'select2d', 'lasso2d'],
+    modeBarButtonsToAdd: ['toggleSpikelines', 'v1hovermode'],
+ };
+ pobj_744bb6fb198a495585b2b31d208980e9 = document.getElementById('plot_744bb6fb198a495585b2b31d208980e9');
+ Plotly.newPlot( pobj_744bb6fb198a495585b2b31d208980e9, data_744bb6fb198a495585b2b31d208980e9, layout, options);
+ window.addEventListener('resize', function() { Plotly.Plots.resize(pobj_744bb6fb198a495585b2b31d208980e9);});
+
+            pobj_744bb6fb198a495585b2b31d208980e9.addEventListener('filter_event', function(event) {
+                for (let [key, value] of Object.entries(const_data_744bb6fb198a495585b2b31d208980e9)) {
+                    data_744bb6fb198a495585b2b31d208980e9[key] = JSON.parse(JSON.stringify(value));
+                }
+                event.detail.forEach((filterDetail, key) => {
+                    let tempData;
+                    switch (key) {
+
+                        case 'plot_range_x':
+                            filterDetail.forEach((rangeObject, key) => {
+                                tempData = JSON.parse(JSON.stringify(data_744bb6fb198a495585b2b31d208980e9));
+                                tempData.forEach((trace, index) => {
+                                    let min = rangeObject.min;
+                                    let max = rangeObject.max;
+                                    data_744bb6fb198a495585b2b31d208980e9[index]['x'] = trace['x'].filter((value) =>
+                                        value >= min && value <= max);
+
+                                            data_744bb6fb198a495585b2b31d208980e9[index]['y'] = trace['y'].filter((value, index) =>
+                                            trace['x'][index] >= min && trace['x'][index] <= max)
+
+                                });
+                            });
+                            break;
+
+                        case 'plot_range_y':
+
+                                    filterDetail.forEach((rangeObject, key) => {
+                                        tempData = JSON.parse(JSON.stringify(data_744bb6fb198a495585b2b31d208980e9))
+                                        tempData.forEach((trace, index) => {
+                                            let min = rangeObject.min;
+                                            let max = rangeObject.max;
+                                            data_744bb6fb198a495585b2b31d208980e9[index]['y'] = trace['y'].filter((value) =>
+                                                value >= min && value <= max);
+                                            data_744bb6fb198a495585b2b31d208980e9[index]['x'] = trace['x'].filter((value, index) =>
+                                                trace['y'][index] >= min && trace['y'][index] <= max);
+                                        });
+                                    });
+
+
+                            break;
+
+                        case 'tag':
+                            filterDetail.forEach((hiddenTags, key) => {
+                                if (hiddenTags.min !== undefined) {
+                                    data_744bb6fb198a495585b2b31d208980e9.forEach((trace, index) => {
+                                        if (trace.tags[key] < hiddenTags.min || trace.tags[key] > hiddenTags.max) {
+                                            trace.visible = 'hidden';
+                                            data_744bb6fb198a495585b2b31d208980e9[index]['x'] = [];
+
+                                                    data_744bb6fb198a495585b2b31d208980e9[index]['y'] = []
+
+                                        }
+                                    })
+                                } else if (key === 'Other tags') {
+                                    hiddenTags.forEach((hiddenTag) => {
+                                        data_744bb6fb198a495585b2b31d208980e9.forEach((trace, index) => {
+                                            if (trace.visible !== 'hidden' && trace.tags[hiddenTag] === 'True') {
+                                                trace.visible = 'hidden';
+                                                data_744bb6fb198a495585b2b31d208980e9[index]['x'] = [];
+
+                                                        data_744bb6fb198a495585b2b31d208980e9[index]['y'] = []
+
+                                            }
+                                        });
+                                    });
+                                } else {
+                                    data_744bb6fb198a495585b2b31d208980e9.forEach((trace, index) => {
+                                        Object.entries(trace.tags).forEach(([tagKey,tagValue]) => {
+                                            if (tagValue === 'True') {
+                                                trace.tags[tagKey] = tagKey;
+                                            }
+                                        })
+                                        if (hiddenTags.includes(trace.tags[key])) {
+                                            trace.visible = 'hidden';
+                                            data_744bb6fb198a495585b2b31d208980e9[index]['x'] = [];
+
+                                                    data_744bb6fb198a495585b2b31d208980e9[index]['y'] = []
+
+                                        }
+                                    })
+                                }
+                            })
+                            break;
+
+                        case 'single-tag':
+                            filterDetail.forEach((tags, key) => {
+                                if (tags.length) {
+                                    let shownTag = tags[0];
+                                    data_744bb6fb198a495585b2b31d208980e9.forEach((trace, index) => {
+                                        let tagIsDefined = trace.tags[key] !== undefined;
+                                        if (!(tagIsDefined && trace.tags[key].includes(shownTag) || trace.tags[shownTag] === 'True')) {
+                                            trace.visible = 'hidden';
+                                            data_744bb6fb198a495585b2b31d208980e9[index]['x'] = [];
+
+                                                    data_744bb6fb198a495585b2b31d208980e9[index]['y'] = []
+
+                                        }
+                                    })
+                                }
+                            })
+                            break;
+                    }
+                });
+
+                let filteredData = data_744bb6fb198a495585b2b31d208980e9.filter(data => data['x'].length>0
+
+                            && (data['y'].length>0)
+                        ).map(filteredData => filteredData['name']);
+                event.filteredData = filteredData;
+                Plotly.redraw(pobj_744bb6fb198a495585b2b31d208980e9);
+            });
+            $(document).ready(function() {
+                Promise.all([ Plotly.Plots.resize(pobj_744bb6fb198a495585b2b31d208980e9) ]).then(()=>{
+                    const loader = document.getElementById('plot_744bb6fb198a495585b2b31d208980e9_loader');
+                    loader.style.display = 'none';
+
+                    pobj_744bb6fb198a495585b2b31d208980e9.classList.add('loaded');
+                });
+            });
+        </script>
+
+                </adr-data-item>
+
+            </adr-panel>
+
+            </div>
+        </div>
+
+            </div>
+        <style>
+.toc_root {list-style-type: none;}
+.toc_0 {text-indent: 0pt;}
+.toc_1 {text-indent: 15pt;}
+.toc_2 {text-indent: 30pt;}
+.toc_3 {text-indent: 45pt;}
+.toc_4 {text-indent: 60pt;}
+.toc_5 {text-indent: 75pt;}
+.toc_6 {text-indent: 90pt;}
+</style>
+<script type='text/javascript'>
+$(document).ready(function() {
+ var figtmp = '<ul class="toc_root"></ul>';
+ var tabtmp = '<ul class="toc_root"></ul>';
+ var itmtmp = '<ul class="toc_root"><li class="toc_0"><a href="#TOC_item_tgt_1">1 Introduction</a></li><li class="toc_0"><a href="#TOC_item_tgt_2">2 Results</a></li></ul>';
+ document.getElementById('TOC_item_list_0').innerHTML = itmtmp;
+});
+</script>
+
+    </adr-report-root>
+
+    <script src="/static/website/scripts/hotkey.min.js"></script>
+    <script src="/static/website/scripts/bootstrap.min.js"></script>
+    <script src="/static/website/scripts/report_template_components.js"></script>
+
+    <script src="/static/website/scripts/bootstrap-slider.min.js"></script>
+    <script src="/static/website/scripts/panzoom.min.js"></script>
+    <script src="/static/website/scripts/report_item.js"></script>
+    <script src="/static/website/scripts/report_display.js"></script>
+
+</div>

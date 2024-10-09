@@ -8,6 +8,7 @@ import uuid
 
 import django
 from django.core import management
+
 # from django.db import IntegrityError, connection, connections
 from django.http import HttpRequest
 
@@ -151,7 +152,7 @@ class ADR:
         if self._databases:
             if "default" not in self._databases:
                 raise ImproperlyConfiguredError(
-                    """ The database configuration must be a dictionary of the following format with
+                    """ The 'databases' option must be a dictionary of the following format with
                     a "default" database specified.
                 {
                     "default": {
@@ -273,7 +274,9 @@ class ADR:
             self._logger.error(f"{e}")
             raise e
 
-    def get_reports(self, fields: Optional[list] = None, flat: bool = False) -> Union[ObjectSet, list]:
+    def get_reports(
+        self, fields: Optional[list] = None, flat: bool = False
+    ) -> Union[ObjectSet, list]:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -313,4 +316,3 @@ class ADR:
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query)
-
