@@ -286,6 +286,8 @@ class BaseModel(metaclass=BaseMeta):
 
     @handle_field_errors
     def save(self, **kwargs):
+        self._saved = False  # reset
+
         cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
         for field_ in cls_fields:
