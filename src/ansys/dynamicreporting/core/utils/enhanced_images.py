@@ -84,7 +84,8 @@ if HAS_VTK and HAS_DPF:
         buffer = io.BytesIO()
         _generate_enhanced_image(model, var_field, part_name, buffer)
         buffer.seek(0)
-        image = Image.open(buffer)
+        with Image.open(buffer) as image:
+            image.load()
         return image
 
 
@@ -340,11 +341,11 @@ def _form_enhanced_image(
     json_data: Dict
         A dictionary that contains "parts" and "variables" sections.
     rgb_buffer: np.ndarray
-        A int8 buffer with RGB values. Its dimension is [height, width, 3].
+        An int8 buffer with RGB values. Its dimension is [height, width, 3].
     pick_buffer: np.ndarray
-        A int8 buffer with pick data. Its dimension is [height, width, 3].
+        An int8 buffer with pick data. Its dimension is [height, width, 3].
     var_buffer: np.ndarray
-        A float32 buffer with variable data. Its dimension is [height, width].
+        An float32 buffer with variable data. Its dimension is [height, width].
     output: Union[str, io.BytesIo]
         Specify the output to be either a file name or a byte buffer.
     """
