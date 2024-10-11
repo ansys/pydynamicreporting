@@ -17,13 +17,14 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import DatabaseError
+from django.db import DataError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
 from django.db.models.manager import Manager
 
 from ..exceptions import (
     ADRException,
+    IntegrityError,
     MultipleObjectsReturnedError,
     ObjectDoesNotExistError,
     ObjectNotSavedError,
@@ -42,7 +43,7 @@ def handle_field_errors(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, FieldDoesNotExist, ValidationError, DatabaseError) as e:
+        except (FieldError, FieldDoesNotExist, ValidationError, DataError) as e:
             raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
 
     return wrapper
@@ -93,6 +94,13 @@ class BaseMeta(ABCMeta):
             add_exception_to_cls(
                 "MultipleObjectsReturned",
                 MultipleObjectsReturnedError,
+                new_cls,
+                parents,
+                namespace.get("__module__"),
+            )
+            add_exception_to_cls(
+                "IntegrityError",
+                IntegrityError,
                 new_cls,
                 parents,
                 namespace.get("__module__"),
@@ -284,36 +292,47 @@ class BaseModel(metaclass=BaseMeta):
         obj._saved = True
         return obj
 
-    @handle_field_errors
-    def save(self, **kwargs):
-        self._saved = False  # reset
-
-        cls_fields = self._get_all_field_names()
-        model_fields = self._get_orm_field_names(self._orm_instance)
+    def _prepare_for_save(self, **kwargs):
+        obj = self
+        obj._saved = False  # reset
+        cls_fields = obj._get_all_field_names()
+        model_fields = obj._get_orm_field_names(obj._orm_instance)
         for field_ in cls_fields:
             if field_ not in model_fields:
                 continue
-            value = getattr(self, field_, None)
-            if value is None:
+            value = getattr(obj, field_, None)
+            if value is None:  # skip and use defaults
                 continue
             if isinstance(value, list):
-                obj_list = []
-                for obj in value:
-                    obj_list.append(obj._orm_instance)
-                getattr(self._orm_instance, field_).add(*obj_list)
+                objs = [o._orm_instance for o in value]
+                getattr(obj._orm_instance, field_).add(*objs)
             else:
                 if isinstance(value, BaseModel):  # relations
                     try:
                         value = value._orm_instance.__class__.objects.using(
                             kwargs.get("using", "default")
                         ).get(guid=value.guid)
-                    except ObjectDoesNotExist:
-                        raise value.__class__.DoesNotExist
+                    except ObjectDoesNotExist as e:
+                        raise value.__class__.DoesNotExist(
+                            extra_detail=f"Object with guid '{value.guid}'" f" does not exist: {e}"
+                        )
                 # for all others
-                setattr(self._orm_instance, field_, value)
+                setattr(obj._orm_instance, field_, value)
+        return obj
 
-        self._orm_instance.save(**kwargs)
-        self._saved = True
+    @handle_field_errors
+    def save(self, **kwargs):
+        try:
+            obj = self._prepare_for_save(**kwargs)
+            obj._orm_instance.save(**kwargs)
+        except IntegrityError as e:
+            raise self.__class__.IntegrityError(
+                extra_detail=f"Save failed for object with guid '{self.guid}': {e}"
+            )
+        except Exception as e:
+            raise e
+        else:
+            obj._saved = True
 
     @classmethod
     @handle_field_errors
@@ -324,7 +343,9 @@ class BaseModel(metaclass=BaseMeta):
 
     def delete(self, **kwargs):
         if not self._saved:
-            raise self.__class__.NotSaved(extra_detail="Delete failed")
+            raise self.__class__.NotSaved(
+                extra_detail=f"Delete failed for object with guid '{self.guid}'."
+            )
         count, _ = self._orm_instance.delete(**kwargs)
         self._saved = False
         return count
@@ -345,13 +366,6 @@ class BaseModel(metaclass=BaseMeta):
     @handle_field_errors
     def filter(cls, **kwargs):
         qs = cls._orm_model_cls.objects.filter(**kwargs)
-        return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
-
-    @classmethod
-    @handle_field_errors
-    def bulk_create(cls, **kwargs):
-        objs = cls._orm_model_cls.objects.bulk_create(**kwargs)
-        qs = cls._orm_model_cls.objects.filter(pk__in=[obj.pk for obj in objs])
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
