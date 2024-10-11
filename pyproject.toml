@@ -36,19 +36,25 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "build>=0.8.0",
-    "django~=4.2",
-    "djangorestframework~=3.14",
     "filelock>=3.7.1",
-    "numpy>=1.18.0,<2",
-    "packaging>=21.0",
     "docker>=7.1.0",
     "pypng>=0.20220715.0",
-    "python-dateutil>=2.8.0",
-    "pytz>=2021.3",
     "requests>=2.32",
     "urllib3<3.0.0",
     "Pillow>=9.3.0",
+    "python-dateutil>=2.8.0",
+    "pytz>=2021.3",
+    "packaging>=21.0",
+    "build>=0.8.0",
+    # core ADR dependencies
+    "django~=4.2",
+    "djangorestframework~=3.14",
+    "django-guardian~=2.4",
+    "tzlocal~=5.0",
+    "numpy>=1.18.0,<2",
+    "python-pptx==0.6.19",
+    "pandas~=2.0",
+    "statsmodels~=0.14",
 ]
 
 [tool.setuptools.packages.find]
