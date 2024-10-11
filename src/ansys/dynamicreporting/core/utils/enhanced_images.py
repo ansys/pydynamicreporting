@@ -61,7 +61,7 @@ if HAS_VTK and HAS_DPF:
 
     def generate_enhanced_image_in_memory(
         model: dpf.Model, var_field: dpf.Field, part_name: str
-    ) -> Image:
+    ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
 
@@ -77,16 +77,15 @@ if HAS_VTK and HAS_DPF:
 
         Returns
         -------
-        Image
-            A PIL Image object that represents the enhanced image.
+        buffer
+            A IO buffer that represents the enhanced image.
+            The returned buffer can be opened by PIL Image.open
         """
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
         _generate_enhanced_image(model, var_field, part_name, buffer)
         buffer.seek(0)
-        with Image.open(buffer) as image:
-            image.load()
-        return image
+        return buffer
 
 
 def _setup_render_routine(
