@@ -172,7 +172,7 @@ class Template(BaseModel):
         new_kwargs = {**kwargs, "query": f"A|t_types|cont|{cls.report_type};{query}"}
         return super().find(**new_kwargs)
 
-    def render(self, context=None, request=None, query=None) -> Optional[str]:
+    def render(self, context=None, request=None, query="") -> str:
         if context is None:
             context = {}
         ctx = {**context, "request": request, "ansys_version": None}
