@@ -60,7 +60,7 @@ jobs:
             os: macos-latest
     steps:
       - name: Build wheelhouse and perform smoke test
-        uses: ansys/actions/build-wheelhouse@v4
+        uses: ansys/actions/build-wheelhouse@v8
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           library-namespace: ${{ env.PACKAGE_NAMESPACE }}
@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload coverage report
         if: env.MAIN_PYTHON_VERSION == matrix.python-version
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage.xml
           path: coverage.xml
@@ -109,7 +109,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: env.MAIN_PYTHON_VERSION == matrix.python-version
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
 
   docs:
     name: Build docs
@@ -160,11 +160,13 @@ jobs:
     needs: [package]
     steps:
       - name: Deploy the latest documentation
-        uses: ansys/actions/doc-deploy-dev@v4
+        uses: ansys/actions/doc-deploy-dev@v8
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
+          bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
 
   upload_docs_release:
     name: Upload release documentation
@@ -173,11 +175,13 @@ jobs:
     needs: [release]
     steps:
       - name: Deploy the stable documentation
-        uses: ansys/actions/doc-deploy-stable@v4
+        uses: ansys/actions/doc-deploy-stable@v8
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
+          bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
   build-failure:
@@ -188,7 +192,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Microsoft Teams Notification
-        uses: jdcargile/ms-teams-notification@v1.3
+        uses: jdcargile/ms-teams-notification@v1.4
         with:
           github-token: ${{ github.token }} # this will use the runner's token.
           ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
