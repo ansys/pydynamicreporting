@@ -89,6 +89,12 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install vtk
+          pip install ansys-dpf-core
+
       - name: Run pytest
         uses: ansys/actions/tests-pytest@v4
         env:
