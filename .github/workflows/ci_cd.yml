@@ -117,7 +117,7 @@ jobs:
 #    needs: [docs-style]
     steps:
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v4
+        uses: ansys/actions/doc-build@v8
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
