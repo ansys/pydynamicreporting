@@ -5,17 +5,16 @@ from PIL import Image
 from PIL.TiffTags import TAGS
 from ansys.dpf import core as dpf
 from ansys.dpf.core import examples
-
-# from ansys.dynamicreporting.core.utils import enhanced_images as ei
-
 import pytest
 
+from ansys.dynamicreporting.core.utils import enhanced_images as ei
 from ansys.dynamicreporting.core.utils import report_utils as ru
 
-sys.path.append(
-    "C:\\Users\\yuzhang\\ADRdev\\pydynamicreporting\\src\\ansys\\dynamicreporting\\core\\utils"
-)
-import enhanced_images as ei
+# sys.path.append(
+#     "C:\\Users\\yuzhang\\ADRdev\\pydynamicreporting\\src\\ansys\\dynamicreporting\\core\\utils"
+# )
+# import enhanced_images as ei
+
 
 def get_dpf_model_field_example():
     model = dpf.Model(examples.find_electric_therm())
