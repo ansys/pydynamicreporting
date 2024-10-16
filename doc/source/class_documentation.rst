@@ -2,7 +2,7 @@
 API reference
 *************
 
-Ansys Dynamic Reporting contains a low-level API that allows the user to access
+Ansys Dynamic Reporting contains a low-level API that allows you to access
 all the available features and properties in full detail. While this low-level
 API is very powerful, it can also be quite complex to use and it requires a
 steep learning curve. For a comprehensive description of this API, see

@@ -15,7 +15,7 @@ To get a copy of Ansys, visit the `Ansys <https://www.ansys.com/>`_ website.
    is installed separately, and can be found in the Fluids section of the
    Ansys installer. Please also note that in all versions, Ansys Dynamic Reporting
    is automatically installed if one of the following Ansys products is
-   installed: EnSight, Forte, Fluent, Polyflow, Icepack.
+   installed: EnSight, Forte, Fluent, Polyflow, or Icepack.
 
 
 
