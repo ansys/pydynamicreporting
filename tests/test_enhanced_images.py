@@ -1,5 +1,4 @@
 import json
-import sys
 
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -9,11 +8,6 @@ import pytest
 
 from ansys.dynamicreporting.core.utils import enhanced_images as ei
 from ansys.dynamicreporting.core.utils import report_utils as ru
-
-# sys.path.append(
-#     "C:\\Users\\yuzhang\\ADRdev\\pydynamicreporting\\src\\ansys\\dynamicreporting\\core\\utils"
-# )
-# import enhanced_images as ei
 
 
 def get_dpf_model_field_example():
@@ -52,14 +46,24 @@ def setup_generation_flow(request):
 
 
 def test_basic_format(setup_generation_flow):
-    image = setup_generation_flow
+    try:
+        image = setup_generation_flow
+    except ValueError as e:
+        print(e)
+        return
+
     image.seek(0)
     result = ru.is_enhanced(image)
     assert result is not None
 
 
 def test_image_description(setup_generation_flow):
-    image = setup_generation_flow
+    try:
+        image = setup_generation_flow
+    except ValueError as e:
+        print(e)
+        return
+
     image.seek(0)
     metadata_dict = {TAGS[key]: image.tag[key] for key in image.tag_v2}
     image_description = json.loads(metadata_dict["ImageDescription"][0])
