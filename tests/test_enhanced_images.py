@@ -1,5 +1,4 @@
 import json
-import sys
 
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -52,6 +51,7 @@ def setup_generation_flow(request):
         return None
 
 
+@pytest.mark.ado_test
 def test_basic_format(setup_generation_flow):
     image = setup_generation_flow
     if image is None:
@@ -62,6 +62,7 @@ def test_basic_format(setup_generation_flow):
         assert result is not None
 
 
+@pytest.mark.ado_test
 def test_image_description(setup_generation_flow):
     image = setup_generation_flow
     if image is None:
