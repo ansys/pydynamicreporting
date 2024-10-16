@@ -68,7 +68,7 @@ jobs:
         run: make test
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
-          
+
   nightly_and_upload:
     name: nightly_and_upload
     runs-on: ubuntu-latest
