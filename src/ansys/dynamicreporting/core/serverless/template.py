@@ -18,12 +18,55 @@ class Template(BaseModel):
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
     _children_order: str = field(
-        compare=False, init=False, default=None
+        compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=None)  # computed from self.parent
     report_type: str = ""
-    _properties: tuple = tuple()
+    _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
+    # Class-level registry of subclasses keyed by type
+    _type_registry = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Automatically register the subclass based on its type attribute
+        Template._type_registry[cls.report_type] = cls
+
+    @classmethod
+    def from_db(cls, orm_instance, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Template:
+            # Get the class based on the type attribute
+            templ_cls = cls._type_registry[orm_instance.report_type]
+            obj = templ_cls.from_db(orm_instance, **kwargs)
+        else:
+            obj = super().from_db(orm_instance, **kwargs)
+        # add relevant props from property dict.
+        props = obj.get_property()
+        for prop in cls._properties:
+            if prop in props:
+                setattr(obj, prop, props[prop])
+        return obj
+
+    def save(self, **kwargs):
+        if self.parent is not None and not self.parent._saved:
+            raise Template.NotSaved(
+                extra_detail="Failed to save template because its parent is not saved"
+            )
+        for child in self.children:
+            if not child._saved:
+                raise Template.NotSaved(
+                    extra_detail="Failed to save template because its children are not saved"
+                )
+        # set properties
+        prop_dict = {}
+        for prop in self._properties:
+            value = getattr(self, prop, None)
+            if value is not None:
+                prop_dict[prop] = value
+        if prop_dict:
+            self.add_property(prop_dict)
+        super().save(**kwargs)
 
     @property
     def type(self):
@@ -37,7 +80,7 @@ class Template(BaseModel):
 
     @property
     def children_order(self):
-        return self._children_order
+        return ",".join([str(child.guid) for child in self.children])
 
     @property
     def master(self):
@@ -107,35 +150,10 @@ class Template(BaseModel):
         params["properties"] = curr_props | new_props
         self.params = json.dumps(params)
 
-    def save(self, **kwargs):
-        if self.parent is not None and not self.parent._saved:
-            raise Template.NotSaved(
-                extra_detail="Failed to save template because its parent is not saved"
-            )
-        for child in self.children:
-            if not child._saved:
-                raise Template.NotSaved(
-                    extra_detail="Failed to save template because its children are not saved"
-                )
-        # set properties
-        prop_dict = {}
-        for prop in self._properties:
-            value = getattr(self, prop, None)
-            if value is not None:
-                prop_dict[prop] = value
-        if prop_dict:
-            self.add_property(prop_dict)
-        super().save(**kwargs)
-
     @classmethod
     def get(cls, **kwargs):
         new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        obj = super().get(**new_kwargs)
-        props = obj.get_property()
-        for prop in cls._properties:
-            if prop in props:
-                setattr(obj, prop, props[prop])
-        return obj
+        return super().get(**new_kwargs)
 
     @classmethod
     def filter(cls, **kwargs):
@@ -154,7 +172,7 @@ class Template(BaseModel):
         new_kwargs = {**kwargs, "query": f"A|t_types|cont|{cls.report_type};{query}"}
         return super().find(**new_kwargs)
 
-    def render(self, context=None, request=None, query=None) -> Optional[str]:
+    def render(self, context=None, request=None, query="") -> str:
         if context is None:
             context = {}
         ctx = {**context, "request": request, "ansys_version": None}
@@ -278,3 +296,15 @@ class TreeMergeGenerator(Generator):
 
 class SQLQueryGenerator(Generator):
     report_type: str = "Generator:sqlqueries"
+
+
+class ItemsComparisonGenerator(Generator):
+    report_type: str = "Generator:itemscomparison"
+
+
+class StatisticalGenerator(Generator):
+    report_type: str = "Generator:statistical"
+
+
+class IteratorGenerator(Generator):
+    report_type: str = "Generator:iterator"
