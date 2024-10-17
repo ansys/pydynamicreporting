@@ -4,8 +4,8 @@
 Embed report and overwrite styles
 =====================================
 
-Applying the new custom web component **<adr-report></adr-report>** as an alternative of
-using **<iframe></iframe>** to fetch and embed a report in the external web application.
+Applying the new custom web component ``<adr-report></adr-report>`` as an alternative of
+using ``<iframe></iframe>`` to fetch and embed a report in the external web application.
 
 .. note::
    This example assumes that you have a local Ansys installation with a version v251 or
@@ -51,19 +51,27 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 # -------------------
 #
 # Using the custom web component to tunnel the report over to the external web
-# app requires additional server settings to bypass potential cross-origin
-# resource sharing (CORS) error. See below diagram of CORS error
+# app requires additional server settings to bypass potential **cross-origin
+# resource sharing (CORS) error**. See below diagram illustrating the CORS error
+# process:
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_0.png
 #
-#    *Browser will block any request from client side between different domains*
+#    *By default, browsers will block requests from the client side between different domains*
 
 ###############################################################################
 # To resolve the CORS error, instead of sending request from the client side,
 # using the server that powers the external web app to proxy the requests.
 # Adding **3 types of REST calls** reroute settings to set up the proxy server:
 
+###############################################################################
+# * Reroute **GET** Request to the main ADR report page (for HTML content)
+# * Reroute **GET** Request to access the ADR report's **static** files
+# * Reroute **GET** Request to access the ADR report's **media** files
+
+###############################################################################
+# The below diagram illustrates the proxy server concept to bypass CORS error:
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_1.png
@@ -71,78 +79,73 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #    *Bypass the CORS error by using the app server to proxy the request*
 
 ###############################################################################
-# * Reroute **GET** Request to the main ADR report page (for HTML content)
-# * Reroute **GET** Request to access the ADR report's "static" files
-# * Reroute **GET** Request to access the ADR report's "media" files
-
-
-###############################################################################
 # This example is using **Flask** as the backend framework, but the same concept
 # is applicable to other backend structures such as Node.js.
-
 
 ###############################################################################
 # .. note::
 #   Using **Flask** as the backend framework to set up proxy will serve the static
 #   assets like CSS, JS files in its "static" directory, the GET request to ADR's
 #   static assets may cause request conflicts (same for requesting "media" files).
+#
 #   Therefore, the below code example includes rewriting request for "static" files
-#   and "media" files to avoid potential request conflicts.
+#   and "media" files to avoid such conflicts, please refer to the **highlighted
+#   code block**.
 
-# init Flask app
-from flask import Flask, Response, redirect, request  # noqa: F811, E402
-from requests import get  # noqa: F811, E402
-
-app = Flask(__name__)
-
-
-# Flask serves its own static files from "/static/"" directory by default, to avoid conflicts occur while getting
-# report's "static" files, intercept the GET request and rewrite the route from "/static/" to "/adr_static/"...
-# if the given patterns match (*Do the route rewrite for media files too)
-@app.before_request
-def intercept_request():
-    # rewrite GET request path to ADR "static" files if the given pattern(s) match(es)
-    if (
-        request.path.startswith("/static/website/content")
-        or request.path.startswith("/static/website/scripts")
-        or request.path.startswith("/static/ansys")
-    ):
-        static_path = request.path.replace("/static/", "/adr_static/", 1)
-        return redirect(static_path)
-
-    # rewrite GET request path to ADR "media" files if the given pattern(s) match(es)
-    if request.path.startswith("/media/"):
-        static_path = request.path.replace("/media/", "/adr_media/", 1)
-        return redirect(static_path)
-
-
-# reroute GET request path with a pattern of "/report/..." to main report HTML page
-@app.route("/report/<path:subpath>", methods=["GET"])
-def proxy_core(subpath):
-    subpath = subpath.split("/")
-    # Construct the target URL for request reroute to get the report page HTML
-    target_url = f"{root}/reports/report_display/?report_table_length=10&view={subpath[0]}&usemenus=on&dpi=120&pwidth=12.80&query={subpath[1]}"
-    resp = get(target_url)
-    return Response(resp.content, content_type=resp.headers["Content-Type"])
-
-
-# reroute GET request path with a pattern of "/adr_static/..." to access report "static" files
-@app.route("/adr_static/<path:subpath>", methods=["GET"])
-def proxy_static(subpath):
-    # Construct the target URL for request reroute to get the report static files
-    static_url = f"{root}/static/{subpath}"
-    resp = get(static_url)
-    return Response(resp.content, content_type=resp.headers["Content-Type"])
-
-
-# reroute GET request path with a pattern of "/adr_media/..." to access report "media" files
-@app.route("/adr_media/<path:subpath>", methods=["GET"])
-def proxy_media(subpath):
-    # Construct the target URL for request reroute to get the report media files
-    media_url = f"{root}/media/{subpath}"
-    resp = get(media_url)
-    return Response(resp.content, content_type=resp.headers["Content-Type"])
-
+###############################################################################
+#  .. code-block:: python
+#     :emphasize-lines: 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24
+#
+#      from flask import Flask, Response, redirect, request  # noqa: F811, E402
+#      from requests import get  # noqa: F811, E402
+#
+#       # init Flask app
+#       app = Flask(__name__)
+#
+#       # Flask serves its own static files from "/static/"" directory by default, to avoid conflicts occur while getting
+#       # report's "static" files, intercept the GET request and rewrite the route from "/static/" to "/adr_static/"...
+#       # if the given patterns match (*Do the route rewrite for media files too)
+#       @app.before_request
+#       def intercept_request():
+#           # rewrite GET request path to ADR "static" files if the given pattern(s) match(es)
+#           if (
+#               request.path.startswith("/static/website/content")
+#               or request.path.startswith("/static/website/scripts")
+#               or request.path.startswith("/static/ansys")
+#           ):
+#               static_path = request.path.replace("/static/", "/adr_static/", 1)
+#               return redirect(static_path)
+#
+#           # rewrite GET request path to ADR "media" files if the given pattern(s) match(es)
+#           if request.path.startswith("/media/"):
+#               static_path = request.path.replace("/media/", "/adr_media/", 1)
+#               return redirect(static_path)
+#
+#       # reroute GET request path with a pattern of "/report/..." to main report HTML page
+#       @app.route("/report/<path:subpath>", methods=["GET"])
+#       def proxy_core(subpath):
+#           subpath = subpath.split("/")
+#           # Construct the target URL for request reroute to get the report page HTML
+#           target_url = f"{root}/reports/report_display/?report_table_length=10&view={subpath[0]}&usemenus=on&dpi=120&pwidth=12.80&query={subpath[1]}"
+#           resp = get(target_url)
+#           return Response(resp.content, content_type=resp.headers["Content-Type"])
+#
+#       # reroute GET request path with a pattern of "/adr_static/..." to access report "static" files
+#       @app.route("/adr_static/<path:subpath>", methods=["GET"])
+#       def proxy_static(subpath):
+#           # Construct the target URL for request reroute to get the report static files
+#           static_url = f"{root}/static/{subpath}"
+#           resp = get(static_url)
+#           return Response(resp.content, content_type=resp.headers["Content-Type"])
+#
+#       # reroute GET request path with a pattern of "/adr_media/..." to access report "media" files
+#       @app.route("/adr_media/<path:subpath>", methods=["GET"])
+#       def proxy_media(subpath):
+#           # Construct the target URL for request reroute to get the report media files
+#           media_url = f"{root}/media/{subpath}"
+#           resp = get(media_url)
+#           return Response(resp.content, content_type=resp.headers["Content-Type"])
+#
 
 ###############################################################################
 # Initiate web component to embed the report
@@ -191,15 +194,26 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 ###############################################################################
-# Build HTML structure to display the report
+# HTML structure and report style overwrite
 # ------------------------------------------
 #
-# The following is a basic HTML structure in the **index.html** fileto serve the
-# web component, its script, and the style sheet for style overwrite (if any).
-# Note that the stylesheets for report style overwrite should be added in the
-# <head></head> section.
-#
-# .. code:: html
+# The following code snippet is a basic HTML structure in the ``index.html``
+# file to serve the web component, its script, and the style sheet for style
+# overwrite (if any).
+
+###############################################################################
+# .. note::
+#   The CSS stylesheet to overwrite report styles should be added as a ``<link>`` tag
+#   inside the ``<head></head>`` section of the HTML file. The ``href`` attribute
+#   of the ``<link>`` tag displays the CSS file path, which should then be passed as
+#   the value of the ``style_path`` argument in the
+#   :func:`get_report_component(style_path="...")<ansys.dynamicreporting.core.Report.get_report_component>`
+#   in order to overwrite the styles.
+
+
+###############################################################################
+# .. code-block:: html
+#    :emphasize-lines: 8
 #
 #      <!DOCTYPE html>
 #      <html lang="en">
