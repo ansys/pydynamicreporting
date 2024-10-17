@@ -4,17 +4,16 @@
 Embed report and overwrite styles
 =====================================
 
-Applying the new custom web component <adr-report></adr-report> as an alternative of
-using <iframe></iframe> to fetch and embed a report in the external web application.
+Applying the new custom web component **<adr-report></adr-report>** as an alternative of
+using **<iframe></iframe>** to fetch and embed a report in the external web application.
 
 .. note::
-   This example assumes that you have a local Ansys installation with a version v251 or beyond.
-   For this feature, as of 25R1, there are only Panel and Tabs layout templates accept style
-   overwrite, more templates will be available for changing styles in the future release.
+   This example assumes that you have a local Ansys installation with a version v251 or 
+   beyond.For this feature, as of **25R1**, **Panel** and **Tabs** are the only layout 
+   templates accept style overwrite, more templates will be available for styles 
+   modification in the future release.
 
 """
-
-from random import random as r
 
 ###############################################################################
 # Start an Ansys Dynamic Reporting service
@@ -22,9 +21,9 @@ from random import random as r
 #
 # Start an Ansys Dynamic Reporting service using an existing database that has
 # at least 1 report template being defined.
-from flask import Flask, Response, redirect, request
+from random import random as r
+
 import numpy as np
-from requests import get
 
 import ansys.dynamicreporting.core as adr
 from ansys.dynamicreporting.core.utils import report_utils
@@ -48,21 +47,52 @@ adr_service.start()
 my_report = adr_service.get_report(report_name="Top Level Report")
 
 ###############################################################################
-# Set up proxy server configuration settings
-# ------------------------------------------
+# Set up proxy server
+# -------------------
 #
 # Using the custom web component to tunnel the report over to the external web
 # app requires additional server settings to bypass potential cross-origin
-# resource sharing (CORS) error. 
+# resource sharing (CORS) error. See below diagram of CORS error
+
+###############################################################################
+# .. figure:: /_static/02_customized_report_embed_0.png
 # 
-# The idea is to include 3 types of REST calls
-# reroute settings for different types of ADR report assets: (1) main report page,
-# (2) report "static" files, (3) report "media" files, in the server that powers
-# the external web app, using it as a proxy server. This example is using Flask
-# as the backend framework, but the same concept is applicable to other backend
-# structures.
+#    *Browser will block any request from client side between different domains*
+
+###############################################################################
+# To resolve the CORS error, instead of sending request from the clinet side,
+# using the server that powers the external web app to proxy the requests.
+# Adding **3 types of REST calls** reroute settings to set up the proxy server:
+
+
+###############################################################################
+# .. figure:: /_static/02_customized_report_embed_1.png
+# 
+#    *Bypass the CORS error by using the app server to proxy the request*
+
+###############################################################################
+#* Reroute **GET** Request to the main ADR report page (for HTML content) 
+#* Reroute **GET** Request to access the ADR report's "static" files 
+#* Reroute **GET** Request to access the ADR report's "media" files  
+
+
+###############################################################################
+# This example is using **Flask** as the backend framework, but the same concept 
+# is applicable to other backend structures such as Node.js.
+
+
+###############################################################################
+#.. note::
+#   Using **Flask** as the backend framework to set up proxy will serve the static
+#   assets like CSS, JS files in its "static" directory, the GET request to ADR's
+#   static assets may cause request conflicts (same for requesting "media" files). 
+#   Therefore, the below code example includes rewriting request for "static" files 
+#   and "media" files to avoid potential request conflicts.
 
 # init Flask app
+from flask import Flask, Response, redirect, request # noqa: F811, E402
+from requests import get # noqa: F811, E402
+
 app = Flask(__name__)
 
 
@@ -115,26 +145,26 @@ def proxy_media(subpath):
 
 
 ###############################################################################
-# Add the custom web component and its script to embed the report
-# ---------------------------------------------------------------
+# Initiate web component to embed the report
+# ------------------------------------------
 # 
 # At this point, all the essential server settings have been included, now it's time
 # to add the custom web component and its script in the external web app by PyADR
 # method :func:`get_report_component<ansys.dynamicreporting.core.Report.get_report_component>`
 # and :func:`get_report_script<ansys.dynamicreporting.core.Report.get_report_script>`.
 # Note that the file structure of this example is:
-#
+
+###############################################################################
 #  .. code::
 # 
 #     flask_app_root/
-#        ├── app.py
+#        ├── app.py (where the proxy server is set up)
 #        ├── static / style.css
 #        ├── templates / index.html
 #
-# 
+
+################################################################################ 
 # The below screenshot demonstrates the simple style overwrite for report's panel layouts.
-# 
-# 
 
 from flask import render_template, url_for  # noqa: F811, E402
 
@@ -164,8 +194,10 @@ if __name__ == "__main__":
 # Build HTML structure to display the report
 # ------------------------------------------
 #
-# Provide a basic HTML structure to serve the web component, its script, and
-# the style sheet for style overwrite (if any):
+# The following is a basic HTML structure in the **index.html** fileto serve the 
+# web component, its script, and the style sheet for style overwrite (if any).
+# Note that the stylesheets for report style overwrite should be added in the
+# <head></head> section.
 #
 # .. code:: html
 # 
@@ -195,8 +227,10 @@ if __name__ == "__main__":
 
 
 ###############################################################################
-# .. image:: /_static/02_customized_report_embed_0.png
-#
+# .. figure:: /_static/02_customized_report_embed_2.png
+# 
+#    *A screenshot of report style overwrite for the Panel layouts*
+   
 # Close the service
 # -----------------
 #
