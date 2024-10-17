@@ -8,9 +8,9 @@ Applying the new custom web component **<adr-report></adr-report>** as an altern
 using **<iframe></iframe>** to fetch and embed a report in the external web application.
 
 .. note::
-   This example assumes that you have a local Ansys installation with a version v251 or 
-   beyond.For this feature, as of **25R1**, **Panel** and **Tabs** are the only layout 
-   templates accept style overwrite, more templates will be available for styles 
+   This example assumes that you have a local Ansys installation with a version v251 or
+   beyond.For this feature, as of **25R1**, **Panel** and **Tabs** are the only layout
+   templates accept style overwrite, more templates will be available for styles
    modification in the future release.
 
 """
@@ -34,11 +34,11 @@ root = f"http://127.0.0.1:{adr_port}/"
 
 # start an ADR server
 adr_service = adr.Service(
-   # (installation version should be >= v251)
-   ansys_installation=r"C:\Program Files\ANSYS Inc\v251",
-   # Unlike previous examples, the db_directory MUST have an existing database in it
-   db_directory=r"D:\tmp\new_db",
-   port=adr_port,
+    # (installation version should be >= v251)
+    ansys_installation=r"C:\Program Files\ANSYS Inc\v251",
+    # Unlike previous examples, the db_directory MUST have an existing database in it
+    db_directory=r"D:\tmp\new_db",
+    port=adr_port,
 )
 
 adr_service.start()
@@ -56,42 +56,42 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_0.png
-# 
+#
 #    *Browser will block any request from client side between different domains*
 
 ###############################################################################
-# To resolve the CORS error, instead of sending request from the clinet side,
+# To resolve the CORS error, instead of sending request from the client side,
 # using the server that powers the external web app to proxy the requests.
 # Adding **3 types of REST calls** reroute settings to set up the proxy server:
 
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_1.png
-# 
+#
 #    *Bypass the CORS error by using the app server to proxy the request*
 
 ###############################################################################
-#* Reroute **GET** Request to the main ADR report page (for HTML content) 
-#* Reroute **GET** Request to access the ADR report's "static" files 
-#* Reroute **GET** Request to access the ADR report's "media" files  
+# * Reroute **GET** Request to the main ADR report page (for HTML content)
+# * Reroute **GET** Request to access the ADR report's "static" files
+# * Reroute **GET** Request to access the ADR report's "media" files
 
 
 ###############################################################################
-# This example is using **Flask** as the backend framework, but the same concept 
+# This example is using **Flask** as the backend framework, but the same concept
 # is applicable to other backend structures such as Node.js.
 
 
 ###############################################################################
-#.. note::
+# .. note::
 #   Using **Flask** as the backend framework to set up proxy will serve the static
 #   assets like CSS, JS files in its "static" directory, the GET request to ADR's
-#   static assets may cause request conflicts (same for requesting "media" files). 
-#   Therefore, the below code example includes rewriting request for "static" files 
+#   static assets may cause request conflicts (same for requesting "media" files).
+#   Therefore, the below code example includes rewriting request for "static" files
 #   and "media" files to avoid potential request conflicts.
 
 # init Flask app
-from flask import Flask, Response, redirect, request # noqa: F811, E402
-from requests import get # noqa: F811, E402
+from flask import Flask, Response, redirect, request  # noqa: F811, E402
+from requests import get  # noqa: F811, E402
 
 app = Flask(__name__)
 
@@ -101,53 +101,53 @@ app = Flask(__name__)
 # if the given patterns match (*Do the route rewrite for media files too)
 @app.before_request
 def intercept_request():
-   # rewrite GET request path to ADR "static" files if the given pattern(s) match(es)
-   if (
-      request.path.startswith("/static/website/content")
-      or request.path.startswith("/static/website/scripts")
-      or request.path.startswith("/static/ansys")
-   ):
-      static_path = request.path.replace("/static/", "/adr_static/", 1)
-      return redirect(static_path)
+    # rewrite GET request path to ADR "static" files if the given pattern(s) match(es)
+    if (
+        request.path.startswith("/static/website/content")
+        or request.path.startswith("/static/website/scripts")
+        or request.path.startswith("/static/ansys")
+    ):
+        static_path = request.path.replace("/static/", "/adr_static/", 1)
+        return redirect(static_path)
 
-   # rewrite GET request path to ADR "media" files if the given pattern(s) match(es)
-   if request.path.startswith("/media/"):
-      static_path = request.path.replace("/media/", "/adr_media/", 1)
-      return redirect(static_path)
+    # rewrite GET request path to ADR "media" files if the given pattern(s) match(es)
+    if request.path.startswith("/media/"):
+        static_path = request.path.replace("/media/", "/adr_media/", 1)
+        return redirect(static_path)
 
 
 # reroute GET request path with a pattern of "/report/..." to main report HTML page
 @app.route("/report/<path:subpath>", methods=["GET"])
 def proxy_core(subpath):
-   subpath = subpath.split("/")
-   # Construct the target URL for request reroute to get the report page HTML
-   target_url = f"{root}/reports/report_display/?report_table_length=10&view={subpath[0]}&usemenus=on&dpi=120&pwidth=12.80&query={subpath[1]}"
-   resp = get(target_url)
-   return Response(resp.content, content_type=resp.headers["Content-Type"])
+    subpath = subpath.split("/")
+    # Construct the target URL for request reroute to get the report page HTML
+    target_url = f"{root}/reports/report_display/?report_table_length=10&view={subpath[0]}&usemenus=on&dpi=120&pwidth=12.80&query={subpath[1]}"
+    resp = get(target_url)
+    return Response(resp.content, content_type=resp.headers["Content-Type"])
 
 
 # reroute GET request path with a pattern of "/adr_static/..." to access report "static" files
 @app.route("/adr_static/<path:subpath>", methods=["GET"])
 def proxy_static(subpath):
-   # Construct the target URL for request reroute to get the report static files
-   static_url = f"{root}/static/{subpath}"
-   resp = get(static_url)
-   return Response(resp.content, content_type=resp.headers["Content-Type"])
+    # Construct the target URL for request reroute to get the report static files
+    static_url = f"{root}/static/{subpath}"
+    resp = get(static_url)
+    return Response(resp.content, content_type=resp.headers["Content-Type"])
 
 
 # reroute GET request path with a pattern of "/adr_media/..." to access report "media" files
 @app.route("/adr_media/<path:subpath>", methods=["GET"])
 def proxy_media(subpath):
-   # Construct the target URL for request reroute to get the report media files
-   media_url = f"{root}/media/{subpath}"
-   resp = get(media_url)
-   return Response(resp.content, content_type=resp.headers["Content-Type"])
+    # Construct the target URL for request reroute to get the report media files
+    media_url = f"{root}/media/{subpath}"
+    resp = get(media_url)
+    return Response(resp.content, content_type=resp.headers["Content-Type"])
 
 
 ###############################################################################
 # Initiate web component to embed the report
 # ------------------------------------------
-# 
+#
 # At this point, all the essential server settings have been included, now it's time
 # to add the custom web component and its script in the external web app by PyADR
 # method :func:`get_report_component<ansys.dynamicreporting.core.Report.get_report_component>`
@@ -156,14 +156,14 @@ def proxy_media(subpath):
 
 ###############################################################################
 #  .. code::
-# 
+#
 #     flask_app_root/
 #        ├── app.py (where the proxy server is set up)
 #        ├── static / style.css
 #        ├── templates / index.html
 #
 
-################################################################################ 
+################################################################################
 # The below screenshot demonstrates the simple style overwrite for report's panel layouts.
 
 from flask import render_template, url_for  # noqa: F811, E402
@@ -172,35 +172,35 @@ from flask import render_template, url_for  # noqa: F811, E402
 # root domain
 @app.route("/")
 def index():
-   return render_template(
-      "index.html",
-      # inject the report fetch web component html
-      custom_html_element=my_report.get_report_component(
-         # request reroute prefix for main report HTML content
-         prefix="report",
-         # Optional argument for style overwrite (Using external CSS file)
-         style_path=url_for("static", filename="style.css"),
-      ),
-      # inject the report fetch web component script logic
-      inline_js=my_report.get_report_script(),
-   )
+    return render_template(
+        "index.html",
+        # inject the report fetch web component html
+        custom_html_element=my_report.get_report_component(
+            # request reroute prefix for main report HTML content
+            prefix="report",
+            # Optional argument for style overwrite (Using external CSS file)
+            style_path=url_for("static", filename="style.css"),
+        ),
+        # inject the report fetch web component script logic
+        inline_js=my_report.get_report_script(),
+    )
 
 
 # Run the Flask server at port 5000
 if __name__ == "__main__":
-   app.run(host="127.0.0.1", port=5000)
+    app.run(host="127.0.0.1", port=5000)
 
 ###############################################################################
 # Build HTML structure to display the report
 # ------------------------------------------
 #
-# The following is a basic HTML structure in the **index.html** fileto serve the 
+# The following is a basic HTML structure in the **index.html** fileto serve the
 # web component, its script, and the style sheet for style overwrite (if any).
 # Note that the stylesheets for report style overwrite should be added in the
 # <head></head> section.
 #
 # .. code:: html
-# 
+#
 #      <!DOCTYPE html>
 #      <html lang="en">
 #        <head>
@@ -215,22 +215,22 @@ if __name__ == "__main__":
 #          <main id="dash-container">
 #             {{ custom_html_element | safe }}
 #          </main>
-# 
+#
 #          <!-- <adr-report> web component <script> define generated by PyADR API from the backend -->
 #          <script type="text/javascript">
 #             {{ inline_js | safe }}
 #          </script>
 #        </body>
 #      </html>
-# 
-# 
+#
+#
 
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_2.png
-# 
+#
 #    *A screenshot of report style overwrite for the Panel layouts*
-   
+
 # Close the service
 # -----------------
 #
