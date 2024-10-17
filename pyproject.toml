@@ -98,7 +98,7 @@ dev = [
     "ipython",
     "whatsonpypi",
     "ansys-sphinx-theme==0.12.4",
-    "numpy==1.25.1",
+    "numpy==1.26.4",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
     "psutil==6.0.0",
