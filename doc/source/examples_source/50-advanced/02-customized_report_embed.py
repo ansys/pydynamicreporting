@@ -9,9 +9,9 @@ using ``<iframe></iframe>`` to fetch and embed a report in the external web appl
 
 .. note::
    This example assumes that you have a local Ansys installation with a version v251 or
-   beyond.For this feature, as of **25R1**, **Panel** and **Tabs** are the only layout
-   templates accept style overwrite, more templates will be available for styles
-   modification in the future release.
+   beyond. For this feature, as of **25R1**, **Panel** and **Tabs** are the only layout
+   templates available for style overwrite, more templates will be included in the
+   future release.
 
 """
 
@@ -21,6 +21,14 @@ using ``<iframe></iframe>`` to fetch and embed a report in the external web appl
 #
 # Start an Ansys Dynamic Reporting service using an existing database that has
 # at least 1 report template being defined.
+
+###############################################################################
+# .. note::
+#   The code here to start an ADR service and the following Python code to initiate
+#   a **Flask** server should all be put together in the ``app.py`` file. The
+#   file structure of this example is demonstrated at the end of the tutorial.
+
+
 from random import random as r
 
 import numpy as np
@@ -147,51 +155,6 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #           return Response(resp.content, content_type=resp.headers["Content-Type"])
 #
 
-###############################################################################
-# Initiate web component to embed the report
-# ------------------------------------------
-#
-# At this point, all the essential server settings have been included, now it's time
-# to add the custom web component and its script in the external web app by PyADR
-# method :func:`get_report_component<ansys.dynamicreporting.core.Report.get_report_component>`
-# and :func:`get_report_script<ansys.dynamicreporting.core.Report.get_report_script>`.
-# Note that the file structure of this example is:
-
-###############################################################################
-#  .. code::
-#
-#     flask_app_root/
-#        ├── app.py (where the proxy server is set up)
-#        ├── static / style.css
-#        ├── templates / index.html
-#
-
-################################################################################
-# The below screenshot demonstrates the simple style overwrite for report's panel layouts.
-
-from flask import render_template, url_for  # noqa: F811, E402
-
-
-# root domain
-@app.route("/")
-def index():
-    return render_template(
-        "index.html",
-        # inject the report fetch web component html
-        custom_html_element=my_report.get_report_component(
-            # request reroute prefix for main report HTML content
-            prefix="report",
-            # Optional argument for style overwrite (Using external CSS file)
-            style_path=url_for("static", filename="style.css"),
-        ),
-        # inject the report fetch web component script logic
-        inline_js=my_report.get_report_script(),
-    )
-
-
-# Run the Flask server at port 5000
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000)
 
 ###############################################################################
 # HTML structure and report style overwrite
@@ -199,7 +162,16 @@ if __name__ == "__main__":
 #
 # The following code snippet is a basic HTML structure in the ``index.html``
 # file to serve the web component, its script, and the style sheet for style
-# overwrite (if any).
+# overwrite (if any). For reference, here is the file structure of this example:
+
+###############################################################################
+#  .. code::
+#
+#     example_root /
+#        ├── app.py (start an ADR service & initi Flask proxy server)
+#        ├── static / style.css
+#        ├── templates / index.html
+#
 
 ###############################################################################
 # .. note::
@@ -239,6 +211,45 @@ if __name__ == "__main__":
 #
 #
 
+
+###############################################################################
+# Initiate web component to embed the report
+# ------------------------------------------
+#
+# At this point, all the essential server settings have been included, now it's time
+# to add the custom web component and its script in the external web app by PyADR
+# method :func:`get_report_component<ansys.dynamicreporting.core.Report.get_report_component>`
+# and :func:`get_report_script<ansys.dynamicreporting.core.Report.get_report_script>`.
+# As mentioned above, if a CSS file has been included for style overwrite, the file path
+# should be passed in the ``style_path`` argument of the ``get_report_component`` method.
+
+###############################################################################
+#  .. code-block:: python
+#     :emphasize-lines: 11
+#
+#      from flask import render_template, url_for  # noqa: F811, E402
+#
+#      # root domain
+#      @app.route("/")
+#      def index():
+#          return render_template(
+#              "index.html",
+#              # inject the report fetch web component html
+#              prefix="report",
+#              # Optional argument for style overwrite (Using external CSS file)
+#              style_path=url_for("static", filename="style.css"),
+#          ),
+#          # inject the report fetch web component script logic
+#          inline_js=my_report.get_report_script(),
+#      )
+#
+#      # Run the Flask server at port 5000
+#      if __name__ == "__main__":
+#          app.run(host="127.0.0.1", port=5000)
+#
+
+################################################################################
+# The below screenshot demonstrates the simple style overwrite result for report's panel layouts.
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_2.png
