@@ -58,7 +58,7 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 # Set up proxy server
 # -------------------
 #
-# Using the custom web component to tunnel the report over to the external web
+# Applying the custom web component to tunnel the report over to the external web
 # app requires additional server settings to bypass potential **cross-origin
 # resource sharing (CORS) error**. See below diagram illustrating the CORS error
 # process:
@@ -69,7 +69,7 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #    *By default, browsers will block requests from the client side between different domains*
 
 ###############################################################################
-# To resolve the CORS error, instead of sending request from the client side,
+# To resolve the CORS error, instead of sending requests from the client side,
 # using the server that powers the external web app to proxy the requests.
 # Adding **3 types of REST calls** reroute settings to set up the proxy server:
 
@@ -225,7 +225,7 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 
 ###############################################################################
 #  .. code-block:: python
-#     :emphasize-lines: 11
+#     :emphasize-lines: 13
 #
 #      from flask import render_template, url_for  # noqa: F811, E402
 #
@@ -235,17 +235,19 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #          return render_template(
 #              "index.html",
 #              # inject the report fetch web component html
-#              prefix="report",
-#              # Optional argument for style overwrite (Using external CSS file)
-#              style_path=url_for("static", filename="style.css"),
-#          ),
-#          # inject the report fetch web component script logic
-#          inline_js=my_report.get_report_script(),
+#              custom_html_element = my_report.get_report_component(
+#                  # Prefix of the proxy request to main report HTML content
+#                  prefix = "report",
+#                  # Optional argument for style overwrite (Using external CSS file)
+#                  style_path = url_for("static", filename = "style.css"),
+#              ),
+#              # inject the report fetch web component script logic
+#              inline_js = my_report.get_report_script(),
 #      )
 #
 #      # Run the Flask server at port 5000
 #      if __name__ == "__main__":
-#          app.run(host="127.0.0.1", port=5000)
+#          app.run(host = "127.0.0.1", port = 5000)
 #
 
 ################################################################################
