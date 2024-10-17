@@ -65,13 +65,9 @@ jobs:
         run: make pull-docker
 
       - name: Run pytest
-        uses: ansys/actions/tests-pytest@v8
+        run: make test
         env:
-          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER )}}
-        with:
-          checkout: false
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          pytest-extra-args: -rvx --setup-show --cov=ansys.dynamicreporting --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
 
   nightly_and_upload:
     name: nightly_and_upload
