@@ -131,9 +131,8 @@ class FileValidator(StringContent):
                 f"Expected content to be a file path. "
                 f"'{file_path.name}' does not exist or is not a file."
             )
-
-        file = DjangoFile(file_path.open(mode="rb"))
-
+        with file_path.open(mode="rb") as f:
+            file = DjangoFile(f)
         # check file type
         file_ext = Path(file.name).suffix.lower()
         if self.ALLOWED_EXT is not None and file_ext.replace(".", "") not in self.ALLOWED_EXT:
@@ -141,7 +140,6 @@ class FileValidator(StringContent):
         # check for empty files
         if file.size == 0:
             raise ValueError("The file specified is empty")
-
         # save a ref on the object.
         setattr(obj, "_file", file)
         return file_str
@@ -152,9 +150,10 @@ class ImageContent(FileValidator):
 
     def process(self, value, obj):
         file_str = super().process(value, obj)
-        file_ext = Path(obj._file.name).suffix.lower()
-        img_bytes = obj._file.read()
+        with obj._file.open(mode="rb") as f:
+            img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
+        file_ext = Path(obj._file.name).suffix.lower()
         if file_ext in (".tif", ".tiff"):
             metadata = report_utils.is_enhanced(image)
             if not metadata:
@@ -192,6 +191,10 @@ class SimplePayloadMixin:
 class FilePayloadMixin:
     _file: DjangoFile = field(init=False, compare=False, default=None)
 
+    @property
+    def has_file(self):
+        return self._file is not None
+
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
         obj = super().from_db(orm_instance, **kwargs)
@@ -203,8 +206,9 @@ class FilePayloadMixin:
         self._orm_instance.payloadfile = f"{str(self.guid)}_{file_name}"
         # more general path, save the file into the media directory
         with open(self._orm_instance.get_payload_server_pathname(), "wb") as out_file:
-            for chunk in self._file.chunks():
-                out_file.write(chunk)  # chunk -> bytes
+            with self._file.open(mode="rb") as f:
+                for chunk in self._file.chunks():
+                    out_file.write(chunk)  # chunk -> bytes
         super().save(**kwargs)
 
 
