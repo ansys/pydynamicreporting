@@ -73,3 +73,4 @@ doc/_build
 
 # TIFF files
 *.tiff
+_test_enhanced_images.py
