@@ -66,7 +66,7 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_0.png
 #
-#    *By default, browsers will block requests from the client side between different domains*
+#    *By default, browsers will block requests from the client side towards the server side of a different domain*
 
 ###############################################################################
 # To resolve the CORS error, instead of sending requests from the client side,
@@ -251,19 +251,21 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #
 
 ################################################################################
-# The below screenshot demonstrates the simple style overwrite result for report's panel layouts.
+# The below screenshot demonstrates the simple style overwrite result for report's
+# **panel** layouts.
 
 ###############################################################################
 # .. figure:: /_static/02_customized_report_embed_2.png
 #
 #    *A screenshot of report style overwrite for the Panel layouts*
 
+###############################################################################
 # Close the service
 # -----------------
 #
 # Close the Ansys Dynamic Reporting service. The database with the items that
-# were created remains on disk, and to stop the Flask server in this example,
-# a Keyboardinterrupt like (Ctrl + C) will shut down the server.
+# were created remains on disk. To stop the Flask server in this example,
+# a ``Keyboardinterrupt`` like (Ctrl + C) will shut down the server.
 
 # sphinx_gallery_thumbnail_path = '_static/00_complete_report_0.png'
 adr_service.stop()
