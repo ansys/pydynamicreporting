@@ -1,4 +1,4 @@
-# from collections.abc import Iterable
+from collections.abc import Iterable
 import os
 from pathlib import Path
 import platform
@@ -8,8 +8,6 @@ import uuid
 
 import django
 from django.core import management
-
-# from django.db import IntegrityError, connection, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
@@ -120,7 +118,7 @@ class ADR:
         raise InvalidAnsysPath(f"Unable to detect an installation in: {','.join(dirs_to_check)}")
 
     def _check_dir(self, dir_):
-        dir_path = Path(dir_)
+        dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
         if not dir_path.is_dir():
             self._logger.error(f"Invalid directory path: {dir_}")
             raise InvalidPath(extra_detail=dir_)
@@ -311,8 +309,9 @@ class ADR:
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
         query: str = "",
+        **kwargs: Any,
     ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
-        return query_type.find(query=query)
+        return query_type.find(query=query, **kwargs)
