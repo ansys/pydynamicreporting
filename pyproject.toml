@@ -76,9 +76,9 @@ test = [
     "exceptiongroup==1.0.0",
     "pytest==8.3.3",
     "pytest-cov==4.1.0",
-    "pyvista==0.44.1; python_version <= '3.11'",
-    "vtk==9.3.1; python_version <= '3.11'",
-    "ansys-dpf-core==0.13.0; python_version <= '3.11'",
+    "pyvista==0.44.1",
+    "vtk==9.3.1",
+    "ansys-dpf-core==0.13.0",
 ]
 doc = [
     "ansys-sphinx-theme==0.12.4",
