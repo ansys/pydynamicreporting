@@ -27,10 +27,8 @@ pull-docker:
 	bash .ci/pull_adr_image.sh
 
 test:
-	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core \
- 	--cov-report html:coverage-html \
-	--cov-report term \
-	--cov-report xml:coverage.xml
+	pip install -e .[test]
+	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
 
 smoketest:
 	python -c "from ansys.dynamicreporting.core import __version__; print(__version__)"
