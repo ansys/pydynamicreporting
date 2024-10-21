@@ -656,6 +656,9 @@ The accepted sorted orders are:
 -  'numeric_up': corresponds to Numeric sort up
 -  'numeric_down': corresponds to Numeric sort down
 -  'none': corresponds to No sorting
+-  'natural_up': corresponds to Natural sort up
+-  'natural_down': corresponds to Natural sort down
+-  'none': corresponds to No sorting
 
 An example of output of this function is: ['tag1|text_up',
 'tag2|numeric_down', 'tag3|none'] where the slider is sorted by "tag1"
