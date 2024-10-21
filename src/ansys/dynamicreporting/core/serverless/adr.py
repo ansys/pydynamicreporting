@@ -315,3 +315,95 @@ class ADR:
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query, **kwargs)
+
+    @staticmethod
+    def create_objects(
+        objects: Union[list, ObjectSet],
+        **kwargs: Any,
+    ) -> int:
+        if not isinstance(objects, Iterable):
+            raise ADRException("objects must be an iterable")
+        count = 0
+        for obj in objects:
+            try:
+                obj.save(**kwargs)
+            except obj.__class__.IntegrityError:  # skip if exists
+                continue
+            else:
+                count += 1
+        return count
+
+    def _is_sqlite(self, database: str) -> bool:
+        return "sqlite" in self._databases[database]["ENGINE"]
+
+    def _get_db_dir(self, database: str) -> str:
+        return self._databases[database]["NAME"]
+
+    def copy_objects(
+        self,
+        object_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        target_database: str,
+        source_database: str = "default",
+        query: str = "",
+        target_media_dir: str = "",
+        test: bool = False,
+    ) -> int:
+        """
+        This copies a selected collection of objects from one database to another.
+
+        GUIDs are preserved and any referenced session and dataset objects are copied as
+        well.
+        """
+        if not issubclass(object_type, (Item, Template, Session, Dataset)):
+            self._logger.error(f"{object_type} is not valid")
+            raise TypeError(f"{object_type} is not valid")
+
+        if target_database not in self._databases or source_database not in self._databases:
+            raise ADRException(
+                f"'{source_database}' and '{target_database}' must be configured first"
+            )
+
+        objects = self.query(object_type, query=query)
+        copy_list = []
+        media_dir = None
+        if issubclass(object_type, Item):
+            for item in objects:
+                if getattr(
+                    item, "has_file", False
+                ):  # check for media dir if item has a physical file
+                    if not media_dir:
+                        if target_media_dir:
+                            media_dir = target_media_dir
+                        elif self._is_sqlite(target_database):
+                            media_dir = self._check_dir(
+                                Path(self._get_db_dir(target_database)).parent / "media"
+                            )
+                        else:
+                            raise ADRException(
+                                "'target_media_dir' must be specified because one of the objects"
+                                " contains media to copy.'"
+                            )
+                # save the sessions, datasets
+                # assign to the item to create the new relation
+                # and then add to the copy list
+                item.session.save(using=target_database)
+                item.dataset.save(using=target_database)
+                copy_list.append(item)
+        elif issubclass(object_type, Template):
+            ...
+        else:  # sessions, datasets
+            copy_list = list(objects)
+
+        if test:
+            self._logger.info(f"Copying {len(copy_list)} objects...")
+            return
+
+        try:
+            count = self.create_objects(copy_list, using=target_database)
+        except Exception as e:
+            raise ADRException(f"Some objects could not be copied: {e}")
+
+        # copy media
+        print(media_dir)
+
+        return count
