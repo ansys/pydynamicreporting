@@ -207,7 +207,7 @@ class FilePayloadMixin:
         # more general path, save the file into the media directory
         with open(self._orm_instance.get_payload_server_pathname(), "wb") as out_file:
             with self._file.open(mode="rb") as f:
-                for chunk in self._file.chunks():
+                for chunk in f.chunks():
                     out_file.write(chunk)  # chunk -> bytes
         super().save(**kwargs)
 
