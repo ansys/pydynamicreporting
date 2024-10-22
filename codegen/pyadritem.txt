@@ -148,6 +148,10 @@ class Item:
                 # If jpg, then convert to png buffer first
                     tmp_img = PIL_image_to_data(value)
                     img = tmp_img['file_data']
+                elif value.capitalize().endswith('tiff') or value.capitalize().endswith('tif'):
+                # If tiff, then convert to png buffer first
+                    tmp_img = PIL_image_to_data(value)
+                    img = tmp_img['file_data']
             else:
                 img = value
             self.item.set_payload_image(img)

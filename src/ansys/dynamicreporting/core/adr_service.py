@@ -537,7 +537,7 @@ class Service:
                 "exec_basis": self._ansys_installation,
                 "ansys_version": self._ansys_version,
             }
-            if self._ansys_version >= 231:
+            if int(self._ansys_version) >= 231:
                 launch_kwargs.update({"allow_iframe_embedding": True})
 
             try:
