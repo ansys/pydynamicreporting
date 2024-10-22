@@ -89,14 +89,15 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
-      - name: Run pytest
-        uses: ansys/actions/tests-pytest@v8
-        env:
-          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER )}}
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          checkout: false
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          pytest-extra-args: -rvx --setup-show --cov=ansys.dynamicreporting --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run pytest
+        run: make test
+        env:
+          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
 
       - name: Upload coverage report
         if: env.MAIN_PYTHON_VERSION == matrix.python-version
