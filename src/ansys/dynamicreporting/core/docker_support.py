@@ -201,7 +201,7 @@ class DockerLauncher:
         # CEI Home for our use here.  And, from this, get the Ansys version
         # number.
 
-        if int(self_ansys_version) > 242:
+        if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
             launcher = "nexus_launcher"
@@ -385,7 +385,7 @@ class DockerLauncher:
         ------
         RuntimeError
         """
-        if int(self_ansys_version) > 242:
+        if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
             launcher = "nexus_launcher"
@@ -407,7 +407,7 @@ class DockerLauncher:
         ------
         RuntimeError
         """
-        if int(self_ansys_version) > 242:
+        if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
             launcher = "nexus_launcher"
@@ -446,7 +446,7 @@ class DockerLauncher:
         ------
         RuntimeError
         """
-        if int(self_ansys_version) > 242:
+        if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
             launcher = "nexus_launcher"
@@ -469,7 +469,7 @@ class DockerLauncher:
         """Release any additional resources allocated during launching."""
         try:
             if self._nexus_is_running:
-                if int(self_ansys_version) > 242:
+                if int(self._ansys_version) > 242:
                     launcher = "adr_launcher"
                 else:
                     launcher = "nexus_launcher"
