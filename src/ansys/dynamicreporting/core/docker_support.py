@@ -103,7 +103,7 @@ class DockerLauncher:
         except Exception:
             raise RuntimeError(f"Can't pull Docker image: {self._image_name}")
 
-    def start(self, host_directory: str, db_directory: str, port: int) -> None:
+    def start(self, host_directory: str, db_directory: str, port: int, ansys_version: int) -> None:
         """
         Start the Docker container for Ansys Dynamic Reporting using a local image.
 
@@ -117,6 +117,7 @@ class DockerLauncher:
         db_directory : str
             Directory for the Ansys Dynamic Reporting database.
         port: TCP port number for Ansys Dynamic Reporting.
+        ansys_version: ansys version
 
         Returns
         -------
@@ -201,10 +202,13 @@ class DockerLauncher:
         # CEI Home for our use here.  And, from this, get the Ansys version
         # number.
 
-        if int(self._ansys_version) > 242:
-            launcher = "adr_launcher"
-        else:
+        if ansys_version is None:
             launcher = "nexus_launcher"
+        else:
+            if int(self._ansys_version) > 242:
+                launcher = "adr_launcher"
+            else:
+                launcher = "nexus_launcher"
         cmd = ["bash", "--login", "-c", f"ls /Nexus/CEI/nexus*/bin/{launcher}"]
         ret = self._container.exec_run(cmd)
         if ret[0] != 0:  # pragma: no cover

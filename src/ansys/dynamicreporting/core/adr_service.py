@@ -212,6 +212,7 @@ class Service:
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
+                    ansys_version=self._ansys_version,
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
