@@ -6,13 +6,13 @@ import io
 import json
 import logging
 import os
-import os.path
 import pickle
 import shlex
 import sys
 import uuid
 import weakref
 
+from PIL import Image
 import dateutil
 import dateutil.parser
 import pytz
@@ -1333,23 +1333,39 @@ class ItemREST(BaseRESTObject):
                 from . import png
             except Exception:
                 import png
-            # we can only read png images as string content (not filename)
-            reader = png.Reader(io.BytesIO(img))
-            # parse the input file
-            pngobj = reader.read()
-            width = pngobj[3]["size"][0]
-            height = pngobj[3]["size"][1]
-            imgdata = list(pngobj[2])
-            # tag the data and write it back out...
-            writer = png.Writer(
-                width=width,
-                height=height,
-                bitdepth=pngobj[3].get("bitdepth", 8),
-                greyscale=pngobj[3].get("greyscale", False),
-                alpha=pngobj[3].get("alpha", False),
-                planes=pngobj[3].get("planes", None),
-                palette=pngobj[3].get("palette", None),
-            )
+            try:
+                # we can only read png images as string content (not filename)
+                reader = png.Reader(io.BytesIO(img))
+                # parse the input file
+                pngobj = reader.read()
+                width = pngobj[3]["size"][0]
+                height = pngobj[3]["size"][1]
+                imgdata = list(pngobj[2])
+                # tag the data and write it back out...
+                writer = png.Writer(
+                    width=width,
+                    height=height,
+                    bitdepth=pngobj[3].get("bitdepth", 8),
+                    greyscale=pngobj[3].get("greyscale", False),
+                    alpha=pngobj[3].get("alpha", False),
+                    planes=pngobj[3].get("planes", None),
+                    palette=pngobj[3].get("palette", None),
+                )
+            except Exception:
+                # enhanced images will fall into this case
+                data = report_utils.PIL_image_to_data(img)
+                self.width = data["width"]
+                self.height = data["height"]
+                writer = png.Writer(
+                    width=self.width,
+                    height=self.height,
+                )
+                imgdata = data["file_data"]
+                self.type = ItemREST.type_img
+                self.image_data = data["file_data"]
+                self.fileobj = io.BytesIO(self.image_data)
+                self.fileurl = "image." + data["format"]
+                return
             # TODO: current version does not support set_text()?
             # writer.set_text(dict(CEI_NEXUS_GUID=str(self.guid)))
             io_in = io.BytesIO()

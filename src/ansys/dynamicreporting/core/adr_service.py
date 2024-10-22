@@ -212,6 +212,7 @@ class Service:
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
+                    ansys_version=self._ansys_version,
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
@@ -537,7 +538,7 @@ class Service:
                 "exec_basis": self._ansys_installation,
                 "ansys_version": self._ansys_version,
             }
-            if self._ansys_version >= 231:
+            if int(self._ansys_version) >= 231:
                 launch_kwargs.update({"allow_iframe_embedding": True})
 
             try:
