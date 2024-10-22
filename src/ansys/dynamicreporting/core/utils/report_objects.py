@@ -1294,21 +1294,6 @@ class ItemREST(BaseRESTObject):
         )
         return value
 
-    def handle_enhanced(self, the_file, force_filenames=False):
-        #imgbytes = the_file.read()
-        image = Image.open(io.BytesIO(the_file))
-        metadata = report_utils.is_enhanced(image)
-        imagedata = list(image.getdata())
-        if metadata:
-            self.width = image.width
-            self.height = image.height
-            if force_filenames:
-                self.payloadfile = str(item.guid) + "_image.tiff"
-            #with open(item.get_payload_server_pathname(), 'wb') as serverfile:
-            #    serverfile.write(imgbytes)
-            return imagedata
-        return imagedata
-
     def set_payload_image(self, img):
         if has_qt:  # pragma: no cover
             if isinstance(img, QtGui.QImage):
@@ -1368,18 +1353,19 @@ class ItemREST(BaseRESTObject):
                     planes=pngobj[3].get("planes", None),
                     palette=pngobj[3].get("palette", None),
                 )
-            except:
+            except Exception as e:
+                # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
+                self.width = data["width"]
+                self.height = data["height"]
                 writer = png.Writer(
-                    width=data['width'],
-                    height=data['height'],
+                    width=self.width,
+                    height=self.height,
                 )
                 imgdata = data["file_data"]
                 self.type = ItemREST.type_img
                 self.image_data = data["file_data"]
                 self.fileobj = io.BytesIO(self.image_data)
-                # The format might be png or tif, make sure the name the URL properly
-                # or Nexus will generate the incorrect display code.
                 self.fileurl = "image." + data["format"]
                 return
             # TODO: current version does not support set_text()?
@@ -1388,9 +1374,9 @@ class ItemREST(BaseRESTObject):
             writer.write(io_in, imgdata)
             s = io_in.getvalue()
         # common options
-        #self.width = width
-        #self.height = height
-        #self.type = ItemREST.type_img
+        self.width = width
+        self.height = height
+        self.type = ItemREST.type_img
         # set up the parameters for get_url_file(): self.fileurl and self.fileobj
         self.image_data = s
         self.fileobj = io.BytesIO(self.image_data)

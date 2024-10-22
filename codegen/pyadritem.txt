@@ -144,12 +144,8 @@ class Item:
                 if value.capitalize().endswith('png'):
                     with open(value, "rb") as fb:
                         img = fb.read()
-                elif value.capitalize().endswith('jpg') or value.capitalize().endswith('jpeg'):
-                # If jpg, then convert to png buffer first
-                    tmp_img = PIL_image_to_data(value)
-                    img = tmp_img['file_data']
-                elif value.capitalize().endswith('tiff') or value.capitalize().endswith('tif'):
-                # If tiff, then convert to png buffer first
+                if value.capitalize().endswith(('jpg', 'jpeg', 'tiff', 'tif')):
+                # If jpg or tiff, then convert to png buffer first
                     tmp_img = PIL_image_to_data(value)
                     img = tmp_img['file_data']
             else:
