@@ -6,18 +6,17 @@ import io
 import json
 import logging
 import os
-import os.path
 import pickle
 import shlex
 import sys
 import uuid
 import weakref
 
+import pytz
 from PIL import Image
 
 import dateutil
 import dateutil.parser
-import pytz
 
 from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
