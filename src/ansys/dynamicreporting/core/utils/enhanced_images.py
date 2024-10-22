@@ -117,6 +117,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         renderer.ResetCamera()
         render_window.AddRenderer(renderer)
         renderer.AddActor(actor)
+        renderer.SetBackground(1, 1, 1)
 
         # Uncomment the following 2 lines to get an interactor
         # render_window_interactor = vtk.vtkRenderWindowInteractor()
@@ -235,6 +236,16 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         # render_window_interactor.Start()
 
         return np_array
+
+    def _add_pick_data(poly_data: vtk.vtkPolyData, part_id: int):
+        arr = vtk.vtkFloatArray()
+        arr.SetName("Pick Data")
+        arr.SetNumberOfComponents(1)
+        num_points = poly_data.GetNumberOfPoints()
+        arr.SetNumberOfTuples(num_points)
+        for i in range(num_points):
+            arr.SetValue(i, part_id)
+        poly_data.GetPointData().AddArray(arr)
 
     def _render_pick_data(
         poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, render_window: vtk.vtkRenderWindow
@@ -388,29 +399,26 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         # Get components for metadata
         var_unit: str = var_field.unit
         var_name = var_field.name
-        var_meshed_region = var_field.meshed_region
         dpf_unit_system = model.metadata.result_info.unit_system_name
         unit_system_to_name = dpf_unit_system.split(":", 1)[0]
-
-        mats: dpf.PropertyField = var_meshed_region.property_field("mat")  # Pick data
+        meshed_region = model.metadata.meshed_region  # Whole mesh region
 
         # Convert DPF to a pyvista UnstructuredGrid, which inherits from vtk
-        grid = vtk_helper.dpf_mesh_to_vtk(var_meshed_region)
-        # Add pick data
-        grid = vtk_helper.append_field_to_grid(mats, var_meshed_region, grid, "Pick Data")
+        grid = vtk_helper.dpf_mesh_to_vtk(meshed_region)
         # Add variable data
-        grid = vtk_helper.append_field_to_grid(var_field, var_meshed_region, grid, var_name)
+        grid = vtk_helper.append_field_to_grid(var_field, meshed_region, grid, var_name)
 
         # Create a vtkGeometryFilter to convert UnstructuredGrid to PolyData
         geometry_filter = vtk.vtkGeometryFilter()
         geometry_filter.SetInputData(grid)
         geometry_filter.Update()
         poly_data = geometry_filter.GetOutput()
+        _add_pick_data(poly_data, 1)  # Todo: optimize hardcoded part ID
 
         renderer, render_window = _setup_render_routine(poly_data)
         rgb_buffer = _get_rgb_value(render_window)
-        pick_buffer = _render_pick_data(grid, renderer, render_window)
-        var_buffer = _render_var_data(grid, renderer, render_window, var_name)
+        pick_buffer = _render_pick_data(poly_data, renderer, render_window)
+        var_buffer = _render_var_data(poly_data, renderer, render_window, var_name)
 
         # Todo: automatic colorby_var support
         # global colorby_var_id
@@ -425,14 +433,14 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             "parts": [
                 {
                     "name": part_name,
-                    "id": str(mats.data[0]),
+                    "id": 1,  # Todo: optimize hardcoded part ID
                     "colorby_var": "1.0",  # colorby_var
                 }
             ],
             "variables": [
                 {
                     "name": var_name,
-                    "id": str(mats.data[0]),
+                    "id": 1,  # Todo: optimize hardcoded part ID
                     "pal_id": "1",  # colorby_var_int,
                     "unit_dims": "",
                     "unit_system_to_name": unit_system_to_name,
