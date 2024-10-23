@@ -303,10 +303,9 @@ class BaseModel(metaclass=BaseMeta):
 
     def as_dict(self, **kwargs):
         out_dict = {}
-        cls_fields = self._get_all_field_names()
-        model_fields = self._get_orm_field_names(self._orm_instance)
+        cls_fields = self._get_field_names()
         for field_ in cls_fields:
-            if field_ not in model_fields:
+            if field_.startswith("_"):
                 continue
             value = getattr(self, field_, None)
             if value is None:  # skip and use defaults
@@ -368,15 +367,6 @@ class BaseModel(metaclass=BaseMeta):
         obj.save(force_insert=True)
         return obj
 
-    def delete(self, **kwargs):
-        if not self._saved:
-            raise self.__class__.NotSaved(
-                extra_detail=f"Delete failed for object with guid '{self.guid}'."
-            )
-        count, _ = self._orm_instance.delete(**kwargs)
-        self._saved = False
-        return count
-
     @classmethod
     @handle_field_errors
     def get(cls, **kwargs):
@@ -406,6 +396,15 @@ class BaseModel(metaclass=BaseMeta):
                 except cls.DoesNotExist:
                     pass
                 raise
+
+    def delete(self, **kwargs):
+        if not self._saved:
+            raise self.__class__.NotSaved(
+                extra_detail=f"Delete failed for object with guid '{self.guid}'."
+            )
+        count, _ = self._orm_instance.delete(**kwargs)
+        self._saved = False
+        return count
 
     @classmethod
     @handle_field_errors
