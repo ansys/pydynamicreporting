@@ -120,3 +120,9 @@ class MultipleObjectsReturnedError(ADRException):
     """Exception raised if only one object was expected, but multiple were returned."""
 
     detail = "get() returned more than one object."
+
+
+class IntegrityError(ADRException):
+    """Exception raised if there is a constraint violation while saving an object in the database."""
+
+    detail = "A database integrity check failed."

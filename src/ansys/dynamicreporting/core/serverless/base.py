@@ -1,13 +1,13 @@
+import importlib
+import inspect
+import shlex
+import uuid
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
-import importlib
-import inspect
 from itertools import chain
-import shlex
 from typing import Any, get_args, get_origin
-import uuid
 from uuid import UUID
 
 from django.core.exceptions import (
@@ -17,13 +17,15 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import DatabaseError
+from django.db import DataError
 from django.db.models import Model, QuerySet
 from django.db.models.base import subclass_exception
 from django.db.models.manager import Manager
+from django.db.utils import IntegrityError as DBIntegrityError
 
 from ..exceptions import (
     ADRException,
+    IntegrityError,
     MultipleObjectsReturnedError,
     ObjectDoesNotExistError,
     ObjectNotSavedError,
@@ -42,7 +44,7 @@ def handle_field_errors(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, FieldDoesNotExist, ValidationError, DatabaseError) as e:
+        except (FieldError, FieldDoesNotExist, ValidationError, DataError) as e:
             raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
 
     return wrapper
@@ -57,11 +59,11 @@ class BaseMeta(ABCMeta):
     _model_cls_registry: dict[str, type[Model]] = {}
 
     def __new__(
-        mcs,
-        cls_name: str,
-        bases: tuple[type[Any], ...],
-        namespace: dict[str, Any],
-        **kwargs: Any,
+            mcs,
+            cls_name: str,
+            bases: tuple[type[Any], ...],
+            namespace: dict[str, Any],
+            **kwargs: Any,
     ) -> type:
         super_new = super().__new__
         # ensure initialization is only performed for subclasses of BaseModel
@@ -93,6 +95,13 @@ class BaseMeta(ABCMeta):
             add_exception_to_cls(
                 "MultipleObjectsReturned",
                 MultipleObjectsReturnedError,
+                new_cls,
+                parents,
+                namespace.get("__module__"),
+            )
+            add_exception_to_cls(
+                "IntegrityError",
+                IntegrityError,
                 new_cls,
                 parents,
                 namespace.get("__module__"),
@@ -219,8 +228,16 @@ class BaseModel(metaclass=BaseMeta):
         return tuple(property_fields) + cls._get_field_names()
 
     @property
-    def saved(self):
+    def saved(self) -> bool:
         return self._saved
+
+    @property
+    def _orm_saved(self) -> bool:
+        return not self._orm_instance._state.adding
+
+    @property
+    def _orm_db(self) -> str:
+        return self._orm_instance._state.db
 
     @classmethod
     def from_db(cls, orm_instance, parent=None):
@@ -284,9 +301,26 @@ class BaseModel(metaclass=BaseMeta):
         obj._saved = True
         return obj
 
-    @handle_field_errors
-    def save(self, **kwargs):
-        self._saved = False  # reset
+    def as_dict(self, **kwargs):
+        out_dict = {}
+        cls_fields = self._get_field_names()
+        for field_ in cls_fields:
+            if field_.startswith("_"):
+                continue
+            value = getattr(self, field_, None)
+            if value is None:  # skip and use defaults
+                continue
+            out_dict[field_] = value
+        return out_dict
+
+    def _prepare_for_save(self, **kwargs):
+        target_db = kwargs.pop("using", "default")
+        # reset
+        if self._orm_saved:
+            self._saved = False
+            # handle cross-database saves
+            if target_db != self._orm_db:
+                self._orm_instance = self.__class__._orm_model_cls()
 
         cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
@@ -294,26 +328,37 @@ class BaseModel(metaclass=BaseMeta):
             if field_ not in model_fields:
                 continue
             value = getattr(self, field_, None)
-            if value is None:
+            if value is None:  # skip and use defaults
                 continue
             if isinstance(value, list):
-                obj_list = []
-                for obj in value:
-                    obj_list.append(obj._orm_instance)
-                getattr(self._orm_instance, field_).add(*obj_list)
+                objs = [o._orm_instance for o in value]
+                getattr(self._orm_instance, field_).add(*objs)
             else:
                 if isinstance(value, BaseModel):  # relations
                     try:
-                        value = value._orm_instance.__class__.objects.using(
-                            kwargs.get("using", "default")
-                        ).get(guid=value.guid)
-                    except ObjectDoesNotExist:
-                        raise value.__class__.DoesNotExist
+                        value = value._orm_instance.__class__.objects.using(target_db).get(guid=value.guid)
+                    except ObjectDoesNotExist as e:
+                        raise value.__class__.DoesNotExist(
+                            extra_detail=f"Object with guid '{value.guid}'" f" does not exist: {e}"
+                        )
                 # for all others
                 setattr(self._orm_instance, field_, value)
 
-        self._orm_instance.save(**kwargs)
-        self._saved = True
+        return self
+
+    @handle_field_errors
+    def save(self, **kwargs):
+        try:
+            obj = self._prepare_for_save(**kwargs)
+            obj._orm_instance.save(**kwargs)
+        except DBIntegrityError as e:
+            raise self.__class__.IntegrityError(
+                extra_detail=f"Save failed for object with guid '{self.guid}': {e}"
+            )
+        except Exception as e:
+            raise e
+        else:
+            obj._saved = True
 
     @classmethod
     @handle_field_errors
@@ -322,18 +367,13 @@ class BaseModel(metaclass=BaseMeta):
         obj.save(force_insert=True)
         return obj
 
-    def delete(self, **kwargs):
-        if not self._saved:
-            raise self.__class__.NotSaved(extra_detail="Delete failed")
-        count, _ = self._orm_instance.delete(**kwargs)
-        self._saved = False
-        return count
-
     @classmethod
     @handle_field_errors
     def get(cls, **kwargs):
         try:
-            orm_instance = cls._orm_model_cls.objects.get(**kwargs)
+            orm_instance = cls._orm_model_cls.objects.using(
+                kwargs.pop("using", "default")
+            ).get(**kwargs)
         except ObjectDoesNotExist:
             raise cls.DoesNotExist
         except MultipleObjectsReturned:
@@ -343,21 +383,41 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     @handle_field_errors
+    def get_or_create(cls, **kwargs):
+        try:
+            return cls.get(**kwargs), False
+        except ObjectDoesNotExist:
+            # Try to create an object using passed params.
+            try:
+                return cls.create(**kwargs), True
+            except cls.IntegrityError:
+                try:
+                    return cls.get(**kwargs), False
+                except cls.DoesNotExist:
+                    pass
+                raise
+
+    def delete(self, **kwargs):
+        if not self._saved:
+            raise self.__class__.NotSaved(
+                extra_detail=f"Delete failed for object with guid '{self.guid}'."
+            )
+        count, _ = self._orm_instance.delete(**kwargs)
+        self._saved = False
+        return count
+
+    @classmethod
+    @handle_field_errors
     def filter(cls, **kwargs):
-        qs = cls._orm_model_cls.objects.filter(**kwargs)
+        qs = cls._orm_model_cls.objects.using(
+            kwargs.pop("using", "default")
+        ).filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
     @handle_field_errors
-    def bulk_create(cls, **kwargs):
-        objs = cls._orm_model_cls.objects.bulk_create(**kwargs)
-        qs = cls._orm_model_cls.objects.filter(pk__in=[obj.pk for obj in objs])
-        return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
-
-    @classmethod
-    @handle_field_errors
-    def find(cls, query="", reverse=False, sort_tag="date"):
-        qs = cls._orm_model_cls.find(query=query, reverse=reverse, sort_tag=sort_tag)
+    def find(cls, query="", **kwargs):
+        qs = cls._orm_model_cls.find(query=query, **kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self):
