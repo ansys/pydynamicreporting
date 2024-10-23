@@ -301,6 +301,19 @@ class BaseModel(metaclass=BaseMeta):
         obj._saved = True
         return obj
 
+    def as_dict(self, **kwargs):
+        out_dict = {}
+        cls_fields = self._get_all_field_names()
+        model_fields = self._get_orm_field_names(self._orm_instance)
+        for field_ in cls_fields:
+            if field_ not in model_fields:
+                continue
+            value = getattr(self, field_, None)
+            if value is None:  # skip and use defaults
+                continue
+            out_dict[field_] = value
+        return out_dict
+
     def _prepare_for_save(self, **kwargs):
         target_db = kwargs.pop("using", "default")
         # reset
@@ -377,6 +390,22 @@ class BaseModel(metaclass=BaseMeta):
             raise cls.MultipleObjectsReturned
 
         return cls.from_db(orm_instance)
+
+    @classmethod
+    @handle_field_errors
+    def get_or_create(cls, **kwargs):
+        try:
+            return cls.get(**kwargs), False
+        except ObjectDoesNotExist:
+            # Try to create an object using passed params.
+            try:
+                return cls.create(**kwargs), True
+            except cls.IntegrityError:
+                try:
+                    return cls.get(**kwargs), False
+                except cls.DoesNotExist:
+                    pass
+                raise
 
     @classmethod
     @handle_field_errors
