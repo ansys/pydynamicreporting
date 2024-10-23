@@ -1,15 +1,18 @@
-from collections.abc import Iterable
 import os
-from pathlib import Path
 import platform
 import sys
-from typing import Any, Optional, Type, Union
 import uuid
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, Optional, Type, Union
 
 import django
 from django.core import management
 from django.http import HttpRequest
 
+from .base import ObjectSet
+from .item import Dataset, Item, Session
+from .template import Template
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
 from ..exceptions import (
@@ -20,9 +23,6 @@ from ..exceptions import (
     InvalidPath,
     StaticFilesCollectionError,
 )
-from .base import ObjectSet
-from .item import Dataset, Item, Session
-from .template import Template
 
 
 class ADR:
@@ -124,6 +124,23 @@ class ADR:
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
+    def _migrate_db(self, db):
+        try:  # upgrade databases
+            management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
+        except Exception as e:
+            self._logger.error(f"{e}")
+            raise DatabaseMigrationError(extra_detail=str(e))
+        else:
+            from django.contrib.auth.models import Group, Permission, User
+
+            if not User.objects.using(db).filter(is_superuser=True).exists():
+                user = User.objects.using(db).create_superuser("nexus", "", "cei")
+                # include the nexus group (with all permissions)
+                nexus_group, created = Group.objects.using(db).get_or_create(name="nexus")
+                if created:
+                    nexus_group.permissions.set(Permission.objects.using(db).all())
+                nexus_group.user_set.add(user)
+
     def setup(self, collect_static: bool = False) -> None:
         from django.conf import settings
 
@@ -193,22 +210,11 @@ class ADR:
             self._dataset = Dataset.create()
 
         # migrations
-        if self._db_directory is not None:
-            try:  # upgrades all databases
-                management.call_command("migrate", "--no-input", verbosity=0)
-            except Exception as e:
-                self._logger.error(f"{e}")
-                raise DatabaseMigrationError(extra_detail=str(e))
-            else:
-                from django.contrib.auth.models import Group, Permission, User
-
-                if not User.objects.filter(is_superuser=True).exists():
-                    user = User.objects.create_superuser("nexus", "", "cei")
-                    # include the nexus group (with all permissions)
-                    nexus_group, created = Group.objects.get_or_create(name="nexus")
-                    if created:
-                        nexus_group.permissions.set(Permission.objects.all())
-                    nexus_group.user_set.add(user)
+        if self._databases:
+            for db in self._databases:
+                self._migrate_db(db)
+        elif self._db_directory is not None:
+            self._migrate_db("default")
 
         # collectstatic
         if collect_static and self._static_directory is not None:
@@ -325,12 +331,8 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
-            try:
-                obj.save(**kwargs)
-            except obj.__class__.IntegrityError:  # skip if exists
-                continue
-            else:
-                count += 1
+            obj.save(**kwargs)
+            count += 1
         return count
 
     def _is_sqlite(self, database: str) -> bool:
@@ -338,72 +340,3 @@ class ADR:
 
     def _get_db_dir(self, database: str) -> str:
         return self._databases[database]["NAME"]
-
-    def copy_objects(
-        self,
-        object_type: Union[Session, Dataset, Type[Item], Type[Template]],
-        target_database: str,
-        source_database: str = "default",
-        query: str = "",
-        target_media_dir: str = "",
-        test: bool = False,
-    ) -> int:
-        """
-        This copies a selected collection of objects from one database to another.
-
-        GUIDs are preserved and any referenced session and dataset objects are copied as
-        well.
-        """
-        if not issubclass(object_type, (Item, Template, Session, Dataset)):
-            self._logger.error(f"{object_type} is not valid")
-            raise TypeError(f"{object_type} is not valid")
-
-        if target_database not in self._databases or source_database not in self._databases:
-            raise ADRException(
-                f"'{source_database}' and '{target_database}' must be configured first"
-            )
-
-        objects = self.query(object_type, query=query)
-        copy_list = []
-        media_dir = None
-        if issubclass(object_type, Item):
-            for item in objects:
-                if getattr(
-                    item, "has_file", False
-                ):  # check for media dir if item has a physical file
-                    if not media_dir:
-                        if target_media_dir:
-                            media_dir = target_media_dir
-                        elif self._is_sqlite(target_database):
-                            media_dir = self._check_dir(
-                                Path(self._get_db_dir(target_database)).parent / "media"
-                            )
-                        else:
-                            raise ADRException(
-                                "'target_media_dir' must be specified because one of the objects"
-                                " contains media to copy.'"
-                            )
-                # save the sessions, datasets
-                # assign to the item to create the new relation
-                # and then add to the copy list
-                item.session.save(using=target_database)
-                item.dataset.save(using=target_database)
-                copy_list.append(item)
-        elif issubclass(object_type, Template):
-            ...
-        else:  # sessions, datasets
-            copy_list = list(objects)
-
-        if test:
-            self._logger.info(f"Copying {len(copy_list)} objects...")
-            return
-
-        try:
-            count = self.create_objects(copy_list, using=target_database)
-        except Exception as e:
-            raise ADRException(f"Some objects could not be copied: {e}")
-
-        # copy media
-        print(media_dir)
-
-        return count
