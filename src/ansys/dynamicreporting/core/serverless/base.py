@@ -130,7 +130,7 @@ class BaseMeta(ABCMeta):
 
 
 class BaseModel(metaclass=BaseMeta):
-    guid: UUID = field(init=False, compare=False, kw_only=True, default_factory=uuid.uuid1)
+    guid: UUID = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
     tags: str = field(compare=False, kw_only=True, default="")
     _saved: bool = field(
         init=False, compare=False, default=False
@@ -301,7 +301,7 @@ class BaseModel(metaclass=BaseMeta):
         obj._saved = True
         return obj
 
-    def as_dict(self, **kwargs):
+    def as_dict(self):
         out_dict = {}
         cls_fields = self._get_field_names()
         for field_ in cls_fields:
@@ -363,8 +363,9 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @handle_field_errors
     def create(cls, **kwargs):
+        target_db = kwargs.pop("using", "default")
         obj = cls(**kwargs)
-        obj.save(force_insert=True)
+        obj.save(force_insert=True, using=target_db)
         return obj
 
     @classmethod
@@ -386,7 +387,7 @@ class BaseModel(metaclass=BaseMeta):
     def get_or_create(cls, **kwargs):
         try:
             return cls.get(**kwargs), False
-        except ObjectDoesNotExist:
+        except cls.DoesNotExist:
             # Try to create an object using passed params.
             try:
                 return cls.create(**kwargs), True
