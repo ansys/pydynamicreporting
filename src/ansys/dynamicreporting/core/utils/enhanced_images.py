@@ -16,11 +16,6 @@ from typing import Dict, Tuple, Union
 from PIL import Image, TiffImagePlugin
 import numpy as np
 
-# import vtk
-# from vtk.util.numpy_support import vtk_to_numpy
-# from ansys.dpf import core as dpf
-# from ansys.dpf.core import vtk_helper
-
 try:
     import vtk
     from vtk.util.numpy_support import vtk_to_numpy
@@ -40,7 +35,11 @@ except (ImportError, ValueError):
 if HAS_VTK and HAS_DPF:  # pragma: no cover
 
     def generate_enhanced_image_as_tiff(
-        model: dpf.Model, var_field: dpf.Field, part_name: str, output_file_name: str
+        model: dpf.Model,
+        var_field: dpf.Field,
+        part_name: str,
+        output_file_name: str,
+        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ):
         """
         Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
@@ -55,12 +54,17 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
         output_file_name: str
-            output TIFF file name with extension of .tiff or .tif
+            output TIFF file name with extension of .tiff or .tif.
+        rotation: Tuple[float, float, float]
+            Rotation degrees about X, Y, Z axes. Note not in radians.
         """
-        _generate_enhanced_image(model, var_field, part_name, output_file_name)
+        _generate_enhanced_image(model, var_field, part_name, output_file_name, rotation)
 
     def generate_enhanced_image_in_memory(
-        model: dpf.Model, var_field: dpf.Field, part_name: str
+        model: dpf.Model,
+        var_field: dpf.Field,
+        part_name: str,
+        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
@@ -74,6 +78,8 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             the variable in interest to visualize in an enhanced image.
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
+        rotation: Tuple[float, float, float]
+            Rotation degrees about X, Y, Z axes. Note not in radians.
 
         Returns
         -------
@@ -83,12 +89,12 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
-        _generate_enhanced_image(model, var_field, part_name, buffer)
+        _generate_enhanced_image(model, var_field, part_name, buffer, rotation)
         buffer.seek(0)
         return buffer
 
     def _setup_render_routine(
-        poly_data: vtk.vtkPolyData,
+        poly_data: vtk.vtkPolyData, rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     ) -> Tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
         """
         Set up VTK render routine, including mapper, actor, renderer and render window.
@@ -117,12 +123,17 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         renderer.ResetCamera()
         render_window.AddRenderer(renderer)
         renderer.AddActor(actor)
+        actor.RotateX(rotation[0])
+        actor.RotateY(rotation[1])
+        actor.RotateZ(rotation[2])
+
+        renderer.SetBackground(1, 1, 1)
 
         # Uncomment the following 2 lines to get an interactor
         # render_window_interactor = vtk.vtkRenderWindowInteractor()
         # render_window_interactor.SetRenderWindow(render_window)
 
-        return renderer, render_window  # , render_windowdow_interactor
+        return renderer, render_window  # , render_windodow_interactor
 
     def _get_vtk_scalar_mode(poly_data: vtk.vtkPolyData, var_name: str) -> int:
         """
@@ -235,6 +246,16 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         # render_window_interactor.Start()
 
         return np_array
+
+    def _add_pick_data(poly_data: vtk.vtkPolyData, part_id: int):
+        arr = vtk.vtkFloatArray()
+        arr.SetName("Pick Data")
+        arr.SetNumberOfComponents(1)
+        num_points = poly_data.GetNumberOfPoints()
+        arr.SetNumberOfTuples(num_points)
+        for i in range(num_points):
+            arr.SetValue(i, part_id)
+        poly_data.GetPointData().AddArray(arr)
 
     def _render_pick_data(
         poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, render_window: vtk.vtkRenderWindow
@@ -362,7 +383,11 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         )
 
     def _generate_enhanced_image(
-        model: dpf.Model, var_field: dpf.Field, part_name: str, output: Union[str, io.BytesIO]
+        model: dpf.Model,
+        var_field: dpf.Field,
+        part_name: str,
+        output: Union[str, io.BytesIO],
+        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
         """
         Esstential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -388,29 +413,26 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         # Get components for metadata
         var_unit: str = var_field.unit
         var_name = var_field.name
-        var_meshed_region = var_field.meshed_region
         dpf_unit_system = model.metadata.result_info.unit_system_name
         unit_system_to_name = dpf_unit_system.split(":", 1)[0]
-
-        mats: dpf.PropertyField = var_meshed_region.property_field("mat")  # Pick data
+        meshed_region = model.metadata.meshed_region  # Whole mesh region
 
         # Convert DPF to a pyvista UnstructuredGrid, which inherits from vtk
-        grid = vtk_helper.dpf_mesh_to_vtk(var_meshed_region)
-        # Add pick data
-        grid = vtk_helper.append_field_to_grid(mats, var_meshed_region, grid, "Pick Data")
+        grid = vtk_helper.dpf_mesh_to_vtk(meshed_region)
         # Add variable data
-        grid = vtk_helper.append_field_to_grid(var_field, var_meshed_region, grid, var_name)
+        grid = vtk_helper.append_field_to_grid(var_field, meshed_region, grid, var_name)
 
         # Create a vtkGeometryFilter to convert UnstructuredGrid to PolyData
         geometry_filter = vtk.vtkGeometryFilter()
         geometry_filter.SetInputData(grid)
         geometry_filter.Update()
         poly_data = geometry_filter.GetOutput()
+        _add_pick_data(poly_data, 1)  # Todo: optimize hardcoded part ID
 
-        renderer, render_window = _setup_render_routine(poly_data)
+        renderer, render_window = _setup_render_routine(poly_data, rotation)
         rgb_buffer = _get_rgb_value(render_window)
-        pick_buffer = _render_pick_data(grid, renderer, render_window)
-        var_buffer = _render_var_data(grid, renderer, render_window, var_name)
+        pick_buffer = _render_pick_data(poly_data, renderer, render_window)
+        var_buffer = _render_var_data(poly_data, renderer, render_window, var_name)
 
         # Todo: automatic colorby_var support
         # global colorby_var_id
@@ -425,14 +447,14 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             "parts": [
                 {
                     "name": part_name,
-                    "id": str(mats.data[0]),
+                    "id": 1,  # Todo: optimize hardcoded part ID
                     "colorby_var": "1.0",  # colorby_var
                 }
             ],
             "variables": [
                 {
                     "name": var_name,
-                    "id": str(mats.data[0]),
+                    "id": 1,  # Todo: optimize hardcoded part ID
                     "pal_id": "1",  # colorby_var_int,
                     "unit_dims": "",
                     "unit_system_to_name": unit_system_to_name,
