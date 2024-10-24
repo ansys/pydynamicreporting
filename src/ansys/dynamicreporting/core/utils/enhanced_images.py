@@ -16,11 +16,6 @@ from typing import Dict, Tuple, Union
 from PIL import Image, TiffImagePlugin
 import numpy as np
 
-# import vtk
-# from vtk.util.numpy_support import vtk_to_numpy
-# from ansys.dpf import core as dpf
-# from ansys.dpf.core import vtk_helper
-
 try:
     import vtk
     from vtk.util.numpy_support import vtk_to_numpy
@@ -40,7 +35,11 @@ except (ImportError, ValueError):
 if HAS_VTK and HAS_DPF:  # pragma: no cover
 
     def generate_enhanced_image_as_tiff(
-        model: dpf.Model, var_field: dpf.Field, part_name: str, output_file_name: str
+        model: dpf.Model,
+        var_field: dpf.Field,
+        part_name: str,
+        output_file_name: str,
+        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ):
         """
         Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
@@ -55,12 +54,17 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
         output_file_name: str
-            output TIFF file name with extension of .tiff or .tif
+            output TIFF file name with extension of .tiff or .tif.
+        rotation: Tuple[float, float, float]
+            Rotation degrees about X, Y, Z axes. Note not in radians.
         """
-        _generate_enhanced_image(model, var_field, part_name, output_file_name)
+        _generate_enhanced_image(model, var_field, part_name, output_file_name, rotation)
 
     def generate_enhanced_image_in_memory(
-        model: dpf.Model, var_field: dpf.Field, part_name: str
+        model: dpf.Model,
+        var_field: dpf.Field,
+        part_name: str,
+        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
@@ -74,6 +78,8 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             the variable in interest to visualize in an enhanced image.
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
+        rotation: Tuple[float, float, float]
+            Rotation degrees about X, Y, Z axes. Note not in radians.
 
         Returns
         -------
@@ -83,12 +89,12 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
-        _generate_enhanced_image(model, var_field, part_name, buffer)
+        _generate_enhanced_image(model, var_field, part_name, buffer, rotation)
         buffer.seek(0)
         return buffer
 
     def _setup_render_routine(
-        poly_data: vtk.vtkPolyData,
+        poly_data: vtk.vtkPolyData, rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     ) -> Tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
         """
         Set up VTK render routine, including mapper, actor, renderer and render window.
@@ -117,13 +123,17 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         renderer.ResetCamera()
         render_window.AddRenderer(renderer)
         renderer.AddActor(actor)
+        actor.RotateX(rotation[0])
+        actor.RotateY(rotation[1])
+        actor.RotateZ(rotation[2])
+
         renderer.SetBackground(1, 1, 1)
 
         # Uncomment the following 2 lines to get an interactor
         # render_window_interactor = vtk.vtkRenderWindowInteractor()
         # render_window_interactor.SetRenderWindow(render_window)
 
-        return renderer, render_window  # , render_windowdow_interactor
+        return renderer, render_window  # , render_windodow_interactor
 
     def _get_vtk_scalar_mode(poly_data: vtk.vtkPolyData, var_name: str) -> int:
         """
@@ -373,7 +383,11 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         )
 
     def _generate_enhanced_image(
-        model: dpf.Model, var_field: dpf.Field, part_name: str, output: Union[str, io.BytesIO]
+        model: dpf.Model,
+        var_field: dpf.Field,
+        part_name: str,
+        output: Union[str, io.BytesIO],
+        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
         """
         Esstential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -415,7 +429,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         poly_data = geometry_filter.GetOutput()
         _add_pick_data(poly_data, 1)  # Todo: optimize hardcoded part ID
 
-        renderer, render_window = _setup_render_routine(poly_data)
+        renderer, render_window = _setup_render_routine(poly_data, rotation)
         rgb_buffer = _get_rgb_value(render_window)
         pick_buffer = _render_pick_data(poly_data, renderer, render_window)
         var_buffer = _render_var_data(poly_data, renderer, render_window, var_name)
