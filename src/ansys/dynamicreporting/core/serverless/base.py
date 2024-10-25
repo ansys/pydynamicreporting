@@ -314,14 +314,9 @@ class BaseModel(metaclass=BaseMeta):
         return out_dict
 
     def _prepare_for_save(self, **kwargs):
-        target_db = kwargs.pop("using", "default")
-        # reset
-        if self._orm_saved:
-            self._saved = False
-            # handle cross-database saves
-            if target_db != self._orm_db:
-                self._orm_instance = self.__class__._orm_model_cls()
+        self._saved = False
 
+        target_db = kwargs.pop("using", "default")
         cls_fields = self._get_all_field_names()
         model_fields = self._get_orm_field_names(self._orm_instance)
         for field_ in cls_fields:
