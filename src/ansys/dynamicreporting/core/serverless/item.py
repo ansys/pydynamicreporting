@@ -59,7 +59,12 @@ class HTMLParser(BaseHTMLParser):
         self._start_tags = []
 
 
-class StringContent(Validator):
+class ItemContent(Validator):
+    def process(self, value, obj):
+        return None
+
+
+class StringContent(ItemContent):
     def process(self, value, obj):
         if not isinstance(value, str):
             raise TypeError("Expected content to be a string")
@@ -74,7 +79,7 @@ class HTMLContent(StringContent):
         return html_str
 
 
-class TableContent(Validator):
+class TableContent(ItemContent):
     def process(self, value, obj):
         if not isinstance(value, numpy.ndarray):
             raise TypeError("Expected content to be a numpy array")
@@ -85,7 +90,7 @@ class TableContent(Validator):
         return value
 
 
-class TreeContent(Validator):
+class TreeContent(ItemContent):
     ALLOWED_VALUE_TYPES = (float, int, datetime, str, bool, uuid.UUID, type(None))
 
     def _validate_tree_value(self, value):
@@ -219,6 +224,7 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     session: Session = field(compare=False, kw_only=True, default=None)
     dataset: Dataset = field(compare=False, kw_only=True, default=None)
+    content: ItemContent = ItemContent()
     type: str = "none"
     _orm_model: str = "data.models.Item"
     # Class-level registry of subclasses keyed by type
@@ -229,15 +235,11 @@ class Item(BaseModel):
         # Automatically register the subclass based on its type attribute
         Item._type_registry[cls.type] = cls
 
-    @classmethod
-    def from_db(cls, orm_instance, **kwargs):
-        # Create a new instance of the correct subclass
-        if cls is Item:
-            # Get the class based on the type attribute
-            item_cls = cls._type_registry[orm_instance.type]
-            return item_cls.from_db(orm_instance, **kwargs)
-
-        return super().from_db(orm_instance, **kwargs)
+    def __post_init__(self):
+        # todo: can be bypassed by setting type at instantiation
+        if self.type == "none":
+            raise TypeError("Cannot instantiate Item directly. Use Item.create()")
+        super().__post_init__()
 
     def save(self, **kwargs):
         if self.session is None or self.dataset is None:
@@ -261,9 +263,38 @@ class Item(BaseModel):
         return super().delete(**kwargs)
 
     @classmethod
+    def from_db(cls, orm_instance, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Item:
+            # Get the class based on the type attribute
+            item_cls = cls._type_registry[orm_instance.type]
+            return item_cls.from_db(orm_instance, **kwargs)
+
+        return super().from_db(orm_instance, **kwargs)
+
+    @classmethod
+    def create(cls, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Item:
+            # Get the class based on the type attribute
+            try:
+                item_cls = cls._type_registry[kwargs.pop("type")]
+            except KeyError:
+                raise ADRException("The 'type' must be passed when using the Item class")
+            return item_cls.create(**kwargs)
+
+        new_kwargs = {"type": cls.type, **kwargs}
+        return super().create(**new_kwargs)
+
+    @classmethod
     def get(cls, **kwargs):
         new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
         return super().get(**new_kwargs)
+
+    @classmethod
+    def get_or_create(cls, **kwargs):
+        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
+        return super().get_or_create(**new_kwargs)
 
     @classmethod
     def filter(cls, **kwargs):
@@ -271,16 +302,14 @@ class Item(BaseModel):
         return super().filter(**new_kwargs)
 
     @classmethod
-    def find(cls, **kwargs):
+    def find(cls, query="", **kwargs):
         if cls.type == "none":
-            return super().find(**kwargs)
-        query = kwargs.pop("query", "")
+            return super().find(query=query, **kwargs)
         if "i_type|cont" in query:
             raise ADRException(
                 extra_detail="The 'i_type' filter is not required if using a subclass of Item"
             )
-        new_kwargs = {**kwargs, "query": f"A|i_type|cont|{cls.type};{query}"}
-        return super().find(**new_kwargs)
+        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)
 
     def render(self, context=None, request=None) -> Optional[str]:
         if context is None:

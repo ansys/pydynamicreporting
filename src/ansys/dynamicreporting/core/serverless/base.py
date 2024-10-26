@@ -218,14 +218,22 @@ class BaseModel(metaclass=BaseMeta):
             fields_.append((f.name, f.type) if with_types else f.name)
         return tuple(fields_)
 
+    def _get_var_field_names(self, include_private=False):
+        fields_ = []
+        for f in vars(self).keys():
+            if not include_private and f.startswith("_"):
+                continue
+            fields_.append(f)
+        return tuple(fields_)
+
     @classmethod
-    def _get_all_field_names(cls):
+    def _get_prop_field_names(cls):
         """Returns a list of all field names from a dataclass, including properties."""
         property_fields = []
         for name, value in inspect.getmembers(cls):
             if isinstance(value, property):
                 property_fields.append(name)
-        return tuple(property_fields) + cls._get_field_names()
+        return tuple(property_fields)
 
     @property
     def saved(self) -> bool:
@@ -238,6 +246,70 @@ class BaseModel(metaclass=BaseMeta):
     @property
     def _orm_db(self) -> str:
         return self._orm_instance._state.db
+
+    def as_dict(self):
+        out_dict = {}
+        # use a combination of vars and fields
+        cls_fields = set(self._get_field_names() + self._get_var_field_names())
+        for field_ in cls_fields:
+            if field_.startswith("_"):
+                continue
+            value = getattr(self, field_, None)
+            if value is None:  # skip and use defaults
+                continue
+            out_dict[field_] = value
+        return out_dict
+
+    def _prepare_for_save(self, **kwargs):
+        self._saved = False
+
+        target_db = kwargs.pop("using", "default")
+        cls_fields = self._get_field_names() + self._get_prop_field_names()
+        model_fields = self._get_orm_field_names(self._orm_instance)
+        for field_ in cls_fields:
+            if field_ not in model_fields:
+                continue
+            value = getattr(self, field_, None)
+            if value is None:  # skip and use defaults
+                continue
+            if isinstance(value, list):
+                objs = [o._orm_instance for o in value]
+                getattr(self._orm_instance, field_).add(*objs)
+            else:
+                if isinstance(value, BaseModel):  # relations
+                    try:
+                        value = value._orm_instance.__class__.objects.using(target_db).get(guid=value.guid)
+                    except ObjectDoesNotExist as e:
+                        raise value.__class__.DoesNotExist(
+                            extra_detail=f"Object with guid '{value.guid}'" f" does not exist: {e}"
+                        )
+                # for all others
+                setattr(self._orm_instance, field_, value)
+
+        return self
+
+    @handle_field_errors
+    def save(self, **kwargs):
+        try:
+            obj = self._prepare_for_save(**kwargs)
+            obj._orm_instance.save(**kwargs)
+        except DBIntegrityError as e:
+            raise self.__class__.IntegrityError(
+                extra_detail=f"Save failed for object with guid '{self.guid}': {e}"
+            )
+        except Exception as e:
+            raise e
+        else:
+            obj._saved = True
+
+    def delete(self, **kwargs):
+        if not self._saved:
+            raise self.__class__.NotSaved(
+                extra_detail=f"Delete failed for object with guid '{self.guid}'."
+            )
+        count, _ = self._orm_instance.delete(**kwargs)
+        self._saved = False
+        return count
 
     @classmethod
     def from_db(cls, orm_instance, parent=None):
@@ -301,60 +373,6 @@ class BaseModel(metaclass=BaseMeta):
         obj._saved = True
         return obj
 
-    def as_dict(self):
-        out_dict = {}
-        cls_fields = self._get_field_names()
-        for field_ in cls_fields:
-            if field_.startswith("_"):
-                continue
-            value = getattr(self, field_, None)
-            if value is None:  # skip and use defaults
-                continue
-            out_dict[field_] = value
-        return out_dict
-
-    def _prepare_for_save(self, **kwargs):
-        self._saved = False
-
-        target_db = kwargs.pop("using", "default")
-        cls_fields = self._get_all_field_names()
-        model_fields = self._get_orm_field_names(self._orm_instance)
-        for field_ in cls_fields:
-            if field_ not in model_fields:
-                continue
-            value = getattr(self, field_, None)
-            if value is None:  # skip and use defaults
-                continue
-            if isinstance(value, list):
-                objs = [o._orm_instance for o in value]
-                getattr(self._orm_instance, field_).add(*objs)
-            else:
-                if isinstance(value, BaseModel):  # relations
-                    try:
-                        value = value._orm_instance.__class__.objects.using(target_db).get(guid=value.guid)
-                    except ObjectDoesNotExist as e:
-                        raise value.__class__.DoesNotExist(
-                            extra_detail=f"Object with guid '{value.guid}'" f" does not exist: {e}"
-                        )
-                # for all others
-                setattr(self._orm_instance, field_, value)
-
-        return self
-
-    @handle_field_errors
-    def save(self, **kwargs):
-        try:
-            obj = self._prepare_for_save(**kwargs)
-            obj._orm_instance.save(**kwargs)
-        except DBIntegrityError as e:
-            raise self.__class__.IntegrityError(
-                extra_detail=f"Save failed for object with guid '{self.guid}': {e}"
-            )
-        except Exception as e:
-            raise e
-        else:
-            obj._saved = True
-
     @classmethod
     @handle_field_errors
     def create(cls, **kwargs):
@@ -392,15 +410,6 @@ class BaseModel(metaclass=BaseMeta):
                 except cls.DoesNotExist:
                     pass
                 raise
-
-    def delete(self, **kwargs):
-        if not self._saved:
-            raise self.__class__.NotSaved(
-                extra_detail=f"Delete failed for object with guid '{self.guid}'."
-            )
-        count, _ = self._orm_instance.delete(**kwargs)
-        self._saved = False
-        return count
 
     @classmethod
     @handle_field_errors

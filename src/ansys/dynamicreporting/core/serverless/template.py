@@ -1,13 +1,12 @@
+import json
 from dataclasses import field
 from datetime import datetime
-import json
-from typing import Optional
 
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from ..exceptions import ADRException
 from .base import BaseModel
+from ..exceptions import ADRException
 
 
 class Template(BaseModel):
@@ -32,21 +31,28 @@ class Template(BaseModel):
         # Automatically register the subclass based on its type attribute
         Template._type_registry[cls.report_type] = cls
 
-    @classmethod
-    def from_db(cls, orm_instance, **kwargs):
-        # Create a new instance of the correct subclass
-        if cls is Template:
-            # Get the class based on the type attribute
-            templ_cls = cls._type_registry[orm_instance.report_type]
-            obj = templ_cls.from_db(orm_instance, **kwargs)
-        else:
-            obj = super().from_db(orm_instance, **kwargs)
-        # add relevant props from property dict.
-        props = obj.get_property()
-        for prop in cls._properties:
-            if prop in props:
-                setattr(obj, prop, props[prop])
-        return obj
+    def __post_init__(self):
+        if self.report_type == "":
+            raise TypeError("Cannot instantiate Template directly. Use Template.create()")
+        super().__post_init__()
+
+    @property
+    def type(self):
+        return self.report_type
+
+    @type.setter
+    def type(self, value):
+        if not isinstance(value, str):
+            raise ValueError(f"{value} must be a string")
+        self.report_type = value
+
+    @property
+    def children_order(self):
+        return ",".join([str(child.guid) for child in self.children])
+
+    @property
+    def master(self):
+        return self.parent is None
 
     def save(self, **kwargs):
         if self.parent is not None and not self.parent._saved:
@@ -68,23 +74,60 @@ class Template(BaseModel):
             self.add_property(prop_dict)
         super().save(**kwargs)
 
-    @property
-    def type(self):
-        return self.report_type
+    @classmethod
+    def from_db(cls, orm_instance, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Template:
+            # Get the class based on the type attribute
+            templ_cls = cls._type_registry[orm_instance.report_type]
+            obj = templ_cls.from_db(orm_instance, **kwargs)
+        else:
+            obj = super().from_db(orm_instance, **kwargs)
+        # add relevant props from property dict.
+        props = obj.get_property()
+        for prop in cls._properties:
+            if prop in props:
+                setattr(obj, prop, props[prop])
+        return obj
 
-    @type.setter
-    def type(self, value):
-        if not isinstance(value, str):
-            raise ValueError(f"{value} must be a string")
-        self.report_type = value
+    @classmethod
+    def create(cls, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Template:
+            # Get the class based on the type attribute
+            try:
+                templ_cls = cls._type_registry[kwargs.pop("report_type")]
+            except KeyError:
+                raise ADRException("The 'report_type' must be passed when using the Template class")
+            return templ_cls.create(**kwargs)
 
-    @property
-    def children_order(self):
-        return ",".join([str(child.guid) for child in self.children])
+        new_kwargs = {"report_type": cls.report_type, **kwargs}
+        return super().create(**new_kwargs)
 
-    @property
-    def master(self):
-        return self.parent is None
+    @classmethod
+    def get(cls, **kwargs):
+        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
+        return super().get(**new_kwargs)
+
+    @classmethod
+    def get_or_create(cls, **kwargs):
+        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
+        return super().get_or_create(**new_kwargs)
+
+    @classmethod
+    def filter(cls, **kwargs):
+        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
+        return super().filter(**new_kwargs)
+
+    @classmethod
+    def find(cls, query="", **kwargs):
+        if not cls.report_type:
+            return super().find(query=query, **kwargs)
+        if "t_types|cont" in query:
+            raise ADRException(
+                extra_detail="The 't_types' filter is not required if using a subclass of Template"
+            )
+        return super().find(query=f"A|t_types|cont|{cls.report_type};{query}", **kwargs)
 
     def reorder_children(self) -> None:
         guid_to_child = {str(child.guid): child for child in self.children}
@@ -149,28 +192,6 @@ class Template(BaseModel):
         curr_props = params.get("properties", {})
         params["properties"] = curr_props | new_props
         self.params = json.dumps(params)
-
-    @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get(**new_kwargs)
-
-    @classmethod
-    def filter(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().filter(**new_kwargs)
-
-    @classmethod
-    def find(cls, **kwargs):
-        if not cls.report_type:
-            return super().find(**kwargs)
-        query = kwargs.pop("query", "")
-        if "t_types|cont" in query:
-            raise ADRException(
-                extra_detail="The 't_types' filter is not required if using a subclass of Template"
-            )
-        new_kwargs = {**kwargs, "query": f"A|t_types|cont|{cls.report_type};{query}"}
-        return super().find(**new_kwargs)
 
     def render(self, context=None, request=None, query="") -> str:
         if context is None:
