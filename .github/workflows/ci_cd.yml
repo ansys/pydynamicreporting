@@ -84,6 +84,10 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
