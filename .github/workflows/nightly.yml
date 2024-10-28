@@ -15,7 +15,6 @@ jobs:
 
   nightly_test:
     name: Testing
-    needs: [ smoke-tests ]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
