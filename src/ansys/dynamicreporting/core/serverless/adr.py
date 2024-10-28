@@ -1,18 +1,15 @@
+from collections.abc import Iterable
 import os
+from pathlib import Path
 import platform
 import sys
-import uuid
-from collections.abc import Iterable
-from pathlib import Path
 from typing import Any, Optional, Type, Union
+import uuid
 
 import django
 from django.core import management
 from django.http import HttpRequest
 
-from .base import ObjectSet
-from .item import Dataset, Item, Session
-from .template import Template
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
 from ..exceptions import (
@@ -23,6 +20,9 @@ from ..exceptions import (
     InvalidPath,
     StaticFilesCollectionError,
 )
+from .base import ObjectSet
+from .item import Dataset, Item, Session
+from .template import Template
 
 
 class ADR:
@@ -372,9 +372,7 @@ class ADR:
         if issubclass(object_type, Item):
             for item in objects:
                 # check for media dir if item has a physical file
-                if getattr(
-                    item, "has_file", False
-                ) and not media_dir:
+                if getattr(item, "has_file", False) and not media_dir:
                     if target_media_dir:
                         media_dir = target_media_dir
                     elif self._is_sqlite(target_database):

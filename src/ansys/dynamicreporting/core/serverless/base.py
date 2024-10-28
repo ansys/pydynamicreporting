@@ -1,13 +1,13 @@
-import importlib
-import inspect
-import shlex
-import uuid
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
+import importlib
+import inspect
 from itertools import chain
+import shlex
 from typing import Any, get_args, get_origin
+import uuid
 from uuid import UUID
 
 from django.core.exceptions import (
@@ -59,11 +59,11 @@ class BaseMeta(ABCMeta):
     _model_cls_registry: dict[str, type[Model]] = {}
 
     def __new__(
-            mcs,
-            cls_name: str,
-            bases: tuple[type[Any], ...],
-            namespace: dict[str, Any],
-            **kwargs: Any,
+        mcs,
+        cls_name: str,
+        bases: tuple[type[Any], ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
     ) -> type:
         super_new = super().__new__
         # ensure initialization is only performed for subclasses of BaseModel
@@ -278,7 +278,9 @@ class BaseModel(metaclass=BaseMeta):
             else:
                 if isinstance(value, BaseModel):  # relations
                     try:
-                        value = value._orm_instance.__class__.objects.using(target_db).get(guid=value.guid)
+                        value = value._orm_instance.__class__.objects.using(target_db).get(
+                            guid=value.guid
+                        )
                     except ObjectDoesNotExist as e:
                         raise value.__class__.DoesNotExist(
                             extra_detail=f"Object with guid '{value.guid}'" f" does not exist: {e}"
@@ -385,9 +387,9 @@ class BaseModel(metaclass=BaseMeta):
     @handle_field_errors
     def get(cls, **kwargs):
         try:
-            orm_instance = cls._orm_model_cls.objects.using(
-                kwargs.pop("using", "default")
-            ).get(**kwargs)
+            orm_instance = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).get(
+                **kwargs
+            )
         except ObjectDoesNotExist:
             raise cls.DoesNotExist
         except MultipleObjectsReturned:
@@ -414,9 +416,7 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @handle_field_errors
     def filter(cls, **kwargs):
-        qs = cls._orm_model_cls.objects.using(
-            kwargs.pop("using", "default")
-        ).filter(**kwargs)
+        qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
