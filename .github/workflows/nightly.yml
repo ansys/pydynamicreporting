@@ -1,48 +1,20 @@
 name: Nightly Build and Test
 
 on:
-  schedule:  # UTC at 0300 - 11pm EDT
-    - cron:  '0 3 * * *'
+  schedule: # UTC at 0300 = 11pm EDT
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 env:
-  MAIN_PYTHON_VERSION: '3.10'
+  MAIN_PYTHON_VERSION: '3.12'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
 
 
 jobs:
 
-  style:
-    name: Code style
-    runs-on: ubuntu-latest
-    steps:
-      - name: PyAnsys code style checks
-        uses: ansys/actions/code-style@v8
-        with:
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-
-  smoke-tests:
-    name: Build and smoke tests
-    runs-on: ${{ matrix.os }}
-    needs: [style]
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: [ '3.9', '3.10', '3.11', '3.12']
-    steps:
-      - name: Build wheelhouse and perform smoke test
-        uses: ansys/actions/build-wheelhouse@v8
-        with:
-          library-name: ${{ env.PACKAGE_NAME }}
-          library-namespace: ${{ env.PACKAGE_NAMESPACE }}
-          operating-system: ${{ matrix.os }}
-          python-version: ${{ matrix.python-version }}
-
   nightly_test:
     name: Testing
-    needs: [smoke-tests]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -64,6 +36,11 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Run pytest
         run: make test
         env:
@@ -71,6 +48,7 @@ jobs:
 
   nightly_and_upload:
     name: nightly_and_upload
+    needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
       - name: Build library source and wheel artifacts
@@ -95,7 +73,7 @@ jobs:
   build-failure:
     name: Teams notify on failure
     if: failure()
-    needs: [ nightly_test, nightly_and_upload]
+    needs: [ nightly_test, nightly_and_upload ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
