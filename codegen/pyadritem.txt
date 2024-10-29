@@ -48,7 +48,7 @@ class Item:
 
 
     The type of the item created in the preceding code cannot be changed. However,
-    the attributes describing the object can be reset at any time. These hanges are
+    the attributes describing the object can be reset at any time. These changes are
     automatically propagated into the database. The attributes described in the
     following "Parameters" section can be used to control the rendering of these objects.
 
