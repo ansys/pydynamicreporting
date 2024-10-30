@@ -325,6 +325,9 @@ sqlqueries              `SQL Query`_                  :ref:`report_objects.sqlqu
 
 treemerge               `Tree Merge`_                 :ref:`report_objects.mergetreeREST()
                                                       <mergetreeREST>`
+
+statistical             `Statistical Analysis`_       :ref:`report_objects.statisticalREST()
+                                                      <statisticalREST>`
 ======================= ============================= ========================================
 
 
@@ -1691,3 +1694,77 @@ header.
 Set the name of the tag to be used to generate an output tree header.
 Input needs to be a string. An empty string (the default) specifies that
 no tree header be generated.
+
+.. _statisticalREST:
+
+statisticalREST object
+^^^^^^^^^^^^^^^^^^^^
+
+Inherits from TemplateREST, GeneratorREST
+
+Class that corresponds to the Statistical Analysis Generator
+template type. Its specific methods are:
+
+**template.get_analysis_type()**
+
+Get the type of statistical analysis
+
+**Template.set_analysis_type(value=””)**
+
+Set the type of statistical analysis.
+Only “Linear Regression” is supported.
+
+**Template.get_table_name()**
+
+Get the name of the output table.
+
+**Template.set_table_name(value=””)**
+
+Set the name of the output table. Input must be a string.
+
+**Template.get_tree_name()**
+
+Get the name of the output tree with statistical parameters values.
+
+**Template.set_tree_name(value=””)**
+
+Set the name of the output tree with statistical parameters values.
+Input must be a string.
+
+**Template.set_predictor_variables(value)**
+
+Set the predictor variables. The input needs to be a list,
+with each element a list of length 3.
+The elements of the sub-lists must be:
+
+-	Type. Only “row” is currently supported.
+-	Variable predictor name.
+-	Output row name.
+
+**Template.get_predictor_variables()**
+
+Get the list of predictor variables.
+Returns a list where each element is a sub-list of
+3 elements (type, predictor name, output name)
+
+**Template.set_response_variables(value=””)**
+
+Set the response variables. Input must be a list of sub-lists,
+each with two elements:
+
+-	Response variable name
+-	Output row name
+
+**Template.get_response_variables()**
+
+Get the response variable list. Each element is a sub-list
+with two elements each.
+
+**Template.set_analysis_params(value=””)**
+
+Set the parameters for the statistical analysis.
+Currently not supported.
+
+**Template.get_analysis_params()**
+
+Get the parameters for the statistical algorithm.
