@@ -247,6 +247,10 @@ class BaseModel(metaclass=BaseMeta):
     def _orm_db(self) -> str:
         return self._orm_instance._state.db
 
+    @property
+    def db(self):
+        return self._orm_db
+
     def as_dict(self):
         out_dict = {}
         # use a combination of vars and fields
@@ -494,9 +498,13 @@ class ObjectSet:
         return self._saved
 
     def delete(self):
+        count = 0
+        for obj in self._obj_set:
+            obj.delete()
+            count += 1
+        self._orm_queryset.delete()
         self._obj_set = []
         self._saved = False
-        count, _ = self._orm_queryset.delete()
         return count
 
     def values_list(self, *fields, flat=False):
