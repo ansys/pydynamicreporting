@@ -1,15 +1,19 @@
-from collections.abc import Iterable
 import os
-from pathlib import Path
 import platform
+import shutil
 import sys
-from typing import Any, Optional, Type, Union
 import uuid
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, Optional, Type, Union
 
 import django
 from django.core import management
 from django.http import HttpRequest
 
+from .base import ObjectSet
+from .item import Dataset, Item, Session
+from .template import Template
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
 from ..exceptions import (
@@ -20,9 +24,6 @@ from ..exceptions import (
     InvalidPath,
     StaticFilesCollectionError,
 )
-from .base import ObjectSet
-from .item import Dataset, Item, Session
-from .template import Template
 
 
 class ADR:
@@ -331,6 +332,9 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
+            if kwargs.get("using", "default") != obj.db:
+                # required if copying across databases
+                obj.reinit()
             obj.save(**kwargs)
             count += 1
         return count
@@ -372,7 +376,7 @@ class ADR:
         if issubclass(object_type, Item):
             for item in objects:
                 # check for media dir if item has a physical file
-                if getattr(item, "has_file", False) and not media_dir:
+                if getattr(item, "has_file", False) and media_dir is None:
                     if target_media_dir:
                         media_dir = target_media_dir
                     elif self._is_sqlite(target_database):
@@ -384,11 +388,10 @@ class ADR:
                             "'target_media_dir' argument must be specified because one of the objects"
                             " contains media to copy.'"
                         )
-                # save or load sessions, datasets
+                # save or load sessions, datasets - since it is possible they are shared
+                # and were saved already.
                 session, _ = Session.get_or_create(**item.session.as_dict(), using=target_database)
                 dataset, _ = Dataset.get_or_create(**item.dataset.as_dict(), using=target_database)
-                # required if copying across databases
-                item.reinit()
                 item.session = session
                 item.dataset = dataset
                 copy_list.append(item)
@@ -407,6 +410,9 @@ class ADR:
             raise ADRException(f"Some objects could not be copied: {e}")
 
         # copy media
-        print(media_dir)
+        if issubclass(object_type, Item) and media_dir is not None:
+            for item in objects:
+                if getattr(item, "has_file", False):
+                    shutil.copy(Path(item.content), media_dir)
 
         return count
