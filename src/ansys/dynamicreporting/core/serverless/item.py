@@ -208,13 +208,22 @@ class FilePayloadMixin:
 
     def save(self, **kwargs):
         file_name = Path(self._file.name).name
-        self._orm_instance.payloadfile = f"{str(self.guid)}_{file_name}"
-        # more general path, save the file into the media directory
-        with open(self._orm_instance.get_payload_server_pathname(), "wb") as out_file:
-            with self._file.open(mode="rb") as f:
-                for chunk in f.chunks():
-                    out_file.write(chunk)  # chunk -> bytes
+        self._orm_instance.payloadfile = file_name
+        # if it does not exist in the target location, create one
+        if not Path(self._orm_instance.get_payload_server_pathname()).is_file():
+            self._orm_instance.payloadfile = f"{str(self.guid)}_{file_name}"
+            # more general path, save the file into the media directory
+            with open(self._orm_instance.get_payload_server_pathname(), "wb") as out_file:
+                with self._file.open(mode="rb") as f:
+                    for chunk in f.chunks():
+                        out_file.write(chunk)  # chunk -> bytes
         super().save(**kwargs)
+
+    def delete(self, **kwargs):
+        from data.utils import delete_item_media
+
+        delete_item_media(self._orm_instance.guid)
+        return super().delete(**kwargs)
 
 
 class Item(BaseModel):
@@ -255,12 +264,6 @@ class Item(BaseModel):
         if self.content is None:
             raise ADRException(extra_detail=f"The item {self.guid} must have some content to save")
         super().save(**kwargs)
-
-    def delete(self, **kwargs):
-        from data.utils import delete_item_media
-
-        delete_item_media(self._orm_instance.guid)
-        return super().delete(**kwargs)
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
