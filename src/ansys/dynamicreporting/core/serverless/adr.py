@@ -384,12 +384,12 @@ class ADR:
                             "'target_media_dir' argument must be specified because one of the objects"
                             " contains media to copy.'"
                         )
-                # save the sessions, datasets
-                # assign to the item to create the new relation
-                # and then add to the copy list
+                # save or load sessions, datasets
                 session, _ = Session.get_or_create(**item.session.as_dict(), using=target_database)
-                item.session = session
                 dataset, _ = Dataset.get_or_create(**item.dataset.as_dict(), using=target_database)
+                # required if copying across databases
+                item.reinit()
+                item.session = session
                 item.dataset = dataset
                 copy_list.append(item)
         elif issubclass(object_type, Template):

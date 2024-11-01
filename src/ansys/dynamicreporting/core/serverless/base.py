@@ -290,6 +290,9 @@ class BaseModel(metaclass=BaseMeta):
 
         return self
 
+    def reinit(self):
+        self._orm_instance = self.__class__._orm_model_cls()
+
     @handle_field_errors
     def save(self, **kwargs):
         try:
