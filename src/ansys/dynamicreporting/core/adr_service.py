@@ -51,6 +51,36 @@ from .exceptions import (
     StartingServiceError,
 )
 
+pim_is_available = False  # pragma: no cover
+try:
+    import ansys.platform.instancemanagement as pypim
+
+    pim_is_available = True  # pragma: no cover
+except Exception:  # pragma: no cover
+    pass  # pragma: no cover
+
+
+if pim_is_available:  # pragma: no cover
+
+    def _prepare_pim(  # pragma: no cover
+        product_version: Optional[str] = None,
+    ):
+        """Create a PIM instance for the input version of Ansys Dynamic Reporting.
+
+        Parameters
+        ----------
+        product_version : str, optional
+            Version of the product. For example, "232". The default is "None"
+
+        """
+        pim = pypim.connect()
+        instance = pim.create_instance(
+            product_name="adr",
+            product_version=product_version,
+        )
+        instance.wait_for_ready()
+        return instance, pim
+
 
 # Main class
 class Service:
@@ -119,6 +149,7 @@ class Service:
         port: int = DOCKER_DEFAULT_PORT,
         logfile: str = None,
         ansys_installation: Optional[str] = None,
+        use_pim: bool = True,
     ) -> None:
         """
         Initialize an Ansys Dynamic Reporting object.
@@ -131,7 +162,8 @@ class Service:
             ``None``. This parameter is needed only if the Service instance is
             to launch a dynamic Reporting service. It is not needed if connecting
             to an existing service. If there is no local Ansys installation and
-            a Docker image is to be used instead, enter ``"docker"``.
+            a Docker image is to be used instead, enter ``"docker"``. If use_pim
+            is True, this option is ignored
         docker_image : str, optional
             Location of the Docker image for Ansys Dynamic Reporting. The default
             is ghcr.io/ansys-internal/nexus. This parameter is used only if the
@@ -151,6 +183,8 @@ class Service:
             Location for the log file. The default is None.
             If this parameter is set to ``stdout``, the output will be printed
             to stdout.
+        use_pim: bool, optional
+            Use pim configuration to start ADR, if available.
         """
         self.serverobj = None
         self._session_guid = ""
@@ -164,6 +198,15 @@ class Service:
         self._container = None
         self._docker_image = docker_image
         self._ansys_installation = ansys_installation
+        self._pim = None
+
+        logger.debug(f"pim_is_available: {pim_is_available} use_pim: {use_pim}\n")
+        if pim_is_available and use_pim:  # pragma: no cover
+            if pypim.is_configured():
+                instance, pim = _prepare_pim(product_version=self._ansys_version)
+                ip_address=pim.get_instance(instance.name).services['http'].uri
+                self.connect(url=ip_address)
+                self._pim = [instance, pim]
 
         if ansys_installation == "docker":
             if not self._db_directory:
@@ -633,6 +676,10 @@ class Service:
 
         self.serverobj = None
         self._url = None
+
+        if self._pim:
+            self._pim[0].delete()
+            self._pim[1].close()
 
     def visualize_report(
         self,
