@@ -94,7 +94,7 @@ The preceding code creates an "editable" installation that lets you develop and 
 PyDynamicReporting at the same time.
 
 To build and create a production-like installation, first install
-`chocolatey <https://chocolatey.org/install>`. Then:
+`chocolatey <https://chocolatey.org/install>`_. Then:
 
 .. code::
 
