@@ -66,7 +66,7 @@ To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@a
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.9 through 3.12 on
+The ``pydynamicreporting`` package supports Python 3.10 through 3.12 on
 Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -75,17 +75,6 @@ To install the package, simply run
 .. code::
 
    pip install ansys-dynamicreporting-core
-
-
-Alternatively, the user can download the repository and locally build the
-package. Two modes of installation are available:
-
-- Developer installation
-- User installation
-
-
-The code provided for both installation modes use a `virtual environment
-<https://docs.python.org/3/library/venv.html>`_.
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -101,16 +90,15 @@ run this code:
    source venv/bin/activate  # (.\venv\Scripts\activate for Windows shell)
    make install-dev  # install pydynamicreporting in editable mode
 
-
 The preceding code creates an "editable" installation that lets you develop and test
 PyDynamicReporting at the same time.
 
-User installation
-^^^^^^^^^^^^^^^^^
-To build and create a production-like installation:
+To build and create a production-like installation, first install
+`chocolatey <https://chocolatey.org/install>`. Then:
 
 .. code::
 
+   choco install make  # install make
    make clean  # clean
    make build   # build
    # this replaces the editable installation done previously. If you don't want to replace,
@@ -119,11 +107,14 @@ To build and create a production-like installation:
    # you can skip the steps above and just do 'make all'
    make smoketest  # test import
 
-
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
 To run GitHub Actions on your local desktop (recommended), install the
 `act <https://github.com/nektos/act#readme>`_ package.
+
+.. code::
+
+   choco install act-cli
 
 To run a job, such as the ``style`` job from the ``ci_cd.yml`` file, use
 this command, where ``style`` is the job name:
@@ -141,6 +132,9 @@ Dependencies
 ------------
 To use PyDynamicReporting, you must have a locally installed and licensed copy
 of Ansys 2023 R2 or later.
+
+To use PyDynamicReporting Serverless (ansys.dynamicreporting.core.serverless),
+you must have a locally installed and licensed copy of Ansys 2025 R1 or later.
 
 Basic usage
 -----------

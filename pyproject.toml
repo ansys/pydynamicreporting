@@ -20,7 +20,7 @@ maintainers = [
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
 license = {text = "MIT"}
 classifiers = [
@@ -29,7 +29,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
