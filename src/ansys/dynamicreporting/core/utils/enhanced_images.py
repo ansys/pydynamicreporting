@@ -18,7 +18,7 @@ import numpy as np
 
 try:
     import vtk
-    from vtk.util.numpy_support import vtk_to_numpy
+    from vtk.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 
     HAS_VTK = True
 except ImportError:
@@ -114,20 +114,21 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         mapper.SetInputData(poly_data)
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
-
-        # Create the renderer, render window, and interactor
-        renderer = vtk.vtkRenderer()
-        render_window = vtk.vtkRenderWindow()
-        render_window.SetOffScreenRendering(1)  # Set it to 0 if there is an interactor
-        render_window.SetMultiSamples(0)
-        renderer.ResetCamera()
-        render_window.AddRenderer(renderer)
-        renderer.AddActor(actor)
         actor.RotateX(rotation[0])
         actor.RotateY(rotation[1])
         actor.RotateZ(rotation[2])
 
-        renderer.SetBackground(1, 1, 1)
+        # Create renderer and render window
+        renderer = vtk.vtkRenderer()
+        render_window = vtk.vtkRenderWindow()
+        render_window.SetOffScreenRendering(1)
+        render_window.SetSize(2048, 1080)
+        renderer.SetBackground(1, 1, 1)  # White background
+        render_window.AddRenderer(renderer)
+        renderer.AddActor(actor)
+
+        # Reset the camera after setting up the scene
+        renderer.ResetCamera()
 
         # Uncomment the following 2 lines to get an interactor
         # render_window_interactor = vtk.vtkRenderWindowInteractor()
@@ -248,7 +249,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         return np_array
 
     def _add_pick_data(poly_data: vtk.vtkPolyData, part_id: int):
-        arr = vtk.vtkFloatArray()
+        arr = vtk.vtkIntArray()
         arr.SetName("Pick Data")
         arr.SetNumberOfComponents(1)
         num_points = poly_data.GetNumberOfPoints()
@@ -256,6 +257,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         for i in range(num_points):
             arr.SetValue(i, part_id)
         poly_data.GetPointData().AddArray(arr)
+        poly_data.Modified()
 
     def _render_pick_data(
         poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, render_window: vtk.vtkRenderWindow
@@ -291,8 +293,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         np_buffer = np_buffer.reshape(height, width)
         nan_mask = np.isnan(np_buffer)
         np_buffer = np.where(nan_mask, 0, np_buffer)  # Reset NaN to 0
-
-        np_buffer = np_buffer.astype(np.int16)
+        np_buffer = np.round(np_buffer).astype(np.int16)  # Round it up before casting
         pick_buffer = np.zeros((height, width, 4), dtype=np.uint8)
 
         # Store the lower 8 bits to pick_buffer's R channel
@@ -409,6 +410,30 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             A tuple of JSON metadata, rgb buffer, pick data buffer and variable data buffer
         """
         # Todo: vector data support: is_scalar_data = var_data.ndim == 1
+        if var_field.data.ndim > 1:
+            sz = len(var_field.data[0])
+            idx_str = input(
+                "Currently, we do not fully support vector variables. But instead, "
+                "we proceed with a scalar value by an index you provide. For example, "
+                "if your vector variable stands for X, Y, Z coordinates, then index 0 "
+                "represents X coordinate, and so on. Now please provide a number as "
+                f"an index in the range of [0, {sz - 1}]:\n"
+            )
+            while True:
+                try:
+                    idx_num = int(idx_str)
+                    if idx_num < 0 or idx_num > sz - 1:
+                        idx_str = input(
+                            "The index number you just input is out of bound."
+                            f"please provide a number as an index in the range of [0, {sz - 1}] one more time:\n"
+                        )
+                    else:
+                        break
+                except ValueError:
+                    idx_str = input(
+                        "The index number you just input is not a valid number."
+                        f"please provide a number as an index in the range of [0, {sz - 1}] one more time:\n"
+                    )
 
         # Get components for metadata
         var_unit: str = var_field.unit
@@ -422,12 +447,22 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         # Add variable data
         grid = vtk_helper.append_field_to_grid(var_field, meshed_region, grid, var_name)
 
-        # Create a vtkGeometryFilter to convert UnstructuredGrid to PolyData
         geometry_filter = vtk.vtkGeometryFilter()
         geometry_filter.SetInputData(grid)
         geometry_filter.Update()
         poly_data = geometry_filter.GetOutput()
-        _add_pick_data(poly_data, 1)  # Todo: optimize hardcoded part ID
+
+        _add_pick_data(poly_data, 3456)
+
+        point_data = poly_data.GetPointData()
+        vtk_array = point_data.GetArray(var_name)
+        var_array = vtk_to_numpy(vtk_array)
+        idx_array = var_array[:, idx_num]
+
+        trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
+        trimmed_vtk_array.SetName(var_name)
+        point_data.RemoveArray(var_name)
+        point_data.AddArray(trimmed_vtk_array)
 
         renderer, render_window = _setup_render_routine(poly_data, rotation)
         rgb_buffer = _get_rgb_value(render_window)
@@ -447,14 +482,14 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             "parts": [
                 {
                     "name": part_name,
-                    "id": 1,  # Todo: optimize hardcoded part ID
+                    "id": "3456",  # Todo: optimize hardcoded part ID
                     "colorby_var": "1.0",  # colorby_var
                 }
             ],
             "variables": [
                 {
                     "name": var_name,
-                    "id": 1,  # Todo: optimize hardcoded part ID
+                    "id": "3456",  # Todo: optimize hardcoded part ID
                     "pal_id": "1",  # colorby_var_int,
                     "unit_dims": "",
                     "unit_system_to_name": unit_system_to_name,
