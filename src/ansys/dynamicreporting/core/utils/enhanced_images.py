@@ -400,7 +400,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         part_name: str,
         output: Union[str, io.BytesIO],
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None
+        component: str = None,
     ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
         """
         Esstential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -428,18 +428,20 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         # Todo: vector data support: is_scalar_data = var_data.ndim == 1
         is_vector_var = var_field.data.ndim > 1
-        if is_vector_var: # if it is a vector variable
+        if is_vector_var:  # if it is a vector variable
             if component is None:
-                print("The field data is vector varaible. Currently, we do not fully support vector variables. "
-                      "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'")
+                print(
+                    "The field data is vector varaible. Currently, we do not fully support vector variables. "
+                    "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'"
+                )
                 return
-            if component not in ('X', 'Y', 'Z'):
+            if component not in ("X", "Y", "Z"):
                 print("The parameter 'component' only takes 'X', 'Y' or 'Z'")
                 return
 
         # Get components for metadata
         var_unit: str = var_field.unit
-        var_name = var_field.name # TODO: var_name should be user input
+        var_name = var_field.name  # TODO: var_name should be user input
         dpf_unit_system = model.metadata.result_info.unit_system_name
         unit_system_to_name = dpf_unit_system.split(":", 1)[0]
         meshed_region = model.metadata.meshed_region  # Whole mesh region
@@ -459,9 +461,9 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
 
         # Extract the required component from the vector data
         if is_vector_var:
-            if component == 'X':
+            if component == "X":
                 col = 0
-            elif component == 'Y':
+            elif component == "Y":
                 col = 1
             else:
                 col = 2
