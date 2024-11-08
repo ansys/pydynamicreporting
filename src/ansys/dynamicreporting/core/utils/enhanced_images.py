@@ -21,16 +21,19 @@ try:
     from vtk.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 
     HAS_VTK = True
-except ImportError:
+except ImportError as e:
     HAS_VTK = False
+    print(e)
 
 try:
     from ansys.dpf import core as dpf
     from ansys.dpf.core import vtk_helper
 
     HAS_DPF = True
-except (ImportError, ValueError):
+except (ImportError, ValueError) as e:
     HAS_DPF = False
+    print(e)
+
 
 if HAS_VTK and HAS_DPF:  # pragma: no cover
 
@@ -40,6 +43,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         part_name: str,
         output_file_name: str,
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        component: str = None,
     ):
         """
         Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
@@ -57,14 +61,18 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             output TIFF file name with extension of .tiff or .tif.
         rotation: Tuple[float, float, float]
             Rotation degrees about X, Y, Z axes. Note not in radians.
+        component: str
+            For vector variable, specify which component to plot, 'X', 'Y' or 'Z'.
+            Leave it unfilled if it is a scalar variable.
         """
-        _generate_enhanced_image(model, var_field, part_name, output_file_name, rotation)
+        _generate_enhanced_image(model, var_field, part_name, output_file_name, rotation, component)
 
     def generate_enhanced_image_in_memory(
         model: dpf.Model,
         var_field: dpf.Field,
         part_name: str,
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        component: str = None,
     ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
@@ -80,6 +88,9 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             The name of the part. It will showed on the interactive enhanced image in ADR.
         rotation: Tuple[float, float, float]
             Rotation degrees about X, Y, Z axes. Note not in radians.
+        component: str
+            For vector variable, specify which component to plot, 'X', 'Y' or 'Z'
+            Leave it unfilled if it is a scalar variable.
 
         Returns
         -------
@@ -89,7 +100,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
-        _generate_enhanced_image(model, var_field, part_name, buffer, rotation)
+        _generate_enhanced_image(model, var_field, part_name, buffer, rotation, component)
         buffer.seek(0)
         return buffer
 
@@ -389,6 +400,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         part_name: str,
         output: Union[str, io.BytesIO],
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        component: str = None
     ) -> Tuple[Dict, np.ndarray, np.ndarray, np.ndarray]:
         """
         Esstential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -403,6 +415,11 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             the variable in interest to visualize in an enhanced image.
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
+        rotation: Tuple[float, float, float]
+            Rotation degrees about X, Y, Z axes. Note not in radians.
+        component: str
+            For vector variable, specify which component to plot, 'X', 'Y' or 'Z'
+            Leave it unfilled if it is a scalar variable.
 
         Returns
         -------
@@ -410,34 +427,19 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             A tuple of JSON metadata, rgb buffer, pick data buffer and variable data buffer
         """
         # Todo: vector data support: is_scalar_data = var_data.ndim == 1
-        if var_field.data.ndim > 1:
-            sz = len(var_field.data[0])
-            idx_str = input(
-                "Currently, we do not fully support vector variables. But instead, "
-                "we proceed with a scalar value by an index you provide. For example, "
-                "if your vector variable stands for X, Y, Z coordinates, then index 0 "
-                "represents X coordinate, and so on. Now please provide a number as "
-                f"an index in the range of [0, {sz - 1}]:\n"
-            )
-            while True:
-                try:
-                    idx_num = int(idx_str)
-                    if idx_num < 0 or idx_num > sz - 1:
-                        idx_str = input(
-                            "The index number you just input is out of bound."
-                            f"please provide a number as an index in the range of [0, {sz - 1}] one more time:\n"
-                        )
-                    else:
-                        break
-                except ValueError:
-                    idx_str = input(
-                        "The index number you just input is not a valid number."
-                        f"please provide a number as an index in the range of [0, {sz - 1}] one more time:\n"
-                    )
+        is_vector_var = var_field.data.ndim > 1
+        if is_vector_var: # if it is a vector variable
+            if component is None:
+                print("The field data is vector varaible. Currently, we do not fully support vector variables. "
+                      "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'")
+                return
+            if component not in ('X', 'Y', 'Z'):
+                print("The parameter 'component' only takes 'X', 'Y' or 'Z'")
+                return
 
         # Get components for metadata
         var_unit: str = var_field.unit
-        var_name = var_field.name
+        var_name = var_field.name # TODO: var_name should be user input
         dpf_unit_system = model.metadata.result_info.unit_system_name
         unit_system_to_name = dpf_unit_system.split(":", 1)[0]
         meshed_region = model.metadata.meshed_region  # Whole mesh region
@@ -452,17 +454,27 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         geometry_filter.Update()
         poly_data = geometry_filter.GetOutput()
 
+        # Assign the pick data
         _add_pick_data(poly_data, 3456)
 
-        point_data = poly_data.GetPointData()
-        vtk_array = point_data.GetArray(var_name)
-        var_array = vtk_to_numpy(vtk_array)
-        idx_array = var_array[:, idx_num]
+        # Extract the required component from the vector data
+        if is_vector_var:
+            if component == 'X':
+                col = 0
+            elif component == 'Y':
+                col = 1
+            else:
+                col = 2
 
-        trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
-        trimmed_vtk_array.SetName(var_name)
-        point_data.RemoveArray(var_name)
-        point_data.AddArray(trimmed_vtk_array)
+            point_data = poly_data.GetPointData()
+            vtk_array = point_data.GetArray(var_name)
+            var_array = vtk_to_numpy(vtk_array)
+            idx_array = var_array[:, col]
+
+            trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
+            trimmed_vtk_array.SetName(var_name)
+            point_data.RemoveArray(var_name)
+            point_data.AddArray(trimmed_vtk_array)
 
         renderer, render_window = _setup_render_routine(poly_data, rotation)
         rgb_buffer = _get_rgb_value(render_window)
