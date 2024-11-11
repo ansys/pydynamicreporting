@@ -1,5 +1,3 @@
-# from collections.abc import Iterable
-import hashlib
 import os
 from pathlib import Path
 import platform
@@ -11,7 +9,6 @@ import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
 
-# from django.db import IntegrityError, connection, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
