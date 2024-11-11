@@ -98,6 +98,12 @@ class DatabaseMigrationError(ADRException):
     detail = "The database setup failed to complete"
 
 
+class GeometryMigrationError(ADRException):
+    """Exception raised if database migrations fails."""
+
+    detail = "The geometry migration failed to complete"
+
+
 class StaticFilesCollectionError(ADRException):
     """Exception raised if collectstatic fails."""
 
