@@ -50,7 +50,7 @@ dependencies = [
     "djangorestframework~=3.14",
     "django-guardian~=2.4",
     "tzlocal~=5.0",
-    "numpy>=1.18.0,<2",
+    "numpy>=1.18.0,<3",
     "python-pptx==0.6.19",
     "pandas~=2.0",
     "statsmodels~=0.14",
