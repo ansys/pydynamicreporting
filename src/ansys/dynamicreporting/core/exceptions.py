@@ -39,7 +39,7 @@ class InvalidAnsysPath(ADRException):
 
 
 class InvalidPath(ADRException):
-    """Exception raised if ANSYS installation path is invalid."""
+    """Exception raised if file/dir path is invalid."""
 
     detail = "Invalid path provided"
 

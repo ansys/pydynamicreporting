@@ -9,6 +9,7 @@ import uuid
 
 import django
 from django.core import management
+from django.core.management.utils import get_random_secret_key
 
 # from django.db import IntegrityError, connection, connections
 from django.http import HttpRequest
@@ -67,23 +68,17 @@ class ADR:
                 except InvalidPath:
                     # dir creation
                     self._db_directory = Path(db_directory)
-                    try:
-                        self._db_directory.mkdir(parents=True, exist_ok=False)
-                    except FileExistsError:
-                        raise InvalidPath("Database directory already exists.")
-                    else:
-                        # media dir
-                        (self._db_directory / "media").mkdir()
-                        # secret key
-                        if "CEI_NEXUS_SECRET_KEY" not in os.environ:
-                            # Make a random string that could be used as a secret key for the database
-                            # take two UUID1 values, run them through md5 and concatenate the digests.
-                            secret_key = (f"{hashlib.md5(uuid.uuid1().bytes).hexdigest()}"
-                                          f"{hashlib.md5(uuid.uuid1().bytes).hexdigest()}")
-                            os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
-                            # And make a target file (.nexdb) for auto launching of the report viewer...
-                            with open(self._db_directory / "media", "w") as f:
-                                f.write(secret_key)
+                    self._db_directory.mkdir(parents=True, exist_ok=True)
+                    # media dir
+                    (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
+                    # secret key
+                    if "CEI_NEXUS_SECRET_KEY" not in os.environ:
+                        # Make a random string that could be used as a secret key for the database
+                        secret_key = get_random_secret_key()
+                        os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
+                        # And make a target file (.nexdb) for auto launching of the report viewer...
+                        with open(self._db_directory / "view_report.nexdb", "w") as f:
+                            f.write(secret_key)
 
                 os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
@@ -146,7 +141,7 @@ class ADR:
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
-        if not dir_path.is_dir():
+        if not dir_path.exists() or not dir_path.is_dir():
             self._logger.error(f"Invalid directory path: {dir_}")
             raise InvalidPath(extra_detail=dir_)
         return dir_path
