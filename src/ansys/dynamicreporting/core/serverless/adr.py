@@ -374,4 +374,6 @@ class ADR:
         return "sqlite" in self._databases[database]["ENGINE"]
 
     def _get_db_dir(self, database: str) -> str:
-        return self._databases[database]["NAME"]
+        if self._is_sqlite(database):
+            return self._databases[database]["NAME"]
+        return ""
