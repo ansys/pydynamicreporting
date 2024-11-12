@@ -26,7 +26,7 @@ Template Objects
 .. _Tree Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TreeMerge.html
 .. _Userdefined: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Userdefined.html
 .. _Generator templates: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/GeneratorTemplates.html
-
+.. _Statistical Analysis: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v251/en/adr_ug/ad_ug_generator_statistical_analysis.html
 
 
 report_objects.TemplateREST object
@@ -1698,7 +1698,7 @@ no tree header be generated.
 .. _statisticalREST:
 
 statisticalREST object
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 Inherits from TemplateREST, GeneratorREST
 
