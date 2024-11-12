@@ -8,7 +8,6 @@ import uuid
 import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
-
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
@@ -16,16 +15,16 @@ from ..adr_utils import get_logger
 from ..exceptions import (
     ADRException,
     DatabaseMigrationError,
+    GeometryMigrationError,
     ImproperlyConfiguredError,
     InvalidAnsysPath,
     InvalidPath,
     StaticFilesCollectionError,
-    GeometryMigrationError
 )
+from ..utils import report_utils
 from .base import ObjectSet
 from .item import Dataset, Item, Session
 from .template import Template
-from ..utils import report_utils
 
 
 class ADR:
@@ -228,6 +227,7 @@ class ADR:
         # geometry migration
         try:
             from data.geofile_rendering import do_geometry_update_check
+
             do_geometry_update_check(self._logger)
         except Exception as e:
             self._logger.error(f"Unable to migrate geometry definition: {e}")
