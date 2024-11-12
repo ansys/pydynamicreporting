@@ -1,4 +1,3 @@
-# from collections.abc import Iterable
 import os
 from pathlib import Path
 import platform
@@ -8,8 +7,7 @@ import uuid
 
 import django
 from django.core import management
-
-# from django.db import IntegrityError, connection, connections
+from django.core.management.utils import get_random_secret_key
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
@@ -17,11 +15,13 @@ from ..adr_utils import get_logger
 from ..exceptions import (
     ADRException,
     DatabaseMigrationError,
+    GeometryMigrationError,
     ImproperlyConfiguredError,
     InvalidAnsysPath,
     InvalidPath,
     StaticFilesCollectionError,
 )
+from ..utils import report_utils
 from .base import ObjectSet
 from .item import Dataset, Item, Session
 from .template import Template
@@ -59,7 +59,23 @@ class ADR:
 
         if not self._databases:
             if db_directory is not None:
-                self._db_directory = self._check_dir(db_directory)
+                try:
+                    self._db_directory = self._check_dir(db_directory)
+                except InvalidPath:
+                    # dir creation
+                    self._db_directory = Path(db_directory)
+                    self._db_directory.mkdir(parents=True, exist_ok=True)
+                    # media dir
+                    (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
+                    # secret key
+                    if "CEI_NEXUS_SECRET_KEY" not in os.environ:
+                        # Make a random string that could be used as a secret key for the database
+                        secret_key = get_random_secret_key()
+                        os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
+                        # And make a target file (.nexdb) for auto launching of the report viewer...
+                        with open(self._db_directory / "view_report.nexdb", "w") as f:
+                            f.write(secret_key)
+
                 os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
                 self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
@@ -75,7 +91,7 @@ class ADR:
         elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
             self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
         elif self._db_directory is not None:  # fallback to the db dir
-            self._media_directory = self._db_directory
+            self._media_directory = self._check_dir(self._db_directory / "media")
         else:
             raise ImproperlyConfiguredError(
                 "A media directory must be specified using either the 'media_directory'"
@@ -121,7 +137,7 @@ class ADR:
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_)
-        if not dir_path.is_dir():
+        if not dir_path.exists() or not dir_path.is_dir():
             self._logger.error(f"Invalid directory path: {dir_}")
             raise InvalidPath(extra_detail=dir_)
         return dir_path
@@ -180,19 +196,15 @@ class ADR:
             # replace the database config
             overrides["DATABASES"] = self._databases
 
+        # Check for Linux TZ issue
+        report_utils.apply_timezone_workaround()
+
         try:
             settings.configure(**overrides)
             django.setup()
         except Exception as e:
             self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
-
-        # create session and dataset w/ defaults if not provided.
-        if self._session is None:
-            self._session = Session.create()
-
-        if self._dataset is None:
-            self._dataset = Dataset.create()
 
         # migrations
         if self._db_directory is not None:
@@ -212,13 +224,29 @@ class ADR:
                         nexus_group.permissions.set(Permission.objects.all())
                     nexus_group.user_set.add(user)
 
-        # collectstatic
+        # geometry migration
+        try:
+            from data.geofile_rendering import do_geometry_update_check
+
+            do_geometry_update_check(self._logger)
+        except Exception as e:
+            self._logger.error(f"Unable to migrate geometry definition: {e}")
+            raise GeometryMigrationError(extra_detail=str(e))
+
+        # collect static files
         if collect_static and self._static_directory is not None:
             try:
                 management.call_command("collectstatic", "--no-input", verbosity=0)
             except Exception as e:
                 self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
+
+        # create session and dataset w/ defaults if not provided.
+        if self._session is None:
+            self._session = Session.create()
+
+        if self._dataset is None:
+            self._dataset = Dataset.create()
 
     @property
     def session(self) -> Session:

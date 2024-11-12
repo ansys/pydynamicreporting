@@ -63,7 +63,7 @@ simple_table.visualize()
 # but this time we will set the plot attribute to line to visualize the values
 # as two line plots, and we will use the xaxis attribute to set which row should
 # be used as the X axis. We can also control the formatting and the title of the
-# axis separately with the *axis_format and *title attributes, as done below.
+# axis separately with the *axis_format* and *title attributes*, as done below.
 # The result can be seen in the following image.
 
 line_plot = adr_service.create_item(obj_name="Line Plot", source="Documentation")
