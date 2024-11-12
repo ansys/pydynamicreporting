@@ -39,7 +39,7 @@ class InvalidAnsysPath(ADRException):
 
 
 class InvalidPath(ADRException):
-    """Exception raised if ANSYS installation path is invalid."""
+    """Exception raised if file/dir path is invalid."""
 
     detail = "Invalid path provided"
 
@@ -96,6 +96,12 @@ class DatabaseMigrationError(ADRException):
     """Exception raised if database migrations fails."""
 
     detail = "The database setup failed to complete"
+
+
+class GeometryMigrationError(ADRException):
+    """Exception raised if database migrations fails."""
+
+    detail = "The geometry migration failed to complete"
 
 
 class StaticFilesCollectionError(ADRException):
