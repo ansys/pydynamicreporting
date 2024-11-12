@@ -82,8 +82,8 @@ class Template(BaseModel):
             # originally, there were no Class values, so for backward compatibility, we prefix
             # with 'Layout'...
             type_name = orm_instance.report_type
-            if ':' not in type_name:
-                type_name = 'Layout:' + type_name
+            if ":" not in type_name:
+                type_name = "Layout:" + type_name
             # Get the class based on the type attribute
             templ_cls = cls._type_registry[type_name]
             obj = templ_cls.from_db(orm_instance, **kwargs)
