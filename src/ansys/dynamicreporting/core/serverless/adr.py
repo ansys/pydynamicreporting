@@ -1,6 +1,8 @@
+from collections.abc import Iterable
 import os
 from pathlib import Path
 import platform
+import shutil
 import sys
 from typing import Any, Optional, Type, Union
 import uuid
@@ -136,11 +138,28 @@ class ADR:
         raise InvalidAnsysPath(f"Unable to detect an installation in: {','.join(dirs_to_check)}")
 
     def _check_dir(self, dir_):
-        dir_path = Path(dir_)
+        dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
         if not dir_path.exists() or not dir_path.is_dir():
             self._logger.error(f"Invalid directory path: {dir_}")
             raise InvalidPath(extra_detail=dir_)
         return dir_path
+
+    def _migrate_db(self, db):
+        try:  # upgrade databases
+            management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
+        except Exception as e:
+            self._logger.error(f"{e}")
+            raise DatabaseMigrationError(extra_detail=str(e))
+        else:
+            from django.contrib.auth.models import Group, Permission, User
+
+            if not User.objects.using(db).filter(is_superuser=True).exists():
+                user = User.objects.using(db).create_superuser("nexus", "", "cei")
+                # include the nexus group (with all permissions)
+                nexus_group, created = Group.objects.using(db).get_or_create(name="nexus")
+                if created:
+                    nexus_group.permissions.set(Permission.objects.using(db).all())
+                nexus_group.user_set.add(user)
 
     def setup(self, collect_static: bool = False) -> None:
         from django.conf import settings
@@ -207,22 +226,11 @@ class ADR:
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
-        if self._db_directory is not None:
-            try:  # upgrades all databases
-                management.call_command("migrate", "--no-input", verbosity=0)
-            except Exception as e:
-                self._logger.error(f"{e}")
-                raise DatabaseMigrationError(extra_detail=str(e))
-            else:
-                from django.contrib.auth.models import Group, Permission, User
-
-                if not User.objects.filter(is_superuser=True).exists():
-                    user = User.objects.create_superuser("nexus", "", "cei")
-                    # include the nexus group (with all permissions)
-                    nexus_group, created = Group.objects.get_or_create(name="nexus")
-                    if created:
-                        nexus_group.permissions.set(Permission.objects.all())
-                    nexus_group.user_set.add(user)
+        if self._databases:
+            for db in self._databases:
+                self._migrate_db(db)
+        elif self._db_directory is not None:
+            self._migrate_db("default")
 
         # geometry migration
         try:
@@ -339,8 +347,33 @@ class ADR:
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
         query: str = "",
+        **kwargs: Any,
     ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
             self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
-        return query_type.find(query=query)
+        return query_type.find(query=query, **kwargs)
+
+    @staticmethod
+    def create_objects(
+        objects: Union[list, ObjectSet],
+        **kwargs: Any,
+    ) -> int:
+        if not isinstance(objects, Iterable):
+            raise ADRException("objects must be an iterable")
+        count = 0
+        for obj in objects:
+            if kwargs.get("using", "default") != obj.db:
+                # required if copying across databases
+                obj.reinit()
+            obj.save(**kwargs)
+            count += 1
+        return count
+
+    def _is_sqlite(self, database: str) -> bool:
+        return "sqlite" in self._databases[database]["ENGINE"]
+
+    def _get_db_dir(self, database: str) -> str:
+        if self._is_sqlite(database):
+            return self._databases[database]["NAME"]
+        return ""
