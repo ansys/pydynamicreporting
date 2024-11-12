@@ -1,20 +1,17 @@
+from collections.abc import Iterable
 import os
+from pathlib import Path
 import platform
 import shutil
 import sys
-import uuid
-from collections.abc import Iterable
-from pathlib import Path
 from typing import Any, Optional, Type, Union
+import uuid
 
 import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
 from django.http import HttpRequest
 
-from .base import ObjectSet
-from .item import Dataset, Item, Session
-from .template import Template
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
 from ..exceptions import (
