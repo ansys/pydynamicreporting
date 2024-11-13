@@ -57,6 +57,7 @@ def is_generic_class(cls):
 def get_uuid():
     return str(uuid.uuid1())
 
+
 class BaseMeta(ABCMeta):
     _cls_registry: dict[str, type["BaseModel"]] = {}
     _model_cls_registry: dict[str, type[Model]] = {}
