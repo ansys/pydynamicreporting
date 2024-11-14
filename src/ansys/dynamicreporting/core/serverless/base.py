@@ -378,6 +378,9 @@ class BaseModel(metaclass=BaseMeta):
                     value = type_(obj_set)
                 else:
                     value = type_()
+            else:
+                if value is not None and not isinstance(value, field_type):
+                    value = field_type(value)
 
             # set the orm value on the proxy object
             setattr(obj, attr, value)
