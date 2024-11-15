@@ -54,6 +54,10 @@ def is_generic_class(cls):
     return not isinstance(cls, type) or get_origin(cls) is not None
 
 
+def get_uuid():
+    return str(uuid.uuid1())
+
+
 class BaseMeta(ABCMeta):
     _cls_registry: dict[str, type["BaseModel"]] = {}
     _model_cls_registry: dict[str, type[Model]] = {}
@@ -130,7 +134,7 @@ class BaseMeta(ABCMeta):
 
 
 class BaseModel(metaclass=BaseMeta):
-    guid: UUID = field(compare=False, kw_only=True, default_factory=uuid.uuid1)
+    guid: str = field(compare=False, kw_only=True, default_factory=get_uuid)
     tags: str = field(compare=False, kw_only=True, default="")
     _saved: bool = field(
         init=False, compare=False, default=False
@@ -374,6 +378,9 @@ class BaseModel(metaclass=BaseMeta):
                     value = type_(obj_set)
                 else:
                     value = type_()
+            else:
+                if value is not None and not isinstance(value, field_type):
+                    value = field_type(value)
 
             # set the orm value on the proxy object
             setattr(obj, attr, value)
