@@ -151,14 +151,18 @@ class ADR:
             self._logger.error(f"{e}")
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
+            # create users/groups only for the default database
+            if db != "default":
+                return
+
             from django.contrib.auth.models import Group, Permission, User
 
-            if not User.objects.using(db).filter(is_superuser=True).exists():
-                user = User.objects.using(db).create_superuser("nexus", "", "cei")
+            if not User.objects.filter(is_superuser=True).exists():
+                user = User.objects.create_superuser("nexus", "", "cei")
                 # include the nexus group (with all permissions)
-                nexus_group, created = Group.objects.using(db).get_or_create(name="nexus")
+                nexus_group, created = Group.objects.get_or_create(name="nexus")
                 if created:
-                    nexus_group.permissions.set(Permission.objects.using(db).all())
+                    nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
 
     def setup(self, collect_static: bool = False) -> None:
