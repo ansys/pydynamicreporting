@@ -172,7 +172,7 @@ class AnimContent(FileValidator):
 
 
 class SceneContent(FileValidator):
-    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "glb")
+    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "glb")
 
 
 class FileContent(FileValidator):
