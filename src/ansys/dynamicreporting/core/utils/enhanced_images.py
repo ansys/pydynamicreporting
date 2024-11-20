@@ -125,18 +125,29 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         mapper.SetInputData(poly_data)
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
+        actor.GetProperty().BackfaceCullingOn()  # TODO: should be removed after VTK bug is solved because it is not a ultimate solution
         actor.RotateX(rotation[0])
         actor.RotateY(rotation[1])
         actor.RotateZ(rotation[2])
 
         # Create renderer and render window
         renderer = vtk.vtkRenderer()
+        renderer.SetBackground(1, 1, 1)  # White background
+        renderer.AddActor(actor)
+
         render_window = vtk.vtkRenderWindow()
         render_window.SetOffScreenRendering(1)
-        render_window.SetSize(2048, 1080)
-        renderer.SetBackground(1, 1, 1)  # White background
+        render_window.SetSize(3840, 2160)
+
+        # TODO: can be removed after the vtk bug is resolved
+        render_window.SetMultiSamples(0)
+        render_window.SetAlphaBitPlanes(1)  # Enable alpha bit planes for depth peeling
         render_window.AddRenderer(renderer)
-        renderer.AddActor(actor)
+
+        # Enable depth peeling for accurate depth sorting
+        renderer.SetUseDepthPeeling(True)  # For transparency
+        renderer.SetOcclusionRatio(0.1)
+        renderer.SetMaximumNumberOfPeels(100)
 
         # Reset the camera after setting up the scene
         renderer.ResetCamera()
@@ -184,6 +195,14 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, var_name: str
     ) -> vtk.vtkValuePass:
         """
+        -------------------------------------------------------------------------------------
+        IMPORTANT
+
+        11/20/2024
+        VTK has a bug in vtkValuePass, resulting in rendering inconsistency by depth buffer.
+        VTK version before 9.3.1 (inclusive) has this problem.
+        -------------------------------------------------------------------------------------
+
         Bind the variable data (point or cell) to value pass, in order to render the given
         variable to each pixel.
 
@@ -431,12 +450,16 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         if is_vector_var:  # if it is a vector variable
             if component is None:
                 print(
-                    "The field data is vector varaible. Currently, we do not fully support vector variables. "
+                    "Error when generating an enhanced image: The field data is vector variable. "
+                    "Currently, we do not fully support vector variables. "
                     "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'"
                 )
                 return
             if component not in ("X", "Y", "Z"):
-                print("The parameter 'component' only takes 'X', 'Y' or 'Z'")
+                print(
+                    "Error when generating an enhanced image: "
+                    "The parameter 'component' only takes 'X', 'Y' or 'Z'"
+                )
                 return
 
         # Get components for metadata
