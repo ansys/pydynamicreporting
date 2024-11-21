@@ -18,6 +18,7 @@ from ..adr_utils import table_attr
 from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
+from ..utils.report_utils import is_enhanced
 from .base import BaseModel, Validator
 
 
@@ -133,37 +134,40 @@ class FileValidator(StringContent):
         file_path = Path(file_str)
         if not file_path.is_file():
             raise ValueError(
-                f"Expected content to be a file path. "
+                f"Expected content to be a file path: "
                 f"'{file_path.name}' does not exist or is not a file."
             )
         with file_path.open(mode="rb") as f:
             file = DjangoFile(f)
         # check file type
-        file_ext = Path(file.name).suffix.lower()
-        if self.ALLOWED_EXT is not None and file_ext.replace(".", "") not in self.ALLOWED_EXT:
+        file_ext = Path(file.name).suffix.lower().lstrip(".")
+        if self.ALLOWED_EXT is not None and file_ext not in self.ALLOWED_EXT:
             raise ValueError(f"File type {file_ext} is not supported by {obj.__class__}")
         # check for empty files
         if file.size == 0:
             raise ValueError("The file specified is empty")
         # save a ref on the object.
         setattr(obj, "_file", file)
+        setattr(obj, "_file_ext", file_ext)
         return file_str
 
 
 class ImageContent(FileValidator):
-    ALLOWED_EXT = ("png", "jpg", "tif", "tiff")
+    ENHANCED_EXT = ("tif", "tiff")
+    ALLOWED_EXT = ("png", "jpg") + ENHANCED_EXT
 
     def process(self, value, obj):
         file_str = super().process(value, obj)
         with obj._file.open(mode="rb") as f:
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
-        file_ext = Path(obj._file.name).suffix.lower()
-        if file_ext in (".tif", ".tiff"):
+        if obj._file_ext in self.ENHANCED_EXT:
             metadata = report_utils.is_enhanced(image)
             if not metadata:
                 raise ADRException("The enhanced image is empty")
+            obj._enhanced = True
         obj._width, obj._height = image.size
+        image.close()
         return file_str
 
 
@@ -195,10 +199,18 @@ class SimplePayloadMixin:
 
 class FilePayloadMixin:
     _file: DjangoFile = field(init=False, compare=False, default=None)
+    _file_ext: str = field(init=False, compare=False, default="")
+
+    @property
+    def file_ext(self):
+        return self._file_ext
 
     @property
     def has_file(self):
         return self._file is not None
+
+    def get_file_path(self):
+        return self._orm_instance.payloadfile.path
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
@@ -206,17 +218,27 @@ class FilePayloadMixin:
         obj.content = obj._orm_instance.payloadfile.path
         return obj
 
-    def save(self, **kwargs):
-        file_name = Path(self._file.name).name
-        self._orm_instance.payloadfile = file_name
-        # if it does not exist in the target location, create one
-        if not Path(self._orm_instance.get_payload_server_pathname()).is_file():
-            self._orm_instance.payloadfile = f"{str(self.guid)}_{file_name}"
-            # more general path, save the file into the media directory
-            with open(self._orm_instance.get_payload_server_pathname(), "wb") as out_file:
-                with self._file.open(mode="rb") as f:
+    @staticmethod
+    def _save_file(target_path, content):
+        if Path(target_path).is_file():
+            return
+        with open(target_path, "wb") as out_file:
+            if isinstance(content, bytes):
+                out_file.write(content)
+            else:
+                with content.open(mode="rb") as f:
                     for chunk in f.chunks():
-                        out_file.write(chunk)  # chunk -> bytes
+                        out_file.write(chunk)
+
+    def save(self, **kwargs):
+        # todo: check backward compatibility: _movie is now _anim.
+        self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
+        # Save file to the target path
+        target_path = self.get_file_path()
+        self._save_file(target_path, self._file)
+        # Update content and save ORM instance
+        self.content = target_path
+
         super().save(**kwargs)
 
     def delete(self, **kwargs):
@@ -375,6 +397,7 @@ class Tree(SimplePayloadMixin, Item):
 class Image(FilePayloadMixin, Item):
     _width: int = field(compare=False, init=False, default=0)
     _height: int = field(compare=False, init=False, default=0)
+    _enhanced: bool = field(compare=False, init=False, default=False)
     content: ImageContent = ImageContent()
     type: str = "image"
 
@@ -385,6 +408,35 @@ class Image(FilePayloadMixin, Item):
     @property
     def height(self):
         return self._height
+
+    @property
+    def enhanced(self):
+        return self._enhanced
+
+    def save(self, **kwargs):
+        with self._file.open(mode="rb") as f:
+            img_bytes = f.read()
+        image = PILImage.open(io.BytesIO(img_bytes))
+
+        # Determine final file name and format
+        target_ext = "png" if not self._enhanced else self._file_ext
+        self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
+
+        # Save the image
+        target_path = self.get_file_path()
+        if target_ext == "png" and self._file_ext != target_ext:
+            try:
+                image.save(target_path, format="PNG")
+            except OSError as e:
+                print(f"Error converting image to PNG: {e}")
+        else:  # save image as is (if enhanced or already PNG)
+            self._save_file(target_path, img_bytes)
+
+        # Close image and update content
+        image.close()
+        self.content = target_path
+
+        super().save(**kwargs)
 
 
 class Animation(FilePayloadMixin, Item):
@@ -399,8 +451,8 @@ class Scene(FilePayloadMixin, Item):
     def save(self, **kwargs):
         super().save(**kwargs)
         rebuild_3d_geometry(
-            self._orm_instance.get_payload_server_pathname(),
-            self._orm_instance.get_unique_id(),
+            self.get_file_path(),
+            unique_id="",
             exec_basis="",
         )
 
@@ -414,7 +466,7 @@ class File(FilePayloadMixin, Item):
         file_name = Path(self._file.name).name
         if file_is_3d_geometry(file_name):
             rebuild_3d_geometry(
-                self._orm_instance.get_payload_server_pathname(),
-                self._orm_instance.get_unique_id(),
+                self.get_file_path(),
+                unique_id="",
                 exec_basis="",
             )
