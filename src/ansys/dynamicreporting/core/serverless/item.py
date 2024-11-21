@@ -238,7 +238,6 @@ class FilePayloadMixin:
         self._save_file(target_path, self._file)
         # Update content and save ORM instance
         self.content = target_path
-
         super().save(**kwargs)
 
     def delete(self, **kwargs):
@@ -417,11 +416,9 @@ class Image(FilePayloadMixin, Item):
         with self._file.open(mode="rb") as f:
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
-
         # Determine final file name and format
         target_ext = "png" if not self._enhanced else self._file_ext
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
-
         # Save the image
         target_path = self.get_file_path()
         if target_ext == "png" and self._file_ext != target_ext:
@@ -431,11 +428,7 @@ class Image(FilePayloadMixin, Item):
                 print(f"Error converting image to PNG: {e}")
         else:  # save image as is (if enhanced or already PNG)
             self._save_file(target_path, img_bytes)
-
-        # Close image and update content
         image.close()
-        self.content = target_path
-
         super().save(**kwargs)
 
 
