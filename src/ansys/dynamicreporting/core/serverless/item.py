@@ -162,7 +162,7 @@ class ImageContent(FileValidator):
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
         if obj._file_ext in self.ENHANCED_EXT:
-            metadata = report_utils.is_enhanced(image)
+            metadata = is_enhanced(image)
             if not metadata:
                 raise ADRException("The enhanced image is empty")
             obj._enhanced = True
