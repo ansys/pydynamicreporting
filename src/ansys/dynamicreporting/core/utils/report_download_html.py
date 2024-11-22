@@ -331,6 +331,8 @@ class ReportDownloadHTML:
             return True
         if name.upper().endswith(".SCDOC"):
             return True
+        if name.upper().endswith(".SCDOCX"):
+            return True
         if name.upper().endswith(".GLB"):
             return True
         return False
