@@ -89,9 +89,12 @@ class ADR:
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
-            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
+        # the env var here is actually the parent directory that contains the media directory
         elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
-            self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
+            self._media_directory = (
+                self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"]) / "media"
+            )
         elif self._db_directory is not None:  # fallback to the db dir
             self._media_directory = self._check_dir(self._db_directory / "media")
         else:
@@ -151,14 +154,18 @@ class ADR:
             self._logger.error(f"{e}")
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
+            # create users/groups only for the default database
+            if db != "default":
+                return
+
             from django.contrib.auth.models import Group, Permission, User
 
-            if not User.objects.using(db).filter(is_superuser=True).exists():
-                user = User.objects.using(db).create_superuser("nexus", "", "cei")
+            if not User.objects.filter(is_superuser=True).exists():
+                user = User.objects.create_superuser("nexus", "", "cei")
                 # include the nexus group (with all permissions)
-                nexus_group, created = Group.objects.using(db).get_or_create(name="nexus")
+                nexus_group, created = Group.objects.get_or_create(name="nexus")
                 if created:
-                    nexus_group.permissions.set(Permission.objects.using(db).all())
+                    nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
 
     def setup(self, collect_static: bool = False) -> None:
@@ -183,6 +190,12 @@ class ADR:
 
         if self._debug is not None:
             overrides["DEBUG"] = self._debug
+
+        if self._media_directory is not None:
+            overrides["MEDIA_ROOT"] = str(self._media_directory)
+
+        if self._static_directory is not None:
+            overrides["STATIC_ROOT"] = str(self._static_directory)
 
         if self._databases:
             if "default" not in self._databases:
