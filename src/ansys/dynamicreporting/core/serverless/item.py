@@ -18,7 +18,6 @@ from ..adr_utils import table_attr
 from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
-from ..utils.report_utils import is_enhanced
 from .base import BaseModel, Validator
 
 
