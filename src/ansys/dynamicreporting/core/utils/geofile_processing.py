@@ -106,7 +106,7 @@ def file_is_3d_geometry(filename: str, file_item_only: bool = True) -> bool:
     return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc")
 
 
-def rebuild_3d_geometry(csf_file: str, unique_id: str, exec_basis: str = None):
+def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = None):
     """Rebuild the media directory representation of the file (udrw format, avz, scdoc
     or evsn)"""
     # We are looking to convert the .csf or other udrw file to .avz with this command:

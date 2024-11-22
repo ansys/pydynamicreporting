@@ -89,9 +89,12 @@ class ADR:
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
-            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
+        # the env var here is actually the parent directory that contains the media directory
         elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
-            self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
+            self._media_directory = (
+                self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"]) / "media"
+            )
         elif self._db_directory is not None:  # fallback to the db dir
             self._media_directory = self._check_dir(self._db_directory / "media")
         else:
@@ -187,6 +190,12 @@ class ADR:
 
         if self._debug is not None:
             overrides["DEBUG"] = self._debug
+
+        if self._media_directory is not None:
+            overrides["MEDIA_ROOT"] = str(self._media_directory)
+
+        if self._static_directory is not None:
+            overrides["STATIC_ROOT"] = str(self._static_directory)
 
         if self._databases:
             if "default" not in self._databases:
