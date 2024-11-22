@@ -8,7 +8,6 @@ from itertools import chain
 import shlex
 from typing import Any, get_args, get_origin
 import uuid
-from uuid import UUID
 
 from django.core.exceptions import (
     FieldDoesNotExist,

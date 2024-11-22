@@ -138,7 +138,9 @@ class ADR:
             if launch_file.exists():
                 return install_dir
 
-        raise InvalidAnsysPath(f"Unable to detect an installation in: {','.join(dirs_to_check)}")
+        raise InvalidAnsysPath(
+            f"Unable to detect an installation in: {[str(d) for d in dirs_to_check]}"
+        )
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
@@ -174,13 +176,14 @@ class ADR:
         if settings.configured:
             raise RuntimeError("ADR has already been configured. setup() can be called only once.")
 
+        # import hack
         try:
-            # import hack
-            sys.path.append(
-                str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
-            )
+            adr_path = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django"
+            ).resolve(strict=True)
+            sys.path.append(str(adr_path))
             from ceireports import settings_serverless
-        except ImportError as e:
+        except (ImportError, OSError) as e:
             raise ImportError(f"Failed to import from the Ansys installation: {e}")
 
         overrides = {}
