@@ -138,7 +138,9 @@ class ADR:
             if launch_file.exists():
                 return install_dir
 
-        raise InvalidAnsysPath(f"Unable to detect an installation in: {','.join(dirs_to_check)}")
+        raise InvalidAnsysPath(
+            f"Unable to detect an installation in: {[str(d) for d in dirs_to_check]}"
+        )
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
