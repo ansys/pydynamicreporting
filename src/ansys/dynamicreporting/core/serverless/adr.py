@@ -176,7 +176,9 @@ class ADR:
 
         # import hack
         try:
-            adr_path = (self._ansys_installation / f"nexus{self._ansys_version}" / "django").resolve(strict=True)
+            adr_path = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django"
+            ).resolve(strict=True)
             sys.path.append(str(adr_path))
             from ceireports import settings_serverless
         except (ImportError, OSError) as e:
