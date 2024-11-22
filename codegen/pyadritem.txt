@@ -96,7 +96,7 @@ class Item:
         self.item_image = None
         """Image object (Image and PNG binary files)"""
         self.item_scene = None
-        """3D scene (AVZ, PLY, SCDOC, GLB, and STL files)"""
+        """3D scene (AVZ, PLY, SCDOC, SCDOCX, GLB, and STL files)"""
         self.item_animation = None
         """Animation file (MP4/H.264 format files)"""
         # Attributes for the table items
