@@ -5,11 +5,9 @@ These are generally applied when a file is uploaded or the Nexus version number 
 These functions will convert files supported by the UDRW interface into AVZ files and
 extract proxy data from AVZ and EVSN files to simplify their display.
 """
-import glob
 import io
 import os
 import platform
-import shutil
 import subprocess
 import typing
 import zipfile
@@ -106,6 +104,11 @@ def file_is_3d_geometry(filename: str, file_item_only: bool = True) -> bool:
     return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx")
 
 
+def get_avz_directory(csf_file: str) -> str:
+    """Return the directory name for the AVZ file associated with the input CSF file."""
+    return os.path.splitext(csf_file)[0]
+
+
 def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = None):
     """Rebuild the media directory representation of the file (udrw format, avz, scdoc
     or evsn)"""
@@ -128,8 +131,8 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     # make the associated directory in all cases
     try:
         os.mkdir(avz_dir)
-    except OSError:
-        print(f"Warning: unable to create 3D geometry directory: {avz_dir}")
+    except OSError as e:
+        print(f"Warning: unable to create 3D geometry directory: {e}")
         return
     avz_filename = csf_file
     # Easiest case, handle SCDOC and SCDOCX files
