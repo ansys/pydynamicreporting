@@ -302,6 +302,63 @@ def test_create_histo(adr_service_create) -> bool:
     assert len(new_table_items) == (len(table_items) + 1)
 
 
+@pytest.mark.ado_test
+def test_create_3d_scatter(adr_service_create) -> bool:
+    _ = adr_service_create.start(
+        create_db=True,
+        exit_on_close=True,
+        delete_db=True,
+    )
+    filter_str = "A|i_type|cont|table"
+    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    my_table = adr_service_create.create_item()
+    my_table.item_table = np.random.uniform(1.0, 50.0, size=(6, 20))
+    my_table.labels_row = ["X1", "Y1", "Z1", "X2", "Y2", "Z2"]
+    my_table.plot = "line"
+    my_table.line_style = "none"
+    my_table.line_marker = "diamond"
+    my_table.xaxis = ["X1", "X2"]
+    my_table.yaxis = ["Y1", "Y2"]
+    my_table.zaxis = ["Z1", "Z2"]
+    my_table.zaxis_format = "floatdot0"
+    my_table.yaxis_format = "floatdot0"
+    my_table.xaxis_format = "floatdot1"
+    my_table.xtitle = "x"
+    my_table.ytitle = "f(x)"
+    my_table.ztitle = "f(x,y)"
+    my_table.line_marker_opacity = 0.7
+    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    adr_service_create.stop()
+    assert len(new_table_items) == (len(table_items) + 1)
+
+
+@pytest.mark.ado_test
+def test_create_3d_surface(adr_service_create) -> bool:
+    _ = adr_service_create.start(
+        create_db=True,
+        exit_on_close=True,
+        delete_db=True,
+    )
+    filter_str = "A|i_type|cont|table"
+    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    my_table = adr_service_create.create_item()
+    my_table.item_table = np.array(
+        [
+            [0.00291, 0.01306, 0.02153, 0.01306, 0.00291],
+            [0.01306, 0.05854, 0.09653, 0.05854, 0.01306],
+            [0.02153, 0.09653, np.nan, 0.09653, 0.02153],
+            [0.01306, 0.05854, 0.09653, 0.05854, 0.01306],
+            [0.00291, 0.01306, 0.02153, 0.01306, 0.00291],
+        ],
+        dtype="|S20",
+    )
+    my_table.plot = "3d surface"
+    my_table.format = "floatdot0"
+    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    adr_service_create.stop()
+    assert len(new_table_items) == (len(table_items) + 1)
+
+
 def test_set_tags(adr_service_query) -> bool:
     success = False
     try:
