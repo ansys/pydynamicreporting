@@ -264,7 +264,7 @@ sankey_plot.visualize()
 #
 # A 3D scatter plot allows you to visualize the data points in 3D space
 # powered by the WebGL engine. You can zoom in and out, and rotate to view the
-# data in different angles.
+# data from different angles.
 
 scatter_plot_3d = adr_service.create_item()
 scatter_plot_3d.item_table = np.random.uniform(1.0, 50.0, size=(6, 20))
