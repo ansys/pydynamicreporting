@@ -156,7 +156,7 @@ heatmap.visualize()
 # A 3D surface plot allows you to visualize the data points in a terrain-like
 # surface in a 3D space powered by WebGL engine. It is a variation of a
 # heatmap as they share the same data structure. The difference is that the
-# surface plot visualize the heatmap values as the Z axis data, allowing you
+# surface plot visualizes the heatmap values as the Z axis data, allowing you
 # to zoom in and out, and rotate to view the surface in different angles. Like
 # heatmap, please note how nan values are also supported, resulting in empty
 # holes on the surface.
