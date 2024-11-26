@@ -158,7 +158,7 @@ heatmap.visualize()
 # heatmap as they share the same data structure. The difference is that the
 # surface plot visualizes the heatmap values as the Z axis data, allowing you
 # to zoom in and out, and rotate to view the surface from different angles. Like
-# heatmap, please note how nan values are also supported, resulting in empty
+# heatmap, nan values are also supported, resulting in empty
 # holes on the surface.
 
 surface = adr_service.create_item()
