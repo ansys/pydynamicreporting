@@ -177,7 +177,7 @@ Scene Item
 
 This method sets the item payload to the 3D geometry found in the passed
 filename.  Supported geometry formats include: EnSight CSF, STL, PLY,
-SCDOC and AVZ format files.
+SCDOC, SCDOCX and AVZ format files.
 
 String Item
 '''''''''''

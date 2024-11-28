@@ -1,8 +1,8 @@
 name: Nightly Build and Test
 
 on:
-  schedule: # UTC at 0300 = 11pm EDT
-    - cron: '0 3 * * *'
+  schedule: # UTC at 22:00 = 6pm EDT
+    - cron: '0 22 * * *'
   workflow_dispatch:
 
 env:

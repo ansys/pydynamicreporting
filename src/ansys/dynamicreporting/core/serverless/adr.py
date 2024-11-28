@@ -89,9 +89,12 @@ class ADR:
 
         if media_directory is not None:
             self._media_directory = self._check_dir(media_directory)
-            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = media_directory
+            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
+        # the env var here is actually the parent directory that contains the media directory
         elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
-            self._media_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"])
+            self._media_directory = (
+                self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"]) / "media"
+            )
         elif self._db_directory is not None:  # fallback to the db dir
             self._media_directory = self._check_dir(self._db_directory / "media")
         else:
@@ -135,7 +138,9 @@ class ADR:
             if launch_file.exists():
                 return install_dir
 
-        raise InvalidAnsysPath(f"Unable to detect an installation in: {','.join(dirs_to_check)}")
+        raise InvalidAnsysPath(
+            f"Unable to detect an installation in: {[str(d) for d in dirs_to_check]}"
+        )
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
@@ -171,13 +176,14 @@ class ADR:
         if settings.configured:
             raise RuntimeError("ADR has already been configured. setup() can be called only once.")
 
+        # import hack
         try:
-            # import hack
-            sys.path.append(
-                str(self._ansys_installation / f"nexus{self._ansys_version}" / "django")
-            )
+            adr_path = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django"
+            ).resolve(strict=True)
+            sys.path.append(str(adr_path))
             from ceireports import settings_serverless
-        except ImportError as e:
+        except (ImportError, OSError) as e:
             raise ImportError(f"Failed to import from the Ansys installation: {e}")
 
         overrides = {}
@@ -187,6 +193,12 @@ class ADR:
 
         if self._debug is not None:
             overrides["DEBUG"] = self._debug
+
+        if self._media_directory is not None:
+            overrides["MEDIA_ROOT"] = str(self._media_directory)
+
+        if self._static_directory is not None:
+            overrides["STATIC_ROOT"] = str(self._static_directory)
 
         if self._databases:
             if "default" not in self._databases:
