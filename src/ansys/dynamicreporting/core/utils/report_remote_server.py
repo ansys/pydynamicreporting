@@ -972,6 +972,58 @@ class Server:
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
 
+    def get_templates_as_json(self, root_guid):
+        """
+        Convert report templates rooted as root_guid to JSON
+        Return a python dictionary.
+        """
+        templates_data = {}
+        templates = self.get_objects(objtype=report_objects.TemplateREST)
+        template_guid_id_map = {root_guid: 0}
+        _build_template_data(root_guid, templates_data, templates, template_guid_id_map)
+        return templates_data
+
+
+def _build_template_data(guid, templates_data, templates, template_guid_id_map):
+    curr_template = None
+    for template in templates:
+        if template.guid == guid:
+            curr_template = template
+    if curr_template is None:
+        return
+
+    curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
+    templates_data[curr_template_key] = {
+        "name": curr_template.name,
+        "report_type": curr_template.report_type,
+        "date": curr_template.date,
+        "tags": curr_template.tags,
+        "params": curr_template.get_params(),
+        "property": curr_template.get_property(),
+        "sort_fields": curr_template.get_sort_fields(),
+        "sort_selection": curr_template.get_sort_selection(),
+        "item_filter": curr_template.item_filter,
+        "filter_mode": curr_template.get_filter_mode(),
+    }
+    if curr_template.parent is None:
+        templates_data[curr_template_key]["parent"] = None
+    else:
+        templates_data[curr_template_key][
+            "parent"
+        ] = f"Template_{template_guid_id_map[curr_template.parent]}"
+
+    templates_data[curr_template_key]["children"] = []
+    children_guids = curr_template.children
+    for child_guid in children_guids:
+        curr_size = len(template_guid_id_map)
+        template_guid_id_map[child_guid] = curr_size
+        templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
+
+    if not children_guids:
+        return
+    for child_guid in children_guids:
+        _build_template_data(child_guid, templates_data, templates, template_guid_id_map)
+
 
 def create_new_local_database(
     parent,
