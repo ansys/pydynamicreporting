@@ -9,6 +9,7 @@ import pytest
 
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
+from ansys.dynamicreporting.core.utils.report_utils import find_unused_ports
 
 
 def pytest_addoption(parser):
@@ -44,33 +45,43 @@ def get_exec(pytestconfig: pytest.Config) -> str:
     return exec_basis
 
 
+used_ports = None
+
+
 @pytest.fixture
 def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
+    global used_ports
+    if not used_ports:
+        used_ports = []
     use_local = pytestconfig.getoption("use_local_launcher")
     dir_name = "auto_delete_" + "".join(choice(ascii_letters) for x in range(5))
     db_dir = os.path.join(os.path.join(request.fspath.dirname, "test_data"), dir_name)
     tmp_docker_dir = os.path.join(os.path.join(request.fspath.dirname, "test_data"), "tmp_docker")
+    port = find_unused_ports(1, start=8000, avoid=used_ports)[0]
     if use_local:
         tmp_service = Service(
             ansys_installation=pytestconfig.getoption("install_path"),
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
-            port=8000 + int(random() * 4000),
+            port=port,
         )
     else:
-        cleanup_docker(request)
         tmp_service = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
             data_directory=tmp_docker_dir,
-            port=8000 + int(random() * 4000),
+            port=port,
         )
+    used_ports.append(port)
     return tmp_service
 
 
 @pytest.fixture
 def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
+    global used_ports
+    if not used_ports:
+        used_ports = []
     use_local = pytestconfig.getoption("use_local_launcher")
     local_db = os.path.join("test_data", "query_db")
     db_dir = os.path.join(request.fspath.dirname, local_db)
@@ -80,16 +91,21 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     if use_local:
         ansys_installation = pytestconfig.getoption("install_path")
     else:
-        cleanup_docker(request)
         ansys_installation = "docker"
+    port = find_unused_ports(1, start=8000, avoid=used_ports)[0]
     tmp_service = Service(
         ansys_installation=ansys_installation,
         docker_image=DOCKER_DEV_REPO_URL,
         db_directory=db_dir,
         data_directory=tmp_docker_dir,
-        port=8000 + int(random() * 4000),
+        port=port,
     )
+    used_ports.append(port)
     if not use_local:
         tmp_service._container.save_config()
+        tmp_service._container.status()
+        print(tmp_service._container.run_in_container("ls /db_directory/"))
+        print(tmp_service._container.run_in_container("cat /db_directory/nexus.log"))
     tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)
+    tmp_service._container.status()
     return tmp_service

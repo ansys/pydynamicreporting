@@ -155,13 +155,13 @@ class DockerLauncher:
         }
 
         # get a unique name for the container to run
-        existing_names = [x.name for x in self._docker_client.from_env().containers.list()]
-        container_name = "nexus"
-        while container_name in existing_names:
-            container_name += random.choice(string.ascii_letters)
-            if len(container_name) > 500:
-                raise RuntimeError("Can't determine a unique Docker container name.")
-        self._container_name = container_name
+        # existing_names = [x.name for x in self._docker_client.from_env().containers.list()]
+        # container_name = "nexus"
+        # while container_name in existing_names:
+        #    container_name += random.choice(string.ascii_letters)
+        #    if len(container_name) > 500:
+        #        raise RuntimeError("Can't determine a unique Docker container name.")
+        # self._container_name = container_name
 
         # Start the container in detached mode and override
         # the default entrypoint so multiple commands can be
@@ -178,13 +178,12 @@ class DockerLauncher:
                 volumes=data_volume,
                 environment=container_env,
                 ports=ports_to_map,
-                name=self._container_name,
                 tty=True,
                 detach=True,
             )
         except Exception as e:  # pragma: no cover
             raise RuntimeError("Can't run Docker container: " + self._image_name + "\n\n" + str(e))
-
+        self._container_name = self._container.name
         # Build up the command to run and send it to the container
         # as a detached command.
         #
@@ -419,6 +418,28 @@ class DockerLauncher:
         nexus_cmd += " --db_directory /db_directory"
         nexus_cmd += " save_config"
         ret = self.run_in_container(nexus_cmd)
+        return ret
+
+    def status(self) -> str:
+        """
+        Run the ``nexus_launcher save_config ...`` command in the Docker container.
+
+        This command runs on the previously specified database directory.
+
+        Returns
+        -------
+        str
+            Output from the command.
+
+        Raises
+        ------
+        RuntimeError
+        """
+        nexus_cmd = self._cei_home + "/bin/nexus_launcher"
+        nexus_cmd += " --db_directory /db_directory"
+        nexus_cmd += " status"
+        ret = self.run_in_container(nexus_cmd)
+        print(ret)
         return ret
 
     def launch_nexus_server(
