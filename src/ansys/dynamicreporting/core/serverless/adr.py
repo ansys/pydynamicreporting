@@ -322,7 +322,7 @@ class ADR:
 
     def get_report(self, **kwargs) -> Template:
         try:
-            return Template.get(master=True, **kwargs)
+            return Template.get(parent=None, **kwargs)
         except Exception as e:
             self._logger.error(f"{e}")
             raise e
@@ -333,7 +333,7 @@ class ADR:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
-            out = Template.filter(master=True)
+            out = Template.filter(parent=None)
             if fields:
                 out = out.values_list(*fields, flat=flat)
         except Exception as e:
@@ -343,7 +343,7 @@ class ADR:
         return out
 
     def get_list_reports(self, r_type: str = "name") -> Union[ObjectSet, list]:
-        supported_types = ["name", "report"]
+        supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
         if r_type == "name":
