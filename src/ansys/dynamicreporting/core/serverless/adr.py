@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import copy
 import os
 from pathlib import Path
 import platform
@@ -24,6 +25,7 @@ from ..exceptions import (
     StaticFilesCollectionError,
 )
 from ..utils import report_utils
+from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import ObjectSet
 from .item import Dataset, Item, Session
 from .template import Template
@@ -145,7 +147,6 @@ class ADR:
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
         if not dir_path.exists() or not dir_path.is_dir():
-            self._logger.error(f"Invalid directory path: {dir_}")
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
@@ -153,7 +154,6 @@ class ADR:
         try:  # upgrade databases
             management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
         except Exception as e:
-            self._logger.error(f"{e}")
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
             # create users/groups only for the default database
@@ -238,7 +238,6 @@ class ADR:
             settings.configure(**overrides)
             django.setup()
         except Exception as e:
-            self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
@@ -254,7 +253,6 @@ class ADR:
 
             do_geometry_update_check(self._logger)
         except Exception as e:
-            self._logger.error(f"Unable to migrate geometry definition: {e}")
             raise GeometryMigrationError(extra_detail=str(e))
 
         # collect static files
@@ -262,7 +260,6 @@ class ADR:
             try:
                 management.call_command("collectstatic", "--no-input", verbosity=0)
             except Exception as e:
-                self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
         # create session and dataset w/ defaults if not provided.
@@ -310,7 +307,6 @@ class ADR:
 
     def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
-            self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
         template = template_type.create(**kwargs)
         parent = kwargs.get("parent")
@@ -321,9 +317,8 @@ class ADR:
 
     def get_report(self, **kwargs) -> Template:
         try:
-            return Template.get(master=True, **kwargs)
+            return Template.get(parent=None, **kwargs)
         except Exception as e:
-            self._logger.error(f"{e}")
             raise e
 
     def get_reports(
@@ -332,17 +327,16 @@ class ADR:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
-            out = Template.filter(master=True)
+            out = Template.filter(parent=None)
             if fields:
                 out = out.values_list(*fields, flat=flat)
         except Exception as e:
-            self._logger.error(f"{e}")
             raise e
 
         return out
 
     def get_list_reports(self, r_type: str = "name") -> Union[ObjectSet, list]:
-        supported_types = ["name", "report"]
+        supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
         if r_type == "name":
@@ -356,7 +350,6 @@ class ADR:
                 request=self._request, context=context, query=query
             )
         except Exception as e:
-            self._logger.error(f"{e}")
             raise e
 
     def query(
@@ -366,7 +359,6 @@ class ADR:
         **kwargs: Any,
     ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
-            self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query, **kwargs)
 
@@ -393,3 +385,105 @@ class ADR:
         if self._is_sqlite(database):
             return self._databases[database]["NAME"]
         return ""
+
+    def _copy_template(self, template: Template, **kwargs) -> Template:
+        # depth-first walk down from the root, which is 'template',
+        # and copy the children along the way.
+        out_template = copy.deepcopy(template)
+        if out_template.parent is not None:
+            parent = out_template.parent
+            out_template.parent = Template.get(
+                guid=parent.guid, using=kwargs.get("using", "default")
+            )
+        out_template.reorder_children()  # preserves legacy code from Server.copy_items
+        children = out_template.children
+        out_template.children = []
+        out_template.reinit()
+        out_template.save(**kwargs)
+        new_children = []
+        for child in children:
+            child.parent = out_template
+            new_child = self._copy_template(child, **kwargs)
+            new_children.append(new_child)
+        out_template.children = new_children
+        return out_template
+
+    def copy_objects(
+        self,
+        object_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        target_database: str,
+        source_database: str = "default",
+        query: str = "",
+        target_media_dir: str = "",
+        test: bool = False,
+    ) -> int:
+        """
+        This copies a selected collection of objects from one database to another.
+
+        GUIDs are preserved and any referenced session and dataset objects are copied as
+        well.
+        """
+        if not issubclass(object_type, (Item, Template, Session, Dataset)):
+            raise TypeError(f"{object_type} is not valid")
+
+        if target_database not in self._databases or source_database not in self._databases:
+            raise ADRException(
+                f"'{source_database}' and '{target_database}' must be configured first"
+            )
+
+        objects = self.query(object_type, query=query)
+        copy_list = []
+        media_dir = None
+
+        if issubclass(object_type, Item):
+            for item in objects:
+                # check for media dir if item has a physical file
+                if getattr(item, "has_file", False) and media_dir is None:
+                    if target_media_dir:
+                        media_dir = target_media_dir
+                    elif self._is_sqlite(target_database):
+                        media_dir = self._check_dir(
+                            Path(self._get_db_dir(target_database)).parent / "media"
+                        )
+                    else:
+                        raise ADRException(
+                            "'target_media_dir' argument must be specified because one of the objects"
+                            " contains media to copy.'"
+                        )
+                # save or load sessions, datasets - since it is possible they are shared
+                # and were saved already.
+                session, _ = Session.get_or_create(**item.session.as_dict(), using=target_database)
+                dataset, _ = Dataset.get_or_create(**item.dataset.as_dict(), using=target_database)
+                item.session = session
+                item.dataset = dataset
+                copy_list.append(item)
+        elif issubclass(object_type, Template):
+            for template in objects:
+                # only copy top-level templates
+                if template.parent is not None:
+                    raise ADRException("Only top-level templates can be copied.")
+                new_template = self._copy_template(template, using=target_database)
+                copy_list.append(new_template)
+        else:  # sessions, datasets
+            copy_list = list(objects)
+
+        if test:
+            self._logger.info(f"Copying {len(copy_list)} objects...")
+            return len(copy_list)
+
+        try:
+            count = self.create_objects(copy_list, using=target_database)
+        except Exception as e:
+            raise ADRException(f"Some objects could not be copied: {e}")
+
+        # copy media
+        if issubclass(object_type, Item) and media_dir is not None:
+            for item in objects:
+                if not getattr(item, "has_file", False):
+                    continue
+                shutil.copy(Path(item.content), media_dir)
+                file_name = str((media_dir / Path(item.content).name).resolve(strict=True))
+                if file_is_3d_geometry(file_name, file_item_only=(item.type == "file")):
+                    rebuild_3d_geometry(file_name)
+
+        return count
