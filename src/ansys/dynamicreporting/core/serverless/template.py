@@ -59,12 +59,14 @@ class Template(BaseModel):
             raise Template.NotSaved(
                 extra_detail="Failed to save template because its parent is not saved"
             )
+        children_order = []
         for child in self.children:
             if not child._saved:
                 raise Template.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
-        self._children_order = ",".join([str(child.guid) for child in self.children])
+            children_order.append(str(child.guid))
+        self._children_order = ",".join(children_order)
         self._master = self.parent is None
         # set properties
         prop_dict = {}

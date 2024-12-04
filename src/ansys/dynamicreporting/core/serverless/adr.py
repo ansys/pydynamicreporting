@@ -392,6 +392,7 @@ class ADR:
         out_template = copy.deepcopy(template)
         if out_template.parent is not None:
             parent = out_template.parent
+            # parents are always copied first, so they should exist
             out_template.parent = Template.get(
                 guid=parent.guid, using=kwargs.get("using", "default")
             )
