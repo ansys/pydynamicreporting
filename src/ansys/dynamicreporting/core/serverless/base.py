@@ -280,7 +280,7 @@ class BaseModel(metaclass=BaseMeta):
             if value is None:  # skip and use defaults
                 continue
             if isinstance(value, list):
-                objs = [o._orm_instance for o in value]
+                objs = [obj._orm_instance for obj in value]
                 getattr(self._orm_instance, field_).add(*objs)
             else:
                 if isinstance(value, BaseModel):  # relations
@@ -348,7 +348,10 @@ class BaseModel(metaclass=BaseMeta):
                     type_ = cls._cls_registry[field_type]
                 else:
                     type_ = field_type
-                if issubclass(cls, type_):  # same hierarchy means there is a parent-child relation
+                if issubclass(cls, type_) and parent is not None:
+                    # Same hierarchy means there is a parent-child relation.
+                    # We avoid loading the parent object again and use the one passed
+                    # from the previous 'from_db' load to prevent infinite recursion.
                     value = parent
                 else:
                     value = type_.from_db(value)
