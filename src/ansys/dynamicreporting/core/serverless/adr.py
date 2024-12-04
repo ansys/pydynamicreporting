@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import copy
 import os
 from pathlib import Path
 import platform
@@ -146,7 +147,6 @@ class ADR:
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
         if not dir_path.exists() or not dir_path.is_dir():
-            self._logger.error(f"Invalid directory path: {dir_}")
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
@@ -154,7 +154,6 @@ class ADR:
         try:  # upgrade databases
             management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
         except Exception as e:
-            self._logger.error(f"{e}")
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
             # create users/groups only for the default database
@@ -239,7 +238,6 @@ class ADR:
             settings.configure(**overrides)
             django.setup()
         except Exception as e:
-            self._logger.error(f"{e}")
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
@@ -255,7 +253,6 @@ class ADR:
 
             do_geometry_update_check(self._logger)
         except Exception as e:
-            self._logger.error(f"Unable to migrate geometry definition: {e}")
             raise GeometryMigrationError(extra_detail=str(e))
 
         # collect static files
@@ -263,7 +260,6 @@ class ADR:
             try:
                 management.call_command("collectstatic", "--no-input", verbosity=0)
             except Exception as e:
-                self._logger.error(f"{e}")
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
         # create session and dataset w/ defaults if not provided.
@@ -311,7 +307,6 @@ class ADR:
 
     def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
-            self._logger.error(f"{template_type} is not valid")
             raise TypeError(f"{template_type} is not valid")
         template = template_type.create(**kwargs)
         parent = kwargs.get("parent")
@@ -324,7 +319,6 @@ class ADR:
         try:
             return Template.get(parent=None, **kwargs)
         except Exception as e:
-            self._logger.error(f"{e}")
             raise e
 
     def get_reports(
@@ -337,7 +331,6 @@ class ADR:
             if fields:
                 out = out.values_list(*fields, flat=flat)
         except Exception as e:
-            self._logger.error(f"{e}")
             raise e
 
         return out
@@ -357,7 +350,6 @@ class ADR:
                 request=self._request, context=context, query=query
             )
         except Exception as e:
-            self._logger.error(f"{e}")
             raise e
 
     def query(
@@ -367,7 +359,6 @@ class ADR:
         **kwargs: Any,
     ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
-            self._logger.error(f"{query_type} is not valid")
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query, **kwargs)
 
@@ -395,6 +386,28 @@ class ADR:
             return self._databases[database]["NAME"]
         return ""
 
+    def _copy_template(self, template: Template, **kwargs) -> Template:
+        # depth-first walk down from the root, which is 'template',
+        # and copy the children along the way.
+        out_template = copy.deepcopy(template)
+        if out_template.parent is not None:
+            parent = out_template.parent
+            out_template.parent = Template.get(
+                guid=parent.guid, using=kwargs.get("using", "default")
+            )
+        out_template.reorder_children()  # preserves legacy code from Server.copy_items
+        children = out_template.children
+        out_template.children = []
+        out_template.reinit()
+        out_template.save(**kwargs)
+        new_children = []
+        for child in children:
+            child.parent = out_template
+            new_child = self._copy_template(child, **kwargs)
+            new_children.append(new_child)
+        out_template.children = new_children
+        return out_template
+
     def copy_objects(
         self,
         object_type: Union[Session, Dataset, Type[Item], Type[Template]],
@@ -411,7 +424,6 @@ class ADR:
         well.
         """
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
-            self._logger.error(f"{object_type} is not valid")
             raise TypeError(f"{object_type} is not valid")
 
         if target_database not in self._databases or source_database not in self._databases:
@@ -446,7 +458,12 @@ class ADR:
                 item.dataset = dataset
                 copy_list.append(item)
         elif issubclass(object_type, Template):
-            raise NotImplementedError("Copying templates is not supported at the moment")
+            for template in objects:
+                # only copy top-level templates
+                if template.parent is not None:
+                    raise ADRException("Only top-level templates can be copied.")
+                new_template = self._copy_template(template, using=target_database)
+                copy_list.append(new_template)
         else:  # sessions, datasets
             copy_list = list(objects)
 
