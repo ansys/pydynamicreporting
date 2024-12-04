@@ -133,8 +133,8 @@ class Template(BaseModel):
             raise ADRException(
                 extra_detail="The 't_types' filter is not required if using a subclass of Template"
             )
-        query_string = f"A|t_types|cont|{cls.report_type};{query}" # noqa: E702
-        return super().find(query=query_string, **kwargs) 
+        query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
+        return super().find(query=query_string, **kwargs)
 
     def reorder_children(self) -> None:
         guid_to_child = {str(child.guid): child for child in self.children}
