@@ -150,6 +150,38 @@ heatmap.visualize()
 #
 # .. image:: /_static/heatmap.png
 #
+# Visualize a 3D surface plot
+# --------------------------
+#
+# A 3D surface plot allows you to visualize the data points in a terrain-like
+# surface in a 3D space powered by the WebGL engine. It is a variation of a
+# heatmap as they share the same data structure. The difference is that the
+# surface plot visualizes the heatmap values as the Z axis data, allowing you
+# to zoom in and out, and rotate to view the surface from different angles. Like
+# heatmap, nan values are also supported, resulting in empty
+# holes on the surface.
+
+surface = adr_service.create_item()
+# We can use the same data as we use to visualize heatmap
+surface.item_table = np.array(
+    [
+        [0.00291, 0.01306, 0.02153, 0.01306, 0.00291],
+        [0.01306, 0.05854, 0.09653, 0.05854, 0.01306],
+        [0.02153, 0.09653, np.nan, 0.09653, 0.02153],
+        [0.01306, 0.05854, 0.09653, 0.05854, 0.01306],
+        [0.00291, 0.01306, 0.02153, 0.01306, 0.00291],
+    ],
+    dtype="|S20",
+)
+surface.plot = "3d surface"
+surface.format = "floatdot0"
+surface.visualize()
+
+
+###############################################################################
+#
+# .. image:: /_static/3d_surface.png
+#
 # Visualize a parallel coordinate plot
 # ------------------------------------
 #
@@ -226,6 +258,40 @@ sankey_plot.visualize()
 ###############################################################################
 #
 # .. image:: /_static/sankey.png
+#
+# Visualize a 3D scatter plot
+# --------------------------
+#
+# A 3D scatter plot allows you to visualize the data points in 3D space
+# powered by the WebGL engine. You can zoom in and out, and rotate to view the
+# data from different angles.
+
+scatter_plot_3d = adr_service.create_item()
+scatter_plot_3d.item_table = np.random.uniform(1.0, 50.0, size=(6, 20))
+scatter_plot_3d.labels_row = ["X1", "Y1", "Z1", "X2", "Y2", "Z2"]
+scatter_plot_3d.plot = "line"
+# specified the 3D scatter's line style (default is markers+lines)
+scatter_plot_3d.line_style = "none"
+# specified the 3D scatter's symbol (default is solid circle)
+# supportive: diamond, cross, x, circle, square (open & solid)
+scatter_plot_3d.xaxis = ["X1", "X2"]
+scatter_plot_3d.yaxis = ["Y1", "Y2"]
+scatter_plot_3d.zaxis = ["Z1", "Z2"]
+scatter_plot_3d.zaxis_format = "floatdot0"
+scatter_plot_3d.yaxis_format = "floatdot0"
+scatter_plot_3d.xaxis_format = "floatdot1"
+scatter_plot_3d.xtitle = "x"
+scatter_plot_3d.ytitle = "f(x)"
+scatter_plot_3d.ztitle = "f(x,y)"
+# opacity
+scatter_plot_3d.line_marker_opacity = 0.7
+# vis
+scatter_plot_3d.visualize()
+
+
+###############################################################################
+#
+# .. image:: /_static/3d_scatter.png
 #
 # Close the service
 # -----------------
