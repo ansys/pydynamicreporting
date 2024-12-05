@@ -348,10 +348,10 @@ class ADR:
         else:
             return self.get_reports()
 
-    def render_report(self, context: Optional[dict] = None, query: str = "", **kwargs: Any) -> str:
+    def render_report(self, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any) -> str:
         try:
             return Template.get(**kwargs).render(
-                request=self._request, context=context, query=query
+                request=self._request, context=context, item_filter=item_filter
             )
         except Exception as e:
             raise e
