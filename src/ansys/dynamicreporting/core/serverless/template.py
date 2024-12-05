@@ -12,14 +12,14 @@ from .base import BaseModel
 class Template(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     name: str = field(compare=False, kw_only=True, default="")
-    params: str = field(compare=False, kw_only=True, default="")
+    params: str = field(compare=False, kw_only=True, default="{}")
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
     _children_order: str = field(
         compare=False, init=False, default=""
     )  # computed from self.children
-    _master: bool = field(compare=False, init=False, default=None)  # computed from self.parent
+    _master: bool = field(compare=False, init=False, default=True)
     report_type: str = ""
     _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
@@ -48,11 +48,11 @@ class Template(BaseModel):
 
     @property
     def children_order(self):
-        return ",".join([str(child.guid) for child in self.children])
+        return self._children_order
 
     @property
     def master(self):
-        return self.parent is None
+        return self._master
 
     def save(self, **kwargs):
         if self.parent is not None and not self.parent._saved:
@@ -64,6 +64,8 @@ class Template(BaseModel):
                 raise Template.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
+        self._children_order = ",".join([str(child.guid) for child in self.children])
+        self._master = self.parent is None
         # set properties
         prop_dict = {}
         for prop in self._properties:

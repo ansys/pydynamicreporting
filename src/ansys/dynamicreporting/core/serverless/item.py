@@ -17,7 +17,7 @@ import numpy
 from ..adr_utils import table_attr
 from ..exceptions import ADRException
 from ..utils import report_utils
-from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
+from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
 from .base import BaseModel, Validator
 
@@ -162,7 +162,7 @@ class ImageContent(FileValidator):
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
         if obj._file_ext in self.ENHANCED_EXT:
-            metadata = report_utils.is_enhanced(image)
+            metadata = is_enhanced(image)
             if not metadata:
                 raise ADRException("The enhanced image is empty")
             obj._enhanced = True
@@ -443,11 +443,9 @@ class Scene(FilePayloadMixin, Item):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        rebuild_3d_geometry(
-            self.get_file_path(),
-            unique_id="",
-            exec_basis="",
-        )
+        file_name = self.get_file_path()
+        if not Path(get_avz_directory(file_name)).exists():
+            rebuild_3d_geometry(file_name)
 
 
 class File(FilePayloadMixin, Item):
@@ -456,10 +454,6 @@ class File(FilePayloadMixin, Item):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        file_name = Path(self._file.name).name
-        if file_is_3d_geometry(file_name):
-            rebuild_3d_geometry(
-                self.get_file_path(),
-                unique_id="",
-                exec_basis="",
-            )
+        file_name = self.get_file_path()
+        if file_is_3d_geometry(file_name) and not Path(get_avz_directory(file_name)).exists():
+            rebuild_3d_geometry(file_name)
