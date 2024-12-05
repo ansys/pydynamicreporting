@@ -303,7 +303,11 @@ class ADR:
     def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
+        return item_type.create(
+            session=kwargs.pop("session", self._session),
+            dataset=kwargs.pop("dataset", self._dataset),
+            **kwargs,
+        )
 
     def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
@@ -362,8 +366,8 @@ class ADR:
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query, **kwargs)
 
-    @staticmethod
     def create_objects(
+        self,
         objects: Union[list, ObjectSet],
         **kwargs: Any,
     ) -> int:
