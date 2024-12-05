@@ -983,6 +983,66 @@ class Server:
         _build_template_data(root_guid, templates_data, templates, template_guid_id_map)
         return templates_data
 
+    def _populate_template(self, attr, parent_template):
+        template = self.create_template(
+            name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+        )
+        template.set_params(attr["params"])
+        template.set_property(property=attr["property"])
+        template.set_sort_fields(attr["sort_fields"])
+        if attr["sort_selection"] != "":
+            template.set_sort_selection(value=attr["sort_selection"])
+        template.set_tags(attr["tags"])
+        template.set_filter(filter_str=attr["item_filter"])
+        template.set_filter_mode(value=attr["filter_mode"])
+
+        return template
+
+    def _update_changes(self, id_str, id_template_map, templates_json):
+        children_id_strs = templates_json[id_str]["children"]
+        if not children_id_strs:
+            return
+
+        for child_id_str in children_id_strs:
+            self._update_changes(child_id_str, id_template_map, templates_json)
+        self.put_objects(id_template_map[id_str])
+
+    def _build_templates_from_parent(self, id_str, id_template_map, templates_json):
+        children_id_strs = templates_json[id_str]["children"]
+        if not children_id_strs:
+            return
+
+        child_templates = []
+        for child_id_str in children_id_strs:
+            child_attr = templates_json[child_id_str]
+            child_template = self._populate_template(child_attr, id_template_map[id_str])
+            child_templates.append(child_template)
+            id_template_map[child_id_str] = child_template
+
+        self.put_objects(child_templates)
+
+        i = 0
+        for child_id_str in children_id_strs:
+            self._build_templates_from_parent(child_id_str, id_template_map, templates_json)
+            i += 1
+
+    def load_templates(self, templates_json):
+        """
+        Load templates given a json-format data
+        """
+        for template_id_str, template_attr in templates_json.items():
+            if template_attr["parent"] is None:
+                root_id_str = template_id_str
+                break
+
+        root_attr = templates_json[root_id_str]
+        root_template = self._populate_template(root_attr, None)
+        self.put_objects(root_template)
+        id_template_map = {}
+        id_template_map[root_id_str] = root_template
+        self._build_templates_from_parent(root_id_str, id_template_map, templates_json)
+        self._update_changes(root_id_str, id_template_map, templates_json)
+
 
 def _build_template_data(guid, templates_data, templates, template_guid_id_map):
     curr_template = None
