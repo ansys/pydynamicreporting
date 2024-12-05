@@ -8,7 +8,7 @@ statistics = True
 ignore =
   # Whitespace before ':'.
   E203,
-  # Whitespavce after ':'.
+  # Whitespace after ':'.
   E231,
   # Line too long (82 > 79 characters).
   E501,
