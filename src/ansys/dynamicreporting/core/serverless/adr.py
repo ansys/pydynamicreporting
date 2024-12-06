@@ -436,7 +436,6 @@ class ADR:
         self,
         object_type: Union[Session, Dataset, Type[Item], Type[Template]],
         target_database: str,
-        source_database: str = "default",
         query: str = "",
         target_media_dir: str = "",
         test: bool = False,
@@ -447,6 +446,8 @@ class ADR:
         GUIDs are preserved and any referenced session and dataset objects are copied as
         well.
         """
+        source_database = "default"  # todo: allow for source database to be specified
+
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
             raise TypeError(f"{object_type} is not valid")
 
