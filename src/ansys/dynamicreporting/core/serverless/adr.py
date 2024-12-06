@@ -85,7 +85,7 @@ class ADR:
                     if not db_files:
                         raise InvalidPath(
                             extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
-                                         "you would like to create a new database."
+                            " you would like to create a new database."
                         )
 
                 os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
