@@ -344,7 +344,7 @@ class ADR:
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
         if r_type == "name":
-            return self.get_reports([r_type], flat=True)
+            return self.get_reports(fields=[r_type, ], flat=True)
         else:
             return self.get_reports()
 
