@@ -264,7 +264,11 @@ class ADR:
             raise GeometryMigrationError(extra_detail=str(e))
 
         # collect static files
-        if collect_static and self._static_directory is not None:
+        if collect_static:
+            if self._static_directory is None:
+                raise ImproperlyConfiguredError(
+                    "The 'static_directory' option must be specified to collect static files."
+                )
             try:
                 management.call_command("collectstatic", "--no-input", verbosity=0)
             except Exception as e:
