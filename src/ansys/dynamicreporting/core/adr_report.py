@@ -433,7 +433,7 @@ class Report:
             }}
 
             customElements.define("adr-report", ReportFetchComponent);
-        """
+        """  # noqa
         return component_logic
 
     def get_report_component(

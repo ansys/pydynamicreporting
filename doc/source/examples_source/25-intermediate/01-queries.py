@@ -37,11 +37,11 @@ session_guid = adr_service.start(create_db=True)
 
 for i in range(100):
     if i % 3 == 0:
-        my_text = adr_service.create_item(obj_name=f"Name {str(i%20)}", source="Application X")
+        my_text = adr_service.create_item(obj_name=f"Name {str(i % 20)}", source="Application X")
     elif i % 3 == 1:
-        my_text = adr_service.create_item(obj_name=f"Name {str(i%20)}", source="Application Y")
+        my_text = adr_service.create_item(obj_name=f"Name {str(i % 20)}", source="Application Y")
     elif i % 3 == 2:
-        my_text = adr_service.create_item(obj_name=f"Name {str(i%20)}", source="Application Z")
+        my_text = adr_service.create_item(obj_name=f"Name {str(i % 20)}", source="Application Z")
     my_text.item_text = "Any text. Does not matter the actual payload"
     if i % 4 == 0:
         my_text.set_tags("var=pressure")

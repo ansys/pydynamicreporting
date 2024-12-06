@@ -333,7 +333,7 @@ class Item(BaseModel):
             raise ADRException(
                 extra_detail="The 'i_type' filter is not required if using a subclass of Item"
             )
-        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)
+        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
     def render(self, context=None, request=None) -> Optional[str]:
         if context is None:
