@@ -448,7 +448,7 @@ class ADR:
 
         if target_database not in self._databases or source_database not in self._databases:
             raise ADRException(
-                f"'{source_database}' and '{target_database}' must be configured first"
+                f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."
             )
 
         objects = self.query(object_type, query=query)
