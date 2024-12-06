@@ -79,6 +79,14 @@ class ADR:
                         # And make a target file (.nexdb) for auto launching of the report viewer...
                         with open(self._db_directory / "view_report.nexdb", "w") as f:
                             f.write(secret_key)
+                else:
+                    # check if there is a sqlite db in the directory
+                    db_files = list(self._db_directory.glob("*.sqlite3"))
+                    if not db_files:
+                        raise InvalidPath(
+                            extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
+                            " you would like to create a new database."
+                        )
 
                 os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
@@ -344,14 +352,21 @@ class ADR:
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
         if r_type == "name":
-            return self.get_reports([r_type], flat=True)
+            return self.get_reports(
+                fields=[
+                    r_type,
+                ],
+                flat=True,
+            )
         else:
             return self.get_reports()
 
-    def render_report(self, context: Optional[dict] = None, query: str = "", **kwargs: Any) -> str:
+    def render_report(
+        self, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
+    ) -> str:
         try:
             return Template.get(**kwargs).render(
-                request=self._request, context=context, query=query
+                request=self._request, context=context, item_filter=item_filter
             )
         except Exception as e:
             raise e
@@ -433,7 +448,7 @@ class ADR:
 
         if target_database not in self._databases or source_database not in self._databases:
             raise ADRException(
-                f"'{source_database}' and '{target_database}' must be configured first"
+                f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."
             )
 
         objects = self.query(object_type, query=query)

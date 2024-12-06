@@ -204,7 +204,7 @@ class Template(BaseModel):
         params["properties"] = curr_props | new_props
         self.params = json.dumps(params)
 
-    def render(self, context=None, request=None, query="") -> str:
+    def render(self, context=None, request=None, item_filter="") -> str:
         if context is None:
             context = {}
         ctx = {**context, "request": request, "ansys_version": None}
@@ -214,7 +214,7 @@ class Template(BaseModel):
 
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
-            items = Item.find(query=query)
+            items = Item.find(query=item_filter)
             # properties that can change during iteration need to go on the class as well as globals
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
