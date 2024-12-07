@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import copy
+from datetime import datetime
 import os
 from pathlib import Path
 import platform
@@ -160,7 +161,7 @@ class ADR:
 
     def _migrate_db(self, db):
         try:  # upgrade databases
-            management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
+            management.call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
         except Exception as e:
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
@@ -270,7 +271,7 @@ class ADR:
                     "The 'static_directory' option must be specified to collect static files."
                 )
             try:
-                management.call_command("collectstatic", "--no-input", verbosity=0)
+                management.call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
@@ -280,6 +281,26 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+    def backup(self, database: str = "default", output_dir: str = ".", compress=False) -> None:
+        if database != "default" and database not in self._databases:
+            raise ADRException(f"{database} must be configured first using the 'databases' option.")
+        target_dir = Path(output_dir).resolve(strict=True)
+        # call django management command to dump the database
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
+        management.call_command(
+            "dumpdata",
+            "--all",
+            "--database",
+            database,
+            "--output",
+            str(file_path),
+            "--verbosity",
+            0,
+        )
+        if not file_path.exists():
+            raise ADRException("Backup failed")
 
     @property
     def session(self) -> Session:
