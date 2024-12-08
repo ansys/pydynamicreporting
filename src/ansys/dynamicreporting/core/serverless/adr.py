@@ -288,6 +288,8 @@ class ADR:
         if database != "default" and database not in self._databases:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
+        if not target_dir.is_dir():
+            raise InvalidPath(extra_detail=f"{output_directory} is not a valid directory.")
         # call django management command to dump the database
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
@@ -308,14 +310,14 @@ class ADR:
     def restore_database(self, input_file: str, *, database: str = "default") -> None:
         if database != "default" and database not in self._databases:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
-        input_file = Path(input_file).resolve(strict=True)
-        if not input_file.is_file():
-            raise InvalidPath(extra_detail=str(input_file))
+        backup_file = Path(input_file).resolve(strict=True)
+        if not backup_file.is_file():
+            raise InvalidPath(extra_detail=f"{input_file} is not a valid file.")
         # call django management command to load the database
         try:
             management.call_command(
                 "loaddata",
-                str(input_file),
+                str(backup_file),
                 "--database",
                 database,
                 "--ignorenonexistent",
