@@ -44,7 +44,7 @@ jobs:
   #        with:
   #          token: ${{ secrets.GITHUB_TOKEN }}
 
-  smoke-tests:
+  smoketest:
     name: Build and smoke tests
     runs-on: ${{ matrix.os }}
     needs: [ style ]
@@ -54,16 +54,19 @@ jobs:
         os: [ ubuntu-latest, windows-latest ]
         python-version: [ '3.10', '3.11', '3.12', '3.13' ]
     steps:
-      - name: Build wheelhouse and perform smoke test
+      - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v8
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
+      # 1. build the wheel
+      # 2. install the wheel
+      # 3. run the smoke tests
 
   test:
     name: Testing
-    needs: [ smoke-tests ]
+    needs: [ smoketest ]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
