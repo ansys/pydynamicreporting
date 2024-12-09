@@ -10,7 +10,6 @@ env:
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
 
-
 jobs:
 
   nightly_test:
