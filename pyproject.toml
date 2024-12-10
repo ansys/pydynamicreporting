@@ -4,7 +4,7 @@ requires = [
     "setuptools>=65.5.0",
     "setuptools-scm",
     "wheel>=0.37.0",
-    "pre-commit==3.3.3",
+    "pre-commit==4.0.1",
 ]
 
 [project]
@@ -75,7 +75,7 @@ test = [
     "psutil==6.0.0",
     "exceptiongroup==1.0.0",
     "pytest==8.3.3",
-    "pytest-cov==4.1.0",
+    "pytest-cov==6.0.0",
     "pyvista==0.44.1",
     "vtk==9.4.0",
     "ansys-dpf-core==0.13.0",
@@ -103,11 +103,11 @@ dev = [
     "psutil==6.0.0",
     "docker>=7.1.0",
     "pytest==8.3.3",
-    "pytest-cov==4.1.0",
+    "pytest-cov==6.0.0",
     "Sphinx==8.0.2",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.18.0",
-    "pre-commit==3.3.3",
+    "pre-commit==4.0.1",
 ]
 
 [tool.pytest.ini_options]
