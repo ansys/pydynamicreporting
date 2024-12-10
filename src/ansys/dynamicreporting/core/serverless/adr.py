@@ -361,6 +361,8 @@ class ADR:
     def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
+        if not kwargs:
+            raise ADRException("At least one keyword argument must be provided to create the item.")
         return item_type.create(
             session=kwargs.pop("session", self._session),
             dataset=kwargs.pop("dataset", self._dataset),
@@ -370,6 +372,10 @@ class ADR:
     def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to create the template."
+            )
         template = template_type.create(**kwargs)
         parent = kwargs.get("parent")
         if parent is not None:
@@ -378,13 +384,17 @@ class ADR:
         return template
 
     def get_report(self, **kwargs) -> Template:
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
         try:
             return Template.get(parent=None, **kwargs)
         except Exception as e:
             raise e
 
     def get_reports(
-        self, fields: Optional[list] = None, flat: bool = False
+        self, *, fields: Optional[list] = None, flat: bool = False
     ) -> Union[ObjectSet, list]:
         # return list of reports by default.
         # if fields are mentioned, return value list
@@ -397,7 +407,7 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, r_type: str = "name") -> Union[ObjectSet, list]:
+    def get_list_reports(self, *, r_type: str = "name") -> Union[ObjectSet, list]:
         supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
@@ -412,8 +422,12 @@ class ADR:
             return self.get_reports()
 
     def render_report(
-        self, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
+        self, *, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
     ) -> str:
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
         try:
             return Template.get(**kwargs).render(
                 request=self._request, context=context, item_filter=item_filter
@@ -424,6 +438,7 @@ class ADR:
     def query(
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        *,
         query: str = "",
         **kwargs: Any,
     ) -> ObjectSet:
@@ -482,6 +497,7 @@ class ADR:
         self,
         object_type: Union[Session, Dataset, Type[Item], Type[Template]],
         target_database: str,
+        *,
         query: str = "",
         target_media_dir: str = "",
         test: bool = False,
