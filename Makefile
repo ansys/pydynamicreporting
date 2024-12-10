@@ -31,8 +31,7 @@ test:
 	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
 
 smoketest:
-	python -c "from ansys.dynamicreporting.core import __version__; print(__version__)"
-	python -c "from ansys.dynamicreporting.core import Service"
+	python tests/smoketest.py
 
 clean:
 	rm -rf dist build
