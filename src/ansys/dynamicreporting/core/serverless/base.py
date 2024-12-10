@@ -358,6 +358,7 @@ class BaseModel(metaclass=BaseMeta):
             elif isinstance(value, Manager):
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
+                # todo: move this check to the metaclass
                 if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
                     raise TypeError(
                         f"The field '{attr}' in the dataclass must be a generic iterable"

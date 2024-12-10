@@ -171,7 +171,7 @@ class Template(BaseModel):
         self.item_filter += filter_str
 
     def get_params(self) -> dict:
-        return self.get_params()
+        return json.loads(self.params)
 
     def set_params(self, new_params: dict) -> None:
         if new_params is None:
