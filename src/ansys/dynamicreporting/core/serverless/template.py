@@ -37,7 +37,7 @@ class Template(BaseModel):
         super().__post_init__()
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__} object {self.name}"
+        return f"<{self.__class__.__name__}: {self.name}>"
 
     @property
     def type(self):

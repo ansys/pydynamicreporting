@@ -148,7 +148,7 @@ class BaseModel(metaclass=BaseMeta):
         return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__} object {self.guid}"
+        return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __post_init__(self):
         self._validate_field_types()
