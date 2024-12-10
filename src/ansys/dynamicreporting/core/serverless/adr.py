@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import copy
+from datetime import datetime
 import os
 from pathlib import Path
 import platform
@@ -160,7 +161,7 @@ class ADR:
 
     def _migrate_db(self, db):
         try:  # upgrade databases
-            management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
+            management.call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
         except Exception as e:
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
@@ -264,9 +265,13 @@ class ADR:
             raise GeometryMigrationError(extra_detail=str(e))
 
         # collect static files
-        if collect_static and self._static_directory is not None:
+        if collect_static:
+            if self._static_directory is None:
+                raise ImproperlyConfiguredError(
+                    "The 'static_directory' option must be specified to collect static files."
+                )
             try:
-                management.call_command("collectstatic", "--no-input", verbosity=0)
+                management.call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
@@ -276,6 +281,51 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+    def backup_database(
+        self, output_directory: str = ".", *, database: str = "default", compress=False
+    ) -> None:
+        if database != "default" and database not in self._databases:
+            raise ADRException(f"{database} must be configured first using the 'databases' option.")
+        target_dir = Path(output_directory).resolve(strict=True)
+        if not target_dir.is_dir():
+            raise InvalidPath(extra_detail=f"{output_directory} is not a valid directory.")
+        # call django management command to dump the database
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
+        try:
+            management.call_command(
+                "dumpdata",
+                "--all",
+                "--database",
+                database,
+                "--output",
+                str(file_path),
+                "--verbosity",
+                0,
+            )
+        except Exception as e:
+            raise ADRException(f"Backup failed: {e}")
+
+    def restore_database(self, input_file: str, *, database: str = "default") -> None:
+        if database != "default" and database not in self._databases:
+            raise ADRException(f"{database} must be configured first using the 'databases' option.")
+        backup_file = Path(input_file).resolve(strict=True)
+        if not backup_file.is_file():
+            raise InvalidPath(extra_detail=f"{input_file} is not a valid file.")
+        # call django management command to load the database
+        try:
+            management.call_command(
+                "loaddata",
+                str(backup_file),
+                "--database",
+                database,
+                "--ignorenonexistent",
+                "--verbosity",
+                0,
+            )
+        except Exception as e:
+            raise ADRException(f"Restore failed: {e}")
 
     @property
     def session(self) -> Session:
@@ -432,7 +482,6 @@ class ADR:
         self,
         object_type: Union[Session, Dataset, Type[Item], Type[Template]],
         target_database: str,
-        source_database: str = "default",
         query: str = "",
         target_media_dir: str = "",
         test: bool = False,
@@ -443,6 +492,8 @@ class ADR:
         GUIDs are preserved and any referenced session and dataset objects are copied as
         well.
         """
+        source_database = "default"  # todo: allow for source database to be specified
+
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
             raise TypeError(f"{object_type} is not valid")
 
