@@ -192,7 +192,7 @@ jobs:
         uses: jdcargile/ms-teams-notification@v1.4
         with:
           github-token: ${{ github.token }} # this will use the runner's token.
-          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
-          notification-summary: GitHub CI failure - ${{ github.event.pull_request.title }}
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
+          notification-summary: CI build failure - ${{ github.event.pull_request.title }}
           notification-color: dc3545
           timezone: America/New_York
