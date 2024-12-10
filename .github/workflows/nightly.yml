@@ -72,7 +72,7 @@ jobs:
   build-failure:
     name: Teams notify on failure
     if: failure()
-    needs: [ nightly_test, nightly_and_upload ]
+    needs: [ nightly_and_upload ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
