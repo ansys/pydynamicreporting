@@ -125,11 +125,11 @@ class ADR:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
     def _is_sqlite(self, database: str) -> bool:
-        return "sqlite" in self._databases[database]["ENGINE"]
+        return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
 
     def _get_db_dir(self, database: str) -> str:
         if self._is_sqlite(database):
-            return self._databases[database]["NAME"]
+            return self._databases.get(database, {}).get("NAME", "")
         return ""
 
     def _get_install_directory(self, ansys_installation: str) -> Path:
