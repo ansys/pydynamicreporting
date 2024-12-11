@@ -209,7 +209,8 @@ class FilePayloadMixin:
     def has_file(self):
         return self._file is not None
 
-    def get_file_path(self):
+    @property
+    def file_path(self):
         return self._orm_instance.payloadfile.path
 
     @classmethod
@@ -234,8 +235,7 @@ class FilePayloadMixin:
         # todo: check backward compatibility: _movie is now _anim.
         self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
         # Save file to the target path
-        target_path = self.get_file_path()
-        self._save_file(target_path, self._file)
+        self._save_file(self.file_path, self._file)
         # save ORM instance
         super().save(**kwargs)
 
@@ -419,14 +419,13 @@ class Image(FilePayloadMixin, Item):
         target_ext = "png" if not self._enhanced else self._file_ext
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
         # Save the image
-        target_path = self.get_file_path()
         if target_ext == "png" and self._file_ext != target_ext:
             try:
-                image.save(target_path, format="PNG")
+                image.save(self.file_path, format="PNG")
             except OSError as e:
                 print(f"Error converting image to PNG: {e}")
         else:  # save image as is (if enhanced or already PNG)
-            self._save_file(target_path, img_bytes)
+            self._save_file(self.file_path, img_bytes)
         image.close()
         super().save(**kwargs)
 
@@ -442,9 +441,8 @@ class Scene(FilePayloadMixin, Item):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        file_name = self.get_file_path()
-        if not Path(get_avz_directory(file_name)).exists():
-            rebuild_3d_geometry(file_name)
+        if not Path(get_avz_directory(self.file_path)).exists():
+            rebuild_3d_geometry(self.file_path)
 
 
 class File(FilePayloadMixin, Item):
@@ -453,6 +451,8 @@ class File(FilePayloadMixin, Item):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        file_name = self.get_file_path()
-        if file_is_3d_geometry(file_name) and not Path(get_avz_directory(file_name)).exists():
-            rebuild_3d_geometry(file_name)
+        if (
+            file_is_3d_geometry(self.file_path)
+            and not Path(get_avz_directory(self.file_path)).exists()
+        ):
+            rebuild_3d_geometry(self.file_path)
