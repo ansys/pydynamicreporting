@@ -236,8 +236,7 @@ class FilePayloadMixin:
         # Save file to the target path
         target_path = self.get_file_path()
         self._save_file(target_path, self._file)
-        # Update content and save ORM instance
-        self.content = target_path
+        # save ORM instance
         super().save(**kwargs)
 
     def delete(self, **kwargs):
