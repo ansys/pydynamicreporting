@@ -41,6 +41,8 @@ class ADR:
         databases: Optional[dict] = None,
         media_directory: Optional[str] = None,
         static_directory: Optional[str] = None,
+        media_url: Optional[str] = None,
+        static_url: Optional[str] = None,
         debug: Optional[bool] = None,
         opts: Optional[dict] = None,
         request: Optional[HttpRequest] = None,
@@ -50,6 +52,8 @@ class ADR:
         self._databases = databases or {}
         self._media_directory = None
         self._static_directory = None
+        self._media_url = media_url
+        self._static_url = static_url
         self._debug = debug
         self._request = request  # passed when used in the context of a webserver.
         self._session = None
@@ -119,6 +123,14 @@ class ADR:
             os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+    def _is_sqlite(self, database: str) -> bool:
+        return "sqlite" in self._databases[database]["ENGINE"]
+
+    def _get_db_dir(self, database: str) -> str:
+        if self._is_sqlite(database):
+            return self._databases[database]["NAME"]
+        return ""
 
     def _get_install_directory(self, ansys_installation: str) -> Path:
         dirs_to_check = []
@@ -208,6 +220,26 @@ class ADR:
 
         if self._static_directory is not None:
             overrides["STATIC_ROOT"] = str(self._static_directory)
+
+        # relative URLs: By default, ADR serves static files from the URL /static/
+        # and media files from the URL /media/. These can be changed using the
+        # static_url and media_url options. URLs must be relative and start and end with
+        # a forward slash.
+        if self._media_url is not None:
+            if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
+                raise ImproperlyConfiguredError(
+                    "The 'media_url' option must be a relative URL and start and end with a forward slash."
+                    " Example: '/media/'"
+                )
+            overrides["MEDIA_URL"] = self._media_url
+
+        if self._static_url is not None:
+            if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
+                raise ImproperlyConfiguredError(
+                    "The 'static_url' option must be a relative URL and start and end with a forward slash."
+                    " Example: '/static/'"
+                )
+            overrides["STATIC_URL"] = self._static_url
 
         if self._databases:
             if "default" not in self._databases:
@@ -461,14 +493,6 @@ class ADR:
             obj.save(**kwargs)
             count += 1
         return count
-
-    def _is_sqlite(self, database: str) -> bool:
-        return "sqlite" in self._databases[database]["ENGINE"]
-
-    def _get_db_dir(self, database: str) -> str:
-        if self._is_sqlite(database):
-            return self._databases[database]["NAME"]
-        return ""
 
     def _copy_template(self, template: Template, **kwargs) -> Template:
         # depth-first walk down from the root, which is 'template',
