@@ -60,9 +60,12 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
-      # 1. build the wheel
-      # 2. install the wheel
-      # 3. run the smoke tests
+
+      - name: Install library
+        run: python --version && python -m pip install ${{ env.install_target }}
+
+      - name: Run smoketest
+        run: make smoketest
 
   test:
     name: Testing
