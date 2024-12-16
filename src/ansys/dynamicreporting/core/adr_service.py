@@ -599,14 +599,14 @@ class Service:
             # If coming from a docker image, clean that up
             try:
                 if self._container:
-                    self.logger.info("Told service Container to shutdown.\n")
+                    self.logger.info("Shutting down container.\n")
                     self._container.stop()
                     self._container = None
                 else:
-                    self.logger.info("Told service to shutdown.\n")
+                    self.logger.info("Shutting down service.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.error(f"Problem shutting down service.\n{str(e)}\n")
+                self.logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
                 pass
 
         if self._delete_db and self._db_directory:
