@@ -36,6 +36,9 @@ class Template(BaseModel):
             raise TypeError("Cannot instantiate Template directly. Use Template.create()")
         super().__post_init__()
 
+    def __str__(self) -> str:
+        return f"<{self.__class__.__name__}: {self.name}>"
+
     @property
     def type(self):
         return self.report_type
@@ -59,12 +62,18 @@ class Template(BaseModel):
             raise Template.NotSaved(
                 extra_detail="Failed to save template because its parent is not saved"
             )
+        children_order = []
         for child in self.children:
+            if not isinstance(child, Template):
+                raise TypeError(
+                    f"Failed to save template because child '{child}' is not a Template object"
+                )
             if not child._saved:
                 raise Template.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
-        self._children_order = ",".join([str(child.guid) for child in self.children])
+            children_order.append(str(child.guid))
+        self._children_order = ",".join(children_order)
         self._master = self.parent is None
         # set properties
         prop_dict = {}
@@ -135,7 +144,8 @@ class Template(BaseModel):
             raise ADRException(
                 extra_detail="The 't_types' filter is not required if using a subclass of Template"
             )
-        return super().find(query=f"A|t_types|cont|{cls.report_type};{query}", **kwargs)
+        query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
+        return super().find(query=query_string, **kwargs)
 
     def reorder_children(self) -> None:
         guid_to_child = {str(child.guid): child for child in self.children}
@@ -152,12 +162,12 @@ class Template(BaseModel):
 
     def set_filter(self, filter_str):
         if not isinstance(filter_str, str):
-            raise TypeError("Error: filter value should be a string")
+            raise TypeError("filter value should be a string")
         self.item_filter = filter_str
 
     def add_filter(self, filter_str=""):
         if not isinstance(filter_str, str):
-            raise TypeError("Error: filter value should be a string")
+            raise TypeError("filter value should be a string")
         self.item_filter += filter_str
 
     def get_params(self) -> dict:
@@ -167,41 +177,81 @@ class Template(BaseModel):
         if new_params is None:
             new_params = {}
         if not isinstance(new_params, dict):
-            raise TypeError("Error: input must be a dictionary")
+            raise TypeError("input must be a dictionary")
         self.params = json.dumps(new_params)
 
     def add_params(self, new_params: dict):
         if new_params is None:
             new_params = {}
         if not isinstance(new_params, dict):
-            raise TypeError("Error: input must be a dictionary")
-        curr_params = json.loads(self.params)
-        self.params = json.dumps(curr_params | new_params)
+            raise TypeError("input must be a dictionary")
+        curr_params = self.get_params()
+        self.set_params(curr_params | new_params)
 
     def get_property(self):
-        params = json.loads(self.params)
-        return params.get("properties", {})
+        return self.get_params().get("properties", {})
 
     def set_property(self, new_props: dict):
         if new_props is None:
             new_props = {}
         if not isinstance(new_props, dict):
-            raise TypeError("Error: input must be a dictionary")
-        params = json.loads(self.params)
+            raise TypeError("input must be a dictionary")
+        params = self.get_params()
         params["properties"] = new_props
-        self.params = json.dumps(params)
+        self.set_params(params)
 
     def add_property(self, new_props: dict):
         if new_props is None:
             new_props = {}
         if not isinstance(new_props, dict):
-            raise TypeError("Error: input must be a dictionary")
-        params = json.loads(self.params)
+            raise TypeError("input must be a dictionary")
+        params = self.get_params()
         curr_props = params.get("properties", {})
         params["properties"] = curr_props | new_props
-        self.params = json.dumps(params)
+        self.set_params(params)
 
-    def render(self, context=None, request=None, query="") -> str:
+    def get_sort_fields(self):
+        return self.get_params().get("sort_fields", [])
+
+    def set_sort_fields(self, sort_field):
+        if not isinstance(sort_field, list):
+            raise ValueError("sorting filter is not a list")
+        params = self.get_params()
+        params["sort_fields"] = sort_field
+        self.set_params(params)
+
+    def add_sort_fields(self, sort_field):
+        if not isinstance(sort_field, list):
+            raise ValueError("sorting filter is not a list")
+        params = self.get_params()
+        params["sort_fields"].extend(sort_field)
+        self.set_params(params)
+
+    def get_sort_selection(self):
+        return self.get_params().get("sort_selection", "")
+
+    def set_sort_selection(self, value="all"):
+        if not isinstance(value, str):
+            raise ValueError("sort selection input should be a string")
+        if value not in ("all", "first", "last"):
+            raise ValueError("sort selection not among the acceptable inputs")
+        params = self.get_params()
+        params["sort_selection"] = value
+        self.set_params(params)
+
+    def get_filter_mode(self):
+        return self.get_params().get("filter_type", "items")
+
+    def set_filter_mode(self, value="items"):
+        if not isinstance(value, str):
+            raise ValueError("filter mode input should be a string")
+        if value not in ("items", "root_replace", "root_append"):
+            raise ValueError("filter mode not among the acceptable inputs")
+        params = self.get_params()
+        params["filter_type"] = value
+        self.set_params(params)
+
+    def render(self, context=None, request=None, item_filter="") -> str:
         if context is None:
             context = {}
         ctx = {**context, "request": request, "ansys_version": None}
@@ -211,7 +261,7 @@ class Template(BaseModel):
 
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
-            items = Item.find(query=query)
+            items = Item.find(query=item_filter)
             # properties that can change during iteration need to go on the class as well as globals
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
@@ -228,7 +278,71 @@ class Template(BaseModel):
 
 
 class Layout(Template):
-    pass
+    def get_column_count(self):
+        return self.get_params().get("column_count", 1)
+
+    def set_column_count(self, value):
+        if not isinstance(value, int):
+            raise ValueError("column count input should be an integer")
+        if value <= 0:
+            raise ValueError("column count input should be larger than 0")
+        params = self.get_params()
+        params["column_count"] = value
+        self.set_params(params)
+
+    def get_column_widths(self):
+        return self.get_params().get("column_widths", [1.0])
+
+    def set_column_widths(self, value):
+        if not isinstance(value, list):
+            raise ValueError("column widths input should be a list")
+        if not all(isinstance(x, (int, float)) for x in value):
+            raise ValueError("column widths input should be a list of integers or floats")
+        if not all(x > 0 for x in value):
+            raise ValueError("column widths input should be larger than 0")
+        params = self.get_params()
+        params["column_widths"] = value
+        self.set_params(params)
+
+    def get_html(self):
+        return self.get_params().get("HTML", "")
+
+    def set_html(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("input needs to be a string")
+        params = self.get_params()
+        params["HTML"] = value
+        self.set_params(params)
+
+    def get_comments(self):
+        return self.get_params().get("comments", "")
+
+    def set_comments(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("input needs to be a string")
+        params = self.get_params()
+        params["comments"] = value
+        self.set_params(params)
+
+    def get_transpose(self):
+        return self.get_params().get("transpose", 0)
+
+    def set_transpose(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("input needs to be an integer")
+        params = self.get_params()
+        params["transpose"] = value
+        self.set_params(params)
+
+    def get_skip(self):
+        return self.get_params().get("skip_empty", 0)
+
+    def set_skip(self, value=0):
+        if not isinstance(value, int) or value not in (0, 1):
+            raise ValueError("input needs to be an integer (0 or 1)")
+        params = self.get_params()
+        params["skip_empty"] = value
+        self.set_params(params)
 
 
 class BasicLayout(Layout):
@@ -296,7 +410,27 @@ class UserDefinedLayout(Layout):
 
 
 class Generator(Template):
-    pass
+    def get_generated_items(self):
+        return self.get_params().get("generate_merge", "add")
+
+    def set_generated_items(self, value):
+        if not isinstance(value, str):
+            raise ValueError("generated items should be a string")
+        if value not in ("add", "replace"):
+            raise ValueError("input should be add or replace")
+        params = self.get_params()
+        params["generate_merge"] = value
+        self.set_params(params)
+
+    def get_append_tags(self):
+        return self.get_params().get("generate_appendtags", True)
+
+    def set_append_tags(self, value=True):
+        if not isinstance(value, bool):
+            raise ValueError("value should be True / False")
+        params = self.get_params()
+        params["generate_appendtags"] = value
+        self.set_params(params)
 
 
 class TableMergeGenerator(Generator):

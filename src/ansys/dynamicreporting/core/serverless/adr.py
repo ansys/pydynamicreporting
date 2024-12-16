@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import copy
+from datetime import datetime
 import os
 from pathlib import Path
 import platform
@@ -40,6 +41,8 @@ class ADR:
         databases: Optional[dict] = None,
         media_directory: Optional[str] = None,
         static_directory: Optional[str] = None,
+        media_url: Optional[str] = None,
+        static_url: Optional[str] = None,
         debug: Optional[bool] = None,
         opts: Optional[dict] = None,
         request: Optional[HttpRequest] = None,
@@ -49,6 +52,8 @@ class ADR:
         self._databases = databases or {}
         self._media_directory = None
         self._static_directory = None
+        self._media_url = media_url
+        self._static_url = static_url
         self._debug = debug
         self._request = request  # passed when used in the context of a webserver.
         self._session = None
@@ -79,6 +84,14 @@ class ADR:
                         # And make a target file (.nexdb) for auto launching of the report viewer...
                         with open(self._db_directory / "view_report.nexdb", "w") as f:
                             f.write(secret_key)
+                else:
+                    # check if there is a sqlite db in the directory
+                    db_files = list(self._db_directory.glob("*.sqlite3"))
+                    if not db_files:
+                        raise InvalidPath(
+                            extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
+                            " you would like to create a new database."
+                        )
 
                 os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
@@ -110,6 +123,14 @@ class ADR:
             os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+    def _is_sqlite(self, database: str) -> bool:
+        return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
+
+    def _get_db_dir(self, database: str) -> str:
+        if self._is_sqlite(database):
+            return self._databases.get(database, {}).get("NAME", "")
+        return ""
 
     def _get_install_directory(self, ansys_installation: str) -> Path:
         dirs_to_check = []
@@ -152,7 +173,7 @@ class ADR:
 
     def _migrate_db(self, db):
         try:  # upgrade databases
-            management.call_command("migrate", "--no-input", "--database", db, verbosity=0)
+            management.call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
         except Exception as e:
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
@@ -199,6 +220,26 @@ class ADR:
 
         if self._static_directory is not None:
             overrides["STATIC_ROOT"] = str(self._static_directory)
+
+        # relative URLs: By default, ADR serves static files from the URL /static/
+        # and media files from the URL /media/. These can be changed using the
+        # static_url and media_url options. URLs must be relative and start and end with
+        # a forward slash.
+        if self._media_url is not None:
+            if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
+                raise ImproperlyConfiguredError(
+                    "The 'media_url' option must be a relative URL and start and end with a forward slash."
+                    " Example: '/media/'"
+                )
+            overrides["MEDIA_URL"] = self._media_url
+
+        if self._static_url is not None:
+            if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
+                raise ImproperlyConfiguredError(
+                    "The 'static_url' option must be a relative URL and start and end with a forward slash."
+                    " Example: '/static/'"
+                )
+            overrides["STATIC_URL"] = self._static_url
 
         if self._databases:
             if "default" not in self._databases:
@@ -256,9 +297,13 @@ class ADR:
             raise GeometryMigrationError(extra_detail=str(e))
 
         # collect static files
-        if collect_static and self._static_directory is not None:
+        if collect_static:
+            if self._static_directory is None:
+                raise ImproperlyConfiguredError(
+                    "The 'static_directory' option must be specified to collect static files."
+                )
             try:
-                management.call_command("collectstatic", "--no-input", verbosity=0)
+                management.call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
@@ -268,6 +313,51 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+    def backup_database(
+        self, output_directory: str = ".", *, database: str = "default", compress=False
+    ) -> None:
+        if database != "default" and database not in self._databases:
+            raise ADRException(f"{database} must be configured first using the 'databases' option.")
+        target_dir = Path(output_directory).resolve(strict=True)
+        if not target_dir.is_dir():
+            raise InvalidPath(extra_detail=f"{output_directory} is not a valid directory.")
+        # call django management command to dump the database
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
+        try:
+            management.call_command(
+                "dumpdata",
+                "--all",
+                "--database",
+                database,
+                "--output",
+                str(file_path),
+                "--verbosity",
+                0,
+            )
+        except Exception as e:
+            raise ADRException(f"Backup failed: {e}")
+
+    def restore_database(self, input_file: str, *, database: str = "default") -> None:
+        if database != "default" and database not in self._databases:
+            raise ADRException(f"{database} must be configured first using the 'databases' option.")
+        backup_file = Path(input_file).resolve(strict=True)
+        if not backup_file.is_file():
+            raise InvalidPath(extra_detail=f"{input_file} is not a valid file.")
+        # call django management command to load the database
+        try:
+            management.call_command(
+                "loaddata",
+                str(backup_file),
+                "--database",
+                database,
+                "--ignorenonexistent",
+                "--verbosity",
+                0,
+            )
+        except Exception as e:
+            raise ADRException(f"Restore failed: {e}")
 
     @property
     def session(self) -> Session:
@@ -303,11 +393,21 @@ class ADR:
     def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
-        return item_type.create(session=self._session, dataset=self._dataset, **kwargs)
+        if not kwargs:
+            raise ADRException("At least one keyword argument must be provided to create the item.")
+        return item_type.create(
+            session=kwargs.pop("session", self._session),
+            dataset=kwargs.pop("dataset", self._dataset),
+            **kwargs,
+        )
 
     def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to create the template."
+            )
         template = template_type.create(**kwargs)
         parent = kwargs.get("parent")
         if parent is not None:
@@ -316,13 +416,17 @@ class ADR:
         return template
 
     def get_report(self, **kwargs) -> Template:
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
         try:
             return Template.get(parent=None, **kwargs)
         except Exception as e:
             raise e
 
     def get_reports(
-        self, fields: Optional[list] = None, flat: bool = False
+        self, *, fields: Optional[list] = None, flat: bool = False
     ) -> Union[ObjectSet, list]:
         # return list of reports by default.
         # if fields are mentioned, return value list
@@ -335,19 +439,30 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, r_type: str = "name") -> Union[ObjectSet, list]:
+    def get_list_reports(self, *, r_type: str = "name") -> Union[ObjectSet, list]:
         supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
         if r_type == "name":
-            return self.get_reports([r_type], flat=True)
+            return self.get_reports(
+                fields=[
+                    r_type,
+                ],
+                flat=True,
+            )
         else:
             return self.get_reports()
 
-    def render_report(self, context: Optional[dict] = None, query: str = "", **kwargs: Any) -> str:
+    def render_report(
+        self, *, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
+    ) -> str:
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
         try:
             return Template.get(**kwargs).render(
-                request=self._request, context=context, query=query
+                request=self._request, context=context, item_filter=item_filter
             )
         except Exception as e:
             raise e
@@ -355,6 +470,7 @@ class ADR:
     def query(
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        *,
         query: str = "",
         **kwargs: Any,
     ) -> ObjectSet:
@@ -362,8 +478,8 @@ class ADR:
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query, **kwargs)
 
-    @staticmethod
     def create_objects(
+        self,
         objects: Union[list, ObjectSet],
         **kwargs: Any,
     ) -> int:
@@ -378,20 +494,13 @@ class ADR:
             count += 1
         return count
 
-    def _is_sqlite(self, database: str) -> bool:
-        return "sqlite" in self._databases[database]["ENGINE"]
-
-    def _get_db_dir(self, database: str) -> str:
-        if self._is_sqlite(database):
-            return self._databases[database]["NAME"]
-        return ""
-
     def _copy_template(self, template: Template, **kwargs) -> Template:
         # depth-first walk down from the root, which is 'template',
         # and copy the children along the way.
         out_template = copy.deepcopy(template)
         if out_template.parent is not None:
             parent = out_template.parent
+            # parents are always copied first, so they should exist
             out_template.parent = Template.get(
                 guid=parent.guid, using=kwargs.get("using", "default")
             )
@@ -412,7 +521,7 @@ class ADR:
         self,
         object_type: Union[Session, Dataset, Type[Item], Type[Template]],
         target_database: str,
-        source_database: str = "default",
+        *,
         query: str = "",
         target_media_dir: str = "",
         test: bool = False,
@@ -423,12 +532,14 @@ class ADR:
         GUIDs are preserved and any referenced session and dataset objects are copied as
         well.
         """
+        source_database = "default"  # todo: allow for source database to be specified
+
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
             raise TypeError(f"{object_type} is not valid")
 
         if target_database not in self._databases or source_database not in self._databases:
             raise ADRException(
-                f"'{source_database}' and '{target_database}' must be configured first"
+                f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."
             )
 
         objects = self.query(object_type, query=query)
