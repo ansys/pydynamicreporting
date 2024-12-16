@@ -145,10 +145,10 @@ class BaseModel(metaclass=BaseMeta):
     )  # tracks the corresponding ORM instance
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
+        return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__} object {self.guid}"
+        return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __post_init__(self):
         self._validate_field_types()
@@ -358,6 +358,7 @@ class BaseModel(metaclass=BaseMeta):
             elif isinstance(value, Manager):
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
+                # todo: move this check to the metaclass
                 if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
                     raise TypeError(
                         f"The field '{attr}' in the dataclass must be a generic iterable"

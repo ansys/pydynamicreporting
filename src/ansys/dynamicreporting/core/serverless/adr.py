@@ -41,6 +41,8 @@ class ADR:
         databases: Optional[dict] = None,
         media_directory: Optional[str] = None,
         static_directory: Optional[str] = None,
+        media_url: Optional[str] = None,
+        static_url: Optional[str] = None,
         debug: Optional[bool] = None,
         opts: Optional[dict] = None,
         request: Optional[HttpRequest] = None,
@@ -50,6 +52,8 @@ class ADR:
         self._databases = databases or {}
         self._media_directory = None
         self._static_directory = None
+        self._media_url = media_url
+        self._static_url = static_url
         self._debug = debug
         self._request = request  # passed when used in the context of a webserver.
         self._session = None
@@ -119,6 +123,14 @@ class ADR:
             os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+    def _is_sqlite(self, database: str) -> bool:
+        return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
+
+    def _get_db_dir(self, database: str) -> str:
+        if self._is_sqlite(database):
+            return self._databases.get(database, {}).get("NAME", "")
+        return ""
 
     def _get_install_directory(self, ansys_installation: str) -> Path:
         dirs_to_check = []
@@ -208,6 +220,26 @@ class ADR:
 
         if self._static_directory is not None:
             overrides["STATIC_ROOT"] = str(self._static_directory)
+
+        # relative URLs: By default, ADR serves static files from the URL /static/
+        # and media files from the URL /media/. These can be changed using the
+        # static_url and media_url options. URLs must be relative and start and end with
+        # a forward slash.
+        if self._media_url is not None:
+            if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
+                raise ImproperlyConfiguredError(
+                    "The 'media_url' option must be a relative URL and start and end with a forward slash."
+                    " Example: '/media/'"
+                )
+            overrides["MEDIA_URL"] = self._media_url
+
+        if self._static_url is not None:
+            if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
+                raise ImproperlyConfiguredError(
+                    "The 'static_url' option must be a relative URL and start and end with a forward slash."
+                    " Example: '/static/'"
+                )
+            overrides["STATIC_URL"] = self._static_url
 
         if self._databases:
             if "default" not in self._databases:
@@ -361,6 +393,8 @@ class ADR:
     def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
+        if not kwargs:
+            raise ADRException("At least one keyword argument must be provided to create the item.")
         return item_type.create(
             session=kwargs.pop("session", self._session),
             dataset=kwargs.pop("dataset", self._dataset),
@@ -370,6 +404,10 @@ class ADR:
     def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to create the template."
+            )
         template = template_type.create(**kwargs)
         parent = kwargs.get("parent")
         if parent is not None:
@@ -378,13 +416,17 @@ class ADR:
         return template
 
     def get_report(self, **kwargs) -> Template:
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
         try:
             return Template.get(parent=None, **kwargs)
         except Exception as e:
             raise e
 
     def get_reports(
-        self, fields: Optional[list] = None, flat: bool = False
+        self, *, fields: Optional[list] = None, flat: bool = False
     ) -> Union[ObjectSet, list]:
         # return list of reports by default.
         # if fields are mentioned, return value list
@@ -397,7 +439,7 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, r_type: str = "name") -> Union[ObjectSet, list]:
+    def get_list_reports(self, *, r_type: str = "name") -> Union[ObjectSet, list]:
         supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
@@ -412,8 +454,12 @@ class ADR:
             return self.get_reports()
 
     def render_report(
-        self, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
+        self, *, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
     ) -> str:
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
         try:
             return Template.get(**kwargs).render(
                 request=self._request, context=context, item_filter=item_filter
@@ -424,6 +470,7 @@ class ADR:
     def query(
         self,
         query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        *,
         query: str = "",
         **kwargs: Any,
     ) -> ObjectSet:
@@ -446,14 +493,6 @@ class ADR:
             obj.save(**kwargs)
             count += 1
         return count
-
-    def _is_sqlite(self, database: str) -> bool:
-        return "sqlite" in self._databases[database]["ENGINE"]
-
-    def _get_db_dir(self, database: str) -> str:
-        if self._is_sqlite(database):
-            return self._databases[database]["NAME"]
-        return ""
 
     def _copy_template(self, template: Template, **kwargs) -> Template:
         # depth-first walk down from the root, which is 'template',
@@ -482,6 +521,7 @@ class ADR:
         self,
         object_type: Union[Session, Dataset, Type[Item], Type[Template]],
         target_database: str,
+        *,
         query: str = "",
         target_media_dir: str = "",
         test: bool = False,
