@@ -287,10 +287,22 @@ def test_vis_report_filtered(adr_service_query) -> bool:
     assert success is True
 
 
-def test_vis_not_running(adr_service_create) -> bool:
+def test_vis_not_running(request, get_exec) -> bool:
     success = False
     try:
-        adr_service_create.visualize_report()
+        db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+        if get_exec != "":
+            tmp_adr = Service(
+                ansys_installation=get_exec,
+                db_directory=db_dir,
+            )
+        else:
+            tmp_adr = Service(
+                ansys_installation="docker",
+                docker_image=DOCKER_DEV_REPO_URL,
+                db_directory=db_dir,
+            )
+        tmp_adr.visualize_report()
     except ConnectionToServiceError:
         success = True
     assert success

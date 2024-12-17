@@ -74,7 +74,7 @@ def test_start_stop(request, get_exec) -> bool:
         )
         _ = r.validate_local_db(db_dir=db_dir, version_check=True)
         r.stop_background_local_server(server_dirname=db_dir)
-        # r.delete_database(db_dir=db_dir)
+        r.delete_database(db_dir=db_dir)
     except Exception:
         succ = False
     assert succ
@@ -343,5 +343,5 @@ def test_acls_start(request, get_exec) -> bool:
         parent=None, directory=db_dir, raise_exception=False, aa=True
     )
     succ_three = not r.launch_local_database_server(parent=None, directory=db_dir, acls=True)
-    # r.delete_database(db_dir=db_dir)
+    r.delete_database(db_dir=db_dir)
     assert succ and succ_two and succ_three
