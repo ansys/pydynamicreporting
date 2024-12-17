@@ -71,6 +71,10 @@ ci =  "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+]
+test-extra = [
     "docker>=7.1.0",
     "psutil==6.0.0",
     "exceptiongroup==1.0.0",
