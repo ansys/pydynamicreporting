@@ -988,13 +988,10 @@ class Server:
             name=attr["name"], parent=parent_template, report_type=attr["report_type"]
         )
         template.set_params(attr["params"])
-        template.set_property(property=attr["property"])
-        template.set_sort_fields(attr["sort_fields"])
         if attr["sort_selection"] != "":
             template.set_sort_selection(value=attr["sort_selection"])
         template.set_tags(attr["tags"])
         template.set_filter(filter_str=attr["item_filter"])
-        template.set_filter_mode(value=attr["filter_mode"])
 
         return template
 
@@ -1059,11 +1056,8 @@ def _build_template_data(guid, templates_data, templates, template_guid_id_map):
         "date": curr_template.date,
         "tags": curr_template.tags,
         "params": curr_template.get_params(),
-        "property": curr_template.get_property(),
-        "sort_fields": curr_template.get_sort_fields(),
         "sort_selection": curr_template.get_sort_selection(),
         "item_filter": curr_template.item_filter,
-        "filter_mode": curr_template.get_filter_mode(),
     }
     if curr_template.parent is None:
         templates_data[curr_template_key]["parent"] = None
