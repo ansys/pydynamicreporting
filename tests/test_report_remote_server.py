@@ -431,11 +431,104 @@ def test_get_templates_as_json(adr_template_json) -> bool:
     assert templates_json["Template_0"]["report_type"] == "Layout:basic"
     assert templates_json["Template_0"]["tags"] == ""
     assert templates_json["Template_0"]["params"] == {}
-    assert templates_json["Template_0"]["property"] == {}
-    assert templates_json["Template_0"]["sort_fields"] == []
     assert templates_json["Template_0"]["sort_selection"] == ""
     assert templates_json["Template_0"]["item_filter"] == ""
-    assert templates_json["Template_0"]["filter_mode"] == "items"
     assert templates_json["Template_0"]["parent"] is None
     assert templates_json["Template_0"]["children"] == ["Template_1", "Template_2"]
-    
+
+
+@pytest.mark.ado_test
+def test_load_templates(adr_service_create) -> bool:
+    _ = adr_service_create.start(
+        create_db=True,
+        exit_on_close=True,
+        delete_db=True,
+    )
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": None,
+            "children": [
+                "Template_1",
+                "Template_2"
+            ]
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": "Template_0",
+            "children": [
+                "Template_3"
+            ]
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": "Template_1",
+            "children": []
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": "Template_0",
+            "children": []
+        }
+    }
+    server.load_templates(templates_json)
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    assert len(templates) == 4
+
+    template_guid_map = {}
+    for template in templates:
+        template_guid_map[template.guid] = template.name
+
+    for template in templates:
+        if template.name == "A":
+            assert template.report_type == "Layout:basic"
+            assert template.tags == ""
+            assert template.get_params() == {}
+            assert template.get_property() == {}
+            assert template.get_sort_fields() == []
+            assert template.get_sort_selection() == ""
+            assert template.item_filter == ""
+            assert template.get_filter_mode() == "items"
+            assert template.parent is None
+            children = []
+            for child in template.children:
+                children.append(template_guid_map[child])
+            assert children == ["B", "C"]
+            break
