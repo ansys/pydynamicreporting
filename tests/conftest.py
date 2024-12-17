@@ -14,7 +14,7 @@ def pytest_addoption(parser):
     parser.addoption("--install-path", action="store", default="dev.json")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def get_exec(pytestconfig: pytest.Config) -> str:
     exec_basis = ""
     use_local = pytestconfig.getoption("use_local_launcher")
@@ -23,7 +23,7 @@ def get_exec(pytestconfig: pytest.Config) -> str:
     return exec_basis
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
     dir_name = "auto_delete_" + "".join(choice(ascii_letters) for x in range(5))
@@ -56,7 +56,7 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
     adr_service.stop()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
     local_db = os.path.join("test_data", "query_db")
