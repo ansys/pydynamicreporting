@@ -15,7 +15,7 @@ def pytest_addoption(parser):
     parser.addoption("--install-path", action="store", default="dev.json")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def get_exec(pytestconfig: pytest.Config) -> str:
     exec_basis = ""
     use_local = pytestconfig.getoption("use_local_launcher")
@@ -24,7 +24,7 @@ def get_exec(pytestconfig: pytest.Config) -> str:
     return exec_basis
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def adr_service_create(pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
 
@@ -62,7 +62,7 @@ def adr_service_create(pytestconfig: pytest.Config) -> Service:
     adr_service.stop()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def adr_service_query(pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
 
