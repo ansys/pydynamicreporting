@@ -416,6 +416,7 @@ def test_acls_start(request, get_exec) -> bool:
     r.delete_database(db_dir=db_dir)
     assert succ and succ_two and succ_three
 
+
 @pytest.mark.ado_test
 def test_get_templates_as_json(adr_template_json) -> bool:
     server = adr_template_json.serverobj
@@ -458,10 +459,7 @@ def test_load_templates(adr_service_create) -> bool:
             "item_filter": "",
             "filter_mode": "items",
             "parent": None,
-            "children": [
-                "Template_1",
-                "Template_2"
-            ]
+            "children": ["Template_1", "Template_2"],
         },
         "Template_1": {
             "name": "B",
@@ -475,9 +473,7 @@ def test_load_templates(adr_service_create) -> bool:
             "item_filter": "",
             "filter_mode": "items",
             "parent": "Template_0",
-            "children": [
-                "Template_3"
-            ]
+            "children": ["Template_3"],
         },
         "Template_3": {
             "name": "D",
@@ -491,7 +487,7 @@ def test_load_templates(adr_service_create) -> bool:
             "item_filter": "",
             "filter_mode": "items",
             "parent": "Template_1",
-            "children": []
+            "children": [],
         },
         "Template_2": {
             "name": "C",
@@ -505,8 +501,8 @@ def test_load_templates(adr_service_create) -> bool:
             "item_filter": "",
             "filter_mode": "items",
             "parent": "Template_0",
-            "children": []
-        }
+            "children": [],
+        },
     }
     server.load_templates(templates_json)
     templates = server.get_objects(objtype=ro.TemplateREST)
