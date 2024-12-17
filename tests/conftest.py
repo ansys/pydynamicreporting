@@ -93,3 +93,29 @@ def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
         tmp_service._container.save_config()
     tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)
     return tmp_service
+
+
+@pytest.fixture
+def adr_template_json(request, pytestconfig: pytest.Config) -> Service:
+    use_local = pytestconfig.getoption("use_local_launcher")
+    local_db = os.path.join("test_data", "template_json")
+    db_dir = os.path.join(request.fspath.dirname, local_db)
+    tmp_docker_dir = os.path.join(
+        os.path.join(request.fspath.dirname, "test_data"), "tmp_docker_json"
+    )
+    if use_local:
+        ansys_installation = pytestconfig.getoption("install_path")
+    else:
+        cleanup_docker(request)
+        ansys_installation = "docker"
+    tmp_service = Service(
+        ansys_installation=ansys_installation,
+        docker_image=DOCKER_DEV_REPO_URL,
+        db_directory=db_dir,
+        data_directory=tmp_docker_dir,
+        port=8000 + int(random() * 4000),
+    )
+    if not use_local:
+        tmp_service._container.save_config()
+    tmp_service.start(create_db=False, exit_on_close=True, delete_db=False)
+    return tmp_service
