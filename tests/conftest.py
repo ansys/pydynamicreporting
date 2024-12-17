@@ -1,5 +1,6 @@
 """Global fixtures go here."""
-import os
+
+from pathlib import Path
 from random import choice, random
 from string import ascii_letters
 
@@ -14,7 +15,7 @@ def pytest_addoption(parser):
     parser.addoption("--install-path", action="store", default="dev.json")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def get_exec(pytestconfig: pytest.Config) -> str:
     exec_basis = ""
     use_local = pytestconfig.getoption("use_local_launcher")
@@ -23,25 +24,29 @@ def get_exec(pytestconfig: pytest.Config) -> str:
     return exec_basis
 
 
-@pytest.fixture(scope="module")
-def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
+@pytest.fixture(scope="session")
+def adr_service_create(pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
-    dir_name = "auto_delete_" + "".join(choice(ascii_letters) for x in range(5))
-    db_dir = os.path.join(os.path.join(request.fspath.dirname, "test_data"), dir_name)
-    tmp_docker_dir = os.path.join(os.path.join(request.fspath.dirname, "test_data"), "tmp_docker")
+
+    # Paths setup
+    base_dir = Path(__file__).parent / "test_data"
+    dir_name = "auto_delete_" + "".join(choice(ascii_letters) for _ in range(5))
+    db_dir = base_dir / dir_name
+    tmp_docker_dir = base_dir / "tmp_docker"
+
     if use_local:
         adr_service = Service(
             ansys_installation=pytestconfig.getoption("install_path"),
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=8000 + int(random() * 4000),
         )
     else:
         adr_service = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
-            data_directory=tmp_docker_dir,
+            db_directory=str(db_dir),
+            data_directory=str(tmp_docker_dir),
             port=8000 + int(random() * 4000),
         )
 
@@ -50,35 +55,41 @@ def adr_service_create(request, pytestconfig: pytest.Config) -> Service:
         exit_on_close=True,
         delete_db=True,
     )
-    # return to running the test session
-    yield adr_service
-    # cleanup
+
+    yield adr_service  # Return to running the test session
+
+    # Cleanup
     adr_service.stop()
 
 
-@pytest.fixture(scope="module")
-def adr_service_query(request, pytestconfig: pytest.Config) -> Service:
+@pytest.fixture(scope="session")
+def adr_service_query(pytestconfig: pytest.Config) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
-    local_db = os.path.join("test_data", "query_db")
-    db_dir = os.path.join(request.fspath.dirname, local_db)
-    tmp_docker_dir = os.path.join(
-        os.path.join(request.fspath.dirname, "test_data"), "tmp_docker_query"
-    )
+
+    # Paths setup
+    base_dir = Path(__file__).parent / "test_data"
+    local_db = base_dir / "query_db"
+    tmp_docker_dir = base_dir / "tmp_docker_query"
+
     if use_local:
         ansys_installation = pytestconfig.getoption("install_path")
     else:
         ansys_installation = "docker"
+
     adr_service = Service(
         ansys_installation=ansys_installation,
         docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=db_dir,
-        data_directory=tmp_docker_dir,
+        db_directory=str(local_db),
+        data_directory=str(tmp_docker_dir),
         port=8000 + int(random() * 4000),
     )
+
     if not use_local:
         adr_service._container.save_config()
+
     adr_service.start(create_db=False, exit_on_close=True, delete_db=False)
-    # return to running the test session
-    yield adr_service
-    # cleanup
+
+    yield adr_service  # Return to running the test session
+
+    # Cleanup
     adr_service.stop()
