@@ -415,3 +415,27 @@ def test_acls_start(request, get_exec) -> bool:
     succ_three = not r.launch_local_database_server(parent=None, directory=db_dir, acls=True)
     r.delete_database(db_dir=db_dir)
     assert succ and succ_two and succ_three
+
+@pytest.mark.ado_test
+def test_get_templates_as_json(adr_template_json) -> bool:
+    server = adr_template_json.serverobj
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    for template in templates:
+        if template.master:
+            root_guid = template.guid
+            break
+
+    templates_json = server.get_templates_as_json(root_guid)
+    assert len(templates_json) == 4
+    assert templates_json["Template_0"]["name"] == "A"
+    assert templates_json["Template_0"]["report_type"] == "Layout:basic"
+    assert templates_json["Template_0"]["tags"] == ""
+    assert templates_json["Template_0"]["params"] == {}
+    assert templates_json["Template_0"]["property"] == {}
+    assert templates_json["Template_0"]["sort_fields"] == []
+    assert templates_json["Template_0"]["sort_selection"] == ""
+    assert templates_json["Template_0"]["item_filter"] == ""
+    assert templates_json["Template_0"]["filter_mode"] == "items"
+    assert templates_json["Template_0"]["parent"] is None
+    assert templates_json["Template_0"]["children"] == ["Template_1", "Template_2"]
+    
