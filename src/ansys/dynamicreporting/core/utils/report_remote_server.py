@@ -1049,16 +1049,20 @@ def _build_template_data(guid, templates_data, templates, template_guid_id_map):
     if curr_template is None:
         return
 
+    fields = ["name", "report_type", "date", "tags", "params", "item_filter"]
     curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
-    templates_data[curr_template_key] = {
-        "name": curr_template.name,
-        "report_type": curr_template.report_type,
-        "date": curr_template.date,
-        "tags": curr_template.tags,
-        "params": curr_template.get_params(),
-        "sort_selection": curr_template.get_sort_selection(),
-        "item_filter": curr_template.item_filter,
-    }
+    for field in fields:
+        value = getattr(curr_template, field, None)
+        if value is None:
+            continue
+        templates_data[curr_template_key][field] = value
+
+    templates_data[curr_template_key][
+        "params"
+    ] = (
+        curr_template.get_params()
+    )  # Remove this line after https://github.com/ansys/pydynamicreporting/issues/193 is solved
+    templates_data[curr_template_key]["sort_selection"] = curr_template.get_sort_selection()
     if curr_template.parent is None:
         templates_data[curr_template_key]["parent"] = None
     else:
