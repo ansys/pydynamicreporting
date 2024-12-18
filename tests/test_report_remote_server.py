@@ -13,8 +13,6 @@ from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import DBCreationFailedError
 
-from .conftest import cleanup_docker
-
 
 def test_copy_item(adr_service_query, request, get_exec) -> bool:
     db_dir = join(join(request.fspath.dirname, "test_data"), "newcopy")
@@ -36,10 +34,7 @@ def test_copy_item(adr_service_query, request, get_exec) -> bool:
     succ = s.copy_items(
         source=adr_service_query.serverobj, obj_type="item", progress=False, progress_qt=False
     )
-    adr_service_query.stop()
     tmp_adr.stop()
-    if get_exec == "":
-        cleanup_docker(request)
     assert succ
 
 
@@ -54,7 +49,6 @@ def test_start_stop(request, get_exec) -> bool:
             port=port_r,
         )
     else:
-        cleanup_docker(request)
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
@@ -90,7 +84,6 @@ def test_validate_existing(adr_service_query) -> bool:
     succ = True
     try:
         _ = r.validate_local_db(db_dir=adr_service_query._db_directory, version_check=True)
-        r.stop_background_local_server(server_dirname=adr_service_query._db_directory)
     except Exception:
         succ = False
     assert succ
@@ -106,7 +99,6 @@ def test_fail_newdb(request, get_exec) -> bool:
             port=port_r,
         )
     else:
-        cleanup_docker(request)
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
@@ -155,11 +147,6 @@ def test_none_url() -> bool:
 
 
 def test_server_token(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     s = adr_service_create.serverobj
     token = s.generate_magic_token(max_age=10)
     succ = s._validate_magic_token(token=token)
@@ -170,24 +157,16 @@ def test_server_token(adr_service_create) -> bool:
     s.set_password(p=s.get_password())
     succ_four = s.get_server_name() == "ADR Database"
     succ_five = s.stop_server_allowed()
-    s.stop_local_server()
-    adr_service_create.stop()
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
 @pytest.mark.ado_test
 def test_server_guids(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     s = adr_service_create.serverobj
     succ = s.get_user_groups() == ["nexus"]
     succ_two = s.get_object_guids() == []
     s.get_object_from_guid(guid=str(uuid.uuid1()))
     succ_three = s.get_file(obj=None, fileobj=None) == requests.codes.service_unavailable
-    adr_service_create.stop()
     assert succ and succ_two and succ_three
 
 
@@ -225,40 +204,6 @@ def test_url_query() -> bool:
     )
 
 
-def test_stop_local_server(adr_service_query, request) -> bool:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
-    success = False
-    try:
-        r.stop_background_local_server(server_dirname=db_dir)
-        success = True
-    except Exception:
-        success = False
-    assert success
-
-
-def test_delete_db(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=False,
-    )
-    db_dir = adr_service_create._db_directory
-    adr_service_create.stop()
-    succ = False
-    try:
-        r.delete_database(db_dir=db_dir)
-        succ = True
-    except Exception:
-        succ = False
-    succ_two = False
-    try:
-        r.delete_database(db_dir=join(request.fspath.dirname, "test_data"))
-        succ_two = True
-    except Exception:
-        succ_two = False
-    assert succ and succ_two
-
-
 def test_export_html(adr_service_query) -> bool:
     success = False
     try:
@@ -268,7 +213,6 @@ def test_export_html(adr_service_query) -> bool:
         success = False
     s = adr_service_query.serverobj
     s.export_report_as_html(report_guid=my_report.report.guid, directory_name="htmltest")
-    adr_service_query.stop()
     assert success is True
 
 
@@ -302,7 +246,6 @@ def test_export_pdf(adr_service_query, get_exec) -> bool:
             s.export_report_as_pdf(report_guid=my_report.report.guid, file_name="mytest")
         except OSError:
             success = True
-    adr_service_query.stop()
     assert success is True
 
 
@@ -316,7 +259,6 @@ def test_export_pptx_error(adr_service_query) -> bool:
         s.export_report_as_pptx(report_guid=my_report.report.guid, file_name="mypresentation")
     except Exception:
         success = True
-    adr_service_query.stop()
     assert success is True
 
 
@@ -331,8 +273,6 @@ def test_get_pptx(adr_service_query, request) -> bool:
         success = False
     else:
         success = True
-    adr_service_query.stop()
-    cleanup_docker(request)
     assert success is True
 
 
@@ -358,26 +298,17 @@ def test_copy_template(adr_service_query, request, get_exec) -> bool:
     succ = s.copy_items(
         source=adr_service_query.serverobj, obj_type="template", progress=False, progress_qt=False
     )
-    adr_service_query.stop()
     tmp_adr.stop()
-    if get_exec == "":
-        cleanup_docker(request)
     assert succ
 
 
 def test_groups(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     s = adr_service_create.serverobj
     succ = s.get_auth() == (b"nexus", b"cei")
     succ_two = s.get_user_groups() == ["nexus"]
     s.cur_username = ""
     succ_three = s.get_user_groups() == []
     s.cur_username = "nexus"
-    adr_service_create.stop()
     assert succ and succ_two and succ_three
 
 
@@ -391,7 +322,6 @@ def test_acls_start(request, get_exec) -> bool:
             port=port_r,
         )
     else:
-        cleanup_docker(request)
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,

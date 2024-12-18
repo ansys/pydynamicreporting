@@ -1295,7 +1295,7 @@ def delete_database(db_dir: str):
     if not validate_local_db(db_dir):
         # Validate the directory database before deleting it
         if print_allowed():
-            print(f"Error: we are asked to delete the database but {db_dir} is not a database dir")
+            print(f"Error: Unable to delete the database: {db_dir} is not a database dir")
     else:
         try:
             # Check if there is a nexus.status file. If yes, it means there is a Nexus service running on that

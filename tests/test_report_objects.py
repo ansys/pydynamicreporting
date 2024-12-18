@@ -1866,5 +1866,4 @@ def test_item_payload(adr_service_query) -> bool:
         succ = True
     except Exception:
         succ = False
-    adr_service_query.stop()
     assert succ
