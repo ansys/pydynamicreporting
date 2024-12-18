@@ -1,8 +1,7 @@
 """This module allows pytest to perform unit testing."""
-
-
-from os.path import join
+from os.path import isdir, join
 from random import random
+import shutil
 
 import pytest
 
@@ -168,6 +167,28 @@ def test_no_docker(request) -> bool:
     except RuntimeError:
         success = False
     assert success is False
+
+
+def test_start_empty_database(request, get_exec) -> None:
+    db_dir = join(join(request.fspath.dirname, "test_data"), "newcopytemp")
+    if isdir(db_dir):
+        shutil.rmtree(db_dir)
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+            port=8000 + int(random() * 4000),
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+            port=8000 + int(random() * 4000),
+        )
+    session_guid = tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
+    tmp_adr.stop()
+    assert session_guid != "0"
 
 
 def test_connect_to_connected(adr_service_create) -> bool:
