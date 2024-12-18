@@ -93,36 +93,3 @@ def adr_service_query(pytestconfig: pytest.Config) -> Service:
 
     # Cleanup
     adr_service.stop()
-
-
-@pytest.fixture
-def adr_template_json(pytestconfig: pytest.Config) -> Service:
-    use_local = pytestconfig.getoption("use_local_launcher")
-
-    # Paths setup
-    base_dir = Path(__file__).parent / "test_data"
-    local_db = base_dir / "template_json"
-    tmp_docker_dir = base_dir / "tmp_docker_query"
-
-    if use_local:
-        ansys_installation = pytestconfig.getoption("install_path")
-    else:
-        ansys_installation = "docker"
-
-    adr_service = Service(
-        ansys_installation=ansys_installation,
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=str(local_db),
-        data_directory=str(tmp_docker_dir),
-        port=8000 + int(random() * 4000),
-    )
-
-    if not use_local:
-        adr_service._container.save_config()
-
-    adr_service.start(create_db=False, exit_on_close=True, delete_db=False)
-
-    yield adr_service  # Return to running the test session
-
-    # Cleanup
-    adr_service.stop()

@@ -76,7 +76,3 @@ doc/_build
 _test_enhanced_images.py
 local_tests/
 *.gz
-
-# tests/test_data/template_json
-tests/test_data/template_json/nginx
-tests/test_data/template_json/nexus.log
