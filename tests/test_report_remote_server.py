@@ -370,11 +370,6 @@ def test_get_templates_as_json(adr_template_json) -> bool:
 
 @pytest.mark.ado_test
 def test_load_templates(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
