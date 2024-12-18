@@ -19,7 +19,7 @@ open_mode = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_TRUNC
 
 
 @pytest.mark.ado_test
-def test_timeout(request) -> bool:
+def test_timeout(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "time.txt")
     open(tmp_file, "a").close()
@@ -28,7 +28,7 @@ def test_timeout(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_base_acquire(request) -> bool:
+def test_base_acquire(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base.txt")
     open(tmp_file, "a").close()
@@ -43,7 +43,7 @@ def test_base_acquire(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_base_release(request) -> bool:
+def test_base_release(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base2.txt")
     open(tmp_file, "a").close()
@@ -58,7 +58,7 @@ def test_base_release(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_base_locked(request) -> bool:
+def test_base_locked(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base3.txt")
     open(tmp_file, "a").close()
@@ -67,7 +67,7 @@ def test_base_locked(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_base_rel(request) -> bool:
+def test_base_rel(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "base4.txt")
     open(tmp_file, "a").close()
@@ -76,7 +76,7 @@ def test_base_rel(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_platform_lock(request) -> bool:
+def test_platform_lock(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "platform.txt")
     tmp_file2 = join(test_path, "platform2.txt")
@@ -96,7 +96,7 @@ def test_platform_lock(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_soft(request) -> bool:
+def test_soft(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "soft.txt")
     tmp_file2 = join(test_path, "soft2.txt")
@@ -108,7 +108,7 @@ def test_soft(request) -> bool:
     assert rel is None
 
 
-def test_nexus_filelock(request) -> bool:
+def test_nexus_filelock(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "n_lock.txt")
     try:
