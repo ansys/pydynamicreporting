@@ -1049,6 +1049,7 @@ def _build_template_data(guid, templates_data, templates, template_guid_id_map):
 
     fields = ["name", "report_type", "date", "tags", "item_filter"]
     curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
+    templates_data[curr_template_key] = {}
     for field in fields:
         value = getattr(curr_template, field, None)
         if value is None:
