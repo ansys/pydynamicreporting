@@ -1046,10 +1046,8 @@ def _build_template_data(guid, templates_data, templates, template_guid_id_map):
     for template in templates:
         if template.guid == guid:
             curr_template = template
-    if curr_template is None:
-        return
 
-    fields = ["name", "report_type", "date", "tags", "params", "item_filter"]
+    fields = ["name", "report_type", "date", "tags", "item_filter"]
     curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
     for field in fields:
         value = getattr(curr_template, field, None)
@@ -1061,7 +1059,7 @@ def _build_template_data(guid, templates_data, templates, template_guid_id_map):
         "params"
     ] = (
         curr_template.get_params()
-    )  # Remove this line after https://github.com/ansys/pydynamicreporting/issues/193 is solved
+    )
     templates_data[curr_template_key]["sort_selection"] = curr_template.get_sort_selection()
     if curr_template.parent is None:
         templates_data[curr_template_key]["parent"] = None
