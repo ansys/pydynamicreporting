@@ -351,16 +351,16 @@ def test_acls_start(request, get_exec) -> bool:
 def test_get_templates_as_json(adr_service_create) -> bool:
     server = adr_service_create.serverobj
 
-    #Level 0
+    # Level 0
     template_01 = server.create_template(name="A", parent=None, report_type="Layout:basic")
     server.put_objects(template_01)
 
-    #Level 1
+    # Level 1
     template_02 = server.create_template(name="B", parent=template_01, report_type="Layout:basic")
     template_04 = server.create_template(name="C", parent=template_01, report_type="Layout:basic")
     server.put_objects([template_02, template_04])
 
-    #Level 2
+    # Level 2
     template_03 = server.create_template(name="D", parent=template_02, report_type="Layout:basic")
     server.put_objects(template_03)
 
