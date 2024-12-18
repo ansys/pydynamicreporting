@@ -1055,11 +1055,7 @@ def _build_template_data(guid, templates_data, templates, template_guid_id_map):
             continue
         templates_data[curr_template_key][field] = value
 
-    templates_data[curr_template_key][
-        "params"
-    ] = (
-        curr_template.get_params()
-    )
+    templates_data[curr_template_key]["params"] = curr_template.get_params()
     templates_data[curr_template_key]["sort_selection"] = curr_template.get_sort_selection()
     if curr_template.parent is None:
         templates_data[curr_template_key]["parent"] = None
