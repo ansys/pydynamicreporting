@@ -10,7 +10,6 @@ from ansys.dynamicreporting.core.utils import report_remote_server
 def test_geturl_report(adr_service_query) -> bool:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     url = my_report.get_url()
-    adr_service_query.stop()
     assert "http:" in url
 
 
@@ -18,7 +17,6 @@ def test_geturl_report(adr_service_query) -> bool:
 def test_geturl_report_with_filter(adr_service_query) -> bool:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     url = my_report.get_url(filter='"A|b_type|cont|image;"')
-    adr_service_query.stop()
     assert "http:" in url
 
 
@@ -31,7 +29,6 @@ def test_visualize_report(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -43,7 +40,6 @@ def test_iframe_report(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -117,7 +113,6 @@ def test_save_as_pdf(adr_service_query, request, get_exec) -> bool:
             success = my_report.export_pdf(file_name=pdf_file)
         except Exception:
             success = False
-        adr_service_query.stop()
     else:  # If no local installation, then skip this test
         success = True
     assert success is True
@@ -131,14 +126,12 @@ def test_save_as_html(adr_service_query) -> bool:
         success = my_report.export_html(directory_name="htmltest_again")
     except Exception:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
 def test_get_guid(adr_service_query) -> bool:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     guid = my_report.get_guid()
-    adr_service_query.stop()
     assert len(guid) > 0
 
 
@@ -326,7 +319,6 @@ def test_get_report_script(adr_service_query) -> bool:
     # check script content
     script_check = clean_script == clean_expected_script
 
-    adr_service_query.stop()
     assert script_check
 
 
@@ -354,5 +346,4 @@ def test_get_report_component(adr_service_query) -> bool:
     )
     web_component_iframe_check = clean_web_component_iframe == clean_expected_web_component_iframe
 
-    adr_service_query.stop()
     assert web_component_prefix_check and web_component_iframe_check

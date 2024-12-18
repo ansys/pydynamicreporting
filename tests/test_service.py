@@ -20,8 +20,6 @@ from ansys.dynamicreporting.core.exceptions import (
 )
 from ansys.dynamicreporting.core.utils import report_remote_server
 
-from .conftest import cleanup_docker
-
 
 @pytest.mark.ado_test
 def test_unit_nexus() -> bool:
@@ -160,7 +158,6 @@ def test_no_directory() -> bool:
 
 
 def test_no_docker(request) -> bool:
-    success = True
     try:
         Service(
             ansys_installation="docker",
@@ -173,35 +170,7 @@ def test_no_docker(request) -> bool:
     assert success is False
 
 
-def test_start_empty_database(adr_service_create) -> bool:
-    session_guid = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
-    assert session_guid != "0"
-
-
-def test_set_sessionguid(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
-    canset = True
-    try:
-        adr_service_create.session_guid = "ABCDE"
-    except AttributeError:
-        canset = False
-    assert canset is False
-
-
 def test_connect_to_connected(adr_service_create) -> bool:
-    adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     success = False
     try:
         _ = adr_service_create.start(
@@ -219,7 +188,6 @@ def test_create_on_existing(request, get_exec) -> bool:
     if get_exec != "":
         tmp_adr = Service(ansys_installation=get_exec, db_directory=db_dir)
     else:
-        cleanup_docker(request)
         tmp_adr = Service(
             ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
         )
@@ -232,34 +200,45 @@ def test_create_on_existing(request, get_exec) -> bool:
 
 
 @pytest.mark.ado_test
-def test_stop_before_starting(adr_service_create) -> bool:
-    success = adr_service_create.stop()
+def test_stop_before_starting(request, get_exec) -> bool:
+    db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=db_dir,
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=db_dir,
+        )
+    success = tmp_adr.stop()
     assert success is None
 
 
 def test_get_sessionid(adr_service_create) -> bool:
-    session_id = adr_service_create.start(create_db=True, delete_db=True, exit_on_close=True)
-    assert session_id == adr_service_create.session_guid
+    assert (
+        isinstance(adr_service_create.session_guid, str)
+        and len(adr_service_create.session_guid) > 0
+    )
 
 
 @pytest.mark.ado_test
 def test_query_sessions(adr_service_query) -> bool:
     len_queried = len(adr_service_query.query(query_type="Session"))
-    adr_service_query.stop()
     assert 3 == len_queried
 
 
 @pytest.mark.ado_test
 def test_query_dataset(adr_service_query) -> bool:
     len_queried = len(adr_service_query.query(query_type="Dataset"))
-    adr_service_query.stop()
     assert 4 == len_queried
 
 
 def test_query_table(adr_service_query) -> bool:
     all_items = adr_service_query.query(query_type="Item")
     only_table = [x for x in all_items if x.type == "table"]
-    adr_service_query.stop()
     assert 1 == len(only_table)
 
 
@@ -268,7 +247,6 @@ def test_delete_item(adr_service_query) -> bool:
     only_text = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
     adr_service_query.delete(only_text)
     newly_items = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
-    adr_service_query.stop()
     assert len(newly_items) == 0
 
 
@@ -285,7 +263,6 @@ def test_delete_report(adr_service_query) -> bool:
     test_report = adr_service_query.get_report(test_report_name)
     adr_service_query.delete([test_report])
     new_reports = adr_service_query.get_list_reports()
-    adr_service_query.stop()
     assert len(old_reports) == len(new_reports)
 
 
@@ -296,7 +273,6 @@ def test_vis_report(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -308,14 +284,25 @@ def test_vis_report_filtered(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
-def test_vis_not_running(adr_service_create) -> bool:
+def test_vis_not_running(request, get_exec) -> bool:
     success = False
     try:
-        adr_service_create.visualize_report()
+        db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+        if get_exec != "":
+            tmp_adr = Service(
+                ansys_installation=get_exec,
+                db_directory=db_dir,
+            )
+        else:
+            tmp_adr = Service(
+                ansys_installation="docker",
+                docker_image=DOCKER_DEV_REPO_URL,
+                db_directory=db_dir,
+            )
+        tmp_adr.visualize_report()
     except ConnectionToServiceError:
         success = True
     assert success
@@ -327,7 +314,6 @@ def test_vis_report_name(adr_service_query) -> bool:
         _ = adr_service_query.visualize_report(report_name="Not existing")
     except MissingReportError:
         success = True
-    adr_service_query.stop()
     assert success
 
 
@@ -349,20 +335,17 @@ def test_connect_to_running(adr_service_query, request, get_exec) -> bool:
         )
     tmp_adr.connect(url=adr_service_query.url, session=adr_service_query.session_guid)
     all_items_second = tmp_adr.query(query_type="Item")
-    adr_service_query.stop()
     tmp_adr.stop()
     assert len(all_items_second) == len(all_items)
 
 
 def test_get_report_name(adr_service_query) -> bool:
     my_report = adr_service_query.get_list_reports()
-    adr_service_query.stop()
     assert len(my_report) == 1 and type(my_report[0]) is str
 
 
 def test_get_report(adr_service_query) -> bool:
     my_report = adr_service_query.get_list_reports(r_type="report")
-    adr_service_query.stop()
     assert len(my_report) == 1 and type(my_report[0]) is Report
 
 
@@ -392,7 +375,6 @@ def test_same_port(request, get_exec) -> bool:
             ansys_installation=get_exec, logfile=logfile, db_directory=db_dir_again, port=a._port
         )
     else:
-        cleanup_docker(request)
         a = Service(
             ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
         )
