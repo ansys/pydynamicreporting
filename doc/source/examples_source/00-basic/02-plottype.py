@@ -297,7 +297,7 @@ scatter_plot_3d.visualize()
 # --------------------------
 #
 # A polar plot is a plot type that visualizes the data point in a polar
-# coodinate system, one common variation of polar plot is radar chart. The
+# coordinate system, one common variation of polar plot is radar chart. The
 # data position is determined by:
 
 ###############################################################################
@@ -311,23 +311,23 @@ scatter_plot_3d.visualize()
 #    * **Scatter polar** is the only available polar plot type for now.
 #    * The **theta (θ)** values is defined by the data type of the **xaxis**
 #      values:
-# 
+#
 #      * If xaxis values have minus numeric value: The labels will be a list
-#        of symmetrical values from "**(-180°) - (180°)**". 
-#      * If xaxis values are all positive values: The labeles will be from 
+#        of symmetrical values from "**(-180°) - (180°)**".
+#      * If xaxis values are all positive values: The labeles will be from
 #        "**(0°) - (360°)**".
-#      * If xaxis values are categorical values: All xaxis values will be used 
+#      * If xaxis values are categorical values: All xaxis values will be used
 #        to label.
 
 polar = adr_service.create_item()
 # We can use the same data as we use to visualize heatmap
 polar.item_table = np.array(
-        [
-            ["-180", "-135", "-90", "-45", "0", "45", "90", "135", "180"],
-            [8.2, 7.3, 10.6, 5.6, 5.9, 9.1, 2.4, 1.6, 4.8],
-        ],
-        dtype="|S20",
-    )
+    [
+        ["-180", "-135", "-90", "-45", "0", "45", "90", "135", "180"],
+        [8.2, 7.3, 10.6, 5.6, 5.9, 9.1, 2.4, 1.6, 4.8],
+    ],
+    dtype="|S20",
+)
 polar.plot = "polar plot"
 polar.format = "floatdot0"
 polar.xaxis = 0
