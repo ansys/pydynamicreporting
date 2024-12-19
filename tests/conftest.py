@@ -1,7 +1,7 @@
 """Global fixtures go here."""
 
 from pathlib import Path
-from random import choice, random
+from random import choice, randint
 from string import ascii_letters
 
 import pytest
@@ -25,21 +25,18 @@ def get_exec(pytestconfig: pytest.Config) -> str:
 
 
 @pytest.fixture(scope="module")
-def adr_service_create(pytestconfig: pytest.Config) -> Service:
+def adr_service_create(pytestconfig: pytest.Config, tmp_path: Path) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
 
     # Paths setup
-    base_dir = Path(__file__).parent / "test_data"
-    dir_name = "auto_delete_" + "".join(choice(ascii_letters) for _ in range(5))
-    db_dir = base_dir / dir_name
-    tmp_docker_dir = base_dir / "tmp_docker"
+    db_dir = tmp_path / "adr_service_create"
+    tmp_docker_dir = tmp_path / "tmp_docker"
 
     if use_local:
         adr_service = Service(
             ansys_installation=pytestconfig.getoption("install_path"),
-            docker_image=DOCKER_DEV_REPO_URL,
             db_directory=str(db_dir),
-            port=8000 + int(random() * 4000),
+            port=8000 + randint(0, 3999),
         )
     else:
         adr_service = Service(
@@ -47,7 +44,7 @@ def adr_service_create(pytestconfig: pytest.Config) -> Service:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=str(db_dir),
             data_directory=str(tmp_docker_dir),
-            port=8000 + int(random() * 4000),
+            port=8000 + randint(0, 3999),
         )
 
     _ = adr_service.start(
@@ -63,13 +60,12 @@ def adr_service_create(pytestconfig: pytest.Config) -> Service:
 
 
 @pytest.fixture(scope="module")
-def adr_service_query(pytestconfig: pytest.Config) -> Service:
+def adr_service_query(pytestconfig: pytest.Config, tmp_path: Path) -> Service:
     use_local = pytestconfig.getoption("use_local_launcher")
 
     # Paths setup
-    base_dir = Path(__file__).parent / "test_data"
-    local_db = base_dir / "query_db"
-    tmp_docker_dir = base_dir / "tmp_docker_query"
+    local_db = Path(__file__).parent / "test_data" / "query_db"
+    tmp_docker_dir = tmp_path / "tmp_docker_query"
 
     if use_local:
         ansys_installation = pytestconfig.getoption("install_path")
@@ -81,7 +77,7 @@ def adr_service_query(pytestconfig: pytest.Config) -> Service:
         docker_image=DOCKER_DEV_REPO_URL,
         db_directory=str(local_db),
         data_directory=str(tmp_docker_dir),
-        port=8000 + int(random() * 4000),
+        port=8000 + randint(0, 3999),
     )
 
     if not use_local:

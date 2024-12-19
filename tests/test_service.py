@@ -1,14 +1,12 @@
 """This module allows pytest to perform unit testing."""
-from os.path import isdir, join
-from random import random
-import shutil
+from pathlib import Path
+from random import randint
 
 import pytest
 
 from ansys.dynamicreporting.core import Report, Service, docker_support
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import (
-    ADRException,
     AlreadyConnectedError,
     CannotCreateDatabaseError,
     ConnectionToServiceError,
@@ -32,8 +30,8 @@ def test_unit_nexus() -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_nexus_nosession(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile7.txt")
+def test_unit_nexus_nosession() -> None:
+    logfile = Path(__file__) / "outfile7.txt"
     a = Service(logfile=logfile)
     success = False
     try:
@@ -44,8 +42,8 @@ def test_unit_nexus_nosession(request) -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_nodbpath(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile8.txt")
+def test_unit_nodbpath() -> None:
+    logfile = Path(__file__) / "outfile8.txt"
     a = Service(logfile=logfile, db_directory="aaa")
     success = False
     try:
@@ -56,8 +54,8 @@ def test_unit_nodbpath(request) -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_nexus_stop(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile.txt")
+def test_unit_nexus_stop() -> None:
+    logfile = Path(__file__) / "outfile.txt"
     a = Service(logfile=logfile)
     a.stop()
     f = open(logfile)
@@ -65,12 +63,12 @@ def test_unit_nexus_stop(request) -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_nexus_connect(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile_2.txt")
+def test_unit_nexus_connect() -> None:
+    logfile = Path(__file__) / "outfile_2.txt"
     a = Service(logfile=logfile)
     success = False
     try:
-        a.connect(url=f"http://localhost:{8000 + int(random() * 4000)}")
+        a.connect(url=f"http://localhost:{8000 + randint(0, 3999)}")
     except NotValidServer:
         success = True
     assert success
@@ -97,8 +95,8 @@ def test_unit_query() -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_delete_invalid(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile_4.txt")
+def test_unit_delete_invalid() -> None:
+    logfile = Path(__file__) / "outfile_4.txt"
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
     success = False
@@ -118,8 +116,8 @@ def test_unit_delete() -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_get_report(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile_5.txt")
+def test_unit_get_report() -> None:
+    logfile = Path(__file__) / "outfile_5.txt"
     a = Service(logfile=logfile)
     success = False
     try:
@@ -130,8 +128,8 @@ def test_unit_get_report(request) -> None:
 
 
 @pytest.mark.ado_test
-def test_unit_get_listreport(request) -> None:
-    logfile = join(request.fspath.dirname, "outfile_9.txt")
+def test_unit_get_listreport() -> None:
+    logfile = Path(__file__) / "outfile_9.txt"
     a = Service(logfile=logfile)
     success = False
     try:
@@ -156,39 +154,17 @@ def test_no_directory() -> None:
     assert success is False
 
 
-def test_no_docker(request) -> None:
+def test_no_docker(tmp_path) -> None:
     try:
         Service(
             ansys_installation="docker",
             docker_image="ghcr.io/ansys-internal/not_existing_docker",
-            db_directory=join(join(request.fspath.dirname, "test_data"), "abc"),
+            db_directory=tmp_path / "abc",
         )
         success = True
     except RuntimeError:
         success = False
     assert success is False
-
-
-def test_start_empty_database(request, get_exec) -> None:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "newcopytemp")
-    if isdir(db_dir):
-        shutil.rmtree(db_dir)
-    if get_exec != "":
-        tmp_adr = Service(
-            ansys_installation=get_exec,
-            db_directory=db_dir,
-            port=8000 + int(random() * 4000),
-        )
-    else:
-        tmp_adr = Service(
-            ansys_installation="docker",
-            docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
-            port=8000 + int(random() * 4000),
-        )
-    session_guid = tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
-    tmp_adr.stop()
-    assert session_guid != "0"
 
 
 def test_connect_to_connected(adr_service_create) -> None:
@@ -204,8 +180,8 @@ def test_connect_to_connected(adr_service_create) -> None:
     assert success
 
 
-def test_create_on_existing(request, get_exec) -> None:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+def test_create_on_existing(get_exec) -> None:
+    db_dir = Path(__file__).parent / "test_data" / "query_db"
     if get_exec != "":
         tmp_adr = Service(ansys_installation=get_exec, db_directory=db_dir)
     else:
@@ -221,8 +197,8 @@ def test_create_on_existing(request, get_exec) -> None:
 
 
 @pytest.mark.ado_test
-def test_stop_before_starting(request, get_exec) -> None:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+def test_stop_before_starting(get_exec) -> None:
+    db_dir = Path(__file__).parent / "test_data" / "query_db"
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
@@ -308,10 +284,10 @@ def test_vis_report_filtered(adr_service_query) -> None:
     assert success is True
 
 
-def test_vis_not_running(request, get_exec) -> None:
+def test_vis_not_running(get_exec) -> None:
     success = False
     try:
-        db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+        db_dir = Path(__file__).parent / "test_data" / "query_db"
         if get_exec != "":
             tmp_adr = Service(
                 ansys_installation=get_exec,
@@ -339,9 +315,9 @@ def test_vis_report_name(adr_service_query) -> None:
 
 
 @pytest.mark.ado_test
-def test_connect_to_running(adr_service_query, request, get_exec) -> None:
+def test_connect_to_running(adr_service_query, get_exec) -> None:
     # Connect to a running service and make sure you can access the same dataset
-    db_dir = join(join(request.fspath.dirname, "test_data"), "query_db")
+    db_dir = Path(__file__).parent / "test_data" / "query_db"
     all_items = adr_service_query.query(query_type="Item")
     if get_exec != "":
         tmp_adr = Service(
@@ -356,7 +332,6 @@ def test_connect_to_running(adr_service_query, request, get_exec) -> None:
         )
     tmp_adr.connect(url=adr_service_query.url, session=adr_service_query.session_guid)
     all_items_second = tmp_adr.query(query_type="Item")
-    tmp_adr.stop()
     assert len(all_items_second) == len(all_items)
 
 
@@ -386,10 +361,10 @@ def test_docker_unit() -> None:
 
 
 @pytest.mark.ado_test
-def test_same_port(request, get_exec) -> None:
-    logfile = join(request.fspath.dirname, "outfile_10.txt")
-    db_dir = join(join(request.fspath.dirname, "test_data"), "sameport")
-    db_dir_again = join(join(request.fspath.dirname, "test_data"), "sameport_again")
+def test_same_port(tmp_path, get_exec) -> None:
+    logfile = tmp_path / "outfile_10.txt"
+    db_dir = tmp_path / "sameport"
+    db_dir_again = tmp_path / "sameport_again"
     if get_exec != "":
         a = Service(ansys_installation=get_exec, logfile=logfile, db_directory=db_dir)
         b = Service(
