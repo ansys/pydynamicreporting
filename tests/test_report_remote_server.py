@@ -384,6 +384,7 @@ def test_get_templates_as_json(adr_service_create) -> bool:
     assert templates_json["Template_0"]["item_filter"] == ""
     assert templates_json["Template_0"]["parent"] is None
     assert templates_json["Template_0"]["children"] == ["Template_1", "Template_2"]
+    server.del_objects(templates)
 
 
 @pytest.mark.ado_test
