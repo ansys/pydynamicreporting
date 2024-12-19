@@ -277,6 +277,25 @@ def test_create_3d_surface(adr_service_create) -> bool:
     assert len(new_table_items) == (len(table_items) + 1)
 
 
+@pytest.mark.ado_test
+def test_create_polar_plot(adr_service_create) -> bool:
+    filter_str = "A|i_type|cont|table"
+    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    my_table = adr_service_create.create_item()
+    my_table.item_table = np.array(
+        [
+            [-180, -135, -90, -45, 0, 45, 90, 135, 180],
+            [8.2, 7.3, 10.6, 5.6, 5.9, 9.1, 2.4, 1.6, 4.8],
+        ],
+        dtype="|S20",
+    )
+    my_table.xaxis = 0
+    my_table.plot = "polar plot"
+    my_table.format = "floatdot0"
+    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    assert len(new_table_items) == (len(table_items) + 1)
+
+
 def test_set_tags(adr_service_query) -> bool:
     success = False
     try:
