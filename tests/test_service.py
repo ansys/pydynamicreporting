@@ -31,7 +31,7 @@ def test_unit_nexus() -> None:
 
 @pytest.mark.ado_test
 def test_unit_nexus_nosession() -> None:
-    logfile = Path(__file__) / "outfile7.txt"
+    logfile = Path(__file__).parent / "outfile7.txt"
     a = Service(logfile=logfile)
     success = False
     try:
@@ -43,7 +43,7 @@ def test_unit_nexus_nosession() -> None:
 
 @pytest.mark.ado_test
 def test_unit_nodbpath() -> None:
-    logfile = Path(__file__) / "outfile8.txt"
+    logfile = Path(__file__).parent / "outfile8.txt"
     a = Service(logfile=logfile, db_directory="aaa")
     success = False
     try:
@@ -55,7 +55,7 @@ def test_unit_nodbpath() -> None:
 
 @pytest.mark.ado_test
 def test_unit_nexus_stop() -> None:
-    logfile = Path(__file__) / "outfile.txt"
+    logfile = Path(__file__).parent / "outfile.txt"
     a = Service(logfile=logfile)
     a.stop()
     f = open(logfile)
@@ -64,7 +64,7 @@ def test_unit_nexus_stop() -> None:
 
 @pytest.mark.ado_test
 def test_unit_nexus_connect() -> None:
-    logfile = Path(__file__) / "outfile_2.txt"
+    logfile = Path(__file__).parent / "outfile_2.txt"
     a = Service(logfile=logfile)
     success = False
     try:
@@ -96,7 +96,7 @@ def test_unit_query() -> None:
 
 @pytest.mark.ado_test
 def test_unit_delete_invalid() -> None:
-    logfile = Path(__file__) / "outfile_4.txt"
+    logfile = Path(__file__).parent / "outfile_4.txt"
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
     success = False
@@ -117,7 +117,7 @@ def test_unit_delete() -> None:
 
 @pytest.mark.ado_test
 def test_unit_get_report() -> None:
-    logfile = Path(__file__) / "outfile_5.txt"
+    logfile = Path(__file__).parent / "outfile_5.txt"
     a = Service(logfile=logfile)
     success = False
     try:
@@ -129,7 +129,7 @@ def test_unit_get_report() -> None:
 
 @pytest.mark.ado_test
 def test_unit_get_listreport() -> None:
-    logfile = Path(__file__) / "outfile_9.txt"
+    logfile = Path(__file__).parent / "outfile_9.txt"
     a = Service(logfile=logfile)
     success = False
     try:
