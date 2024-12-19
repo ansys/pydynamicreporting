@@ -358,6 +358,7 @@ def test_create_3d_surface(adr_service_create) -> bool:
     adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
 
+
 @pytest.mark.ado_test
 def test_create_polar_plot(adr_service_create) -> bool:
     _ = adr_service_create.start(
