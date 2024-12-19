@@ -1,6 +1,8 @@
 CODESPELL_DIRS ?= ./pydynamicreporting
 CODESPELL_SKIP ?= "*.pyc,*.xml,*.txt,*.gif,*.png,*.jpg,*.js,*.html,*.doctree,*.ttf,*.woff,*.woff2,*.eot,*.mp4,*.inv,*.pickle,*.ipynb,flycheck*,./.git/*,./.hypothesis/*,*.yml,./docs/build/*,./docs/images/*,./dist/*,*~,.hypothesis*,./docs/source/examples/*,*cover,*.dat,*.mac,\#*,PKG-INFO,*.mypy_cache/*,*.xml,*.aedt,*.svg"
 CODESPELL_IGNORE ?= "ignore_words.txt"
+TEST_FILE ?= "tests\test_service.py"
+INSTALL_PATH ?= "C:\Program Files\ANSYS Inc\v252"
 
 doctest: codespell
 
@@ -29,6 +31,10 @@ pull-docker:
 test:
 	pip install -e .[test]
 	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+
+test-dev:
+	pip install -e .[test]
+	pytest -rvx --setup-show "$(TEST_FILE)" --use-local-launcher --install-path "$(INSTALL_PATH)"
 
 smoketest:
 	python tests/smoketest.py

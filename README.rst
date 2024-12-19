@@ -93,12 +93,12 @@ run this code:
 The preceding code creates an "editable" installation that lets you develop and test
 PyDynamicReporting at the same time.
 
-To build and create a production-like installation, first install
-`chocolatey <https://chocolatey.org/install>`_. Then:
+To build and create a production-like installation on Windows (not required on other OSes),
+first install `chocolatey <https://chocolatey.org/install>`_. Then:
 
 .. code::
 
-   choco install make  # install make
+   choco install make  # install make on Windows
    make clean  # clean
    make build   # build
    # this replaces the editable installation done previously. If you don't want to replace,
@@ -127,6 +127,19 @@ this command, where ``style`` is the job name:
 Deploy and upload steps **must always** be ignored. If they are not ignored,
 before running GitHub Actions locally, add ``if: ${{ !env.ACT }}`` to the
 workflow step and commit this change if required.
+
+Local tests
+^^^^^^^^^^^
+To run tests on your local desktop (recommended), use the `make` target
+`test-dev`. This target runs the tests in the same way as GitHub Actions but using
+a local Ansys installation instead of Docker. You must specify the path to your Ansys
+installation and the test file you are trying to run.
+
+.. code::
+
+   make test-dev TEST_FILE="tests/test_service.py" INSTALL_PATH="C:\Program Files\ANSYS Inc\v252"
+
+Note that any tests that require Docker will obviously fail.
 
 Dependencies
 ------------

@@ -8,111 +8,64 @@ from ansys.dynamicreporting.core import Item, Service
 
 @pytest.mark.ado_test
 def test_create_img(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|image"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "aa_00_0_alpha1.png")
     new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_img_items) == (len(img_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_img_jpg(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|image"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "car_crash.jpg")
     new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_img_items) == (len(img_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_img_tiff(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|image"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "displacement.tiff")
     new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_img_items) == (len(img_items) + 1)
 
 
 def test_create_scene(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     my_scene = adr_service_create.create_item()
     my_scene.item_scene = join(
         join(join(request.fspath.dirname, "test_data"), "scenes"), "scene.avz"
     )
     my_scene.width = 800
     my_scene.height = 500
-    adr_service_create.stop()
     assert type(my_scene) is Item
 
 
 def test_create_text(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     my_text = adr_service_create.create_item(obj_name="testtext", source="testing")
     my_text.item_text = "<h1>This is my first test of a text item</h1>"
     my_text.item_text = "Now let us change the text just to make sure it works"
-    adr_service_create.stop()
     assert my_text.type == "text"
 
 
 def test_create_file(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     my_file = adr_service_create.create_item(obj_name="testfile", source="testing")
     my_file.item_file = join(join(request.fspath.dirname, "test_data"), "dam_break.ens")
-    adr_service_create.stop()
     assert my_file.type == "file"
 
 
 def test_create_anim(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     my_anim = adr_service_create.create_item(obj_name="testanim", source="testing")
     my_anim.item_animation = join(join(request.fspath.dirname, "test_data"), "dam_break.mp4")
-    adr_service_create.stop()
     assert my_anim.type == "animation"
 
 
 def test_create_tree(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     leaves = []
     for i in range(10):
         leaves.append({"key": "leaves", "name": f"Leaf {i}", "value": i})
@@ -141,23 +94,16 @@ def test_create_tree(adr_service_create, request) -> bool:
     )
     my_tree = adr_service_create.create_item(obj_name="testtree", source="testing")
     my_tree.item_tree = tree
-    adr_service_create.stop()
     assert my_tree.type == "tree"
 
 
 def test_change_type(adr_service_create, request) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|html"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "aa_00_0_alpha1.png")
     my_img.item_text = "This is not supposed to work"
     new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_img_items) == len(img_items)
 
 
@@ -170,7 +116,6 @@ def test_vis_item(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -183,7 +128,6 @@ def test_iframe_item(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -196,7 +140,6 @@ def test_iframe_on_img_item(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -205,17 +148,11 @@ def test_get_url(adr_service_query) -> bool:
     filter_str = "A|i_type|cont|table"
     one_item = adr_service_query.query(query_type="Item", filter=filter_str)
     url = one_item[0].url
-    adr_service_query.stop()
     assert (url is not None) and ("http" in url)
 
 
 @pytest.mark.ado_test
 def test_create_table(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -278,17 +215,11 @@ def test_create_table(adr_service_create) -> bool:
     my_table.row_tags = ["dp=0", "dp=2"]
     my_table.col_tags = ["a", "b", "c", "d", "e", "f"]
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_histo(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -298,17 +229,11 @@ def test_create_histo(adr_service_create) -> bool:
     my_table.histogram_normalized = 1
     my_table.histogram_bin_size = 0.5
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_3d_scatter(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -328,17 +253,11 @@ def test_create_3d_scatter(adr_service_create) -> bool:
     my_table.ztitle = "f(x,y)"
     my_table.line_marker_opacity = 0.7
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_3d_surface(adr_service_create) -> bool:
-    _ = adr_service_create.start(
-        create_db=True,
-        exit_on_close=True,
-        delete_db=True,
-    )
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -355,7 +274,6 @@ def test_create_3d_surface(adr_service_create) -> bool:
     my_table.plot = "3d surface"
     my_table.format = "floatdot0"
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
 
 
@@ -391,7 +309,6 @@ def test_set_tags(adr_service_query) -> bool:
         success = one_item[0].set_tags(tagstring="firsttag=one")
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -403,7 +320,6 @@ def test_get_tags(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True and len(tags) == 36
 
 
@@ -415,7 +331,6 @@ def test_add_tag(adr_service_query) -> bool:
         success = one_item[0].add_tag(tag="Tag", value="one")
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
@@ -426,7 +341,6 @@ def test_rem_tag(adr_service_query) -> bool:
         success = one_item[0].rem_tag(tag="tagtodelete")
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 

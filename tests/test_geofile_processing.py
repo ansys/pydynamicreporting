@@ -48,6 +48,12 @@ def test_file_is_3d_geometry(request) -> bool:
 
 
 @pytest.mark.ado_test
+def test_get_avz_directory(request) -> bool:
+    avz_dir = gp.get_avz_directory(return_file_paths(request)[1])
+    assert isinstance(avz_dir, str) and avz_dir != ""
+
+
+@pytest.mark.ado_test
 def test_rebuild_3d_geom_avz(request) -> bool:
     _ = gp.rebuild_3d_geometry(
         csf_file=return_file_paths(request)[1], unique_id="abc", exec_basis="avz"
