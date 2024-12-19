@@ -358,7 +358,6 @@ def test_create_3d_surface(adr_service_create) -> bool:
     adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
 
-
 @pytest.mark.ado_test
 def test_create_polar_plot(adr_service_create) -> bool:
     _ = adr_service_create.start(
@@ -376,11 +375,9 @@ def test_create_polar_plot(adr_service_create) -> bool:
         ],
         dtype="|S20",
     )
+    my_table.xaxis = 0
     my_table.plot = "polar plot"
     my_table.format = "floatdot0"
-    my_table.xaxis = 0
-    my_table.format_row = "str"
-    my_table.labels_row = ["theta", "r"]
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     adr_service_create.stop()
     assert len(new_table_items) == (len(table_items) + 1)
