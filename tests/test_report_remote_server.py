@@ -345,3 +345,130 @@ def test_acls_start(request, get_exec) -> bool:
     succ_three = not r.launch_local_database_server(parent=None, directory=db_dir, acls=True)
     r.delete_database(db_dir=db_dir)
     assert succ and succ_two and succ_three
+
+
+@pytest.mark.ado_test
+def test_get_templates_as_json(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+
+    # Level 0
+    template_01 = server.create_template(name="A", parent=None, report_type="Layout:basic")
+    server.put_objects(template_01)
+
+    # Level 1
+    template_02 = server.create_template(name="B", parent=template_01, report_type="Layout:basic")
+    template_04 = server.create_template(name="C", parent=template_01, report_type="Layout:basic")
+    server.put_objects([template_02, template_04])
+
+    # Level 2
+    template_03 = server.create_template(name="D", parent=template_02, report_type="Layout:basic")
+    server.put_objects(template_03)
+
+    # Updates the reports with change in children
+    server.put_objects(template_02)
+    server.put_objects(template_01)
+
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    for template in templates:
+        if template.master:
+            root_guid = template.guid
+            break
+
+    templates_json = server.get_templates_as_json(root_guid)
+    assert len(templates_json) == 4
+    assert templates_json["Template_0"]["name"] == "A"
+    assert templates_json["Template_0"]["report_type"] == "Layout:basic"
+    assert templates_json["Template_0"]["tags"] == ""
+    assert templates_json["Template_0"]["params"] == {}
+    assert templates_json["Template_0"]["sort_selection"] == ""
+    assert templates_json["Template_0"]["item_filter"] == ""
+    assert templates_json["Template_0"]["parent"] is None
+    assert templates_json["Template_0"]["children"] == ["Template_1", "Template_2"]
+    server.del_objects(templates)
+
+
+@pytest.mark.ado_test
+def test_load_templates(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "property": {},
+            "sort_fields": [],
+            "sort_selection": "",
+            "item_filter": "",
+            "filter_mode": "items",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    server.load_templates(templates_json)
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    assert len(templates) == 4
+
+    template_guid_map = {}
+    for template in templates:
+        template_guid_map[template.guid] = template.name
+
+    for template in templates:
+        if template.name == "A":
+            assert template.report_type == "Layout:basic"
+            assert template.tags == ""
+            assert template.get_params() == {}
+            assert template.get_property() == {}
+            assert template.get_sort_fields() == []
+            assert template.get_sort_selection() == ""
+            assert template.item_filter == ""
+            assert template.get_filter_mode() == "items"
+            assert template.parent is None
+            children = []
+            for child in template.children:
+                children.append(template_guid_map[child])
+            assert children == ["B", "C"]
+            break
