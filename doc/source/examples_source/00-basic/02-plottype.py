@@ -297,7 +297,7 @@ scatter_plot_3d.visualize()
 # --------------------------
 #
 # A polar plot is a plot type that visualizes the data point in a polar
-# coordinate system, one common variation of polar plot is radar chart. The
+# coordinate system. One common variation of a polar plot is a radar chart. The
 # data position is determined by:
 
 ###############################################################################
