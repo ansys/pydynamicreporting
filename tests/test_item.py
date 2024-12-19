@@ -371,13 +371,13 @@ def test_create_polar_plot(adr_service_create) -> bool:
     my_table = adr_service_create.create_item()
     my_table.item_table = np.array(
         [
-            ["-180", "-135", "-90", "-45", "0", "45", "90", "135", "180"],
+            [-180, -135, -90, -45, 0, 45, 90, 135, 180],
             [8.2, 7.3, 10.6, 5.6, 5.9, 9.1, 2.4, 1.6, 4.8],
         ],
         dtype="|S20",
     )
-    my_table.format = "floatdot0"
     my_table.plot = "polar plot"
+    my_table.format = "floatdot0"
     my_table.xaxis = 0
     my_table.format_row = "str"
     my_table.labels_row = ["theta", "r"]
