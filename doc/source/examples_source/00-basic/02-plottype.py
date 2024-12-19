@@ -309,7 +309,7 @@ scatter_plot_3d.visualize()
 ###############################################################################
 # .. note::
 #    * **Scatter polar** is the only available polar plot type for now.
-#    * The **theta (θ)** values is defined by the data type of the **xaxis**
+#    * The **theta (θ)** value is defined by the data type of the **xaxis**
 #      values:
 #
 #      * If xaxis values have minus numeric value: The labels will be a list
