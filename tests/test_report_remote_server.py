@@ -1,7 +1,5 @@
 from os import environ
-from os.path import isdir, join
-from random import random
-import shutil
+from random import randint
 import uuid
 
 import pytest
@@ -14,34 +12,44 @@ from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import DBCreationFailedError
 
 
-def test_copy_item(adr_service_query, request, get_exec) -> bool:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "newcopy")
+def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
+    db_dir = tmp_path / "test_copy_item"
+    port = 8000 + randint(0, 3999)
+
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
-            port=8000 + int(random() * 4000),
+            db_directory=str(db_dir),
+            port=port,
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
-            port=8000 + int(random() * 4000),
+            db_directory=str(db_dir),
+            port=port,
         )
+
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
-    s = tmp_adr.serverobj
-    succ = s.copy_items(
-        source=adr_service_query.serverobj, obj_type="item", progress=False, progress_qt=False
-    )
-    tmp_adr.stop()
-    assert succ
+    try:
+        s = tmp_adr.serverobj
+        success = s.copy_items(
+            source=adr_service_query.serverobj,
+            obj_type="item",
+            progress=False,
+            progress_qt=False,
+        )
+    except Exception:
+        success = False
+    finally:
+        tmp_adr.stop()
+    assert success
 
 
 @pytest.mark.ado_test
-def test_start_stop(request, get_exec) -> bool:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "create_delete")
-    port_r = 8000 + int(random() * 4000)
+def test_start_stop(tmp_path, get_exec) -> None:
+    db_dir = tmp_path / "test_start_stop"
+    port_r = 8000 + randint(0, 3999)
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
@@ -74,13 +82,12 @@ def test_start_stop(request, get_exec) -> bool:
         )
         _ = r.validate_local_db(db_dir=db_dir, version_check=True)
         r.stop_background_local_server(server_dirname=db_dir)
-        r.delete_database(db_dir=db_dir)
     except Exception:
         succ = False
     assert succ
 
 
-def test_validate_existing(adr_service_query) -> bool:
+def test_validate_existing(adr_service_query) -> None:
     succ = True
     try:
         _ = r.validate_local_db(db_dir=adr_service_query._db_directory, version_check=True)
@@ -89,9 +96,10 @@ def test_validate_existing(adr_service_query) -> bool:
     assert succ
 
 
-def test_fail_newdb(request, get_exec) -> bool:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "create_twice")
-    port_r = 8000 + int(random() * 4000)
+def test_fail_newdb(tmp_path, get_exec) -> None:
+    db_dir = tmp_path / "test_fail_newdb"
+    db_dir.mkdir(parents=True)  # create beforehand
+    port_r = 8000 + randint(0, 3999)
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
@@ -105,7 +113,7 @@ def test_fail_newdb(request, get_exec) -> bool:
             db_directory=db_dir,
             port=port_r,
         )
-    succ = True
+    succ = False
     try:
         r.create_new_local_database(
             parent=None,
@@ -120,7 +128,7 @@ def test_fail_newdb(request, get_exec) -> bool:
     assert succ
 
 
-def test_none_url() -> bool:
+def test_none_url() -> None:
     a = r.Server()
     succ = a.get_server_name() is None
     succ_two = False
@@ -146,7 +154,7 @@ def test_none_url() -> bool:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
-def test_server_token(adr_service_create) -> bool:
+def test_server_token(adr_service_create) -> None:
     s = adr_service_create.serverobj
     token = s.generate_magic_token(max_age=10)
     succ = s._validate_magic_token(token=token)
@@ -161,7 +169,7 @@ def test_server_token(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_server_guids(adr_service_create) -> bool:
+def test_server_guids(adr_service_create) -> None:
     s = adr_service_create.serverobj
     succ = s.get_user_groups() == ["nexus"]
     succ_two = s.get_object_guids() == []
@@ -171,7 +179,7 @@ def test_server_guids(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_default() -> bool:
+def test_default() -> None:
     s = r.Server()
     succ = False
     try:
@@ -190,13 +198,13 @@ def test_default() -> bool:
 
 
 @pytest.mark.ado_test
-def test_template() -> bool:
+def test_template() -> None:
     s = r.Server()
     assert isinstance(s.create_template(parent=s.create_template()), ro.basicREST)
 
 
 @pytest.mark.ado_test
-def test_url_query() -> bool:
+def test_url_query() -> None:
     s = r.Server()
     s.cur_url = "http://localhost:8000"
     assert "&a=1&b=2" in s.build_url_with_query(
@@ -204,7 +212,38 @@ def test_url_query() -> bool:
     )
 
 
-def test_export_html(adr_service_query) -> bool:
+def test_delete_db(tmp_path, get_exec) -> None:
+    db_dir = tmp_path / "test_delete_db"
+    port = 8000 + randint(0, 3999)
+
+    if get_exec != "":
+        tmp_adr = Service(
+            ansys_installation=get_exec,
+            db_directory=str(db_dir),
+            port=port,
+        )
+    else:
+        tmp_adr = Service(
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=str(db_dir),
+            port=port,
+        )
+    r.create_new_local_database(
+        parent=None,
+        directory=db_dir,
+        exec_basis=tmp_adr._ansys_installation,
+        ansys_version=tmp_adr._ansys_version,
+    )
+    try:
+        r.delete_database(db_dir=db_dir)
+        succ = True
+    except Exception:
+        succ = False
+    assert succ
+
+
+def test_export_html(adr_service_query) -> None:
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -217,7 +256,7 @@ def test_export_html(adr_service_query) -> bool:
 
 
 @pytest.mark.ado_test
-def test_export_pdf(adr_service_query, get_exec) -> bool:
+def test_export_pdf(adr_service_query, get_exec) -> None:
     exec_basis = get_exec
     success = False
     try:
@@ -250,7 +289,7 @@ def test_export_pdf(adr_service_query, get_exec) -> bool:
 
 
 @pytest.mark.ado_test
-def test_export_pptx_error(adr_service_query) -> bool:
+def test_export_pptx_error(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     s = adr_service_query.serverobj
     success = False
@@ -262,8 +301,8 @@ def test_export_pptx_error(adr_service_query) -> bool:
     assert success is True
 
 
-def test_get_pptx(adr_service_query, request) -> bool:
-    db_dir = join(request.fspath.dirname, "test_data")
+def test_get_pptx(adr_service_query, tmp_path) -> None:
+    db_dir = tmp_path / "test_get_pptx"
     my_report = adr_service_query.get_report(report_name="My Top Report")
     s = adr_service_query.serverobj
     try:
@@ -276,22 +315,20 @@ def test_get_pptx(adr_service_query, request) -> bool:
     assert success is True
 
 
-def test_copy_template(adr_service_query, request, get_exec) -> bool:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "newcopytemp")
-    if isdir(db_dir):
-        shutil.rmtree(db_dir)
+def test_copy_template(adr_service_query, tmp_path, get_exec) -> None:
+    db_dir = tmp_path / "test_copy_template"
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
             db_directory=db_dir,
-            port=8000 + int(random() * 4000),
+            port=8000 + randint(0, 3999),
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=db_dir,
-            port=8000 + int(random() * 4000),
+            port=8000 + randint(0, 3999),
         )
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     s = tmp_adr.serverobj
@@ -302,7 +339,7 @@ def test_copy_template(adr_service_query, request, get_exec) -> bool:
     assert succ
 
 
-def test_groups(adr_service_create, request) -> bool:
+def test_groups(adr_service_create) -> None:
     s = adr_service_create.serverobj
     succ = s.get_auth() == (b"nexus", b"cei")
     succ_two = s.get_user_groups() == ["nexus"]
@@ -312,9 +349,9 @@ def test_groups(adr_service_create, request) -> bool:
     assert succ and succ_two and succ_three
 
 
-def test_acls_start(request, get_exec) -> bool:
-    db_dir = join(join(request.fspath.dirname, "test_data"), "create_delete")
-    port_r = 8000 + int(random() * 4000)
+def test_acls_start(tmp_path, get_exec) -> None:
+    db_dir = tmp_path / "test_acls_start"
+    port_r = 8000 + randint(0, 3999)
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
@@ -343,7 +380,6 @@ def test_acls_start(request, get_exec) -> bool:
         parent=None, directory=db_dir, raise_exception=False, aa=True
     )
     succ_three = not r.launch_local_database_server(parent=None, directory=db_dir, acls=True)
-    r.delete_database(db_dir=db_dir)
     assert succ and succ_two and succ_three
 
 
