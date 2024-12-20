@@ -37,6 +37,15 @@ from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
 
+class TemplateEditorJSONLoadingError(Exception):
+    '''
+    A specialized exception class for errors when loading a JSON file for the template editor
+    '''
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+
 def disable_warn_logging(func):
     # Decorator to suppress harmless warning messages
     @functools.wraps(func)
@@ -983,20 +992,29 @@ class Server:
         _build_template_data(root_guid, templates_data, templates, template_guid_id_map)
         return templates_data
 
-    def _populate_template(self, attr, parent_template):
-        template = self.create_template(
-            name=attr["name"], parent=parent_template, report_type=attr["report_type"]
-        )
-        template.set_params(attr["params"])
-        if attr["sort_selection"] != "":
-            template.set_sort_selection(value=attr["sort_selection"])
-        template.set_tags(attr["tags"])
-        template.set_filter(filter_str=attr["item_filter"])
+    def _populate_template(self, id_str, attr, parent_template):
+        try:
+            template = self.create_template(
+                name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+            )
+            template.set_params(attr["params"])
+            if attr["sort_selection"] != "":
+                template.set_sort_selection(value=attr["sort_selection"])
+            template.set_tags(attr["tags"])
+            template.set_filter(filter_str=attr["item_filter"])
+        except KeyError as ke:
+            raise TemplateEditorJSONLoadingError(f"You are using a different key from the correct '{ke}' so that it does not conform to the JSON schema.\n"
+                                                 f"Please check the '{ke}' entry under '{id_str}' in your JSON file as you might have a typo in that entry.") from ke
 
         return template
 
     def _update_changes(self, id_str, id_template_map, templates_json):
-        children_id_strs = templates_json[id_str]["children"]
+        try:
+            children_id_strs = templates_json[id_str]["children"]
+        except KeyError as ke:
+            raise TemplateEditorJSONLoadingError(f"You are using a different key from the correct '{ke}' so that it does not conform to the JSON schema.\n"
+                                                 f"Please check the '{ke}' entry under '{id_str}' in your JSON file as you might have a typo in that entry.") from ke
+        
         if not children_id_strs:
             return
 
@@ -1012,7 +1030,7 @@ class Server:
         child_templates = []
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
-            child_template = self._populate_template(child_attr, id_template_map[id_str])
+            child_template = self._populate_template(child_id_str, child_attr, id_template_map[id_str])
             child_templates.append(child_template)
             id_template_map[child_id_str] = child_template
 
@@ -1033,13 +1051,17 @@ class Server:
                 break
 
         root_attr = templates_json[root_id_str]
-        root_template = self._populate_template(root_attr, None)
+        root_template = self._populate_template(root_id_str, root_attr, None)
         self.put_objects(root_template)
         id_template_map = {}
         id_template_map[root_id_str] = root_template
         self._build_templates_from_parent(root_id_str, id_template_map, templates_json)
         self._update_changes(root_id_str, id_template_map, templates_json)
 
+# def _check_template(template_json):
+#     agreed_keys = {"name", "report_type", "date", "tags", "params", "sort_selection", "item_filter", "parent", "children"}
+#     for agreed_key in agreed_keys:
+        
 
 def _build_template_data(guid, templates_data, templates, template_guid_id_map):
     curr_template = None
