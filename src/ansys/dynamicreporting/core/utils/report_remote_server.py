@@ -993,27 +993,20 @@ class Server:
         return templates_data
 
     def _populate_template(self, id_str, attr, parent_template):
-        try:
-            template = self.create_template(
-                name=attr["name"], parent=parent_template, report_type=attr["report_type"]
-            )
-            template.set_params(attr["params"])
-            if attr["sort_selection"] != "":
-                template.set_sort_selection(value=attr["sort_selection"])
-            template.set_tags(attr["tags"])
-            template.set_filter(filter_str=attr["item_filter"])
-        except KeyError as ke:
-            raise TemplateEditorJSONLoadingError(f"You are using a different key from the correct '{ke}' so that it does not conform to the JSON schema.\n"
-                                                 f"Please check the '{ke}' entry under '{id_str}' in your JSON file as you might have a typo in that entry.") from ke
-
+        _check_template(id_str, attr)
+        template = self.create_template(
+            name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+        )
+        template.set_params(attr["params"])
+        if attr["sort_selection"] != "":
+            template.set_sort_selection(value=attr["sort_selection"])
+        template.set_tags(attr["tags"])
+        template.set_filter(filter_str=attr["item_filter"])
+        
         return template
 
     def _update_changes(self, id_str, id_template_map, templates_json):
-        try:
-            children_id_strs = templates_json[id_str]["children"]
-        except KeyError as ke:
-            raise TemplateEditorJSONLoadingError(f"You are using a different key from the correct '{ke}' so that it does not conform to the JSON schema.\n"
-                                                 f"Please check the '{ke}' entry under '{id_str}' in your JSON file as you might have a typo in that entry.") from ke
+        children_id_strs = templates_json[id_str]["children"]
         
         if not children_id_strs:
             return
@@ -1058,11 +1051,68 @@ class Server:
         self._build_templates_from_parent(root_id_str, id_template_map, templates_json)
         self._update_changes(root_id_str, id_template_map, templates_json)
 
-# def _check_template(template_json):
-#     agreed_keys = {"name", "report_type", "date", "tags", "params", "sort_selection", "item_filter", "parent", "children"}
-#     for agreed_key in agreed_keys:
-        
 
+def _check_template(template_id_str, template_attr):
+    # Check template_id_str
+    if not _check_template_name_convection(template_id_str):
+        raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
+                                             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'")
+    
+    # Check parent and children template name convention
+    if not _check_template_name_convection(template_attr["parent"]):
+        raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
+                                             f"that does not have the correct name convection in the key: 'parent'\n"
+                                             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'")
+    
+    for child_attr in template_attr["children"]:
+        if not _check_template_name_convection(child_attr):
+            raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid template name: '{child_attr}' "
+                                                 f"that does not have the correct name convection in the key: 'children'\n"
+                                                 "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'")
+            
+    # Check key names
+    agreed_keys = {"name", "report_type", "date", "tags", "params", "sort_selection", "item_filter", "parent", "children"}
+    for key in template_attr.keys():
+        if key not in agreed_keys:
+            raise TemplateEditorJSONLoadingError(f"The loaded JSON file is using an unknown key: {key} other than any in the JSON schema.\n"
+                                                 f"Please check the '{key}' entry under '{template_id_str}' in your JSON file as you might have a typo in that entry.")
+    
+    # Check missing keys
+    if len(template_attr) != len(agreed_keys): # Missing one or more entries
+        keys = template_attr.keys()
+        missing_keys = list(agreed_keys - set(keys))
+        raise TemplateEditorJSONLoadingError(f"The loaded JSON file is missing keys: {missing_keys}.\n"
+                                             f"Please check them under '{template_id_str}' in your JSON file for the missing keys.")
+    
+    # Check report_type
+    report_types = {"Layout:panel", "Layout:basic", "Layout:box", "Layout:tabs", "Layout:carousel",
+                    "Layout:slider", "Layout:footer", "Layout:header", "Layout:iterator", "Layout:tagprops",
+                    "Layout:toc", "Layout:reportlink", "Layout:userdefined"}
+    if not template_attr["report_type"] in report_types:
+         raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid 'report_type' value: {template_attr['report_type']}\n"
+                                              f"Please make sure the 'report_type' values are only selected from {report_types}")
+    
+    # Check item_filter
+    common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
+    for query_stanza in template_attr["item_filter"].split(";"):
+        if len(query_stanza) > 0:
+            parts = query_stanza.split("|")
+            if len(parts) != 4:
+                raise TemplateEditorJSONLoadingError(f"{common_error_str}Each part should be divided by '|', "
+                                                     f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 4 '|'s")
+            if parts[0] not in ["A", "O"]:
+                raise TemplateEditorJSONLoadingError(f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
+                                                     f"while the first part of the input is {parts[0]} under {template_id_str}")
+            prefix = ["i_", "s_", "d_", "t_"]
+            if parts[1][0:2] not in prefix:
+                raise TemplateEditorJSONLoadingError(f"{common_error_str}The second part of the filter can only be {prefix}, "
+                                                     f"while the second part of the input is {parts[1]}")
+    # TODO: check 'sort_selection' and 'params'
+
+def _check_template_name_convection(template_name):
+    parts = template_name.split('_')
+    return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
+        
 def _build_template_data(guid, templates_data, templates, template_guid_id_map):
     curr_template = None
     for template in templates:
