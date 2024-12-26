@@ -38,9 +38,10 @@ from .encoders import BaseEncoder
 
 
 class TemplateEditorJSONLoadingError(Exception):
-    '''
+    """
     A specialized exception class for errors when loading a JSON file for the template editor
-    '''
+    """
+
     def __init__(self, message):
         super().__init__(message)
         self.message = message
@@ -1002,12 +1003,12 @@ class Server:
             template.set_sort_selection(value=attr["sort_selection"])
         template.set_tags(attr["tags"])
         template.set_filter(filter_str=attr["item_filter"])
-        
+
         return template
 
     def _update_changes(self, id_str, id_template_map, templates_json):
         children_id_strs = templates_json[id_str]["children"]
-        
+
         if not children_id_strs:
             return
 
@@ -1023,7 +1024,9 @@ class Server:
         child_templates = []
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
-            child_template = self._populate_template(child_id_str, child_attr, id_template_map[id_str])
+            child_template = self._populate_template(
+                child_id_str, child_attr, id_template_map[id_str]
+            )
             child_templates.append(child_template)
             id_template_map[child_id_str] = child_template
 
@@ -1054,65 +1057,108 @@ class Server:
 
 def _check_template(template_id_str, template_attr):
     # Check template_id_str
-    if not _check_template_name_convection(template_id_str):
-        raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
-                                             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'")
-    
+    if not _check_template_name_convention(template_id_str):
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
+            "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        )
+
     # Check parent and children template name convention
-    if not _check_template_name_convection(template_attr["parent"]):
-        raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
-                                             f"that does not have the correct name convection in the key: 'parent'\n"
-                                             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'")
-    
-    for child_attr in template_attr["children"]:
-        if not _check_template_name_convection(child_attr):
-            raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid template name: '{child_attr}' "
-                                                 f"that does not have the correct name convection in the key: 'children'\n"
-                                                 "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'")
-            
+    if not _check_template_name_convention(template_attr["parent"]):
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
+            f"that does not have the correct name convection under the key: 'parent' of '{template_id_str}'\n"
+            "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        )
+
+    for child_name in template_attr["children"]:
+        if not _check_template_name_convention(child_name):
+            raise TemplateEditorJSONLoadingError(
+                f"The loaded JSON file has an invalid template name: '{child_name}' "
+                f"that does not have the correct name convection under the key: 'children' of '{template_id_str}'\n"
+                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+            )
+
     # Check key names
-    agreed_keys = {"name", "report_type", "date", "tags", "params", "sort_selection", "item_filter", "parent", "children"}
+    agreed_keys = {
+        "name",
+        "report_type",
+        "date",
+        "tags",
+        "params",
+        "sort_selection",
+        "item_filter",
+        "parent",
+        "children",
+    }
     for key in template_attr.keys():
         if key not in agreed_keys:
-            raise TemplateEditorJSONLoadingError(f"The loaded JSON file is using an unknown key: {key} other than any in the JSON schema.\n"
-                                                 f"Please check the '{key}' entry under '{template_id_str}' in your JSON file as you might have a typo in that entry.")
-    
+            raise TemplateEditorJSONLoadingError(
+                f"The loaded JSON file is using an unknown key: '{key}' other than any in the JSON schema.\n"
+                f"Please check the '{key}' entry under '{template_id_str}' in your JSON file as you might have a typo in that entry."
+            )
+
     # Check missing keys
-    if len(template_attr) != len(agreed_keys): # Missing one or more entries
+    if len(template_attr) != len(agreed_keys):  # Missing one or more entries
         keys = template_attr.keys()
         missing_keys = list(agreed_keys - set(keys))
-        raise TemplateEditorJSONLoadingError(f"The loaded JSON file is missing keys: {missing_keys}.\n"
-                                             f"Please check them under '{template_id_str}' in your JSON file for the missing keys.")
-    
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file is missing keys: {missing_keys}.\n"
+            f"Please check them under '{template_id_str}' in your JSON file for the missing keys."
+        )
+
     # Check report_type
-    report_types = {"Layout:panel", "Layout:basic", "Layout:box", "Layout:tabs", "Layout:carousel",
-                    "Layout:slider", "Layout:footer", "Layout:header", "Layout:iterator", "Layout:tagprops",
-                    "Layout:toc", "Layout:reportlink", "Layout:userdefined"}
+    report_types = {
+        "Layout:panel",
+        "Layout:basic",
+        "Layout:box",
+        "Layout:tabs",
+        "Layout:carousel",
+        "Layout:slider",
+        "Layout:footer",
+        "Layout:header",
+        "Layout:iterator",
+        "Layout:tagprops",
+        "Layout:toc",
+        "Layout:reportlink",
+        "Layout:userdefined",
+    }
     if not template_attr["report_type"] in report_types:
-         raise TemplateEditorJSONLoadingError(f"The loaded JSON file has an invalid 'report_type' value: {template_attr['report_type']}\n"
-                                              f"Please make sure the 'report_type' values are only selected from {report_types}")
-    
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
+        )
+
     # Check item_filter
     common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
     for query_stanza in template_attr["item_filter"].split(";"):
         if len(query_stanza) > 0:
             parts = query_stanza.split("|")
             if len(parts) != 4:
-                raise TemplateEditorJSONLoadingError(f"{common_error_str}Each part should be divided by '|', "
-                                                     f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 4 '|'s")
+                raise TemplateEditorJSONLoadingError(
+                    f"{common_error_str}Each part should be divided by '|', "
+                    f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 3 '|'s"
+                )
             if parts[0] not in ["A", "O"]:
-                raise TemplateEditorJSONLoadingError(f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
-                                                     f"while the first part of the input is {parts[0]} under {template_id_str}")
+                raise TemplateEditorJSONLoadingError(
+                    f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
+                    f"while the first part of the input is '{parts[0]}' under '{template_id_str}'"
+                )
             prefix = ["i_", "s_", "d_", "t_"]
             if parts[1][0:2] not in prefix:
-                raise TemplateEditorJSONLoadingError(f"{common_error_str}The second part of the filter can only be {prefix}, "
-                                                     f"while the second part of the input is {parts[1]}")
+                raise TemplateEditorJSONLoadingError(
+                    f"{common_error_str}The second part of the filter can only be '{prefix}', "
+                    f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
+                )
     # TODO: check 'sort_selection' and 'params'
 
-def _check_template_name_convection(template_name):
-    parts = template_name.split('_')
+
+def _check_template_name_convention(template_name):
+    if template_name is None:
+        return True
+    parts = template_name.split("_")
     return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
-        
+
+
 def _build_template_data(guid, templates_data, templates, template_guid_id_map):
     curr_template = None
     for template in templates:

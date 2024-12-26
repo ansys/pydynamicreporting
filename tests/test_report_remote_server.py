@@ -1,5 +1,6 @@
 from os import environ
 from random import randint
+import re
 import uuid
 
 import pytest
@@ -496,3 +497,534 @@ def test_load_templates(adr_service_create) -> bool:
                 children.append(template_guid_map[child])
             assert children == ["B", "C"]
             break
+    server.del_objects(templates)
+
+
+@pytest.mark.ado_test
+def test_check_templates_id_name(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "WRONG_NAME": {  # Error
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match="The loaded JSON file has an invalid template name: 'WRONG_NAME' as the key.\n"
+        "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'",
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_parent_name(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "WRONG_NAME",  # Error
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=(
+            "The loaded JSON file has an invalid template name: 'WRONG_NAME' "
+            "that does not have the correct name convection under the key: 'parent' of 'Template_1'\n"
+            "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        ),
+    ):
+        server.load_templates(templates_json)
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    server.del_objects(templates)
+
+
+@pytest.mark.ado_test
+def test_check_templates_children_name(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": None,
+            "children": ["Template_1", "WRONG_NAME"],  # Error
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=(
+            "The loaded JSON file has an invalid template name: 'WRONG_NAME' "
+            "that does not have the correct name convection under the key: 'children' of 'Template_0'\n"
+            "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        ),
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_key_name(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type_WRONG": "Layout:basic",  # Error
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=(
+            "The loaded JSON file is using an unknown key: 'report_type_WRONG' other than any in the JSON schema.\n"
+            "Please check the 'report_type_WRONG' entry under 'Template_0' in your JSON file as you might have a typo in that entry."
+        ),
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_missing_key(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            # Missing item_filter
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=re.escape(
+            "The loaded JSON file is missing keys: ['item_filter'].\n"
+            "Please check them under 'Template_0' in your JSON file for the missing keys."
+        ),
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_report_type(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:WRONG",  # Error
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=("The loaded JSON file has an invalid 'report_type' value: 'Layout:WRONG'"),
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_item_filter_parts(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "A|d_name|cont;",  # Error
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=(
+            "The loaded JSON file does not follow the correct item_filter convention!\n"
+            "Each part should be divided by '|', while the input is 'A|d_name|cont' under 'Template_0', which does not have 4 '|'s"
+        ),
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_item_filter_part0(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "W|d_name|cont|12-10.2_2.38.case;",  # Error
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=(
+            "The loaded JSON file does not follow the correct item_filter convention!\n"
+            "The first part of the filter can only be 'A' or 'O', while the first part of the input is 'W' under 'Template_0'"
+        ),
+    ):
+        server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_check_templates_item_filter_part1(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.175728-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "A|w_name|cont|12-10.2_2.38.case;",  # Error
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.876721-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "date": "2024-12-17T08:40:49.413270-05:00",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+    with pytest.raises(
+        r.TemplateEditorJSONLoadingError,
+        match=re.escape(
+            "The loaded JSON file does not follow the correct item_filter convention!\n"
+            "The second part of the filter can only be '['i_', 's_', 'd_', 't_']', while the second part of the input is 'w_name' under 'Template_0'"
+        ),
+    ):
+        server.load_templates(templates_json)
