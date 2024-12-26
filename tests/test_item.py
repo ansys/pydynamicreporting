@@ -7,7 +7,7 @@ from ansys.dynamicreporting.core import Item, Service
 
 
 @pytest.mark.ado_test
-def test_create_img(adr_service_create, request) -> bool:
+def test_create_img(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
@@ -17,7 +17,7 @@ def test_create_img(adr_service_create, request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_create_img_jpg(adr_service_create, request) -> bool:
+def test_create_img_jpg(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
@@ -27,7 +27,7 @@ def test_create_img_jpg(adr_service_create, request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_create_img_tiff(adr_service_create, request) -> bool:
+def test_create_img_tiff(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
@@ -36,7 +36,7 @@ def test_create_img_tiff(adr_service_create, request) -> bool:
     assert len(new_img_items) == (len(img_items) + 1)
 
 
-def test_create_scene(adr_service_create, request) -> bool:
+def test_create_scene(adr_service_create, request) -> None:
     my_scene = adr_service_create.create_item()
     my_scene.item_scene = join(
         join(join(request.fspath.dirname, "test_data"), "scenes"), "scene.avz"
@@ -46,26 +46,26 @@ def test_create_scene(adr_service_create, request) -> bool:
     assert type(my_scene) is Item
 
 
-def test_create_text(adr_service_create, request) -> bool:
+def test_create_text(adr_service_create, request) -> None:
     my_text = adr_service_create.create_item(obj_name="testtext", source="testing")
     my_text.item_text = "<h1>This is my first test of a text item</h1>"
     my_text.item_text = "Now let us change the text just to make sure it works"
     assert my_text.type == "text"
 
 
-def test_create_file(adr_service_create, request) -> bool:
+def test_create_file(adr_service_create, request) -> None:
     my_file = adr_service_create.create_item(obj_name="testfile", source="testing")
     my_file.item_file = join(join(request.fspath.dirname, "test_data"), "dam_break.ens")
     assert my_file.type == "file"
 
 
-def test_create_anim(adr_service_create, request) -> bool:
+def test_create_anim(adr_service_create, request) -> None:
     my_anim = adr_service_create.create_item(obj_name="testanim", source="testing")
     my_anim.item_animation = join(join(request.fspath.dirname, "test_data"), "dam_break.mp4")
     assert my_anim.type == "animation"
 
 
-def test_create_tree(adr_service_create, request) -> bool:
+def test_create_tree(adr_service_create, request) -> None:
     leaves = []
     for i in range(10):
         leaves.append({"key": "leaves", "name": f"Leaf {i}", "value": i})
@@ -97,7 +97,7 @@ def test_create_tree(adr_service_create, request) -> bool:
     assert my_tree.type == "tree"
 
 
-def test_change_type(adr_service_create, request) -> bool:
+def test_change_type(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|html"
     img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
@@ -107,7 +107,7 @@ def test_change_type(adr_service_create, request) -> bool:
     assert len(new_img_items) == len(img_items)
 
 
-def test_vis_item(adr_service_query) -> bool:
+def test_vis_item(adr_service_query) -> None:
     success = False
     try:
         one_item = adr_service_query.query(query_type="Item")
@@ -119,7 +119,7 @@ def test_vis_item(adr_service_query) -> bool:
     assert success is True
 
 
-def test_iframe_item(adr_service_query) -> bool:
+def test_iframe_item(adr_service_query) -> None:
     success = False
     try:
         filter_str = "A|i_type|cont|table"
@@ -131,7 +131,7 @@ def test_iframe_item(adr_service_query) -> bool:
     assert success is True
 
 
-def test_iframe_on_img_item(adr_service_query) -> bool:
+def test_iframe_on_img_item(adr_service_query) -> None:
     success = False
     try:
         filter_str = "A|i_type|cont|image"
@@ -144,7 +144,7 @@ def test_iframe_on_img_item(adr_service_query) -> bool:
 
 
 @pytest.mark.ado_test
-def test_get_url(adr_service_query) -> bool:
+def test_get_url(adr_service_query) -> None:
     filter_str = "A|i_type|cont|table"
     one_item = adr_service_query.query(query_type="Item", filter=filter_str)
     url = one_item[0].url
@@ -152,7 +152,7 @@ def test_get_url(adr_service_query) -> bool:
 
 
 @pytest.mark.ado_test
-def test_create_table(adr_service_create) -> bool:
+def test_create_table(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -219,7 +219,7 @@ def test_create_table(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_create_histo(adr_service_create) -> bool:
+def test_create_histo(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -233,7 +233,7 @@ def test_create_histo(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_create_3d_scatter(adr_service_create) -> bool:
+def test_create_3d_scatter(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -257,7 +257,7 @@ def test_create_3d_scatter(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_create_3d_surface(adr_service_create) -> bool:
+def test_create_3d_surface(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -277,7 +277,26 @@ def test_create_3d_surface(adr_service_create) -> bool:
     assert len(new_table_items) == (len(table_items) + 1)
 
 
-def test_set_tags(adr_service_query) -> bool:
+@pytest.mark.ado_test
+def test_create_polar_plot(adr_service_create) -> bool:
+    filter_str = "A|i_type|cont|table"
+    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    my_table = adr_service_create.create_item()
+    my_table.item_table = np.array(
+        [
+            [-180, -135, -90, -45, 0, 45, 90, 135, 180],
+            [8.2, 7.3, 10.6, 5.6, 5.9, 9.1, 2.4, 1.6, 4.8],
+        ],
+        dtype="|S20",
+    )
+    my_table.xaxis = 0
+    my_table.plot = "polar plot"
+    my_table.format = "floatdot0"
+    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    assert len(new_table_items) == (len(table_items) + 1)
+
+
+def test_set_tags(adr_service_query) -> None:
     success = False
     try:
         one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|testtable")
@@ -287,7 +306,7 @@ def test_set_tags(adr_service_query) -> bool:
     assert success is True
 
 
-def test_get_tags(adr_service_query) -> bool:
+def test_get_tags(adr_service_query) -> None:
     success = False
     try:
         one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|testone")
@@ -299,7 +318,7 @@ def test_get_tags(adr_service_query) -> bool:
 
 
 @pytest.mark.ado_test
-def test_add_tag(adr_service_query) -> bool:
+def test_add_tag(adr_service_query) -> None:
     success = False
     try:
         one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|img_two")
@@ -309,7 +328,7 @@ def test_add_tag(adr_service_query) -> bool:
     assert success is True
 
 
-def test_rem_tag(adr_service_query) -> bool:
+def test_rem_tag(adr_service_query) -> None:
     success = False
     try:
         one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|testone")
@@ -319,7 +338,7 @@ def test_rem_tag(adr_service_query) -> bool:
     assert success is True
 
 
-def test_unit_item(request) -> bool:
+def test_unit_item(request) -> None:
     valid = False
     try:
         _ = Item()
@@ -328,7 +347,7 @@ def test_unit_item(request) -> bool:
     assert valid
 
 
-def test_unit_item_empty_nexus(request) -> bool:
+def test_unit_item_empty_nexus(request) -> None:
     valid = False
     a = Service()
     try:

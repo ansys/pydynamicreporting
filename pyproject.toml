@@ -116,6 +116,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
 addopts = "--capture=tee-sys --tb=native -p no:warnings"
 markers =[
