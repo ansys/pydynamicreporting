@@ -1,0 +1,3 @@
+[run]
+omit =
+    src/ansys/dynamicreporting/core/serverless/*
