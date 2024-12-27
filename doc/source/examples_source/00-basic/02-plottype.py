@@ -328,7 +328,7 @@ polar.item_table = np.array(
     ],
     dtype="|S20",
 )
-polar.plot = "polar plot"
+polar.plot = "polar"
 polar.format = "floatdot0"
 polar.xaxis = 0
 polar.format_row = "str"
