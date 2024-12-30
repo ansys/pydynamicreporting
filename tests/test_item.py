@@ -290,7 +290,7 @@ def test_create_polar_plot(adr_service_create) -> bool:
         dtype="|S20",
     )
     my_table.xaxis = 0
-    my_table.plot = "polar plot"
+    my_table.plot = "polar"
     my_table.format = "floatdot0"
     new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
