@@ -10,6 +10,7 @@ from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
+from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils.exceptions import DBCreationFailedError
 
 
@@ -550,7 +551,7 @@ def test_check_templates_id_name(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match="The loaded JSON file has an invalid template name: 'WRONG_NAME' as the key.\n"
         "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'",
     ):
@@ -607,7 +608,7 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file has an invalid template name: 'WRONG_NAME' "
             "that does not have the correct name convection under the key: 'parent' of 'Template_1'\n"
@@ -669,7 +670,7 @@ def test_check_templates_children_name(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file has an invalid template name: 'WRONG_NAME' "
             "that does not have the correct name convection under the key: 'children' of 'Template_0'\n"
@@ -729,7 +730,7 @@ def test_check_templates_key_name(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file is using an unknown key: 'report_type_WRONG' other than any in the JSON schema.\n"
             "Please check the 'report_type_WRONG' entry under 'Template_0' in your JSON file as you might have a typo in that entry."
@@ -788,7 +789,7 @@ def test_check_templates_missing_key(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=re.escape(
             "The loaded JSON file is missing keys: ['item_filter'].\n"
             "Please check them under 'Template_0' in your JSON file for the missing keys."
@@ -847,7 +848,7 @@ def test_check_templates_report_type(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=("The loaded JSON file has an invalid 'report_type' value: 'Layout:WRONG'"),
     ):
         server.load_templates(templates_json)
@@ -903,7 +904,7 @@ def test_check_templates_item_filter_parts(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file does not follow the correct item_filter convention!\n"
             "Each part should be divided by '|', while the input is 'A|d_name|cont' under 'Template_0', which does not have 4 '|'s"
@@ -962,7 +963,7 @@ def test_check_templates_item_filter_part0(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file does not follow the correct item_filter convention!\n"
             "The first part of the filter can only be 'A' or 'O', while the first part of the input is 'W' under 'Template_0'"
@@ -1021,7 +1022,7 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
         },
     }
     with pytest.raises(
-        r.TemplateEditorJSONLoadingError,
+        e.TemplateEditorJSONLoadingError,
         match=re.escape(
             "The loaded JSON file does not follow the correct item_filter convention!\n"
             "The second part of the filter can only be '['i_', 's_', 'd_', 't_']', while the second part of the input is 'w_name' under 'Template_0'"
