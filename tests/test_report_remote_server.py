@@ -432,7 +432,6 @@ def test_load_templates(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -443,7 +442,6 @@ def test_load_templates(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -454,7 +452,6 @@ def test_load_templates(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -465,7 +462,6 @@ def test_load_templates(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -508,7 +504,6 @@ def test_check_templates_id_name(adr_service_create) -> bool:
         "WRONG_NAME": {  # Error
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -519,7 +514,6 @@ def test_check_templates_id_name(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -530,7 +524,6 @@ def test_check_templates_id_name(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -541,7 +534,6 @@ def test_check_templates_id_name(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -565,7 +557,6 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -576,7 +567,6 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -587,7 +577,6 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -598,7 +587,6 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -627,7 +615,6 @@ def test_check_templates_children_name(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -638,7 +625,6 @@ def test_check_templates_children_name(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -649,7 +635,6 @@ def test_check_templates_children_name(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -660,7 +645,6 @@ def test_check_templates_children_name(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -687,7 +671,6 @@ def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
         "Template_0": {
             # Missing name
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -698,7 +681,6 @@ def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -709,7 +691,6 @@ def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -720,7 +701,6 @@ def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -746,7 +726,6 @@ def test_check_templates_report_type(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:WRONG",  # Error
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -757,7 +736,6 @@ def test_check_templates_report_type(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -768,7 +746,6 @@ def test_check_templates_report_type(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -779,7 +756,6 @@ def test_check_templates_report_type(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -802,7 +778,6 @@ def test_check_templates_item_filter_parts(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -813,7 +788,6 @@ def test_check_templates_item_filter_parts(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -824,7 +798,6 @@ def test_check_templates_item_filter_parts(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -835,7 +808,6 @@ def test_check_templates_item_filter_parts(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -861,7 +833,6 @@ def test_check_templates_item_filter_part0(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -872,7 +843,6 @@ def test_check_templates_item_filter_part0(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -883,7 +853,6 @@ def test_check_templates_item_filter_part0(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -894,7 +863,6 @@ def test_check_templates_item_filter_part0(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -920,7 +888,6 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
         "Template_0": {
             "name": "A",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -931,7 +898,6 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
         "Template_1": {
             "name": "B",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -942,7 +908,6 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
         "Template_3": {
             "name": "D",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",
@@ -953,7 +918,6 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
         "Template_2": {
             "name": "C",
             "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
             "tags": "",
             "params": {},
             "sort_selection": "",

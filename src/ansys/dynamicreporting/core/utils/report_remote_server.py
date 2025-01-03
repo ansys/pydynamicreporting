@@ -1044,27 +1044,11 @@ class Server:
             self._build_templates_from_parent(child_id_str, id_template_map, templates_json)
             i += 1
 
-    def _get_json_template_keys(self):
-        """
-        Return a list of allowed keys in the JSON templates
-        """
-        return [
-            "name",
-            "report_type",
-            "date",
-            "tags",
-            "params",
-            "sort_selection",
-            "item_filter",
-            "parent",
-            "children",
-        ]
-
     def _get_json_attr_keys(self):
         """
         Return a list of JSON keys that can be got directory by attribute rather than by getters
         """
-        return ["name", "report_type", "date", "tags", "item_filter"]
+        return ["name", "report_type", "tags", "item_filter"]
 
     def _get_json_necessary_keys(self):
         """
