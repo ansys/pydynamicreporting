@@ -1056,7 +1056,7 @@ class Server:
             "sort_selection",
             "item_filter",
             "parent",
-            "children"
+            "children",
         ]
 
     def _get_json_attr_keys(self):
@@ -1123,7 +1123,7 @@ class Server:
                     f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
                     f"Please check the entries under '{template_id_str}'."
                 )
-                
+
         # Add warnings to the logger about the extra keys
         if logger:
             default_allowed_keys = self._get_json_template_keys()
