@@ -8,9 +8,9 @@ import requests
 
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
+from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
-from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils.exceptions import DBCreationFailedError
 
 
@@ -681,12 +681,12 @@ def test_check_templates_children_name(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_key_name(adr_service_create) -> bool:
+def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
-            "name": "A",
-            "report_type_WRONG": "Layout:basic",  # Error
+            # Missing name
+            "report_type": "Layout:basic",
             "date": "2024-12-17T08:40:49.175728-05:00",
             "tags": "",
             "params": {},
@@ -732,67 +732,8 @@ def test_check_templates_key_name(adr_service_create) -> bool:
     with pytest.raises(
         e.TemplateEditorJSONLoadingError,
         match=(
-            "The loaded JSON file is using an unknown key: 'report_type_WRONG' other than any in the JSON schema.\n"
-            "Please check the 'report_type_WRONG' entry under 'Template_0' in your JSON file as you might have a typo in that entry."
-        ),
-    ):
-        server.load_templates(templates_json)
-
-
-@pytest.mark.ado_test
-def test_check_templates_missing_key(adr_service_create) -> bool:
-    server = adr_service_create.serverobj
-    templates_json = {
-        "Template_0": {
-            "name": "A",
-            "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.175728-05:00",
-            "tags": "",
-            "params": {},
-            "sort_selection": "",
-            # Missing item_filter
-            "parent": None,
-            "children": ["Template_1", "Template_2"],
-        },
-        "Template_1": {
-            "name": "B",
-            "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
-            "tags": "",
-            "params": {},
-            "sort_selection": "",
-            "item_filter": "",
-            "parent": "Template_0",
-            "children": ["Template_3"],
-        },
-        "Template_3": {
-            "name": "D",
-            "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.876721-05:00",
-            "tags": "",
-            "params": {},
-            "sort_selection": "",
-            "item_filter": "",
-            "parent": "Template_1",
-            "children": [],
-        },
-        "Template_2": {
-            "name": "C",
-            "report_type": "Layout:basic",
-            "date": "2024-12-17T08:40:49.413270-05:00",
-            "tags": "",
-            "params": {},
-            "sort_selection": "",
-            "item_filter": "",
-            "parent": "Template_0",
-            "children": [],
-        },
-    }
-    with pytest.raises(
-        e.TemplateEditorJSONLoadingError,
-        match=re.escape(
-            "The loaded JSON file is missing keys: ['item_filter'].\n"
-            "Please check them under 'Template_0' in your JSON file for the missing keys."
+            "The loaded JSON file is missing a necessary key: 'name'\n"
+            "Please check the entries under 'Template_0'."
         ),
     ):
         server.load_templates(templates_json)
