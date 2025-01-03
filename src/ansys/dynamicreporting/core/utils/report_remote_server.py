@@ -983,7 +983,7 @@ class Server:
         self._build_template_data(root_guid, templates_data, templates, template_guid_id_map)
         return templates_data
 
-    def load_templates(self, templates_json):
+    def load_templates(self, templates_json, logger=None):
         """
         Load templates given a json-format data
         """
@@ -993,15 +993,15 @@ class Server:
                 break
 
         root_attr = templates_json[root_id_str]
-        root_template = self._populate_template(root_id_str, root_attr, None)
+        root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
         id_template_map = {}
         id_template_map[root_id_str] = root_template
-        self._build_templates_from_parent(root_id_str, id_template_map, templates_json)
+        self._build_templates_from_parent(root_id_str, id_template_map, templates_json, logger)
         self._update_changes(root_id_str, id_template_map, templates_json)
 
-    def _populate_template(self, id_str, attr, parent_template):
-        self._check_template(id_str, attr)
+    def _populate_template(self, id_str, attr, parent_template, logger=None):
+        self._check_template(id_str, attr, logger)
         template = self.create_template(
             name=attr["name"], parent=parent_template, report_type=attr["report_type"]
         )
@@ -1023,7 +1023,7 @@ class Server:
             self._update_changes(child_id_str, id_template_map, templates_json)
         self.put_objects(id_template_map[id_str])
 
-    def _build_templates_from_parent(self, id_str, id_template_map, templates_json):
+    def _build_templates_from_parent(self, id_str, id_template_map, templates_json, logger=None):
         children_id_strs = templates_json[id_str]["children"]
         if not children_id_strs:
             return
@@ -1032,7 +1032,7 @@ class Server:
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
             child_template = self._populate_template(
-                child_id_str, child_attr, id_template_map[id_str]
+                child_id_str, child_attr, id_template_map[id_str], logger
             )
             child_templates.append(child_template)
             id_template_map[child_id_str] = child_template
@@ -1041,8 +1041,23 @@ class Server:
 
         i = 0
         for child_id_str in children_id_strs:
-            self._build_templates_from_parent(child_id_str, id_template_map, templates_json)
+            self._build_templates_from_parent(child_id_str, id_template_map, templates_json, logger)
             i += 1
+
+    def _get_json_template_keys(self):
+        """
+        Return a list of the default allowed keys in the JSON templates
+        """
+        return [
+            "name",
+            "report_type",
+            "tags",
+            "params",
+            "sort_selection",
+            "item_filter",
+            "parent",
+            "children"
+        ]
 
     def _get_json_attr_keys(self):
         """
@@ -1076,7 +1091,7 @@ class Server:
             "Layout:userdefined",
         ]
 
-    def _check_template(self, template_id_str, template_attr):
+    def _check_template(self, template_id_str, template_attr, logger=None):
         # Check template_id_str
         if not self._check_template_name_convention(template_id_str):
             raise exceptions.TemplateEditorJSONLoadingError(
@@ -1108,6 +1123,16 @@ class Server:
                     f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
                     f"Please check the entries under '{template_id_str}'."
                 )
+                
+        # Add warnings to the logger about the extra keys
+        if logger:
+            default_allowed_keys = self._get_json_template_keys()
+            extra_keys = []
+            for key in template_attr.keys():
+                if key not in default_allowed_keys:
+                    extra_keys.append(key)
+            if extra_keys:
+                logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
 
         # Check report_type
         report_types = self._get_report_types()

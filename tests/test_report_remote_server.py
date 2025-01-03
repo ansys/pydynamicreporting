@@ -1,3 +1,4 @@
+import logging
 from os import environ
 from random import randint
 import re
@@ -717,6 +718,76 @@ def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
         ),
     ):
         server.load_templates(templates_json)
+
+class CapturingHandler(logging.Handler):
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+        self.records = []  # Store log records
+
+    def emit(self, record):
+        self.records.append(self.format(record))  # Store formatted log message
+
+    def get_recent_warnings(self):
+        # Return the most recent warning and higher-level messages
+        return [record for record in self.records if record.startswith("WARNING") or "WARNING" in record]
+
+@pytest.mark.ado_test
+def test_check_templates_extra_keys_with_logger(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    templates_json = {
+        "Template_0": {
+            "name": "A",
+            "report_type": "Layout:basic",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": None,
+            "children": ["Template_1", "Template_2"],
+            "extra_key": "", # Extra key
+        },
+        "Template_1": {
+            "name": "B",
+            "report_type": "Layout:basic",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": ["Template_3"],
+        },
+        "Template_3": {
+            "name": "D",
+            "report_type": "Layout:basic",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_1",
+            "children": [],
+        },
+        "Template_2": {
+            "name": "C",
+            "report_type": "Layout:basic",
+            "tags": "",
+            "params": {},
+            "sort_selection": "",
+            "item_filter": "",
+            "parent": "Template_0",
+            "children": [],
+        },
+    }
+
+    capture_handler = CapturingHandler()
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    capture_handler.setFormatter(formatter)
+    adr_service_create.logger.setLevel(logging.WARNING)
+    adr_service_create.logger.addHandler(capture_handler)
+
+    server.load_templates(templates_json, adr_service_create.logger)
+
+    recent_warnings = capture_handler.get_recent_warnings()
+    assert recent_warnings[-1] == "WARNING - There are some extra keys under 'Template_0': ['extra_key']"
 
 
 @pytest.mark.ado_test
