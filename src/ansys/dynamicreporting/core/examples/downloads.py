@@ -2,8 +2,8 @@
 
 import logging
 import os
-import re
 from pathlib import Path
+import re
 from urllib import request
 
 import ansys.dynamicreporting.core as adr
