@@ -25,6 +25,7 @@ new instance.
 # database. The path for the database directory must be to an empty directory.
 
 import ansys.dynamicreporting.core as adr
+import ansys.dynamicreporting.core.examples as examples
 
 db_dir = r"C:\tmp\new_database"
 adr_service = adr.Service(ansys_installation="docker", db_directory=db_dir)
@@ -42,9 +43,9 @@ session_guid = adr_service.start(create_db=True)
 my_text = adr_service.create_item(obj_name="Text", source="Documentation")
 my_text.item_text = "This is a simple string with no HTML formatting."
 my_animation = adr_service.create_item(obj_name="Animation File", source="Documentation")
-my_animation.item_animation = r"D:\tmp\myanim.mp4"
+my_animation.item_animation = examples.download_file("dam_break.mp4", "input_data")
 my_file = adr_service.create_item(obj_name="General File", source="Documentation")
-my_file.item_file = r"D:\tmp\anytfile.txt"
+my_file.item_file = examples.download_file("report_template.json", "multi_physics")
 adr_service.visualize_report()
 
 ###############################################################################
@@ -75,7 +76,7 @@ connected_s.visualize_report()
 # added to the database.
 
 my_image = connected_s.create_item(obj_name="Image", source="Documentation")
-my_image.item_image = r"D:\tmp\local_img.png"
+my_image.item_image = examples.download_file("introduction.png", "multi_physics")
 connected_s.visualize_report()
 
 

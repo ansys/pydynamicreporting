@@ -1,10 +1,12 @@
 """Functions to download sample datasets from the Ansys example data repository."""
 
 import ansys.dynamicreporting.core as adr
+import logging
 import os
 from pathlib import Path
 import re
 from urllib import request
+
 
 class RemoteFileNotFoundError(FileNotFoundError):
     """Raised on an attempt to download a non-existent remote file."""
@@ -33,6 +35,7 @@ def check_url_exists(url: str) -> bool:
     except Exception:
         return False
 
+
 def get_url_content(url: str) -> str:
     """Get the content of a URL.
 
@@ -49,14 +52,15 @@ def get_url_content(url: str) -> str:
     with request.urlopen(url) as response:
         return response.read()
 
+
 def _get_file_url(file_name: str, directory: str | None = None) -> str:
     """Get file URL."""
     if directory:
         return (
-            "https://github.com/ansys/example-data/raw/master/"
+            "https://github.com/ansys/example-data/raw/refs/heads/master/pydynamicreporting/"
             f"{directory}/{file_name}"
         )
-    return f"https://github.com/ansys/example-data/raw/master/{file_name}"
+    return f"https://github.com/ansys/example-data/raw/refs/heads/master/pydynamicreporting/{file_name}"
 
 
 def _retrieve_file(
@@ -72,24 +76,24 @@ def _retrieve_file(
         save_path = os.path.abspath(save_path)
     local_path = os.path.join(save_path, file_name)
     # First check if file has already been downloaded
-    print(f"Checking if {local_path} already exists...")
+    logging.debug(f"Checking if {local_path} already exists...")
     if os.path.isfile(local_path) or os.path.isdir(local_path):
-        print("File already exists.")
+        logging.debug("File already exists.")
         return local_path
 
-    print("File does not exist. Downloading specified file...")
+    logging.debug("File does not exist. Downloading specified file...")
 
     # Check if save path exists
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
     # Download file
-    print(f'Downloading URL: "{url}"')
+    logging.debug(f'Downloading URL: "{url}"')
     content = get_url_content(url)
     with open(local_path, "wb") as f:
         f.write(content)
 
-    print("Download successful.")
+    logging.debug("Download successful.")
     return local_path
 
 

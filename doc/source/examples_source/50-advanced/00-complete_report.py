@@ -23,6 +23,7 @@ amd generate a report template. As a result, you get a report.
 import numpy as np
 
 import ansys.dynamicreporting.core as adr
+import ansys.dynamicreporting.core.examples as examples
 
 ansys_loc = r"C:\Program Files\ANSYS Inc\v232"
 db_dir = r"C:\tmp\new_database"
@@ -277,16 +278,16 @@ b.item_text = "[some static content] <p></p>\r\nThe workflow provides calibrario
 b.set_tags("solution=solverA section=intro")
 b.get_tags()
 c = adr_service.create_item(obj_name="Schema")
-c.item_image = r"C:\tmp\schema.png"
+c.item_image = examples.download_file("multiphysics_workflow_diagram.PNG", "multi_physics")
 c.set_tags("solution=solverA section=intro")
 d = adr_service.create_item(obj_name="Schema")
-d.item_image = r"C:\tmp\sections.png"
+d.item_image = examples.download_file("summary.png", "multi_physics")
 d.set_tags("solution=solverA section=cad_summary")
 e = adr_service.create_item(obj_name="Schema")
-e.item_image = r"C:\tmp\preliminary.png"
+e.item_image = examples.download_file("preliminary.png", "multi_physics")
 e.set_tags("solution=solverA section=preliminar_summary")
-f = adr_service.create_item(obj_name="Schema")
-f.item_image = r"C:\tmp\solution.png"
+f = adr_service.create_item(obj_name="Details")
+f.item_image = examples.download_file("detailed.png", "multi_physics")
 f.set_tags("solution=solverA section=detailed_summary")
 g = adr_service.create_item(obj_name="param_input")
 g.table_dict["rowlbls"] = [
