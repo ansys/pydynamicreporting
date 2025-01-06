@@ -22,7 +22,7 @@ def test_download_error(adr_service_create, request) -> None:
     except examples.RemoteFileNotFoundError:
         success = True
     assert success
-    
+
 
 @pytest.mark.ado_test
 def test_download_image_newdir(adr_service_create, request) -> None:
