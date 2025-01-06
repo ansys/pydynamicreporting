@@ -151,7 +151,7 @@ heatmap.visualize()
 # .. image:: /_static/heatmap.png
 #
 # Visualize a 3D surface plot
-# --------------------------
+# ---------------------------
 #
 # A 3D surface plot allows you to visualize the data points in a terrain-like
 # surface in a 3D space powered by the WebGL engine. It is a variation of a
@@ -260,7 +260,7 @@ sankey_plot.visualize()
 # .. image:: /_static/sankey.png
 #
 # Visualize a 3D scatter plot
-# --------------------------
+# ---------------------------
 #
 # A 3D scatter plot allows you to visualize the data points in 3D space
 # powered by the WebGL engine. You can zoom in and out, and rotate to view the
