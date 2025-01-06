@@ -1,11 +1,12 @@
 """Functions to download sample datasets from the Ansys example data repository."""
 
-import ansys.dynamicreporting.core as adr
 import logging
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 from urllib import request
+
+import ansys.dynamicreporting.core as adr
 
 
 class RemoteFileNotFoundError(FileNotFoundError):
