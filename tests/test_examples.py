@@ -15,9 +15,10 @@ def test_download_image(adr_service_create, request) -> None:
 
 @pytest.mark.ado_test
 def test_download_error(adr_service_create, request) -> None:
-    filter_str = "A|i_type|cont|image"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     my_img = adr_service_create.create_item()
-    my_img.item_image = examples.download_file("does_not_exist.png", "input_data")
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
-    assert len(new_img_items) == len(img_items)
+    success = False
+    try:
+        my_img.item_image = examples.download_file("does_not_exist.png", "input_data")
+    except examples.RemoteFileNotFoundError:
+        success = True
+    assert success
