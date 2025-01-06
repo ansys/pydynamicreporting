@@ -41,19 +41,19 @@ for v in variables:
     for i in range(7):
         if i % 3 == 0:
             new_image = adr_service.create_item(
-                obj_name=f"Image {str(i+1)}", source="Application X"
+                obj_name=f"Image {str(i + 1)}", source="Application X"
             )
         elif i % 3 == 1:
             new_image = adr_service.create_item(
-                obj_name=f"Image {str(i +1)}", source="Application Y"
+                obj_name=f"Image {str(i + 1)}", source="Application Y"
             )
         elif i % 3 == 2:
             new_image = adr_service.create_item(
-                obj_name=f"Image {str(i +1)}", source="Application Z"
+                obj_name=f"Image {str(i + 1)}", source="Application Z"
             )
-        filename = f"{v}_{str(i+1).zfill(3)}.png"
+        filename = f"{v}_{str(i + 1).zfill(3)}.png"
         new_image.item_image = examples.download_file(filename, "input_data")
-        new_image.set_tags(f"var={v} clip=-{float(i)*0.01}")
+        new_image.set_tags(f"var={v} clip=-{float(i) * 0.01}")
 
 ###############################################################################
 # Query the database
