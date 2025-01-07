@@ -1136,7 +1136,7 @@ class Server:
                 logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
 
         # Check report_type
-        report_types = self._get_report_types()
+        report_types = self.get_report_types()
         if not template_attr["report_type"] in report_types:
             raise exceptions.TemplateEditorJSONLoadingError(
                 f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
