@@ -32,3 +32,10 @@ def test_download_image_newdir(adr_service_create, request) -> None:
     my_img.item_image = examples.download_file("enthalpy_001.png", "input_data", "new_dir")
     new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
     assert len(new_img_items) == (len(img_items) + 1)
+
+
+@pytest.mark.ado_test
+def test_url_validation() -> None:
+    is_valid = examples.downloads.uri_validator("http://google.com")
+    is_not_valid = examples.downloads.uri_validator("google.com")
+    assert is_valid and (not is_not_valid)

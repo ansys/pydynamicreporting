@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 import re
-from urllib import request
+from urllib import parse, request
 
 import ansys.dynamicreporting.core as adr
 
@@ -15,6 +15,14 @@ class RemoteFileNotFoundError(FileNotFoundError):
     def __init__(self, url):
         """Initializes RemoteFileNotFoundError."""
         super().__init__(f"{url} does not exist.")
+
+
+def uri_validator(url: str) -> bool:
+    try:
+        result = parse.urlparse(url)
+        return all([result.scheme, result.netloc])
+    except AttributeError:
+        return False
 
 
 def check_url_exists(url: str) -> bool:
@@ -30,6 +38,9 @@ def check_url_exists(url: str) -> bool:
     bool
         True if the URL exists, False otherwise
     """
+    if uri_validator(url) is False:
+        logging.debug(f"Passed url is invalid: {url}\n")
+        return False
     try:
         with request.urlopen(url) as response:
             return response.status == 200
@@ -137,30 +148,3 @@ def download_file(
     if not check_url_exists(url):
         raise RemoteFileNotFoundError(url)
     return _retrieve_file(url, file_name, save_path)
-
-
-def path(file_name: str):
-    """Return path of given file name.
-
-    Parameters
-    ----------
-    file_name : str
-        Name of the file.
-
-    Raises
-    ------
-    FileNotFoundError
-        If file does not exist.
-
-    Returns
-    -------
-    file_path: str
-        File path.
-    """
-    if os.path.isabs(file_name):
-        return file_name
-    file_path = Path(adr.EXAMPLES_PATH) / file_name
-    if file_path.is_file():
-        return str(file_path)
-    else:
-        raise FileNotFoundError(f"{file_name} does not exist.")
