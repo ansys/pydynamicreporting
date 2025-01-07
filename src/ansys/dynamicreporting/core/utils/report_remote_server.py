@@ -972,6 +972,27 @@ class Server:
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
 
+    def get_report_types(self):
+        """
+        Return a list of valid report types
+        """
+        return [
+            "Layout:basic",
+            "Layout:panel",
+            "Layout:box",
+            "Layout:tabs",
+            "Layout:carousel",
+            "Layout:slider",
+            "Layout:footer",
+            "Layout:header",
+            "Layout:iterator",
+            "Layout:tagprops",
+            "Layout:toc",
+            "Layout:reportlink",
+            "Layout:userdefined",
+            "Layout:datafilter",
+        ]
+
     def get_templates_as_json(self, root_guid):
         """
         Convert report templates rooted as root_guid to JSON
@@ -1070,26 +1091,6 @@ class Server:
         Return a list of necessary keys in the JSON templates
         """
         return ["name", "report_type", "parent", "children"]
-
-    def _get_report_types(self):
-        """
-        Return a list of valid report types
-        """
-        return [
-            "Layout:panel",
-            "Layout:basic",
-            "Layout:box",
-            "Layout:tabs",
-            "Layout:carousel",
-            "Layout:slider",
-            "Layout:footer",
-            "Layout:header",
-            "Layout:iterator",
-            "Layout:tagprops",
-            "Layout:toc",
-            "Layout:reportlink",
-            "Layout:userdefined",
-        ]
 
     def _check_template(self, template_id_str, template_attr, logger=None):
         # Check template_id_str
