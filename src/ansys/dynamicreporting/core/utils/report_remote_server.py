@@ -1069,28 +1069,25 @@ class Server:
         """
         Return a list of the default allowed keys in the JSON templates
         """
-        return [
-            "name",
-            "report_type",
-            "tags",
-            "params",
-            "sort_selection",
-            "item_filter",
-            "parent",
-            "children",
-        ]
-
-    def _get_json_attr_keys(self):
-        """
-        Return a list of JSON keys that can be got directory by attribute rather than by getters
-        """
-        return ["name", "report_type", "tags", "item_filter"]
+        return self._get_json_necessary_keys() + self._get_json_unnecessary_keys()
 
     def _get_json_necessary_keys(self):
         """
         Return a list of necessary keys in the JSON templates
         """
         return ["name", "report_type", "parent", "children"]
+
+    def _get_json_unnecessary_keys(self):
+        """
+        Return a list of unnecessary keys in the JSON templates
+        """
+        return ["tags", "params", "sort_selection", "item_filter"]
+
+    def _get_json_attr_keys(self):
+        """
+        Return a list of JSON keys that can be got directory by attribute rather than by getters
+        """
+        return ["name", "report_type", "tags", "item_filter"]
 
     def _check_template(self, template_id_str, template_attr, logger=None):
         # Check template_id_str
