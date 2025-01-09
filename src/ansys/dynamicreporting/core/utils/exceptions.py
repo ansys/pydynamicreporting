@@ -1,7 +1,7 @@
 """
 template_editor.exceptions
 --------------------------
-This module definse all exceptions used in the code base for the template editor.
+This module define all exceptions used in the code base for the template editor.
 """
 
 
@@ -47,3 +47,7 @@ class APIException(Exception):
 
 class PermissionDenied(APIException):
     """Raised if user does not have permissions for a server request."""
+
+
+class TemplateEditorJSONLoadingError(RuntimeError):
+    """Raised for errors when loading a JSON file for the template editor"""
