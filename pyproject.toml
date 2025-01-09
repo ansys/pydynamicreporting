@@ -81,7 +81,7 @@ test-extra = [
     "exceptiongroup==1.0.0",
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
-    "pyvista==0.44.1",
+    "pyvista==0.44.2",
     "vtk==9.4.0",
     "ansys-dpf-core==0.13.0",
 ]
