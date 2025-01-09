@@ -853,7 +853,7 @@ class Server:
         with open(file_path, "wb") as report:
             report.write(resp.content)
 
-    def build_url_with_query(self, report_guid, query, filter, rest_api=False):
+    def build_url_with_query(self, report_guid, query, filter=None, rest_api=False):
         url = self.get_URL()
         if rest_api:
             url += f"/api/generate-report/?view={str(report_guid)}"
