@@ -126,7 +126,7 @@ def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
         try:
             my_report = adr_service_query.get_report(report_name="My Top Report")
             pdf_file = os.path.join(request.fspath.dirname, "again_mytest_filter")
-            success = my_report.export_pdf(file_name=pdf_file, filter='A|i_type|cont|image;')
+            success = my_report.export_pdf(file_name=pdf_file, filter="A|i_type|cont|image;")
         except Exception:
             success = False
     else:  # If no local installation, then skip this test

@@ -34,9 +34,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
-from .encoders import BaseEncoder
-
 from ..adr_utils import build_query_url
+from .encoders import BaseEncoder
 
 
 def disable_warn_logging(func):
