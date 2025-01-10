@@ -967,9 +967,6 @@ class Service:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
 
-    def export_json(self, json_file_path: str) -> None:
-        
-
     def load_templates(self, json_file_path: str) -> None:
         """
         Load templates given a JSON-formatted file.
