@@ -967,12 +967,31 @@ class Service:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
 
-    def load_templates(self, json_file_name: str) -> None:
+    def load_templates(self, json_file_path: str) -> None:
         """
         Load templates given a JSON-formatted file.
+        There will be some interactive inputs if required.
+
+        Parameters
+        ----------
+        json_file_path: str
+            Full path of the JSON file to be loaded.
+
+        Returns
+        -------
+            None.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypsw")
+            adr_service.load_templates(r'C:\\my_json_file')
         """
         try:
-            with open(json_file_name, encoding="utf-8") as file:
+            with open(json_file_path, encoding="utf-8") as file:
                 templates_json = json.load(file)
         except json.JSONDecodeError as je:
             self.logger.error(
@@ -1005,7 +1024,7 @@ class Service:
                 .strip()
                 .lower()
             )
-            if reply == "y" or reply == "":
+            if reply in ("y", ""):
                 while True:
                     loaded_root_name = input("Please enter the new name: ")
                     if not loaded_root_name:
