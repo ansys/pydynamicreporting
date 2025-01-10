@@ -967,6 +967,9 @@ class Service:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
 
+    def export_json(self, json_file_path: str) -> None:
+        
+
     def load_templates(self, json_file_path: str) -> None:
         """
         Load templates given a JSON-formatted file.
@@ -1028,15 +1031,15 @@ class Service:
                 while True:
                     loaded_root_name = input("Please enter the new name: ")
                     if not loaded_root_name:
-                        self.logger.error("The root name can not be empty!")
+                        print("ERROR: The root name can not be empty!")
                     else:
                         break
                 root_attr["name"] = loaded_root_name
             elif reply == "n":
-                self.logger.error("JSON loading not completed due to naming conflicts.")
+                print("ERROR: JSON loading not completed due to naming conflicts.")
                 return
             else:
-                self.logger.warning("Please respond with 'Y' or 'N'.")
+                print("WARNING: Please respond with 'Y' or 'N'.")
 
         try:
             self.serverobj.load_templates(templates_json, self.logger)
