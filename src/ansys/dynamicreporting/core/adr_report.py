@@ -17,6 +17,8 @@ Examples
     my_report = adr_service.get_report(report_name = "My First Report")
     my_report.visualize()
 """
+import json
+import os
 import sys
 from typing import Optional
 import webbrowser
@@ -655,3 +657,39 @@ class Report:
         except Exception as e:  # pragma: no cover
             self.service.logger.error(f"Can not export static HTML report: {str(e)}")
         return success
+
+    def export_json(self, json_file_path: str) -> None:
+        """
+        Export THIS report to a JSON-formatted file.
+
+        Parameters
+        ----------
+            json_file_path: str
+                Full path of the JSON file to be exported to.
+
+        Returns
+        -------
+            None.
+
+        Examples
+        --------
+        ::
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypsw")
+
+            report = adr_service.get_report("my_report_name")
+            report.export_json(r'C:\\my_json_file')
+        """
+        try:
+            templates_data = self.service.serverobj.get_templates_as_json(self.report.guid)
+            with open(json_file_path, "w", encoding="utf-8") as json_file:
+                json.dump(templates_data, json_file, indent=4)
+
+            # Make the file read-only
+            os.chmod(json_file_path, 0o444)
+        except Exception as e:
+            self.service.logger.error(
+                f"Report: {self.report_name} terminated when exporting to JSON\n"
+                f"Error details: {e}"
+            )
