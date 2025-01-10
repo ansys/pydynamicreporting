@@ -665,7 +665,7 @@ class Report:
         Parameters
         ----------
             json_file_path: str
-                Full path of the JSON file to be exported to.
+                Path of the JSON file to be exported to.
 
         Returns
         -------
