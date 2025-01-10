@@ -1001,14 +1001,14 @@ class Service:
             return
 
         # Address root name conflict
-        ## 1. Find the root
+        # 1. Find the root
         for template_attr in templates_json.values():
             if template_attr["parent"] is None:
                 loaded_root_name = template_attr["name"]
                 root_attr = template_attr
                 break
 
-        ## 2. Compare with the existing root template(s)
+        # 2. Compare with the existing root template(s)
         templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
         existing_root_names = set()
         for template in templates:
