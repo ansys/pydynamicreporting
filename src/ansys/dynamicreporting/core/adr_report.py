@@ -159,12 +159,12 @@ class Report:
             my_report = adr_service.get_report(report_name = 'Top report')
             report_url = my_report.get_url()
         """
+        if self.service is None:  # pragma: no cover
+            print("No connection to any report")
+            return ""
         if filter:
             self.service.logger.warning("Deprecation warning: use item_filter instead of filter.")
             item_filter = filter
-        if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
             return ""
@@ -184,7 +184,7 @@ class Report:
                 )
                 return ""
         url += "usemenus=off"
-        url += build_query_url(self.service.logger, item_filter=item_filter)
+        url += build_query_url(logger = self.service.logger, item_filter=item_filter)
         return url
 
     def get_guid(self) -> str:
@@ -456,10 +456,10 @@ class Report:
         self,
         prefix: str = "",
         filter: str = "",
-        item_filter: str = "",
         style_path: str = "",
         width: int = 1000,
         height: int = 800,
+        item_filter: str = "",
     ) -> str:
         """
         A HTML code of the web component for report fetching. By default, the web
