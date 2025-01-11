@@ -184,7 +184,7 @@ class Report:
                 )
                 return ""
         url += "usemenus=off"
-        url += build_query_url(logger = self.service.logger, item_filter=item_filter)
+        url += build_query_url(logger=self.service.logger, item_filter=item_filter)
         return url
 
     def get_guid(self) -> str:

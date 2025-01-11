@@ -866,7 +866,7 @@ class Server:
             else:
                 url += f"&{key}={value}"
         if item_filter:
-            query_str = build_query_url(logger = None, item_filter = item_filter)
+            query_str = build_query_url(logger=None, item_filter=item_filter)
             url += query_str
         return url
 

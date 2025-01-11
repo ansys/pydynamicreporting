@@ -705,7 +705,7 @@ class Service:
         url += "usemenus=off"
         query_str = ""
         if item_filter:
-            query_str = build_query_url(logger = self.logger, item_filter = item_filter)
+            query_str = build_query_url(logger=self.logger, item_filter=item_filter)
         else:
             query_str = ""
         url += query_str
