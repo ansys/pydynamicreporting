@@ -608,7 +608,7 @@ class Report:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
-            succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query = {"colormode": "dark"})
+            succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"})
             succ2 = my_report.export_pdf(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False  # pragma: no cover
@@ -676,7 +676,7 @@ class Report:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
-            succ = my_report.export_html(directory_name = r'D:\\tmp', query={"colormode": "dark"})
+            succ = my_report.export_html(directory_name = r'D:\\tmp', query_params={"colormode": "dark"})
             succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False
