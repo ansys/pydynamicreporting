@@ -69,16 +69,16 @@ for v in variables:
 
 all_items = adr_service.query()
 test_one = len(all_items) == 14
-app_x = adr_service.query(filter="A|i_src|cont|Application X")
-app_y = adr_service.query(filter="A|i_src|cont|Application Y")
-app_z = adr_service.query(filter="A|i_src|cont|Application Z")
+app_x = adr_service.query(item_filter="A|i_src|cont|Application X")
+app_y = adr_service.query(item_filter="A|i_src|cont|Application Y")
+app_z = adr_service.query(item_filter="A|i_src|cont|Application Z")
 test_two = len(app_x) == 6
 test_three = len(app_y) == len(app_z) == 4
-enthalpy_items = adr_service.query(filter="A|i_tags|cont|var=enthalpy")
-statictemperature_items = adr_service.query(filter="A|i_tags|cont|var=statictemperature")
+enthalpy_items = adr_service.query(item_filter="A|i_tags|cont|var=enthalpy")
+statictemperature_items = adr_service.query(item_filter="A|i_tags|cont|var=statictemperature")
 test_four = len(enthalpy_items) == len(statictemperature_items) == 7
-clip3_items = adr_service.query(filter="A|i_tags|cont|clip=-0.03")
-clip5_items = adr_service.query(filter="A|i_tags|cont|clip=-0.05")
+clip3_items = adr_service.query(item_filter="A|i_tags|cont|clip=-0.03")
+clip5_items = adr_service.query(item_filter="A|i_tags|cont|clip=-0.05")
 test_five = len(clip3_items) == len(clip5_items) == 2
 
 ###############################################################################

@@ -241,9 +241,9 @@ def test_query_table(adr_service_query) -> None:
 
 @pytest.mark.ado_test
 def test_delete_item(adr_service_query) -> None:
-    only_text = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
+    only_text = adr_service_query.query(query_type="Item", item_filter="A|i_type|cont|html")
     adr_service_query.delete(only_text)
-    newly_items = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
+    newly_items = adr_service_query.query(query_type="Item", item_filter="A|i_type|cont|html")
     assert len(newly_items) == 0
 
 
@@ -277,7 +277,7 @@ def test_vis_report_filtered(adr_service_query) -> None:
     success = False
     try:
         filter = "A|s_guid|cont|15401c2b-089e-11ed-b75d-747827182a82"
-        adr_service_query.visualize_report(report_name="My Top Report", filter=filter)
+        adr_service_query.visualize_report(report_name="My Top Report", item_filter=filter)
         success = True
     except SyntaxError:
         success = False

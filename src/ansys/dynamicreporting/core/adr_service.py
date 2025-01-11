@@ -639,6 +639,7 @@ class Service:
         report_name: Optional[str] = "",
         new_tab: Optional[bool] = False,
         filter: Optional[str] = "",
+        item_filter: Optional[str] = "",
     ) -> None:
         """
         Render the report.
@@ -654,6 +655,11 @@ class Service:
             report is rendered in the current location. If the environment is
             not a Jupyter notebook, the report is always rendered in a new tab.
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -682,6 +688,9 @@ class Service:
             my_img.item_image = 'Image_to_push_on_report'
             adr_service.visualize_report()
         """
+        if filter:
+            self.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            item_filter = filter
         if self.serverobj is None:
             self.logger.error("No connection to any service")
             raise ConnectionToServiceError
@@ -695,8 +704,8 @@ class Service:
             url += "view=" + reportobj.guid + "&"
         url += "usemenus=off"
         query_str = ""
-        if filter:
-            query_str = build_query_url(self.logger, filter)
+        if item_filter:
+            query_str = build_query_url(self.logger, item_filter)
         else:
             query_str = ""
         url += query_str
@@ -736,7 +745,9 @@ class Service:
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
 
-    def query(self, query_type: str = "Item", filter: Optional[str] = "") -> list:
+    def query(
+        self, query_type: str = "Item", filter: Optional[str] = "", item_filter: Optional[str] = ""
+    ) -> list:
         """
         Query the database.
 
@@ -748,6 +759,11 @@ class Service:
             Type of objects to query. The default is ``"Item"``. Options are ``"Item"``,
             ``"Session"``, and ``"Dataset"``.
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -764,16 +780,19 @@ class Service:
             import ansys.dynamicreporting.core as adr
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
-            imgs = adr_service.query(query_type='Item', filter='A|i_type|cont|image;')
+            imgs = adr_service.query(query_type='Item', item_filter='A|i_type|cont|image;')
         """
+        if filter:
+            self.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            item_filter = filter
         queried_items = []
-        valid = check_filter(filter)
+        valid = check_filter(item_filter=item_filter)
         if valid is False:
-            self.logger.warning("Warning: filter string is not valid. Will be ignored.")
-            filter = ""
+            self.logger.warning("Warning: item_filter string is not valid. Will be ignored.")
+            item_filter = ""
         if query_type == "Item":
             org_queried_items = self.serverobj.get_objects(
-                objtype=report_objects.ItemREST, query=filter
+                objtype=report_objects.ItemREST, query=item_filter
             )
             for i in org_queried_items:
                 tmp_item = Item(service=self, obj_name=i.name, source=i.source)
@@ -793,11 +812,11 @@ class Service:
                     queried_items.append(tmp_item)
         elif query_type == "Session":
             queried_items = self.serverobj.get_objects(
-                objtype=report_objects.SessionREST, query=filter
+                objtype=report_objects.SessionREST, query=item_filter
             )
         elif query_type == "Dataset":
             queried_items = self.serverobj.get_objects(
-                objtype=report_objects.DatasetREST, query=filter
+                objtype=report_objects.DatasetREST, query=item_filter
             )
         return queried_items
 
