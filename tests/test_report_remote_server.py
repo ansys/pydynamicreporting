@@ -292,6 +292,43 @@ def test_export_pdf(adr_service_query, get_exec) -> None:
 
 
 @pytest.mark.ado_test
+def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
+    exec_basis = get_exec
+    item_filter = "A|i_type|cont|image;"
+    success = False
+    try:
+        my_report = adr_service_query.get_report(report_name="My Top Report")
+        success = True
+    except SyntaxError:
+        success = False
+    s = adr_service_query.serverobj
+    if exec_basis:
+        if environ.get("ANSYS_REL_INT_I"):
+            ansys_version = int(environ.get("ANSYS_REL_INT_I"))
+        else:
+            import re
+
+            matches = re.search(r".*v([0-9]{3}).*", exec_basis)
+            ansys_version = int(matches.group(1))
+        s.export_report_as_pdf(
+            report_guid=my_report.report.guid,
+            file_name="mytest",
+            exec_basis=exec_basis,
+            ansys_version=ansys_version,
+            item_filter=item_filter,
+        )
+    else:
+        # If no local installation, then you can not run the routine for pdf conversion. OSError expected.
+        try:
+            s.export_report_as_pdf(
+                report_guid=my_report.report.guid, file_name="mytest", item_filter=item_filter
+            )
+        except OSError:
+            success = True
+    assert success is True
+
+
+@pytest.mark.ado_test
 def test_export_pptx_error(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     s = adr_service_query.serverobj
