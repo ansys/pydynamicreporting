@@ -75,13 +75,13 @@ def get_logger(logfile=None):
     return logger
 
 
-def check_filter(filter: str = ""):
+def check_filter(item_filter: str = ""):
     """
     Verify validity of the query string for filtering.
 
     Parameters
     ----------
-    filter : str, optional
+    item_filter : str, optional
         Query string for filtering. The default is ``""``. The syntax corresponds
         to the syntax for Ansys Dynamic Reporting. For more information, see
         _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -91,7 +91,7 @@ def check_filter(filter: str = ""):
     bool
         ``True`` if the query string is valid, ``False`` otherwise.
     """
-    for query_stanza in filter.split(";"):
+    for query_stanza in item_filter.split(";"):
         if len(query_stanza) > 0:
             if len(query_stanza.split("|")) != 4:
                 return False
@@ -102,7 +102,7 @@ def check_filter(filter: str = ""):
     return True
 
 
-def build_query_url(logger = None, filter: str = "") -> str:
+def build_query_url(logger = None, item_filter: str = "") -> str:
     """
     Build the query section of report url.
 
@@ -111,7 +111,7 @@ def build_query_url(logger = None, filter: str = "") -> str:
     logger: logging.logger
         The logger object.
 
-    filter : str, optional
+    item_filter : str, optional
         Query string for filtering. The default is ``""``. The syntax corresponds
         to the syntax for Ansys Dynamic Reporting. For more information, see
         _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -121,10 +121,10 @@ def build_query_url(logger = None, filter: str = "") -> str:
     str
         query section of the report url corresponding to the query string.
     """
-    valid = check_filter(filter)
+    valid = check_filter(item_filter)
     if valid is False:
-        logger.warning("Warning: filter string is not valid. Will be ignored.")
+        logger.warning("Warning: item_filter string is not valid. Will be ignored.")
         return ""
     else:
-        query_str = "&query={}".format(filter.replace("|", "%7C").replace(";", "%3B").replace("&", "%2C"))
+        query_str = "&query={}".format(item_filter.replace("|", "%7C").replace(";", "%3B").replace("&", "%2C"))
         return query_str

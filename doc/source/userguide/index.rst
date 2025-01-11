@@ -144,7 +144,7 @@ Once you are connected to the session, you can query its items:
 .. code:: python
 
    all_items = adr_service.query()
-   only_images = adr_service.query(filter="A|i_type|cont|image|")
+   only_images = adr_service.query(item_filter="A|i_type|cont|image|")
 
 
 The :func:`query<ansys.dynamicreporting.core.Service.query>` method takes

@@ -16,7 +16,7 @@ def test_geturl_report(adr_service_query) -> None:
 @pytest.mark.ado_test
 def test_geturl_report_with_filter(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
-    url = my_report.get_url(filter='"A|b_type|cont|image;"')
+    url = my_report.get_url(item_filter='"A|b_type|cont|image;"')
     assert "http:" in url
 
 
