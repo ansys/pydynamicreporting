@@ -535,7 +535,8 @@ class Report:
     def export_pdf(
         self,
         file_name: str = "",
-        query: Optional[dict] = None,
+        query_params: Optional[dict] = None,
+        item_filter: Optional[str] = None,
         page: Optional[list] = None,
         delay: Optional[int] = None,
     ) -> bool:
@@ -547,8 +548,11 @@ class Report:
         ----------
         file_name : str
             Path and filename for the PDF file to export.
-        query : dict, optional
-            Dictionary for query parameters to apply to report template before export. Default: None
+        query_params : dict, optional
+            Dictionary for parameters to apply to report template. Default: None
+        item_filter: str, optional
+            String corresponding to query to run on the database items before rendering the report.
+            Default: None
         page : list, optional
             List of integers that represents the size of the exported pdf. Default: None, which
             corresponds to A4 size
@@ -569,7 +573,8 @@ class Report:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
-            succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf')
+            succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query = {"colormode": "dark"})
+            succ2 = my_report.export_pdf(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False  # pragma: no cover
         if self.service is None:  # pragma: no cover
@@ -579,12 +584,13 @@ class Report:
             self.service.logger.error("No connection to any server")
             return ""
         try:  # pragma: no cover
-            if query is None:
-                query = {}
+            if query_params is None:
+                query_params = {}
             self.service.serverobj.export_report_as_pdf(
                 report_guid=self.report.guid,
                 file_name=file_name,
-                query=query,
+                query=query_params,
+                item_filter=item_filter,
                 page=page,
                 parent=None,
                 delay=delay,
@@ -599,7 +605,8 @@ class Report:
     def export_html(
         self,
         directory_name: str = "",
-        query: Optional[dict] = None,
+        query_params: Optional[dict] = None,
+        item_filter: Optional[str] = None,
         filename: Optional[str] = "index.html",
         no_inline_files: Optional[bool] = False,
     ) -> bool:
@@ -610,8 +617,11 @@ class Report:
         ----------
         directory_name : str
             ....
-        query : dict, optional
-            Dictionary for query parameters to apply to report template before export. Default: None
+        query_params : dict, optional
+            Dictionary for parameters to apply to report template. Default: None
+        item_filter: str, optional
+            String corresponding to query to run on the database items before rendering the report.
+            Default: None
         filename : str, optional
             Filename for the exported static HTML file. Default: index.html
         no_inline_files : bool, optional
@@ -631,7 +641,8 @@ class Report:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
-            succ = my_report.export_html(directory_name = r'D:\\tmp')
+            succ = my_report.export_html(directory_name = r'D:\\tmp', query={"colormode": "dark"})
+            succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False
         if self.service is None:  # pragma: no cover
@@ -641,12 +652,13 @@ class Report:
             self.service.logger.error("No connection to any server")
             return ""
         try:
-            if query is None:
-                query = {}
+            if query_params is None:
+                query_params = {}
             self.service.serverobj.export_report_as_html(
                 report_guid=self.report.guid,
                 directory_name=directory_name,
-                query=query,
+                query=query_params,
+                item_filter=item_filter,
                 filename=filename,
                 no_inline_files=no_inline_files,
                 ansys_version=self.service._ansys_version,

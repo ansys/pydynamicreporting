@@ -119,6 +119,22 @@ def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
 
 
 @pytest.mark.ado_test
+def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
+    exec_basis = get_exec
+    if exec_basis:
+        success = False
+        try:
+            my_report = adr_service_query.get_report(report_name="My Top Report")
+            pdf_file = os.path.join(request.fspath.dirname, "again_mytest_filter")
+            success = my_report.export_pdf(file_name=pdf_file, item_filter="A|i_type|cont|image;")
+        except Exception:
+            success = False
+    else:  # If no local installation, then skip this test
+        success = True
+    assert success is True
+
+
+@pytest.mark.ado_test
 def test_save_as_html(adr_service_query) -> None:
     success = False
     try:

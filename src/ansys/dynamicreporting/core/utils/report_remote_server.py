@@ -34,6 +34,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
+from ..adr_utils import build_query_url
 from .encoders import BaseEncoder
 
 
@@ -852,7 +853,7 @@ class Server:
         with open(file_path, "wb") as report:
             report.write(resp.content)
 
-    def build_url_with_query(self, report_guid, query, rest_api=False):
+    def build_url_with_query(self, report_guid, query, item_filter=None, rest_api=False):
         url = self.get_URL()
         if rest_api:
             url += f"/api/generate-report/?view={str(report_guid)}"
@@ -864,6 +865,9 @@ class Server:
                 url += f"&{key}"
             else:
                 url += f"&{key}={value}"
+        if item_filter:
+            query_str = build_query_url(filter=item_filter)
+            url += query_str
         return url
 
     def export_report_as_html(
@@ -871,6 +875,7 @@ class Server:
         report_guid,
         directory_name,
         query=None,
+        item_filter=None,
         filename="index.html",
         no_inline_files=False,
         ansys_version=None,
@@ -881,7 +886,7 @@ class Server:
         directory_path = os.path.abspath(directory_name)
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
-        url = self.build_url_with_query(report_guid, query)
+        url = self.build_url_with_query(report_guid, query, item_filter)
         # ask the server for the Ansys version number. It will generally know it.
         _ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
         if ansys_version:
@@ -901,6 +906,7 @@ class Server:
         report_guid,
         file_name,
         query=None,
+        item_filter=None,
         page=None,
         parent=None,
         delay=None,
@@ -910,7 +916,7 @@ class Server:
         if query is None:
             query = {}
         query["print"] = "pdf"
-        url = self.build_url_with_query(report_guid, query)
+        url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
         if has_qt and (parent is not None):
             from .report_download_pdf import NexusPDFSave
