@@ -22,6 +22,7 @@ create items in this database.
 import numpy as np
 
 import ansys.dynamicreporting.core as adr
+import ansys.dynamicreporting.core.examples as examples
 
 ansys_loc = r"C:\Program Files\ANSYS Inc\v232"
 db_dir = r"C:\tmp\new_database"
@@ -39,9 +40,9 @@ session_guid = adr_service.start(create_db=True)
 my_text = adr_service.create_item()
 my_text.item_text = "<h1>Analysis Title</h1>This is the first of many items"
 my_image = adr_service.create_item()
-my_image.item_image = r"""D:\tmp\tmp_img.png"""
+my_image.item_image = examples.download_file("enthalpy_001.png", "input_data")
 my_scene = adr_service.create_item()
-my_scene.item_scene = r"""D:\tmp\tmp_scene.avz"""
+my_scene.item_scene = examples.download_file("dam_break.avz", "input_data")
 
 ###############################################################################
 # Visualize all items
