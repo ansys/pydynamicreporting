@@ -678,7 +678,7 @@ class Report:
             adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
             adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypsw")
 
-            report = adr_service.get_report("my_report_name")
+            report = adr_service.get_report(report_name="my_report_name")
             report.export_json(r'C:\\my_json_file')
         """
         try:
