@@ -9,7 +9,7 @@ requires = [
 
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.9.0.dev0"
+version = "0.10.0.dev0"
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
@@ -48,7 +48,7 @@ dependencies = [
     "build>=0.8.0",
     # core ADR dependencies
     "django~=4.2",
-    "djangorestframework~=3.14",
+    "djangorestframework~=3.15",
     "django-guardian~=2.4",
     "tzlocal~=5.0",
     "numpy>=1.18.0,<3",
@@ -71,11 +71,16 @@ ci =  "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+    "psutil==6.0.0",
+]
+test-extra = [
     "docker>=7.1.0",
     "psutil==6.0.0",
     "exceptiongroup==1.0.0",
-    "pytest==8.3.3",
-    "pytest-cov==6.0.0",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
     "pyvista==0.44.1",
     "vtk==9.4.0",
     "ansys-dpf-core==0.13.0",
@@ -102,8 +107,8 @@ dev = [
     "pillow==10.4.0",
     "psutil==6.0.0",
     "docker>=7.1.0",
-    "pytest==8.3.3",
-    "pytest-cov==6.0.0",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
     "Sphinx==8.0.2",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.18.0",
@@ -111,6 +116,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
 addopts = "--capture=tee-sys --tb=native -p no:warnings"
 markers =[

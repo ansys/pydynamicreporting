@@ -20,6 +20,7 @@ method allows you to quickly slice the database to select a subset of items.
 # database directory must be to an empty directory.
 
 import ansys.dynamicreporting.core as adr
+import ansys.dynamicreporting.core.examples as examples
 
 ansys_loc = r"C:\Program Files\ANSYS Inc\v232"
 db_dir = r"C:\tmp\new_database"
@@ -31,56 +32,54 @@ session_guid = adr_service.start(create_db=True)
 # ------------
 #
 # Now that an Ansys Dynamic Reporting service is running on top of a
-# new database, you can populate it. To keep this example simple, this code
-# creates multiple text items. It then sets some different names, sources, and
-# tags.
+# new database, you can populate it. We will download and push to the database
+# 14 images.We will then set some different names, sources, and
+# tags based on the image names
 
-for i in range(100):
-    if i % 3 == 0:
-        my_text = adr_service.create_item(obj_name=f"Name {str(i % 20)}", source="Application X")
-    elif i % 3 == 1:
-        my_text = adr_service.create_item(obj_name=f"Name {str(i % 20)}", source="Application Y")
-    elif i % 3 == 2:
-        my_text = adr_service.create_item(obj_name=f"Name {str(i % 20)}", source="Application Z")
-    my_text.item_text = "Any text. Does not matter the actual payload"
-    if i % 4 == 0:
-        my_text.set_tags("var=pressure")
-    elif i % 4 == 1:
-        my_text.set_tags("var=energy")
-    elif i % 4 == 2:
-        my_text.set_tags("var=temperature")
-    elif i % 4 == 3:
-        my_text.set_tags("var=vorticity")
-    my_text.add_tag(tag="dp", value=str(i % 50))
+variables = ["enthalpy", "statictemperature"]
+for v in variables:
+    for i in range(7):
+        if i % 3 == 0:
+            new_image = adr_service.create_item(
+                obj_name=f"Image {str(i + 1)}", source="Application X"
+            )
+        elif i % 3 == 1:
+            new_image = adr_service.create_item(
+                obj_name=f"Image {str(i + 1)}", source="Application Y"
+            )
+        elif i % 3 == 2:
+            new_image = adr_service.create_item(
+                obj_name=f"Image {str(i + 1)}", source="Application Z"
+            )
+        filename = f"{v}_{str(i + 1).zfill(3)}.png"
+        new_image.item_image = examples.download_file(filename, "input_data")
+        new_image.set_tags(f"var={v} clip=-{float(i) * 0.01}")
 
 ###############################################################################
 # Query the database
 # ------------------
 #
-# Now that the database is populated with a hundred items with different
+# Now that the database is populated with a few items with different
 # names, sources, and tags, query the database, beginning with an empty
-# query that returns the entire set (all 100 items). Next, query on the
-# source name, which results in three different lists, with 34, 33, and 33 items
-# respectively. Finally, query on the name and the ``dp`` tag. See that the lists
-# have theexpected length. You can try different queries using the other attributes
-# that have been set on the items.
-#
+# query that returns the entire set (all 14 items). Next, query on the
+# source name, which results in three different lists, with 6, 4, and 4 items
+# respectively. Query on the ``var`` and ``clip`` taga. See that the lists
+# have the expected length. You can try different queries using other attributes.
+# #
 
 all_items = adr_service.query()
-test_one = len(all_items) == 100
+test_one = len(all_items) == 14
 app_x = adr_service.query(filter="A|i_src|cont|Application X")
 app_y = adr_service.query(filter="A|i_src|cont|Application Y")
 app_z = adr_service.query(filter="A|i_src|cont|Application Z")
-test_two = len(app_x) == 34
-test_three = len(app_y) == len(app_z) == 33
-name_0 = adr_service.query(filter="A|i_name|cont|Name 0")
-name_11 = adr_service.query(filter="A|i_name|cont|Name 11")
-name_7 = adr_service.query(filter="A|i_name|cont|Name 7")
-test_four = len(name_7) == len(name_0) == len(name_11) == 5
-dp0_items = adr_service.query(filter="A|i_tags|cont|dp=0")
-dp10_items = adr_service.query(filter="A|i_tags|cont|dp=10")
-dp33_items = adr_service.query(filter="A|i_tags|cont|dp=33")
-test_five = len(dp0_items) == len(dp10_items) == len(dp33_items) == 2
+test_two = len(app_x) == 6
+test_three = len(app_y) == len(app_z) == 4
+enthalpy_items = adr_service.query(filter="A|i_tags|cont|var=enthalpy")
+statictemperature_items = adr_service.query(filter="A|i_tags|cont|var=statictemperature")
+test_four = len(enthalpy_items) == len(statictemperature_items) == 7
+clip3_items = adr_service.query(filter="A|i_tags|cont|clip=-0.03")
+clip5_items = adr_service.query(filter="A|i_tags|cont|clip=-0.05")
+test_five = len(clip3_items) == len(clip5_items) == 2
 
 ###############################################################################
 # Close the service

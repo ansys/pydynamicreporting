@@ -7,22 +7,20 @@ from ansys.dynamicreporting.core.utils import report_remote_server
 
 
 @pytest.mark.ado_test
-def test_geturl_report(adr_service_query) -> bool:
+def test_geturl_report(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     url = my_report.get_url()
-    adr_service_query.stop()
     assert "http:" in url
 
 
 @pytest.mark.ado_test
-def test_geturl_report_with_filter(adr_service_query) -> bool:
+def test_geturl_report_with_filter(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     url = my_report.get_url(filter='"A|b_type|cont|image;"')
-    adr_service_query.stop()
     assert "http:" in url
 
 
-def test_visualize_report(adr_service_query) -> bool:
+def test_visualize_report(adr_service_query) -> None:
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -31,11 +29,10 @@ def test_visualize_report(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
-def test_iframe_report(adr_service_query) -> bool:
+def test_iframe_report(adr_service_query) -> None:
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -43,12 +40,11 @@ def test_iframe_report(adr_service_query) -> bool:
         success = True
     except SyntaxError:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
 @pytest.mark.ado_test
-def test_unit_report_url(request) -> bool:
+def test_unit_report_url(request) -> None:
     logfile = os.path.join(request.fspath.dirname, "outfile_3.txt")
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
@@ -62,7 +58,7 @@ def test_unit_report_url(request) -> bool:
     assert err_msg
 
 
-def test_unit_report_visualize(request) -> bool:
+def test_unit_report_visualize(request) -> None:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
@@ -77,7 +73,7 @@ def test_unit_report_visualize(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_unit_report_iframe(request) -> bool:
+def test_unit_report_iframe(request) -> None:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
@@ -92,7 +88,7 @@ def test_unit_report_iframe(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_unit_no_url(request) -> bool:
+def test_unit_no_url(request) -> None:
     logfile = os.path.join(request.fspath.dirname, "outfile_6.txt")
     a = Service(logfile=logfile)
     a.serverobj = report_remote_server.Server()
@@ -107,7 +103,7 @@ def test_unit_no_url(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_save_as_pdf(adr_service_query, request, get_exec) -> bool:
+def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
     exec_basis = get_exec
     if exec_basis:
         success = False
@@ -117,32 +113,45 @@ def test_save_as_pdf(adr_service_query, request, get_exec) -> bool:
             success = my_report.export_pdf(file_name=pdf_file)
         except Exception:
             success = False
-        adr_service_query.stop()
     else:  # If no local installation, then skip this test
         success = True
     assert success is True
 
 
 @pytest.mark.ado_test
-def test_save_as_html(adr_service_query) -> bool:
+def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
+    exec_basis = get_exec
+    if exec_basis:
+        success = False
+        try:
+            my_report = adr_service_query.get_report(report_name="My Top Report")
+            pdf_file = os.path.join(request.fspath.dirname, "again_mytest_filter")
+            success = my_report.export_pdf(file_name=pdf_file, item_filter="A|i_type|cont|image;")
+        except Exception:
+            success = False
+    else:  # If no local installation, then skip this test
+        success = True
+    assert success is True
+
+
+@pytest.mark.ado_test
+def test_save_as_html(adr_service_query) -> None:
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
         success = my_report.export_html(directory_name="htmltest_again")
     except Exception:
         success = False
-    adr_service_query.stop()
     assert success is True
 
 
-def test_get_guid(adr_service_query) -> bool:
+def test_get_guid(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
     guid = my_report.get_guid()
-    adr_service_query.stop()
     assert len(guid) > 0
 
 
-def test_get_report_script(adr_service_query) -> bool:
+def test_get_report_script(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
 
     # call web component <script> & defined expected output
@@ -326,11 +335,10 @@ def test_get_report_script(adr_service_query) -> bool:
     # check script content
     script_check = clean_script == clean_expected_script
 
-    adr_service_query.stop()
     assert script_check
 
 
-def test_get_report_component(adr_service_query) -> bool:
+def test_get_report_component(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
 
     # call web component <adr-report> & define expected output
@@ -354,5 +362,4 @@ def test_get_report_component(adr_service_query) -> bool:
     )
     web_component_iframe_check = clean_web_component_iframe == clean_expected_web_component_iframe
 
-    adr_service_query.stop()
     assert web_component_prefix_check and web_component_iframe_check

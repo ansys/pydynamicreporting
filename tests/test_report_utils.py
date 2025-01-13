@@ -18,7 +18,7 @@ def return_file_paths(request) -> list:
 
 
 @pytest.mark.ado_test
-def test_encode_decode() -> bool:
+def test_encode_decode() -> None:
     mys = "D:\tmp\\My String()"
     encoded_s = ru.encode_url(mys)
     decoded_s = ru.decode_url(encoded_s)
@@ -26,30 +26,30 @@ def test_encode_decode() -> bool:
 
 
 @pytest.mark.ado_test
-def test_is_enve_image(request) -> bool:
+def test_is_enve_image(request) -> None:
     img = ru.is_enve_image_or_pil(return_file_paths(request)[0])
     assert img is True
 
 
 @pytest.mark.ado_test
-def test_enve_image_to_data(request) -> bool:
+def test_enve_image_to_data(request) -> None:
     img_data = ru.image_to_data(return_file_paths(request)[0])
     assert "file_data" in img_data.keys()
 
 
 @pytest.mark.ado_test
-def test_env_arch() -> bool:
+def test_env_arch() -> None:
     local_arch = ru.enve_arch()
     assert ("win" in local_arch) or ("lin" in local_arch)
 
 
-def test_enve_home() -> bool:
+def test_enve_home() -> None:
     enve_home = ru.enve_home()
     assert "ansys" in enve_home
 
 
 @pytest.mark.ado_test
-def test_ceiversion_nexus_suffix() -> bool:
+def test_ceiversion_nexus_suffix() -> None:
     suffix = ru.ceiversion_nexus_suffix()
     try:
         int_suffix = int(suffix)
@@ -60,7 +60,7 @@ def test_ceiversion_nexus_suffix() -> bool:
 
 
 @pytest.mark.ado_test
-def test_ceiversion_apex_suffix() -> bool:
+def test_ceiversion_apex_suffix() -> None:
     suffix = ru.ceiversion_apex_suffix()
     try:
         int_suffix = int(suffix)
@@ -71,7 +71,7 @@ def test_ceiversion_apex_suffix() -> bool:
 
 
 @pytest.mark.ado_test
-def test_ceiversion_ensight_suffix() -> bool:
+def test_ceiversion_ensight_suffix() -> None:
     suffix = ru.ceiversion_ensight_suffix()
     try:
         int_suffix = int(suffix)
@@ -82,62 +82,61 @@ def test_ceiversion_ensight_suffix() -> bool:
 
 
 @pytest.mark.ado_test
-def test_platform_encoding() -> bool:
+def test_platform_encoding() -> None:
     encode = ru.platform_encoding()
     assert encode == "mbcs" or encode == "utf-8"
 
 
 @pytest.mark.ado_test
-def test_local_to_utf8() -> bool:
+def test_local_to_utf8() -> None:
     testone = ru.local_to_utf8(v=b"33")
     testtwo = ru.local_to_utf8(v=b"33", use_unicode=True)
     assert type(testone) is bytes and type(testtwo) is str
 
 
 @pytest.mark.ado_test
-def test_utf8_to_local() -> bool:
+def test_utf8_to_local() -> None:
     assert type(ru.utf8_to_local(v="rr")) is bytes
 
 
 @pytest.mark.ado_test
-def test_utf8_to_unicode() -> bool:
+def test_utf8_to_unicode() -> None:
     assert type(ru.utf8_to_unicode(v="rr")) is str and type(ru.utf8_to_unicode(v=b"rr"))
 
 
 @pytest.mark.ado_test
-def test_to_local_8bit() -> bool:
+def test_to_local_8bit() -> None:
     assert type(ru.to_local_8bit(v="rr")) is str
 
 
 @pytest.mark.ado_test
-def test_from_local_8bit() -> bool:
+def test_from_local_8bit() -> None:
     testone = ru.from_local_8bit(v=b"33")
     testtwo = ru.from_local_8bit(v="33")
     assert type(testone) is str and type(testtwo) is str
 
 
 @pytest.mark.ado_test
-def test_run_web_request(adr_service_query) -> bool:
+def test_run_web_request(adr_service_query) -> None:
     resp = ru.run_web_request(method="GET", server=adr_service_query.serverobj, relative_url="")
-    adr_service_query.stop()
     assert resp.ok is True
 
 
 @pytest.mark.ado_test
-def test_isSQLite3(request) -> bool:
+def test_isSQLite3(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     slite_file = join(join(test_path, "query_db"), "db.sqlite3")
     assert ru.isSQLite3(slite_file) is True
 
 
 @pytest.mark.ado_test
-def test_no_isSQLite3(request) -> bool:
+def test_no_isSQLite3(request) -> None:
     slite_file = return_file_paths(request)[0]
     assert ru.isSQLite3(slite_file) is False
 
 
 @pytest.mark.ado_test
-def test_narray() -> bool:
+def test_narray() -> None:
     try:
         a = ru.nexus_array(dtype="u8", shape=(1, 2))
         a.set_shape(value=(2, 3))
@@ -170,7 +169,7 @@ def test_narray() -> bool:
 
 
 @pytest.mark.ado_test
-def test_narray_index() -> bool:
+def test_narray_index() -> None:
     a = ru.nexus_array()
     mystr = a._index(key="a")
     myint = a._index(key=(1, 1))
@@ -178,7 +177,7 @@ def test_narray_index() -> bool:
 
 
 @pytest.mark.ado_test
-def test_narray_getitem() -> bool:
+def test_narray_getitem() -> None:
     b = ru.nexus_array()
     b.__setitem__(key=0, value=10)
     myval = b.__getitem__(key=0)
@@ -189,7 +188,7 @@ def test_narray_getitem() -> bool:
 
 
 @pytest.mark.ado_test
-def test_settings() -> bool:
+def test_settings() -> None:
     try:
         _ = ru.Settings(defaults={"a": 1, "b": 2})
         success = True
@@ -199,7 +198,7 @@ def test_settings() -> bool:
 
 
 @pytest.mark.ado_test
-def test_find_unused_ports() -> bool:
+def test_find_unused_ports() -> None:
     ports = ru.find_unused_ports(count=3)
     single_port = ru.find_unused_ports(start=0, end=9000, count=1, avoid=range(10, 1000))
     succ = len(ru.find_unused_ports(count=0)) <= 1
@@ -208,7 +207,7 @@ def test_find_unused_ports() -> bool:
 
 
 @pytest.mark.ado_test
-def test_is_port_in_use() -> bool:
+def test_is_port_in_use() -> None:
     ret_f = ru.is_port_in_use(port=-34)
     ret_t = ru.is_port_in_use(port=9090)
     ret_less = ru.is_port_in_use(admin_check=True, port=90)
@@ -216,13 +215,13 @@ def test_is_port_in_use() -> bool:
 
 
 @pytest.mark.ado_test
-def test_get_links_from_html() -> bool:
+def test_get_links_from_html() -> None:
     res = ru.get_links_from_html(html="www.mocksite.com")
     assert res == []
 
 
 @pytest.mark.ado_test
-def test_htmlparser() -> bool:
+def test_htmlparser() -> None:
     a = ru.HTMLParser()
     a.handle_starttag(tag="a", attrs=[("href", 1)])
     assert a._links == [1]

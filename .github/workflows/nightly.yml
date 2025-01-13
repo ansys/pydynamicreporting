@@ -10,7 +10,6 @@ env:
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
 
-
 jobs:
 
   nightly_test:
@@ -73,7 +72,7 @@ jobs:
   build-failure:
     name: Teams notify on failure
     if: failure()
-    needs: [ nightly_test, nightly_and_upload ]
+    needs: [ nightly_and_upload ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +80,7 @@ jobs:
         uses: jdcargile/ms-teams-notification@v1.4
         with:
           github-token: ${{ github.token }}
-          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
-          notification-summary: Nightly failure
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_NIGHTLY }}
+          notification-summary: Nightly build failure
           notification-color: dc3545
           timezone: America/New_York
