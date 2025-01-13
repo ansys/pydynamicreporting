@@ -1,5 +1,5 @@
 [flake8]
-exclude = venv, __init__.py, doc/_build
+exclude = venv, __init__.py, doc/_build, doc/_data
 select = B,B9,C,D,DAR,E,F,N,RST,S,W
 count = True
 max-complexity = 10
