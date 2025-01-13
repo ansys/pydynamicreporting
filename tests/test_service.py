@@ -1,4 +1,5 @@
 """This module allows pytest to perform unit testing."""
+from os import path
 from pathlib import Path
 from random import randint
 
@@ -15,6 +16,7 @@ from ansys.dynamicreporting.core.exceptions import (
     MissingSession,
     NotValidServer,
 )
+from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server
 
 
@@ -385,3 +387,19 @@ def test_same_port(tmp_path, get_exec) -> None:
     a.stop()
     b.stop()
     assert a._port != b._port
+
+
+@pytest.mark.ado_test
+def test_load_templates(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+    current_script_path = path.abspath(__file__)
+    sample_json = path.join(
+        path.dirname(current_script_path), "test_data", "test_load_templates.json"
+    )
+    adr_service_create.load_templates(sample_json)
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    for template in templates:
+        if template.master:
+            assert template.name == "A"
+            break
+    server.del_objects(templates)
