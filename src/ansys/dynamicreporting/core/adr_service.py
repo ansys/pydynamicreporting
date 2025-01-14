@@ -1018,13 +1018,17 @@ class Service:
         if loaded_root_name in existing_root_names:
             num_copies = 1
             for name in existing_root_names:
-                if name.startswith(loaded_root_name) and \
-                   len(name) > len(loaded_root_name) + 2 and \
-                   name[len(loaded_root_name) + 1] == '(':
-                       num_copies += 1
+                if (
+                    name.startswith(loaded_root_name)
+                    and len(name) > len(loaded_root_name) + 2
+                    and name[len(loaded_root_name) + 1] == "("
+                ):
+                    num_copies += 1
             renamed_root_name = f"{loaded_root_name} ({num_copies + 1})"
-            self.logger.warning("The root name in the JSON conflicts with one of the existing templates': "
-                                f"'{loaded_root_name}'. In order to proceed, it is automatically renamed to: '{renamed_root_name}'")
+            self.logger.warning(
+                "The root name in the JSON conflicts with one of the existing templates': "
+                f"'{loaded_root_name}'. In order to proceed, it is automatically renamed to: '{renamed_root_name}'"
+            )
             root_attr["name"] = renamed_root_name
 
         try:
