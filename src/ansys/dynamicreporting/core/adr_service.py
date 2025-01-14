@@ -29,6 +29,7 @@ try:
 except ImportError:  # pragma: no cover
     pass
 
+import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -689,7 +690,11 @@ class Service:
             adr_service.visualize_report()
         """
         if filter:
-            self.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             item_filter = filter
         if self.serverobj is None:
             self.logger.error("No connection to any service")
@@ -783,7 +788,11 @@ class Service:
             imgs = adr_service.query(query_type='Item', item_filter='A|i_type|cont|image;')
         """
         if filter:
-            self.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             item_filter = filter
         queried_items = []
         valid = check_filter(item_filter=item_filter)

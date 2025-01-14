@@ -19,6 +19,7 @@ Examples
 """
 import sys
 from typing import Optional
+import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
@@ -113,7 +114,11 @@ class Report:
             my_report.visualize(new_tab = True)
         """
         if filter:
-            self.service.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             item_filter = filter
         if in_ipynb() and not new_tab:  # pragma: no cover
             iframe = self.get_iframe()
@@ -163,7 +168,11 @@ class Report:
             print("No connection to any report")
             return ""
         if filter:
-            self.service.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             item_filter = filter
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
@@ -506,7 +515,11 @@ class Report:
             my_report.get_report_component()
         """
         if filter:
-            self.service.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             item_filter = filter
         # fetch method using predefined prefix rules in the proxy server OR using traditional <iframe>
         # add host-style-path attribute if specified (can only work when prefix is provided)
@@ -558,7 +571,11 @@ class Report:
             report_iframe = my_report.get_iframe()
         """
         if filter:
-            self.service.logger.warning("Deprecation warning: use item_filter instead of filter.")
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             item_filter = filter
         if "IPython.display" in sys.modules:
             url = self.get_url(item_filter=item_filter)

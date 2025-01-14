@@ -1,6 +1,7 @@
 """This module allows pytest to perform unit testing."""
 from pathlib import Path
 from random import randint
+import warnings
 
 import pytest
 
@@ -248,6 +249,13 @@ def test_delete_item(adr_service_query) -> None:
 
 
 @pytest.mark.ado_test
+def test_query_filter_deprecated(adr_service_query) -> None:
+    with warnings.catch_warnings(record=True) as w:
+        only_text = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
+    assert "The 'filter' parameter is deprecated" in str(w[-1].message)
+
+
+@pytest.mark.ado_test
 def test_delete_report(adr_service_query) -> None:
     server = adr_service_query.serverobj
     old_reports = adr_service_query.get_list_reports()
@@ -282,6 +290,18 @@ def test_vis_report_filtered(adr_service_query) -> None:
     except SyntaxError:
         success = False
     assert success is True
+
+
+def test_vis_report_filtered_depr(adr_service_query) -> None:
+    success = False
+    try:
+        filter = "A|s_guid|cont|15401c2b-089e-11ed-b75d-747827182a82"
+        with warnings.catch_warnings(record=True) as w:
+            adr_service_query.visualize_report(report_name="My Top Report", filter=filter)
+        success = True
+    except SyntaxError:
+        success = False
+    assert success is True and "The 'filter' parameter is deprecated" in str(w[-1].message)
 
 
 def test_vis_not_running(get_exec) -> None:
