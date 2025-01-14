@@ -19,6 +19,7 @@ Examples
 """
 import sys
 from typing import Optional
+import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
@@ -75,7 +76,7 @@ class Report:
                 success = True
         return success
 
-    def visualize(self, new_tab: bool = False, filter: str = "") -> None:
+    def visualize(self, new_tab: bool = False, filter: str = "", item_filter: str = "") -> None:
         """
         Render the report.
 
@@ -87,6 +88,11 @@ class Report:
             report is rendered in the current location. If the environment is
             not a Jupyter notebook, the report is always rendered in a new tab.
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -107,6 +113,13 @@ class Report:
             my_report = adr_service.get_report(report_name = "My First Report")
             my_report.visualize(new_tab = True)
         """
+        if filter:
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            item_filter = filter
         if in_ipynb() and not new_tab:  # pragma: no cover
             iframe = self.get_iframe()
             if iframe is None:  # pragma: no cover
@@ -114,19 +127,24 @@ class Report:
             else:
                 display(iframe)
         else:
-            url = self.get_url(filter=filter)
+            url = self.get_url(item_filter=item_filter)
             if url == "":  # pragma: no cover
                 self.service.logger.error("Error: could not obtain url for report")
             else:
                 webbrowser.open_new(url)
 
-    def get_url(self, filter: str = "") -> str:
+    def get_url(self, filter: str = "", item_filter: str = "") -> str:
         """
         Get the URL corresponding to the report.
 
         Parameters
         ----------
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -147,8 +165,15 @@ class Report:
             report_url = my_report.get_url()
         """
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
+            print("No connection to any report")
             return ""
+        if filter:
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            item_filter = filter
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
             return ""
@@ -168,7 +193,7 @@ class Report:
                 )
                 return ""
         url += "usemenus=off"
-        url += build_query_url(self.service.logger, filter)
+        url += build_query_url(logger=self.service.logger, item_filter=item_filter)
         return url
 
     def get_guid(self) -> str:
@@ -443,6 +468,7 @@ class Report:
         style_path: str = "",
         width: int = 1000,
         height: int = 800,
+        item_filter: str = "",
     ) -> str:
         """
         A HTML code of the web component for report fetching. By default, the web
@@ -457,6 +483,11 @@ class Report:
             A user defined key in the server to reroute and fetch the report from ADR server. If not provided,
             the web component will use the default iframe to embed the report in the application.
         filter : str, optional
+            DEPRECATED: use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -483,18 +514,27 @@ class Report:
             my_report = adr_service.get_report(report_name = 'Top report')
             my_report.get_report_component()
         """
+        if filter:
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            item_filter = filter
         # fetch method using predefined prefix rules in the proxy server OR using traditional <iframe>
         # add host-style-path attribute if specified (can only work when prefix is provided)
         host_style_path = f'host-style-path="{style_path}"' if style_path else ""
         fetch_method = (
-            f'prefix="{prefix}" guid="{self.get_guid()}" query="{filter}" {host_style_path}'
+            f'prefix="{prefix}" guid="{self.get_guid()}" query="{item_filter}" {host_style_path}'
             if prefix
             else f'reportURL="{self.get_url()}" width="{width}" height="{height}"'
         )
         component = f"<adr-report {fetch_method}></adr-report>"
         return component
 
-    def get_iframe(self, width: int = 1000, height: int = 800, filter: str = ""):
+    def get_iframe(
+        self, width: int = 1000, height: int = 800, filter: str = "", item_filter: str = ""
+    ):
         """
         Get the iframe object corresponding to the report.
 
@@ -505,6 +545,11 @@ class Report:
         height : int, optional
             Height of the iframe object. The default is ``800``.
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -525,8 +570,15 @@ class Report:
             my_report = adr_service.get_report(report_name = "My Top Report")
             report_iframe = my_report.get_iframe()
         """
+        if filter:
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            item_filter = filter
         if "IPython.display" in sys.modules:
-            url = self.get_url(filter=filter)
+            url = self.get_url(item_filter=item_filter)
             iframe = IFrame(src=url, width=width, height=height)
         else:
             iframe = None
@@ -573,7 +625,7 @@ class Report:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
-            succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query = {"colormode": "dark"})
+            succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"})
             succ2 = my_report.export_pdf(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False  # pragma: no cover
@@ -641,7 +693,7 @@ class Report:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
-            succ = my_report.export_html(directory_name = r'D:\\tmp', query={"colormode": "dark"})
+            succ = my_report.export_html(directory_name = r'D:\\tmp', query_params={"colormode": "dark"})
             succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False
