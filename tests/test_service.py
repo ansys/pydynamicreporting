@@ -251,7 +251,8 @@ def test_delete_item(adr_service_query) -> None:
 @pytest.mark.ado_test
 def test_query_filter_deprecated(adr_service_query) -> None:
     with warnings.catch_warnings(record=True) as w:
-        only_text = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
+        warnings.simplefilter("always")
+        _ = adr_service_query.query(query_type="Item", filter="A|i_type|cont|html")
     assert "The 'filter' parameter is deprecated" in str(w[-1].message)
 
 
@@ -297,6 +298,7 @@ def test_vis_report_filtered_depr(adr_service_query) -> None:
     try:
         filter = "A|s_guid|cont|15401c2b-089e-11ed-b75d-747827182a82"
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             adr_service_query.visualize_report(report_name="My Top Report", filter=filter)
         success = True
     except SyntaxError:
