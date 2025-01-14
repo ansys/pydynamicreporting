@@ -168,7 +168,7 @@ if "Simulation Report" not in new_service.get_list_reports():
 # report for the first design point. Simularly, filter for tag dp=dp1 will
 # display the report for the second design point.
 
-new_service.visualize_report(report_name="Simulation Report", filter="A|i_tags|cont|dp0;")
+new_service.visualize_report(report_name="Simulation Report", item_filter="A|i_tags|cont|dp0;")
 
 
 ###############################################################################
@@ -180,7 +180,7 @@ new_service.visualize_report(report_name="Simulation Report", filter="A|i_tags|c
 # Visualize the report for the second design point. See how you only need to
 # change the filter.
 
-new_service.visualize_report(report_name="Simulation Report", filter="A|i_tags|cont|dp1;")
+new_service.visualize_report(report_name="Simulation Report", item_filter="A|i_tags|cont|dp1;")
 
 ###############################################################################
 #
