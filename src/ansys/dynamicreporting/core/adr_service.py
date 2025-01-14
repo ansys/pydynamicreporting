@@ -1015,28 +1015,17 @@ class Service:
             if template.master:
                 existing_root_names.add(template.name)
 
-        while loaded_root_name in existing_root_names:
-            reply = (
-                input(
-                    "The root name in the JSON conflicts with one of the existing templates': "
-                    f"'{loaded_root_name}'. Do you want to rename? (Y/n): "
-                )
-                .strip()
-                .lower()
-            )
-            if reply in ("y", ""):
-                while True:
-                    loaded_root_name = input("Please enter the new name: ")
-                    if not loaded_root_name:
-                        print("ERROR: The root name can not be empty!")
-                    else:
-                        break
-                root_attr["name"] = loaded_root_name
-            elif reply == "n":
-                print("ERROR: JSON loading not completed due to naming conflicts.")
-                return
-            else:
-                print("WARNING: Please respond with 'Y' or 'N'.")
+        if loaded_root_name in existing_root_names:
+            num_copies = 1
+            for name in existing_root_names:
+                if name.startswith(loaded_root_name) and \
+                   len(name) > len(loaded_root_name) + 2 and \
+                   name[len(loaded_root_name) + 1] == '(':
+                       num_copies += 1
+            renamed_root_name = f"{loaded_root_name} ({num_copies + 1})"
+            self.logger.warning("The root name in the JSON conflicts with one of the existing templates': "
+                                f"'{loaded_root_name}'. In order to proceed, it is automatically renamed to: '{renamed_root_name}'")
+            root_attr["name"] = renamed_root_name
 
         try:
             self.serverobj.load_templates(templates_json, self.logger)
