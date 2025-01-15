@@ -1,0 +1,47 @@
+{
+    "Template_0": {
+        "name": "A",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "parent": null,
+        "children": [
+            "Template_1",
+            "Template_2"
+        ]
+    },
+    "Template_1": {
+        "name": "B",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_3"
+        ]
+    },
+    "Template_3": {
+        "name": "D",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_2": {
+        "name": "C",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    }
+}
