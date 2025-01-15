@@ -93,7 +93,7 @@ connected_s.visualize_report()
 # report visualization. Note that running this method on either of the
 # Ansys Dynamic Reporting instances produces the same result.
 
-adr_service.visualize_report(filter=f"A|s_guid|cont|{connected_s.session_guid}")
+adr_service.visualize_report(item_filter=f"A|s_guid|cont|{connected_s.session_guid}")
 
 ###############################################################################
 # Close the service

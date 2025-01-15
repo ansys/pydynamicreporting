@@ -251,10 +251,23 @@ class Template(BaseModel):
         params["filter_type"] = value
         self.set_params(params)
 
-    def render(self, context=None, request=None, item_filter="") -> str:
+    def render(self, *, context=None, item_filter="", request=None) -> str:
         if context is None:
             context = {}
-        ctx = {**context, "request": request, "ansys_version": None}
+        ctx = {
+            "request": request,
+            "ansys_version": None,
+            "plotly": int(context.get("plotly", 0)),  # default referenced in the header via static
+            "page_width": float(context.get("pwidth", "10.5")),
+            "page_dpi": float(context.get("dpi", "96.")),
+            "page_col_pixel_width": (float(context.get("pwidth", "10.5")) / 12.0)
+            * float(context.get("dpi", "96.")),
+            "date_date": datetime.now(timezone.get_current_timezone()).strftime("%x"),
+            "date_datetime": datetime.now(timezone.get_current_timezone()).strftime("%c"),
+            "date_iso": datetime.now(timezone.get_current_timezone()).isoformat(),
+            "date_year": datetime.now(timezone.get_current_timezone()).year,
+        }
+
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
