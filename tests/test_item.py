@@ -9,30 +9,30 @@ from ansys.dynamicreporting.core import Item, Service
 @pytest.mark.ado_test
 def test_create_img(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "aa_00_0_alpha1.png")
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_img_items) == (len(img_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_img_jpg(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "car_crash.jpg")
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_img_items) == (len(img_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_img_tiff(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "displacement.tiff")
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_img_items) == (len(img_items) + 1)
 
 
@@ -99,11 +99,11 @@ def test_create_tree(adr_service_create, request) -> None:
 
 def test_change_type(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|html"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = join(join(request.fspath.dirname, "test_data"), "aa_00_0_alpha1.png")
     my_img.item_text = "This is not supposed to work"
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_img_items) == len(img_items)
 
 
@@ -123,7 +123,7 @@ def test_iframe_item(adr_service_query) -> None:
     success = False
     try:
         filter_str = "A|i_type|cont|table"
-        one_item = adr_service_query.query(query_type="Item", filter=filter_str)
+        one_item = adr_service_query.query(query_type="Item", item_filter=filter_str)
         _ = one_item[0].get_iframe()
         success = True
     except SyntaxError:
@@ -135,7 +135,7 @@ def test_iframe_on_img_item(adr_service_query) -> None:
     success = False
     try:
         filter_str = "A|i_type|cont|image"
-        one_item = adr_service_query.query(query_type="Item", filter=filter_str)
+        one_item = adr_service_query.query(query_type="Item", item_filter=filter_str)
         _ = one_item[0].get_iframe()
         success = True
     except SyntaxError:
@@ -146,7 +146,7 @@ def test_iframe_on_img_item(adr_service_query) -> None:
 @pytest.mark.ado_test
 def test_get_url(adr_service_query) -> None:
     filter_str = "A|i_type|cont|table"
-    one_item = adr_service_query.query(query_type="Item", filter=filter_str)
+    one_item = adr_service_query.query(query_type="Item", item_filter=filter_str)
     url = one_item[0].url
     assert (url is not None) and ("http" in url)
 
@@ -154,7 +154,7 @@ def test_get_url(adr_service_query) -> None:
 @pytest.mark.ado_test
 def test_create_table(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
-    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()
     my_table.item_table = np.array([[1, 2, 3, 4, 5, 6], [1, 4, 9, 16, 25, 36]], dtype="|S20")
     my_table.format = "floatdot3"
@@ -214,28 +214,28 @@ def test_create_table(adr_service_create) -> None:
     my_table.table_cond_format = ""
     my_table.row_tags = ["dp=0", "dp=2"]
     my_table.col_tags = ["a", "b", "c", "d", "e", "f"]
-    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_histo(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
-    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()
     my_table.item_table = np.random.normal(0, 0.1, 100)
     my_table.plot = "histogram"
     my_table.histogram_cumulative = 1
     my_table.histogram_normalized = 1
     my_table.histogram_bin_size = 0.5
-    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_3d_scatter(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
-    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()
     my_table.item_table = np.random.uniform(1.0, 50.0, size=(6, 20))
     my_table.labels_row = ["X1", "Y1", "Z1", "X2", "Y2", "Z2"]
@@ -252,14 +252,14 @@ def test_create_3d_scatter(adr_service_create) -> None:
     my_table.ytitle = "f(x)"
     my_table.ztitle = "f(x,y)"
     my_table.line_marker_opacity = 0.7
-    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_3d_surface(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
-    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()
     my_table.item_table = np.array(
         [
@@ -273,14 +273,14 @@ def test_create_3d_surface(adr_service_create) -> None:
     )
     my_table.plot = "3d surface"
     my_table.format = "floatdot0"
-    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 @pytest.mark.ado_test
 def test_create_polar_plot(adr_service_create) -> bool:
     filter_str = "A|i_type|cont|table"
-    table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()
     my_table.item_table = np.array(
         [
@@ -292,14 +292,14 @@ def test_create_polar_plot(adr_service_create) -> bool:
     my_table.xaxis = 0
     my_table.plot = "polar"
     my_table.format = "floatdot0"
-    new_table_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
 
 
 def test_set_tags(adr_service_query) -> None:
     success = False
     try:
-        one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|testtable")
+        one_item = adr_service_query.query(query_type="Item", item_filter="A|i_name|cont|testtable")
         success = one_item[0].set_tags(tagstring="firsttag=one")
     except SyntaxError:
         success = False
@@ -309,7 +309,7 @@ def test_set_tags(adr_service_query) -> None:
 def test_get_tags(adr_service_query) -> None:
     success = False
     try:
-        one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|testone")
+        one_item = adr_service_query.query(query_type="Item", item_filter="A|i_name|cont|testone")
         tags = one_item[0].get_tags()
         success = True
     except SyntaxError:
@@ -321,7 +321,7 @@ def test_get_tags(adr_service_query) -> None:
 def test_add_tag(adr_service_query) -> None:
     success = False
     try:
-        one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|img_two")
+        one_item = adr_service_query.query(query_type="Item", item_filter="A|i_name|cont|img_two")
         success = one_item[0].add_tag(tag="Tag", value="one")
     except SyntaxError:
         success = False
@@ -331,7 +331,7 @@ def test_add_tag(adr_service_query) -> None:
 def test_rem_tag(adr_service_query) -> None:
     success = False
     try:
-        one_item = adr_service_query.query(query_type="Item", filter="A|i_name|cont|testone")
+        one_item = adr_service_query.query(query_type="Item", item_filter="A|i_name|cont|testone")
         success = one_item[0].rem_tag(tag="tagtodelete")
     except SyntaxError:
         success = False

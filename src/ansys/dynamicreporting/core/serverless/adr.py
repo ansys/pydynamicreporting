@@ -8,6 +8,7 @@ import shutil
 import sys
 from typing import Any, Optional, Type, Union
 import uuid
+import warnings
 
 import django
 from django.core import management
@@ -195,7 +196,36 @@ class ADR:
         from django.conf import settings
 
         if settings.configured:
-            raise RuntimeError("ADR has already been configured. setup() can be called only once.")
+            raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+
+        # look for enve, but keep it optional.
+        try:
+            import enve
+        except ImportError:
+            pf = "winx64" if platform.system().startswith("Wind") else "linx64"
+            dirs_to_check = [
+                self._ansys_installation / "commonfiles" / "ensight_components" / pf,
+                # for older versions < 2025R1
+                self._ansys_installation / "commonfiles" / "fluids" / "ensight_components" / pf,
+            ]
+            try:
+                for enve_path in dirs_to_check:
+                    try:
+                        enve_path.resolve(strict=True)
+                        sys.path.append(str(enve_path))
+                        break
+                    except OSError:
+                        continue
+
+                from enve_common import enve
+            except ImportError as e:
+                self._logger.warning(
+                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
+                )
+                warnings.warn(
+                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}",
+                    ImportWarning,
+                )
 
         # import hack
         try:
@@ -205,7 +235,7 @@ class ADR:
             sys.path.append(str(adr_path))
             from ceireports import settings_serverless
         except (ImportError, OSError) as e:
-            raise ImportError(f"Failed to import from the Ansys installation: {e}")
+            raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
 
         overrides = {}
         for setting in dir(settings_serverless):
