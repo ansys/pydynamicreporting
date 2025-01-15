@@ -1015,12 +1015,11 @@ class Server:
         Given a root guid, generate a JSON file rooted this guid, and store the file on disk
         """
         templates_data = self.get_templates_as_json(root_guid)
-        with open(filename, "w", encoding='utf-8') as json_file:
+        with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
 
         # Make the file read-only
         os.chmod(filename, 0o444)
-
 
     def load_templates(self, templates_json, logger=None):
         """
