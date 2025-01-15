@@ -694,14 +694,9 @@ class Report:
             report.export_json(r'C:\\my_json_file')
         """
         try:
-            templates_data = self.service.serverobj.get_templates_as_json(self.report.guid)
-            with open(json_file_path, "w", encoding="utf-8") as json_file:
-                json.dump(templates_data, json_file, indent=4)
-
-            # Make the file read-only
-            os.chmod(json_file_path, 0o444)
+            self.service.serverobj.store_json(self.report.guid, json_file_path)
         except Exception as e:
             self.service.logger.error(
-                f"Report: {self.report_name} terminated when exporting to JSON\n"
+                f"Exporting to JSON terminated for report: {self.report_name}\n"
                 f"Error details: {e}"
             )
