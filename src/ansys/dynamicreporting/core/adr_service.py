@@ -15,6 +15,7 @@ Examples::
 
 import atexit
 import glob
+import json
 import os
 import re
 import shutil
@@ -993,6 +994,84 @@ class Service:
         else:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
+
+    def load_templates(self, json_file_path: str) -> None:
+        """
+        Load templates given a JSON-formatted file.
+        There will be some interactive inputs if required.
+
+        Parameters
+        ----------
+        json_file_path: str
+            Path of the JSON file to be loaded.
+
+        Returns
+        -------
+            None.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypsw")
+            adr_service.load_templates(r'C:\\my_json_file')
+        """
+        try:
+            with open(json_file_path, encoding="utf-8") as file:
+                templates_json = json.load(file)
+        except json.JSONDecodeError as je:
+            self.logger.error(
+                "The loaded JSON file does not have a correct JSON format!\n"
+                f"Please check your JSON file path.\nError details: {je}"
+            )
+            return
+
+        # Address root name conflict
+        # 1. Find the root
+        for template_attr in templates_json.values():
+            if template_attr["parent"] is None:
+                loaded_root_name = template_attr["name"]
+                root_attr = template_attr
+                break
+
+        # 2. Compare with the existing root template(s)
+        templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
+        existing_root_names = set()
+        for template in templates:
+            if template.master:
+                existing_root_names.add(template.name)
+
+        if loaded_root_name in existing_root_names:
+            num_copies = 1
+            for name in existing_root_names:
+                if (
+                    name.startswith(loaded_root_name)
+                    and len(name) > len(loaded_root_name) + 2
+                    and name[len(loaded_root_name) + 1] == "("
+                ):
+                    num_copies += 1
+            renamed_root_name = f"{loaded_root_name} ({num_copies + 1})"
+            self.logger.warning(
+                "The root name in the JSON conflicts with one of the existing templates': "
+                f"'{loaded_root_name}'. In order to proceed, it is automatically renamed to: '{renamed_root_name}'"
+            )
+            root_attr["name"] = renamed_root_name
+
+        try:
+            self.serverobj.load_templates(templates_json, self.logger)
+        except report_remote_server.TemplateEditorJSONLoadingError as e:
+            self.logger.error(
+                "The loaded JSON file does not conform to the schema!\nPlease check your JSON file.\n"
+                f"Error details: {e}"
+            )
+
+            # Clean up already-put template objects
+            all_templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
+            for template in all_templates:
+                if template.name == loaded_root_name:
+                    self.serverobj.del_objects(template)
 
     def __checkport__(self):
         """
