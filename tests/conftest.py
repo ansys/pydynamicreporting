@@ -98,7 +98,7 @@ def adr_serverless_create(pytestconfig: pytest.Config) -> ADR:
     local_db = base_dir / f"auto_delete_{uuid4().hex}"
     static_dir = base_dir / "static"
     static_dir.mkdir(exist_ok=True)
-    install_dir = base_dir / "installation" / "ansys_inc" / f"v{DEFAULT_ANSYS_VERSION}" / "CEI"
+    install_dir = base_dir / "installation" / "ansys_inc" / f"v{DEFAULT_ANSYS_VERSION}"
 
     adr_service = Service(
         ansys_installation="docker",
