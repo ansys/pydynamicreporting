@@ -137,7 +137,7 @@ class ADR:
         dirs_to_check = []
         if ansys_installation:
             # User passed directory
-            dirs_to_check.extend([Path(ansys_installation) / "CEI", Path(ansys_installation)])
+            dirs_to_check = [Path(ansys_installation) / "CEI", Path(ansys_installation)]
         else:
             # Environmental variable
             if "PYADR_ANSYS_INSTALLATION" in os.environ:
@@ -145,7 +145,7 @@ class ADR:
                 # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
                 # where there is no CEI directory, but for folks using it in other
                 # ways, we'll add that one too, just in case.
-                dirs_to_check.extend([env_inst, env_inst / "CEI"])
+                dirs_to_check = [env_inst / "CEI", env_inst]
             # Look for Ansys install using target version number
             if f"AWP_ROOT{self._ansys_version}" in os.environ:
                 dirs_to_check.append(Path(os.environ[f"AWP_ROOT{self._ansys_version}"]) / "CEI")
@@ -204,9 +204,14 @@ class ADR:
         except ImportError:
             pf = "winx64" if platform.system().startswith("Wind") else "linx64"
             dirs_to_check = [
-                self._ansys_installation / "commonfiles" / "ensight_components" / pf,
+                # Path('C:/Program Files/ANSYS Inc/v252/CEI').parent is "C:/Program Files/ANSYS Inc/v252"
+                self._ansys_installation.parent / "commonfiles" / "ensight_components" / pf,
                 # for older versions < 2025R1
-                self._ansys_installation / "commonfiles" / "fluids" / "ensight_components" / pf,
+                self._ansys_installation.parent
+                / "commonfiles"
+                / "fluids"
+                / "ensight_components"
+                / pf,
             ]
             try:
                 for enve_path in dirs_to_check:
