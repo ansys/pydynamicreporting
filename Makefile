@@ -30,7 +30,7 @@ pull-docker:
 
 test:
 	pip install -e .[test]
-	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml tests/test_adr_serverless.py::test_set_default_session
 
 test-dev:
 	pip install -e .[test]
