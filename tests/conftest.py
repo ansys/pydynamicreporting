@@ -111,7 +111,7 @@ def adr_serverless_create(pytestconfig: pytest.Config) -> ADR:
     adr_service._container.copy_from_cei_home_to_host_directory(src="", do_recursive=True)
 
     # List all files and folders in the install_dir
-    for path in install_dir.rglob('*'):
+    for path in install_dir.rglob("*"):
         print(path)
 
     adr = ADR(
