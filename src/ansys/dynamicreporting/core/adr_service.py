@@ -1002,7 +1002,7 @@ class Service:
 
         Parameters
         ----------
-        json_file_path: str
+        json_file_path : str
             Path of the JSON file to be loaded.
 
         Returns
