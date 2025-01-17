@@ -5,9 +5,9 @@ Import / Export report template via JSON
 ========================================
 
 Ansys Dynamic Reporting provides a seamless solution for serialization and deserialization
-of report templates. It enables users to export templates as local JSON files and rebuild 
-them through JSON imports. This guide will walk you through the process of converting a 
-report template and loading it back, ensuring you gain confidence and proficiency 
+of report templates. It enables users to export templates as local JSON files and rebuild
+them through JSON imports. This guide will walk you through the process of converting a
+report template and loading it back, ensuring you gain confidence and proficiency
 in using these features.
 
 .. note::
@@ -20,13 +20,15 @@ in using these features.
 # Start a new Ansys Dynamic Reporting service
 # -------------------------------------------
 #
-# Start a new ADR service. Make sure the database directory is empty. Use the get_list_report 
+# Start a new ADR service. Make sure the database directory is empty. Use the get_list_report
 # method to check that there are no reports in the datanase.
 
 import ansys.dynamicreporting.core as adr
 import ansys.dynamicreporting.core.examples as examples
 
-adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v251", db_directory=r'C:\tmp\new_template')
+adr_service = adr.Service(
+    ansys_installation=r"C:\Program Files\ANSYS Inc\v251", db_directory=r"C:\tmp\new_template"
+)
 adr_service.start(create_db=True)
 adr_service.get_list_reports()
 
@@ -35,13 +37,13 @@ adr_service.get_list_reports()
 # Create a new report template from the JSON file
 # ------------------------------------------------
 #
-# Download a json sample file for the report templates. Load it into the ADR service. 
+# Download a json sample file for the report templates. Load it into the ADR service.
 # Check that the ADR service now contains a report. Visualize it.
 
-template_path = examples.download_file('report_template.json', 'multi_physics')
+template_path = examples.download_file("report_template.json", "multi_physics")
 adr_service.load_templates(template_path)
 adr_service.get_list_reports()
-new_report = adr_service.get_report('Solution Analysis from Multiphysics simulation')
+new_report = adr_service.get_report("Solution Analysis from Multiphysics simulation")
 new_report.visualize()
 
 ##########################################################################################
@@ -52,19 +54,21 @@ new_report.visualize()
 # Modify and export the report template
 # -------------------------------------
 #
-# Add a new chapter to the report template via the low level API. Export the new json 
-# file corresponding to the changed report, and visualize it. Note the extra chapter in 
+# Add a new chapter to the report template via the low level API. Export the new json
+# file corresponding to the changed report, and visualize it. Note the extra chapter in
 # the Table Of Content, corresponding to the change we just made.
 
 server = adr_service.serverobj
-new_chapter = server.create_template(name="Appendix", parent=new_report.report, report_type="Layout:basic")
-new_chapter.params =  '{"TOCitems": 1, "HTML": "<h3>Appendix</h3>", "properties": {"TOCItem": "1", "TOCLevel": "0", "justification": "left"}}'
+new_chapter = server.create_template(
+    name="Appendix", parent=new_report.report, report_type="Layout:basic"
+)
+new_chapter.params = '{"TOCitems": 1, "HTML": "<h3>Appendix</h3>", "properties": {"TOCItem": "1", "TOCLevel": "0", "justification": "left"}}'
 new_chapter.set_filter("A|i_tags|cont|section=appendix;")
 server.put_objects(new_chapter)
 server.put_objects(new_report.report)
 new_report.visualize()
 
-new_report.export_json('modified_report.json')
+new_report.export_json("modified_report.json")
 
 ##########################################################################################
 #
@@ -82,7 +86,7 @@ new_report.export_json('modified_report.json')
 # Close the service
 # -----------------
 #
-# Close the Ansys Dynamic Reporting service. The database with the report 
+# Close the Ansys Dynamic Reporting service. The database with the report
 # template that was created remains on disk.
 
 # sphinx_gallery_thumbnail_path = '_static/default_thumb.png'
