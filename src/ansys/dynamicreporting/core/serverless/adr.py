@@ -6,6 +6,7 @@ from pathlib import Path
 import platform
 import shutil
 import sys
+import tempfile
 from typing import Any, Optional, Type, Union
 import uuid
 import warnings
@@ -17,6 +18,8 @@ from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
+from ..constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
+from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
     DatabaseMigrationError,
@@ -48,6 +51,7 @@ class ADR:
         opts: Optional[dict] = None,
         request: Optional[HttpRequest] = None,
         logfile: Optional[str] = None,
+        docker_image: str = DOCKER_REPO_URL,
     ) -> None:
         self._db_directory = None
         self._databases = databases or {}
@@ -61,7 +65,6 @@ class ADR:
         self._dataset = None
         self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
-        self._ansys_installation = self._get_install_directory(ansys_installation)
 
         if opts is None:
             opts = {}
@@ -124,6 +127,51 @@ class ADR:
             os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+        if ansys_installation == "docker":
+            try:
+                container = DockerLauncher(docker_image_name=docker_image)
+            except Exception as e:
+                self._logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
+                raise e
+
+            try:
+                container.pull()
+            except Exception as e:
+                self._logger.error(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
+                raise e
+
+            try:
+                # start the container and map specified host directory into the
+                # container.  The location in the container is always /host_directory/.
+                ports = report_utils.find_unused_ports(1, start=DOCKER_DEFAULT_PORT)
+                if not ports:
+                    raise ADRException("No available ports found.")
+                data_directory = Path(tempfile.TemporaryDirectory().name)
+                container.start(
+                    host_directory=str(data_directory),
+                    db_directory=self._db_directory,
+                    port=ports[0],
+                    ansys_version=self._ansys_version,
+                )
+            except Exception as e:  # pragma: no cover
+                self._logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
+                raise e
+            # copy installation to a temp dir
+            try:
+                container.copy_from_cei_home_to_host_directory(src="*", do_recursive=True)
+            except Exception as e:
+                self._logger.error(f"Error copying files from the Docker Container.\n{str(e)}\n")
+                raise e
+            # stop
+            try:
+                container.stop()
+            except Exception as e:
+                self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
+
+            self._ansys_installation = data_directory
+        else:
+            self._ansys_installation = self._get_install_directory(ansys_installation)
 
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
