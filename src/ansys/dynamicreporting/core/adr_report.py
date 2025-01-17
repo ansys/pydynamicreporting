@@ -740,11 +740,11 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
-            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypsw")
 
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
             report = adr_service.get_report(report_name="my_report_name")
-            report.export_json(r'C:\\my_json_file')
+            report.export_json(r'C:\\tmp\\my_json_file')
         """
         try:
             self.service.serverobj.store_json(self.report.guid, json_file_path)
