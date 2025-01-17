@@ -1,13 +1,14 @@
 """
 .. _ref_json:
 
-JSON export/import
-====================
+Import / Export report template via JSON
+========================================
 
 Ansys Dynamic Reporting provides a seamless solution for serialization and deserialization
-of reports. It enables users to export reports as local JSON files and rebuild reports through
-JSON imports. This guide will walk you through the process of converting a report template
-and loading it back, ensuring you gain confidence and proficiency in using these features.
+of report templates. It enables users to export templates as local JSON files and rebuild 
+them through JSON imports. This guide will walk you through the process of converting a 
+report template and loading it back, ensuring you gain confidence and proficiency 
+in using these features.
 
 .. note::
 
@@ -16,37 +17,59 @@ and loading it back, ensuring you gain confidence and proficiency in using these
 """
 
 ##########################################################################################
-# Connect to a running Ansys Dynamic Reporting service
-# ----------------------------------------------------
+# Start a new Ansys Dynamic Reporting service
+# -------------------------------------------
 #
-# Assume that an Ansys Dynamic Reporting service is already running, as set up in the
-# earlier steps of this guide. Connect to the service to proceed. For additional details
-# about establishing a service connection, refer to :ref:`ref_connect_to_a_running_service`.
+# Start a new ADR service. Make sure the database directory is empty. Use the get_list_report 
+# method to check that there are no reports in the datanase.
 
 import ansys.dynamicreporting.core as adr
+import ansys.dynamicreporting.core.examples as examples
 
-adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
-adr_service.connect(url="http://localhost:8020", username="admin", password="mypassword")
+adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v251", db_directory=r'C:\tmp\new_template')
+adr_service.start(create_db=True)
+adr_service.get_list_reports()
 
 ##########################################################################################
-# Select a report and export it to a JSON file
-# --------------------------------------------
 #
-# From the running service, select the desired report and export it as a JSON file to
-# your local disk.
-
-report = adr_service.get_report(report_name="my_report_name")
-report.export_json(r"C:\tmp\my_json_file.json")
-
-##########################################################################################
-# Load the JSON file back
-# -----------------------
+# Create a new report template from the JSON file
+# ------------------------------------------------
 #
-# Load the same file you just exported back the Ansys Dynamic Reporting service.
+# Download a json sample file for the report templates. Load it into the ADR service. 
+# Check that the ADR service now contains a report. Visualize it.
 
-adr_service.load_templates(r"C:\tmp\my_json_file.json")
+template_path = examples.download_file('report_template.json', 'multi_physics')
+adr_service.load_templates(template_path)
+adr_service.get_list_reports()
+new_report = adr_service.get_report('Solution Analysis from Multiphysics simulation')
+new_report.visualize()
 
 ##########################################################################################
+#
+# .. image:: /_static/report_json_vis.png
+#    :scale: 50%
+#
+# Modify and export the report template
+# -------------------------------------
+#
+# Add a new chapter to the report template via the low level API. Export the new json 
+# file corresponding to the changed report, and visualize it. Note the extra chapter in 
+# the Table Of Content, corresponding to the change we just made.
+
+server = adr_service.serverobj
+new_chapter = server.create_template(name="Appendix", parent=new_report.report, report_type="Layout:basic")
+new_chapter.params =  '{"TOCitems": 1, "HTML": "<h3>Appendix</h3>", "properties": {"TOCItem": "1", "TOCLevel": "0", "justification": "left"}}'
+new_chapter.set_filter("A|i_tags|cont|section=appendix;")
+server.put_objects(new_chapter)
+server.put_objects(new_report.report)
+new_report.visualize()
+
+new_report.export_json('modified_report.json')
+
+##########################################################################################
+#
+# .. image:: /_static/export_json_vis.png
+#    :scale: 50%
 #
 # .. note::
 #
@@ -54,3 +77,13 @@ adr_service.load_templates(r"C:\tmp\my_json_file.json")
 #    (e.g., when reloading the same report as in the previous step), Ansys Dynamic
 #    Reporting automatically renames the loaded report. In this case, the report will be
 #    renamed to "my_report_name (1)".
+
+###############################################################################
+# Close the service
+# -----------------
+#
+# Close the Ansys Dynamic Reporting service. The database with the report 
+# template that was created remains on disk.
+
+# sphinx_gallery_thumbnail_path = '_static/default_thumb.png'
+adr_service.stop()

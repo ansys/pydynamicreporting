@@ -670,7 +670,7 @@ class Report:
         Parameters
         ----------
         directory_name : str
-            ....
+            Path for the html export directory
         query_params : dict, optional
             Dictionary for parameters to apply to report template. Default: None
         item_filter: str, optional
