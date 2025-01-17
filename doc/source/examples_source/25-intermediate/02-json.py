@@ -25,8 +25,8 @@ and loading it back, ensuring you gain confidence and proficiency in using these
 
 import ansys.dynamicreporting.core as adr
 
-adr_service = adr.Service(ansys_installation=r'C:\Program Files\ANSYS Inc\v232')
-adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
+adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+adr_service.connect(url="http://localhost:8020", username="admin", password="mypassword")
 
 ##########################################################################################
 # Select a report and export it to a JSON file
@@ -36,7 +36,7 @@ adr_service.connect(url='http://localhost:8020', username = "admin", password = 
 # your local disk.
 
 report = adr_service.get_report(report_name="my_report_name")
-report.export_json(r'C:\tmp\my_json_file.json')
+report.export_json(r"C:\tmp\my_json_file.json")
 
 ##########################################################################################
 # Load the JSON file back
@@ -44,13 +44,13 @@ report.export_json(r'C:\tmp\my_json_file.json')
 #
 # Load the same file you just exported back the Ansys Dynamic Reporting service.
 
-adr_service.load_templates(r'C:\tmp\my_json_file.json')
+adr_service.load_templates(r"C:\tmp\my_json_file.json")
 
 ##########################################################################################
 #
 # .. note::
 #
 #    If the name of the loaded report conflicts with an existing name in the service
-#    (e.g., when reloading the same report as in the previous step), Ansys Dynamic 
+#    (e.g., when reloading the same report as in the previous step), Ansys Dynamic
 #    Reporting automatically renames the loaded report. In this case, the report will be
 #    renamed to "my_report_name (1)".
