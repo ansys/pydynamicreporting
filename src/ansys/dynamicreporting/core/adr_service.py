@@ -1017,7 +1017,7 @@ class Service:
 
             adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
             adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
-            adr_service.load_templates(r'C:\\tmp\\my_json_file')
+            adr_service.load_templates(r'C:\\tmp\\my_json_file.json')
         """
         try:
             with open(json_file_path, encoding="utf-8") as file:
