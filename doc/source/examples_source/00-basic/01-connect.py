@@ -52,6 +52,8 @@ adr_service.visualize_report()
 #
 # .. image:: /_static/01_connect_0.png
 #
+# .. _ref_connect_to_a_running_service:
+#
 # Create another connected instance
 # ---------------------------------
 #
