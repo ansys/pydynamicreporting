@@ -77,7 +77,7 @@ class DockerLauncher:
         self._nexus_directory = None
         self._nexus_is_running = False
 
-    def pull(self, image_url: Optional[str] = None) -> docker.models.images.Image:
+    def pull_image(self) -> docker.models.images.Image:
         """
         Pulls the Docker image.
 
@@ -90,35 +90,30 @@ class DockerLauncher:
         RuntimeError:
            If Docker couldn't pull the image.
         """
-        img = image_url or self._image_url
         try:
-            return self._docker_client.images.pull(img)
+            self._image = self._docker_client.images.pull(self._image_url)
         except Exception:
-            raise RuntimeError(f"Can't pull Docker image: {img}")
+            raise RuntimeError(f"Can't pull Docker image: {self._image_url}")
+        return self._image
 
-    def create_container(
-        self, image: Optional[docker.models.images.Image] = None
-    ) -> docker.models.containers.Container:
+    def create_container(self) -> docker.models.containers.Container:
         """
         Create a Docker container using the specified image.
         """
-        img = image or self._image
         try:
-            return self._docker_client.containers.create(img.id)
+            self._container = self._docker_client.containers.create(self._image)
         except Exception as e:
             raise RuntimeError(f"Can't create Docker container: \n\n{str(e)}")
+        return self._container
 
-    def copy_to_host(
-        self, src: str, dest: str, container: docker.models.containers.Container = None
-    ) -> None:
-        ctr = container or self._container
+    def copy_to_host(self, src: str, *, dest: str = ".") -> None:
         try:
-            tar_stream, _ = ctr.get_archive(src)
+            tar_stream, _ = self._container.get_archive(src)
             # Ensure the output directory exists
             output_path = Path(dest)
             output_path.mkdir(parents=True, exist_ok=True)
             # Save the tar archive
-            tar_file_path = output_path / f"{ctr.id}.tar"
+            tar_file_path = output_path / f"{self._container.id}.tar"
             with tar_file_path.open("wb") as tar_file:
                 for chunk in tar_stream:
                     tar_file.write(chunk)
@@ -258,6 +253,28 @@ class DockerLauncher:
         # print("CEI_HOME =", self._cei_home)
         # print("Ansys Version =", self._ansys_version)
         self._nexus_directory = self._cei_home + "/nexus" + self._ansys_version
+
+    def image(self):
+        """
+        Get the Docker image.
+
+        Returns
+        -------
+        docker.models.images.Image
+            Docker image or ``None`` if an image was not found.
+        """
+        return self._image
+
+    def container(self):
+        """
+        Get the Docker container.
+
+        Returns
+        -------
+        docker.models.containers.Container
+            Docker container or ``None`` if a container was not found.
+        """
+        return self._container
 
     def container_name(self) -> str:
         """
@@ -503,20 +520,30 @@ class DockerLauncher:
                 f"Problem stopping and cleaning up Nexus service\n"
                 f"in the Docker container.\n{str(e)}"
             )
-
+        # Stop the container
         try:
             self._container.stop()
         except Exception as e:
             raise RuntimeWarning(f"Problem stopping the Docker container.\n{str(e)}")
 
+    def remove(self, *, exclude_image=True, force=False) -> None:
+        """Remove the Docker container."""
         try:
-            self._container.remove()
+            self._container.remove(force=force)
+            if not exclude_image:
+                self._image.remove(force=force)
         except Exception as e:
             raise RuntimeWarning(f"Problem removing the Docker container.\n{str(e)}")
-
         self._container = None
         self._image = None
 
     def close(self) -> None:
         """Close the Docker client."""
         self._docker_client.close()
+
+    def cleanup(self, *, close=False, **kwargs) -> None:
+        """Cleanup the Docker container and client."""
+        self.stop()
+        self.remove(**kwargs)
+        if close:
+            self.close()

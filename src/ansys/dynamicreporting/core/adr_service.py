@@ -163,7 +163,7 @@ class Service:
         self._db_directory = db_directory
         self._delete_db = False
         self._port = port
-        self._container = None
+        self._docker_launcher = None
         self._docker_image = docker_image
         self._ansys_installation = ansys_installation
 
@@ -193,13 +193,13 @@ class Service:
                 self._data_directory = data_directory
 
             try:
-                self._container = DockerLauncher(image_url=docker_image)
+                self._docker_launcher = DockerLauncher(image_url=docker_image)
             except Exception as e:
                 self.logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
                 raise e
 
             try:
-                self._container.pull()
+                self._docker_launcher.pull_image()
             except Exception as e:
                 self.logger.error(
                     f"Error pulling the Docker image {self._docker_image}.\n{str(e)}\n"
@@ -210,7 +210,7 @@ class Service:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
                 self.__checkport__()
-                self._container.start(
+                self._docker_launcher.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
@@ -443,7 +443,7 @@ class Service:
             self.logger.error("Error: There is no database associated with this Service.\n")
             raise DatabaseDirNotProvidedError
 
-        if exit_on_close or self._container:
+        if exit_on_close or self._docker_launcher:
             atexit.register(self.stop)
             if exit_on_close and delete_db:
                 self._delete_db = True
@@ -468,12 +468,11 @@ class Service:
                     else:
                         do_create = False
             if do_create:
-                if self._container:
-                    create_output = ""
+                if self._docker_launcher:
                     try:
-                        create_output = self._container.create_nexus_db()
+                        create_output = self._docker_launcher.create_nexus_db()
                     except Exception:  # pragma: no cover
-                        self._container.stop()
+                        self._docker_launcher.cleanup()
                         self.logger.error(
                             f"Error creating the database at the path {self._db_directory} in the "
                             "Docker container.\n"
@@ -482,7 +481,7 @@ class Service:
                     for f in ["db.sqlite3", "view_report.nexdb"]:
                         db_file = os.path.join(self._db_directory, f)
                         if not os.path.isfile(db_file):
-                            self._container.stop()
+                            self._docker_launcher.cleanup()
                             self.logger.error(
                                 "Error creating the database using Docker at the path "
                                 + f"{self._db_directory}.\n"
@@ -505,9 +504,11 @@ class Service:
                         raise CannotCreateDatabaseError
 
         # launch the server
-        if self._container:
+        if self._docker_launcher:
             try:
-                self._container.launch_nexus_server(port=self._port, allow_iframe_embedding=True)
+                self._docker_launcher.launch_nexus_server(
+                    port=self._port, allow_iframe_embedding=True
+                )
             except Exception as e:  # pragma: no cover
                 self.logger.error(
                     f"Error starting the service in the Docker container.\n{str(e)}\n"
@@ -596,11 +597,10 @@ class Service:
         else:
             # If coming from a docker image, clean that up
             try:
-                if self._container:
+                if self._docker_launcher:
                     self.logger.info("Shutting down container.\n")
-                    self._container.stop()
-                    self._container.close()
-                    self._container = None
+                    self._docker_launcher.cleanup(close=True)
+                    self._docker_launcher = None
                 else:
                     self.logger.info("Shutting down service.\n")
                     self.serverobj.stop_local_server()
