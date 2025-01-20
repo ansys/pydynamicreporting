@@ -1,14 +1,13 @@
 """
 .. _ref_json:
 
-Import / Export report template via JSON
-========================================
+Import or export report template using JSON
+===========================================
 
-Ansys Dynamic Reporting provides a seamless solution for serialization and deserialization
-of report templates. It enables users to export templates as local JSON files and rebuild
-them through JSON imports. This guide will walk you through the process of converting a
-report template and loading it back, ensuring you gain confidence and proficiency
-in using these features.
+Ansys Dynamic Reporting provides a seamless solution for serializing and
+deserializing report templates. It allows you to export templates as local
+JSON files and rebuild them through JSON imports. This section describes
+the process of converting a report template and loading it back in.
 
 .. note::
 
@@ -37,7 +36,7 @@ adr_service.get_list_reports()
 # Create a new report template from the JSON file
 # ------------------------------------------------
 #
-# Download a json sample file for the report templates. Load it into the ADR service.
+# Download a JSON sample file for the report templates. Load it into the ADR service.
 # Check that the ADR service now contains a report. Visualize it.
 
 template_path = examples.download_file("report_template.json", "multi_physics")
@@ -54,9 +53,9 @@ new_report.visualize()
 # Modify and export the report template
 # -------------------------------------
 #
-# Add a new chapter to the report template via the low level API. Export the new json
+# Add a new chapter to the report template using the low level API. Export the new JSON
 # file corresponding to the changed report, and visualize it. Note the extra chapter in
-# the Table Of Content, corresponding to the change we just made.
+# the Table Of Contents, corresponding to the change you just made.
 
 server = adr_service.serverobj
 new_chapter = server.create_template(
@@ -78,7 +77,7 @@ new_report.export_json("modified_report.json")
 # .. note::
 #
 #    If the name of the loaded report conflicts with an existing name in the service
-#    (e.g., when reloading the same report as in the previous step), Ansys Dynamic
+#    (for example, when reloading the same report as in the previous step), Ansys Dynamic
 #    Reporting automatically renames the loaded report. In this case, the report will be
 #    renamed to "my_report_name (1)".
 
