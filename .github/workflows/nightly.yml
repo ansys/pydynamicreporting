@@ -32,9 +32,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull Docker container
-        run: make pull-docker
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
