@@ -61,9 +61,13 @@ class DockerLauncher:
             self._image_url = image_url
         else:
             self._image_url = DOCKER_DEV_REPO_URL if use_dev else DOCKER_REPO_URL
-
-        self._container = None
-        self._image = None
+        # Load up Docker from the user's environment
+        try:
+            self._docker_client: docker.client.DockerClient = docker.from_env()
+        except Exception:  # pragma: no cover
+            raise RuntimeError("Can't initialize Docker")
+        self._container: docker.models.containers.Container = None
+        self._image: docker.models.images.Image = None
         # the Ansys / EnSight version we found in the container
         # to be reassigned later
         self._ansys_version = None
@@ -72,13 +76,8 @@ class DockerLauncher:
         # nexus directory under CEI_HOME; to be reassigned later
         self._nexus_directory = None
         self._nexus_is_running = False
-        # Load up Docker from the user's environment
-        try:
-            self._docker_client: docker.client.DockerClient = docker.from_env()
-        except Exception:  # pragma: no cover
-            raise RuntimeError("Can't initialize Docker")
 
-    def pull(self, image_name: str) -> docker.models.images.Image:
+    def pull(self, image_url: Optional[str] = None) -> docker.models.images.Image:
         """
         Pulls the Docker image.
 
@@ -91,19 +90,21 @@ class DockerLauncher:
         RuntimeError:
            If Docker couldn't pull the image.
         """
+        img = image_url or self._image_url
         try:
-            return self._docker_client.images.pull(image_name)
+            return self._docker_client.images.pull(img)
         except Exception:
-            raise RuntimeError(f"Can't pull Docker image: {image_name}")
+            raise RuntimeError(f"Can't pull Docker image: {img}")
 
     def create_container(
-        self, image: docker.models.images.Image
+        self, image: Optional[docker.models.images.Image] = None
     ) -> docker.models.containers.Container:
         """
         Create a Docker container using the specified image.
         """
+        img = image or self._image
         try:
-            return self._docker_client.containers.create(image.id)
+            return self._docker_client.containers.create(img.id)
         except Exception as e:
             raise RuntimeError(f"Can't create Docker container: \n\n{str(e)}")
 
@@ -191,7 +192,6 @@ class DockerLauncher:
         # we run "/bin/bash" as container user "ensight" in lieu of
         # the default entrypoint command "ensight" which is in the
         # container's path for user "ensight".
-
         try:
             self._container = self._docker_client.containers.run(
                 self._image_url,
