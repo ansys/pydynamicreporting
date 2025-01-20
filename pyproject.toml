@@ -1,7 +1,7 @@
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-    "setuptools>=65.5.0",
+    "setuptools>=75.8.0",
     "setuptools-scm",
     "wheel>=0.37.0",
     "pre-commit==4.0.1",
@@ -51,7 +51,7 @@ dependencies = [
     "djangorestframework~=3.15",
     "django-guardian~=2.4",
     "tzlocal~=5.0",
-    "numpy>=1.18.0,<3",
+    "numpy>=2.2.2,<3",
     "python-pptx==0.6.19",
     "pandas~=2.0",
     "statsmodels~=0.14",
@@ -102,7 +102,7 @@ dev = [
     "ipython",
     "whatsonpypi",
     "ansys-sphinx-theme==1.1.1",
-    "numpy==1.25.1",
+    "numpy==2.2.2,<3",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
     "psutil==6.0.0",
@@ -112,7 +112,7 @@ dev = [
     "Sphinx==8.0.2",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.18.0",
-    "pre-commit==4.0.1",
+    "pre-commit>=4.0.1",
 ]
 
 [tool.pytest.ini_options]
