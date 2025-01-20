@@ -15,10 +15,14 @@ Examples:
 """
 
 import os
+from pathlib import Path
 import random
 import re
 import string
+import tarfile
 from typing import Optional
+
+import docker
 
 from .constants import DOCKER_DEV_REPO_URL, DOCKER_REPO_URL
 
@@ -34,7 +38,7 @@ class DockerLauncher:
     ----------
     data_directory : str
         Directory to make into the container at ``/data``.
-    docker_image_name : str, optional
+    image_url : str, optional
         Name of the Docker image to use. The default is ``None``.
     use_dev : bool, optional
         Whether to use the latest ``ensight_dev`` Docker image. The
@@ -51,10 +55,15 @@ class DockerLauncher:
             d.stop()
     """
 
-    def __init__(self, docker_image_name: Optional[str] = None, use_dev: bool = False) -> None:
-        # the Docker container name
-        self._container_name = None
+    def __init__(self, image_url: Optional[str] = None, use_dev: bool = False) -> None:
+        # get the optional user specified image name
+        if image_url:
+            self._image_url = image_url
+        else:
+            self._image_url = DOCKER_DEV_REPO_URL if use_dev else DOCKER_REPO_URL
 
+        self._container = None
+        self._image = None
         # the Ansys / EnSight version we found in the container
         # to be reassigned later
         self._ansys_version = None
@@ -62,30 +71,14 @@ class DockerLauncher:
         self._cei_home = None
         # nexus directory under CEI_HOME; to be reassigned later
         self._nexus_directory = None
-
-        # reassigned by start()
-        self._host_directory = None
-        self._db_directory = None
-
         self._nexus_is_running = False
-        self._delete_db_on_stop = False
-
-        # get the optional user specified image name
-        self._image_name = DOCKER_REPO_URL
-        if use_dev:
-            self._image_name = DOCKER_DEV_REPO_URL
-        if docker_image_name:
-            self._image_name = docker_image_name
-
         # Load up Docker from the user's environment
         try:
-            import docker
-
             self._docker_client: docker.client.DockerClient = docker.from_env()
         except Exception:  # pragma: no cover
             raise RuntimeError("Can't initialize Docker")
 
-    def pull(self) -> None:
+    def pull(self, image_name: str) -> docker.models.images.Image:
         """
         Pulls the Docker image.
 
@@ -99,9 +92,42 @@ class DockerLauncher:
            If Docker couldn't pull the image.
         """
         try:
-            self._docker_client.images.pull(self._image_name)
+            return self._docker_client.images.pull(image_name)
         except Exception:
-            raise RuntimeError(f"Can't pull Docker image: {self._image_name}")
+            raise RuntimeError(f"Can't pull Docker image: {image_name}")
+
+    def create_container(
+        self, image: docker.models.images.Image
+    ) -> docker.models.containers.Container:
+        """
+        Create a Docker container using the specified image.
+        """
+        try:
+            return self._docker_client.containers.create(image.id)
+        except Exception as e:
+            raise RuntimeError(f"Can't create Docker container: \n\n{str(e)}")
+
+    def copy_to_host(
+        self, src: str, dest: str, container: docker.models.containers.Container = None
+    ) -> None:
+        ctr = container or self._container
+        try:
+            tar_stream, _ = ctr.get_archive(src)
+            # Ensure the output directory exists
+            output_path = Path(dest)
+            output_path.mkdir(parents=True, exist_ok=True)
+            # Save the tar archive
+            tar_file_path = output_path / f"{ctr.id}.tar"
+            with tar_file_path.open("wb") as tar_file:
+                for chunk in tar_stream:
+                    tar_file.write(chunk)
+            # Extract the tar archive
+            with tarfile.open(tar_file_path) as tar:
+                tar.extractall(path=output_path)
+            # Remove the tar archive
+            tar_file_path.unlink()
+        except Exception as e:
+            raise RuntimeError(f"Can't copy files from container: {src}\n\n{str(e)}")
 
     def start(self, host_directory: str, db_directory: str, port: int, ansys_version: int) -> None:
         """
@@ -134,11 +160,7 @@ class DockerLauncher:
         if not host_directory:  # pragma: no cover
             raise ValueError("host_directory cannot be None.")
         if not db_directory:  # pragma: no cover
-            raise ValueError("host_directory cannot be None.")
-
-        self._host_directory = host_directory
-        self._db_directory = db_directory
-        self._port = port
+            raise ValueError("db_directory cannot be None.")
 
         # Environment to pass into the container
         container_env = {
@@ -146,12 +168,12 @@ class DockerLauncher:
         }
 
         # Ports to map between the host and the container
-        ports_to_map = {str(self._port) + "/tcp": str(self._port)}
+        ports_to_map = {str(port) + "/tcp": str(port)}
 
         # The data directory to map into the container
         data_volume = {
-            self._host_directory: {"bind": "/host_directory", "mode": "rw"},
-            self._db_directory: {"bind": "/db_directory", "mode": "rw"},
+            host_directory: {"bind": "/host_directory", "mode": "rw"},
+            db_directory: {"bind": "/db_directory", "mode": "rw"},
         }
 
         # get a unique name for the container to run
@@ -161,7 +183,6 @@ class DockerLauncher:
             container_name += random.choice(string.ascii_letters)
             if len(container_name) > 500:
                 raise RuntimeError("Can't determine a unique Docker container name.")
-        self._container_name = container_name
 
         # Start the container in detached mode and override
         # the default entrypoint so multiple commands can be
@@ -173,17 +194,18 @@ class DockerLauncher:
 
         try:
             self._container = self._docker_client.containers.run(
-                self._image_name,
+                self._image_url,
                 entrypoint="/bin/bash",
                 volumes=data_volume,
                 environment=container_env,
                 ports=ports_to_map,
-                name=self._container_name,
+                name=container_name,
                 tty=True,
                 detach=True,
             )
+            self._image = self._container.image
         except Exception as e:  # pragma: no cover
-            raise RuntimeError("Can't run Docker container: " + self._image_name + "\n\n" + str(e))
+            raise RuntimeError("Can't run Docker container: " + self._image_url + "\n\n" + str(e))
 
         # Build up the command to run and send it to the container
         # as a detached command.
@@ -246,7 +268,7 @@ class DockerLauncher:
         str
             Name of the container or ``None`` if a container was not found.
         """
-        return self._container_name
+        return self._container.name
 
     def ansys_version(self) -> str:
         """
@@ -288,7 +310,7 @@ class DockerLauncher:
 
         Parameters
         ----------
-        cmdLine: str
+        cmd_line: str
             Command to run in the Docker container.
 
         Returns
@@ -423,9 +445,8 @@ class DockerLauncher:
 
     def launch_nexus_server(
         self,
-        username: str,
-        password: str,
-        allow_iframe_embedding: bool,
+        port: int,
+        allow_iframe_embedding: bool = False,
     ) -> str:
         """
         Run the ``nexus_launcher start ...`` command in the Docker container.
@@ -434,10 +455,8 @@ class DockerLauncher:
 
         Parameters
         ----------
-        username : str
-            Username.
-        password : str
-            Password
+        port : int
+            Port number for the Nexus server.
         allow_iframe_embedding : bool
             Whether iframes must be allowed.
 
@@ -450,21 +469,15 @@ class DockerLauncher:
         ------
         RuntimeError
         """
-        if int(self._ansys_version) > 242:
-            launcher = "adr_launcher"
-        else:
-            launcher = "nexus_launcher"
-        nexus_cmd = self._cei_home + f"/bin/{launcher} start"
-        nexus_cmd += " --db_directory /db_directory"
-        nexus_cmd += " --server_port "
-        nexus_cmd += str(self._port)
+        launcher = "adr_launcher" if int(self._ansys_version) > 242 else "nexus_launcher"
+        nexus_cmd = (
+            f"{self._cei_home}/bin/{launcher} start "
+            f"--db_directory /db_directory "
+            f"--server_port {port}"
+        )
         if allow_iframe_embedding:
             nexus_cmd += " --allow_iframe_embedding true"
-        # nexus_cmd += " --username "
-        # nexus_cmd += username
-        # nexus_cmd += " --password "
-        # nexus_cmd += password
-        nexus_cmd += " &"
+        nexus_cmd += " &"  # run in background
         ret = self.run_in_container(nexus_cmd)
         self._nexus_is_running = True
         return ret
@@ -477,10 +490,14 @@ class DockerLauncher:
                     launcher = "adr_launcher"
                 else:
                     launcher = "nexus_launcher"
-                self._nexus_is_running = False
                 stop_cmd = self._cei_home + f"/bin/{launcher} stop "
                 stop_cmd += " --db_directory /db_directory"
                 self.run_in_container(stop_cmd)
+                # reset after stopping
+                self._nexus_is_running = False
+                self._ansys_version = None
+                self._cei_home = None
+                self._nexus_directory = None
         except Exception as e:
             raise RuntimeWarning(
                 f"Problem stopping and cleaning up Nexus service\n"
@@ -498,3 +515,8 @@ class DockerLauncher:
             raise RuntimeWarning(f"Problem removing the Docker container.\n{str(e)}")
 
         self._container = None
+        self._image = None
+
+    def close(self) -> None:
+        """Close the Docker client."""
+        self._docker_client.close()

@@ -193,7 +193,7 @@ class Service:
                 self._data_directory = data_directory
 
             try:
-                self._container = DockerLauncher(docker_image_name=docker_image)
+                self._container = DockerLauncher(image_url=docker_image)
             except Exception as e:
                 self.logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
                 raise e
@@ -507,11 +507,7 @@ class Service:
         # launch the server
         if self._container:
             try:
-                self._container.launch_nexus_server(
-                    username=username,
-                    password=password,
-                    allow_iframe_embedding=True,
-                )
+                self._container.launch_nexus_server(port=self._port, allow_iframe_embedding=True)
             except Exception as e:  # pragma: no cover
                 self.logger.error(
                     f"Error starting the service in the Docker container.\n{str(e)}\n"
