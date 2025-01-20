@@ -599,6 +599,7 @@ class Service:
                 if self._container:
                     self.logger.info("Shutting down container.\n")
                     self._container.stop()
+                    self._container.close()
                     self._container = None
                 else:
                     self.logger.info("Shutting down service.\n")
