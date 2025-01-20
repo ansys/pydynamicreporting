@@ -130,42 +130,34 @@ class ADR:
 
         if ansys_installation == "docker":
             try:
-                container = DockerLauncher(docker_image_name=docker_image)
+                docker_launcher = DockerLauncher(image_url=docker_image)
             except Exception as e:
                 self._logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
-                raise e
+                raise ADRException(f"Error initializing the Docker Container object.\n{str(e)}\n")
 
             try:
-                container.pull()
+                docker_launcher.pull_image()
             except Exception as e:
                 self._logger.error(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
-                raise e
+                raise ADRException(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
 
             try:
-                # start the container and map specified host directory into the
-                # container.  The location in the container is always /host_directory/.
-                ports = report_utils.find_unused_ports(1, start=DOCKER_DEFAULT_PORT)
-                if not ports:
-                    raise ADRException("No available ports found.")
-                data_directory = Path(tempfile.TemporaryDirectory().name)
-                container.start(
-                    host_directory=str(data_directory),
-                    db_directory=self._db_directory,
-                    port=ports[0],
-                    ansys_version=self._ansys_version,
-                )
+                docker_launcher.create_container()
+            except Exception as e:
+                self._logger.error(f"Error creating the Docker Container.\n{str(e)}\n")
+                raise ADRException(f"Error creating the Docker Container.\n{str(e)}\n")
+
+            # copy
+            data_directory = Path(tempfile.TemporaryDirectory().name)
+            try:
+                # copy the CEI directory from the container to the host
+                docker_launcher.copy_to_host("/Nexus/CEI", dest=str(data_directory))
             except Exception as e:  # pragma: no cover
                 self._logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
-                raise e
-            # copy installation to a temp dir
+                raise ADRException(f"Error starting the Docker Container.\n{str(e)}\n")
+            # close the container and the connection
             try:
-                container.copy_from_cei_home_to_host_directory(src="*", do_recursive=True)
-            except Exception as e:
-                self._logger.error(f"Error copying files from the Docker Container.\n{str(e)}\n")
-                raise e
-            # stop
-            try:
-                container.stop()
+                docker_launcher.cleanup(close=True)
             except Exception as e:
                 self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
 
