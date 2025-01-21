@@ -14,11 +14,12 @@ import warnings
 import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
+from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
-from ..constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
+from ..constants import DOCKER_REPO_URL
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -169,12 +170,6 @@ class ADR:
             self._ansys_installation = self._get_install_directory(self._temp_installation.name)
         else:
             self._ansys_installation = self._get_install_directory(ansys_installation)
-
-    def cleanup(self):
-        """Ensure the temporary directory is cleaned up automatically."""
-        if self._temp_installation is not None:
-            self._temp_installation.cleanup()
-            self._temp_installation = None  # set to None to avoid double cleanup
 
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
@@ -398,6 +393,18 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+    def close(self):
+        """Ensure that everything is cleaned up"""
+        # close db connections
+        try:
+            connections.close_all()
+        except DatabaseError:
+            pass
+        # cleanup temp installation
+        if self._temp_installation is not None:
+            self._temp_installation.cleanup()
+            self._temp_installation = None  # set to None to avoid double cleanup
 
     def backup_database(
         self, output_directory: str = ".", *, database: str = "default", compress=False
