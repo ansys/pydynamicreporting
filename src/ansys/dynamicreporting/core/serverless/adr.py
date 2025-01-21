@@ -98,7 +98,7 @@ class ADR:
                             " you would like to create a new database."
                         )
 
-                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
                 self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
             else:
@@ -125,7 +125,7 @@ class ADR:
 
         if static_directory is not None:
             self._static_directory = self._check_dir(static_directory)
-            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
+            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
