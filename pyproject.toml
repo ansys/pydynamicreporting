@@ -53,9 +53,11 @@ dependencies = [
     "tzlocal~=5.0",
     "numpy>=2.2.2,<3",
     "python-pptx==0.6.19",
-    "pandas~=2.0",
-    "statsmodels~=0.14",
-    "docutils~=0.21"
+    "pandas>=2.0",
+    "statsmodels>=0.14",
+    "docutils>=0.21",
+    "QtPy>=2.4",
+    "psycopg[binary]>=3.2.3",
 ]
 
 [tool.setuptools.packages.find]
