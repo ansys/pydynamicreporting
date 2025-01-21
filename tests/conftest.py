@@ -1,28 +1,25 @@
 """Global fixtures go here."""
 from pathlib import Path
 from random import randint
-import shutil
 from uuid import uuid4
 
 import pytest
 
-from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, Service
+from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.serverless import ADR
 
 
 def pytest_addoption(parser):
-    parser.addoption("--use-local-launcher", default=False, action="store_true")
+    parser.addoption("--use-local-launcher", action="store_true", default=False)
     parser.addoption("--install-path", action="store", default="dev.json")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def get_exec(pytestconfig: pytest.Config) -> str:
-    exec_basis = ""
-    use_local = pytestconfig.getoption("use_local_launcher")
-    if use_local:
-        exec_basis = pytestconfig.getoption("install_path")
-    return exec_basis
+    if pytestconfig.getoption("use_local_launcher"):
+        return pytestconfig.getoption("install_path")
+    return ""
 
 
 @pytest.fixture(scope="module")
