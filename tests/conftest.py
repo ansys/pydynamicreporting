@@ -1,7 +1,7 @@
 """Global fixtures go here."""
-
 from pathlib import Path
 from random import randint
+import shutil
 from uuid import uuid4
 
 import pytest
@@ -80,9 +80,7 @@ def adr_service_query(pytestconfig: pytest.Config) -> Service:
             data_directory=str(tmp_docker_dir),
             port=8000 + randint(0, 3999),
         )
-
-    if not use_local:
-        adr_service._container.save_config()
+        adr_service._docker_launcher.save_config()
 
     adr_service.start(create_db=False, exit_on_close=True, delete_db=False)
 
@@ -98,26 +96,11 @@ def adr_serverless_create(pytestconfig: pytest.Config) -> ADR:
     local_db = base_dir / f"auto_delete_{uuid4().hex}"
     static_dir = base_dir / "static"
     static_dir.mkdir(exist_ok=True)
-    install_dir = base_dir / "installation" / "ansys_inc" / f"v{DEFAULT_ANSYS_VERSION}"
-
-    adr_service = Service(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=str(local_db),
-        data_directory=str(install_dir),
-        port=8000 + randint(0, 3999),
-    )
-
-    adr_service._container.copy_from_cei_home_to_host_directory(src="", do_recursive=True)
-
-    # List all files and folders in the install_dir
-    for path in install_dir.rglob("*"):
-        print(path)
 
     adr = ADR(
-        ansys_installation=install_dir,
+        ansys_installation="docker",
+        docker_image=DOCKER_DEV_REPO_URL,
         db_directory=local_db,
-        media_directory=local_db / "media",
         static_directory=static_dir,
         media_url="/media1/",
         static_url="/static2/",
@@ -126,4 +109,5 @@ def adr_serverless_create(pytestconfig: pytest.Config) -> ADR:
 
     yield adr
 
-    adr_service.stop()
+    shutil.rmtree(local_db, ignore_errors=True)
+    shutil.rmtree(static_dir, ignore_errors=True)

@@ -154,8 +154,12 @@ class ADR:
                 # copy the installation from the container to the host
                 docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_installation.name)
             except Exception as e:  # pragma: no cover
-                self._logger.error(f"Error copying the installation from the container.\n{str(e)}\n")
-                raise ADRException(f"Error copying the installation from the container.\n{str(e)}\n")
+                self._logger.error(
+                    f"Error copying the installation from the container.\n{str(e)}\n"
+                )
+                raise ADRException(
+                    f"Error copying the installation from the container.\n{str(e)}\n"
+                )
             # close the container and the connection
             try:
                 docker_launcher.cleanup(close=True)
