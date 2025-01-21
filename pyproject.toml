@@ -86,7 +86,7 @@ test-extra = [
     "ansys-dpf-core==0.13.0",
 ]
 doc = [
-    "ansys-sphinx-theme==1.1.1",
+    "ansys-sphinx-theme==1.2.6",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
     "docker>=7.1.0",
@@ -101,7 +101,7 @@ dev = [
     "ipdb",
     "ipython",
     "whatsonpypi",
-    "ansys-sphinx-theme==1.1.1",
+    "ansys-sphinx-theme==1.2.6",
     "numpy>=1.23.5,<3",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
