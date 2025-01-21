@@ -63,7 +63,7 @@ class DockerLauncher:
             self._image_url = DOCKER_DEV_REPO_URL if use_dev else DOCKER_REPO_URL
         # Load up Docker from the user's environment
         try:
-            self._docker_client: docker.client.DockerClient = docker.from_env()
+            self._client: docker.client.DockerClient = docker.from_env()
         except Exception:  # pragma: no cover
             raise RuntimeError("Can't initialize Docker")
         self._container: docker.models.containers.Container = None
@@ -91,7 +91,7 @@ class DockerLauncher:
            If Docker couldn't pull the image.
         """
         try:
-            self._image = self._docker_client.images.pull(self._image_url)
+            self._image = self._client.images.pull(self._image_url)
         except Exception:
             raise RuntimeError(f"Can't pull Docker image: {self._image_url}")
         return self._image
@@ -101,7 +101,7 @@ class DockerLauncher:
         Create a Docker container using the specified image.
         """
         try:
-            self._container = self._docker_client.containers.create(self._image)
+            self._container = self._client.containers.create(self._image)
         except Exception as e:
             raise RuntimeError(f"Can't create Docker container: \n\n{str(e)}")
         return self._container
@@ -173,7 +173,7 @@ class DockerLauncher:
         }
 
         # get a unique name for the container to run
-        existing_names = [x.name for x in self._docker_client.from_env().containers.list()]
+        existing_names = [x.name for x in self._client.from_env().containers.list()]
         container_name = "nexus"
         while container_name in existing_names:
             container_name += random.choice(string.ascii_letters)
@@ -188,7 +188,7 @@ class DockerLauncher:
         # the default entrypoint command "ensight" which is in the
         # container's path for user "ensight".
         try:
-            self._container = self._docker_client.containers.run(
+            self._container = self._client.containers.run(
                 self._image_url,
                 entrypoint="/bin/bash",
                 volumes=data_volume,
@@ -539,7 +539,7 @@ class DockerLauncher:
 
     def close(self) -> None:
         """Close the Docker client."""
-        self._docker_client.close()
+        self._client.close()
 
     def cleanup(self, *, close=False, **kwargs) -> None:
         """Cleanup the Docker container and client."""

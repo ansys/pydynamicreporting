@@ -65,6 +65,7 @@ class ADR:
         self._dataset = None
         self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
+        self._temp_installation = None
 
         if opts is None:
             opts = {}
@@ -132,8 +133,8 @@ class ADR:
             try:
                 docker_launcher = DockerLauncher(image_url=docker_image)
             except Exception as e:
-                self._logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
-                raise ADRException(f"Error initializing the Docker Container object.\n{str(e)}\n")
+                self._logger.error(f"Error initializing the Docker environment.\n{str(e)}\n")
+                raise ADRException(f"Error initializing the Docker environment.\n{str(e)}\n")
 
             try:
                 docker_launcher.pull_image()
@@ -144,26 +145,32 @@ class ADR:
             try:
                 docker_launcher.create_container()
             except Exception as e:
-                self._logger.error(f"Error creating the Docker Container.\n{str(e)}\n")
-                raise ADRException(f"Error creating the Docker Container.\n{str(e)}\n")
+                self._logger.error(f"Error creating the Docker container.\n{str(e)}\n")
+                raise ADRException(f"Error creating the Docker container.\n{str(e)}\n")
 
+            self._temp_installation = tempfile.TemporaryDirectory()
             # copy
-            data_directory = Path(tempfile.TemporaryDirectory().name)
             try:
-                # copy the CEI directory from the container to the host
-                docker_launcher.copy_to_host("/Nexus/CEI", dest=str(data_directory))
+                # copy the installation from the container to the host
+                docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_installation.name)
             except Exception as e:  # pragma: no cover
-                self._logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
-                raise ADRException(f"Error starting the Docker Container.\n{str(e)}\n")
+                self._logger.error(f"Error copying the installation from the container.\n{str(e)}\n")
+                raise ADRException(f"Error copying the installation from the container.\n{str(e)}\n")
             # close the container and the connection
             try:
                 docker_launcher.cleanup(close=True)
             except Exception as e:
                 self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
-
-            self._ansys_installation = data_directory
+            # set the installation directory
+            self._ansys_installation = self._get_install_directory(self._temp_installation.name)
         else:
             self._ansys_installation = self._get_install_directory(ansys_installation)
+
+    def cleanup(self):
+        """Ensure the temporary directory is cleaned up automatically."""
+        if self._temp_installation is not None:
+            self._temp_installation.cleanup()
+            self._temp_installation = None  # set to None to avoid double cleanup
 
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
@@ -173,7 +180,7 @@ class ADR:
             return self._databases.get(database, {}).get("NAME", "")
         return ""
 
-    def _get_install_directory(self, ansys_installation: str) -> Path:
+    def _get_install_directory(self, ansys_installation: Optional[str] = None) -> Path:
         dirs_to_check = []
         if ansys_installation:
             # User passed directory
@@ -194,7 +201,6 @@ class ADR:
                 install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{self._ansys_version}\CEI")
             else:
                 install_loc = Path(f"/ansys_inc/v{self._ansys_version}/CEI")
-
             dirs_to_check.append(install_loc)
 
         for install_dir in dirs_to_check:
@@ -433,6 +439,10 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"Restore failed: {e}")
+
+    @property
+    def ansys_installation(self) -> str:
+        return str(self._ansys_installation)
 
     @property
     def session(self) -> Session:
