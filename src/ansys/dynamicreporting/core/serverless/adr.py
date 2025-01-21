@@ -6,6 +6,7 @@ from pathlib import Path
 import platform
 import shutil
 import sys
+import tempfile
 from typing import Any, Optional, Type, Union
 import uuid
 import warnings
@@ -13,10 +14,13 @@ import warnings
 import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
+from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
+from ..constants import DOCKER_REPO_URL
+from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
     DatabaseMigrationError,
@@ -48,6 +52,7 @@ class ADR:
         opts: Optional[dict] = None,
         request: Optional[HttpRequest] = None,
         logfile: Optional[str] = None,
+        docker_image: str = DOCKER_REPO_URL,
     ) -> None:
         self._db_directory = None
         self._databases = databases or {}
@@ -61,7 +66,7 @@ class ADR:
         self._dataset = None
         self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
-        self._ansys_installation = self._get_install_directory(ansys_installation)
+        self._temp_installation = None
 
         if opts is None:
             opts = {}
@@ -94,7 +99,7 @@ class ADR:
                             " you would like to create a new database."
                         )
 
-                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
                 self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
             else:
@@ -121,9 +126,50 @@ class ADR:
 
         if static_directory is not None:
             self._static_directory = self._check_dir(static_directory)
-            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
+            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+        if ansys_installation == "docker":
+            try:
+                docker_launcher = DockerLauncher(image_url=docker_image)
+            except Exception as e:
+                self._logger.error(f"Error initializing the Docker environment.\n{str(e)}\n")
+                raise ADRException(f"Error initializing the Docker environment.\n{str(e)}\n")
+
+            try:
+                docker_launcher.pull_image()
+            except Exception as e:
+                self._logger.error(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
+                raise ADRException(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
+
+            try:
+                docker_launcher.create_container()
+            except Exception as e:
+                self._logger.error(f"Error creating the Docker container.\n{str(e)}\n")
+                raise ADRException(f"Error creating the Docker container.\n{str(e)}\n")
+
+            self._temp_installation = tempfile.TemporaryDirectory()
+            # copy
+            try:
+                # copy the installation from the container to the host
+                docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_installation.name)
+            except Exception as e:  # pragma: no cover
+                self._logger.error(
+                    f"Error copying the installation from the container.\n{str(e)}\n"
+                )
+                raise ADRException(
+                    f"Error copying the installation from the container.\n{str(e)}\n"
+                )
+            # close the container and the connection
+            try:
+                docker_launcher.cleanup(close=True)
+            except Exception as e:
+                self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
+            # set the installation directory
+            self._ansys_installation = self._get_install_directory(self._temp_installation.name)
+        else:
+            self._ansys_installation = self._get_install_directory(ansys_installation)
 
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
@@ -133,7 +179,7 @@ class ADR:
             return self._databases.get(database, {}).get("NAME", "")
         return ""
 
-    def _get_install_directory(self, ansys_installation: str) -> Path:
+    def _get_install_directory(self, ansys_installation: Optional[str] = None) -> Path:
         dirs_to_check = []
         if ansys_installation:
             # User passed directory
@@ -154,7 +200,6 @@ class ADR:
                 install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{self._ansys_version}\CEI")
             else:
                 install_loc = Path(f"/ansys_inc/v{self._ansys_version}/CEI")
-
             dirs_to_check.append(install_loc)
 
         for install_dir in dirs_to_check:
@@ -349,6 +394,18 @@ class ADR:
         if self._dataset is None:
             self._dataset = Dataset.create()
 
+    def close(self):
+        """Ensure that everything is cleaned up"""
+        # close db connections
+        try:
+            connections.close_all()
+        except DatabaseError:
+            pass
+        # cleanup temp installation
+        if self._temp_installation is not None:
+            self._temp_installation.cleanup()
+            self._temp_installation = None  # set to None to avoid double cleanup
+
     def backup_database(
         self, output_directory: str = ".", *, database: str = "default", compress=False
     ) -> None:
@@ -393,6 +450,10 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"Restore failed: {e}")
+
+    @property
+    def ansys_installation(self) -> str:
+        return str(self._ansys_installation)
 
     @property
     def session(self) -> Session:
