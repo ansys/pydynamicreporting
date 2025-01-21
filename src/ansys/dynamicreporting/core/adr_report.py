@@ -670,7 +670,7 @@ class Report:
         Parameters
         ----------
         directory_name : str
-            ....
+            Path for the HTML export directory
         query_params : dict, optional
             Dictionary for parameters to apply to report template. Default: None
         item_filter: str, optional
@@ -724,11 +724,11 @@ class Report:
 
     def export_json(self, json_file_path: str) -> None:
         """
-        Export THIS report to a JSON-formatted file.
+        Export this report to a JSON-formatted file.
 
         Parameters
         ----------
-            json_file_path: str
+            json_file_path : str
                 Path of the JSON file to be exported to.
 
         Returns
@@ -738,12 +738,13 @@ class Report:
         Examples
         --------
         ::
-            import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
-            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypsw")
 
+            import ansys.dynamicreporting.core as adr
+
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
             report = adr_service.get_report(report_name="my_report_name")
-            report.export_json(r'C:\\my_json_file')
+            report.export_json(r'C:\\tmp\\my_json_file.json')
         """
         try:
             self.service.serverobj.store_json(self.report.guid, json_file_path)
