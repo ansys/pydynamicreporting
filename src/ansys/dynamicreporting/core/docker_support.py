@@ -276,7 +276,7 @@ class DockerLauncher:
         """
         return self._container
 
-    def container_name(self) -> str:
+    def container_name(self) -> Optional[str]:
         """
         Get the Docker container name.
 
@@ -285,6 +285,8 @@ class DockerLauncher:
         str
             Name of the container or ``None`` if a container was not found.
         """
+        if self._container is None:
+            return None
         return self._container.name
 
     def ansys_version(self) -> str:

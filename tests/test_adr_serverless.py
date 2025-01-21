@@ -12,8 +12,8 @@ def test_set_default_session(adr_serverless_create):
 
 @pytest.mark.ado_test
 def test_set_default_session_no_session(adr_serverless_create):
-    adr_serverless_create.set_default_session(None)
-    assert adr_serverless_create.session_guid is None
+    with pytest.raises(TypeError, match="Must be an instance of type 'Session'"):
+        adr_serverless_create.set_default_session(None)
 
 
 @pytest.mark.ado_test
@@ -27,5 +27,5 @@ def test_set_default_dataset(adr_serverless_create):
 
 @pytest.mark.ado_test
 def test_set_default_dataset_no_dataset(adr_serverless_create):
-    adr_serverless_create.set_default_dataset(None)
-    assert adr_serverless_create.dataset is None
+    with pytest.raises(TypeError, match="Must be an instance of type 'Dataset'"):
+        adr_serverless_create.set_default_dataset(None)
