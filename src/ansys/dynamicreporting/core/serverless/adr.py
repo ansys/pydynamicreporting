@@ -11,7 +11,6 @@ from typing import Any, Optional, Type, Union
 import uuid
 import warnings
 
-import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
@@ -67,6 +66,7 @@ class ADR:
         self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
         self._temp_installation = None
+        self._is_setup = False
 
         if opts is None:
             opts = {}
@@ -238,10 +238,8 @@ class ADR:
                 nexus_group.user_set.add(user)
 
     def setup(self, collect_static: bool = False) -> None:
-        from django.conf import settings
-
-        if settings.configured:
-            raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+        if self._is_setup:
+            raise RuntimeError("ADR has already been setup. setup() can only be called once.")
 
         # look for enve, but keep it optional.
         try:
@@ -356,7 +354,11 @@ class ADR:
         report_utils.apply_timezone_workaround()
 
         try:
-            settings.configure(**overrides)
+            import django
+            from django.conf import settings
+
+            if not settings.configured:
+                settings.configure(**overrides)
             django.setup()
         except Exception as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
@@ -393,6 +395,8 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+        self._is_setup = True
 
     def close(self):
         """Ensure that everything is cleaned up"""
@@ -450,6 +454,10 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"Restore failed: {e}")
+
+    @property
+    def is_setup(self) -> bool:
+        return self._is_setup
 
     @property
     def ansys_installation(self) -> str:
