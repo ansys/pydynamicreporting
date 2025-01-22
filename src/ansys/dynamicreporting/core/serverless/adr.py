@@ -37,6 +37,9 @@ from .template import Template
 
 
 class ADR:
+    # Class-level variable to track the active instance
+    _curr_instance = None
+
     def __init__(
         self,
         ansys_installation: str,
@@ -170,6 +173,8 @@ class ADR:
             self._ansys_installation = self._get_install_directory(self._temp_installation.name)
         else:
             self._ansys_installation = self._get_install_directory(ansys_installation)
+
+        ADR._curr_instance = self  # Set this as the current active instance
 
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
@@ -397,6 +402,18 @@ class ADR:
             self._dataset = Dataset.create()
 
         self._is_setup = True
+
+    @classmethod
+    def ensure_setup(cls):
+        """
+        Check if the current ADR instance has been set up.
+        Raise an ImportError if not.
+        """
+        if not cls._curr_instance or not cls._curr_instance.is_setup:
+            raise ImportError(
+                "ADR has not been set up yet. Please create an ADR instance and call its `setup()` method "
+                "before importing and using other classes."
+            )
 
     def close(self):
         """Ensure that everything is cleaned up"""
