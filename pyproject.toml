@@ -120,7 +120,7 @@ dev = [
 [tool.pytest.ini_options]
 tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
-addopts = "--capture=tee-sys --tb=native -p no:warnings"
+addopts = "--capture=tee-sys --tb=native -p no:warnings -vv"
 markers =[
     "integration:Run integration tests",
     "smoke:Run the smoke tests",

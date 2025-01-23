@@ -66,6 +66,7 @@ def test_init_multiple(adr_serverless):  # multiple databases
         databases=database_config,
         media_directory=doc_db.parent / "media",
     )
+    print(adr._databases)
     adr.setup()
     assert adr.is_setup
 
