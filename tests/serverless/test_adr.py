@@ -2,15 +2,16 @@ from pathlib import Path
 
 import pytest
 
-from ansys.dynamicreporting.core.serverless import ADR
 from ansys.dynamicreporting.core.exceptions import InvalidPath
+from ansys.dynamicreporting.core.serverless import ADR
 
 
 def test_init_simple(adr_serverless):  # existing directory
+    base_dir = Path(__file__).parent / "test_data"
+    dest_dir = base_dir / "dest" / "db.sqlite3"
     adr = ADR(
         ansys_installation=adr_serverless._ansys_installation,
-        db_directory=adr_serverless._db_directory,
-        debug=True,
+        db_directory=dest_dir,
     )
     adr.setup()
     assert adr.is_setup
@@ -87,6 +88,7 @@ def test_import_with_setup(adr_serverless):
     )
     adr.setup()
     from ansys.dynamicreporting.core.serverless import String
+
     assert String is not None
 
 
