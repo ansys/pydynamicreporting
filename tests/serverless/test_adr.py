@@ -8,7 +8,7 @@ from ansys.dynamicreporting.core.serverless import ADR
 
 def test_init_simple(adr_serverless):  # existing directory
     base_dir = Path(__file__).parent / "test_data"
-    dest_dir = base_dir / "dest" / "db.sqlite3"
+    dest_dir = base_dir / "dest"
     adr = ADR(
         ansys_installation=adr_serverless._ansys_installation,
         db_directory=dest_dir,
