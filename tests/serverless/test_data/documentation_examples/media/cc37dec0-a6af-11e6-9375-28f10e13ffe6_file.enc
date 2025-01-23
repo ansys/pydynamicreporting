@@ -20,10 +20,10 @@ prefs: fastdisplay_sparse_res 50
 prefs: abort_server_time 0
 prefs: abort_server_operations OFF
 view_transf: rotate -48.6823845 -2.54416919 0
-part: select_default 
-part: modify_begin 
-part: elt_representation 3D_border_2D_full 
-part: modify_end 
+part: select_default
+part: modify_begin
+part: elt_representation 3D_border_2D_full
+part: modify_end
 data: binary_files_are native
 data: format ExodusII
 data: reader_option 'Read distribution factors' ON

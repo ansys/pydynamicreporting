@@ -334,7 +334,7 @@ class Item(BaseModel):
             )
         return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
-    def render(self, *, context=None, request=None) -> Optional[str]:
+    def render(self, *, context=None, request=None) -> str | None:
         if context is None:
             context = {}
         ctx = {

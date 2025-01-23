@@ -55,7 +55,7 @@ class DockerLauncher:
             d.stop()
     """
 
-    def __init__(self, image_url: Optional[str] = None, use_dev: bool = False) -> None:
+    def __init__(self, image_url: str | None = None, use_dev: bool = False) -> None:
         # get the optional user specified image name
         if image_url:
             self._image_url = image_url
@@ -276,7 +276,7 @@ class DockerLauncher:
         """
         return self._container
 
-    def container_name(self) -> Optional[str]:
+    def container_name(self) -> str | None:
         """
         Get the Docker container name.
 

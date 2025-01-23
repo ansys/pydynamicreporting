@@ -44,16 +44,16 @@ class ADR:
         self,
         ansys_installation: str,
         *,
-        db_directory: Optional[str] = None,
-        databases: Optional[dict] = None,
-        media_directory: Optional[str] = None,
-        static_directory: Optional[str] = None,
-        media_url: Optional[str] = None,
-        static_url: Optional[str] = None,
-        debug: Optional[bool] = None,
-        opts: Optional[dict] = None,
-        request: Optional[HttpRequest] = None,
-        logfile: Optional[str] = None,
+        db_directory: str | None = None,
+        databases: dict | None = None,
+        media_directory: str | None = None,
+        static_directory: str | None = None,
+        media_url: str | None = None,
+        static_url: str | None = None,
+        debug: bool | None = None,
+        opts: dict | None = None,
+        request: HttpRequest | None = None,
+        logfile: str | None = None,
         docker_image: str = DOCKER_REPO_URL,
     ) -> None:
         self._db_directory = None
@@ -184,7 +184,7 @@ class ADR:
             return self._databases.get(database, {}).get("NAME", "")
         return ""
 
-    def _get_install_directory(self, ansys_installation: Optional[str] = None) -> Path:
+    def _get_install_directory(self, ansys_installation: str | None = None) -> Path:
         dirs_to_check = []
         if ansys_installation:
             # User passed directory
@@ -511,7 +511,7 @@ class ADR:
         """GUID of the session associated with the service."""
         return self._session.guid
 
-    def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
+    def create_item(self, item_type: type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
         if not kwargs:
@@ -522,7 +522,7 @@ class ADR:
             **kwargs,
         )
 
-    def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
+    def create_template(self, template_type: type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
         if not kwargs:
@@ -546,9 +546,7 @@ class ADR:
         except Exception as e:
             raise e
 
-    def get_reports(
-        self, *, fields: Optional[list] = None, flat: bool = False
-    ) -> Union[ObjectSet, list]:
+    def get_reports(self, *, fields: list | None = None, flat: bool = False) -> ObjectSet | list:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -560,7 +558,7 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, *, r_type: str = "name") -> Union[ObjectSet, list]:
+    def get_list_reports(self, *, r_type: str = "name") -> ObjectSet | list:
         supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
@@ -575,7 +573,7 @@ class ADR:
             return self.get_reports()
 
     def render_report(
-        self, *, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
+        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> str:
         if not kwargs:
             raise ADRException(
@@ -590,7 +588,7 @@ class ADR:
 
     def query(
         self,
-        query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        query_type: Session | Dataset | type[Item] | type[Template],
         *,
         query: str = "",
         **kwargs: Any,
@@ -601,7 +599,7 @@ class ADR:
 
     def create_objects(
         self,
-        objects: Union[list, ObjectSet],
+        objects: list | ObjectSet,
         **kwargs: Any,
     ) -> int:
         if not isinstance(objects, Iterable):
@@ -640,7 +638,7 @@ class ADR:
 
     def copy_objects(
         self,
-        object_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        object_type: Session | Dataset | type[Item] | type[Template],
         target_database: str,
         *,
         query: str = "",

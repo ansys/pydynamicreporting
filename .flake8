@@ -40,3 +40,5 @@ ignore =
   B907
   # zip() without an explicit strict= parameter set.
   B905
+  # do not compare types, for exact checks use `is` / `is not`
+  E721

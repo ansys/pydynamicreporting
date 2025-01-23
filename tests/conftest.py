@@ -1,9 +1,11 @@
 """Global fixtures go here."""
+
 from pathlib import Path
 from random import randint
 from uuid import uuid4
 
 import pytest
+
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 

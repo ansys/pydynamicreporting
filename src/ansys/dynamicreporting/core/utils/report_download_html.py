@@ -71,7 +71,7 @@ class ReportDownloadHTML:
         self._total_data_uri_size += size
         return True
 
-    def download(self, url: Optional[str] = None, directory: Optional[str] = None) -> None:
+    def download(self, url: str | None = None, directory: str | None = None) -> None:
         if url is not None:
             self._url = url
         if directory is not None:

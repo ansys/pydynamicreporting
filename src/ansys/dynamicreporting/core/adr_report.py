@@ -17,6 +17,7 @@ Examples
     my_report = adr_service.get_report(report_name = "My First Report")
     my_report.visualize()
 """
+
 import json
 import os
 import sys
@@ -589,10 +590,10 @@ class Report:
     def export_pdf(
         self,
         file_name: str = "",
-        query_params: Optional[dict] = None,
-        item_filter: Optional[str] = None,
-        page: Optional[list] = None,
-        delay: Optional[int] = None,
+        query_params: dict | None = None,
+        item_filter: str | None = None,
+        page: list | None = None,
+        delay: int | None = None,
     ) -> bool:
         """
         Export report as PDF. Currently works only with a local ADR installation, and
@@ -659,10 +660,10 @@ class Report:
     def export_html(
         self,
         directory_name: str = "",
-        query_params: Optional[dict] = None,
-        item_filter: Optional[str] = None,
-        filename: Optional[str] = "index.html",
-        no_inline_files: Optional[bool] = False,
+        query_params: dict | None = None,
+        item_filter: str | None = None,
+        filename: str | None = "index.html",
+        no_inline_files: bool | None = False,
     ) -> bool:
         """
         Export report as static HTML.
