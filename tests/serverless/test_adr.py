@@ -39,12 +39,14 @@ def test_init_new(adr_serverless, tmp_path):  # creates new directory
 def test_init_multiple(adr_serverless):  # multiple databases
     # Paths setup
     base_dir = Path(__file__).parent / "test_data"
-    doc_ex = base_dir / "documentation_examples" / "db.sqlite3"
-    dest_dir = base_dir / "dest" / "db.sqlite3"
+    doc_db = base_dir / "documentation_examples" / "db.sqlite3"
+    doc_db.resolve(strict=True)
+    dest_db = base_dir / "dest" / "db.sqlite3"
+    dest_db.resolve(strict=True)
     database_config = {
         "default": {
             "ENGINE": "sqlite3",
-            "NAME": str(doc_ex),
+            "NAME": str(doc_db),
             "USER": "nexus",
             "PASSWORD": "cei",
             "HOST": "",
@@ -52,7 +54,7 @@ def test_init_multiple(adr_serverless):  # multiple databases
         },
         "dest": {
             "ENGINE": "sqlite3",
-            "NAME": str(dest_dir),
+            "NAME": str(dest_db),
             "USER": "nexus",
             "PASSWORD": "cei",
             "HOST": "",
@@ -62,7 +64,7 @@ def test_init_multiple(adr_serverless):  # multiple databases
     adr = ADR(
         ansys_installation=adr_serverless._ansys_installation,
         databases=database_config,
-        media_directory=doc_ex.parent / "media",
+        media_directory=doc_db.parent / "media",
     )
     adr.setup()
     assert adr.is_setup
