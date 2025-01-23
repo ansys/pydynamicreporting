@@ -14,6 +14,8 @@ def test_init_simple(adr_serverless):  # existing directory
         db_directory=dest_dir,
     )
     adr.setup()
+    from django.conf import settings
+    print(settings.DATABASES)
     assert adr.is_setup
 
 
