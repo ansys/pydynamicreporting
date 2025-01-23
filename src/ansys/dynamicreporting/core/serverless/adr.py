@@ -11,7 +11,6 @@ from typing import Any, Optional, Type, Union
 import uuid
 import warnings
 
-import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
@@ -38,6 +37,9 @@ from .template import Template
 
 
 class ADR:
+    # Class-level variable to track the active instance
+    _curr_instance = None
+
     def __init__(
         self,
         ansys_installation: str,
@@ -67,6 +69,7 @@ class ADR:
         self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
         self._temp_installation = None
+        self._is_setup = False
 
         if opts is None:
             opts = {}
@@ -171,6 +174,8 @@ class ADR:
         else:
             self._ansys_installation = self._get_install_directory(ansys_installation)
 
+        ADR._curr_instance = self  # Set this as the current active instance
+
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
 
@@ -238,10 +243,8 @@ class ADR:
                 nexus_group.user_set.add(user)
 
     def setup(self, collect_static: bool = False) -> None:
-        from django.conf import settings
-
-        if settings.configured:
-            raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+        if self._is_setup:
+            raise RuntimeError("ADR has already been setup. setup() can only be called once.")
 
         # look for enve, but keep it optional.
         try:
@@ -356,7 +359,11 @@ class ADR:
         report_utils.apply_timezone_workaround()
 
         try:
-            settings.configure(**overrides)
+            import django
+            from django.conf import settings
+
+            if not settings.configured:
+                settings.configure(**overrides)
             django.setup()
         except Exception as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
@@ -393,6 +400,20 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+        self._is_setup = True
+
+    @classmethod
+    def ensure_setup(cls):
+        """
+        Check if the current ADR instance has been set up.
+        Raise an ImportError if not.
+        """
+        if not cls._curr_instance or not cls._curr_instance.is_setup:
+            raise ImportError(
+                "ADR has not been set up yet. Please create an ADR instance and call its `setup()` method "
+                "before importing and using other classes."
+            )
 
     def close(self):
         """Ensure that everything is cleaned up"""
@@ -450,6 +471,10 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"Restore failed: {e}")
+
+    @property
+    def is_setup(self) -> bool:
+        return self._is_setup
 
     @property
     def ansys_installation(self) -> str:
