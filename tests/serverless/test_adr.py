@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from ansys.dynamicreporting.core.serverless import ADR
-from src.ansys.dynamicreporting.core.exceptions import InvalidPath
+from ansys.dynamicreporting.core.exceptions import InvalidPath
 
 
 def test_init_simple(adr_serverless):  # existing directory
