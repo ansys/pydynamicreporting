@@ -75,7 +75,7 @@ def test_import_without_setup(adr_serverless):
             db_directory=adr_serverless._db_directory,
             debug=True,
         )
-        from ansys.dynamicreporting.core.serverless import *  # noqa: F406
+        from ansys.dynamicreporting.core.serverless import String  # noqa: F406
 
 
 @pytest.mark.ado_test
@@ -86,10 +86,8 @@ def test_import_with_setup(adr_serverless):
         debug=True,
     )
     adr.setup()
-    from ansys.dynamicreporting.core.serverless import *  # noqa: F406
     from ansys.dynamicreporting.core.serverless import String
-
-    assert HTML is not None
+    assert String is not None
 
 
 @pytest.mark.ado_test
