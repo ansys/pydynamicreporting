@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import pytest
-from ansys.dynamicreporting.core.serverless import ADR
 
+from ansys.dynamicreporting.core.serverless import ADR
 from src.ansys.dynamicreporting.core.exceptions import InvalidPath
 
 
@@ -10,7 +10,7 @@ def test_init_simple(adr_serverless):  # existing directory
     adr = ADR(
         ansys_installation=adr_serverless._ansys_installation,
         db_directory=adr_serverless._db_directory,
-        debug=True
+        debug=True,
     )
     adr.setup()
     assert adr.is_setup
@@ -30,10 +30,7 @@ def test_init_empty(adr_serverless, tmp_path):
 
 def test_init_new(adr_serverless, tmp_path):  # creates new directory
     db_dir = tmp_path / "test_init_new"
-    adr = ADR(
-        ansys_installation=adr_serverless._ansys_installation,
-        db_directory=db_dir
-    )
+    adr = ADR(ansys_installation=adr_serverless._ansys_installation, db_directory=db_dir)
     adr.setup()
     assert adr.is_setup
 
@@ -59,7 +56,7 @@ def test_init_multiple(adr_serverless):  # multiple databases
             "PASSWORD": "cei",
             "HOST": "",
             "PORT": "",
-        }
+        },
     }
     adr = ADR(
         ansys_installation=adr_serverless._ansys_installation,
@@ -73,12 +70,12 @@ def test_init_multiple(adr_serverless):  # multiple databases
 @pytest.mark.ado_test
 def test_import_without_setup(adr_serverless):
     with pytest.raises(ImportError):
-        adr = ADR(
+        ADR(
             ansys_installation=adr_serverless._ansys_installation,
             db_directory=adr_serverless._db_directory,
-            debug=True
+            debug=True,
         )
-        from ansys.dynamicreporting.core.serverless import *
+        from ansys.dynamicreporting.core.serverless import *  # noqa: F406
 
 
 @pytest.mark.ado_test
@@ -86,11 +83,12 @@ def test_import_with_setup(adr_serverless):
     adr = ADR(
         ansys_installation=adr_serverless._ansys_installation,
         db_directory=adr_serverless._db_directory,
-        debug=True
+        debug=True,
     )
     adr.setup()
-    from ansys.dynamicreporting.core.serverless import *
+    from ansys.dynamicreporting.core.serverless import *  # noqa: F406
     from ansys.dynamicreporting.core.serverless import String
+
     assert HTML is not None
 
 
