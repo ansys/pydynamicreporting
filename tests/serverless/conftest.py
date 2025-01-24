@@ -23,7 +23,6 @@ def adr_serverless(pytestconfig: pytest.Config) -> ADR:
             static_directory=static_dir,
             media_url="/media1/",
             static_url="/static2/",
-            debug=True,
         )
     else:
         adr = ADR(
@@ -33,7 +32,6 @@ def adr_serverless(pytestconfig: pytest.Config) -> ADR:
             static_directory=static_dir,
             media_url="/media1/",
             static_url="/static2/",
-            debug=True,
         )
     adr.setup(collect_static=True)
 
