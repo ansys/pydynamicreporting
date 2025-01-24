@@ -11,7 +11,7 @@ __all__ = ["ADR"]
 class _LazyLoader:
     """
     Lazy loader for dependent classes to defer imports until accessed.
-    This allows ADR.setup() to be called before triggering the imports.
+    This enforces ADR.setup() to be called before triggering the imports.
     """
 
     def __init__(self):

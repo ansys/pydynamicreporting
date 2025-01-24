@@ -805,10 +805,10 @@ class Settings:
 
 def find_unused_ports(
     count: int,
-    start: Optional[int] = None,
-    end: Optional[int] = None,
-    avoid: Optional[List[int]] = None,
-) -> Optional[List[int]]:
+    start: int | None = None,
+    end: int | None = None,
+    avoid: list[int] | None = None,
+) -> list[int] | None:
     """
     Find "count" unused ports on the host system.  A port is considered unused if it
     does not respond to a "connect" attempt.  Walk the ports from 'start' to 'end'

@@ -1,4 +1,5 @@
 """The setup script."""
+
 import subprocess
 
 from setuptools import setup

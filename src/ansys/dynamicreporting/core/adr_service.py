@@ -120,7 +120,7 @@ class Service:
         db_directory: str = None,
         port: int = DOCKER_DEFAULT_PORT,
         logfile: str = None,
-        ansys_installation: Optional[str] = None,
+        ansys_installation: str | None = None,
     ) -> None:
         """
         Initialize an Ansys Dynamic Reporting object.
@@ -319,7 +319,7 @@ class Service:
         url: str = f"http://localhost:{DOCKER_DEFAULT_PORT}",
         username: str = "nexus",
         password: str = "cei",
-        session: Optional[str] = "",
+        session: str | None = "",
     ) -> None:
         """
         Connect to a running service.
@@ -635,10 +635,10 @@ class Service:
 
     def visualize_report(
         self,
-        report_name: Optional[str] = "",
-        new_tab: Optional[bool] = False,
-        filter: Optional[str] = "",
-        item_filter: Optional[str] = "",
+        report_name: str | None = "",
+        new_tab: bool | None = False,
+        filter: str | None = "",
+        item_filter: str | None = "",
     ) -> None:
         """
         Render the report.
@@ -717,9 +717,7 @@ class Service:
         else:
             webbrowser.open_new(url)
 
-    def create_item(
-        self, obj_name: Optional[str] = "default", source: Optional[str] = "ADR"
-    ) -> Item:
+    def create_item(self, obj_name: str | None = "default", source: str | None = "ADR") -> Item:
         """
         Create an item that gets automatically pushed into the database.
 
@@ -749,7 +747,7 @@ class Service:
         return a
 
     def query(
-        self, query_type: str = "Item", filter: Optional[str] = "", item_filter: Optional[str] = ""
+        self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""
     ) -> list:
         """
         Query the database.
@@ -940,7 +938,7 @@ class Service:
             self.logger.error("Error: there is no report with the name {report_name}.")
             raise MissingReportError
 
-    def get_list_reports(self, r_type: Optional[str] = "name") -> list:
+    def get_list_reports(self, r_type: str | None = "name") -> list:
         """
         Get a list of top-level reports in the database.
 
