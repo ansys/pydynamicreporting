@@ -176,7 +176,7 @@ class AnimContent(FileValidator):
 
 
 class SceneContent(FileValidator):
-    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "glb")
+    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj")
 
 
 class FileContent(FileValidator):
@@ -334,10 +334,15 @@ class Item(BaseModel):
             )
         return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
-    def render(self, context=None, request=None) -> Optional[str]:
+    def render(self, *, context=None, request=None) -> str | None:
         if context is None:
             context = {}
-        ctx = {**context, "request": request, "ansys_version": None}
+        ctx = {
+            "request": request,
+            "ansys_version": None,
+            "plotly": int(context.get("plotly", 0)),  # default referenced in the header via static
+            "format": context.get("format", None),
+        }
         try:
             ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:

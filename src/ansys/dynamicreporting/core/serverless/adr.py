@@ -6,16 +6,20 @@ from pathlib import Path
 import platform
 import shutil
 import sys
+import tempfile
 from typing import Any, Optional, Type, Union
 import uuid
+import warnings
 
-import django
 from django.core import management
 from django.core.management.utils import get_random_secret_key
+from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
 from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
+from ..constants import DOCKER_REPO_URL
+from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
     DatabaseMigrationError,
@@ -33,20 +37,24 @@ from .template import Template
 
 
 class ADR:
+    # Class-level variable to track the active instance
+    _curr_instance = None
+
     def __init__(
         self,
         ansys_installation: str,
         *,
-        db_directory: Optional[str] = None,
-        databases: Optional[dict] = None,
-        media_directory: Optional[str] = None,
-        static_directory: Optional[str] = None,
-        media_url: Optional[str] = None,
-        static_url: Optional[str] = None,
-        debug: Optional[bool] = None,
-        opts: Optional[dict] = None,
-        request: Optional[HttpRequest] = None,
-        logfile: Optional[str] = None,
+        db_directory: str | None = None,
+        databases: dict | None = None,
+        media_directory: str | None = None,
+        static_directory: str | None = None,
+        media_url: str | None = None,
+        static_url: str | None = None,
+        debug: bool | None = None,
+        opts: dict | None = None,
+        request: HttpRequest | None = None,
+        logfile: str | None = None,
+        docker_image: str = DOCKER_REPO_URL,
     ) -> None:
         self._db_directory = None
         self._databases = databases or {}
@@ -60,7 +68,8 @@ class ADR:
         self._dataset = None
         self._logger = get_logger(logfile)
         self._ansys_version = DEFAULT_ANSYS_VERSION
-        self._ansys_installation = self._get_install_directory(ansys_installation)
+        self._temp_installation = None
+        self._is_setup = False
 
         if opts is None:
             opts = {}
@@ -93,7 +102,7 @@ class ADR:
                             " you would like to create a new database."
                         )
 
-                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = db_directory
+                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
             elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
                 self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
             else:
@@ -120,9 +129,52 @@ class ADR:
 
         if static_directory is not None:
             self._static_directory = self._check_dir(static_directory)
-            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = static_directory
+            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
         elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
             self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
+
+        if ansys_installation == "docker":
+            try:
+                docker_launcher = DockerLauncher(image_url=docker_image)
+            except Exception as e:
+                self._logger.error(f"Error initializing the Docker environment.\n{str(e)}\n")
+                raise ADRException(f"Error initializing the Docker environment.\n{str(e)}\n")
+
+            try:
+                docker_launcher.pull_image()
+            except Exception as e:
+                self._logger.error(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
+                raise ADRException(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
+
+            try:
+                docker_launcher.create_container()
+            except Exception as e:
+                self._logger.error(f"Error creating the Docker container.\n{str(e)}\n")
+                raise ADRException(f"Error creating the Docker container.\n{str(e)}\n")
+
+            self._temp_installation = tempfile.TemporaryDirectory()
+            # copy
+            try:
+                # copy the installation from the container to the host
+                docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_installation.name)
+            except Exception as e:  # pragma: no cover
+                self._logger.error(
+                    f"Error copying the installation from the container.\n{str(e)}\n"
+                )
+                raise ADRException(
+                    f"Error copying the installation from the container.\n{str(e)}\n"
+                )
+            # close the container and the connection
+            try:
+                docker_launcher.cleanup(close=True)
+            except Exception as e:
+                self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
+            # set the installation directory
+            self._ansys_installation = self._get_install_directory(self._temp_installation.name)
+        else:
+            self._ansys_installation = self._get_install_directory(ansys_installation)
+
+        ADR._curr_instance = self  # Set this as the current active instance
 
     def _is_sqlite(self, database: str) -> bool:
         return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
@@ -132,11 +184,11 @@ class ADR:
             return self._databases.get(database, {}).get("NAME", "")
         return ""
 
-    def _get_install_directory(self, ansys_installation: str) -> Path:
+    def _get_install_directory(self, ansys_installation: str | None = None) -> Path:
         dirs_to_check = []
         if ansys_installation:
             # User passed directory
-            dirs_to_check.extend([Path(ansys_installation) / "CEI", Path(ansys_installation)])
+            dirs_to_check = [Path(ansys_installation) / "CEI", Path(ansys_installation)]
         else:
             # Environmental variable
             if "PYADR_ANSYS_INSTALLATION" in os.environ:
@@ -144,7 +196,7 @@ class ADR:
                 # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
                 # where there is no CEI directory, but for folks using it in other
                 # ways, we'll add that one too, just in case.
-                dirs_to_check.extend([env_inst, env_inst / "CEI"])
+                dirs_to_check = [env_inst / "CEI", env_inst]
             # Look for Ansys install using target version number
             if f"AWP_ROOT{self._ansys_version}" in os.environ:
                 dirs_to_check.append(Path(os.environ[f"AWP_ROOT{self._ansys_version}"]) / "CEI")
@@ -153,7 +205,6 @@ class ADR:
                 install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{self._ansys_version}\CEI")
             else:
                 install_loc = Path(f"/ansys_inc/v{self._ansys_version}/CEI")
-
             dirs_to_check.append(install_loc)
 
         for install_dir in dirs_to_check:
@@ -192,10 +243,42 @@ class ADR:
                 nexus_group.user_set.add(user)
 
     def setup(self, collect_static: bool = False) -> None:
-        from django.conf import settings
+        if self._is_setup:
+            raise RuntimeError("ADR has already been setup. setup() can only be called once.")
 
-        if settings.configured:
-            raise RuntimeError("ADR has already been configured. setup() can be called only once.")
+        # look for enve, but keep it optional.
+        try:
+            import enve
+        except ImportError:
+            pf = "winx64" if platform.system().startswith("Wind") else "linx64"
+            dirs_to_check = [
+                # Path('C:/Program Files/ANSYS Inc/v252/CEI').parent is "C:/Program Files/ANSYS Inc/v252"
+                self._ansys_installation.parent / "commonfiles" / "ensight_components" / pf,
+                # for older versions < 2025R1
+                self._ansys_installation.parent
+                / "commonfiles"
+                / "fluids"
+                / "ensight_components"
+                / pf,
+            ]
+            try:
+                for enve_path in dirs_to_check:
+                    try:
+                        enve_path.resolve(strict=True)
+                        sys.path.append(str(enve_path))
+                        break
+                    except OSError:
+                        continue
+
+                from enve_common import enve
+            except ImportError as e:
+                self._logger.warning(
+                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
+                )
+                warnings.warn(
+                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}",
+                    ImportWarning,
+                )
 
         # import hack
         try:
@@ -205,7 +288,7 @@ class ADR:
             sys.path.append(str(adr_path))
             from ceireports import settings_serverless
         except (ImportError, OSError) as e:
-            raise ImportError(f"Failed to import from the Ansys installation: {e}")
+            raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
 
         overrides = {}
         for setting in dir(settings_serverless):
@@ -276,7 +359,11 @@ class ADR:
         report_utils.apply_timezone_workaround()
 
         try:
-            settings.configure(**overrides)
+            import django
+            from django.conf import settings
+
+            if not settings.configured:
+                settings.configure(**overrides)
             django.setup()
         except Exception as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
@@ -313,6 +400,32 @@ class ADR:
 
         if self._dataset is None:
             self._dataset = Dataset.create()
+
+        self._is_setup = True
+
+    @classmethod
+    def ensure_setup(cls):
+        """
+        Check if the current ADR instance has been set up.
+        Raise an ImportError if not.
+        """
+        if not cls._curr_instance or not cls._curr_instance.is_setup:
+            raise ImportError(
+                "ADR has not been set up yet. Please create an ADR instance and call its `setup()` method "
+                "before importing and using other classes."
+            )
+
+    def close(self):
+        """Ensure that everything is cleaned up"""
+        # close db connections
+        try:
+            connections.close_all()
+        except DatabaseError:
+            pass
+        # cleanup temp installation
+        if self._temp_installation is not None:
+            self._temp_installation.cleanup()
+            self._temp_installation = None  # set to None to avoid double cleanup
 
     def backup_database(
         self, output_directory: str = ".", *, database: str = "default", compress=False
@@ -360,6 +473,14 @@ class ADR:
             raise ADRException(f"Restore failed: {e}")
 
     @property
+    def is_setup(self) -> bool:
+        return self._is_setup
+
+    @property
+    def ansys_installation(self) -> str:
+        return str(self._ansys_installation)
+
+    @property
     def session(self) -> Session:
         return self._session
 
@@ -390,7 +511,7 @@ class ADR:
         """GUID of the session associated with the service."""
         return self._session.guid
 
-    def create_item(self, item_type: Type[Item], **kwargs: Any) -> Item:
+    def create_item(self, item_type: type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
             raise TypeError(f"{item_type} is not valid")
         if not kwargs:
@@ -401,7 +522,7 @@ class ADR:
             **kwargs,
         )
 
-    def create_template(self, template_type: Type[Template], **kwargs: Any) -> Template:
+    def create_template(self, template_type: type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
         if not kwargs:
@@ -425,9 +546,7 @@ class ADR:
         except Exception as e:
             raise e
 
-    def get_reports(
-        self, *, fields: Optional[list] = None, flat: bool = False
-    ) -> Union[ObjectSet, list]:
+    def get_reports(self, *, fields: list | None = None, flat: bool = False) -> ObjectSet | list:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -439,7 +558,7 @@ class ADR:
 
         return out
 
-    def get_list_reports(self, *, r_type: str = "name") -> Union[ObjectSet, list]:
+    def get_list_reports(self, *, r_type: str = "name") -> ObjectSet | list:
         supported_types = ("name", "report")
         if r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
@@ -454,7 +573,7 @@ class ADR:
             return self.get_reports()
 
     def render_report(
-        self, *, context: Optional[dict] = None, item_filter: str = "", **kwargs: Any
+        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> str:
         if not kwargs:
             raise ADRException(
@@ -469,7 +588,7 @@ class ADR:
 
     def query(
         self,
-        query_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        query_type: Session | Dataset | type[Item] | type[Template],
         *,
         query: str = "",
         **kwargs: Any,
@@ -480,7 +599,7 @@ class ADR:
 
     def create_objects(
         self,
-        objects: Union[list, ObjectSet],
+        objects: list | ObjectSet,
         **kwargs: Any,
     ) -> int:
         if not isinstance(objects, Iterable):
@@ -519,7 +638,7 @@ class ADR:
 
     def copy_objects(
         self,
-        object_type: Union[Session, Dataset, Type[Item], Type[Template]],
+        object_type: Session | Dataset | type[Item] | type[Template],
         target_database: str,
         *,
         query: str = "",

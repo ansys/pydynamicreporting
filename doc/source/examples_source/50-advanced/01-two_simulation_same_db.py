@@ -165,10 +165,10 @@ if "Simulation Report" not in new_service.get_list_reports():
 # were to simply visualize the report, both simulation results would appear.
 # To avoid that, use a filter to downselect the items to visualize each time.
 # Setting the filter to look only at items with tag dp=dp0 will show the
-# report for the first design point. Simularly, filter for tag dp=dp1 will
+# report for the first design point. Similarly, filter for tag dp=dp1 will
 # display the report for the second design point.
 
-new_service.visualize_report(report_name="Simulation Report", filter="A|i_tags|cont|dp0;")
+new_service.visualize_report(report_name="Simulation Report", item_filter="A|i_tags|cont|dp0;")
 
 
 ###############################################################################
@@ -180,7 +180,7 @@ new_service.visualize_report(report_name="Simulation Report", filter="A|i_tags|c
 # Visualize the report for the second design point. See how you only need to
 # change the filter.
 
-new_service.visualize_report(report_name="Simulation Report", filter="A|i_tags|cont|dp1;")
+new_service.visualize_report(report_name="Simulation Report", item_filter="A|i_tags|cont|dp1;")
 
 ###############################################################################
 #

@@ -6,10 +6,10 @@ import ansys.dynamicreporting.core.examples as examples
 @pytest.mark.ado_test
 def test_download_image(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = examples.download_file("enthalpy_001.png", "input_data")
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_img_items) == (len(img_items) + 1)
 
 
@@ -27,10 +27,10 @@ def test_download_error(adr_service_create, request) -> None:
 @pytest.mark.ado_test
 def test_download_image_newdir(adr_service_create, request) -> None:
     filter_str = "A|i_type|cont|image"
-    img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_img = adr_service_create.create_item()
     my_img.item_image = examples.download_file("enthalpy_001.png", "input_data", "new_dir")
-    new_img_items = adr_service_create.query(query_type="Item", filter=filter_str)
+    new_img_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_img_items) == (len(img_items) + 1)
 
 

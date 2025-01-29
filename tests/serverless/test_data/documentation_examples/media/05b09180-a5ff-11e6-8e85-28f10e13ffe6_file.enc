@@ -1,0 +1,67 @@
+VERSION 10.20 (b)
+prefs: minimize_redraw OFF
+prefs: static_fast_display OFF
+prefs: transparency_sort depth_peel
+prefs: number_of_peels 16
+prefs: fastdisplay_point_res 1
+prefs: fastdisplay_sparse_res 50
+prefs: abort_server_time 0
+prefs: abort_server_operations OFF
+prefs: binary_files_are native
+prefs: starting_time_step last
+prefs: auto_load_parts none
+prefs: nfaced_decomp_method earclip
+prefs: minimize_redraw OFF
+prefs: static_fast_display OFF
+prefs: transparency_sort depth_peel
+prefs: number_of_peels 16
+prefs: fastdisplay_point_res 1
+prefs: fastdisplay_sparse_res 50
+prefs: abort_server_time 0
+prefs: abort_server_operations OFF
+data: binary_files_are native
+data: format Synthetic
+data: reader_option 'Verbose mode' OFF
+data: reader_option 'Use ghost elements' OFF
+data: reader_option 'Long names' ON
+data: reader_option 'Compatibility mode' ON
+data: reader_option 'Element type' 'Tri 3'
+data: reader_option 'Boundary ghosts' 'None'
+data: reader_option 'Spread out parts' 'Legacy'
+data: reader_option 'Number of spheres' 4
+data: reader_option 'Number of cubes' 0
+data: reader_option 'Number of elements start' 10
+data: reader_option 'Number of elements end' 10
+data: reader_option 'Number of timesteps' 1
+data: reader_option 'Part scaling factor' 1.000000e+00
+data: reader_option 'Random number seed' 0
+data: shift_time 1.000000 0.000000 0.000000
+solution_time: monitor_for_new_steps off
+data: replace ./foo
+view_transf: rotate 0.803579092 -22.3902435 0
+legend: select_palette_begin
+Coordinates
+legend: select_palette_end
+legend: visible ON
+part: select_begin
+1
+part: select_end
+variables: activate Coordinates
+part: modify_begin
+part: colorby_palette Coordinates
+part: modify_end
+legend: select_palette_begin
+Coordinates
+legend: select_palette_end
+legend: visible ON
+part: select_all
+view_transf: rotate 108.214279 66.7317047 0
+view_transf: rotate 46.0714302 65.1951218 0
+view_transf: rotate 34.0178566 111.951218 0
+view_transf: rotate 53.5714226 -47.6341438 0
+view_transf: rotate -59.1964378 -93.0731659 0
+view_transf: rotate 31.8750019 16.6829224 0
+ext: guis.enscore session_save_begin
+ext: guis.enscore session_save_packData False
+ext: guis.enscore session_save_filename r"""C:\Users\rjfrank\.ensight102\nexus_temp_gqnokr"""
+ext: guis.enscore session_save_end

@@ -1,4 +1,6 @@
+import json
 import os
+import warnings
 
 import pytest
 
@@ -14,13 +16,35 @@ def test_geturl_report(adr_service_query) -> None:
 
 
 @pytest.mark.ado_test
+def test_geturl_report_deprecated(adr_service_query) -> None:
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        _ = my_report.get_url(filter="A|i_type|cont|image;")
+    assert "The 'filter' parameter is deprecated" in str(w[-1].message)
+
+
+@pytest.mark.ado_test
 def test_geturl_report_with_filter(adr_service_query) -> None:
     my_report = adr_service_query.get_report(report_name="My Top Report")
-    url = my_report.get_url(filter='"A|b_type|cont|image;"')
+    url = my_report.get_url(item_filter="A|b_type|cont|image;")
     assert "http:" in url
 
 
 def test_visualize_report(adr_service_query) -> None:
+    success = False
+    try:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            my_report = adr_service_query.get_report(report_name="My Top Report")
+            my_report.visualize(filter="A|i_type|cont|image;")
+        success = True
+    except SyntaxError:
+        success = False
+    assert success is True and "The 'filter' parameter is deprecated" in str(w[-1].message)
+
+
+def test_visualize_deprecated(adr_service_query) -> None:
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -41,6 +65,19 @@ def test_iframe_report(adr_service_query) -> None:
     except SyntaxError:
         success = False
     assert success is True
+
+
+def test_iframe_report_deprecated(adr_service_query) -> None:
+    success = False
+    try:
+        my_report = adr_service_query.get_report(report_name="My Top Report")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            _ = my_report.get_iframe(filter='"A|b_type|cont|image;"')
+        success = True
+    except SyntaxError:
+        success = False
+    assert success is True and "The 'filter' parameter is deprecated" in str(w[-1].message)
 
 
 @pytest.mark.ado_test
@@ -363,3 +400,21 @@ def test_get_report_component(adr_service_query) -> None:
     web_component_iframe_check = clean_web_component_iframe == clean_expected_web_component_iframe
 
     assert web_component_prefix_check and web_component_iframe_check
+
+
+@pytest.mark.ado_test
+def test_export_json(adr_service_query) -> None:
+    my_report = adr_service_query.get_report(report_name="My Top Report")
+    current_script_path = os.path.abspath(__file__)
+    json_file = os.path.join(
+        os.path.dirname(current_script_path), "test_data", "test_export_json.json"
+    )
+    my_report.export_json(json_file)
+    with open(json_file, encoding="utf-8") as file:
+        templates_json = json.load(file)
+        for template_json in templates_json.values():
+            if template_json["parent"] is None:
+                assert template_json["name"] == "My Top Report"
+                break
+    os.chmod(json_file, 0o777)
+    os.remove(json_file)

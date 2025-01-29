@@ -71,7 +71,7 @@ my_second_text.set_tags("var=temperature dp=3")
 my_thid_text = adr_service.create_item()
 my_thid_text.item_text = "<h1>Third Text</h1>An other item"
 my_thid_text.set_tags("var=temperature dp=2")
-dp3_items = adr_service.query(filter="A|i_tags|cont|dp=3")
+dp3_items = adr_service.query(item_filter="A|i_tags|cont|dp=3")
 
 ###############################################################################
 # Close the service
