@@ -176,14 +176,6 @@ class ADR:
 
         ADR._curr_instance = self  # Set this as the current active instance
 
-    def _is_sqlite(self, database: str) -> bool:
-        return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
-
-    def _get_db_dir(self, database: str) -> str:
-        if self._is_sqlite(database):
-            return self._databases.get(database, {}).get("NAME", "")
-        return ""
-
     def _get_install_directory(self, ansys_installation: str | None = None) -> Path:
         dirs_to_check = []
         if ansys_installation:
@@ -241,6 +233,14 @@ class ADR:
                 if created:
                     nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
+
+    def _is_sqlite(self, database: str) -> bool:
+        return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
+
+    def _get_db_dir(self, database: str) -> str:
+        if self._is_sqlite(database):
+            return self._databases.get(database, {}).get("NAME", "")
+        return ""
 
     def setup(self, collect_static: bool = False) -> None:
         if self._is_setup:
@@ -401,6 +401,7 @@ class ADR:
         if self._dataset is None:
             self._dataset = Dataset.create()
 
+        # todo: add this to the environment, like settings.configured in django
         self._is_setup = True
 
     @classmethod
