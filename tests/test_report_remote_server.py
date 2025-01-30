@@ -12,7 +12,7 @@ from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
-from ansys.dynamicreporting.core.utils.exceptions import DBCreationFailedError
+from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
 
 
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
@@ -1049,3 +1049,133 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
         ),
     ):
         server.load_templates(templates_json)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_tmp_name(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_template = server.create_template(name="testing" * 255, report_type="Layout:box")
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure name has no more than 255 characters.")
+    ):
+        server.put_objects(test_template)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_tmp_tags(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_template = server.create_template(name="testing", report_type="Layout:box")
+    test_template.tags = "testing" * 256
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure tags has no more than 256 characters.")
+    ):
+        server.put_objects(test_template)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_tmp_item_filter(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_template = server.create_template(name="testing", report_type="Layout:box")
+    test_template.item_filter = "testing" * 1024
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure item_filter has no more than 1024 characters.")
+    ):
+        server.put_objects(test_template)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_itm_name(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_item = server.create_item(name="testing" * 255)
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure name has no more than 255 characters.")
+    ):
+        server.put_objects(test_item)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_itm_source(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_item = server.create_item(name="testing")
+    test_item.source = "testing" * 80
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure source has no more than 80 characters.")
+    ):
+        server.put_objects(test_item)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_itm_type(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_item = server.create_item(name="testing")
+    test_item.type = "testing" * 16
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure type has no more than 16 characters.")
+    ):
+        server.put_objects(test_item)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_ds_filename(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_dataset = server.get_default_dataset()
+    test_dataset.filename = "testing" * 256
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure filename has no more than 256 characters.")
+    ):
+        server.put_objects(test_dataset)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_ds_dirname(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_dataset = server.get_default_dataset()
+    test_dataset.dirname = "testing" * 256
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure dirname has no more than 256 characters.")
+    ):
+        server.put_objects(test_dataset)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_ds_format(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_dataset = server.get_default_dataset()
+    test_dataset.format = "testing" * 50
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure format has no more than 50 characters.")
+    ):
+        server.put_objects(test_dataset)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_se_hostname(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_session = server.get_default_session()
+    test_session.hostname = "testing" * 50
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure hostname has no more than 50 characters.")
+    ):
+        server.put_objects(test_session)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_se_platform(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_session = server.get_default_session()
+    test_session.platform = "testing" * 50
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure platform has no more than 50 characters.")
+    ):
+        server.put_objects(test_session)
+
+
+@pytest.mark.ado_test
+def test_put_objects_bad_request_se_application(adr_service_create) -> bool:
+    server = adr_service_create.serverobj
+    test_session = server.get_default_session()
+    test_session.application = "testing" * 40
+    with pytest.raises(
+        BadRequestError, match=re.escape("Ensure application has no more than 40 characters.")
+    ):
+        server.put_objects(test_session)

@@ -507,30 +507,28 @@ class Server:
                     print(f"Unable to push object {o}: {e}")
                 raise
 
-            # One special case: perhaps the session/dataset was deleted and the cache not invalidated?
-            # In this case, we would get a 400 back and the response text would include 'Invalid pk'.  So,
-            # we try to push the dataset and session again and then re-push the object.  Only try this once!
             if r.status_code == requests.codes.bad_request:  # pragma: no cover
-                if isinstance(o, report_objects.ItemREST):
-                    if "Invalid pk" in r.text:
-                        repushed = False
-                        if o.session == session.guid:
-                            error = self.put_objects([session])
-                            if error != requests.codes.ok:
-                                return error
-                            repushed = True
-                        if o.dataset == dataset.guid:
-                            error = self.put_objects([dataset])
-                            if error != requests.codes.ok:
-                                return error
-                            repushed = True
-                        # try one more time..
-                        if repushed:
-                            r = request_method(uri, auth=auth, data=data, headers=headers)
+                # One special case: perhaps the session/dataset was deleted and the cache not invalidated?
+                # In this case, we would get a 400 back and the response text would include 'Invalid pk'.  So,
+                # we try to push the dataset and session again and then re-push the object.  Only try this once!
+                if isinstance(o, report_objects.ItemREST) and "Invalid pk" in r.text:
+                    repushed = False
+                    if o.session == session.guid:
+                        error = self.put_objects([session])
+                        if error != requests.codes.ok:
+                            return error
+                        repushed = True
+                    if o.dataset == dataset.guid:
+                        error = self.put_objects([dataset])
+                        if error != requests.codes.ok:
+                            return error
+                        repushed = True
+                    # try one more time..
+                    if repushed:
+                        r = request_method(uri, auth=auth, data=data, headers=headers)
                 else:
-                    # the likely case here is that the session/dataset are no longer valid
                     self._last_error = r.text
-                    return r.status_code
+                    exceptions.raise_bad_request_error(r)
             elif r.status_code == requests.codes.forbidden:
                 raise exceptions.PermissionDenied(
                     r.json().get("detail", "You do not have permission to perform this action.")
@@ -580,6 +578,8 @@ class Server:
             ret = r.status_code
             # the output should be 204 no_content
             if ret != requests.codes.no_content:
+                if ret == requests.codes.bad_request:
+                    exceptions.raise_bad_request_error(r)
                 if ret == requests.codes.forbidden:
                     raise exceptions.PermissionDenied(
                         r.json().get("detail", "You do not have permission to perform this action.")
