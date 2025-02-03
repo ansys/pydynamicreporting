@@ -5,6 +5,7 @@ These are generally applied when a file is uploaded or the Nexus version number 
 These functions will convert files supported by the UDRW interface into AVZ files and
 extract proxy data from AVZ and EVSN files to simplify their display.
 """
+
 import io
 import os
 import platform
@@ -22,7 +23,7 @@ except Exception:
     is_enve = False
 
 
-def get_evsn_proxy_image(filename: str) -> typing.Union[bytearray, None]:
+def get_evsn_proxy_image(filename: str) -> bytearray | None:
     """Extract and return any PNG proxy image that could be found in the input EVSN
     file."""
     # From liben/proxy_image.cpp

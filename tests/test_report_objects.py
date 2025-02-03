@@ -193,13 +193,6 @@ def test_itemcategory() -> None:
 
 
 @pytest.mark.ado_test
-def test_itemcategory_dict() -> None:
-    a = ro.ItemCategoryREST()
-    mydict = a.get_json_key_limits()
-    assert mydict == {"name": 80}
-
-
-@pytest.mark.ado_test
 def test_itemcategory_url() -> None:
     a = ro.ItemCategoryREST()
     success = False
@@ -250,7 +243,6 @@ def test_templaterest() -> None:
     a = ro.TemplateREST()
     a.reorder_children()
     _ = a.get_json_keys()
-    _ = a.get_json_key_limits()
     assert len(a.get_url_data()) == 2
 
 

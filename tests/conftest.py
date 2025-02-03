@@ -11,17 +11,15 @@ from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
 
 def pytest_addoption(parser):
-    parser.addoption("--use-local-launcher", default=False, action="store_true")
+    parser.addoption("--use-local-launcher", action="store_true", default=False)
     parser.addoption("--install-path", action="store", default="dev.json")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def get_exec(pytestconfig: pytest.Config) -> str:
-    exec_basis = ""
-    use_local = pytestconfig.getoption("use_local_launcher")
-    if use_local:
-        exec_basis = pytestconfig.getoption("install_path")
-    return exec_basis
+    if pytestconfig.getoption("use_local_launcher"):
+        return pytestconfig.getoption("install_path")
+    return ""
 
 
 @pytest.fixture(scope="module")
@@ -79,9 +77,7 @@ def adr_service_query(pytestconfig: pytest.Config) -> Service:
             data_directory=str(tmp_docker_dir),
             port=8000 + randint(0, 3999),
         )
-
-    if not use_local:
-        adr_service._container.save_config()
+        adr_service._docker_launcher.save_config()
 
     adr_service.start(create_db=False, exit_on_close=True, delete_db=False)
 
