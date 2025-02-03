@@ -997,6 +997,18 @@ class Server:
             "Layout:reportlink",
             "Layout:userdefined",
             "Layout:datafilter",
+            "Layout:pptx",
+            "Layout:pptxslide",
+            "Generator:tablemerge",
+            "Generator:tablereduce",
+            "Generator:tablemergercfilter",
+            "Generator:tablemergevaluefilter",
+            "Generator:tablesortfilter",
+            "Generator:treemerge",
+            "Generator:sqlquery",
+            "Generator:itermscomparison",
+            "Generator:statistical",
+            "Generator:iterator",
         ]
 
     def get_templates_as_json(self, root_guid):
