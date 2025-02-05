@@ -1001,7 +1001,7 @@ class Server:
 
     def get_generator_types(self):
         """
-        Return a list of valid generator types as in report types 
+        Return a list of valid generator types as in report types
         """
         return [
             "Generator:tablemerge",
