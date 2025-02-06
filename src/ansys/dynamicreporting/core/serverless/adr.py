@@ -211,6 +211,8 @@ class ADR:
         return ""
 
     def setup(self, collect_static: bool = False) -> None:
+        if self.is_setup:
+            raise RuntimeError("ADR has already been configured. setup() can only be called once.")
         # look for enve, but keep it optional.
         try:
             import enve
@@ -327,8 +329,7 @@ class ADR:
             import django
             from django.conf import settings
 
-            if not settings.configured:
-                settings.configure(**overrides)
+            settings.configure(**overrides)
             django.setup()
         except Exception as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
