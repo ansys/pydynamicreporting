@@ -20,7 +20,7 @@ the process of converting a report template and loading it back in.
 # -------------------------------------------
 #
 # Start a new ADR service. Make sure the database directory is empty. Use the get_list_report
-# method to check that there are no reports in the datanase.
+# method to check that there are no reports in the database.
 
 import ansys.dynamicreporting.core as adr
 import ansys.dynamicreporting.core.examples as examples

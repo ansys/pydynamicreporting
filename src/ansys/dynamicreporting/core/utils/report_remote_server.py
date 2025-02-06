@@ -978,9 +978,9 @@ class Server:
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
 
-    def get_report_types(self):
+    def get_layout_types(self):
         """
-        Return a list of valid report types
+        Return a list of valid layout types as in report types (not including BETA)
         """
         return [
             "Layout:basic",
@@ -998,6 +998,29 @@ class Server:
             "Layout:userdefined",
             "Layout:datafilter",
         ]
+
+    def get_generator_types(self):
+        """
+        Return a list of valid generator types as in report types
+        """
+        return [
+            "Generator:tablemerge",
+            "Generator:tablereduce",
+            "Generator:tablerowcolumnfilter",
+            "Generator:tablevaluefilter",
+            "Generator:tablesortfilter",
+            "Generator:sqlquery",
+            "Generator:treemerge",
+            "Generator:itemscomparison",
+            "Generator:statistical",
+            # "Generator:iterator",
+        ]
+
+    def get_report_types(self):
+        """
+        Return a list of valid report types
+        """
+        return self.get_layout_types() + self.get_generator_types()
 
     def get_templates_as_json(self, root_guid):
         """
@@ -1206,6 +1229,7 @@ class Server:
         templates_data[curr_template_key]["sort_selection"] = curr_template.get_sort_selection()
         if curr_template.parent is None:
             templates_data[curr_template_key]["parent"] = None
+            templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
         else:
             templates_data[curr_template_key][
                 "parent"
