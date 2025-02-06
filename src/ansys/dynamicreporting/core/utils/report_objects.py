@@ -535,10 +535,6 @@ class BaseRESTObject:
         return ["guid", "tags"]
 
     @classmethod
-    def get_json_key_limits(cls):
-        return {}
-
-    @classmethod
     def get_url_base_name(cls):
         return "foo"
 
@@ -551,16 +547,7 @@ class BaseRESTObject:
         return f"/{cls.get_url_base_name()}/api_list?version={cls.API_VERSION}"
 
     def validate_url_data(self, key, value):
-        # Fields that match the REST API
-        # with simple length-based error checking...
-        limit = self.get_json_key_limits().get(key, None)
-        if limit:
-            if len(value) > limit:
-                raise ValueError(
-                    "Attribute {} is limited to {} characters ({},'{}')".format(
-                        key, str(limit), str(self), value
-                    )
-                )
+        pass
 
     # this is used to serialize the data out of the REST object into JSON
     def get_url_data(self):
@@ -655,14 +642,6 @@ class DatasetREST(BaseRESTObject):
             "numelements",
         ]
 
-    @classmethod
-    def get_json_key_limits(cls):
-        d = super().get_json_key_limits()
-        d["filename"] = 256
-        d["dirname"] = 256
-        d["format"] = 50
-        return d
-
 
 class SessionREST(BaseRESTObject):
     """Simple representation of a session."""
@@ -690,15 +669,6 @@ class SessionREST(BaseRESTObject):
             "platform",
             "application",
         ]
-
-    @classmethod
-    def get_json_key_limits(cls):
-        d = super().get_json_key_limits()
-        d["hostname"] = 50
-        d["platform"] = 50
-        d["application"] = 40
-        d["version"] = 20
-        return d
 
 
 class ItemCategoryREST(BaseRESTObject):
@@ -734,13 +704,6 @@ class ItemCategoryREST(BaseRESTObject):
     @classmethod
     def get_json_keys(cls):
         return ["guid", "date", "name", "perms_and_groups"]
-
-    @classmethod
-    def get_json_key_limits(cls):
-        d = {
-            "name": 80,
-        }
-        return d
 
     def validate_url_data(self, key, value):
         # inherited to do custom validation.
@@ -958,14 +921,6 @@ class ItemREST(BaseRESTObject):
             "payloaddata",
             "categories",
         ]
-
-    @classmethod
-    def get_json_key_limits(cls):
-        d = super().get_json_key_limits()
-        d["name"] = 255
-        d["source"] = 80
-        d["type"] = 16
-        return d
 
     def update_api_version(self, new_api_version):
         # this call is made if we were read from an older API server, but are now
@@ -1474,14 +1429,6 @@ class TemplateREST(BaseRESTObject):
             "children",
             "children_order",
         ]
-
-    @classmethod
-    def get_json_key_limits(cls):
-        d = super().get_json_key_limits()
-        d["name"] = 255
-        d["report_type"] = 50
-        d["filter"] = 1024
-        return d
 
     def add_params(self, d: dict = None):
         if d is None:
