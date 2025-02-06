@@ -38,7 +38,6 @@ from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
 from .docker_support import DockerLauncher
 from .exceptions import (
     AlreadyConnectedError,
-    AnsysVersionAbsentError,
     CannotCreateDatabaseError,
     ConnectionToServiceError,
     DatabaseDirNotProvidedError,
@@ -153,16 +152,14 @@ class Service:
         self._session_guid = ""
         self._url = None
         self.logger = get_logger(logfile)
-        self._ansys_version = ansys_version
         self._data_directory = None
         self._db_directory = db_directory
         self._delete_db = False
         self._port = port
         self._docker_launcher = None
         self._docker_image = docker_image
-        self._ansys_installation = ansys_installation
 
-        if self._ansys_installation == "docker":
+        if ansys_installation == "docker":
             if not self._db_directory:
                 self.logger.error("db_directory cannot be None when using Docker.\n")
                 raise DatabaseDirNotProvidedError
@@ -201,10 +198,6 @@ class Service:
                 )
                 raise e
 
-            # check and raise for ansys_version
-            if self._ansys_version is None:
-                self.logger.error("ansys_version must be provided when using Docker.\n")
-                raise AnsysVersionAbsentError
             try:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
@@ -213,16 +206,18 @@ class Service:
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
-                    ansys_version=self._ansys_version,
+                    ansys_version=ansys_version,
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
                 raise e
 
+            self._ansys_installation, self._ansys_version = (ansys_installation, ansys_version)
+
         else:  # pragma: no cover
-            # local installation. Version is not necessary for local installation
+            # local installation
             self._ansys_installation, self._ansys_version = get_install_info(
-                ansys_installation=self._ansys_installation, ansys_version=self._ansys_version
+                ansys_installation=ansys_installation, ansys_version=ansys_version
             )
 
     @property

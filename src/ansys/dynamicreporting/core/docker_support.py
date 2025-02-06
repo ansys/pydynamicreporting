@@ -222,7 +222,7 @@ class DockerLauncher:
         if ansys_version is None:
             launcher = "nexus_launcher"
         else:
-            if int(self._ansys_version) > 242:
+            if ansys_version > 242:
                 launcher = "adr_launcher"
             else:
                 launcher = "nexus_launcher"

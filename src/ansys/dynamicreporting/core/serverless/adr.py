@@ -25,6 +25,7 @@ from ..exceptions import (
     DatabaseMigrationError,
     GeometryMigrationError,
     ImproperlyConfiguredError,
+    InvalidAnsysPath,
     InvalidPath,
     StaticFilesCollectionError,
 )
@@ -43,6 +44,7 @@ class ADR:
         self,
         ansys_installation: str,
         *,
+        ansys_version: int | None = None,
         db_directory: str | None = None,
         databases: dict | None = None,
         media_directory: str | None = None,
@@ -66,7 +68,6 @@ class ADR:
         self._session = None
         self._dataset = None
         self._logger = get_logger(logfile)
-        self._ansys_version = None
         self._temp_installation = None
 
         if opts is None:
@@ -167,11 +168,19 @@ class ADR:
                 docker_launcher.cleanup(close=True)
             except Exception as e:
                 self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
-            # set the installation directory
-            install_dir, self._ansys_version = get_install_info(self._temp_installation.name)
-        else:
-            install_dir, self._ansys_version = get_install_info(ansys_installation)
 
+            # set the installation directory
+            install_dir, self._ansys_version = get_install_info(
+                ansys_installation=self._temp_installation.name, ansys_version=ansys_version
+            )
+        else:
+            # local installation
+            install_dir, self._ansys_version = get_install_info(
+                ansys_installation=ansys_installation, ansys_version=ansys_version
+            )
+
+        if install_dir is None:
+            raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
         self._ansys_installation = Path(install_dir)
 
         ADR._curr_instance = self  # Set this as the current active instance

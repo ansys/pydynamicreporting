@@ -4,14 +4,18 @@ import platform
 import re
 
 from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
-from .exceptions import AnsysVersionAbsentError, InvalidAnsysPath
+from .exceptions import InvalidAnsysPath
 
 
-def get_install_version(install_dir: Path) -> str:
-    """Extracts the version number from an installation directory path, ensuring 'v###' is the last segment with exactly 3 digits.
+def get_install_version(install_dir: Path) -> int | None:
+    """
+    Extracts the version number from an installation directory path.
+
+        - Matches `v###` or `V###` anywhere in the path.
+        - Ensures `v###` is a full segment, not inside another word.
 
     Expected formats:
-    - Windows: C:\\Program Files\\ANSYS Inc\v252
+    - Windows: C:\\Program Files\\ANSYS Inc\\v252
     - Linux: /ansys_inc/v252
 
     Args:
@@ -20,18 +24,18 @@ def get_install_version(install_dir: Path) -> str:
     Returns:
         str: Extracted version number or an empty string if not found.
     """
-    match = re.fullmatch(r"[vV](\d{3})", install_dir.name)
-    return match.group(1) if match else ""
+    matches = re.search(r"[\\/][vV]([0-9]{3})([\\/]|$)", str(install_dir))
+    return int(matches.group(1)) if matches else None
 
 
 def get_install_info(
-    ansys_installation: str | None = None, ansys_version: str | None = None
-) -> tuple[str, int]:
+    ansys_installation: str | None = None, ansys_version: int | None = None
+) -> tuple[str | None, int]:
     """Attempts to detect the Ansys installation directory and version number.
 
     Args:
         ansys_installation (str, optional): Path to the Ansys installation directory. Defaults to None.
-        ansys_version (str, optional): Version number to use. Defaults to None.
+        ansys_version (int, optional): Version number to use. Defaults to None.
 
     Returns:
         tuple[str, int]: Installation directory and version number.
@@ -68,25 +72,26 @@ def get_install_info(
             install_loc = Path(f"/ansys_inc/v{CURRENT_VERSION}/CEI")
         dirs_to_check.append(install_loc)
 
+    # find a valid installation directory
     install_dir = None
-    version = None
     for dir_ in dirs_to_check:
         if dir_.is_dir():
             install_dir = dir_
-            version = get_install_version(install_dir)
             break
 
+    version = get_install_version(install_dir)
     # use user provided version only if install dir has no version
     if version is None:
-        if ansys_version:
-            version = ansys_version
-        else:
-            raise AnsysVersionAbsentError
+        version = ansys_version or int(CURRENT_VERSION)
 
-    config_file = install_dir / f"nexus{version}" / "django" / "manage.py"
-    if not config_file.exists():
+    # raise if ansys_installation is provided but not found
+    if ansys_installation and (
+        install_dir is None
+        or not (install_dir / f"nexus{version}" / "django" / "manage.py").exists()
+    ):
         raise InvalidAnsysPath(
             f"Unable to detect an installation in: {[str(d) for d in dirs_to_check]}"
         )
-
-    return str(install_dir), int(version)
+    # if it is not found and the user did not provide a path, return None
+    # This is for backwards compatibility with the old behavior in the Service class
+    return str(install_dir) if install_dir is not None else None, version
