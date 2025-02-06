@@ -7,7 +7,7 @@ import platform
 import shutil
 import sys
 import tempfile
-from typing import Any, Optional, Type, Union
+from typing import Any
 import uuid
 import warnings
 
@@ -16,8 +16,8 @@ from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
-from .. import DEFAULT_ANSYS_VERSION
 from ..adr_utils import get_logger
+from ..common_utils import get_install_info
 from ..constants import DOCKER_REPO_URL
 from ..docker_support import DockerLauncher
 from ..exceptions import (
@@ -25,7 +25,6 @@ from ..exceptions import (
     DatabaseMigrationError,
     GeometryMigrationError,
     ImproperlyConfiguredError,
-    InvalidAnsysPath,
     InvalidPath,
     StaticFilesCollectionError,
 )
@@ -67,9 +66,8 @@ class ADR:
         self._session = None
         self._dataset = None
         self._logger = get_logger(logfile)
-        self._ansys_version = DEFAULT_ANSYS_VERSION
+        self._ansys_version = None
         self._temp_installation = None
-        self._is_setup = False
 
         if opts is None:
             opts = {}
@@ -170,43 +168,13 @@ class ADR:
             except Exception as e:
                 self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
             # set the installation directory
-            self._ansys_installation = self._get_install_directory(self._temp_installation.name)
+            install_dir, self._ansys_version = get_install_info(self._temp_installation.name)
         else:
-            self._ansys_installation = self._get_install_directory(ansys_installation)
+            install_dir, self._ansys_version = get_install_info(ansys_installation)
+
+        self._ansys_installation = Path(install_dir)
 
         ADR._curr_instance = self  # Set this as the current active instance
-
-    def _get_install_directory(self, ansys_installation: str | None = None) -> Path:
-        dirs_to_check = []
-        if ansys_installation:
-            # User passed directory
-            dirs_to_check = [Path(ansys_installation) / "CEI", Path(ansys_installation)]
-        else:
-            # Environmental variable
-            if "PYADR_ANSYS_INSTALLATION" in os.environ:
-                env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
-                # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
-                # where there is no CEI directory, but for folks using it in other
-                # ways, we'll add that one too, just in case.
-                dirs_to_check = [env_inst / "CEI", env_inst]
-            # Look for Ansys install using target version number
-            if f"AWP_ROOT{self._ansys_version}" in os.environ:
-                dirs_to_check.append(Path(os.environ[f"AWP_ROOT{self._ansys_version}"]) / "CEI")
-            # Common, default install locations
-            if platform.system().startswith("Wind"):
-                install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{self._ansys_version}\CEI")
-            else:
-                install_loc = Path(f"/ansys_inc/v{self._ansys_version}/CEI")
-            dirs_to_check.append(install_loc)
-
-        for install_dir in dirs_to_check:
-            launch_file = install_dir / "bin" / "adr_template_editor"
-            if launch_file.exists():
-                return install_dir
-
-        raise InvalidAnsysPath(
-            f"Unable to detect an installation in: {[str(d) for d in dirs_to_check]}"
-        )
 
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
@@ -243,9 +211,6 @@ class ADR:
         return ""
 
     def setup(self, collect_static: bool = False) -> None:
-        if self._is_setup:
-            raise RuntimeError("ADR has already been setup. setup() can only be called once.")
-
         # look for enve, but keep it optional.
         try:
             import enve
@@ -401,9 +366,6 @@ class ADR:
         if self._dataset is None:
             self._dataset = Dataset.create()
 
-        # todo: add this to the environment, like settings.configured in django
-        self._is_setup = True
-
     @classmethod
     def ensure_setup(cls):
         """
@@ -475,11 +437,17 @@ class ADR:
 
     @property
     def is_setup(self) -> bool:
-        return self._is_setup
+        from django.conf import settings
+
+        return settings.configured
 
     @property
     def ansys_installation(self) -> str:
         return str(self._ansys_installation)
+
+    @property
+    def ansys_version(self) -> int:
+        return self._ansys_version
 
     @property
     def session(self) -> Session:
