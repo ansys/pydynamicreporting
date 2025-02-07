@@ -40,8 +40,8 @@ class ADR:
 
     def __init__(
         self,
-        ansys_installation: str,
         *,
+        ansys_installation: str | None = None,
         ansys_version: int | None = None,
         db_directory: str | None = None,
         databases: dict | None = None,
