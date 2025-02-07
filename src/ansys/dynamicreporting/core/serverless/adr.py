@@ -37,8 +37,6 @@ from .template import Template
 
 
 class ADR:
-    # Class-level variable to track the active instance
-    _curr_instance = None
 
     def __init__(
         self,
@@ -68,7 +66,7 @@ class ADR:
         self._session = None
         self._dataset = None
         self._logger = get_logger(logfile)
-        self._temp_installation = None
+        self._temp_install_dir = None
 
         if opts is None:
             opts = {}
@@ -151,11 +149,11 @@ class ADR:
                 self._logger.error(f"Error creating the Docker container.\n{str(e)}\n")
                 raise ADRException(f"Error creating the Docker container.\n{str(e)}\n")
 
-            self._temp_installation = tempfile.TemporaryDirectory()
+            self._temp_install_dir = tempfile.TemporaryDirectory()
             # copy
             try:
                 # copy the installation from the container to the host
-                docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_installation.name)
+                docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_install_dir.name)
             except Exception as e:  # pragma: no cover
                 self._logger.error(
                     f"Error copying the installation from the container.\n{str(e)}\n"
@@ -171,7 +169,7 @@ class ADR:
 
             # set the installation directory
             install_dir, self._ansys_version = get_install_info(
-                ansys_installation=self._temp_installation.name, ansys_version=ansys_version
+                ansys_installation=self._temp_install_dir.name, ansys_version=ansys_version
             )
         else:
             # local installation
@@ -376,18 +374,6 @@ class ADR:
         if self._dataset is None:
             self._dataset = Dataset.create()
 
-    @classmethod
-    def ensure_setup(cls):
-        """
-        Check if the current ADR instance has been set up.
-        Raise an ImportError if not.
-        """
-        if not cls._curr_instance or not cls._curr_instance.is_setup:
-            raise ImportError(
-                "ADR has not been set up yet. Please create an ADR instance and call its `setup()` method "
-                "before importing and using other classes."
-            )
-
     def close(self):
         """Ensure that everything is cleaned up"""
         # close db connections
@@ -396,9 +382,9 @@ class ADR:
         except DatabaseError:
             pass
         # cleanup temp installation
-        if self._temp_installation is not None:
-            self._temp_installation.cleanup()
-            self._temp_installation = None  # set to None to avoid double cleanup
+        if self._temp_install_dir is not None:
+            self._temp_install_dir.cleanup()
+            self._temp_install_dir = None  # set to None to avoid double cleanup
 
     def backup_database(
         self, output_directory: str = ".", *, database: str = "default", compress=False
