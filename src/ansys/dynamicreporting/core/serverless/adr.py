@@ -181,8 +181,6 @@ class ADR:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
         self._ansys_installation = Path(install_dir)
 
-        ADR._curr_instance = self  # Set this as the current active instance
-
     def _check_dir(self, dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
         if not dir_path.exists() or not dir_path.is_dir():
