@@ -980,7 +980,11 @@ class Server:
 
     def get_layout_types(self):
         """
-        Return a list of valid layout types as in report types (not including BETA)
+        Return a list of valid layout types as in report types (not including BETA).
+        
+        Note: When a new type is added, please remember to also add a corresponding name
+        description in ADO, rptframework/report_editor_main.py::_get_layout_type_item_names.
+        In addition, update the minor version to prevent build from failing.
         """
         return [
             "Layout:basic",
@@ -1001,7 +1005,11 @@ class Server:
 
     def get_generator_types(self):
         """
-        Return a list of valid generator types as in report types
+        Return a list of valid generator types as in report types.
+        
+        Note: When a new type is added, please remember to also add a corresponding name
+        description in ADO, rptframework/report_editor_main.py::_get_generator_type_item_names.
+        In addition, update the minor version to prevent build from failing.
         """
         return [
             "Generator:tablemerge",
