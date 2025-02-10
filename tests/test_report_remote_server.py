@@ -215,6 +215,7 @@ def test_url_query() -> None:
     )
 
 
+# todo: Error: Unable to delete the database: /tmp/pytest-of-runner/pytest-0/test_delete_db0/test_delete_db is not a database dir
 def test_delete_db(tmp_path, get_exec) -> None:
     db_dir = tmp_path / "test_delete_db"
     port = 8000 + randint(0, 3999)
