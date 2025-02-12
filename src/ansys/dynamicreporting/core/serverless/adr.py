@@ -54,9 +54,9 @@ class ADR:
         request: HttpRequest | None = None,
         logfile: str | None = None,
         docker_image: str = DOCKER_REPO_URL,
+        in_memory: bool = False,
     ) -> None:
         self._db_directory = None
-        self._databases = databases or {}
         self._media_directory = None
         self._static_directory = None
         self._media_url = media_url
@@ -66,12 +66,25 @@ class ADR:
         self._session = None
         self._dataset = None
         self._logger = get_logger(logfile)
-        self._temp_install_dir = None
+        self._tmp_dirs = []
+        self._in_memory = in_memory
 
         if opts is None:
             opts = {}
         os.environ.update(opts)
 
+        # database configuration
+        if self._in_memory:
+            self._databases = {
+                "default": {
+                    "ENGINE": "sqlite3",
+                    "NAME": ":memory:",
+                }
+            }
+        else:
+            self._databases = databases or {}
+
+        # check the database directory
         if not self._databases:
             if db_directory is not None:
                 try:
@@ -108,75 +121,73 @@ class ADR:
                     " or the 'databases' option."
                 )
 
-        if media_directory is not None:
-            self._media_directory = self._check_dir(media_directory)
-            os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
-        # the env var here is actually the parent directory that contains the media directory
-        elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
-            self._media_directory = (
-                self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"]) / "media"
-            )
-        elif self._db_directory is not None:  # fallback to the db dir
-            self._media_directory = self._check_dir(self._db_directory / "media")
+        if self._in_memory:
+            tmp_media_dir = tempfile.TemporaryDirectory()
+            self._media_directory = self._check_dir(Path(tmp_media_dir.name))
+            tmp_static_dir = tempfile.TemporaryDirectory()
+            self._static_directory = self._check_dir(Path(tmp_static_dir.name))
+            self._tmp_dirs.extend([tmp_media_dir, tmp_static_dir])
         else:
-            raise ImproperlyConfiguredError(
-                "A media directory must be specified using either the 'media_directory'"
-                " or the 'db_directory' option."
-            )
+            # check the media directory
+            if media_directory is not None:
+                self._media_directory = self._check_dir(media_directory)
+                os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
+            # the env var here is actually the parent directory that contains the media directory
+            elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
+                self._media_directory = (
+                    self._check_dir(os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"]) / "media"
+                )
+            elif self._db_directory is not None:  # fallback to the db dir
+                self._media_directory = self._check_dir(self._db_directory / "media")
+            else:
+                raise ImproperlyConfiguredError(
+                    "A media directory must be specified using either the 'media_directory'"
+                    " or the 'db_directory' option."
+                )
+            # check the static directory
+            if static_directory is not None:
+                self._static_directory = self._check_dir(static_directory)
+                os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
+            elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
+                self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
-        if static_directory is not None:
-            self._static_directory = self._check_dir(static_directory)
-            os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
-        elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
-            self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
-
+        # check the Ansys installation
         if ansys_installation == "docker":
             try:
                 docker_launcher = DockerLauncher(image_url=docker_image)
-            except Exception as e:
-                self._logger.error(f"Error initializing the Docker environment.\n{str(e)}\n")
-                raise ADRException(f"Error initializing the Docker environment.\n{str(e)}\n")
-
-            try:
                 docker_launcher.pull_image()
-            except Exception as e:
-                self._logger.error(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
-                raise ADRException(f"Error pulling the Docker image {docker_image}.\n{str(e)}\n")
-
-            try:
                 docker_launcher.create_container()
             except Exception as e:
-                self._logger.error(f"Error creating the Docker container.\n{str(e)}\n")
-                raise ADRException(f"Error creating the Docker container.\n{str(e)}\n")
+                error_message = f"Error during Docker setup: {str(e)}\n"
+                self._logger.error(error_message)
+                raise ADRException(error_message)
 
-            self._temp_install_dir = tempfile.TemporaryDirectory()
-            # copy
+            # create a temporary directory to store the installation
+            tmp_install_dir = tempfile.TemporaryDirectory()
+            self._tmp_dirs.append(tmp_install_dir)
             try:
-                # copy the installation from the container to the host
-                docker_launcher.copy_to_host("/Nexus/CEI", dest=self._temp_install_dir.name)
+                # Copy the installation from the container to the host
+                docker_launcher.copy_to_host("/Nexus/CEI", dest=tmp_install_dir.name)
             except Exception as e:  # pragma: no cover
-                self._logger.error(
-                    f"Error copying the installation from the container.\n{str(e)}\n"
-                )
-                raise ADRException(
-                    f"Error copying the installation from the container.\n{str(e)}\n"
-                )
-            # close the container and the connection
+                error_message = f"Error copying the installation from the container: {str(e)}"
+                self._logger.error(error_message)
+                raise ADRException(error_message)
+
+            # Clean up the Docker container
             try:
                 docker_launcher.cleanup(close=True)
             except Exception as e:
-                self._logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
+                self._logger.warning(f"Problem shutting down container/service: {str(e)}")
 
-            # set the installation directory
+            # Set the installation directory
             install_dir, self._ansys_version = get_install_info(
-                ansys_installation=self._temp_install_dir.name, ansys_version=ansys_version
+                ansys_installation=tmp_install_dir.name, ansys_version=ansys_version
             )
         else:
             # local installation
             install_dir, self._ansys_version = get_install_info(
                 ansys_installation=ansys_installation, ansys_version=ansys_version
             )
-
         if install_dir is None:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
         self._ansys_installation = Path(install_dir)
@@ -208,7 +219,9 @@ class ADR:
                 nexus_group.user_set.add(user)
 
     def _is_sqlite(self, database: str) -> bool:
-        return "sqlite" in self._databases.get(database, {}).get("ENGINE", "")
+        return not self._in_memory and "sqlite" in self._databases.get(database, {}).get(
+            "ENGINE", ""
+        )
 
     def _get_db_dir(self, database: str) -> str:
         if self._is_sqlite(database):
@@ -270,8 +283,8 @@ class ADR:
         if self._debug is not None:
             overrides["DEBUG"] = self._debug
 
-        if self._media_directory is not None:
-            overrides["MEDIA_ROOT"] = str(self._media_directory)
+        # cannot be None
+        overrides["MEDIA_ROOT"] = str(self._media_directory)
 
         if self._static_directory is not None:
             overrides["STATIC_ROOT"] = str(self._static_directory)
@@ -327,6 +340,18 @@ class ADR:
             # replace the database config
             overrides["DATABASES"] = self._databases
 
+        # in-memory media storage
+        if self._in_memory:
+            overrides.update(
+                {
+                    "DEFAULT_FILE_STORAGE": "django.core.files.storage.InMemoryStorage",
+                    "FILE_UPLOAD_HANDLERS": [
+                        "django.core.files.uploadhandler.MemoryFileUploadHandler"
+                    ],
+                    "FILE_UPLOAD_MAX_MEMORY_SIZE": 1 * 10**9,  # 1 GB
+                }
+            )
+
         # Check for Linux TZ issue
         report_utils.apply_timezone_workaround()
 
@@ -379,14 +404,15 @@ class ADR:
             connections.close_all()
         except DatabaseError:
             pass
-        # cleanup temp installation
-        if self._temp_install_dir is not None:
-            self._temp_install_dir.cleanup()
-            self._temp_install_dir = None  # set to None to avoid double cleanup
+        # cleanup temp files
+        for tmp_dir in self._tmp_dirs:
+            tmp_dir.cleanup()
 
     def backup_database(
         self, output_directory: str = ".", *, database: str = "default", compress=False
     ) -> None:
+        if self._in_memory:
+            raise ADRException("Backup is not available in in-memory mode.")
         if database != "default" and database not in self._databases:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
@@ -444,6 +470,14 @@ class ADR:
         return self._ansys_version
 
     @property
+    def media_directory(self) -> str:
+        return str(self._media_directory)
+
+    @property
+    def static_directory(self) -> str:
+        return str(self._static_directory)
+
+    @property
     def session(self) -> Session:
         return self._session
 
@@ -479,6 +513,7 @@ class ADR:
             raise TypeError(f"{item_type} is not valid")
         if not kwargs:
             raise ADRException("At least one keyword argument must be provided to create the item.")
+        kwargs["_in_memory"] = self._in_memory
         return item_type.create(
             session=kwargs.pop("session", self._session),
             dataset=kwargs.pop("dataset", self._dataset),
