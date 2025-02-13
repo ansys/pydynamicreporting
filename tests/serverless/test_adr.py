@@ -25,10 +25,9 @@ def test_get_instance_error_no_setup():
     ADR(
         ansys_installation="docker",
         docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=adr_serverless.db_directory,
-        static_directory=adr_serverless.static_directory,
         media_url="/media1/",
         static_url="/static2/",
+        in_memory=True,
     )
     with pytest.raises(RuntimeError):
         ADR.get_instance()

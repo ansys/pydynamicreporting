@@ -123,7 +123,7 @@ class ADR:
     def __new__(cls, *args, **kwargs):
         """Ensure that only one instance of the class is created"""
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
     def __init__(
