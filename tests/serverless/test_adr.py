@@ -22,7 +22,7 @@ def test_get_instance_error():
 def test_get_instance_error_no_setup():
     from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
-    ADR(
+    adr = ADR(  # noqa: F841
         ansys_installation="docker",
         docker_image=DOCKER_DEV_REPO_URL,
         media_url="/media1/",
