@@ -5,7 +5,6 @@ import io
 from pathlib import Path
 import pickle
 import platform
-from typing import Optional
 import uuid
 
 from PIL import Image as PILImage
@@ -17,7 +16,7 @@ import numpy
 from ..adr_utils import table_attr
 from ..exceptions import ADRException
 from ..utils import report_utils
-from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
+from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
 from .base import BaseModel, Validator
 
@@ -147,8 +146,8 @@ class FileValidator(StringContent):
         if file.size == 0:
             raise ValueError("The file specified is empty")
         # save a ref on the object.
-        setattr(obj, "_file", file)
-        setattr(obj, "_file_ext", file_ext)
+        obj._file = file
+        obj._file_ext = file_ext
         return file_str
 
 
@@ -162,7 +161,7 @@ class ImageContent(FileValidator):
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
         if obj._file_ext in self.ENHANCED_EXT:
-            metadata = report_utils.is_enhanced(image)
+            metadata = is_enhanced(image)
             if not metadata:
                 raise ADRException("The enhanced image is empty")
             obj._enhanced = True
@@ -176,7 +175,7 @@ class AnimContent(FileValidator):
 
 
 class SceneContent(FileValidator):
-    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "glb")
+    ALLOWED_EXT = ("stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj")
 
 
 class FileContent(FileValidator):
@@ -209,7 +208,8 @@ class FilePayloadMixin:
     def has_file(self):
         return self._file is not None
 
-    def get_file_path(self):
+    @property
+    def file_path(self):
         return self._orm_instance.payloadfile.path
 
     @classmethod
@@ -234,10 +234,8 @@ class FilePayloadMixin:
         # todo: check backward compatibility: _movie is now _anim.
         self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
         # Save file to the target path
-        target_path = self.get_file_path()
-        self._save_file(target_path, self._file)
-        # Update content and save ORM instance
-        self.content = target_path
+        self._save_file(self.file_path, self._file)
+        # save ORM instance
         super().save(**kwargs)
 
     def delete(self, **kwargs):
@@ -257,8 +255,8 @@ class Item(BaseModel):
     content: ItemContent = ItemContent()
     type: str = "none"
     _orm_model: str = "data.models.Item"
-    # Class-level registry of subclasses keyed by type
-    _type_registry = {}
+    _type_registry = {}  # Class-level registry of subclasses keyed by type
+    _in_memory: bool = field(compare=False, kw_only=True, default=False)
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -333,12 +331,17 @@ class Item(BaseModel):
             raise ADRException(
                 extra_detail="The 'i_type' filter is not required if using a subclass of Item"
             )
-        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)
+        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
-    def render(self, context=None, request=None) -> Optional[str]:
+    def render(self, *, context=None, request=None) -> str | None:
         if context is None:
             context = {}
-        ctx = {**context, "request": request, "ansys_version": None}
+        ctx = {
+            "request": request,
+            "ansys_version": None,
+            "plotly": int(context.get("plotly", 0)),  # default referenced in the header via static
+            "format": context.get("format", None),
+        }
         try:
             ctx["HTML"] = self._orm_instance.render(ctx)
         except Exception as e:
@@ -420,14 +423,13 @@ class Image(FilePayloadMixin, Item):
         target_ext = "png" if not self._enhanced else self._file_ext
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
         # Save the image
-        target_path = self.get_file_path()
         if target_ext == "png" and self._file_ext != target_ext:
             try:
-                image.save(target_path, format="PNG")
+                image.save(self.file_path, format="PNG")
             except OSError as e:
                 print(f"Error converting image to PNG: {e}")
         else:  # save image as is (if enhanced or already PNG)
-            self._save_file(target_path, img_bytes)
+            self._save_file(self.file_path, img_bytes)
         image.close()
         super().save(**kwargs)
 
@@ -443,11 +445,8 @@ class Scene(FilePayloadMixin, Item):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        rebuild_3d_geometry(
-            self.get_file_path(),
-            unique_id="",
-            exec_basis="",
-        )
+        if not Path(get_avz_directory(self.file_path)).exists():
+            rebuild_3d_geometry(self.file_path)
 
 
 class File(FilePayloadMixin, Item):
@@ -456,10 +455,8 @@ class File(FilePayloadMixin, Item):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        file_name = Path(self._file.name).name
-        if file_is_3d_geometry(file_name):
-            rebuild_3d_geometry(
-                self.get_file_path(),
-                unique_id="",
-                exec_basis="",
-            )
+        if (
+            file_is_3d_geometry(self.file_path)
+            and not Path(get_avz_directory(self.file_path)).exists()
+        ):
+            rebuild_3d_geometry(self.file_path)

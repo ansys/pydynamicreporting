@@ -1,5 +1,6 @@
 # Version
 # ------------------------------------------------------------------------------
+from pathlib import Path
 
 try:
     import importlib.metadata as importlib_metadata  # type: ignore

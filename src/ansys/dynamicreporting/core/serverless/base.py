@@ -145,10 +145,10 @@ class BaseModel(metaclass=BaseMeta):
     )  # tracks the corresponding ORM instance
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
+        return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__} object {self.guid}"
+        return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __post_init__(self):
         self._validate_field_types()
@@ -280,7 +280,7 @@ class BaseModel(metaclass=BaseMeta):
             if value is None:  # skip and use defaults
                 continue
             if isinstance(value, list):
-                objs = [o._orm_instance for o in value]
+                objs = [obj._orm_instance for obj in value]
                 getattr(self._orm_instance, field_).add(*objs)
             else:
                 if isinstance(value, BaseModel):  # relations
@@ -298,6 +298,7 @@ class BaseModel(metaclass=BaseMeta):
         return self
 
     def reinit(self):
+        self._saved = False
         self._orm_instance = self.__class__._orm_model_cls()
 
     @handle_field_errors
@@ -347,13 +348,17 @@ class BaseModel(metaclass=BaseMeta):
                     type_ = cls._cls_registry[field_type]
                 else:
                     type_ = field_type
-                if issubclass(cls, type_):  # same hierarchy means there is a parent-child relation
+                if issubclass(cls, type_) and parent is not None:
+                    # Same hierarchy means there is a parent-child relation.
+                    # We avoid loading the parent object again and use the one passed
+                    # from the previous 'from_db' load to prevent infinite recursion.
                     value = parent
                 else:
                     value = type_.from_db(value)
             elif isinstance(value, Manager):
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
+                # todo: move this check to the metaclass
                 if type_ is None or not issubclass(type_, Iterable) or len(args) != 1:
                     raise TypeError(
                         f"The field '{attr}' in the dataclass must be a generic iterable"

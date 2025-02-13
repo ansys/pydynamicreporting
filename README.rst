@@ -1,7 +1,7 @@
 PyDynamicReporting
 ==================
 
-|pyansys| |python| |pypi| |GH-CI| |bandit| |MIT| |black|
+|pyansys| |python| |pypi| |GH-CI| |cov| |MIT| |black|
 
 .. |pyansys| image:: https://img.shields.io/badge/Py-Ansys-ffc107.svg?labelColor=black&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABDklEQVQ4jWNgoDfg5mD8vE7q/3bpVyskbW0sMRUwofHD7Dh5OBkZGBgW7/3W2tZpa2tLQEOyOzeEsfumlK2tbVpaGj4N6jIs1lpsDAwMJ278sveMY2BgCA0NFRISwqkhyQ1q/Nyd3zg4OBgYGNjZ2ePi4rB5loGBhZnhxTLJ/9ulv26Q4uVk1NXV/f///////69du4Zdg78lx//t0v+3S88rFISInD59GqIH2esIJ8G9O2/XVwhjzpw5EAam1xkkBJn/bJX+v1365hxxuCAfH9+3b9/+////48cPuNehNsS7cDEzMTAwMMzb+Q2u4dOnT2vWrMHu9ZtzxP9vl/69RVpCkBlZ3N7enoDXBwEAAA+YYitOilMVAAAAAElFTkSuQmCC
    :target: https://docs.pyansys.com/
@@ -19,9 +19,9 @@ PyDynamicReporting
    :target: https://github.com/ansys/pydynamicreporting/actions?query=branch%3Amain
    :alt: GH-CI
 
-.. |bandit| image:: https://img.shields.io/badge/security-bandit-yellow.svg
-    :target: https://github.com/PyCQA/bandit
-    :alt: Security Status
+.. |cov| image:: https://codecov.io/gh/ansys/pydynamicreporting/graph/badge.svg?token=WCAK7QRLR3
+   :target: https://codecov.io/gh/ansys/pydynamicreporting
+   :alt: codecov
 
 .. |MIT| image:: https://img.shields.io/badge/License-MIT-yellow.svg
    :target: https://opensource.org/licenses/MIT
@@ -66,7 +66,7 @@ To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@a
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.10 through 3.12 on
+The ``pydynamicreporting`` package supports Python 3.10 through 3.13 on
 Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -93,12 +93,12 @@ run this code:
 The preceding code creates an "editable" installation that lets you develop and test
 PyDynamicReporting at the same time.
 
-To build and create a production-like installation, first install
-`chocolatey <https://chocolatey.org/install>`_. Then:
+To build and create a production-like installation on Windows (not required on other OSes),
+first install `chocolatey <https://chocolatey.org/install>`_. Then:
 
 .. code::
 
-   choco install make  # install make
+   choco install make  # install make on Windows
    make clean  # clean
    make build   # build
    # this replaces the editable installation done previously. If you don't want to replace,
@@ -127,6 +127,19 @@ this command, where ``style`` is the job name:
 Deploy and upload steps **must always** be ignored. If they are not ignored,
 before running GitHub Actions locally, add ``if: ${{ !env.ACT }}`` to the
 workflow step and commit this change if required.
+
+Local tests
+^^^^^^^^^^^
+To run tests on your local desktop (recommended), use the `make` target
+`test-dev`. This target runs the tests in the same way as GitHub Actions but using
+a local Ansys installation instead of Docker. You must specify the path to your Ansys
+installation and the test file you are trying to run.
+
+.. code::
+
+   make test-dev TEST_FILE="tests/test_service.py" INSTALL_PATH="C:\Program Files\ANSYS Inc\v252"
+
+Note that any tests that require Docker will obviously fail.
 
 Dependencies
 ------------

@@ -1,7 +1,7 @@
 """
 template_editor.exceptions
 --------------------------
-This module definse all exceptions used in the code base for the template editor.
+This module define all exceptions used in the code base for the template editor.
 """
 
 
@@ -47,3 +47,22 @@ class APIException(Exception):
 
 class PermissionDenied(APIException):
     """Raised if user does not have permissions for a server request."""
+
+
+class BadRequestError(APIException):
+    """Raised if there is something wrong with client's request."""
+
+
+class TemplateEditorJSONLoadingError(RuntimeError):
+    """Raised for errors when loading a JSON file for the template editor"""
+
+
+def raise_bad_request_error(response):
+    """
+    Generates bad request error message and raises an exception.
+    """
+    error_messages = []
+    for key, messages in response.json().items():
+        error_messages.append(messages[0].replace("this field", key))
+    message = " ".join(error_messages)
+    raise BadRequestError(message)

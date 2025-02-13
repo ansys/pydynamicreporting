@@ -14,21 +14,18 @@ Examples::
 """
 
 import atexit
-import glob
+import json
 import os
-import re
 import shutil
 import tempfile
 import time
-from typing import Optional
-
-from requests import codes
 
 try:
     from IPython.display import IFrame
 except ImportError:  # pragma: no cover
     pass
 
+import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -36,15 +33,14 @@ from ansys.dynamicreporting.core.utils import report_objects, report_remote_serv
 from .adr_item import Item
 from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
+from .common_utils import get_install_info
 from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
 from .docker_support import DockerLauncher
 from .exceptions import (
     AlreadyConnectedError,
-    AnsysVersionAbsentError,
     CannotCreateDatabaseError,
     ConnectionToServiceError,
     DatabaseDirNotProvidedError,
-    InvalidAnsysPath,
     MissingReportError,
     MissingSession,
     NotValidServer,
@@ -118,7 +114,7 @@ class Service:
         db_directory: str = None,
         port: int = DOCKER_DEFAULT_PORT,
         logfile: str = None,
-        ansys_installation: Optional[str] = None,
+        ansys_installation: str | None = None,
     ) -> None:
         """
         Initialize an Ansys Dynamic Reporting object.
@@ -156,14 +152,12 @@ class Service:
         self._session_guid = ""
         self._url = None
         self.logger = get_logger(logfile)
-        self._ansys_version = ansys_version
         self._data_directory = None
         self._db_directory = db_directory
         self._delete_db = False
         self._port = port
-        self._container = None
+        self._docker_launcher = None
         self._docker_image = docker_image
-        self._ansys_installation = ansys_installation
 
         if ansys_installation == "docker":
             if not self._db_directory:
@@ -191,13 +185,13 @@ class Service:
                 self._data_directory = data_directory
 
             try:
-                self._container = DockerLauncher(docker_image_name=docker_image)
+                self._docker_launcher = DockerLauncher(image_url=docker_image)
             except Exception as e:
                 self.logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
                 raise e
 
             try:
-                self._container.pull()
+                self._docker_launcher.pull_image()
             except Exception as e:
                 self.logger.error(
                     f"Error pulling the Docker image {self._docker_image}.\n{str(e)}\n"
@@ -208,95 +202,23 @@ class Service:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
                 self.__checkport__()
-                self._container.start(
+                self._docker_launcher.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
-                    ansys_version=self._ansys_version,
+                    ansys_version=ansys_version,
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
                 raise e
 
+            self._ansys_installation, self._ansys_version = (ansys_installation, ansys_version)
+
         else:  # pragma: no cover
-            # Not using docker. Make a list of directory names to consider:
-            # 1) any passed ansys_installation directory
-            # 2) any passed ansys_installation directory with 'CEI' dir appended
-            # 3) the 'enve.home()' directory (if enve will load)
-            # 4) the latest ansys installation via AWP_ROOTxyz environmental variable
-            # 5) CEIDEVROOTDOS environmental variable
-            #
-            dirs_to_check = []
-            if ansys_installation:
-                dirs_to_check.append(ansys_installation)
-                dirs_to_check.append(os.path.join(ansys_installation, "CEI"))
-
-            # if we are running from a distro "EnSight" cpython, enve might be there
-            try:
-                import enve
-
-                dirs_to_check.append(enve.home())
-            except ModuleNotFoundError:
-                pass
-
-            # Find via AWP_ROOTxyz envvar...  Most recent version installed
-            env_name = "AWP_ROOT000"
-            for name in os.environ.keys():
-                if name.startswith("AWP_ROOT"):
-                    env_name = max(env_name, name)
-            if env_name in os.environ:
-                # add AWP_ROOT{max}/CEI to the list of directories to search
-                dirs_to_check.append(os.path.join(os.environ[env_name], "CEI"))
-
-            # Option for local development build
-            if os.environ.get("CEIDEVROOTDOS") is not None:
-                dirs_to_check.append(os.environ.get("CEIDEVROOTDOS"))
-
-            # Check all the potential local directories for the distro
-            # bin/cpython should be in the server distro
-            found = False
-            for install_dir in dirs_to_check:
-                cpython_name = os.path.join(install_dir, "bin", "cpython")
-                if os.path.isfile(cpython_name):
-                    self._ansys_installation = install_dir
-                    found = True
-                    break
-
-            # Should we raise an exception here?  If no ansys_installation was
-            # passed, then no but the user can only connect to existing servers
-            # as per docs.  If ansys_installation was passed, then there is an
-            # exception if the passed value is not the root of the installation.
-            # Basically, the passed install path was illegal.
-            if ansys_installation:
-                if not self._ansys_installation.startswith(ansys_installation):
-                    raise InvalidAnsysPath(ansys_installation)
-            if not found:
-                self._ansys_installation = None
-            else:
-                # populate the version number
-                if self._ansys_version is None:
-                    # An ansys distro include a v??? directory name.  This is the fallback.
-                    matches = re.search(r".*v([0-9]{3}).*", self._ansys_installation)
-                    # Try to get version from install path bin\cei_python??? name
-                    # Build the cpython path glob name:
-                    cpython_glob = os.path.join(
-                        self._ansys_installation, "bin", "cpython[0-9][0-9][0-9]"
-                    )
-                    cpython_name = glob.glob(cpython_glob)
-                    # is the file there (it should be...)
-                    if len(cpython_name):
-                        matches = re.search(r".*cpython([0-9]{3})", cpython_name[0])
-                    if matches is None:
-                        # Option for local development build
-                        if "ANSYS_REL_INT_I" in os.environ:
-                            self._ansys_version = int(os.environ.get("ANSYS_REL_INT_I"))
-                        else:
-                            raise AnsysVersionAbsentError
-                    else:
-                        try:
-                            self._ansys_version = int(matches.group(1))
-                        except IndexError:
-                            raise AnsysVersionAbsentError
+            # local installation
+            self._ansys_installation, self._ansys_version = get_install_info(
+                ansys_installation=ansys_installation, ansys_version=ansys_version
+            )
 
     @property
     def session_guid(self):
@@ -317,7 +239,7 @@ class Service:
         url: str = f"http://localhost:{DOCKER_DEFAULT_PORT}",
         username: str = "nexus",
         password: str = "cei",
-        session: Optional[str] = "",
+        session: str | None = "",
     ) -> None:
         """
         Connect to a running service.
@@ -441,7 +363,7 @@ class Service:
             self.logger.error("Error: There is no database associated with this Service.\n")
             raise DatabaseDirNotProvidedError
 
-        if exit_on_close or self._container:
+        if exit_on_close or self._docker_launcher:
             atexit.register(self.stop)
             if exit_on_close and delete_db:
                 self._delete_db = True
@@ -466,12 +388,11 @@ class Service:
                     else:
                         do_create = False
             if do_create:
-                if self._container:
-                    create_output = ""
+                if self._docker_launcher:
                     try:
-                        create_output = self._container.create_nexus_db()
+                        create_output = self._docker_launcher.create_nexus_db()
                     except Exception:  # pragma: no cover
-                        self._container.stop()
+                        self._docker_launcher.cleanup()
                         self.logger.error(
                             f"Error creating the database at the path {self._db_directory} in the "
                             "Docker container.\n"
@@ -480,7 +401,7 @@ class Service:
                     for f in ["db.sqlite3", "view_report.nexdb"]:
                         db_file = os.path.join(self._db_directory, f)
                         if not os.path.isfile(db_file):
-                            self._container.stop()
+                            self._docker_launcher.cleanup()
                             self.logger.error(
                                 "Error creating the database using Docker at the path "
                                 + f"{self._db_directory}.\n"
@@ -503,12 +424,10 @@ class Service:
                         raise CannotCreateDatabaseError
 
         # launch the server
-        if self._container:
+        if self._docker_launcher:
             try:
-                self._container.launch_nexus_server(
-                    username=username,
-                    password=password,
-                    allow_iframe_embedding=True,
+                self._docker_launcher.launch_nexus_server(
+                    port=self._port, allow_iframe_embedding=True
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(
@@ -598,15 +517,15 @@ class Service:
         else:
             # If coming from a docker image, clean that up
             try:
-                if self._container:
-                    self.logger.info("Told service Container to shutdown.\n")
-                    self._container.stop()
-                    self._container = None
+                if self._docker_launcher:
+                    self.logger.info("Shutting down container.\n")
+                    self._docker_launcher.cleanup(close=True)
+                    self._docker_launcher = None
                 else:
-                    self.logger.info("Told service to shutdown.\n")
+                    self.logger.info("Shutting down service.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.error(f"Problem shutting down service.\n{str(e)}\n")
+                self.logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
                 pass
 
         if self._delete_db and self._db_directory:
@@ -636,9 +555,10 @@ class Service:
 
     def visualize_report(
         self,
-        report_name: Optional[str] = "",
-        new_tab: Optional[bool] = False,
-        filter: Optional[str] = "",
+        report_name: str | None = "",
+        new_tab: bool | None = False,
+        filter: str | None = "",
+        item_filter: str | None = "",
     ) -> None:
         """
         Render the report.
@@ -654,6 +574,11 @@ class Service:
             report is rendered in the current location. If the environment is
             not a Jupyter notebook, the report is always rendered in a new tab.
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -682,6 +607,13 @@ class Service:
             my_img.item_image = 'Image_to_push_on_report'
             adr_service.visualize_report()
         """
+        if filter:
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            item_filter = filter
         if self.serverobj is None:
             self.logger.error("No connection to any service")
             raise ConnectionToServiceError
@@ -695,8 +627,8 @@ class Service:
             url += "view=" + reportobj.guid + "&"
         url += "usemenus=off"
         query_str = ""
-        if filter:
-            query_str = build_query_url(self.logger, filter)
+        if item_filter:
+            query_str = build_query_url(logger=self.logger, item_filter=item_filter)
         else:
             query_str = ""
         url += query_str
@@ -705,9 +637,7 @@ class Service:
         else:
             webbrowser.open_new(url)
 
-    def create_item(
-        self, obj_name: Optional[str] = "default", source: Optional[str] = "ADR"
-    ) -> Item:
+    def create_item(self, obj_name: str | None = "default", source: str | None = "ADR") -> Item:
         """
         Create an item that gets automatically pushed into the database.
 
@@ -736,7 +666,9 @@ class Service:
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
 
-    def query(self, query_type: str = "Item", filter: Optional[str] = "") -> list:
+    def query(
+        self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""
+    ) -> list:
         """
         Query the database.
 
@@ -748,6 +680,11 @@ class Service:
             Type of objects to query. The default is ``"Item"``. Options are ``"Item"``,
             ``"Session"``, and ``"Dataset"``.
         filter : str, optional
+            DEPRECATED. Use item_filter instead.
+            Query string for filtering. The default is ``""``. The syntax corresponds
+            to the syntax for Ansys Dynamic Reporting. For more information, see
+            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+        item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
             _Query Expressions in the documentation for Ansys Dynamic Reporting.
@@ -764,16 +701,23 @@ class Service:
             import ansys.dynamicreporting.core as adr
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect()
-            imgs = adr_service.query(query_type='Item', filter='A|i_type|cont|image;')
+            imgs = adr_service.query(query_type='Item', item_filter='A|i_type|cont|image;')
         """
+        if filter:
+            warnings.warn(
+                "The 'filter' parameter is deprecated. Use 'item_filter' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            item_filter = filter
         queried_items = []
-        valid = check_filter(filter)
+        valid = check_filter(item_filter=item_filter)
         if valid is False:
-            self.logger.warning("Warning: filter string is not valid. Will be ignored.")
-            filter = ""
+            self.logger.warning("Warning: item_filter string is not valid. Will be ignored.")
+            item_filter = ""
         if query_type == "Item":
             org_queried_items = self.serverobj.get_objects(
-                objtype=report_objects.ItemREST, query=filter
+                objtype=report_objects.ItemREST, query=item_filter
             )
             for i in org_queried_items:
                 tmp_item = Item(service=self, obj_name=i.name, source=i.source)
@@ -793,11 +737,11 @@ class Service:
                     queried_items.append(tmp_item)
         elif query_type == "Session":
             queried_items = self.serverobj.get_objects(
-                objtype=report_objects.SessionREST, query=filter
+                objtype=report_objects.SessionREST, query=item_filter
             )
         elif query_type == "Dataset":
             queried_items = self.serverobj.get_objects(
-                objtype=report_objects.DatasetREST, query=filter
+                objtype=report_objects.DatasetREST, query=item_filter
             )
         return queried_items
 
@@ -914,7 +858,7 @@ class Service:
             self.logger.error("Error: there is no report with the name {report_name}.")
             raise MissingReportError
 
-    def get_list_reports(self, r_type: Optional[str] = "name") -> list:
+    def get_list_reports(self, r_type: str | None = "name") -> list:
         """
         Get a list of top-level reports in the database.
 
@@ -965,6 +909,85 @@ class Service:
         else:
             self.logger.warning("Invalid input: r_type needs to be name or report")
         return r_list
+
+    def load_templates(self, json_file_path: str) -> None:
+        """
+        Load templates given a JSON-formatted file.
+        There will be some interactive inputs if required.
+
+        Parameters
+        ----------
+        json_file_path : str
+            Path of the JSON file to be loaded.
+
+        Returns
+        -------
+            None.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
+            adr_service.load_templates(r'C:\\tmp\\my_json_file.json')
+        """
+        try:
+            with open(json_file_path, encoding="utf-8") as file:
+                templates_json = json.load(file)
+        except json.JSONDecodeError as je:
+            self.logger.error(
+                "The loaded JSON file does not have a correct JSON format!\n"
+                f"Please check your JSON file path.\nError details: {je}"
+            )
+            return
+
+        # Address root name conflict
+        # 1. Find the root
+        for template_attr in templates_json.values():
+            if template_attr["parent"] is None:
+                loaded_root_name = template_attr["name"]
+                root_attr = template_attr
+                break
+
+        # 2. Compare with the existing root template(s)
+        templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
+        existing_root_names = set()
+        for template in templates:
+            if template.master:
+                existing_root_names.add(template.name)
+
+        if loaded_root_name in existing_root_names:
+            num_copies = 1
+            for name in existing_root_names:
+                if (
+                    name.startswith(loaded_root_name)
+                    and len(name) > len(loaded_root_name) + 2
+                    and name[len(loaded_root_name) + 1] == "("
+                ):
+                    num_copies += 1
+            renamed_root_name = f"{loaded_root_name} ({num_copies + 1})"
+            self.logger.warning(
+                "The root name in the JSON conflicts with one of the existing templates': "
+                f"'{loaded_root_name}'. In order to proceed, it is automatically renamed to: '{renamed_root_name}'"
+            )
+            root_attr["name"] = renamed_root_name
+
+        try:
+            self.serverobj.load_templates(templates_json, self.logger)
+        except report_remote_server.TemplateEditorJSONLoadingError as e:
+            self.logger.error(
+                "The loaded JSON file does not conform to the schema!\nPlease check your JSON file.\n"
+                f"Error details: {e}"
+            )
+
+            # Clean up already-put template objects
+            all_templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
+            for template in all_templates:
+                if template.name == loaded_root_name:
+                    self.serverobj.del_objects(template)
 
     def __checkport__(self):
         """

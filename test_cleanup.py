@@ -40,7 +40,8 @@ file_list.append("tests/test_data/index.raw")
 file_list.extend(glob.glob("tests/outfile*.txt"))
 file_list.append("mypresentation")
 file_list.append("mytest.pdf")
-file_list.append("again_mytest")
+file_list.append("tests/again_mytest.pdf")
+file_list.append("tests/again_mytest_filter.pdf")
 for i_file in file_list:
     try:
         os.remove(i_file)
