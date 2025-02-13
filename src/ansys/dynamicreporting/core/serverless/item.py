@@ -5,7 +5,6 @@ import io
 from pathlib import Path
 import pickle
 import platform
-from typing import Optional
 import uuid
 
 from PIL import Image as PILImage
@@ -147,8 +146,8 @@ class FileValidator(StringContent):
         if file.size == 0:
             raise ValueError("The file specified is empty")
         # save a ref on the object.
-        setattr(obj, "_file", file)
-        setattr(obj, "_file_ext", file_ext)
+        obj._file = file
+        obj._file_ext = file_ext
         return file_str
 
 
@@ -256,8 +255,8 @@ class Item(BaseModel):
     content: ItemContent = ItemContent()
     type: str = "none"
     _orm_model: str = "data.models.Item"
-    # Class-level registry of subclasses keyed by type
-    _type_registry = {}
+    _type_registry = {}  # Class-level registry of subclasses keyed by type
+    _in_memory: bool = field(compare=False, kw_only=True, default=False)
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
