@@ -37,6 +37,85 @@ from .template import Template
 
 
 class ADR:
+    """
+    Ansys Dynamic Reporting (ADR) class.
+
+    This class is used to interact with the Ansys Dynamic Reporting (ADR) system.
+    It provides methods to create, query, and manipulate items and templates without the need
+    for a web server.
+
+    Parameters
+    ----------
+        ansys_installation: str, optional
+            The path to the Ansys installation. If not provided, the class will attempt to
+            detect the installation path.
+        ansys_version: int, optional
+            The version of Ansys to use. If not provided, the class will attempt to detect the
+            version.
+        db_directory: str, optional
+            The directory to store the database. If not provided, the class will attempt to
+            detect the database directory.
+        databases: dict, optional
+            A dictionary of database configurations. This is required if the 'db_directory' option
+            is not provided.
+        media_directory: str, optional
+            The directory to store the media files. If not provided, the class will attempt to
+            detect the media directory.
+        static_directory: str, optional
+            The directory to store the static files. If not provided, the class will attempt to
+            detect the static directory.
+        media_url: str, optional
+            The URL to use for the media files. If not provided, the class will use the default
+            URL.
+        static_url: str, optional
+            The URL to use for the static files. If not provided, the class will use the default
+            URL.
+        debug: bool, optional
+            If True, the class will run in debug mode. If not provided, the class will run in
+            production mode.
+        opts: dict, optional
+            A dictionary of environment variables to set.
+        request: HttpRequest, optional
+            The request object. This is required if the class is used in the context of a web server.
+        logfile: str, optional
+            The path to the log file. If not provided, the class will log to the console.
+        docker_image: str, optional
+            The Docker image to use. This is required if the 'ansys_installation' option is set to
+            'docker'. If not provided, the class will use the default Docker image.
+        in_memory: bool, optional
+            If True, the class will run in in-memory mode. If not provided, the class will require a
+            database directory or databases to be specified.
+
+    Raises
+    ------
+    ADRException
+        Raised if there is an error during the setup process.
+    DatabaseMigrationError
+        Raised if there is an error during the database migration process.
+    GeometryMigrationError
+        Raised if there is an error during the geometry migration process.
+    ImproperlyConfiguredError
+        Raised if the configuration is incorrect.
+    InvalidAnsysPath
+        Raised if the Ansys installation path is invalid.
+    InvalidPath
+        Raised if the path is invalid.
+    StaticFilesCollectionError
+        Raised if there is an error during the static files collection process.
+
+    Examples
+    --------
+    >>> install_loc = "C:\\Program Files\\ANSYS Inc\v252"
+    >>> db_dir = "C:\\DBs\\docex"
+    >>> from ansys.dynamicreporting.core.serverless import ADR, String
+    >>> adr = ADR(ansys_installation=install_loc, db_directory=db_dir, static_directory=f"{doc_ex_dir}\\static")
+    >>> adr.setup(collect_static=True)
+    >>> item = adr.create_item(String, name="intro_text", content="It's alive!", tags="dp=dp227 section=intro", source="sls-test")
+    >>> template = adr.create_template(BasicLayout, name="Serverless Simulation Report", parent=None, tags="dp=dp227")
+    >>> template.set_filter("A|i_tags|cont|dp=dp227;")
+    >>> template.save()
+    >>> html_content = adr.render_report(name="Serverless Simulation Report", context={}, item_filter="A|i_tags|cont|dp=dp227;")
+    """
 
     def __init__(
         self,
