@@ -1,4 +1,13 @@
+from django.core.exceptions import ImproperlyConfigured
 import pytest
+
+
+@pytest.mark.ado_test
+def test_import_no_setup():
+    from ansys.dynamicreporting.core.serverless import Session
+
+    with pytest.raises(ImproperlyConfigured):
+        Session.create()
 
 
 @pytest.mark.ado_test
