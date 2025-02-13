@@ -324,7 +324,7 @@ class ADR:
         return cls._instance
 
     def setup(self, collect_static: bool = False) -> None:
-        if self._is_setup:
+        if ADR._is_setup:
             return
         # look for enve, but keep it optional.
         try:
@@ -494,7 +494,7 @@ class ADR:
         if self._dataset is None:
             self._dataset = Dataset.create()
 
-        self._is_setup = True
+        ADR._is_setup = True
 
     def close(self):
         """Ensure that everything is cleaned up"""
@@ -556,7 +556,7 @@ class ADR:
 
     @property
     def is_setup(self) -> bool:
-        return self._is_setup
+        return ADR._is_setup
 
     @property
     def ansys_installation(self) -> str:
