@@ -1,14 +1,13 @@
-from django.core.exceptions import ImproperlyConfigured
 import pytest
 
 from ansys.dynamicreporting.core.serverless import ADR
 
 
 @pytest.mark.ado_test
-def test_import_no_setup():
+def test_create_no_setup():
     from ansys.dynamicreporting.core.serverless import Session
 
-    with pytest.raises(ImproperlyConfigured):
+    with pytest.raises(RuntimeError):
         Session.create()
 
 
@@ -51,13 +50,6 @@ def test_init_twice(adr_serverless):
         static_url="/static2/",
     )
     assert adr is adr_serverless
-
-
-@pytest.mark.ado_test
-def test_import(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import String
-
-    assert String is not None
 
 
 @pytest.mark.ado_test

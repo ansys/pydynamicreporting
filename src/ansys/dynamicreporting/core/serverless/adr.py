@@ -319,11 +319,44 @@ class ADR:
     @classmethod
     def get_instance(cls):
         """Retrieve the configured ADR instance."""
-        if cls._instance is None or not cls._is_setup:
-            raise RuntimeError("ADR has not been set up. Instantiate ADR first and call setup().")
+        cls.ensure_setup()
         return cls._instance
 
+    @classmethod
+    def ensure_setup(cls):
+        """
+        Check if the singleton ADR instance has been set up.
+        Raise a RuntimeError if not.
+        """
+        if cls._instance is None or not cls._is_setup:
+            raise RuntimeError("ADR has not been set up. Instantiate ADR first and call setup().")
+
     def setup(self, collect_static: bool = False) -> None:
+        """
+        Set up the ADR environment.
+
+        Parameters
+        ----------
+        collect_static : bool, optional
+            If True, collect the static files to static_directory. Default is False.
+
+        Raises
+        ------
+        ImportError
+            Raised if there is an error importing the required modules or the Ansys installation.
+        DatabaseMigrationError
+            Raised if there is an error during the database migration process.
+        GeometryMigrationError
+            Raised if there is an error during the geometry migration process.
+        ImproperlyConfiguredError
+            Raised if the configuration is incorrect.
+        StaticFilesCollectionError
+            Raised if there is an error during the static files collection process.
+
+        Returns
+        -------
+        None
+        """
         if ADR._is_setup:
             return
         # look for enve, but keep it optional.
@@ -487,14 +520,12 @@ class ADR:
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
-        # create session and dataset w/ defaults if not provided.
-        if self._session is None:
-            self._session = Session.create()
-
-        if self._dataset is None:
-            self._dataset = Dataset.create()
-
+        # setup is complete
         ADR._is_setup = True
+
+        # create session and dataset w/ defaults
+        self._session = Session.create()
+        self._dataset = Dataset.create()
 
     def close(self):
         """Ensure that everything is cleaned up"""

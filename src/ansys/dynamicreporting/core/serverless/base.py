@@ -144,6 +144,18 @@ class BaseModel(metaclass=BaseMeta):
         init=False, compare=False, default=None
     )  # tracks the corresponding ORM instance
 
+    # check if ADR is set up before creating instances
+    def __new__(cls, *args, **kwargs):
+        try:
+            from .adr import ADR
+
+            ADR.ensure_setup()
+        except RuntimeError as e:
+            raise RuntimeError(
+                f"ADR must be set up before creating instances of '{cls.__name__}': {e}"
+            )
+        return super().__new__(cls)
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.guid}>"
 
