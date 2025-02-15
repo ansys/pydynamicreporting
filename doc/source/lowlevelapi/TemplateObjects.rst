@@ -3,30 +3,30 @@
 Template Objects
 ================
 
-.. _here: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html
-.. _link: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html
-.. _Columns: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Columns.html
-.. _Panel: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Panel.html
-.. _Boxes: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Boxes.html
-.. _Tabs: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Tabs.html
-.. _Carousel: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Carousel.html
-.. _Slider: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Slider.html
-.. _Page Footer: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageFooter.html
-.. _Page Header: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageHeader.html
-.. _Iterator: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Iterator.html
-.. _Tag to Properties: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TagProperties.html
-.. _Table of Contents: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableofContents.html
-.. _Link Report: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LinkedReport.html
-.. _Table Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableMerge.html
-.. _Table Reduction: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableReduction.html
-.. _Table Row/Column Filter: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnFilter.html
-.. _Table Value Filter: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableValueFilter.html
-.. _Table Row/Column Sort: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnSort.html
-.. _SQL Query: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/SQLQuery.html
-.. _Tree Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TreeMerge.html
-.. _Userdefined: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Userdefined.html
-.. _Generator templates: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/GeneratorTemplates.html
-.. _Statistical Analysis: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v251/en/adr_ug/ad_ug_generator_statistical_analysis.html
+.. _here: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_templates.html
+.. _link: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_query_expressions.html
+.. _Columns: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_columns.html
+.. _Panel: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_panel.html
+.. _Boxes: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_boxes.html
+.. _Tabs: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_tabs.html
+.. _Carousel: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_carousel.html
+.. _Slider: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_slider.html
+.. _Page Footer: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_page_footer.html
+.. _Page Header: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_page_header.html
+.. _Iterator: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_iterator.html
+.. _Tag to Properties: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_tag_properties.html
+.. _Table of Contents: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_table_of_contents.html
+.. _Link Report: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_linked_report.html
+.. _Table Merge: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_merge.html
+.. _Table Reduction: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_reduction.html
+.. _Table Row/Column Filter: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_row_column_filter.html
+.. _Table Value Filter: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_value_filter.html
+.. _Table Row/Column Sort: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_row_column_sort.html
+.. _SQL Query: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_sql_query.html
+.. _Tree Merge: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_tree_merge.html
+.. _Userdefined: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_user_defined_block.html
+.. _Generator templates: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_templates.html
+.. _Statistical Analysis: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/ad_ug_generator_statistical_analysis.html
 
 
 report_objects.TemplateREST object

@@ -1,7 +1,7 @@
 Low Level Python API
 ====================
 
-.. _Nexus: https://nexusdemo.ensight.com/docs/html/Nexus.html
+.. _Nexus: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&prodver=25.2&lang=en
 
 .. toctree::
    :maxdepth: 4
