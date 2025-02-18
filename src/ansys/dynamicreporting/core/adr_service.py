@@ -29,6 +29,7 @@ import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
+from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 
 from .adr_item import Item
 from .adr_report import Report
@@ -977,7 +978,7 @@ class Service:
 
         try:
             self.serverobj.load_templates(templates_json, self.logger)
-        except report_remote_server.TemplateEditorJSONLoadingError as e:
+        except adr_utils_exceptions.TemplateEditorJSONLoadingError as e:
             self.logger.error(
                 "The loaded JSON file does not conform to the schema!\nPlease check your JSON file.\n"
                 f"Error details: {e}"
