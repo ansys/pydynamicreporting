@@ -28,8 +28,8 @@ except ImportError:  # pragma: no cover
 import warnings
 import webbrowser
 
-from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
+from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
 
 from .adr_item import Item
 from .adr_report import Report
