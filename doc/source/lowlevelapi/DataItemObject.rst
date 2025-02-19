@@ -226,9 +226,10 @@ plotter attributes. One example might be:
 
 Many more table properties exist and can be set as the default values
 for a table by setting same-named keys in the dictionary. The properties
-are documented in the item properties section at `this`_ page.
+are documented in the item properties section described in `Table`_
+in the documentation for Ansys Dynamic Reporting.
 
-A short-cut APIs exists for a common case:
+A shortcut API exists for a common case:
 
 .. code-block:: python
 

@@ -19,8 +19,7 @@ release = version = __version__
 __ansys_version__ = 251
 
 rst_prolog = f"""
-.. _here: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_templates.html
-.. _link: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_query_expressions.html
+.. _Layout Templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_templates.html
 .. _Columns: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_columns.html
 .. _Panel: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_panel.html
 .. _Boxes: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_boxes.html
@@ -43,7 +42,7 @@ rst_prolog = f"""
 .. _Userdefined: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_user_defined_block.html
 .. _Generator templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_generator_templates.html
 .. _Statistical Analysis: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/ad_ug_generator_statistical_analysis.html
-.. _this: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_data_item_table.html
+.. _Table: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_data_item_table.html
 .. _Query Expressions: <https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_query_expressions.html>
 
 """
