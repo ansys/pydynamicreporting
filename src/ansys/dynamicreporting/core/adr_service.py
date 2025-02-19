@@ -577,11 +577,11 @@ class Service:
             DEPRECATED. Use item_filter instead.
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
         item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
@@ -672,7 +672,7 @@ class Service:
         """
         Query the database.
 
-        .. _Query Expressions: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
+        .. _Query: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v251/en/adr_ug/adr_ug_query_expressions.html
 
         Parameters
         ----------
@@ -683,11 +683,11 @@ class Service:
             DEPRECATED. Use item_filter instead.
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
         item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------

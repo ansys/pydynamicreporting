@@ -150,7 +150,7 @@ Once you are connected to the session, you can query its items:
 The :func:`query<ansys.dynamicreporting.core.Service.query>` method takes
 a filter input that allows you to select the items to return. The query
 string follows the same structure as the queries described in
-`Query Expressions <https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_query_expressions.html>`_
+`Query Expressions`_
 
 in the documentation for Ansys Dynamic Reporting.
 

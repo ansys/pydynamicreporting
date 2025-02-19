@@ -1,7 +1,7 @@
 Low Level Python API
 ====================
 
-.. _Nexus: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&prodver=25.2&lang=en
+.. _Nexus: https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&pid=ansdynrep&lang=en
 
 
 .. toctree::
