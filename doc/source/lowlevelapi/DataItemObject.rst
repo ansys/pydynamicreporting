@@ -228,7 +228,8 @@ Many more table properties exist and can be set as the default values
 for a table by setting same-named keys in the dictionary. The properties
 are documented in the item properties section at `this`_ page.
 
-.. _this: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_data_item_table.html
+.. _this: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_data_item_table.html
+
 
 A short-cut APIs exists for a common case:
 

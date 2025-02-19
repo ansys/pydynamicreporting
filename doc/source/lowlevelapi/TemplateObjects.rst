@@ -3,30 +3,54 @@
 Template Objects
 ================
 
-.. _here: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_templates.html
-.. _link: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_query_expressions.html
-.. _Columns: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_columns.html
-.. _Panel: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_panel.html
-.. _Boxes: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_boxes.html
-.. _Tabs: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_tabs.html
-.. _Carousel: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_carousel.html
-.. _Slider: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_slider.html
-.. _Page Footer: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_page_footer.html
-.. _Page Header: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_page_header.html
-.. _Iterator: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_iterator.html
-.. _Tag to Properties: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_tag_properties.html
-.. _Table of Contents: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_table_of_contents.html
-.. _Link Report: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_linked_report.html
-.. _Table Merge: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_merge.html
-.. _Table Reduction: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_reduction.html
-.. _Table Row/Column Filter: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_row_column_filter.html
-.. _Table Value Filter: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_value_filter.html
-.. _Table Row/Column Sort: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_row_column_sort.html
-.. _SQL Query: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_sql_query.html
-.. _Tree Merge: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_tree_merge.html
-.. _Userdefined: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_user_defined_block.html
-.. _Generator templates: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_templates.html
-.. _Statistical Analysis: https://ansysproducthelpqa.win.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/ad_ug_generator_statistical_analysis.html
+.. _here: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_templates.html
+
+.. _link: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_query_expressions.html
+
+.. _Columns: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_columns.html
+
+.. _Panel: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_panel.html
+
+.. _Boxes: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_boxes.html
+
+.. _Tabs: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_tabs.html
+
+.. _Carousel: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_carousel.html
+
+.. _Slider: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_slider.html
+
+.. _Page Footer: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_page_footer.html
+
+.. _Page Header: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_page_header.html
+
+.. _Iterator: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_iterator.html
+
+.. _Tag to Properties: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_tag_properties.html
+
+.. _Table of Contents: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_table_of_contents.html
+
+.. _Link Report: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_linked_report.html
+
+.. _Table Merge: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_merge.html
+
+.. _Table Reduction: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_reduction.html
+
+.. _Table Row/Column Filter: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_row_column_filter.html
+
+.. _Table Value Filter: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_value_filter.html
+
+.. _Table Row/Column Sort: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_table_row_column_sort.html
+
+.. _SQL Query: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_sql_query.html
+
+.. _Tree Merge: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_tree_merge.html
+
+.. _Userdefined: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_layout_user_defined_block.html
+
+.. _Generator templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_generator_templates.html
+
+.. _Statistical Analysis: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/ad_ug_generator_statistical_analysis.html
+
 
 
 report_objects.TemplateREST object
