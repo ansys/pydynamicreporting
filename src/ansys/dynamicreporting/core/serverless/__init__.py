@@ -6,6 +6,7 @@ from .adr import ADR
 # Expose ADR immediately
 __all__ = ["ADR"]
 
+# for organization and to avoid repeating the same class names in multiple places
 _item_classes = [
     "Session",
     "Dataset",
