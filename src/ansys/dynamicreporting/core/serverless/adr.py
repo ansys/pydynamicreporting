@@ -280,13 +280,15 @@ class ADR:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
         self._ansys_installation = Path(install_dir)
 
-    def _check_dir(self, dir_):
+    @staticmethod
+    def _check_dir(dir_):
         dir_path = Path(dir_) if not isinstance(dir_, Path) else dir_
         if not dir_path.exists() or not dir_path.is_dir():
             raise InvalidPath(extra_detail=dir_)
         return dir_path
 
-    def _migrate_db(self, db):
+    @staticmethod
+    def _migrate_db(db):
         try:  # upgrade databases
             management.call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
         except Exception as e:
@@ -505,7 +507,7 @@ class ADR:
         try:
             from data.geofile_rendering import do_geometry_update_check
 
-            do_geometry_update_check(self._logger)
+            do_geometry_update_check(self._logger.info)
         except Exception as e:
             raise GeometryMigrationError(extra_detail=str(e))
 
@@ -653,7 +655,8 @@ class ADR:
             **kwargs,
         )
 
-    def create_template(self, template_type: type[Template], **kwargs: Any) -> Template:
+    @staticmethod
+    def create_template(template_type: type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type} is not valid")
         if not kwargs:
@@ -667,7 +670,8 @@ class ADR:
             parent.save()
         return template
 
-    def get_report(self, **kwargs) -> Template:
+    @staticmethod
+    def get_report(**kwargs) -> Template:
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
@@ -677,7 +681,8 @@ class ADR:
         except Exception as e:
             raise e
 
-    def get_reports(self, *, fields: list | None = None, flat: bool = False) -> ObjectSet | list:
+    @staticmethod
+    def get_reports(*, fields: list | None = None, flat: bool = False) -> ObjectSet | list:
         # return list of reports by default.
         # if fields are mentioned, return value list
         try:
@@ -717,8 +722,8 @@ class ADR:
         except Exception as e:
             raise e
 
+    @staticmethod
     def query(
-        self,
         query_type: Session | Dataset | type[Item] | type[Template],
         *,
         query: str = "",
@@ -728,8 +733,8 @@ class ADR:
             raise TypeError(f"{query_type} is not valid")
         return query_type.find(query=query, **kwargs)
 
+    @staticmethod
     def create_objects(
-        self,
         objects: list | ObjectSet,
         **kwargs: Any,
     ) -> int:

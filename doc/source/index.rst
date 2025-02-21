@@ -11,7 +11,7 @@ PyDynamicReporting
    examples/index
    contributing
 
-.. _Nexus: https://nexusdemo.ensight.com/docs/html/Nexus.html
+.. _Nexus: https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&pid=ansdynrep&lang=en
 
 Introduction
 ------------
