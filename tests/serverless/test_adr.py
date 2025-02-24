@@ -49,7 +49,7 @@ def test_ensure_setup_error_no_setup():
 
 @pytest.mark.ado_test
 def test_is_setup_before_setup():
-    assert not ADR.is_setup
+    assert not ADR.get_instance().is_setup
 
 
 @pytest.mark.ado_test
