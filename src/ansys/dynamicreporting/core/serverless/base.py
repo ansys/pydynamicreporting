@@ -472,13 +472,13 @@ class BaseModel(metaclass=BaseMeta):
 
     def rem_tag(self, tag):
         tags = shlex.split(self.get_tags())
-        for tag in list(tags):
-            if "=" in tag:
-                if tag.split("=")[0] == tag:
-                    tags.remove(tag)
-            elif tag == tag:
-                tags.remove(tag)
+        for t in tags:
+            if t == tag or t.split("=")[0] == tag:
+                tags.remove(t)
         self._rebuild_tags(tags)
+
+    def remove_tag(self, tag):
+        self.rem_tag(tag)
 
 
 @dataclass(eq=False, order=False, repr=False)
