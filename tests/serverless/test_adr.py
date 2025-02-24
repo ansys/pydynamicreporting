@@ -18,7 +18,7 @@ def test_get_instance_error():
 
 
 @pytest.mark.ado_test
-def test_get_instance_error_no_setup():
+def test_get_instance_no_setup():
     from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
     adr = ADR(  # noqa: F841
@@ -28,13 +28,38 @@ def test_get_instance_error_no_setup():
         static_url="/static2/",
         in_memory=True,
     )
+    assert ADR.get_instance() is adr
+
+
+@pytest.mark.ado_test
+def test_ensure_setup_error_no_setup():
+    from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
+
+    adr = ADR(  # noqa: F841
+        ansys_installation="docker",
+        docker_image=DOCKER_DEV_REPO_URL,
+        media_url="/media1/",
+        static_url="/static2/",
+        in_memory=True,
+    )
+
     with pytest.raises(RuntimeError):
-        ADR.get_instance()
+        ADR.ensure_setup()
+
+
+@pytest.mark.ado_test
+def test_is_setup_before_setup():
+    assert not ADR.get_instance().is_setup
 
 
 @pytest.mark.ado_test
 def test_get_instance(adr_serverless):
     assert ADR.get_instance() is adr_serverless
+
+
+@pytest.mark.ado_test
+def test_is_setup_after_setup(adr_serverless):
+    assert adr_serverless.is_setup
 
 
 @pytest.mark.ado_test
