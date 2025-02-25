@@ -1067,7 +1067,6 @@ class Server:
         id_template_map = {}
         id_template_map[root_id_str] = root_template
         self._build_templates_from_parent(root_id_str, id_template_map, templates_json, logger)
-        self._update_changes(root_id_str, id_template_map, templates_json)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
         self._check_template(id_str, attr, logger)
@@ -1081,16 +1080,6 @@ class Server:
         template.set_filter(filter_str=attr["item_filter"] if "item_filter" in attr else "")
 
         return template
-
-    def _update_changes(self, id_str, id_template_map, templates_json):
-        children_id_strs = templates_json[id_str]["children"]
-
-        if not children_id_strs:
-            return
-
-        for child_id_str in children_id_strs:
-            self._update_changes(child_id_str, id_template_map, templates_json)
-        self.put_objects(id_template_map[id_str])
 
     def _build_templates_from_parent(self, id_str, id_template_map, templates_json, logger=None):
         children_id_strs = templates_json[id_str]["children"]
@@ -1133,7 +1122,7 @@ class Server:
 
     def _get_json_attr_keys(self):
         """
-        Return a list of JSON keys that can be got directory by attribute rather than by getters
+        Return a list of JSON keys that can be got directly by attribute rather than by getters
         """
         return ["name", "report_type", "tags", "item_filter"]
 
