@@ -67,6 +67,28 @@ def test_is_setup_after_setup(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_setup_after_setup(adr_serverless):
+    with pytest.raises(RuntimeError):
+        adr_serverless.setup(collect_static=True)
+
+
+@pytest.mark.ado_test
+def test_get_instance_session():
+    from ansys.dynamicreporting.core.serverless import Session
+
+    adr = ADR.get_instance()
+    assert adr.session is not None and isinstance(adr.session, Session) and adr.session_guid
+
+
+@pytest.mark.ado_test
+def test_get_instance_dataset():
+    from ansys.dynamicreporting.core.serverless import Dataset
+
+    adr = ADR.get_instance()
+    assert adr.dataset is not None and isinstance(adr.dataset, Dataset) and adr.dataset.guid
+
+
+@pytest.mark.ado_test
 def test_init_twice(adr_serverless):
     from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
