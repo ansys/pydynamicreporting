@@ -1,5 +1,7 @@
 from pathlib import Path
+from random import random as r
 
+import numpy as np
 import pytest
 
 from ansys.dynamicreporting.core.serverless import ADR
@@ -312,7 +314,7 @@ def test_create_file_ens(adr_serverless):
     intro_ens = adr_serverless.create_item(
         File,
         name="intro_ens",
-        content=r"test_data/scene2.ens",
+        content=str(Path(__file__).parent / "test_data" / "scene2.ens"),
         tags="dp=dp227 section=data",
         source="sls-test",
         sequence=1,
@@ -329,7 +331,7 @@ def test_create_file_evsn(adr_serverless):
     intro_evsn = adr_serverless.create_item(
         File,
         name="intro_evsn",
-        content=r"test_data/scenario.evsn",
+        content=str(Path(__file__).parent / "test_data" / "scenario.evsn"),
         tags="dp=dp227 section=data",
         source="sls-test",
         sequence=1,
@@ -346,7 +348,7 @@ def test_create_image(adr_serverless):
     intro_image = adr_serverless.create_item(
         Image,
         name="intro_image",
-        content=r"test_data/nexus_logo.png",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
         tags="dp=dp227 section=data",
         source="sls-test",
     )
@@ -362,7 +364,7 @@ def test_create_enhanced_image(adr_serverless):
     intro_enhanced_image = adr_serverless.create_item(
         Image,
         name="intro_enhanced_image",
-        content=r"test_data/case.tif",
+        content=str(Path(__file__).parent / "test_data" / "case.tif"),
         tags="dp=dp227 section=data",
         source="sls-test",
     )
@@ -378,7 +380,7 @@ def test_create_scene(adr_serverless):
     scene = adr_serverless.create_item(
         Scene,
         name="intro_scene",
-        content=r"test_data/scene.avz",
+        content=r"./test_data/scene.avz",  # test relative path
         session=adr_serverless.session,  # random test
         dataset=adr_serverless.dataset,
         tags="dp=dp227 section=data",
@@ -390,10 +392,6 @@ def test_create_scene(adr_serverless):
 
 @pytest.mark.ado_test
 def test_create_table(adr_serverless):
-    from random import random as r
-
-    import numpy as np
-
     from ansys.dynamicreporting.core.serverless import Table
 
     # table
