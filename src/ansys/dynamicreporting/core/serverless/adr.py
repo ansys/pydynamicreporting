@@ -360,8 +360,9 @@ class ADR:
         -------
         None
         """
+
         if ADR._is_setup:
-            return
+            raise RuntimeError("ADR has already been configured. setup() can only be called once.")
         # look for enve, but keep it optional.
         try:
             import enve
