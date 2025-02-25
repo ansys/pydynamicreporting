@@ -321,7 +321,8 @@ class ADR:
     @classmethod
     def get_instance(cls):
         """Retrieve the configured ADR instance."""
-        cls.ensure_setup()
+        if cls._instance is None:
+            raise RuntimeError("There is no ADR instance available. Instantiate ADR first.")
         return cls._instance
 
     @classmethod
