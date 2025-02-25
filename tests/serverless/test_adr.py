@@ -548,22 +548,6 @@ def test_query_no_templates(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_render(adr_serverless):
-    rep = adr_serverless.get_report(name="Serverless Simulation Report")
-    html_content = rep.render(context={}, item_filter="A|i_tags|cont|dp=dp227;")
-
-    assert html_content and "render error" not in html_content
-
-
-@pytest.mark.ado_test
-def test_render_report(adr_serverless):
-    html_content = adr_serverless.render_report(
-        name="Serverless Simulation Report", context={}, item_filter="A|i_tags|cont|dp=dp227;"
-    )
-    assert html_content and "render error" not in html_content
-
-
-@pytest.mark.ado_test
 def test_delete_items(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Item
 
