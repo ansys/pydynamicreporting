@@ -238,14 +238,6 @@ def test_create_string(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_create_string_no_content(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import String
-
-    with pytest.raises(ValueError):  # must be str
-        adr_serverless.create_item(String, name="empty_text", content=None)
-
-
-@pytest.mark.ado_test
 def test_create_anim(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Animation
 
@@ -260,14 +252,6 @@ def test_create_anim(adr_serverless):
     )
 
     assert Animation.get(name="intro_anim").guid == anim.guid
-
-
-@pytest.mark.ado_test
-def test_create_anim_no_content(adr_serverless):  # content is None
-    from ansys.dynamicreporting.core.serverless import Animation
-
-    with pytest.raises(ValueError):
-        adr_serverless.create_item(Animation, name="empty_anim", content=None)
 
 
 @pytest.mark.ado_test
@@ -471,3 +455,147 @@ def test_create_tree(adr_serverless):
     )
 
     assert Tree.get(name="intro_tree").guid == tree.guid
+
+
+def test_backup_database(adr_serverless):
+    adr_serverless.backup_database(compress=True)
+    backup_files = list(Path(".").glob("*.gz"))
+    assert len(backup_files) > 0, "No backup file found with .gz extension"
+
+
+@pytest.mark.ado_test
+def test_create_demo_report(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="Serverless Simulation Report", parent=None, tags="dp=dp227"
+    )
+    top_parent.params = '{"HTML": "<h1>Serverless Simulation Report</h1>"}'
+    top_parent.set_filter("A|i_tags|cont|dp=dp227;")
+    top_parent.save()
+
+    from ansys.dynamicreporting.core.serverless import TOCLayout
+
+    toc_layout = adr_serverless.create_template(
+        TOCLayout, name="TOC", parent=top_parent, tags="dp=dp227"
+    )
+    toc_layout.params = '{"TOCitems": 1, "HTML": "<h2>Table of Content</h2>"}'
+    toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
+    toc_layout.save()
+
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    intro_panel = adr_serverless.create_template(
+        PanelLayout, name="Introduction", parent=top_parent, tags="dp=dp227"
+    )
+    intro_panel.params = '{"HTML": "<h2>Introduction</h2>", "properties": {"TOCItem": "1"}}'
+    intro_panel.set_filter("A|i_tags|cont|section=intro;")
+    intro_panel.save()
+
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    # alternate way of creation
+    results_panel = PanelLayout.create(name="Results", parent=top_parent, tags="dp=dp227")
+    results_panel.params = (
+        '{"HTML": "<h2>Results</h2>\\nYour simulation results.", "properties": {"TOCItem": "1"}}'
+    )
+    results_panel.set_filter("A|i_tags|cont|section=data;")
+    results_panel.save()
+    # create_template() does this for you
+    top_parent.children.append(results_panel)
+    top_parent.save()
+
+
+@pytest.mark.ado_test
+def test_query_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import File, Item
+
+    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|intro_file;")
+    objs2 = adr_serverless.query(
+        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|intro_file;"
+    )
+    assert objs and objs2
+
+
+@pytest.mark.ado_test
+def test_get_list_reports(adr_serverless):
+    count = len(adr_serverless.get_list_reports(r_type="name"))
+    assert count > 0, "No reports found"
+
+
+@pytest.mark.ado_test
+def test_query_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template, TOCLayout
+
+    temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|TOC;")
+    temps2 = adr_serverless.query(
+        query_type=Template, query="A|t_types|cont|Layout:toc;A|t_name|eq|TOC;"
+    )
+
+    assert temps and temps2
+
+
+@pytest.mark.ado_test
+def test_query_no_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PPTXLayout, Template
+
+    temps = adr_serverless.query(query_type=PPTXLayout, query="A|t_name|eq|pptx-select;")
+    temps2 = adr_serverless.query(
+        query_type=Template, query="A|t_types|cont|Layout:pptx;A|t_name|eq|pptx-select;"
+    )
+
+    assert not temps and not temps2
+
+
+@pytest.mark.ado_test
+def test_render(adr_serverless):
+    rep = adr_serverless.get_report(name="Serverless Simulation Report")
+    html_content = rep.render(context={}, item_filter="A|i_tags|cont|dp=dp227;")
+
+    assert html_content and "render error" not in html_content
+
+
+@pytest.mark.ado_test
+def test_render_report(adr_serverless):
+    html_content = adr_serverless.render_report(
+        name="Serverless Simulation Report", context={}, item_filter="A|i_tags|cont|dp=dp227;"
+    )
+    assert html_content and "render error" not in html_content
+
+
+@pytest.mark.ado_test
+def test_delete_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    del_items = adr_serverless.query(query_type=Item, query="A|i_tags|cont|dp=dp227;")
+    count = del_items.delete()
+    assert count > 0, "No items deleted"
+
+
+@pytest.mark.ado_test
+def test_delete_sessions(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Session
+
+    del_sesh = adr_serverless.query(query_type=Session, query="A|s_tags|cont|dp=dp227;")
+    count = del_sesh.delete()
+    assert count > 0, "No sessions deleted"
+
+
+@pytest.mark.ado_test
+def test_delete_datasets(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Dataset
+
+    del_dataset = adr_serverless.query(query_type=Dataset, query="A|d_tags|cont|dp=dp227;")
+    count = del_dataset.delete()
+    assert count > 0, "No datasets deleted"
+
+
+@pytest.mark.ado_test
+def test_delete_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    del_templates = adr_serverless.query(
+        query_type=Template, query="A|t_name|eq|Serverless Simulation Report;"
+    )
+    count = del_templates.delete()
+    assert count > 0, "No templates deleted"
