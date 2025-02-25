@@ -86,7 +86,7 @@ class MissingReportError(ADRException):
     detail = "Can not find the corresponding report."
 
 
-### serverless exceptions ###
+"""Serverless exceptions."""
 
 
 class ImproperlyConfiguredError(ADRException):
