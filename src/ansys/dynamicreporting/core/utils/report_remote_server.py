@@ -429,7 +429,7 @@ class Server:
         :param obj:
         :return:
         """
-        if hasattr(obj, "server_api_version"):  # only items; skip templates, etc.
+        if hasattr(obj, "server_api_version"):
             # if the object server version and the current server version do
             # not match, convert them (if possible)
             if (obj.server_api_version is not None) and (obj.server_api_version < self.api_version):
