@@ -241,7 +241,7 @@ def test_create_string(adr_serverless):
 def test_create_string_no_content(adr_serverless):
     from ansys.dynamicreporting.core.serverless import String
 
-    with pytest.raises(TypeError):  # must be str
+    with pytest.raises(ValueError):  # must be str
         adr_serverless.create_item(String, name="empty_text", content=None)
 
 
@@ -266,7 +266,7 @@ def test_create_anim(adr_serverless):
 def test_create_anim_no_content(adr_serverless):  # content is None
     from ansys.dynamicreporting.core.serverless import Animation
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         adr_serverless.create_item(Animation, name="empty_anim", content=None)
 
 
@@ -402,7 +402,7 @@ def test_create_scene(adr_serverless):
     scene = adr_serverless.create_item(
         Scene,
         name="intro_scene",
-        content=r"./test_data/scene.avz",  # test relative path
+        content=str(Path(__file__).parent / "test_data" / "scene.avz"),
         session=adr_serverless.session,  # random test
         dataset=adr_serverless.dataset,
         tags="dp=dp227 section=data",
