@@ -61,11 +61,14 @@ class HTMLParser(BaseHTMLParser):
 
 class ItemContent(Validator):
     def process(self, value, obj):
-        return None
+        if value is None:
+            raise ValueError(extra_detail="Content cannot be None")
+        return value
 
 
 class StringContent(ItemContent):
     def process(self, value, obj):
+        value = super().process(value, obj)
         if not isinstance(value, str):
             raise TypeError("Expected content to be a string")
         return value
@@ -81,6 +84,7 @@ class HTMLContent(StringContent):
 
 class TableContent(ItemContent):
     def process(self, value, obj):
+        value = super().process(value, obj)
         if not isinstance(value, numpy.ndarray):
             raise TypeError("Expected content to be a numpy array")
         if value.dtype.kind not in ["S", "f"]:
@@ -121,6 +125,7 @@ class TreeContent(ItemContent):
             self._validate_tree_value(elem["value"])
 
     def process(self, value, obj):
+        value = super().process(value, obj)
         self._validate_tree(value)
         return value
 
@@ -134,7 +139,7 @@ class FileValidator(StringContent):
         if not file_path.is_file():
             raise ValueError(
                 f"Expected content to be a file path: "
-                f"'{file_path.name}' does not exist or is not a file."
+                f"'{file_path}' does not exist or is not a file."
             )
         with file_path.open(mode="rb") as f:
             file = DjangoFile(f)
@@ -280,8 +285,6 @@ class Item(BaseModel):
             raise Dataset.NotSaved(
                 extra_detail="Failed to save item because the dataset is not saved"
             )
-        if self.content is None:
-            raise ADRException(extra_detail=f"The item {self.guid} must have some content to save")
         super().save(**kwargs)
 
     @classmethod
