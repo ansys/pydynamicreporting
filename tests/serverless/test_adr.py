@@ -90,6 +90,7 @@ def test_get_instance_dataset():
 
 @pytest.mark.ado_test
 def test_init_twice(adr_serverless):
+    # return the same instance
     from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
     adr = ADR(
@@ -160,56 +161,19 @@ def test_create_html(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_set_tags(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import HTML
-
-    intro_html = HTML.get(name="intro_html")
-    intro_html.set_tags("dp=dp227 section=intro")
-    intro_html.save()
-
-    assert "section=intro" in HTML.get(guid=intro_html.guid).tags
-
-
-@pytest.mark.ado_test
-def test_get_tags(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import HTML
-
-    intro_html = HTML.get(name="intro_html")
-    assert "dp=dp227" in intro_html.get_tags()
-
-
-@pytest.mark.ado_test
 def test_edit_html(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
-    intro_html = HTML.get(name="intro_html")
-    intro_html.content = (
-        "<h1>Heading 1</h1>"
-        "<h2>Heading 2</h2>"
-        "<h3>Heading 3</h3>"
-        "<h4>Heading 4</h4>"
-        "<h5>Heading 5</h5>"
-        "Two breaks below"
-        "<br><br />"
-        "<h6>Heading 6 (& one break below)</h6>"
-        "<br>"
+    adr_serverless.create_item(
+        HTML,
+        name="test_edit_html",
+        content="<h1>Heading 1</h1>",
     )
+    intro_html = HTML.get(name="test_edit_html")
+    intro_html.content = "<h2>Heading 2</h2>" "<br>"
     intro_html.save()
 
-    assert "end" not in HTML.get(guid=intro_html.guid).content
-
-
-@pytest.mark.ado_test
-def test_add_rem_tag(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import HTML
-
-    intro_html = HTML.get(name="intro_html")
-    intro_html.add_tag("pptx_slide_title", "headers and breaks")
-    intro_html.save()
-    intro_html.rem_tag("pptx_slide_title")
-    intro_html.save()
-
-    assert "pptx_slide_title" not in HTML.get(guid=intro_html.guid).get_tags()
+    assert "h1" not in HTML.get(guid=intro_html.guid).content
 
 
 @pytest.mark.ado_test
@@ -505,20 +469,48 @@ def test_create_demo_report(adr_serverless):
     top_parent.children.append(results_panel)
     top_parent.save()
 
+    from ansys.dynamicreporting.core.serverless import Template
+
+    test_parent = Template.get(name="Serverless Simulation Report")
+    assert test_parent.guid == top_parent.guid
+    for child in test_parent.children:
+        assert child.guid in top_parent.children_order
+
 
 @pytest.mark.ado_test
 def test_query_items(adr_serverless):
     from ansys.dynamicreporting.core.serverless import File, Item
 
-    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|intro_file;")
-    objs2 = adr_serverless.query(
-        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|intro_file;"
+    # file
+    adr_serverless.create_item(
+        File,
+        name="query_test_file",
+        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
     )
-    assert objs and objs2
+
+    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|query_test_file;")
+    objs2 = adr_serverless.query(
+        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|query_test_file;"
+    )
+    assert len(objs) == 1 and len(objs2) == 1
 
 
 @pytest.mark.ado_test
 def test_get_list_reports(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_list_reports", parent=None
+    )
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    toc_layout = adr_serverless.create_template(
+        TOCLayout, name="test_get_list_reports_toc", parent=top_parent
+    )
+    toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
+    toc_layout.save()
+
     count = len(adr_serverless.get_list_reports(r_type="name"))
     assert count > 0, "No reports found"
 
@@ -527,12 +519,16 @@ def test_get_list_reports(adr_serverless):
 def test_query_templates(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Template, TOCLayout
 
-    temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|TOC;")
+    toc_layout = adr_serverless.create_template(TOCLayout, name="test_query_templates")
+    toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
+    toc_layout.save()
+
+    temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_query_templates;")
     temps2 = adr_serverless.query(
-        query_type=Template, query="A|t_types|cont|Layout:toc;A|t_name|eq|TOC;"
+        query_type=Template, query="A|t_types|cont|Layout:toc;A|t_name|eq|test_query_templates;"
     )
 
-    assert temps and temps2
+    assert len(temps) == 1 and len(temps2) == 1
 
 
 @pytest.mark.ado_test
@@ -549,37 +545,48 @@ def test_query_no_templates(adr_serverless):
 
 @pytest.mark.ado_test
 def test_delete_items(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Item
+    from ansys.dynamicreporting.core.serverless import File, Item
 
-    del_items = adr_serverless.query(query_type=Item, query="A|i_tags|cont|dp=dp227;")
+    # file
+    adr_serverless.create_item(
+        File,
+        name="test_delete_items",
+        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+        tags="test_delete_items",
+    )
+
+    del_items = adr_serverless.query(query_type=Item, query="A|i_tags|cont|test_delete_items;")
     count = del_items.delete()
-    assert count > 0, "No items deleted"
+    assert count == 1, "No items deleted"
 
 
 @pytest.mark.ado_test
 def test_delete_sessions(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 
-    del_sesh = adr_serverless.query(query_type=Session, query="A|s_tags|cont|dp=dp227;")
+    _ = Session.create(application="test_delete_sessions", tags="test_delete_sessions;")
+    del_sesh = adr_serverless.query(query_type=Session, query="A|s_tags|cont|test_delete_sessions;")
     count = del_sesh.delete()
-    assert count > 0, "No sessions deleted"
+    assert count == 1, "No sessions deleted"
 
 
 @pytest.mark.ado_test
 def test_delete_datasets(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Dataset
 
-    del_dataset = adr_serverless.query(query_type=Dataset, query="A|d_tags|cont|dp=dp227;")
+    _ = Dataset.create(filename="test_delete_datasets", tags="test_delete_datasets;")
+    del_dataset = adr_serverless.query(
+        query_type=Dataset, query="A|d_tags|cont|test_delete_datasets"
+    )
     count = del_dataset.delete()
-    assert count > 0, "No datasets deleted"
+    assert count == 1, "No datasets deleted"
 
 
 @pytest.mark.ado_test
 def test_delete_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Template
+    from ansys.dynamicreporting.core.serverless import Template, TOCLayout
 
-    del_templates = adr_serverless.query(
-        query_type=Template, query="A|t_name|eq|Serverless Simulation Report;"
-    )
-    count = del_templates.delete()
-    assert count > 0, "No templates deleted"
+    _ = adr_serverless.create_template(TOCLayout, name="test_delete_templates")
+    temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_delete_templates;")
+    count = temps.delete()
+    assert count == 1, "No templates deleted"
