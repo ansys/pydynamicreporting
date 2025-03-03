@@ -72,7 +72,7 @@ class Template(BaseModel):
                 raise Template.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
-            children_order.append(str(child.guid))
+            children_order.append(child.guid)
         self._children_order = ",".join(children_order)
         self._master = self.parent is None
         # set properties
@@ -148,7 +148,7 @@ class Template(BaseModel):
         return super().find(query=query_string, **kwargs)
 
     def reorder_children(self) -> None:
-        guid_to_child = {str(child.guid): child for child in self.children}
+        guid_to_child = {child.guid: child for child in self.children}
         sorted_guids = self.children_order.lower().split(",")
         # return the children based on the order of guids in children_order
         reordered = []
