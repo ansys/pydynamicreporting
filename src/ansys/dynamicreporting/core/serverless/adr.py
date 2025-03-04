@@ -319,7 +319,7 @@ class ADR:
         return ""
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls) -> "ADR":
         """Retrieve the configured ADR instance."""
         if cls._instance is None:
             raise RuntimeError("There is no ADR instance available. Instantiate ADR first.")
@@ -360,8 +360,9 @@ class ADR:
         -------
         None
         """
+
         if ADR._is_setup:
-            return
+            raise RuntimeError("ADR has already been configured. setup() can only be called once.")
         # look for enve, but keep it optional.
         try:
             import enve
@@ -550,7 +551,7 @@ class ADR:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
         if not target_dir.is_dir():
-            raise InvalidPath(extra_detail=f"{output_directory} is not a valid directory.")
+            raise InvalidPath(extra_detail=f"'{output_directory}' is not a valid directory.")
         # call django management command to dump the database
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
