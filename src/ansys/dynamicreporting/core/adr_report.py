@@ -242,6 +242,13 @@ class Report:
         Note that the function return a block of string that stands for JavaScript codes
         and need to be wrapped in a <script>...</script> HTML tag.
 
+        .. note::
+
+            This feature has been deprecated as of 25R2, please refer to the ``adr_offline_report_src.js``
+            file under this directory: ``django/utils/remote/adr_offline_report_src/`` from the latest ADR
+            installation. The new web component ``<adr-offline-report></adr-offline-report>`` supports
+            report embed and style overwrites generated from both server and serverless ADR.
+
         Returns
         -------
         str
@@ -479,6 +486,13 @@ class Report:
         configuration settings on their application server or on another proxy server,
         the web component will use fetch API to embed the report directly in the
         application.
+
+        .. note::
+
+            This feature has been deprecated as of 25R2, please refer to the ``adr_offline_report_src.js``
+            file under this directory: ``django/utils/remote/adr_offline_report_src/`` from the latest ADR
+            installation. The new web component ``<adr-offline-report></adr-offline-report>`` supports
+            report embed and style overwrites generated from both server and serverless ADR.
 
         Parameters
         ----------
