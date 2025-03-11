@@ -546,7 +546,7 @@ the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == "Box reporttest"][0]
+   my_parent = [x for x in all_reports if x.name == "Box report test"][0]
    my_template = server.create_template(
        name="Box Template", parent=my_parent, report_type="Layout:box"
    )
@@ -566,7 +566,6 @@ the new template:
 
    server.put_objects([first_box, second_box, third_box])
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tabsREST:
 
@@ -695,7 +694,6 @@ lines of code to create the new template:
        ["timestep|numeric_up", "variable|text_up", "mode|text_down"]
    )
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _footerREST:
 
@@ -1040,7 +1038,6 @@ the lines of code to create the new template:
    my_template.set_use_labels(0)
    my_template.set_use_ids("Distance")
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablereduceREST:
 
@@ -1231,7 +1228,6 @@ These would be the lines of code to create the new template:
        operation="count",
    )
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablerowcolumnfilterREST:
 
@@ -1342,7 +1338,6 @@ These would be the lines of code to create the new template:
    my_template.set_filter_columns(["1", "Tria3", "Tetra\*"])
    my_template.set_table_name("RC_Filtered_Table")
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablevaluefilterREST:
 
@@ -1455,7 +1450,6 @@ the new template:
    my_template.set_filter_by(value=["row", "Quad4"])
    my_template.set_filter_value(value=["range", "100", ""])
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablesortfilterREST:
 
@@ -1546,7 +1540,6 @@ These would be the lines of code to create the new template:
    my_template.set_generated_items("replace")
    my_template.set_sort_columns(["+Labels"])
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _sqlqueriesREST:
 
