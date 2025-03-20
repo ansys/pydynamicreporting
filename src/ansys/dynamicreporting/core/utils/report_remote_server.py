@@ -1001,6 +1001,8 @@ class Server:
             "Layout:reportlink",
             "Layout:userdefined",
             "Layout:datafilter",
+            "Layout:pptx",
+            "Layout:pptxslide",
         ]
 
     def get_generator_types(self):
