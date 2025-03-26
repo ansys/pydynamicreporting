@@ -6,8 +6,8 @@
         "item_filter": "",
         "params": {
             "properties": {
-                "input_pptx": "Ansys Fluent Simulation Report_input_ppt.pptx",
-                "output_pptx": "Ansys_Fluent_Simulation_Report.pptx",
+                "input_pptx": "Simulation_Report_input_ppt.pptx",
+                "output_pptx": "Simulation_Report.pptx",
                 "use_all_slides": "0"
             }
         },
@@ -41,7 +41,7 @@
                 "source_slide": 1,
                 "exclude_from_toc": "1"
             },
-            "HTML": "<h2>Ansys Fluent Simulation Report</h2>"
+            "HTML": "<h2>Simulation Report</h2>"
         },
         "sort_selection": "",
         "parent": "Template_0",
@@ -101,7 +101,7 @@
         "name": "Geometry and Mesh_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;A|i_name|eq|MeshSizeTableItem;O|i_name|eq|MeshQualityTableItem;O|i_type|eq|image;O|i_name|eq|MeshOrthogonalHistogram;",
+        "item_filter": "A|i_type|eq|table;",
         "params": {
             "properties": {
                 "source_slide": 5,
@@ -173,7 +173,7 @@
         "name": "Simulation Setup_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;A|i_name|eq|ModelsTableItem;O|i_type|eq|tree;O|i_name|eq|MaterialsTreeItem;O|i_name|eq|CellZonesTreeItem;O|i_name|eq|BoundaryZonesTreeItem;O|i_name|eq|ReferenceValuesTableItem;O|i_name|eq|SolverSettingsTreeItem;",
+        "item_filter": "A|i_type|eq|table;",
         "params": {
             "properties": {
                 "source_slide": 9,
@@ -193,7 +193,7 @@
         "name": "Physics_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;A|i_name|eq|ModelsTableItem;O|i_type|eq|tree;O|i_name|eq|MaterialsTreeItem;O|i_name|eq|CellZonesTreeItem;O|i_name|eq|BoundaryZonesTreeItem;O|i_name|eq|ReferenceValuesTableItem;",
+        "item_filter": "A|i_type|eq|table;",
         "params": {
             "properties": {
                 "source_slide": 10,
@@ -215,7 +215,7 @@
     "Template_20": {
         "name": "Models_template_ppt",
         "report_type": "Layout:pptxslide",
-        "tags": "dataset=4b878171-05af-11f0-a78e-743af4bc475f",
+        "tags": "",
         "item_filter": "A|i_type|eq|table;A|i_name|eq|ModelsTableItem;",
         "params": {
             "properties": {
@@ -232,7 +232,7 @@
     "Template_21": {
         "name": "Material Properties_template_ppt",
         "report_type": "Layout:pptxslide",
-        "tags": "dataset=4b878171-05af-11f0-a78e-743af4bc475f",
+        "tags": "",
         "item_filter": "A|i_type|eq|tree;A|i_name|eq|MaterialsTreeItem;",
         "params": {
             "properties": {
@@ -249,7 +249,7 @@
     "Template_22": {
         "name": "Cell Zone Conditions_template_ppt",
         "report_type": "Layout:pptxslide",
-        "tags": "dataset=4b878171-05af-11f0-a78e-743af4bc475f",
+        "tags": "",
         "item_filter": "A|i_type|eq|tree;A|i_name|eq|CellZonesTreeItem;",
         "params": {
             "properties": {
@@ -266,7 +266,7 @@
     "Template_23": {
         "name": "Boundary Conditions_template_ppt",
         "report_type": "Layout:pptxslide",
-        "tags": "dataset=4b878171-05af-11f0-a78e-743af4bc475f",
+        "tags": "",
         "item_filter": "A|i_type|eq|tree;A|i_name|eq|BoundaryZonesTreeItem;",
         "params": {
             "properties": {
@@ -283,7 +283,7 @@
     "Template_24": {
         "name": "Reference Values_template_ppt",
         "report_type": "Layout:pptxslide",
-        "tags": "dataset=4b878171-05af-11f0-a78e-743af4bc475f",
+        "tags": "",
         "item_filter": "A|i_type|eq|table;A|i_name|eq|ReferenceValuesTableItem;",
         "params": {
             "properties": {
