@@ -1,0 +1,568 @@
+{
+    "Template_0": {
+        "name": "Test_ppt",
+        "report_type": "Layout:pptx",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "input_pptx": "Simulation_Report_input_ppt.pptx",
+                "output_pptx": "Simulation_Report.pptx",
+                "use_all_slides": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": null,
+        "guid": "07ac56d8-8278-4401-adc2-491ec5a9ba7e",
+        "children": [
+            "Template_1",
+            "Template_2",
+            "Template_3",
+            "Template_4",
+            "Template_5",
+            "Template_6",
+            "Template_7",
+            "Template_8",
+            "Template_9",
+            "Template_10",
+            "Template_11",
+            "Template_12",
+            "Template_13",
+            "Template_14"
+        ]
+    },
+    "Template_1": {
+        "name": "ReportTitleText_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "source_slide": 1,
+                "exclude_from_toc": "1"
+            },
+            "HTML": "<h2>Simulation Report</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_2": {
+        "name": "TOC_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "source_slide": 3,
+                "exclude_from_toc": "1"
+            },
+            "HTML": "<h2>Table of Contents</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_3": {
+        "name": "Header_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|HeaderTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 2,
+                "exclude_from_toc": "1"
+            },
+            "HTML": "<h2>Header</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_4": {
+        "name": "System Information_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|SystemTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 4,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>System Information</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_5": {
+        "name": "Geometry and Mesh_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;",
+        "params": {
+            "properties": {
+                "source_slide": 5,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Geometry and Mesh</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_15",
+            "Template_16",
+            "Template_17"
+        ]
+    },
+    "Template_15": {
+        "name": "Mesh Size_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|MeshSizeTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 6,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Mesh Size</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_5",
+        "children": []
+    },
+    "Template_16": {
+        "name": "Mesh Quality_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|MeshQualityTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 7,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Mesh Quality</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_5",
+        "children": []
+    },
+    "Template_17": {
+        "name": "Orthogonal Quality_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|eq|MeshOrthogonalHistogram;",
+        "params": {
+            "properties": {
+                "source_slide": 8,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Orthogonal Quality</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_5",
+        "children": []
+    },
+    "Template_6": {
+        "name": "Simulation Setup_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;",
+        "params": {
+            "properties": {
+                "source_slide": 9,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Simulation Setup</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_18",
+            "Template_19"
+        ]
+    },
+    "Template_18": {
+        "name": "Physics_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;",
+        "params": {
+            "properties": {
+                "source_slide": 10,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Physics</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_6",
+        "children": [
+            "Template_20",
+            "Template_21",
+            "Template_22",
+            "Template_23",
+            "Template_24"
+        ]
+    },
+    "Template_20": {
+        "name": "Models_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ModelsTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 11,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Models</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_18",
+        "children": []
+    },
+    "Template_21": {
+        "name": "Material Properties_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|MaterialsTreeItem;",
+        "params": {
+            "properties": {
+                "source_slide": 12,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Material Properties</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_18",
+        "children": []
+    },
+    "Template_22": {
+        "name": "Cell Zone Conditions_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|CellZonesTreeItem;",
+        "params": {
+            "properties": {
+                "source_slide": 13,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Cell Zone Conditions</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_18",
+        "children": []
+    },
+    "Template_23": {
+        "name": "Boundary Conditions_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|BoundaryZonesTreeItem;",
+        "params": {
+            "properties": {
+                "source_slide": 14,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Boundary Conditions</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_18",
+        "children": []
+    },
+    "Template_24": {
+        "name": "Reference Values_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ReferenceValuesTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 15,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Reference Values</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_18",
+        "children": []
+    },
+    "Template_19": {
+        "name": "Solver Settings_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|SolverSettingsTreeItem;",
+        "params": {
+            "properties": {
+                "source_slide": 16,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Solver Settings</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_6",
+        "children": []
+    },
+    "Template_7": {
+        "name": "Run Information_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|RunTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 17,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Run Information</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_8": {
+        "name": "Solution Status_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|SolverStatusTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 18,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Solution Status</h2><h4>Iterations: 65</h4>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_9": {
+        "name": "Named Expressions_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ExpressionsTableItem;",
+        "params": {
+            "properties": {
+                "source_slide": 19,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Named Expressions</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_10": {
+        "name": "Report Definitions_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|ReportDefinitionsTreeItem;",
+        "params": {
+            "properties": {
+                "source_slide": 20,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Report Definitions</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_11": {
+        "name": "Plots_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|cont|_plot;",
+        "params": {
+            "properties": {
+                "source_slide": 21,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Plots</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_25",
+            "Template_26"
+        ]
+    },
+    "Template_25": {
+        "name": "Residuals_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|residuals_plot;",
+        "params": {
+            "properties": {
+                "source_slide": 22,
+                "exclude_from_toc": "0",
+                "pptx_legend_position": "bottom",
+                "pptx_log_base": "10"
+            },
+            "HTML": "<h2>Residuals</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_11",
+        "children": []
+    },
+    "Template_26": {
+        "name": "Report Plots_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|cont|_plot;",
+        "params": {
+            "properties": {
+                "source_slide": 23,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Report Plots</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_11",
+        "children": [
+            "Template_27"
+        ]
+    },
+    "Template_27": {
+        "name": "Report Plots_child_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_plot;",
+        "params": {
+            "properties": {
+                "source_slide": 24,
+                "exclude_from_toc": "1",
+                "pptx_legend_position": "bottom",
+                "show_tag_title_only": "1"
+            },
+            "HTML": "<h2>report plots</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_26",
+        "children": []
+    },
+    "Template_12": {
+        "name": "Mesh_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
+        "params": {
+            "properties": {
+                "source_slide": 25,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Mesh</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_28"
+        ]
+    },
+    "Template_28": {
+        "name": "Mesh_child_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_mesh;",
+        "params": {
+            "properties": {
+                "source_slide": 26,
+                "exclude_from_toc": "1",
+                "show_tag_title_only": "1"
+            },
+            "HTML": "<h2>mesh</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_12",
+        "children": []
+    },
+    "Template_13": {
+        "name": "Pathlines_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
+        "params": {
+            "properties": {
+                "source_slide": 31,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Pathlines</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_29"
+        ]
+    },
+    "Template_29": {
+        "name": "Pathlines_child_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_pathline;",
+        "params": {
+            "properties": {
+                "source_slide": 32,
+                "exclude_from_toc": "1",
+                "show_tag_title_only": "1"
+            },
+            "HTML": "<h2>pathlines</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_13",
+        "children": []
+    },
+    "Template_14": {
+        "name": "Contours_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "params": {
+            "properties": {
+                "source_slide": 27,
+                "exclude_from_toc": "0"
+            },
+            "HTML": "<h2>Contours</h2>",
+            "comments": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_30"
+        ]
+    },
+    "Template_30": {
+        "name": "Contours_child_template_ppt",
+        "report_type": "Layout:pptxslide",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_contour;",
+        "params": {
+            "properties": {
+                "source_slide": 28,
+                "exclude_from_toc": "1",
+                "show_tag_title_only": "1"
+            },
+            "HTML": "<h2>contours</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_14",
+        "children": []
+    }
+}
