@@ -1,5 +1,28 @@
 import pytest
 
+from src.ansys.dynamicreporting.core.exceptions import InvalidFieldError
+
+
+@pytest.mark.ado_test
+def test_field_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(InvalidFieldError):
+        assert HTML.get(lol=1)
+
+
+@pytest.mark.ado_test
+def test_field_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(TypeError):
+        HTML.create(
+            name=1,  # error
+            content="<h1>Heading 1</h1>",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
+
 
 @pytest.mark.ado_test
 def test_create_html_cls(adr_serverless):
@@ -12,6 +35,32 @@ def test_create_html_cls(adr_serverless):
         dataset=adr_serverless.dataset,
     )
     assert HTML.get(name="test_create_html_cls").guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_str(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_str",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert str(intro_html) == f"<HTML: {intro_html.guid}>"
+
+
+@pytest.mark.ado_test
+def test_repr(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_repr",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert repr(intro_html) == f"<HTML: {intro_html.guid}>"
 
 
 @pytest.mark.ado_test
