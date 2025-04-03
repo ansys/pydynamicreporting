@@ -75,13 +75,11 @@ class BaseMeta(ABCMeta):
         if parents:
             # dynamically make the properties listed into class attrs
             if "_properties" in namespace:
-                dynamic_props_field = namespace["_properties"]
-                if hasattr(dynamic_props_field, "default"):
-                    props = dynamic_props_field.default
-                    new_namespace = {**namespace}
-                    for prop in props:
-                        new_namespace[prop] = None
-                    new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
+                props = namespace["_properties"]
+                new_namespace = {**namespace}
+                for prop in props:
+                    new_namespace[prop] = None
+                new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
             # save every class extending BaseModel
             mcs._cls_registry[cls_name] = new_cls
             # add exceptions
@@ -562,4 +560,4 @@ class Validator(ABC):
 
     @abstractmethod
     def process(self, value, obj):
-        pass
+        pass  # pragma: no cover
