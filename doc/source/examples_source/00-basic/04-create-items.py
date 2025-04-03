@@ -19,7 +19,7 @@ import numpy as np
 
 
 db_dir = 'C:\\tmp\\my_local_db_directory'
-ansys_ins = 'C:\\Program Files\Ansys Inc\\v241'
+ansys_ins = 'C:\\Program Files\\Ansys Inc\\v241'
 adr_service = adr.Service(ansys_installation=ansys_ins, db_directory=db_dir)
 session_guid = adr_service.start(create_db=True)
 
