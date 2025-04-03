@@ -1,10 +1,9 @@
 import pytest
 
-from src.ansys.dynamicreporting.core.exceptions import InvalidFieldError
-
 
 @pytest.mark.ado_test
 def test_field_error(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import InvalidFieldError
     from ansys.dynamicreporting.core.serverless import HTML
 
     with pytest.raises(InvalidFieldError):
