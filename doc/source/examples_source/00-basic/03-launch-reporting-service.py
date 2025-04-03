@@ -41,9 +41,6 @@ adr_service.stop()
 # credentials required.
 #
 
-import ansys.dynamicreporting.core as adr
-
-
 ansys_ins = r'C:\Program Files\Ansys Inc\v241'
 adr_service = adr.Service(ansys_installation=ansys_ins)
 adr_service.connect(url='http://localhost:8000', username='user', password='p455w0rd')
