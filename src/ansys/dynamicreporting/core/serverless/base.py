@@ -25,6 +25,7 @@ from django.db.utils import IntegrityError as DBIntegrityError
 from ..exceptions import (
     ADRException,
     IntegrityError,
+    InvalidFieldError,
     MultipleObjectsReturnedError,
     ObjectDoesNotExistError,
     ObjectNotSavedError,
@@ -44,7 +45,9 @@ def handle_field_errors(func):
         try:
             return func(*args, **kwargs)
         except (FieldError, FieldDoesNotExist, ValidationError, DataError) as e:
-            raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
+            raise InvalidFieldError(
+                extra_detail=f"One or more fields set or accessed are invalid: {e}"
+            )
 
     return wrapper
 

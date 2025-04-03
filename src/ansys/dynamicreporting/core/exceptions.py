@@ -135,3 +135,9 @@ class IntegrityError(ADRException):
     """Exception raised if there is a constraint violation while saving an object in the database."""
 
     detail = "A database integrity check failed."
+
+
+class InvalidFieldError(ADRException):
+    """Exception raised if a field is not valid."""
+
+    detail = "Field is invalid."
