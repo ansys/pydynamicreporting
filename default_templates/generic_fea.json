@@ -449,7 +449,8 @@
         "params": {
             "HTML": "<h2>References</h2>",
             "properties": {
-                "TOCItem": "1"
+                "TOCItem": "1",
+                "TOCLevel": "0"
             }
         },
         "sort_selection": "",
@@ -560,7 +561,7 @@
         "name": "Appendix-B",
         "report_type": "Layout:basic",
         "tags": "",
-        "item_filter": "A|i_tags|cont|section=appendixA;",
+        "item_filter": "A|i_tags|cont|section=appendixB;",
         "params": {
             "HTML": "<p>Appendix B</p>",
             "properties": {
