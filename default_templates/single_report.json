@@ -1,0 +1,792 @@
+{
+    "Template_0": {
+        "name": "Single Simulation Report",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|simulation=runA;",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": null,
+        "guid": "ff0c691a-1d73-44ba-a0c6-6b2ee6a2b909",
+        "children": [
+            "Template_1",
+            "Template_2",
+            "Template_3",
+            "Template_4",
+            "Template_5",
+            "Template_6",
+            "Template_7",
+            "Template_8",
+            "Template_9",
+            "Template_10",
+            "Template_11",
+            "Template_12"
+        ]
+    },
+    "Template_1": {
+        "name": "Top",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_13",
+            "Template_14",
+            "Template_15",
+            "Template_16"
+        ]
+    },
+    "Template_13": {
+        "name": "Logo",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|eq|AnsysLogo;O|i_name|eq|UserLogo;",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            },
+            "filter_type": "root_replace"
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_14": {
+        "name": "Title",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|html;A|i_name|eq|ReportTitle;",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_15": {
+        "name": "Header",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|HeaderTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "1"
+            },
+            "HTML": "",
+            "skip_empty": 1
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_16": {
+        "name": "Table of Contents",
+        "report_type": "Layout:toc",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_nothing_selected_;",
+        "params": {
+            "HTML": "<h3>Table of Contents</h3>",
+            "TOCitems": 1,
+            "TOCtables": 0,
+            "TOCfigures": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_2": {
+        "name": "System Information",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|cont|table;A|i_name|eq|SystemTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>System Information</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_3": {
+        "name": "Geometry and Mesh",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Geometry and Mesh</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_17",
+            "Template_18",
+            "Template_19"
+        ]
+    },
+    "Template_17": {
+        "name": "Mesh Size",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|table;A|i_name|eq|MeshSizeTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Mesh Size</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_3",
+        "children": []
+    },
+    "Template_18": {
+        "name": "Mesh Quality",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|table;A|i_name|eq|MeshQualityTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Mesh Quality</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_3",
+        "children": []
+    },
+    "Template_19": {
+        "name": "Orthogonal Quality",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|eq|MeshOrthogonalHistogram;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Orthogonal Quality</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_3",
+        "children": []
+    },
+    "Template_4": {
+        "name": "Simulation Setup",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Simulation Setup</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_20",
+            "Template_21"
+        ]
+    },
+    "Template_20": {
+        "name": "Physics",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "panel_template_toggle": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Physics</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_4",
+        "children": [
+            "Template_22",
+            "Template_23",
+            "Template_24",
+            "Template_25"
+        ]
+    },
+    "Template_22": {
+        "name": "Models",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ModelsTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Models</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_20",
+        "children": []
+    },
+    "Template_23": {
+        "name": "Material Properties",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|MaterialsTreeItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Material Properties</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_20",
+        "children": []
+    },
+    "Template_24": {
+        "name": "Boundary Conditions",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|BoundaryZonesTreeItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>{{\"BoundaryZones\"|nexus_anchor}}Boundary Conditions</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_20",
+        "children": []
+    },
+    "Template_25": {
+        "name": "Reference Values",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ReferenceValuesTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Reference Values</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_20",
+        "children": []
+    },
+    "Template_21": {
+        "name": "Solver Settings",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|SolverSettingsTreeItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Solver Settings</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_4",
+        "children": []
+    },
+    "Template_5": {
+        "name": "Run Information",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|RunTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Run Information</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_6": {
+        "name": "Solution Status",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|SolverStatusTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Solution Status</h2><br /><br /><h4>Iterations: 10</h4>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_7": {
+        "name": "Plots",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Plots</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_26"
+        ]
+    },
+    "Template_26": {
+        "name": "PlotTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_7",
+        "children": [
+            "Template_27"
+        ]
+    },
+    "Template_27": {
+        "name": "Residuals",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|table;A|i_name|eq|residuals_plot;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Residuals</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_26",
+        "children": []
+    },
+    "Template_8": {
+        "name": "Mesh",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Mesh</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_28"
+        ]
+    },
+    "Template_28": {
+        "name": "MeshTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": [
+            "Template_29"
+        ]
+    },
+    "Template_29": {
+        "name": "mesh1",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|eq|mesh1;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>mesh-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_28",
+        "children": []
+    },
+    "Template_9": {
+        "name": "Contours",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Contours</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_30"
+        ]
+    },
+    "Template_30": {
+        "name": "ContourTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_9",
+        "children": [
+            "Template_31",
+            "Template_32"
+        ]
+    },
+    "Template_31": {
+        "name": "contour-1",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|cont|contour-1;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>contour-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_30",
+        "children": []
+    },
+    "Template_32": {
+        "name": "contour-2",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|eq|contour-1;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>temperature-contour</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_30",
+        "children": []
+    },
+    "Template_10": {
+        "name": "Pathlines",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|cont|pathline;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Pathlines</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_33"
+        ]
+    },
+    "Template_33": {
+        "name": "PathlineTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_10",
+        "children": [
+            "Template_34",
+            "Template_35"
+        ]
+    },
+    "Template_34": {
+        "name": "pathlines-1",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|eq|pathlines-1;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>pathlines-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_33",
+        "children": []
+    },
+    "Template_35": {
+        "name": "pathlines-2",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|image;A|i_name|eq|pathlines-2;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>pathlines-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_33",
+        "children": []
+    },
+    "Template_11": {
+        "name": "Scenes",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|cont|scene;O|i_name|cont|_scene;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Scenes</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_36"
+        ]
+    },
+    "Template_36": {
+        "name": "SceneTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_11",
+        "children": [
+            "Template_37",
+            "Template_38"
+        ]
+    },
+    "Template_37": {
+        "name": "scene-1(3D)",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|scene;A|i_name|cont|scene-1;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "width": 960,
+                "height": 720
+            },
+            "HTML": "<h2>scene-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_36",
+        "children": []
+    },
+    "Template_38": {
+        "name": "scene-2(3D)",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|scene;A|i_name|cont|scene-2;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "width": 960,
+                "height": 720
+            },
+            "HTML": "<h2>scene-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_36",
+        "children": []
+    },
+    "Template_12": {
+        "name": "Animations",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|cont|anim;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Animations</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_39"
+        ]
+    },
+    "Template_39": {
+        "name": "AnimationTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_12",
+        "children": [
+            "Template_40",
+            "Template_41"
+        ]
+    },
+    "Template_40": {
+        "name": "animation-1",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|anim;A|i_name|cont|animation-1;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>animation-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_39",
+        "children": []
+    },
+    "Template_41": {
+        "name": "animation-2",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|cont|anim;A|i_name|cont|animation-2;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>animation-1</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_39",
+        "children": []
+    }
+}
