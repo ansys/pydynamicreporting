@@ -28,7 +28,7 @@
         "name": "Top",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_tags|cont|ReportType=Parametric;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "0"
@@ -148,7 +148,7 @@
         "name": "Physics",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_tags|cont|'Design Point'='Base DP';O|i_type|eq|table;O|i_name|eq|ModelsTableItem;A|i_tags|cont|'Design Point'='Base DP';O|i_type|eq|tree;O|i_name|eq|MaterialsTreeItem;A|i_tags|cont|'Design Point'='Base DP';O|i_name|eq|CellZonesTreeItem;A|i_tags|cont|'Design Point'='Base DP';O|i_name|eq|BoundaryZonesTreeItem;A|i_tags|cont|'Design Point'='Base DP';O|i_name|eq|ReferenceValuesTableItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -281,7 +281,7 @@
         "name": "Parametric Plots",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|cont|table;A|i_name|cont|parametric_plot;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -318,7 +318,7 @@
         "name": "Mesh",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -339,7 +339,7 @@
         "name": "MeshTabs",
         "report_type": "Layout:tabs",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "0",
@@ -402,7 +402,7 @@
         "name": "Contours",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -423,7 +423,7 @@
         "name": "ContourTabs",
         "report_type": "Layout:tabs",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "0",
@@ -486,7 +486,7 @@
         "name": "Pathlines",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -507,7 +507,7 @@
         "name": "PathlineTabs",
         "report_type": "Layout:tabs",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "0",
@@ -637,7 +637,7 @@
         "name": "Scenes",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_scene;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -658,7 +658,7 @@
         "name": "SceneTabs",
         "report_type": "Layout:tabs",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_scene;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "0",

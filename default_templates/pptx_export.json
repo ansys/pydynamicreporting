@@ -1,6 +1,6 @@
 {
     "Template_0": {
-        "name": "Test_ppt",
+        "name": "PPTX Export Report",
         "report_type": "Layout:pptx",
         "tags": "",
         "item_filter": "",
@@ -101,7 +101,7 @@
         "name": "Geometry and Mesh_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 5,
@@ -173,7 +173,7 @@
         "name": "Simulation Setup_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 9,
@@ -193,7 +193,7 @@
         "name": "Physics_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 10,
@@ -386,7 +386,7 @@
         "name": "Plots_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;A|i_name|cont|_plot;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 21,
@@ -424,7 +424,7 @@
         "name": "Report Plots_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|table;A|i_name|cont|_plot;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 23,
@@ -443,7 +443,7 @@
         "name": "Report Plots_child_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_name|cont|_plot;",
+        "item_filter": "A|i_type|eq|table;A|i_name|cont|_plot;",
         "params": {
             "properties": {
                 "source_slide": 24,
@@ -461,7 +461,7 @@
         "name": "Mesh_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 25,
@@ -480,7 +480,7 @@
         "name": "Mesh_child_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_name|cont|_mesh;",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
         "params": {
             "properties": {
                 "source_slide": 26,
@@ -497,7 +497,7 @@
         "name": "Pathlines_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 31,
@@ -516,7 +516,7 @@
         "name": "Pathlines_child_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_name|cont|_pathline;",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
         "params": {
             "properties": {
                 "source_slide": 32,
@@ -533,7 +533,7 @@
         "name": "Contours_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "source_slide": 27,
@@ -552,7 +552,7 @@
         "name": "Contours_child_template_ppt",
         "report_type": "Layout:pptxslide",
         "tags": "",
-        "item_filter": "A|i_name|cont|_contour;",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
         "params": {
             "properties": {
                 "source_slide": 28,
