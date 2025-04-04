@@ -267,7 +267,7 @@ class BaseModel(metaclass=BaseMeta):
     def db(self):
         return self._orm_db
 
-    def as_dict(self):
+    def as_dict(self, recursive=False) -> dict[str, Any]:
         out_dict = {}
         # use a combination of vars and fields
         cls_fields = set(self._get_field_names() + self._get_var_field_names())
@@ -277,6 +277,9 @@ class BaseModel(metaclass=BaseMeta):
             value = getattr(self, field_, None)
             if value is None:  # skip and use defaults
                 continue
+            if isinstance(value, list) and recursive:
+                # convert to guids
+                value = [obj.guid for obj in value]
             out_dict[field_] = value
         return out_dict
 
