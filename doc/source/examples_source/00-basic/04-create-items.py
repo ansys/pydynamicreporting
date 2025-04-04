@@ -14,9 +14,9 @@ Initially we must create and start a session, as per other examples.
 
 """
 
-import ansys.dynamicreporting.core as adr
 import numpy as np
 
+import ansys.dynamicreporting.core as adr
 
 db_dir = "C:\\tmp\\my_local_db_directory"
 ansys_ins = "C:\\Program Files\\Ansys Inc\\v241"

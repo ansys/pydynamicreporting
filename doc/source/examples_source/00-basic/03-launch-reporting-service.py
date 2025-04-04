@@ -14,7 +14,6 @@ and an existing, empty, directory may be provided if you intend to create a data
 
 import ansys.dynamicreporting.core as adr
 
-
 db_dir = "C:\\tmp\\my_local_db_directory"
 ansys_ins = "C:\\Program Files\\Ansys Inc\\v241"
 

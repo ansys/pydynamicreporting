@@ -23,6 +23,7 @@ Initially we must create and start a session, as per other examples.
 #
 
 import numpy as np
+
 import ansys.dynamicreporting.core as adr
 
 db_dir = "C:\\tmp\\new_database"
