@@ -25,10 +25,9 @@ session_guid = adr_service.start(create_db=True)
 
 
 ###############################################################################
-# Create a table
-# ~~~~~~~~~~~~~~
-# Once a `Service` object has been created, it must be started. It can be #
-# similarly stopped.
+# Create a text item
+# ~~~~~~~~~~~~~~~~~~
+# Text items are supplied as strings and can contain HTML instructions.
 #
 
 my_text = adr_service.create_item(obj_name="Text")
