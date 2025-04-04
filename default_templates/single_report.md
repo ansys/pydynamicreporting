@@ -19,7 +19,7 @@ Report
 │   ├── Orthogonal Quality
 ├── Simulation Setup
 │   ├── Physics
-│   |   ├── Models 
+│   |   ├── Models
 │   |   ├── Material Properties
 │   |   ├── Bounday Conditions
 │   |   ├── Reference Values
@@ -75,7 +75,7 @@ Report -> item tag contains "simulation=runA"
 ├── Mesh
 │   ├── Tabs of mesh images -> Image item with name "mesh1"
 ├── Contours
-│   ├── Tabs of contours images -> Image item with name that contains "_contour1" or "_contour2" 
+│   ├── Tabs of contours images -> Image item with name that contains "_contour1" or "_contour2"
 ├── Pathlines
 │   ├── Tabs of pathline images -> Image item with name "pathlines-1" or "pathlines-2"
 ├── Scenes
@@ -84,4 +84,4 @@ Report -> item tag contains "simulation=runA"
     ├── Tabs of animation files -> Animation item with name that contains "animation-1" or "animation-2"
 ```
 
-For the tabs sections, you can create a new template child for each object you want to place in a separate tab. Remember to set the filters correctly on each child template. This is just an example to place one or two tabs on each of these sections. 
+For the tabs sections, you can create a new template child for each object you want to place in a separate tab. Remember to set the filters correctly on each child template. This is just an example to place one or two tabs on each of these sections.

@@ -19,11 +19,11 @@ Report
 │   ├── Othogonal Quality_template_ppt
 ├── Simulation Setup_template_ppt
 │   ├── Physics_template_ppt
-│   ├── ├── Models_template_ppt 
-│   ├── ├── Material Properties_template_ppt 
-│   ├── ├── Cell Zones Conditions_template_ppt 
-│   ├── ├── Boundary Conditions_template_ppt 
-│   ├── ├── Reference Values_template_ppt 
+│   ├── ├── Models_template_ppt
+│   ├── ├── Material Properties_template_ppt
+│   ├── ├── Cell Zones Conditions_template_ppt
+│   ├── ├── Boundary Conditions_template_ppt
+│   ├── ├── Reference Values_template_ppt
 │   ├── Solver Settings_template_ppt
 ├── Run Information_template_ppt
 ├── Solution Status_template_ppt

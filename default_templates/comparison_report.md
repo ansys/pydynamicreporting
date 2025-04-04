@@ -15,7 +15,7 @@ Report
 ├── Design Points Table
 ├── Base Case Simulation Setup
 │   ├── Physics
-│   |   ├── Models 
+│   |   ├── Models
 │   |   ├── Material Properties
 │   |   ├── Cell Zones Conditions
 │   |   ├── Bounday Conditions
@@ -47,11 +47,11 @@ You can add or modify the structure of the report by adding / removing / modifyi
 
 ## Filters
 
-Each report section is populated with items from the database that pass the aggregated filters. You can modify these filters to fit your database. 
+Each report section is populated with items from the database that pass the aggregated filters. You can modify these filters to fit your database.
 
 The report is written assuming that all data is tagged with a 'Design Point=DPX' tag that marks which design point each item refers to. Please adjust the filters accordingly if this isn't the case in you database.
 
-At the top level, there is a filter for item tags containing the string 'Design Point' and 'ReportType=Parametric'. 
+At the top level, there is a filter for item tags containing the string 'Design Point' and 'ReportType=Parametric'.
 
 The following tree displays the filter for each report leaf. This template mainly uses item names, types and tags to place them in the correct section.
 
@@ -70,7 +70,7 @@ Report -> Items with  'Design Point' and 'ReportType=Parametric' in the tag
 │   |   ├── Bounday Conditions -> Tree item with name "BoundaryZonesTreeItem" and tags with "'Design Point'='Base DP'"
 │   |   ├── Reference Values -> Tree item with name "ReferenceValuesTableItem" and tags with "'Design Point'='Base DP'"
 │   ├── Solver Settings -> Tree item with name "SolverSettingsTreeItem" and tags with "'Design Point'='Base DP'"
-├── Parametrics Plots 
+├── Parametrics Plots
 │   ├── ParametricPlotTabs -> Table item with name that contains '_parametric_plot'
 ├── Mesh
 │   ├── Mesh slider -> Image items with "_mesh" in the name
