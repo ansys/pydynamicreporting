@@ -58,7 +58,7 @@ class Template(BaseModel):
         return self._master
 
     def save(self, **kwargs):
-        if self.parent is not None and not self.parent._saved:
+        if self.parent is not None and not self.parent.saved:
             raise Template.NotSaved(
                 extra_detail="Failed to save template because its parent is not saved"
             )
@@ -68,7 +68,7 @@ class Template(BaseModel):
                 raise TypeError(
                     f"Failed to save template because child '{child}' is not a Template object"
                 )
-            if not child._saved:
+            if not child.saved:
                 raise Template.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )

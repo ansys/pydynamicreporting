@@ -23,8 +23,8 @@ from django.db.models.manager import Manager
 from django.db.utils import IntegrityError as DBIntegrityError
 
 from ..exceptions import (
-    ADRException,
     IntegrityError,
+    InvalidFieldError,
     MultipleObjectsReturnedError,
     ObjectDoesNotExistError,
     ObjectNotSavedError,
@@ -44,7 +44,9 @@ def handle_field_errors(func):
         try:
             return func(*args, **kwargs)
         except (FieldError, FieldDoesNotExist, ValidationError, DataError) as e:
-            raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
+            raise InvalidFieldError(
+                extra_detail=f"One or more fields set or accessed are invalid: {e}"
+            )
 
     return wrapper
 
@@ -75,13 +77,11 @@ class BaseMeta(ABCMeta):
         if parents:
             # dynamically make the properties listed into class attrs
             if "_properties" in namespace:
-                dynamic_props_field = namespace["_properties"]
-                if hasattr(dynamic_props_field, "default"):
-                    props = dynamic_props_field.default
-                    new_namespace = {**namespace}
-                    for prop in props:
-                        new_namespace[prop] = None
-                    new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
+                props = namespace["_properties"]
+                new_namespace = {**namespace}
+                for prop in props:
+                    new_namespace[prop] = None
+                new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
             # save every class extending BaseModel
             mcs._cls_registry[cls_name] = new_cls
             # add exceptions
@@ -266,7 +266,7 @@ class BaseModel(metaclass=BaseMeta):
     def db(self):
         return self._orm_db
 
-    def as_dict(self):
+    def as_dict(self, recursive=False) -> dict[str, Any]:
         out_dict = {}
         # use a combination of vars and fields
         cls_fields = set(self._get_field_names() + self._get_var_field_names())
@@ -276,6 +276,9 @@ class BaseModel(metaclass=BaseMeta):
             value = getattr(self, field_, None)
             if value is None:  # skip and use defaults
                 continue
+            if isinstance(value, list) and recursive:
+                # convert to guids
+                value = [obj.guid for obj in value]
             out_dict[field_] = value
         return out_dict
 
@@ -562,4 +565,4 @@ class Validator(ABC):
 
     @abstractmethod
     def process(self, value, obj):
-        pass
+        pass  # pragma: no cover
