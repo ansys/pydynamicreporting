@@ -144,3 +144,18 @@ def test_get_tags(adr_serverless):
         dataset=adr_serverless.dataset,
     )
     assert "dp=dp227" in HTML.get(guid=intro_html.guid).get_tags()
+
+
+@pytest.mark.ado_test
+def test_db(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_db",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    from django.conf import settings
+
+    assert intro_html.db in settings.DATABASES
