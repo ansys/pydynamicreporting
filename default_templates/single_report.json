@@ -550,7 +550,7 @@
         "name": "contour-2",
         "report_type": "Layout:basic",
         "tags": "",
-        "item_filter": "A|i_type|cont|image;A|i_name|eq|contour-1;",
+        "item_filter": "A|i_type|cont|image;A|i_name|cont|contour-2;",
         "params": {
             "properties": {
                 "TOCItem": "0",
@@ -641,7 +641,7 @@
         "name": "Scenes",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|cont|scene;O|i_name|cont|_scene;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
@@ -719,7 +719,7 @@
         "name": "Animations",
         "report_type": "Layout:panel",
         "tags": "",
-        "item_filter": "A|i_type|cont|anim;",
+        "item_filter": "",
         "params": {
             "properties": {
                 "TOCItem": "1",
