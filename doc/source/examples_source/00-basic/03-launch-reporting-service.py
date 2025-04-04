@@ -11,11 +11,12 @@ and an existing, empty, directory may be provided if you intend to create a data
    This example assumes that you have a local Ansys installation.
 
 """
+
 import ansys.dynamicreporting.core as adr
 
 
-db_dir = 'C:\\tmp\\my_local_db_directory'
-ansys_ins = 'C:\\Program Files\\Ansys Inc\\v241'
+db_dir = "C:\\tmp\\my_local_db_directory"
+ansys_ins = "C:\\Program Files\\Ansys Inc\\v241"
 
 adr_service = adr.Service(ansys_installation=ansys_ins, db_directory=db_dir)
 
@@ -37,13 +38,13 @@ adr_service.stop()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # You may need to connect to a service that is already running. To do so create
 # a Service object, as before, but leave off the database argument and this time,
-# call the `connect` method and provide connection details, including any 
+# call the `connect` method and provide connection details, including any
 # credentials required.
 #
 
-ansys_ins = r'C:\Program Files\Ansys Inc\v241'
+ansys_ins = r"C:\Program Files\Ansys Inc\v241"
 adr_service = adr.Service(ansys_installation=ansys_ins)
-adr_service.connect(url='http://localhost:8000', username='user', password='p455w0rd')
+adr_service.connect(url="http://localhost:8000", username="user", password="p455w0rd")
 
 # To stop the service
 adr_service.stop()

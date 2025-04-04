@@ -44,16 +44,15 @@ simple_table.item_table = np.array(
 simple_table.labels_row = ["X", "line", "square"]
 
 ###############################################################################
-# Once we have created a table we can actually set it to be a plot by changing 
+# Once we have created a table we can actually set it to be a plot by changing
 # its properties
 #
 
 # Set visualization to be plot instead of table
-simple_table.plot = 'line'
+simple_table.plot = "line"
 
 # Set X axis and axis formatting
-simple_table.xaxis = 'Row 1'
-simple_table.format = 'floatdot1'
+simple_table.xaxis = "Row 1"
+simple_table.format = "floatdot1"
 
 adr_service.stop()
-
