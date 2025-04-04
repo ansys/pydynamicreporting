@@ -39,11 +39,3 @@ def adr_serverless(pytestconfig: pytest.Config) -> ADR:
 
     # Cleanup
     adr.close()
-
-
-@pytest.fixture(autouse=True, scope="function")
-def teardown(adr_serverless):
-    yield
-    # delete all objects
-    adr_serverless.query(query_type=Item, query="").delete()
-    adr_serverless.query(query_type=Template, query="").delete()
