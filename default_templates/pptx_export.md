@@ -16,7 +16,7 @@ Report
 ├── Geometry and Mesh_template_ppt
 │   ├── Mesh Size_template_ppt
 │   ├── Mesh Quality_template_ppt
-│   ├── Othogonal Quality_template_ppt
+│   ├── Orthogonal Quality_template_ppt
 ├── Simulation Setup_template_ppt
 │   ├── Physics_template_ppt
 │   ├── ├── Models_template_ppt
@@ -56,13 +56,13 @@ Report
 ├── Geometry and Mesh_template_ppt
 │   ├── Mesh Size_template_ppt -> Table item with name "MeshSizeTableItem"
 │   ├── Mesh Quality_template_ppt -> Table item with name "MeshQualityTableItem"
-│   ├── Othogonal Quality_template_ppt -> Table item with name "MeshSizeTableItem"
+│   ├── Orthogonal Quality_template_ppt -> Table item with name "MeshSizeTableItem"
 ├── Simulation Setup_template_ppt -> Table image with name "MeshOrthogonalHistogram"
 │   ├── Physics_template_ppt
 │   ├── ├── Models_template_ppt -> Table item with name "ModelsTableItem"
 │   ├── ├── Material Properties_template_ppt -> Tree item with name "MaterialsTreeItem"
 │   ├── ├── Cell Zones Conditions_template_ppt -> Tree item with name "CellZonesTreeItem"
-│   ├── ├── Boundary Conditions_template_ppt -> Tree item with name "BoundayZonesTreeItem"
+│   ├── ├── Boundary Conditions_template_ppt -> Tree item with name "Boundary"
 │   ├── ├── Reference Values_template_ppt -> Table item with name "ReferenceValuesTableItem"
 │   ├── Solver Settings_template_ppt -> Tree item with name "SolverSettingsTreeItem"
 ├── Run Information_template_ppt -> Table item with name "RunTableItem"

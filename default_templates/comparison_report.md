@@ -18,7 +18,7 @@ Report
 │   |   ├── Models
 │   |   ├── Material Properties
 │   |   ├── Cell Zones Conditions
-│   |   ├── Bounday Conditions
+│   |   ├── Boundary Conditions
 │   |   ├── Reference Values
 │   ├── Solver Settings
 ├── Parametrics Plots
@@ -67,7 +67,7 @@ Report -> Items with  'Design Point' and 'ReportType=Parametric' in the tag
 │   |   ├── Models -> Table item with name "ModelsTableItem" and tags with "'Design Point'='Base DP'"
 │   |   ├── Material Properties -> Tree item with name "MaterialsTreeItem" and tags with "'Design Point'='Base DP'"
 │   |   ├── Cell Zones Conditions -> Tree item with name "CellZonesTreeItem" and tags with "'Design Point'='Base DP'"
-│   |   ├── Bounday Conditions -> Tree item with name "BoundaryZonesTreeItem" and tags with "'Design Point'='Base DP'"
+│   |   ├── Boundary Conditions -> Tree item with name "BoundaryZonesTreeItem" and tags with "'Design Point'='Base DP'"
 │   |   ├── Reference Values -> Tree item with name "ReferenceValuesTableItem" and tags with "'Design Point'='Base DP'"
 │   ├── Solver Settings -> Tree item with name "SolverSettingsTreeItem" and tags with "'Design Point'='Base DP'"
 ├── Parametrics Plots

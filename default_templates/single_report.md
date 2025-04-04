@@ -21,7 +21,7 @@ Report
 │   ├── Physics
 │   |   ├── Models
 │   |   ├── Material Properties
-│   |   ├── Bounday Conditions
+│   |   ├── Boundary Conditions
 │   |   ├── Reference Values
 │   ├── Solver Settings
 ├── Run Information
@@ -65,7 +65,7 @@ Report -> item tag contains "simulation=runA"
 │   ├── Physics
 │   |   ├── Models -> Table item with name "ModelsTableItem"
 │   |   ├── Material Properties -> Tree item with name "MaterialsTreeItem"
-│   |   ├── Bounday Conditions -> Tree item with name "BoundaryZonesTreeItem"
+│   |   ├── Boundary Conditions -> Tree item with name "BoundaryZonesTreeItem"
 │   |   ├── Reference Values -> Table item with name "ReferenceValuesTableItem"
 │   ├── Solver Settings -> Tree item with name "SolverSettingsTreeItem"
 ├── Run Information -> Table item with name "RunTableItem"
