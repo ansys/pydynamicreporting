@@ -90,5 +90,5 @@ def test_as_dict(adr_serverless):
         top_dict["name"] == "Serverless Simulation Report"
         and top_dict["tags"] == "dp=dp227"
         and top_dict["params"] == '{"HTML": "<h1>Serverless Simulation Report</h1>"}'
-        and top_dict["children"][0]["name"] == "TOC"
+        and top_dict["children"][0] == toc_layout.guid
     )
