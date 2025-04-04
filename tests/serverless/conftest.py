@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
-from ansys.dynamicreporting.core.serverless import ADR
+from ansys.dynamicreporting.core.serverless import ADR, Item, Template
 
 
 @pytest.fixture(scope="session")
@@ -39,3 +39,11 @@ def adr_serverless(pytestconfig: pytest.Config) -> ADR:
 
     # Cleanup
     adr.close()
+
+
+@pytest.fixture(autouse=True, scope="function")
+def teardown(adr_serverless):
+    yield
+    # delete all objects
+    adr_serverless.query(query_type=Item, query="")
+    adr_serverless.query(query_type=Template, query="")
