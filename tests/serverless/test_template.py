@@ -1,5 +1,7 @@
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import ObjectDoesNotExist
+
 
 @pytest.mark.ado_test
 def test_create_template_cls(adr_serverless):
@@ -92,3 +94,21 @@ def test_as_dict(adr_serverless):
         and top_dict["params"] == '{"HTML": "<h1>Serverless Simulation Report</h1>"}'
         and top_dict["children"][0] == toc_layout.guid
     )
+
+
+@pytest.mark.ado_test
+def test_child_not_exist(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout,
+        name="Serverless Simulation Report",
+        parent=None,
+        tags="dp=dp227",
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
+    toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
+    toc_layout._saved = True  # fake save
+    top_parent.children.append(toc_layout)
+    with pytest.raises(ObjectDoesNotExist):
+        top_parent.save()

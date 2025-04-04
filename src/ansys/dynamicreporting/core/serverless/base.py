@@ -23,7 +23,6 @@ from django.db.models.manager import Manager
 from django.db.utils import IntegrityError as DBIntegrityError
 
 from ..exceptions import (
-    ADRException,
     IntegrityError,
     InvalidFieldError,
     MultipleObjectsReturnedError,
