@@ -1,7 +1,5 @@
 import pytest
 
-from src.ansys.dynamicreporting.core.serverless.template import BasicLayout
-
 
 @pytest.mark.ado_test
 def test_create_template_cls(adr_serverless):
