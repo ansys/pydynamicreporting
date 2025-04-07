@@ -164,4 +164,4 @@ def test_child_not_exist(adr_serverless):
     toc_layout._saved = True  # Simulate that the child is saved, but does not exist in the database
     top_parent.children.append(toc_layout)
     with pytest.raises(TOCLayout.NotSaved):
-        toc_layout.save()
+        top_parent.save()
