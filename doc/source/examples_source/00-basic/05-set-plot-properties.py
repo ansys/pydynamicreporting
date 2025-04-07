@@ -18,7 +18,7 @@ Initially we must create and start a session, as per other examples.
 # Start an Ansys Dynamic Reporting service
 # ----------------------------------------
 #
-# Start an Ansys Dynamic Reporting service via a Docker image on a new
+# Start an Ansys Dynamic Reporting service on a new
 # database. The path for the database directory must be to an empty directory.
 #
 
