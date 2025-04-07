@@ -95,18 +95,17 @@ def test_as_dict(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_child_not_exist(adr_serverless):
+def test_child_not_saved(adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
 
     top_parent = adr_serverless.create_template(
         BasicLayout,
-        name="test_child_not_exist",
+        name="test_child_not_saved",
         parent=None,
         tags="dp=dp227",
         params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     )
     toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
-    toc_layout._saved = True  # fake save
     top_parent.children.append(toc_layout)
-    with pytest.raises(BasicLayout.DoesNotExist):
+    with pytest.raises(BasicLayout.NotSaved):
         top_parent.save()
