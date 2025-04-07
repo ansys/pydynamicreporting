@@ -72,10 +72,26 @@ def test_add_tag(adr_serverless):
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
     )
-    intro_html.add_tag("pptx_slide_title", "headers and breaks")
+    intro_html.add_tag("pptx_slide_title", value="headers and breaks")
     intro_html.save()
 
     assert "pptx_slide_title" in HTML.get(guid=intro_html.guid).get_tags()
+
+
+@pytest.mark.ado_test
+def test_add_tag_key(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import String
+
+    intro_text = String(
+        name="intro_text",
+        content="intro text",
+        tags="dp=dp227 section=intro",
+        source="sls-test",
+    )
+    intro_text.add_tag("sls-test")
+    intro_text.save()
+
+    assert "sls-test" in String.get(guid=intro_text.guid).tags
 
 
 @pytest.mark.ado_test
@@ -207,3 +223,70 @@ def test_delete_not_saved(adr_serverless):
     )
     with pytest.raises(HTML.NotSaved):
         intro_html.delete()
+
+
+@pytest.mark.ado_test
+def test_get_item(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_get_item",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    item = HTML.get(guid=intro_html.guid)
+    assert item.guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_get_item_does_not_exist(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(HTML.DoesNotExist):
+        HTML.get(guid="non_existent_guid")
+
+
+@pytest.mark.ado_test
+def test_get_item_multiple(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    HTML.create(
+        name="test_get_item_multiple",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    HTML(
+        name="test_get_item_multiple",
+        content="<h1>Heading 2</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    with pytest.raises(HTML.MultipleObjectsReturned):
+        HTML.get(name="test_get_item_multiple")
+
+
+@pytest.mark.ado_test
+def test_get_or_create_item(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    # tree
+    tree_content = [
+        {"key": "root", "name": "Solver", "value": "My Solver"},
+        {"key": "root", "name": "Number cells", "value": 10e6},
+        {"key": "root", "name": "Mesh Size", "value": "1.0 mm^3"},
+        {"key": "root", "name": "Mesh Type", "value": "Hex8"},
+    ]
+    # alternative way of creation
+    tree_kwargs = {
+        "name": "intro_tree",
+        "content": tree_content,
+        "tags": "dp=dp227 section=data",
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+        "source": "sls-test",
+    }
+    tree = Tree.get_or_create(**tree_kwargs)
+    new_tree = Tree.get_or_create(**tree_kwargs)
+    assert new_tree.guid == tree.guid
