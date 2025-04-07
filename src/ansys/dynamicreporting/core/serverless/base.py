@@ -299,8 +299,8 @@ class BaseModel(metaclass=BaseMeta):
                 try:
                     getattr(self._orm_instance, field_).add(*objs)
                 except (ObjectDoesNotExist, ValueError) as e:
-                    if objs:
-                        obj_cls = objs[0].__class__
+                    if value:
+                        obj_cls = value[0].__class__
                         raise obj_cls.NotSaved(extra_detail=str(e))
                     else:
                         raise ValueError(str(e))
