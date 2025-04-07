@@ -14,7 +14,6 @@ Initially we must create and start a session, as per other examples.
 
 """
 
-
 ###############################################################################
 # Start an Ansys Dynamic Reporting service
 # ----------------------------------------
@@ -69,4 +68,3 @@ server.put_objects(template_2)
 server.put_objects(template_0)
 
 adr_service.stop()
-

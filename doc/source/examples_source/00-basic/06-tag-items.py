@@ -7,9 +7,9 @@ What are "tags" for?
 When working with a items you can set, add, and remove tags on them.
 
 The system of tagging is how the Ansys Dynamic Reporting service knows
-where to put items into your reports. Filters can be applied later to 
+where to put items into your reports. Filters can be applied later to
 select the relevant tags for a specific section of the report. Items are
-fetched from teh database based on the tags they have associated with them.
+fetched from the database based on the tags they have associated with them.
 
 .. note::
    This example assumes that you have a local Ansys installation.
@@ -52,7 +52,7 @@ my_text.item_text = "<h1>Simple Title</h1>Abc..."
 my_text.set_tags("tag1=one tag2=two tag3=three")
 
 # Add or remove tags on an item
-my_text.add_tag(tag='tag4', value='four')
+my_text.add_tag(tag="tag4", value="four")
 my_text.rem_tag("tag1")
 
 adr_service.stop()
