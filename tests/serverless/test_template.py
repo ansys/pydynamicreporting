@@ -1,5 +1,7 @@
 import pytest
 
+from src.ansys.dynamicreporting.core.serverless.template import BasicLayout
+
 
 @pytest.mark.ado_test
 def test_create_template_cls(adr_serverless):
@@ -95,6 +97,44 @@ def test_as_dict(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_parent_not_saved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
+
+    top_parent = BasicLayout(
+        name="test_parent_not_saved",
+        parent=None,
+        tags="dp=dp227",
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
+    toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
+    with pytest.raises(BasicLayout.NotSaved):
+        toc_layout.save()
+
+
+@pytest.mark.ado_test
+def test_child_bad_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, BasicLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout,
+        name="test_child_bad_type",
+        parent=None,
+        tags="dp=dp227",
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
+    # Wrong type of child
+    toc_layout = HTML.create(
+        name="test_child_bad_type_item",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    top_parent.children.append(toc_layout)
+    with pytest.raises(TypeError):
+        top_parent.save()
+
+
+@pytest.mark.ado_test
 def test_child_not_saved(adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
 
@@ -107,5 +147,23 @@ def test_child_not_saved(adr_serverless):
     )
     toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
     top_parent.children.append(toc_layout)
-    with pytest.raises(BasicLayout.NotSaved):
+    with pytest.raises(TOCLayout.NotSaved):
         top_parent.save()
+
+
+@pytest.mark.ado_test
+def test_child_not_exist(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout,
+        name="test_child_not_exist",
+        parent=None,
+        tags="dp=dp227",
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
+    toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
+    toc_layout._saved = True  # Simulate that the child is saved, but does not exist in the database
+    top_parent.children.append(toc_layout)
+    with pytest.raises(TOCLayout.NotSaved):
+        toc_layout.save()
