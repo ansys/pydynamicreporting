@@ -1,7 +1,5 @@
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import ObjectDoesNotExist
-
 
 @pytest.mark.ado_test
 def test_create_template_cls(adr_serverless):
@@ -59,10 +57,10 @@ def test_raise_child_type_create(adr_serverless):
 
 @pytest.mark.ado_test
 def test_raise_child_type_save(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+    from ansys.dynamicreporting.core.serverless import BasicLayout
 
     with pytest.raises(TypeError):
-        top_parent = BasicLayout(name="Serverless Simulation Report", parent=None, tags="dp=dp227")
+        top_parent = BasicLayout(name="test_raise_child_type_save", parent=None, tags="dp=dp227")
         top_parent.children.append("T1")
         top_parent.save()
 
@@ -73,7 +71,7 @@ def test_as_dict(adr_serverless):
 
     top_parent = adr_serverless.create_template(
         BasicLayout,
-        name="Serverless Simulation Report",
+        name="test_as_dict",
         parent=None,
         tags="dp=dp227",
         params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
@@ -89,7 +87,7 @@ def test_as_dict(adr_serverless):
     top_dict = top_parent.as_dict(recursive=True)
 
     assert (
-        top_dict["name"] == "Serverless Simulation Report"
+        top_dict["name"] == "test_as_dict"
         and top_dict["tags"] == "dp=dp227"
         and top_dict["params"] == '{"HTML": "<h1>Serverless Simulation Report</h1>"}'
         and top_dict["children"][0] == toc_layout.guid
@@ -102,7 +100,7 @@ def test_child_not_exist(adr_serverless):
 
     top_parent = adr_serverless.create_template(
         BasicLayout,
-        name="Serverless Simulation Report",
+        name="test_child_not_exist",
         parent=None,
         tags="dp=dp227",
         params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
@@ -110,5 +108,5 @@ def test_child_not_exist(adr_serverless):
     toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
     toc_layout._saved = True  # fake save
     top_parent.children.append(toc_layout)
-    with pytest.raises(ObjectDoesNotExist):
+    with pytest.raises(BasicLayout.DoesNotExist):
         top_parent.save()
