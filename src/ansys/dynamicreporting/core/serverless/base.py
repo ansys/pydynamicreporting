@@ -443,15 +443,7 @@ class BaseModel(metaclass=BaseMeta):
         try:
             return cls.get(**kwargs), False
         except cls.DoesNotExist:
-            # Try to create an object using passed params.
-            try:
-                return cls.create(**kwargs), True
-            except cls.IntegrityError:
-                try:
-                    return cls.get(**kwargs), False
-                except cls.DoesNotExist:
-                    pass
-                raise
+            return cls.create(**kwargs), True
 
     @classmethod
     @handle_field_errors
