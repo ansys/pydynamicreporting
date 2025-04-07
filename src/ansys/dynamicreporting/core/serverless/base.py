@@ -296,7 +296,14 @@ class BaseModel(metaclass=BaseMeta):
                 continue
             if isinstance(value, list):
                 objs = [obj._orm_instance for obj in value]
-                getattr(self._orm_instance, field_).add(*objs)
+                try:
+                    getattr(self._orm_instance, field_).add(*objs)
+                except (ObjectDoesNotExist, ValueError) as e:
+                    if objs:
+                        obj_cls = objs[0].__class__
+                        raise obj_cls.NotSaved(extra_detail=str(e))
+                    else:
+                        raise ValueError(str(e))
             else:
                 if isinstance(value, BaseModel):  # relations
                     try:
