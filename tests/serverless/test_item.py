@@ -137,7 +137,7 @@ def test_get_tags(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
     intro_html = HTML.create(
-        name="test_set_tags",
+        name="test_get_tags",
         tags="dp=dp227",
         content="<h1>Heading 1</h1>",
         session=adr_serverless.session,
@@ -159,3 +159,51 @@ def test_db(adr_serverless):
     from django.conf import settings
 
     assert intro_html.db in settings.DATABASES
+
+
+@pytest.mark.ado_test
+def test_reinit(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_reinit",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    intro_html.reinit()
+    assert intro_html.saved is False
+
+
+@pytest.mark.ado_test
+def test_integrity_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_integrity_error",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    with pytest.raises(HTML.IntegrityError):
+        HTML.create(
+            guid=intro_html.guid,
+            name="test_integrity_error",
+            content="<h1>Heading 1</h1>",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
+
+
+@pytest.mark.ado_test
+def test_delete_not_saved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML(
+        name="test_delete_not_saved",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    with pytest.raises(HTML.NotSaved):
+        intro_html.delete()
