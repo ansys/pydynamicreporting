@@ -5,7 +5,9 @@ How to set plot properties
 ==========================
 
 When working with a table it is possible to turn it into a plot by specifying
-the plot type through the `plot` property.
+the plot type through the `plot` property. Once a table is converted
+you can alter all sorts of plot properties by accessing properties on
+the item object.
 
 .. note::
    This example assumes that you have a local Ansys installation.
@@ -38,22 +40,28 @@ session_guid = adr_service.start(create_db=True)
 # with 5 columns and 3 rows.
 #
 
-simple_table = adr_service.create_item(obj_name="Simple Table", source="Documentation")
-simple_table.item_table = np.array(
-    [[0, 1, 2, 3, 4], [0, 3, 6, 9, 12], [0, 1, 4, 9, 16]], dtype="|S20"
+my_table = adr_service.create_item(obj_name="Table")
+my_table.table_dict["rowlbls"] = ["Row 1", "Row 2"]
+my_table.item_table = np.array(
+    [["1", "2", "3", "4", "5"], ["1", "4", "9", "16", "25"]], dtype="|S20"
 )
-simple_table.labels_row = ["X", "line", "square"]
 
 ###############################################################################
 # Once we have created a table we can actually set it to be a plot by changing
-# its properties
+# its properties, and then we are free to set other properties.
 #
 
 # Set visualization to be plot instead of table
-simple_table.plot = "line"
+my_table.plot = "line"
 
 # Set X axis and axis formatting
-simple_table.xaxis = "Row 1"
-simple_table.format = "floatdot1"
+my_table.xaxis = "Row 1"
+my_table.format = "floatdot1"
+
+###############################################################################
+# Properties can also be inspected this way.
+#
+
+print(my_table.type)
 
 adr_service.stop()
