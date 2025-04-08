@@ -426,6 +426,11 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @handle_field_errors
     def get(cls, **kwargs):
+        """Get an object from the database using the ORM model."""
+        # convert basemodel instances to orm instances
+        for key, value in kwargs.items():
+            if isinstance(value, BaseModel):
+                kwargs[key] = value._orm_instance
         try:
             orm_instance = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).get(
                 **kwargs
@@ -439,7 +444,7 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     @handle_field_errors
-    def get_or_create(cls, **kwargs):
+    def get_or_create(cls, **kwargs) -> tuple["BaseModel", bool]:
         try:
             return cls.get(**kwargs), False
         except cls.DoesNotExist:
@@ -447,23 +452,23 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     @handle_field_errors
-    def filter(cls, **kwargs):
+    def filter(cls, **kwargs) -> "ObjectSet":
         qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
     @handle_field_errors
-    def find(cls, query="", **kwargs):
+    def find(cls, query="", **kwargs) -> "ObjectSet":
         qs = cls._orm_model_cls.find(query=query, **kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
-    def get_tags(self):
+    def get_tags(self) -> str:
         return self.tags
 
-    def set_tags(self, tag_str):
+    def set_tags(self, tag_str: str) -> None:
         self.tags = tag_str
 
-    def add_tag(self, tag, value=None):
+    def add_tag(self, tag: str, value: str | None = None) -> None:
         self.rem_tag(tag)
         tags = shlex.split(self.get_tags())
         if value:
@@ -472,14 +477,14 @@ class BaseModel(metaclass=BaseMeta):
             tags.append(tag)
         self._rebuild_tags(tags)
 
-    def rem_tag(self, tag):
+    def rem_tag(self, tag: str) -> None:
         tags = shlex.split(self.get_tags())
         for t in tags:
             if t == tag or t.split("=")[0] == tag:
                 tags.remove(t)
         self._rebuild_tags(tags)
 
-    def remove_tag(self, tag):
+    def remove_tag(self, tag: str) -> None:
         self.rem_tag(tag)
 
 
