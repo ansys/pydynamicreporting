@@ -539,8 +539,8 @@ class ObjectSet:
 
     def values_list(self, *fields, flat=False):
         if flat and len(fields) > 1:
-            raise TypeError(
-                "'flat' is not valid when values_list is called with more than one " "field."
+            raise ValueError(
+                "'flat' is not valid when values_list is called with more than one field."
             )
         ret = []
         for obj in self._obj_set:
