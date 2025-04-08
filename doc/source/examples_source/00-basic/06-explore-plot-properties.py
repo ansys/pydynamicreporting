@@ -4,8 +4,8 @@
 Explore plot properties
 =======================
 
-When working with a table it is possible to turn it into a 
-plot by specifying the plot type through the `plot` property. 
+When working with a table it is possible to turn it into a
+plot by specifying the plot type through the `plot` property.
 In this example we demonstrate a variety of the possible plot
 properties available.
 
@@ -74,7 +74,7 @@ my_table.xrange = [0, 3]
 my_table.visualize()
 
 ###############################################################################
-# Key properties 
+# Key properties
 # --------------
 # A few key properties are listed below as well as what they do, to get you started.
 #
