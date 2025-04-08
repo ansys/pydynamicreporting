@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 
 
@@ -87,6 +89,8 @@ def test_add_tag_key(adr_serverless):
         content="intro text",
         tags="dp=dp227 section=intro",
         source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
     )
     intro_text.add_tag("sls-test")
     intro_text.save()
@@ -244,7 +248,7 @@ def test_get_item_does_not_exist(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
     with pytest.raises(HTML.DoesNotExist):
-        HTML.get(guid="non_existent_guid")
+        HTML.get(guid=str(uuid4()))
 
 
 @pytest.mark.ado_test
@@ -262,7 +266,7 @@ def test_get_item_multiple(adr_serverless):
         content="<h1>Heading 2</h1>",
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
-    )
+    ).save()
     with pytest.raises(HTML.MultipleObjectsReturned):
         HTML.get(name="test_get_item_multiple")
 
@@ -281,7 +285,6 @@ def test_get_or_create_item(adr_serverless):
     # alternative way of creation
     tree_kwargs = {
         "name": "intro_tree",
-        "content": tree_content,
         "tags": "dp=dp227 section=data",
         "session": adr_serverless.session,
         "dataset": adr_serverless.dataset,
