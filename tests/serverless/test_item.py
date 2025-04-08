@@ -275,13 +275,6 @@ def test_get_item_multiple(adr_serverless):
 def test_get_or_create_item(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Tree
 
-    # tree
-    tree_content = [
-        {"key": "root", "name": "Solver", "value": "My Solver"},
-        {"key": "root", "name": "Number cells", "value": 10e6},
-        {"key": "root", "name": "Mesh Size", "value": "1.0 mm^3"},
-        {"key": "root", "name": "Mesh Type", "value": "Hex8"},
-    ]
     # alternative way of creation
     tree_kwargs = {
         "name": "intro_tree",
