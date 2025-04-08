@@ -1,3 +1,4 @@
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -105,7 +106,7 @@ def test_rem_tag(adr_serverless):
     intro_html = HTML.create(
         name="test_rem_tag",
         content="<h1>Heading 1</h1>",
-        tags="tag1 tag2",
+        tags="tag1=1 tag2",
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
     )
@@ -277,10 +278,10 @@ def test_get_or_create_item(adr_serverless):
 
     tree_kwargs = {
         "name": "intro_tree",
-        "tags": "dp=dp227 section=data",
+        "source": "sls-test",
+        "tags": "dp=dp227",
         "session": adr_serverless.session,
         "dataset": adr_serverless.dataset,
-        "source": "sls-test",
     }
     tree, _ = Tree.get_or_create(**tree_kwargs)
     new_tree, _ = Tree.get_or_create(**tree_kwargs)
@@ -301,10 +302,111 @@ def test_get_or_create_item_w_content(adr_serverless):
     tree_kwargs = {
         "name": "intro_tree",
         "content": tree_content,
-        "tags": "dp=dp227 section=data",
+        "source": "sls-test",
+        "tags": "dp=dp227",
         "session": adr_serverless.session,
         "dataset": adr_serverless.dataset,
-        "source": "sls-test",
     }
     with pytest.raises(ValueError):
         Tree.get_or_create(**tree_kwargs)
+
+
+@pytest.mark.ado_test
+def test_item_objectset_repr(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_objectset_repr",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_repr;")
+    assert repr(objs) == f"<ObjectSet  [<HTML: {intro_html.guid}>]>"
+
+
+@pytest.mark.ado_test
+def test_item_objectset_str(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_objectset_str",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_str;")
+    assert str(objs) == f"[<HTML: {intro_html.guid}>]"
+
+
+@pytest.mark.ado_test
+def test_item_objectset_getitem(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_objectset_getitem",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_getitem;")
+    assert objs[0].guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_item_objectset_saved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    HTML.create(
+        name="test_item_objectset_saved",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_saved;")
+    assert objs.saved is True
+
+
+@pytest.mark.ado_test
+def test_item_objectset_values_list(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    HTML.create(
+        name="test_item_objectset_values_list",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(
+        query_type=HTML, query="A|i_name|cont|test_item_objectset_values_list;"
+    )
+    assert objs.values_list("name") == ["test_item_objectset_values_list"]
+
+
+@pytest.mark.ado_test
+def test_item_objectset_values_list_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    HTML.create(
+        name="test_item_objectset_values_list_error",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(
+        query_type=HTML, query="A|i_name|cont|test_item_objectset_values_list_error;"
+    )
+    with pytest.raises(ValueError):
+        objs.values_list("name", "guid", flat=True)
