@@ -43,7 +43,7 @@ rst_prolog = f"""
 .. _Generator templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_generator_templates.html
 .. _Statistical Analysis: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/ad_ug_generator_statistical_analysis.html
 .. _Table: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_data_item_table.html
-.. _Query Expressions: <https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_query_expressions.html>
+.. _Query Expressions: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_query_expressions.html
 
 """
 
