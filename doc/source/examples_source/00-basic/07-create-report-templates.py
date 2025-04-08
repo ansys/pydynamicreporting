@@ -53,7 +53,7 @@ server.put_objects(template_0)
 # being the report itself.
 #
 # Filters are composed of strings in a common format. The format is explained in more detail
-# on this page [Query Expressions](https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html).
+# on this page [Query Expressions](https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/corp/v251/en/adr_ug/adr_ug_query_expressions.html?q=query%20expression).
 #
 
 template_1 = server.create_template(name="Intro", parent=template_0, report_type="Layout:panel")
