@@ -16,11 +16,11 @@ class Template(BaseModel):
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
+    report_type: str = ""
     _children_order: str = field(
         compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)
-    report_type: str = ""
     _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
@@ -122,19 +122,22 @@ class Template(BaseModel):
         return super().create(**new_kwargs)
 
     @classmethod
+    def _validate_kwargs(cls, **kwargs):
+        if "children" in kwargs:
+            raise ValueError("'children' kwarg is not supported for get* and filter methods")
+        return {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
+
+    @classmethod
     def get(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get(**new_kwargs)
+        return super().get(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def get_or_create(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get_or_create(**new_kwargs)
+        return super().get_or_create(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().filter(**new_kwargs)
+        return super().filter(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def find(cls, query="", **kwargs):
