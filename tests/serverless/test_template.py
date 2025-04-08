@@ -177,12 +177,8 @@ def test_get_or_create_template(adr_serverless):
         "tags": "dp=dp227",
         "params": '{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     }
-
-    # Create a template
     template = BasicLayout.create(**template_kwargs)
-
-    # Get or create the same template
-    same_template = BasicLayout.get_or_create(**template_kwargs)
+    same_template, _ = BasicLayout.get_or_create(**template_kwargs)
     assert template.guid == same_template.guid
 
 

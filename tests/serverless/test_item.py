@@ -275,7 +275,6 @@ def test_get_item_multiple(adr_serverless):
 def test_get_or_create_item(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Tree
 
-    # tree
     tree_kwargs = {
         "name": "intro_tree",
         "tags": "dp=dp227 section=data",
