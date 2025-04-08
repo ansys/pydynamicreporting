@@ -37,8 +37,8 @@ Report
 │   ├── Summary
 │   ├── Recommendations
 ├── Appendices
-│   ├── Appendix-A
-│   ├── Appendix-B
+    ├── Appendix-A
+    ├── Appendix-B
 ```
 
 You can add or modify the structure of the report by adding / removing / modifying the corresponding report templates.
@@ -82,8 +82,8 @@ Report -> item tag contains "projectA"
 │   ├── Summary -> item tags contain "session=summary"
 │   ├── Recommendations -> item tags contain "session=recommendations"
 ├── Appendices -> item name contain "chapter=appendices"
-│   ├── Appendix-A -> item tags contain "session=appendixA"
-│   ├── Appendix-B -> item tags contain "session=appendixB"
+    ├── Appendix-A -> item tags contain "session=appendixA"
+    ├── Appendix-B -> item tags contain "session=appendixB"
 ```
 
 
