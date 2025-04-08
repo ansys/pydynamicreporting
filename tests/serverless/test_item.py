@@ -390,7 +390,7 @@ def test_item_objectset_values_list(adr_serverless):
     objs = adr_serverless.query(
         query_type=HTML, query="A|i_name|cont|test_item_objectset_values_list;"
     )
-    assert objs.values_list("name") == ["test_item_objectset_values_list"]
+    assert objs.values_list("name", flat=True) == ["test_item_objectset_values_list"]
 
 
 @pytest.mark.ado_test
