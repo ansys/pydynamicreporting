@@ -40,9 +40,11 @@ session_guid = adr_service.start(create_db=True)
 # with 5 columns and 3 rows.
 #
 
-my_table = adr_service.create_item(obj_name='Table')
+my_table = adr_service.create_item(obj_name="Table")
 my_table.table_dict["rowlbls"] = ["Row 1", "Row 2"]
-my_table.item_table = np.array([["1", "2", "3", "4", "5"],["1", "4", "9", "16", "25"]], dtype="|S20")
+my_table.item_table = np.array(
+    [["1", "2", "3", "4", "5"], ["1", "4", "9", "16", "25"]], dtype="|S20"
+)
 
 ###############################################################################
 # Once we have created a table we can actually set it to be a plot by changing
@@ -64,9 +66,9 @@ my_table.format = "floatdot1"
 # - Plots can have `visualize()` called repeatedly without exhausting the object
 #
 
-my_table.line_color = 'black'
+my_table.line_color = "black"
 # This won't appear on our 2D plot or affect its output
-my_table.zaxis = 'z-axis'
+my_table.zaxis = "z-axis"
 my_table.visualize()
 
 # Sets the x-axis limits and similar patterns work for yrange and zrange.
