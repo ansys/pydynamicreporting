@@ -275,7 +275,7 @@ def test_get_item_multiple(adr_serverless):
 def test_get_or_create_item(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Tree
 
-    # alternative way of creation
+    # tree
     tree_kwargs = {
         "name": "intro_tree",
         "tags": "dp=dp227 section=data",
@@ -283,6 +283,29 @@ def test_get_or_create_item(adr_serverless):
         "dataset": adr_serverless.dataset,
         "source": "sls-test",
     }
-    tree = Tree.get_or_create(**tree_kwargs)
-    new_tree = Tree.get_or_create(**tree_kwargs)
+    tree, _ = Tree.get_or_create(**tree_kwargs)
+    new_tree, _ = Tree.get_or_create(**tree_kwargs)
     assert new_tree.guid == tree.guid
+
+
+@pytest.mark.ado_test
+def test_get_or_create_item_w_content(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    tree_content = [
+        {"key": "root", "name": "Solver", "value": "My Solver"},
+        {"key": "root", "name": "Number cells", "value": 10e6},
+        {"key": "root", "name": "Mesh Size", "value": "1.0 mm^3"},
+        {"key": "root", "name": "Mesh Type", "value": "Hex8"},
+    ]
+    # tree
+    tree_kwargs = {
+        "name": "intro_tree",
+        "content": tree_content,
+        "tags": "dp=dp227 section=data",
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+        "source": "sls-test",
+    }
+    with pytest.raises(ValueError):
+        Tree.get_or_create(**tree_kwargs)
