@@ -190,14 +190,18 @@ def test_get_or_create_template(adr_serverless):
 def test_get_or_create_template_w_children(adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
 
-    toc_layout = TOCLayout.create(name="TOC", parent=top_parent, tags="dp=dp227")
-    # Shared kwargs
     template_kwargs = {
         "name": "test_get_or_create_template_w_children",
         "parent": None,
-        "children": [toc_layout],
         "tags": "dp=dp227",
         "params": '{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     }
+    top_parent = adr_serverless.create_template(
+        BasicLayout,
+        **template_kwargs,
+    )
+    toc_layout = adr_serverless.create_template(
+        TOCLayout, name="TOC", parent=top_parent, tags="dp=dp227"
+    )
     with pytest.raises(ValueError):
-        BasicLayout.get_or_create(**template_kwargs)
+        BasicLayout.get_or_create(**template_kwargs, children=[toc_layout])
