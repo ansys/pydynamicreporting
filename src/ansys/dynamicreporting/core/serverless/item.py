@@ -314,16 +314,12 @@ class Item(BaseModel):
     @classmethod
     def _validate_kwargs(cls, **kwargs):
         if "content" in kwargs:
-            raise ValueError("'content' kwarg is not supported for get* and filter methods")
+            raise ValueError("'content' kwarg is not supported for get and filter methods")
         return {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
 
     @classmethod
     def get(cls, **kwargs):
         return super().get(**cls._validate_kwargs(**kwargs))
-
-    @classmethod
-    def get_or_create(cls, **kwargs):
-        return super().get_or_create(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):

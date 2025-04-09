@@ -444,14 +444,6 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     @handle_field_errors
-    def get_or_create(cls, **kwargs) -> tuple["BaseModel", bool]:
-        try:
-            return cls.get(**kwargs), False
-        except cls.DoesNotExist:
-            return cls.create(**kwargs), True
-
-    @classmethod
-    @handle_field_errors
     def filter(cls, **kwargs) -> "ObjectSet":
         qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)

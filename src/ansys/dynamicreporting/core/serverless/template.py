@@ -124,16 +124,12 @@ class Template(BaseModel):
     @classmethod
     def _validate_kwargs(cls, **kwargs):
         if "children" in kwargs:
-            raise ValueError("'children' kwarg is not supported for get* and filter methods")
+            raise ValueError("'children' kwarg is not supported for get and filter methods")
         return {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
 
     @classmethod
     def get(cls, **kwargs):
         return super().get(**cls._validate_kwargs(**kwargs))
-
-    @classmethod
-    def get_or_create(cls, **kwargs):
-        return super().get_or_create(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):

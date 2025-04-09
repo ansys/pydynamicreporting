@@ -231,6 +231,29 @@ def test_delete_not_saved(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_create_item(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    tree_content = [
+        {"key": "root", "name": "Solver", "value": "My Solver"},
+        {"key": "root", "name": "Number cells", "value": 10e6},
+        {"key": "root", "name": "Mesh Size", "value": "1.0 mm^3"},
+        {"key": "root", "name": "Mesh Type", "value": "Hex8"},
+    ]
+
+    tree_kwargs = {
+        "name": "test_create_item",
+        "source": "sls-test",
+        "content": tree_content,
+        "tags": "dp=dp227",
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+    }
+    tree = Tree.create(**tree_kwargs)
+    assert tree.saved is True
+
+
+@pytest.mark.ado_test
 def test_get_item(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
@@ -270,45 +293,6 @@ def test_get_item_multiple(adr_serverless):
     ).save()
     with pytest.raises(HTML.MultipleObjectsReturned):
         HTML.get(name="test_get_item_multiple")
-
-
-@pytest.mark.ado_test
-def test_get_or_create_item(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Tree
-
-    tree_kwargs = {
-        "name": "intro_tree",
-        "source": "sls-test",
-        "tags": "dp=dp227",
-        "session": adr_serverless.session,
-        "dataset": adr_serverless.dataset,
-    }
-    tree, _ = Tree.get_or_create(**tree_kwargs)
-    new_tree, _ = Tree.get_or_create(**tree_kwargs)
-    assert new_tree.guid == tree.guid
-
-
-@pytest.mark.ado_test
-def test_get_or_create_item_w_content(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Tree
-
-    tree_content = [
-        {"key": "root", "name": "Solver", "value": "My Solver"},
-        {"key": "root", "name": "Number cells", "value": 10e6},
-        {"key": "root", "name": "Mesh Size", "value": "1.0 mm^3"},
-        {"key": "root", "name": "Mesh Type", "value": "Hex8"},
-    ]
-    # tree
-    tree_kwargs = {
-        "name": "intro_tree",
-        "content": tree_content,
-        "source": "sls-test",
-        "tags": "dp=dp227",
-        "session": adr_serverless.session,
-        "dataset": adr_serverless.dataset,
-    }
-    with pytest.raises(ValueError):
-        Tree.get_or_create(**tree_kwargs)
 
 
 @pytest.mark.ado_test

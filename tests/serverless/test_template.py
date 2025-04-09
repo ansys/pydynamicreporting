@@ -168,36 +168,14 @@ def test_child_not_exist(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_get_or_create_template(adr_serverless):
+def test_create_template(adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
     template_kwargs = {
-        "name": "test_get_or_create_template",
+        "name": "test_create_template",
         "parent": None,
         "tags": "dp=dp227",
         "params": '{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     }
     template = BasicLayout.create(**template_kwargs)
-    same_template, _ = BasicLayout.get_or_create(**template_kwargs)
-    assert template.guid == same_template.guid
-
-
-@pytest.mark.ado_test
-def test_get_or_create_template_w_children(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, TOCLayout
-
-    template_kwargs = {
-        "name": "test_get_or_create_template_w_children",
-        "parent": None,
-        "tags": "dp=dp227",
-        "params": '{"HTML": "<h1>Serverless Simulation Report</h1>"}',
-    }
-    top_parent = adr_serverless.create_template(
-        BasicLayout,
-        **template_kwargs,
-    )
-    toc_layout = adr_serverless.create_template(
-        TOCLayout, name="TOC", parent=top_parent, tags="dp=dp227"
-    )
-    with pytest.raises(ValueError):
-        BasicLayout.get_or_create(**template_kwargs, children=[toc_layout])
+    assert template.saved is True
