@@ -350,7 +350,7 @@ class BaseModel(metaclass=BaseMeta):
     def from_db(cls, orm_instance, parent=None):
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(orm_instance)
-        obj = cls()
+        obj = cls.__new__(cls)  # Bypass __init__ to skip validation
         for field_ in model_fields:
             if field_ in cls_fields:
                 attr = field_
