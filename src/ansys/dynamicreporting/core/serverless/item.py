@@ -62,7 +62,7 @@ class HTMLParser(BaseHTMLParser):
 class ItemContent(Validator):
     def process(self, value, obj):
         if value is None:
-            raise ValueError(extra_detail="Content cannot be None")
+            raise ValueError("Content cannot be None")
         return value
 
 
