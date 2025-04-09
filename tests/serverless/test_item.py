@@ -426,32 +426,30 @@ def test_item_objectset_values_list_empty(adr_serverless):
 def test_string_content_none(adr_serverless):
     from ansys.dynamicreporting.core.serverless import String
 
-    string = String(
-        name="test_string_content_none",
-        content=None,
-        tags="dp=dp227",
-        source="sls-test",
-        session=adr_serverless.session,
-        dataset=adr_serverless.dataset,
-    )
     with pytest.raises(ValueError):
-        string.save()
+        string = String(
+            name="test_string_content_none",
+            content=None,
+            tags="dp=dp227",
+            source="sls-test",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
 
 
 @pytest.mark.ado_test
 def test_string_content_wrong_type(adr_serverless):
     from ansys.dynamicreporting.core.serverless import String
 
-    string = String(
-        name="test_string_content_wrong_type",
-        content=1,
-        tags="dp=dp227",
-        source="sls-test",
-        session=adr_serverless.session,
-        dataset=adr_serverless.dataset,
-    )
     with pytest.raises(TypeError):
-        string.save()
+        string = String(
+            name="test_string_content_wrong_type",
+            content=1,
+            tags="dp=dp227",
+            source="sls-test",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
 
 
 @pytest.mark.ado_test
@@ -474,16 +472,15 @@ def test_string_content_empty(adr_serverless):
 def test_table_content_not_numpy(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Table
 
-    table = Table(
-        name="test_table_content_not_numpy",
-        content="",
-        tags="dp=dp227",
-        source="sls-test",
-        session=adr_serverless.session,
-        dataset=adr_serverless.dataset,
-    )
     with pytest.raises(TypeError):
-        table.save()
+        table = Table(
+            name="test_table_content_not_numpy",
+            content="",
+            tags="dp=dp227",
+            source="sls-test",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
 
 
 @pytest.mark.ado_test
@@ -492,16 +489,15 @@ def test_table_content_invalid_dtype(adr_serverless):
 
     from ansys.dynamicreporting.core.serverless import Table
 
-    table = Table(
-        name="test_table_content_invalid_dtype",
-        content=np.array([[1, 2], [3, 4]], dtype=int),  # Invalid dtype
-        session=adr_serverless.session,
-        tags="dp=dp227",
-        source="sls-test",
-        dataset=adr_serverless.dataset,
-    )
     with pytest.raises(TypeError):
-        table.save()
+        table = Table(
+            name="test_table_content_invalid_dtype",
+            content=np.array([[1, 2], [3, 4]], dtype=int),  # Invalid dtype
+            session=adr_serverless.session,
+            tags="dp=dp227",
+            source="sls-test",
+            dataset=adr_serverless.dataset,
+        )
 
 
 @pytest.mark.ado_test
@@ -510,16 +506,15 @@ def test_table_content_invalid_shape(adr_serverless):
 
     from ansys.dynamicreporting.core.serverless import Table
 
-    table = Table(
-        name="test_table_content_invalid_shape",
-        content=np.array([1, 2, 3], dtype="|S20"),  # Invalid shape (1D array instead of 2D)
-        session=adr_serverless.session,
-        tags="dp=dp227",
-        source="sls-test",
-        dataset=adr_serverless.dataset,
-    )
     with pytest.raises(ValueError):
-        table.save()
+        table = Table(
+            name="test_table_content_invalid_shape",
+            content=np.array([1, 2, 3], dtype="|S20"),  # Invalid shape (1D array instead of 2D)
+            session=adr_serverless.session,
+            tags="dp=dp227",
+            source="sls-test",
+            dataset=adr_serverless.dataset,
+        )
 
 
 @pytest.mark.ado_test
