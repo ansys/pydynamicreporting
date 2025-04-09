@@ -269,9 +269,8 @@ class Item(BaseModel):
         Item._type_registry[cls.type] = cls
 
     def __post_init__(self):
-        # todo: can be bypassed by setting type at instantiation
-        if self.type == "none":
-            raise TypeError("Cannot instantiate Item directly. Use Item.create()")
+        if self.__class__ is Item:
+            raise ADRException("Cannot instantiate Item directly. Use the Item.create() method.")
         super().__post_init__()
 
     def save(self, **kwargs):
