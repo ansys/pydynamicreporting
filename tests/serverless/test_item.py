@@ -520,3 +520,108 @@ def test_table_content_invalid_shape(adr_serverless):
     )
     with pytest.raises(ValueError):
         table.save()
+
+
+@pytest.mark.ado_test
+def test_create_tree_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    tree_content = [
+        {"key": "root", "name": "Solver", "value": "My Solver"},
+        {"key": "root", "name": "Number cells", "value": 10e6},
+    ]
+    tree = adr_serverless.create_item(
+        Tree,
+        name="intro_tree",
+        content=tree_content,
+        tags="dp=dp227 section=data",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+        source="sls-test",
+    )
+    assert Tree.get(name="intro_tree").guid == tree.guid
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(
+    "bad_content",
+    [
+        [{"name": "Missing key", "value": "Oops"}],  # Missing 'key'
+        [{"key": "root", "value": "Oops"}],  # Missing 'name'
+        [{"key": "root", "name": "Missing value"}],  # Missing 'value'
+    ],
+)
+def test_create_tree_missing_keys(adr_serverless, bad_content):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    with pytest.raises(ValueError):
+        adr_serverless.create_item(
+            Tree,
+            name="bad_tree",
+            content=bad_content,
+            tags="dp=dp227 section=data",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_tree_invalid_value_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    bad_content = [{"key": "root", "name": "Invalid value", "value": {"not": "allowed"}}]
+    with pytest.raises(ValueError):
+        adr_serverless.create_item(
+            Tree,
+            name="bad_value_tree",
+            content=bad_content,
+            tags="dp=dp227 section=data",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_tree_non_dict_element(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    bad_content = [
+        {"key": "root", "name": "Good", "value": "OK"},
+        "I am not a dictionary",
+    ]
+    with pytest.raises(ValueError):
+        adr_serverless.create_item(
+            Tree,
+            name="non_dict_tree",
+            content=bad_content,
+            tags="dp=dp227 section=data",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_tree_invalid_nested_value(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    bad_content = [
+        {
+            "key": "root",
+            "name": "Nested Tree",
+            "value": "Root",
+            "children": [{"key": "child", "name": "Bad Child", "value": {"bad": "value"}}],
+        }
+    ]
+    with pytest.raises(ValueError):
+        adr_serverless.create_item(
+            Tree,
+            name="nested_bad_tree",
+            content=bad_content,
+            tags="dp=dp227 section=data",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
