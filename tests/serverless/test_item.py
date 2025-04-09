@@ -530,16 +530,15 @@ def test_create_tree_success(adr_serverless):
         {"key": "root", "name": "Solver", "value": "My Solver"},
         {"key": "root", "name": "Number cells", "value": 10e6},
     ]
-    tree = adr_serverless.create_item(
-        Tree,
-        name="intro_tree",
+    tree = Tree.create(
+        name="test_create_tree_success",
         content=tree_content,
         tags="dp=dp227 section=data",
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
         source="sls-test",
     )
-    assert Tree.get(name="intro_tree").guid == tree.guid
+    assert Tree.get(guid=tree.guid).guid == tree.guid
 
 
 @pytest.mark.ado_test
@@ -555,9 +554,8 @@ def test_create_tree_missing_keys(adr_serverless, bad_content):
     from ansys.dynamicreporting.core.serverless import Tree
 
     with pytest.raises(ValueError):
-        adr_serverless.create_item(
-            Tree,
-            name="bad_tree",
+        Tree.create(
+            name="test_create_tree_missing_keys",
             content=bad_content,
             tags="dp=dp227 section=data",
             session=adr_serverless.session,
@@ -572,9 +570,8 @@ def test_create_tree_invalid_value_type(adr_serverless):
 
     bad_content = [{"key": "root", "name": "Invalid value", "value": {"not": "allowed"}}]
     with pytest.raises(ValueError):
-        adr_serverless.create_item(
-            Tree,
-            name="bad_value_tree",
+        Tree.create(
+            name="test_create_tree_invalid_value_type",
             content=bad_content,
             tags="dp=dp227 section=data",
             session=adr_serverless.session,
@@ -592,9 +589,8 @@ def test_create_tree_non_dict_element(adr_serverless):
         "I am not a dictionary",
     ]
     with pytest.raises(ValueError):
-        adr_serverless.create_item(
-            Tree,
-            name="non_dict_tree",
+        Tree.create(
+            name="test_create_tree_non_dict_element",
             content=bad_content,
             tags="dp=dp227 section=data",
             session=adr_serverless.session,
@@ -616,9 +612,8 @@ def test_create_tree_invalid_nested_value(adr_serverless):
         }
     ]
     with pytest.raises(ValueError):
-        adr_serverless.create_item(
-            Tree,
-            name="nested_bad_tree",
+        Tree.create(
+            name="test_create_tree_invalid_nested_value",
             content=bad_content,
             tags="dp=dp227 section=data",
             session=adr_serverless.session,
