@@ -599,3 +599,55 @@ def test_create_tree_invalid_nested_value(adr_serverless):
             dataset=adr_serverless.dataset,
             source="sls-test",
         )
+
+
+@pytest.mark.ado_test
+def test_tree_content_value_list_valid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    tree_content = [
+        {"key": "root", "name": "Solver List", "value": ["Ansys", "Fluent", "CFX"]},
+    ]
+    tree = Tree.create(
+        name="test_tree_content_value_list_valid",
+        content=tree_content,
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+        source="sls-test",
+    )
+    assert Tree.get(guid=tree.guid).guid == tree.guid
+
+
+@pytest.mark.ado_test
+def test_tree_content_value_list_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    tree_content = [
+        {"key": "root", "name": "Solver List", "value": ["Ansys", object()]},
+    ]
+    with pytest.raises(ValueError):
+        Tree.create(
+            name="test_tree_content_value_list_invalid",
+            content=tree_content,
+            tags="dp=dp227",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+
+
+@pytest.mark.ado_test
+def test_tree_content_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Tree
+
+    tree_content = "This is not a valid content"
+    with pytest.raises(ValueError):
+        Tree.create(
+            name="test_tree_content_invalid",
+            content=tree_content,
+            tags="dp=dp227",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
