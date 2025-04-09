@@ -562,9 +562,7 @@ class Validator(ABC):
         return getattr(obj, self._name, self._default)
 
     def __set__(self, obj, value):
-        cleaned_value = None
-        if value is not None:
-            cleaned_value = self.process(value, obj)
+        cleaned_value = self.process(value, obj)
         setattr(obj, self._name, cleaned_value)
 
     @abstractmethod
