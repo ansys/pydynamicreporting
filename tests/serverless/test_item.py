@@ -3,6 +3,8 @@ from uuid import uuid4
 
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import ADRException
+
 
 @pytest.mark.ado_test
 def test_field_error(adr_serverless):
@@ -37,6 +39,124 @@ def test_create_html_cls(adr_serverless):
         dataset=adr_serverless.dataset,
     )
     assert HTML.get(name="test_create_html_cls").guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_create_item_cls(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    intro_html = Item.create(
+        name="test_create_item_cls",
+        type="html",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert Item.get(guid=intro_html.guid).guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_create_item_cls_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    with pytest.raises(ADRException):
+        Item.create(
+            name="test_create_item_cls_error",
+            content="<h1>Heading 1</h1>",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
+
+
+@pytest.mark.ado_test
+def test_item_cls_init(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    with pytest.raises(ADRException):
+        Item(
+            name="test_item_cls_init",
+            type="tree",
+            content="<h1>Heading 1</h1>",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
+
+
+@pytest.mark.ado_test
+def test_item_get_w_content_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    intro_html = Item.create(
+        name="test_create_item_cls",
+        type="html",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    with pytest.raises(ValueError):
+        Item.get(content=intro_html.content)
+
+
+@pytest.mark.ado_test
+def test_item_filter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_filter",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert (
+        HTML.filter(
+            name="test_item_filter", session=adr_serverless.session, dataset=adr_serverless.dataset
+        )[0].guid
+        == intro_html.guid
+    )
+
+
+@pytest.mark.ado_test
+def test_item_cls_filter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, Item
+
+    intro_html = HTML.create(
+        name="test_item_cls_filter",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert (
+        Item.filter(
+            name="test_item_filter", session=adr_serverless.session, dataset=adr_serverless.dataset
+        )[0].guid
+        == intro_html.guid
+    )
+
+
+@pytest.mark.ado_test
+def test_item_find(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_find",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert HTML.find(query="A|i_name|cont|test_item_find")[0].guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_item_cls_find(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, Item
+
+    intro_html = HTML.create(
+        name="test_item_cls_find",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert Item.find(query="A|i_name|cont|test_item_cls_find")[0].guid == intro_html.guid
 
 
 @pytest.mark.ado_test
@@ -651,3 +771,48 @@ def test_tree_content_invalid(adr_serverless):
             dataset=adr_serverless.dataset,
             source="sls-test",
         )
+
+
+@pytest.mark.ado_test
+def test_item_file_ext(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    # image
+    intro_image = Image(
+        name="test_item_file_ext",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags="dp=dp227 section=data",
+        source="sls-test",
+    )
+
+    assert intro_image.file_ext == "png"
+
+
+@pytest.mark.ado_test
+def test_item_has_file(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    # image
+    intro_image = Image(
+        name="test_item_has_file",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags="dp=dp227 section=data",
+        source="sls-test",
+    )
+
+    assert intro_image.has_file is True
+
+
+@pytest.mark.ado_test
+def test_item_is_enhanced(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    # image
+    intro_image = Image(
+        name="test_item_is_enhanced",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags="dp=dp227 section=data",
+        source="sls-test",
+    )
+
+    assert intro_image.enhanced is False
