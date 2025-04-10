@@ -415,7 +415,7 @@ def test_save_item_session_unsaved(adr_serverless):
         session=session,
         dataset=adr_serverless.dataset,
     )
-    with pytest.raises(HTML.SessionUnsaved):
+    with pytest.raises(Session.NotSaved):
         intro_html.save()
 
 
@@ -430,7 +430,7 @@ def test_save_item_dataset_unsaved(adr_serverless):
         session=adr_serverless.session,
         dataset=dataset,
     )
-    with pytest.raises(HTML.DatasetUnsaved):
+    with pytest.raises(Dataset.NotSaved):
         intro_html.save()
 
 
@@ -944,7 +944,6 @@ def test_image_conversion_to_png(adr_serverless):
 
         image_obj.save()
 
-        assert image_obj._orm_instance.payloadfile.endswith(".png")
         assert image_obj.file_path.is_file()
         assert image_obj.file_path.suffix == ".png"
 
