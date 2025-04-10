@@ -1,6 +1,9 @@
 from pathlib import Path
+import tempfile
+from unittest import mock
 from uuid import uuid4
 
+from PIL import Image as PILImage
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import ADRException
@@ -146,6 +149,15 @@ def test_item_find(adr_serverless):
         dataset=adr_serverless.dataset,
     )
     assert HTML.find(query="A|i_name|cont|test_item_find")[0].guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_item_find_raises_exception(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(ADRException):
+        HTML.find(query="A|i_type|cont|html")
 
 
 @pytest.mark.ado_test
@@ -350,6 +362,76 @@ def test_delete_not_saved(adr_serverless):
     )
     with pytest.raises(HTML.NotSaved):
         intro_html.delete()
+
+
+@pytest.mark.ado_test
+def test_save_item(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML(
+        name="test_save_item",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    intro_html.save()
+    assert HTML.get(guid=intro_html.guid).guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_save_item_no_session(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML(
+        name="test_save_item_no_session",
+        content="<h1>Heading 1</h1>",
+        dataset=adr_serverless.dataset,
+    )
+    with pytest.raises(ADRException):
+        intro_html.save()
+
+
+@pytest.mark.ado_test
+def test_save_item_no_dataset(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML(
+        name="test_save_item_no_dataset",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+    )
+    with pytest.raises(ADRException):
+        intro_html.save()
+
+
+@pytest.mark.ado_test
+def test_save_item_session_unsaved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, Session
+
+    session = Session()
+    intro_html = HTML(
+        name="test_save_item_session_unsaved",
+        content="<h1>Heading 1</h1>",
+        session=session,
+        dataset=adr_serverless.dataset,
+    )
+    with pytest.raises(HTML.SessionUnsaved):
+        intro_html.save()
+
+
+@pytest.mark.ado_test
+def test_save_item_dataset_unsaved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, Dataset
+
+    dataset = Dataset()
+    intro_html = HTML(
+        name="test_save_item_dataset_unsaved",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=dataset,
+    )
+    with pytest.raises(HTML.DatasetUnsaved):
+        intro_html.save()
 
 
 @pytest.mark.ado_test
@@ -818,3 +900,126 @@ def test_item_is_enhanced(adr_serverless):
     )
 
     assert intro_image.enhanced is False
+
+
+@pytest.mark.ado_test
+def test_file_size_zero_fails_validation(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import File
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
+        tmp_path = Path(tmp.name)
+
+    try:
+        with pytest.raises(ValueError, match="The file specified is empty"):
+            File.create(
+                name="test_file_size_zero_fails_validation",
+                content=str(tmp_path),
+                tags="dp=dp227",
+                session=adr_serverless.session,
+                dataset=adr_serverless.dataset,
+                source="sls-test",
+            )
+    finally:
+        tmp_path.unlink()
+
+
+@pytest.mark.ado_test
+def test_image_conversion_to_png(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image  # Import your Image class
+
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        img = PILImage.new("RGB", (10, 10), color="red")
+        img.save(tmp_path, "JPEG")  # Save as JPEG
+
+    try:
+        image_obj = Image.create(
+            name="test_image_conversion_to_png",
+            content=str(tmp_path),
+            tags="dp=dp227",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+
+        image_obj.save()
+
+        assert image_obj._orm_instance.payloadfile.endswith(".png")
+        assert image_obj.file_path.is_file()
+        assert image_obj.file_path.suffix == ".png"
+
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_invalid_file_extension_fails(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        tmp.write(b"Dummy content")
+        tmp.flush()
+
+    try:
+        with pytest.raises(ValueError, match="File type txt is not supported"):
+            Image.create(
+                name="test_invalid_file_extension_fails",
+                content=str(tmp_path),
+                tags="dp=dp227",
+                session=adr_serverless.session,
+                dataset=adr_serverless.dataset,
+                source="sls-test",
+            )
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_image_save_raises_adr_exception(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        img = PILImage.new("RGB", (10, 10), color="red")
+        img.save(tmp_path, "JPEG")
+
+    try:
+        image_obj = Image.create(
+            name="test_image_save_raises_adr_exception",
+            content=str(tmp_path),
+            tags="dp=dp227",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+
+        with mock.patch("PIL.Image.Image.save", side_effect=OSError("Simulated save error")):
+            with pytest.raises(ADRException, match="Error converting image to PNG:"):
+                image_obj.save()
+
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_is_enhanced_fails_on_non_enhanced_tiff(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    with tempfile.NamedTemporaryFile(suffix=".tiff", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        img = PILImage.new("RGB", (10, 10), color="blue")
+        img.save(tmp_path, format="TIFF")
+
+    try:
+        with pytest.raises(ADRException, match="The enhanced image is empty"):
+            Image.create(
+                name="test_is_enhanced_fails_on_non_enhanced_tiff",
+                content=str(tmp_path),
+                tags="dp=dp227",
+                session=adr_serverless.session,
+                dataset=adr_serverless.dataset,
+                source="sls-test",
+            )
+    finally:
+        tmp_path.unlink(missing_ok=True)
