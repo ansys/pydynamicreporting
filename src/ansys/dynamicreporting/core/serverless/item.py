@@ -206,16 +206,24 @@ class FilePayloadMixin:
     _file_ext: str = field(init=False, compare=False, default="")
 
     @property
-    def file_ext(self):
-        return self._file_ext
+    def file_path(self):
+        try:
+            return self._orm_instance.payloadfile.path
+        except (AttributeError, ValueError):
+            # If the file path is not set, return None
+            return None
 
     @property
     def has_file(self):
-        return self._file is not None
+        return self.file_path is not None and Path(self.file_path).is_file()
 
     @property
-    def file_path(self):
-        return self._orm_instance.payloadfile.path
+    def file_ext(self):
+        try:
+            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")
+        except (AttributeError, ValueError):
+            # If the file path is not set, return None
+            return None
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
@@ -236,7 +244,6 @@ class FilePayloadMixin:
                         out_file.write(chunk)
 
     def save(self, **kwargs):
-        # todo: check backward compatibility: _movie is now _anim.
         self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
         # Save file to the target path
         self._save_file(self.file_path, self._file)
@@ -425,8 +432,10 @@ class Image(FilePayloadMixin, Item):
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
         # Save the image
         if self._file_ext != target_ext and target_ext == "png":
+            # Convert to PNG format
+            self._file_ext = target_ext
             try:
-                image.save(self.file_path, format="PNG")
+                image.save(self.file_path, format=self._file_ext.upper())
             except OSError as e:
                 raise ADRException(f"Error converting image to PNG: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
