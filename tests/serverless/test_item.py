@@ -943,10 +943,8 @@ def test_image_conversion_to_png(adr_serverless):
         )
 
         image_obj.save()
-
-        assert image_obj.file_path.is_file()
-        assert image_obj.file_path.suffix == ".png"
-
+        file_path = Path(image_obj.file_path)
+        assert file_path.is_file() and file_path.suffix == ".png"
     finally:
         tmp_path.unlink(missing_ok=True)
 
