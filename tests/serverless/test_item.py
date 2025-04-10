@@ -906,6 +906,21 @@ def test_item_file_ext(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_item_has_no_file(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    # image
+    intro_image = Image(
+        name="test_item_has_no_file",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags="dp=dp227 section=data",
+        source="sls-test",
+    )
+
+    assert intro_image.has_file is False
+
+
+@pytest.mark.ado_test
 def test_item_has_file(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Image
 
@@ -916,6 +931,7 @@ def test_item_has_file(adr_serverless):
         tags="dp=dp227 section=data",
         source="sls-test",
     )
+    intro_image.save()
 
     assert intro_image.has_file is True
 
@@ -954,6 +970,56 @@ def test_file_size_zero_fails_validation(adr_serverless):
             )
     finally:
         tmp_path.unlink()
+
+
+def test_image_on_disk(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        img = PILImage.new("RGB", (10, 10), color="blue")
+        img.save(tmp_path, "PNG")
+
+    try:
+        image_obj = Image.create(
+            name="test_image_on_disk",
+            content=str(tmp_path),
+            tags="dp=dp227",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+        assert Path(image_obj.file_path).is_file() is True and image_obj.file_ext == "png"
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_image_conversion_to_png(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        img = PILImage.new("RGB", (10, 10), color="red")
+        img.save(tmp_path, "JPEG")  # Save as JPEG
+
+    try:
+        image_obj = Image.create(
+            name="test_image_conversion_to_png",
+            content=str(tmp_path),
+            tags="dp=dp227",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+            source="sls-test",
+        )
+        file_path = Path(image_obj.file_path)
+        assert (
+            Path(image_obj._file.name).suffix == ".jpg"
+            and file_path.is_file()
+            and file_path.suffix == ".png"
+        )
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 @pytest.mark.ado_test
@@ -997,11 +1063,9 @@ def test_image_save_raises_adr_exception(adr_serverless):
             dataset=adr_serverless.dataset,
             source="sls-test",
         )
-
         with mock.patch("PIL.Image.Image.save", side_effect=OSError("Simulated save error")):
             with pytest.raises(ADRException, match="Error converting image to PNG:"):
                 image_obj.save()
-
     finally:
         tmp_path.unlink(missing_ok=True)
 
