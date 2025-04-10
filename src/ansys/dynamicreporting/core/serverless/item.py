@@ -326,11 +326,11 @@ class Item(BaseModel):
 
     @classmethod
     def find(cls, query="", **kwargs):
-        if cls.type == "none":
+        if cls is Item:
             return super().find(query=query, **kwargs)
         if "i_type|cont" in query:
             raise ADRException(
-                extra_detail="The 'i_type' filter is not required if using a subclass of Item"
+                extra_detail="The 'i_type' filter is not allowed if using a subclass of Item"
             )
         return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
@@ -424,7 +424,7 @@ class Image(FilePayloadMixin, Item):
         target_ext = "png" if not self._enhanced else self._file_ext
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
         # Save the image
-        if target_ext == "png" and self._file_ext != target_ext:
+        if self._file_ext != target_ext and target_ext == "png":
             try:
                 image.save(self.file_path, format="PNG")
             except OSError as e:

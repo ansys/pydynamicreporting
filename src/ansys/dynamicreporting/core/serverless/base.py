@@ -445,6 +445,9 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @handle_field_errors
     def filter(cls, **kwargs) -> "ObjectSet":
+        for key, value in kwargs.items():
+            if isinstance(value, BaseModel):
+                kwargs[key] = value._orm_instance
         qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 

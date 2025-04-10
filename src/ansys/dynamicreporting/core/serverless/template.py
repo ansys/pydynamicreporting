@@ -32,7 +32,7 @@ class Template(BaseModel):
         Template._type_registry[cls.report_type] = cls
 
     def __post_init__(self):
-        if self.report_type == "":
+        if self.__class__ is Template:
             raise TypeError("Cannot instantiate Template directly. Use Template.create()")
         super().__post_init__()
 
@@ -137,11 +137,11 @@ class Template(BaseModel):
 
     @classmethod
     def find(cls, query="", **kwargs):
-        if not cls.report_type:
+        if cls is Template:
             return super().find(query=query, **kwargs)
         if "t_types|cont" in query:
             raise ADRException(
-                extra_detail="The 't_types' filter is not required if using a subclass of Template"
+                extra_detail="The 't_types' filter is not allowed if using a subclass of Template"
             )
         query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
         return super().find(query=query_string, **kwargs)
