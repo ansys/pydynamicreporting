@@ -891,6 +891,22 @@ def test_tree_content_invalid(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_item_file_ext_no_save(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image
+
+    # image
+    intro_image = Image(
+        name="test_item_file_ext_no_save",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags="dp=dp227 section=data",
+        source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert intro_image.file_ext is None
+
+
+@pytest.mark.ado_test
 def test_item_file_ext(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Image
 
@@ -900,7 +916,10 @@ def test_item_file_ext(adr_serverless):
         content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
         tags="dp=dp227 section=data",
         source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
     )
+    intro_image.save()
 
     assert intro_image.file_ext == "png"
 
@@ -915,6 +934,8 @@ def test_item_has_no_file(adr_serverless):
         content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
         tags="dp=dp227 section=data",
         source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
     )
 
     assert intro_image.has_file is False
@@ -930,6 +951,8 @@ def test_item_has_file(adr_serverless):
         content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
         tags="dp=dp227 section=data",
         source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
     )
     intro_image.save()
 
