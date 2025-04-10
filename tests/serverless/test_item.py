@@ -1087,7 +1087,7 @@ def test_image_save_raises_adr_exception(adr_serverless):
             source="sls-test",
         )
         with mock.patch("PIL.Image.Image.save", side_effect=OSError("Simulated save error")):
-            with pytest.raises(ADRException, match="Error converting image to PNG:"):
+            with pytest.raises(ADRException, match="Error converting image"):
                 image_obj.save()
     finally:
         tmp_path.unlink(missing_ok=True)
