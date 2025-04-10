@@ -1078,17 +1078,16 @@ def test_image_save_raises_adr_exception(adr_serverless):
         img.save(tmp_path, "JPEG")
 
     try:
-        image_obj = Image.create(
-            name="test_image_save_raises_adr_exception",
-            content=str(tmp_path),
-            tags="dp=dp227",
-            session=adr_serverless.session,
-            dataset=adr_serverless.dataset,
-            source="sls-test",
-        )
         with mock.patch("PIL.Image.Image.save", side_effect=OSError("Simulated save error")):
             with pytest.raises(ADRException, match="Error converting image"):
-                image_obj.save()
+                Image.create(
+                    name="test_image_save_raises_adr_exception",
+                    content=str(tmp_path),
+                    tags="dp=dp227",
+                    session=adr_serverless.session,
+                    dataset=adr_serverless.dataset,
+                    source="sls-test",
+                )
     finally:
         tmp_path.unlink(missing_ok=True)
 
