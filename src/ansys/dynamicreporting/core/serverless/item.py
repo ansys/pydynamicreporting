@@ -437,7 +437,7 @@ class Image(FilePayloadMixin, Item):
             try:
                 image.save(self.file_path, format=self._file_ext.upper())
             except OSError as e:
-                raise ADRException(f"Error converting image to PNG: {e}") from e
+                raise ADRException(f"Error converting image to {self._file_ext}: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
             self._save_file(self.file_path, img_bytes)
         image.close()
