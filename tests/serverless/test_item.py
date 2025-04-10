@@ -127,7 +127,7 @@ def test_item_cls_filter(adr_serverless):
     )
     assert (
         Item.filter(
-            name="test_item_filter", session=adr_serverless.session, dataset=adr_serverless.dataset
+            name="test_item_cls_filter", session=adr_serverless.session, dataset=adr_serverless.dataset
         )[0].guid
         == intro_html.guid
     )
