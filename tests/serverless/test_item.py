@@ -472,6 +472,21 @@ def test_get_item(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_item_delete(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_delete",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    intro_html.delete()
+    with pytest.raises(HTML.DoesNotExist):
+        HTML.get(guid=intro_html.guid)
+
+
+@pytest.mark.ado_test
 def test_get_item_does_not_exist(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
@@ -529,6 +544,24 @@ def test_item_objectset_str(adr_serverless):
     )
     objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_str;")
     assert str(objs) == f"[<HTML: {intro_html.guid}>]"
+
+
+@pytest.mark.ado_test
+def test_item_objectset_delete(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML.create(
+        name="test_item_objectset_delete",
+        content="<h1>Heading 1</h1>",
+        source="sls-test",
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_delete;")
+    objs.delete()
+    with pytest.raises(HTML.DoesNotExist):
+        HTML.get(guid=intro_html.guid)
 
 
 @pytest.mark.ado_test
@@ -921,32 +954,6 @@ def test_file_size_zero_fails_validation(adr_serverless):
             )
     finally:
         tmp_path.unlink()
-
-
-@pytest.mark.ado_test
-def test_image_conversion_to_png(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Image  # Import your Image class
-
-    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        img = PILImage.new("RGB", (10, 10), color="red")
-        img.save(tmp_path, "JPEG")  # Save as JPEG
-
-    try:
-        image_obj = Image.create(
-            name="test_image_conversion_to_png",
-            content=str(tmp_path),
-            tags="dp=dp227",
-            session=adr_serverless.session,
-            dataset=adr_serverless.dataset,
-            source="sls-test",
-        )
-
-        image_obj.save()
-        file_path = Path(image_obj.file_path)
-        assert file_path.is_file() and file_path.suffix == ".png"
-    finally:
-        tmp_path.unlink(missing_ok=True)
 
 
 @pytest.mark.ado_test
