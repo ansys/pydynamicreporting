@@ -1,0 +1,6 @@
+yaxis
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.yaxis

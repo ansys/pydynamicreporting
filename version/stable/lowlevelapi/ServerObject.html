@@ -1,0 +1,938 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Server Object &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/ansys_sphinx_theme.css?v=e7c4c341" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=c4a83403"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/js/table.js?v=b64f5182"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'lowlevelapi/ServerObject';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.15.4';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner = false;
+        </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Dataset and Session Objects" href="DatasetandSessionObjects.html" />
+    <link rel="prev" title="Template Objects" href="TemplateObjects.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/lowlevelapi/ServerObject.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <script>document.write(`<img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark" alt="PyDynamicReporting documentation |version| - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<div class="search-bar" id="search-bar">
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+         aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+         autocapitalize="off" spellcheck="false"/>
+  <span class="search-button__kbd-shortcut">
+    <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+  </span>
+</form>
+<!-- Search results container -->
+<div id="results" class="results" style="display: none;" tabindex="0">
+</div>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button id="pst-version-switcher-button-2"
+      type="button"
+      class="version-switcher__button btn btn-sm dropdown-toggle"
+      data-bs-toggle="dropdown"
+      aria-haspopup="listbox"
+      aria-controls="pst-version-switcher-list-2"
+      aria-label="Version switcher list"
+    >
+      Choose version  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div id="pst-version-switcher-list-2"
+      class="version-switcher__menu dropdown-menu list-group-flush py-0"
+      role="listbox" aria-labelledby="pst-version-switcher-button-2">
+      <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<div class="search-bar" id="search-bar">
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+         aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+         autocapitalize="off" spellcheck="false"/>
+  <span class="search-button__kbd-shortcut">
+    <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+  </span>
+</form>
+<!-- Search results container -->
+<div id="results" class="results" style="display: none;" tabindex="0">
+</div>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button id="pst-version-switcher-button-3"
+      type="button"
+      class="version-switcher__button btn btn-sm dropdown-toggle"
+      data-bs-toggle="dropdown"
+      aria-haspopup="listbox"
+      aria-controls="pst-version-switcher-list-3"
+      aria-label="Version switcher list"
+    >
+      Choose version  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div id="pst-version-switcher-list-3"
+      class="version-switcher__menu dropdown-menu list-group-flush py-0"
+      role="listbox" aria-labelledby="pst-version-switcher-button-3">
+      <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.html">Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Report.html">Report</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Low Level Python API</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="GettingStarted.html">Startup</a></li>
+
+
+
+
+<li class="toctree-l2"><a class="reference internal" href="DataItemObject.html">Data Item Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TemplateObjects.html">Template Objects</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Server Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DatasetandSessionObjects.html">Dataset and Session Objects</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="../class_documentation.html" class="nav-link">API reference</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="index.html" class="nav-link">Low Level Python API</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page">Server Object</li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="server-object">
+<h1>Server Object<a class="headerlink" href="#server-object" title="Link to this heading">#</a></h1>
+<section id="report-remote-server-server-object">
+<h2>report_remote_server.Server object<a class="headerlink" href="#report-remote-server-server-object" title="Link to this heading">#</a></h2>
+<p>This object serves to wrap the Ansys Dynamic Reporting REST API.
+It sets up a connection
+to an ADR Nexus server and allows objects to be pulled from and pushed to the
+server.</p>
+<p>A new server object can be created with the following:</p>
+<p><strong>serverobj = report_remote_server.Server(url=None, username=None, password=None)</strong></p>
+<section id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h3>
+<p><strong>serverobj.set_URL(“http://localhost:8000”)</strong>
+<strong>serverobj.set_username(“nexus”)</strong>
+<strong>serverobj.set_password(“cei”)</strong></p>
+<p>Specify the ADR Nexus server (url and authentication information) to which
+to connect the Server object to.</p>
+<p><strong>url = serverobj.get_URL()</strong>
+<strong>username = serverobj.get_username()</strong>
+<strong>password = serverobj.get_password()</strong></p>
+<p>Retrieve information about the current Server configuration.</p>
+<p><strong>server_name = serverobj.get_server_name()</strong></p>
+<p>Attempts to connect to the database returns the name of the server. For
+remote servers, the name is a configuration parameter. For local
+servers, it is the name of the directory that contains the SQLite file.
+Note: if a connection to the server cannot be made or the server does
+not support names, this method returns the URL for the server.</p>
+<p><strong>server_version_float = serverobj.validate()</strong></p>
+<p>Attempts to connect to the database and verifies that the server
+connection specifications are valid. It returns the version of the
+ADR Nexus
+server API that the server is using. Note: this method will throw an
+exception on encountering an error.</p>
+<p><strong>has_database_url = serverobj.valid_database()</strong></p>
+<p>This method checks to see if a database url has been set. It returns
+True if a url has been set. It does not verify that the connection and
+username, password is valid.</p>
+<p><strong>serverobj.stop_local_server()</strong></p>
+<p>This method will stop any local ADR Nexus server accessible via the current
+Server object URL, username and password.</p>
+<p><strong>guid_list = serverobj.get_object_guids(objtype=type_class, query=None)</strong></p>
+<p>This method will query the server and returns a list of the object GUIDs
+that meet the specific query. If the query is
+None, all of the GUIDs of the type specified by objtype will be
+returned. The objtype keyword specifies the type of database object to
+get the list of guids for. Valid values for the objtype keyword include:</p>
+<ul class="simple">
+<li><p>report_objects.DatasetREST</p></li>
+<li><p>report_objects.SessionREST</p></li>
+<li><p>report_objects.ItemREST</p></li>
+</ul>
+<p><strong>obj_list = serverobj.get_objects(objtype=type_class, query=None)</strong></p>
+<p>This method is similar to <strong>get_object_guids()</strong> except that it
+returns a list of actual instances of the class specified by the
+objtype keyword instead of just returning the GUIDs.</p>
+<p>Note that if you want the list of templates, you can either set
+<strong>objtype</strong> to <strong>report_objects.TempalteREST</strong> or to
+<strong>report.objects.TemplateREST.factory</strong>. In the first case, all the
+templates will be returned as objects of the TemplateREST class. In
+the second case, all templates will be returned as objects of the
+sub-classes of TemplateREST, corresponding to the exact report_type.</p>
+<p><strong>obj = serverobj.get_object_from_guid(guid, objtype=type_class)</strong></p>
+<p>This method queries the ADR Nexus server for a single object of the class
+specified by objtype with the GUID specified by the guid argument. It
+returns an instance of the class specified by objtype or None if the
+GUID is not present.</p>
+<p><strong>status_code = serverobj.put_objects(objects)</strong></p>
+<p>This method takes a collection of objects of the classes
+report_objects.DatasetREST, report_objects.SessionREST and
+report_objects.ItemREST and pushes the local contents of the objects to
+the server. If objects with the same GUID(s) already exist in the server
+database, they will be overwritten. The return value is a status code
+from the <strong>requests</strong> Python module (e.g. <strong>requests.codes.ok</strong>). Note:
+if an error occurs the method will return the last error, but it will
+try to push every object in the input collection.</p>
+<p><strong>status_code = serverobj.del_objects(objects)</strong></p>
+<p>This method takes a collection of objects of the classes
+report_objects.DatasetREST, report_objects.SessionREST and
+report_objects.ItemREST and asks the server to delete them. If objects
+with matching GUIDs exist in the server database, they will be removed
+from the database. This method only looks at the guid attribute of the
+input object collection. The return value is a status code from the
+<strong>requests</strong> Python module (e.g. <strong>requests.codes.ok</strong>). Note: if an
+error occurs the method will return the last error, but it will try to
+delete every object in the input collection.</p>
+<p><strong>status_code = serverobj.get_file(object, fileobj)</strong></p>
+<p>In some cases, a report_objects.ItemREST instance will have an
+associated file in the Ansys Dynamic Reporting datastore.
+Examples include images,
+animations and 3D geometry (see report_objects.ItemRest above). The
+ItemREST.is_file_protocol() can be used to check for this. This method
+will download the file (if any) associated with the (ItemREST instance)
+object and write the output into the file object specified by the
+fileobj argument. Fileobj should be an open Python file type object that
+supports minimally write I/O semantics. Note that the operation is
+streaming, so it is possible for a partial file to exist if errors are
+encountered. The return value is a status code from the <strong>requests</strong>
+Python module (e.g. <strong>requests.codes.ok</strong>).</p>
+<p><strong>session = serverobj.get_default_session()</strong>
+<strong>dataset = serverobj.get_default_dataset()</strong>
+<strong>serverobj.set_default_session(session)</strong>
+<strong>serverobj.set_default_dataset(dataset)</strong></p>
+<p>The server object maintains default SessionREST and DatasetREST objects
+that are used with the create_item() method to simplify data item
+creation. The get_default_session() and get_default_dataset() methods
+return the current default session and dataset objects. The
+corresponding set_default_session() and set_default_dataset() methods
+set these objects to externally generated objects or more commonly,
+modified objects returned by the get methods.</p>
+<p><strong>item = serverobj.create_item(name=”Unnamed Item”, source=”ADR Python
+API”, sequence=0)</strong></p>
+<p>This method simplifies the generation of data items. One can create a
+new data item by simply instantiating an instance of ItemREST(), but
+many of the item attributes would need to be configured properly before
+the object can be saved into the database. Most notably, the
+item.session and item.dataset attributes need to be set to the GUIDs for
+an instance of SessionREST and DatasetREST respectively. The Server
+object always maintains a default instance of SessionREST and
+DatasetREST objects. The object references can be modified by the user
+to customize their metadata. The create_item() method will create a new
+instance of the ItemREST class and will automatically fill in the
+session and dataset attributes to the objects returned by
+get_default_session() and get_default_dataset(). Additionally, if
+put_objects() is called on an item whose session or dataset attributes
+match the default GUIDs, the put_objects() method will push the session
+and/or dataset objects as needed. If the session/dataset objects change
+(without changing the GUIDs) the system will detect this any
+automatically push them when the next item is pushed that references one
+of them. The create_item() method allows the user to specify the name,
+source and sequence number for the item during creation.</p>
+<p><strong>serverobj.export_report_as_html(report_guid, directory_name,
+query=None)</strong></p>
+<p>This method exports the Ansys Dynamic Reporting report with the
+GUID specified by the
+argument “report_guid”. The result will be written into the directory
+specified by the argument “directory_name”. The method will create the
+directory if it does not exist previously. There will be a file named
+“index.html” in the directory and a “media” subdirectory containing the
+resources needed to display the report. note: if there is an error, this
+method will throw an exception.</p>
+<p>Input arguments:</p>
+<ul class="simple">
+<li><p>report guid (string) - the guid of the report to be downloaded as
+HTML.</p></li>
+<li><p>directory_name (string) - the name of the directory to save the
+downloaded contents.</p></li>
+<li><p>query (dictionary) - a dictionary of query parameters to add to the
+report URL.</p></li>
+</ul>
+<p><strong>serverobj.export_report_as_pdf(report_guid, file_name, delay=5000)</strong></p>
+<p>Save a PDF rendering of the Ansys Dynamic Reporting report with the GUID specified by the
+argument “report_guid”. The name of the PDF file is specified by the
+argument “file_name”. Note: if there is an error, this method will throw
+an exception. This is the equivalent of displaying the report with the
+query ‘print=pdf’ included in the report URL.</p>
+<p>Input arguments:</p>
+<ul class="simple">
+<li><p>report guid (string) - the guid of the report to be saved as PDF.</p></li>
+<li><p>file_name (string) - the name of the target PDF file.</p></li>
+<li><p>delay (int) - number of milliseconds to wait for the report to load
+before downloading it. Default is 5000ms. Optional.</p></li>
+</ul>
+<p>Various data items and report templates will behave differently when
+printing:</p>
+<ol class="arabic simple">
+<li><p>Tree data items will be fully expanded and the interactive buttons
+for expanding/collapsing will be removed.</p></li>
+<li><p>Animation data items will be rendered as if the ‘image_display’
+property is set to 1.</p></li>
+<li><p>Table data items will have all of their interactive controls
+suppressed (e.g. sorting, searching, scrolling, pagination, etc)</p></li>
+<li><p>Tab layouts will behave as if the ‘inline_tabs’ property is set to 1.</p></li>
+<li><p>Panel layouts will behave as if the ‘panel_template_toggle’ property
+is set to 0.</p></li>
+</ol>
+</section>
+<section id="magic-tokens">
+<h3>Magic tokens<a class="headerlink" href="#magic-tokens" title="Link to this heading">#</a></h3>
+<p>Magic tokens is a new way for users in the ADR Nexus server
+to login without using
+their password. Ansys Dynamic Reporting
+provides a Python API to generate a per-user
+secret token. This token can then be attached to any Ansys Dynamic Reporting web page URL
+to bypass login during future access. This is currently restricted to
+only the user who starts the server. This can be useful if a URL needs
+to be reused within a HTML iframe.</p>
+<p><strong>serverobj.generate_magic_token(max_age=None)</strong></p>
+<p>This method generates a magic token with the desired expiry.</p>
+<p>Input arguments:</p>
+<ul class="simple">
+<li><p>max_age (int) - Expiry of the token in seconds. If this is None, the
+server will use its default expiry of 1 day.</p></li>
+</ul>
+<p><strong>serverobj.get_url_with_magic_token()</strong></p>
+<p>This will return a URL to access the ADR Nexus server with a magic token
+attached.</p>
+<p>Usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">()</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="mi">8000</span><span class="p">,</span>
+    <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;C:</span><span class="se">\\</span><span class="s2">Users</span><span class="se">\\</span><span class="s2">Nexus</span><span class="se">\\</span><span class="s2">db&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;raise_exception&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;connect&quot;</span><span class="p">:</span> <span class="n">server</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">launched</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">launch_local_database_server</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">launched</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">magic_token</span><span class="p">)</span>  <span class="c1"># auto generation.. default expiry of 1day</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">get_url_with_magic_token</span><span class="p">())</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">magic_token</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">generate_magic_token</span><span class="p">(</span>
+        <span class="n">max_age</span><span class="o">=</span><span class="mi">60</span>
+    <span class="p">)</span>  <span class="c1"># manual generation, with an expiry of 60 seconds</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">get_url_with_magic_token</span><span class="p">())</span>
+    <span class="c1"># Prints URL with token.</span>
+    <span class="c1"># Example: http://127.0.0.1:8000?magic_token=eyJ1c2VyX2lkIjozLCJtYXhfYWdlIjo4NjQwMCwidGltZXN0YW1wIjoiMW5QY1B5In0:1nPcPy:c3OZhMCVQQq_fXXzevQ47WHxYfbAZE5TI-GL0yBzIaw</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">serverobj</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;New Template&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:basic&quot;</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>Method on a report_remote_server.Server() object to create a new
+report_object.TemplateREST object. You can pass as input:</p>
+<ul class="simple">
+<li><p>name (string) - the name of the template</p></li>
+<li><p>parent (template objects)- the parent template. If None, the new
+template will be a top level one</p></li>
+<li><p>report_type (string) - sets the type of template. Each value of
+report_type corresponds to a different template type, and will
+generate an object from the corresponding template sub-class. See the
+table for the accepted values of report_type, the corresponding
+template type and Python API sub-class.</p></li>
+</ul>
+<p><strong>error_string = serverobj.get_last_error()</strong></p>
+<p>Several of the server methods return REST error codes: put_objects(),
+del_objects(), get_file(), etc. When these methods error, they return
+the specific REST error code. If the error in question was generated by
+the ADR Nexus server, in addition to the error_code not being equal to
+<strong>requests.codes.ok</strong>, the server may return a more detailed error
+string. This string can be retrieved using the get_last_error() method.
+An example of a data item with an item name exceeding:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">serverobj</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span>
+    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;cei&quot;</span>
+<span class="p">)</span>
+<span class="n">invalid_data_item_name</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">item</span> <span class="o">=</span> <span class="n">serverobj</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span><span class="n">invalid_data_item_name</span><span class="p">,</span> <span class="s2">&quot;command line&quot;</span><span class="p">)</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_string</span><span class="p">(</span><span class="s2">&quot;A simple text string&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">serverobj</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">serverobj</span><span class="o">.</span><span class="n">get_last_error</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>will output the following (note: <strong>requests.codes.bad_request</strong> == 400)
+output noting that the “name” field exceeds the maximum field length:</p>
+<p><strong>400</strong>
+<strong>{“name”:[“Ensure this field has no more than 80 characters.”]}</strong></p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#report-remote-server-server-object">report_remote_server.Server object</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#methods">Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#magic-tokens">Magic tokens</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="None">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/lowlevelapi/ServerObject.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+<link rel="stylesheet" href="../_static/css/fuse-search.css">
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+
+
+
+
+
+
+
+
+<script>
+var theme_static_search = JSON.parse('{"ignoreLocation": "False", "keys": ["title", "text"], "shouldSort": "True", "threshold": 0.5, "useExtendedSearch": "True"}');
+var theme_limit = "10";
+var min_chars_for_search = "1";
+var searchPath = "../_static/search.json";
+
+</script>
+
+<script src="../_static/js/fuse_search.js"></script>
+<script src="../_static/js/fuse_extension.js"></script>
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2024 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.0.2.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.1.1. <br />Last updated on
+  <span id="date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var lastModifiedDate = new Date(document.lastModified);
+  var date = lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("date").innerHTML = date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
