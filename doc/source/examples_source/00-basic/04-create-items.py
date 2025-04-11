@@ -76,8 +76,8 @@ scene.item_scene = r"C:\tmp\test_scene.avz"
 ###############################################################################
 # Create a Tree item via a dictionary
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Creating a tree item is similarly straightforward following the same pattern as
-# previous examples have, however, in this example our dictionary is quite large
+# Creating a tree item follows the same pattern as
+# previous examples have. In this example, the dictionary is quite large
 # and takes up most of the code section.
 #
 
