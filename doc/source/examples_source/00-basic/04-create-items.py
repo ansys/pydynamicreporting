@@ -66,8 +66,8 @@ img.item_image = image_path
 ###############################################################################
 # Create a 3D Item
 # ~~~~~~~~~~~~~~~~
-# This process is almost identical to the previous one except this time we assign
-# to the `item_scene` property.
+# This process is almost identical to the previous one except this time you assign
+# the image path to the `item_scene` property.
 #
 
 scene = adr_service.create_item(obj_name="3D Scene")
