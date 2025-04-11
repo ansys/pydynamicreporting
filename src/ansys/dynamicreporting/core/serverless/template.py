@@ -33,21 +33,14 @@ class Template(BaseModel):
 
     def __post_init__(self):
         if self.__class__ is Template:
-            raise TypeError("Cannot instantiate Template directly. Use Template.create()")
+            raise ADRException(
+                "Cannot instantiate Template directly. Use the Template.create() method."
+            )
         super().__post_init__()
-
-    def __str__(self) -> str:
-        return f"<{self.__class__.__name__}: {self.name}>"
 
     @property
     def type(self):
         return self.report_type
-
-    @type.setter
-    def type(self, value):
-        if not isinstance(value, str):
-            raise ValueError(f"{value} must be a string")
-        self.report_type = value
 
     @property
     def children_order(self):
@@ -208,6 +201,9 @@ class Template(BaseModel):
         curr_props = params.get("properties", {})
         params["properties"] = curr_props | new_props
         self.set_params(params)
+
+    def add_properties(self, new_props: dict) -> None:
+        self.add_property(new_props)
 
     def get_sort_fields(self):
         return self.get_params().get("sort_fields", [])

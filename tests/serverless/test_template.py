@@ -1,5 +1,7 @@
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import ADRException
+
 
 @pytest.mark.ado_test
 def test_create_template_cls(adr_serverless):
@@ -11,6 +13,16 @@ def test_create_template_cls(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_get_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    results_panel = PanelLayout(name="test_get_type", tags="dp=dp227")
+    results_panel.save()
+
+    assert PanelLayout.get(guid=results_panel.guid).type == "Layout:panel"
+
+
+@pytest.mark.ado_test
 def test_init_template_cls(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
@@ -18,6 +30,14 @@ def test_init_template_cls(adr_serverless):
     results_panel.save()
 
     assert PanelLayout.get(name="test_init_template_cls").guid == results_panel.guid
+
+
+@pytest.mark.ado_test
+def test_init_template_super_cls(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    with pytest.raises(ADRException, match="Cannot instantiate Template directly"):
+        Template(name="test_init_template_super_cls", tags="dp=dp227", type="Layout:panel")
 
 
 @pytest.mark.ado_test
@@ -36,7 +56,6 @@ def test_edit_template(adr_serverless):
 
 @pytest.mark.ado_test
 def test_raise_child_type_init(adr_serverless):
-    # Templates/reports
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
     with pytest.raises(TypeError):
