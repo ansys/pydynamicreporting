@@ -4,9 +4,9 @@
 Explore plot properties
 =======================
 
-When working with a table it is possible to turn it into a
+When working with a table, you can turn it into a
 plot by specifying the plot type through the `plot` property.
-In this example we demonstrate a variety of the possible plot
+This example demonstrates a variety of the possible plot
 properties available.
 
 .. note::
