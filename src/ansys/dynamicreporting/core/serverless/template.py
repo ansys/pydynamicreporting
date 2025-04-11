@@ -106,9 +106,11 @@ class Template(BaseModel):
         if cls is Template:
             # Get the class based on the type attribute
             try:
-                templ_cls = cls._type_registry[kwargs.pop("report_type")]
+                type_name = kwargs.pop("report_type")
             except KeyError:
                 raise ADRException("The 'report_type' must be passed when using the Template class")
+            # Get the class based on the type attribute
+            templ_cls = cls._type_registry[type_name]
             return templ_cls.create(**kwargs)
 
         new_kwargs = {"report_type": cls.report_type, **kwargs}
@@ -403,10 +405,15 @@ class ReportLinkLayout(Layout):
 
 class PPTXLayout(Layout):
     report_type: str = "Layout:pptx"
+    _properties = ("input_pptx", "output_pptx", "use_all_slides")
 
 
 class PPTXSlideLayout(Layout):
     report_type: str = "Layout:pptxslide"
+    _properties = (
+        "source_slide",
+        "exclude_from_toc",
+    )
 
 
 class DataFilterLayout(Layout):
