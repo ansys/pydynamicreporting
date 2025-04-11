@@ -10,7 +10,7 @@ can be nested to describe the layout of subsections in greater detail.
 .. note::
    This example assumes that you have a local Ansys installation.
 
-Initially we must create and start a session, as per other examples.
+Initially, create and start a session as per other examples.
 
 """
 
