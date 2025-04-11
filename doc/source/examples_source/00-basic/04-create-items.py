@@ -54,8 +54,8 @@ my_table.item_table = np.array(
 ###############################################################################
 # Create a image item
 # ~~~~~~~~~~~~~~~~~~~
-# To create an image item we just need to supply the path to the image in question.
-# In this example, we first download a sample png file and then supply its
+# To create an image item, supply the path to the image in question.
+# In this example, you first download a sample PNG file and then supply its
 # path.
 #
 
