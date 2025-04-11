@@ -37,9 +37,11 @@ my_text.item_text = "<h1>Simple Title</h1>Abc..."
 ###############################################################################
 # Create a table item
 # ~~~~~~~~~~~~~~~~~~~
-# Table items can only be numpy arrays, which is why we import numpy in a previous cell.
-# Then, create our item based on predefined names. Then we can set the row labels and
-# populate the database.
+# Table items can only be numpy arrays, which is why you import numpy in a previous cell.
+# Then:
+1.  Create the item based on predefined names. 
+1. Set the row labels.
+1. Populate the database.
 #
 
 
