@@ -4,7 +4,7 @@
 How to set plot properties
 ==========================
 
-When working with a table it is possible to turn it into a plot by specifying
+When working with a table, you can turn it into a plot by specifying
 the plot type through the `plot` property. Once a table is converted
 you can alter all sorts of plot properties by accessing properties on
 the item object.
