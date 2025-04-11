@@ -47,8 +47,8 @@ my_table.item_table = np.array(
 )
 
 ###############################################################################
-# Once we have created a table we can actually set it to be a plot by changing
-# its properties, and then we are free to set other properties.
+# Once you have created a table, set it to be a plot by changing
+# its properties, and then you can set other properties.
 #
 
 # Set visualization to be plot instead of table
