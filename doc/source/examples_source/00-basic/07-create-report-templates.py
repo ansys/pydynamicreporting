@@ -20,7 +20,7 @@ Initially we must create and start a session, as per other examples.
 #
 # Start an Ansys Dynamic Reporting service on a new
 # database. The path for the database directory must be to an empty directory.
-# Get the serverobj property from the service. We will use this to create the
+# Get the serverobj property from the service. This property will be used to create the
 # template.
 #
 
