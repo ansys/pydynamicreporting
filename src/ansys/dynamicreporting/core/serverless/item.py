@@ -18,7 +18,7 @@ from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
-from .base import BaseModel, Validator
+from .base import BaseModel, StrEnum, Validator
 
 
 class Session(BaseModel):
@@ -257,6 +257,18 @@ class FilePayloadMixin:
         return super().delete(**kwargs)
 
 
+class ItemType(StrEnum):
+    STRING = "string"
+    HTML = "html"
+    TABLE = "table"
+    TREE = "tree"
+    IMAGE = "image"
+    ANIMATION = "anim"
+    SCENE = "scene"
+    FILE = "file"
+    NONE = "none"
+
+
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
@@ -265,7 +277,7 @@ class Item(BaseModel):
     session: Session = field(compare=False, kw_only=True, default=None)
     dataset: Dataset = field(compare=False, kw_only=True, default=None)
     content: ItemContent = ItemContent()
-    type: str = "none"
+    type: str = ItemType.NONE  # todo: make this read-only
     _orm_model: str = "data.models.Item"
     _type_registry = {}  # Class-level registry of subclasses keyed by type
     _in_memory: bool = field(compare=False, kw_only=True, default=False)
@@ -362,17 +374,17 @@ class Item(BaseModel):
 
 class String(SimplePayloadMixin, Item):
     content: StringContent = StringContent()
-    type: str = "string"
+    type: str = ItemType.STRING
 
 
 class HTML(String):
     content: HTMLContent = HTMLContent()
-    type: str = "html"
+    type: str = ItemType.HTML
 
 
 class Table(Item):
     content: TableContent = TableContent()
-    type: str = "table"
+    type: str = ItemType.TABLE
     _properties: tuple = table_attr
 
     @classmethod
@@ -401,7 +413,7 @@ class Table(Item):
 
 class Tree(SimplePayloadMixin, Item):
     content: TreeContent = TreeContent()
-    type: str = "tree"
+    type: str = ItemType.TREE
 
 
 class Image(FilePayloadMixin, Item):
@@ -409,7 +421,7 @@ class Image(FilePayloadMixin, Item):
     _height: int = field(compare=False, init=False, default=0)
     _enhanced: bool = field(compare=False, init=False, default=False)
     content: ImageContent = ImageContent()
-    type: str = "image"
+    type: str = ItemType.IMAGE
 
     @property
     def width(self):
@@ -446,12 +458,12 @@ class Image(FilePayloadMixin, Item):
 
 class Animation(FilePayloadMixin, Item):
     content: AnimContent = AnimContent()
-    type: str = "anim"
+    type: str = ItemType.ANIMATION
 
 
 class Scene(FilePayloadMixin, Item):
     content: SceneContent = SceneContent()
-    type: str = "scene"
+    type: str = ItemType.SCENE
 
     def save(self, **kwargs):
         super().save(**kwargs)
@@ -461,7 +473,7 @@ class Scene(FilePayloadMixin, Item):
 
 class File(FilePayloadMixin, Item):
     content: FileContent = FileContent()
-    type: str = "file"
+    type: str = ItemType.FILE
 
     def save(self, **kwargs):
         super().save(**kwargs)

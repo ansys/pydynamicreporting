@@ -2,6 +2,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
+from enum import Enum
 import importlib
 import inspect
 from itertools import chain
@@ -563,3 +564,13 @@ class Validator(ABC):
     @abstractmethod
     def process(self, value, obj):
         pass  # pragma: no cover
+
+
+class StrEnum(str, Enum):
+    """Enum with a str mixin."""
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.value
