@@ -46,4 +46,5 @@ adr_service = adr.Service(ansys_installation=ansys_ins)
 adr_service.connect(url="http://localhost:8000", username="user", password="p455w0rd")
 
 # To stop the service
+# sphinx_gallery_thumbnail_path = '_static/00_create_db_0.png'
 adr_service.stop()

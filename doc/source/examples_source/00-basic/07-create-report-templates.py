@@ -67,4 +67,11 @@ template_2.set_filter("A|i_type|cont|table;")
 server.put_objects(template_2)
 server.put_objects(template_0)
 
+# Close the service
+# -----------------
+#
+# Close the Ansys Dynamic Reporting service. The database with the items that
+# were created remains on disk.
+
+# sphinx_gallery_thumbnail_path = '_static/00_create_db_0.png'
 adr_service.stop()

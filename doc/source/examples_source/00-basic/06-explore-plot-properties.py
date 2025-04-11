@@ -37,7 +37,7 @@ session_guid = adr_service.start(create_db=True)
 # ---------------------
 #
 # Let us start by creating a simple table and visualizing it. Create a table
-# with 5 columns and 3 rows.
+# with 5 columns and 2 rows.
 #
 
 my_table = adr_service.create_item(obj_name="Table")
@@ -88,4 +88,11 @@ my_table.visualize()
 # - `width`, `height` - dimensions of chart in pixels
 #
 
+# Close the service
+# -----------------
+#
+# Close the Ansys Dynamic Reporting service. The database with the items that
+# were created remains on disk.
+
+# sphinx_gallery_thumbnail_path = '_static/00_create_db_0.png'
 adr_service.stop()

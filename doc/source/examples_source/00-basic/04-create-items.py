@@ -17,6 +17,7 @@ Initially we must create and start a session, as per other examples.
 import numpy as np
 
 import ansys.dynamicreporting.core as adr
+import ansys.dynamicreporting.core.examples as examples
 
 db_dir = "C:\\tmp\\my_local_db_directory"
 ansys_ins = "C:\\Program Files\\Ansys Inc\\v241"
@@ -35,7 +36,7 @@ my_text.item_text = "<h1>Simple Title</h1>Abc..."
 
 ###############################################################################
 # Create a table item
-# ~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~
 # Table items can only be numpy arrays, which is why we import numpy in a previous cell.
 # Then, create our item based on predefined names. Then we can set the row labels and
 # populate the database.
@@ -50,12 +51,15 @@ my_table.item_table = np.array(
 
 ###############################################################################
 # Create a image item
-# ~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~
 # To create an image item we just need to supply the path to the image in question.
+# In this example, we first download a sample png file and then supply its
+# path.
 #
 
 img = adr_service.create_item(obj_name="Image")
-img.item_image = "C:\\tmp\\test_image.png"
+image_path = examples.download_file("enthalpy_001.png", "input_data")
+img.item_image = image_path
 
 ###############################################################################
 # Create a 3D Item
@@ -100,6 +104,11 @@ tree.append(
 my_tree = adr_service.create_item(obj_name="Tree")
 my_tree.item_tree = tree
 
+# Close the service
+# -----------------
+#
+# Close the Ansys Dynamic Reporting service. The database with the items that
+# were created remains on disk.
 
-# Finally, stop the service
+# sphinx_gallery_thumbnail_path = '_static/00_create_db_0.png'
 adr_service.stop()

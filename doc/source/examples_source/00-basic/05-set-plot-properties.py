@@ -64,4 +64,11 @@ my_table.format = "floatdot1"
 
 print(my_table.type)
 
+# Close the service
+# -----------------
+#
+# Close the Ansys Dynamic Reporting service. The database with the items that
+# were created remains on disk.
+
+# sphinx_gallery_thumbnail_path = '_static/00_create_db_0.png'
 adr_service.stop()
