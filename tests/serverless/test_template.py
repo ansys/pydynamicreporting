@@ -61,9 +61,18 @@ def test_init_template_super_cls(adr_serverless):
 def test_create_template_super_cls(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Template
 
-    Template.create(
+    template = Template.create(
         name="test_create_template_super_cls", tags="dp=dp227", report_type="Layout:panel"
     )
+    assert Template.get(guid=template.guid).guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_create_template_super_cls_no_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    with pytest.raises(ADRException):
+        Template.create(name="test_create_template_super_cls_no_type_error", tags="dp=dp227")
 
 
 @pytest.mark.ado_test
