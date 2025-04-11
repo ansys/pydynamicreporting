@@ -23,7 +23,7 @@ adr_service = adr.Service(ansys_installation=ansys_ins, db_directory=db_dir)
 ###############################################################################
 # Starting the Service
 # ~~~~~~~~~~~~~~~~~~~~
-# Once a `Service` object has been created, it must be started. It can be #
+# Once a `Service` object has been created, it must be started. It can be
 # similarly stopped.
 #
 
