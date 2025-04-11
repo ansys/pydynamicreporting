@@ -23,6 +23,23 @@ def test_get_type(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_template_props(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = PPTXLayout(name="pptx")
+    pptx_template.input_pptx = "input.pptx"
+    pptx_template.output_pptx = "output-get.pptx"
+    pptx_template.use_all_slides = "1"
+    pptx_template.save()
+    out = PPTXLayout.get(guid=pptx_template.guid)
+    assert (
+        out.input_pptx == "input.pptx"
+        and out.output_pptx == "output-get.pptx"
+        and out.use_all_slides == "1"
+    )
+
+
+@pytest.mark.ado_test
 def test_init_template_cls(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
@@ -37,7 +54,16 @@ def test_init_template_super_cls(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Template
 
     with pytest.raises(ADRException, match="Cannot instantiate Template directly"):
-        Template(name="test_init_template_super_cls", tags="dp=dp227", type="Layout:panel")
+        Template(name="test_init_template_super_cls", tags="dp=dp227", report_type="Layout:panel")
+
+
+@pytest.mark.ado_test
+def test_create_template_super_cls(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    Template.create(
+        name="test_create_template_super_cls", tags="dp=dp227", report_type="Layout:panel"
+    )
 
 
 @pytest.mark.ado_test
