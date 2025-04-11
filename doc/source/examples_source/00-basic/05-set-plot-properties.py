@@ -36,7 +36,7 @@ session_guid = adr_service.start(create_db=True)
 # Create a simple table
 # ---------------------
 #
-# Let us start by creating a simple table and visualizing it. Create a table
+# Start by creating a simple table and visualizing it. Create a table
 # with 5 columns and 3 rows.
 #
 
