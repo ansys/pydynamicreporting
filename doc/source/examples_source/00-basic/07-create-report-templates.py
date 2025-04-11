@@ -36,7 +36,7 @@ server = adr_service.serverobj
 ###############################################################################
 # Create a template
 # ~~~~~~~~~~~~~~~~~~
-# The template is a plan of how adr items will be presented in the final report.
+# The template is a plan of how ADR items will be presented in the final report.
 # The contents of sections is specified by filters that query the tags of items
 # in the database.
 #
