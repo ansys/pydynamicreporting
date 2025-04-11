@@ -16,11 +16,11 @@ class Template(BaseModel):
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
+    report_type: str = ""
     _children_order: str = field(
         compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)
-    report_type: str = ""
     _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
@@ -32,7 +32,7 @@ class Template(BaseModel):
         Template._type_registry[cls.report_type] = cls
 
     def __post_init__(self):
-        if self.report_type == "":
+        if self.__class__ is Template:
             raise TypeError("Cannot instantiate Template directly. Use Template.create()")
         super().__post_init__()
 
@@ -58,8 +58,8 @@ class Template(BaseModel):
         return self._master
 
     def save(self, **kwargs):
-        if self.parent is not None and not self.parent._saved:
-            raise Template.NotSaved(
+        if self.parent is not None and not self.parent.saved:
+            raise self.parent.__class__.NotSaved(
                 extra_detail="Failed to save template because its parent is not saved"
             )
         children_order = []
@@ -68,8 +68,8 @@ class Template(BaseModel):
                 raise TypeError(
                     f"Failed to save template because child '{child}' is not a Template object"
                 )
-            if not child._saved:
-                raise Template.NotSaved(
+            if not child.saved:
+                raise child.__class__.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
             children_order.append(child.guid)
@@ -122,27 +122,26 @@ class Template(BaseModel):
         return super().create(**new_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get(**new_kwargs)
+    def _validate_kwargs(cls, **kwargs):
+        if "children" in kwargs:
+            raise ValueError("'children' kwarg is not supported for get and filter methods")
+        return {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
 
     @classmethod
-    def get_or_create(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get_or_create(**new_kwargs)
+    def get(cls, **kwargs):
+        return super().get(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().filter(**new_kwargs)
+        return super().filter(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def find(cls, query="", **kwargs):
-        if not cls.report_type:
+        if cls is Template:
             return super().find(query=query, **kwargs)
         if "t_types|cont" in query:
             raise ADRException(
-                extra_detail="The 't_types' filter is not required if using a subclass of Template"
+                extra_detail="The 't_types' filter is not allowed if using a subclass of Template"
             )
         query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
         return super().find(query=query_string, **kwargs)

@@ -818,10 +818,16 @@ class ADR:
                             "'target_media_dir' argument must be specified because one of the objects"
                             " contains media to copy.'"
                         )
-                # save or load sessions, datasets - since it is possible they are shared
+                # try to load sessions, datasets - since it is possible they are shared
                 # and were saved already.
-                session, _ = Session.get_or_create(**item.session.as_dict(), using=target_database)
-                dataset, _ = Dataset.get_or_create(**item.dataset.as_dict(), using=target_database)
+                try:
+                    session = Session.get(guid=item.session.guid, using=target_database)
+                except Session.DoesNotExist:
+                    session = Session.create(**item.session.as_dict(), using=target_database)
+                try:
+                    dataset = Dataset.get(guid=item.dataset.guid, using=target_database)
+                except Dataset.DoesNotExist:
+                    dataset = Dataset.create(**item.dataset.as_dict(), using=target_database)
                 item.session = session
                 item.dataset = dataset
                 copy_list.append(item)

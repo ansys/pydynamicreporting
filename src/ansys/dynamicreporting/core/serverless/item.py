@@ -62,7 +62,7 @@ class HTMLParser(BaseHTMLParser):
 class ItemContent(Validator):
     def process(self, value, obj):
         if value is None:
-            raise ValueError(extra_detail="Content cannot be None")
+            raise ValueError("Content cannot be None")
         return value
 
 
@@ -206,16 +206,24 @@ class FilePayloadMixin:
     _file_ext: str = field(init=False, compare=False, default="")
 
     @property
-    def file_ext(self):
-        return self._file_ext
+    def file_path(self):
+        try:
+            return self._orm_instance.payloadfile.path
+        except (AttributeError, ValueError):
+            # If the file path is not set, return None
+            return None
 
     @property
     def has_file(self):
-        return self._file is not None
+        return self.file_path is not None and Path(self.file_path).is_file()
 
     @property
-    def file_path(self):
-        return self._orm_instance.payloadfile.path
+    def file_ext(self):
+        try:
+            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")
+        except (AttributeError, ValueError):
+            # If the file path is not set, return None
+            return None
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
@@ -236,7 +244,6 @@ class FilePayloadMixin:
                         out_file.write(chunk)
 
     def save(self, **kwargs):
-        # todo: check backward compatibility: _movie is now _anim.
         self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
         # Save file to the target path
         self._save_file(self.file_path, self._file)
@@ -269,9 +276,8 @@ class Item(BaseModel):
         Item._type_registry[cls.type] = cls
 
     def __post_init__(self):
-        # todo: can be bypassed by setting type at instantiation
-        if self.type == "none":
-            raise TypeError("Cannot instantiate Item directly. Use Item.create()")
+        if self.__class__ is Item:
+            raise ADRException("Cannot instantiate Item directly. Use the Item.create() method.")
         super().__post_init__()
 
     def save(self, **kwargs):
@@ -312,27 +318,26 @@ class Item(BaseModel):
         return super().create(**new_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().get(**new_kwargs)
+    def _validate_kwargs(cls, **kwargs):
+        if "content" in kwargs:
+            raise ValueError("'content' kwarg is not supported for get and filter methods")
+        return {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
 
     @classmethod
-    def get_or_create(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().get_or_create(**new_kwargs)
+    def get(cls, **kwargs):
+        return super().get(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().filter(**new_kwargs)
+        return super().filter(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def find(cls, query="", **kwargs):
-        if cls.type == "none":
+        if cls is Item:
             return super().find(query=query, **kwargs)
         if "i_type|cont" in query:
             raise ADRException(
-                extra_detail="The 'i_type' filter is not required if using a subclass of Item"
+                extra_detail="The 'i_type' filter is not allowed if using a subclass of Item"
             )
         return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
@@ -426,11 +431,13 @@ class Image(FilePayloadMixin, Item):
         target_ext = "png" if not self._enhanced else self._file_ext
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
         # Save the image
-        if target_ext == "png" and self._file_ext != target_ext:
+        if self._file_ext != target_ext and target_ext == "png":
+            # Convert to PNG format
+            self._file_ext = target_ext
             try:
-                image.save(self.file_path, format="PNG")
+                image.save(self.file_path, format=self._file_ext.upper())
             except OSError as e:
-                print(f"Error converting image to PNG: {e}")
+                raise ADRException(f"Error converting image to {self._file_ext}: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
             self._save_file(self.file_path, img_bytes)
         image.close()
