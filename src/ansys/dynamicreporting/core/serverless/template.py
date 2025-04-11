@@ -70,7 +70,7 @@ class Template(BaseModel):
         self._master = self.parent is None
         # set properties
         prop_dict = {}
-        for prop in self._properties:
+        for prop in self.__class__._properties:
             value = getattr(self, prop, None)
             if value is not None:
                 prop_dict[prop] = value
