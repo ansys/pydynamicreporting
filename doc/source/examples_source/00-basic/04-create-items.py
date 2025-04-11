@@ -4,8 +4,8 @@
 Create new items in the database
 ================================
 
-In order to launch the service an Ansys installation directory must be provided as a string
-and an existing, empty, directory may be provided if you intend to create a database.
+To launch the service, provide an Ansys installation directory as a string.
+You can provide an existing, empty, directory if you intend to create a database.
 
 .. note::
    This example assumes that you have a local Ansys installation.
