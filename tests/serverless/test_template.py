@@ -233,3 +233,81 @@ def test_create_template(adr_serverless):
     }
     template = BasicLayout.create(**template_kwargs)
     assert template.saved is True
+
+
+@pytest.mark.ado_test
+def test_template_set_property(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_property", tags="dp=dp227")
+    template.set_property({"custom_prop_1": "value1"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {"custom_prop_1": "value1"}
+
+
+@pytest.mark.ado_test
+def test_template_add_property(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_property", tags="dp=dp227")
+    template.set_property({"custom_prop_1": "value1"})
+    template.add_property({"custom_prop_2": "value2"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {
+        "custom_prop_1": "value1",
+        "custom_prop_2": "value2",
+    }
+
+
+@pytest.mark.ado_test
+def test_template_add_properties(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_properties", tags="dp=dp227")
+    template.set_property({"custom_prop_1": "value1"})
+    template.add_properties({"custom_prop_2": "value2", "custom_prop_3": "value3"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {
+        "custom_prop_1": "value1",
+        "custom_prop_2": "value2",
+        "custom_prop_3": "value3",
+    }
+
+
+@pytest.mark.ado_test
+def test_template_set_property_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_property_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.set_property(["not", "a", "dict"])
+
+
+@pytest.mark.ado_test
+def test_template_add_property_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_property_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.add_property("not-a-dict")
+
+
+@pytest.mark.ado_test
+def test_template_add_properties_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_properties_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.add_properties(1234)
