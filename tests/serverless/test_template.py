@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import ADRException
@@ -604,3 +606,21 @@ def test_template_reorder_children(adr_serverless):
 
     # After reorder, check order
     assert [child.name for child in parent.children] == ["child2", "child3", "child1"]
+
+
+@pytest.mark.ado_test
+def test_template_render_fallback(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_render_fallback", tags="dp=dp227")
+    template.save()
+
+    # Patch Template.render internals to simulate a failure
+    with mock.patch(
+        "ansys.dynamicreporting.core.serverless.template.TemplateEngine.start_toc_session",
+        side_effect=Exception("Forced error"),
+    ):
+        html_output = template.render()
+
+    # Check that the fallback HTML contains "Error"
+    assert "Error" in html_output or "error" in html_output
