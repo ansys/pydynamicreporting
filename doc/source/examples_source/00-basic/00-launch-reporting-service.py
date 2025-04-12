@@ -38,7 +38,9 @@ adr_service.stop()
 # You may need to connect to a service that is already running. To do so create
 # a Service object, as before, but leave off the database argument and this time,
 # call the `connect` method and provide connection details, including any
-# credentials required.
+# credentials required. If no username and password were set when creating the
+# database, you can leave these fields empty and the default values will be
+# used.
 #
 
 ansys_ins = r"C:\Program Files\Ansys Inc\v241"

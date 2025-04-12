@@ -37,7 +37,7 @@ session_guid = adr_service.start(create_db=True)
 # ---------------------
 #
 # Start by creating a simple table and visualizing it. Create a table
-# with 5 columns and 3 rows.
+# with 5 columns and 2 rows.
 #
 
 my_table = adr_service.create_item(obj_name="Table")
