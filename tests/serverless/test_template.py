@@ -624,3 +624,141 @@ def test_template_render_fallback(adr_serverless):
 
     # Check that the fallback HTML contains "Error"
     assert "Error" in html_output or "error" in html_output
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_column_count(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_count", tags="dp=dp227")
+    layout.set_column_count(3)
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_column_count() == 3
+
+
+@pytest.mark.ado_test
+def test_layout_set_column_count_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_count_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="column count input should be an integer"):
+        layout.set_column_count("not-an-integer")
+
+    with pytest.raises(ValueError, match="column count input should be larger than 0"):
+        layout.set_column_count(0)
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_column_widths(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_widths", tags="dp=dp227")
+    layout.set_column_widths([1.0, 2.0])
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_column_widths() == [1.0, 2.0]
+
+
+@pytest.mark.ado_test
+def test_layout_set_column_widths_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_widths_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="column widths input should be a list"):
+        layout.set_column_widths("not-a-list")
+
+    with pytest.raises(ValueError, match="column widths input should be a list of integers or floats"):
+        layout.set_column_widths([1, "bad", 3])
+
+    with pytest.raises(ValueError, match="column widths input should be larger than 0"):
+        layout.set_column_widths([1, -2])
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_html(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_html", tags="dp=dp227")
+    layout.set_html("<h1>Hello</h1>")
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_html() == "<h1>Hello</h1>"
+
+
+@pytest.mark.ado_test
+def test_layout_set_html_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_html_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be a string"):
+        layout.set_html(123)
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_comments(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_comments", tags="dp=dp227")
+    layout.set_comments("This is a comment")
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_comments() == "This is a comment"
+
+
+@pytest.mark.ado_test
+def test_layout_set_comments_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_comments_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be a string"):
+        layout.set_comments(456)
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_transpose(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_transpose", tags="dp=dp227")
+    layout.set_transpose(1)
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_transpose() == 1
+
+
+@pytest.mark.ado_test
+def test_layout_set_transpose_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_transpose_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be an integer"):
+        layout.set_transpose("not-integer")
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_skip_empty(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_skip", tags="dp=dp227")
+    layout.set_skip(1)
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_skip() == 1
+
+
+@pytest.mark.ado_test
+def test_layout_set_skip_empty_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_skip_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be an integer"):
+        layout.set_skip("invalid")
+
+    with pytest.raises(ValueError, match="input needs to be an integer \\(0 or 1\\)"):
+        layout.set_skip(5)
