@@ -455,3 +455,152 @@ def test_template_add_sort_fields_type_error(adr_serverless):
 
     with pytest.raises(ValueError, match="sorting filter is not a list"):
         template.add_sort_fields("field_should_be_list")
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_all(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_selection_all", tags="dp=dp227")
+    template.set_sort_selection("all")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_selection() == "all"
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_first(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_selection_first", tags="dp=dp227")
+    template.set_sort_selection("first")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_selection() == "first"
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_last(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_selection_last", tags="dp=dp227")
+    template.set_sort_selection("last")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_selection() == "last"
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_invalid_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_sort_selection_invalid_type", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="sort selection input should be a string"):
+        template.set_sort_selection(123)
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_invalid_value(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_sort_selection_invalid_value", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="sort selection not among the acceptable inputs"):
+        template.set_sort_selection("invalid-option")
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter_mode_items", tags="dp=dp227")
+    template.set_filter_mode("items")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter_mode() == "items"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_root_replace(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_filter_mode_root_replace", tags="dp=dp227"
+    )
+    template.set_filter_mode("root_replace")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter_mode() == "root_replace"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_root_append(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter_mode_root_append", tags="dp=dp227")
+    template.set_filter_mode("root_append")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter_mode() == "root_append"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_invalid_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_filter_mode_invalid_type", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="filter mode input should be a string"):
+        template.set_filter_mode(123)
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_invalid_value(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_filter_mode_invalid_value", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="filter mode not among the acceptable inputs"):
+        template.set_filter_mode("invalid-mode")
+
+
+@pytest.mark.ado_test
+def test_template_reorder_children(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    # Create parent template
+    parent = PanelLayout.create(name="test_template_reorder_children", tags="dp=dp227")
+
+    # Create child templates
+    child1 = BasicLayout.create(name="child1", parent=parent)
+    child2 = BasicLayout.create(name="child2", parent=parent)
+    child3 = BasicLayout.create(name="child3", parent=parent)
+
+    # Manually set the parent's children
+    parent.children = [child1, child2, child3]
+    parent._children_order = f"{child2.guid},{child3.guid},{child1.guid}"  # Desired order
+    parent.reorder_children()
+
+    # After reorder, check order
+    assert [child.name for child in parent.children] == ["child2", "child3", "child1"]
