@@ -617,7 +617,7 @@ def test_template_render_fallback(adr_serverless):
 
     # Patch Template.render internals to simulate a failure
     with mock.patch(
-        "ansys.dynamicreporting.core.serverless.template.TemplateEngine.start_toc_session",
+        "reports.engine.TemplateEngine.start_toc_session",
         side_effect=Exception("Forced error"),
     ):
         html_output = template.render()
