@@ -311,3 +311,149 @@ def test_template_add_properties_type_error(adr_serverless):
 
     with pytest.raises(TypeError, match="input must be a dictionary"):
         template.add_properties(1234)
+
+
+@pytest.mark.ado_test
+def test_template_set_params(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_params", tags="dp=dp227")
+    template.set_params({"param1": "value1"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {"param1": "value1"}
+
+
+@pytest.mark.ado_test
+def test_template_add_params(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_params", tags="dp=dp227")
+    template.set_params({"param1": "value1"})
+    template.add_params({"param2": "value2"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {
+        "param1": "value1",
+        "param2": "value2",
+    }
+
+
+@pytest.mark.ado_test
+def test_template_set_params_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_params_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.set_params("not-a-dict")
+
+
+@pytest.mark.ado_test
+def test_template_add_params_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_params_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.add_params(1234)
+
+
+@pytest.mark.ado_test
+def test_template_set_filter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter", tags="dp=dp227")
+    template.set_filter("A|i_tags|cont|dp=dp227;")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter() == "A|i_tags|cont|dp=dp227;"
+
+
+@pytest.mark.ado_test
+def test_template_add_filter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_filter", tags="dp=dp227")
+    template.set_filter("A|i_tags|cont|dp=dp227;")
+    template.add_filter("A|i_tags|cont|section=data;")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter() == "A|i_tags|cont|dp=dp227;A|i_tags|cont|section=data;"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="filter value should be a string"):
+        template.set_filter(123)
+
+
+@pytest.mark.ado_test
+def test_template_add_filter_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_filter_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="filter value should be a string"):
+        template.add_filter(456)
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_fields(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_fields", tags="dp=dp227")
+    template.set_sort_fields(["name", "date"])
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_fields() == ["name", "date"]
+
+
+@pytest.mark.ado_test
+def test_template_add_sort_fields(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_sort_fields", tags="dp=dp227")
+    template.set_sort_fields(["name"])
+    template.add_sort_fields(["date", "tags"])
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_fields() == ["name", "date", "tags"]
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_fields_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_fields_type_error", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="sorting filter is not a list"):
+        template.set_sort_fields("not-a-list")
+
+
+@pytest.mark.ado_test
+def test_template_add_sort_fields_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_sort_fields_type_error", tags="dp=dp227")
+
+    with pytest.raises(AttributeError):
+        # Note: add_sort_fields assumes sort_fields is a list already
+        # and directly calls .extend() on it — if it's not a list, it crashes
+        template.add_sort_fields("field_should_be_list")
