@@ -453,7 +453,5 @@ def test_template_add_sort_fields_type_error(adr_serverless):
 
     template = PanelLayout.create(name="test_template_add_sort_fields_type_error", tags="dp=dp227")
 
-    with pytest.raises(AttributeError):
-        # Note: add_sort_fields assumes sort_fields is a list already
-        # and directly calls .extend() on it — if it's not a list, it crashes
+    with pytest.raises(ValueError, match="sorting filter is not a list"):
         template.add_sort_fields("field_should_be_list")
