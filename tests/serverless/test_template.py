@@ -670,7 +670,9 @@ def test_layout_set_column_widths_invalid(adr_serverless):
     with pytest.raises(ValueError, match="column widths input should be a list"):
         layout.set_column_widths("not-a-list")
 
-    with pytest.raises(ValueError, match="column widths input should be a list of integers or floats"):
+    with pytest.raises(
+        ValueError, match="column widths input should be a list of integers or floats"
+    ):
         layout.set_column_widths([1, "bad", 3])
 
     with pytest.raises(ValueError, match="column widths input should be larger than 0"):
