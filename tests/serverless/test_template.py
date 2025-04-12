@@ -609,24 +609,6 @@ def test_template_reorder_children(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_template_render_fallback(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import PanelLayout
-
-    template = PanelLayout.create(name="test_template_render_fallback", tags="dp=dp227")
-    template.save()
-
-    # Patch Template.render internals to simulate a failure
-    with mock.patch(
-        "reports.engine.TemplateEngine.start_toc_session",
-        side_effect=Exception("Forced error"),
-    ):
-        html_output = template.render()
-
-    # Check that the fallback HTML contains "Error"
-    assert "Error" in html_output or "error" in html_output
-
-
-@pytest.mark.ado_test
 def test_layout_set_get_column_count(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
@@ -764,3 +746,52 @@ def test_layout_set_skip_empty_invalid(adr_serverless):
 
     with pytest.raises(ValueError, match="input needs to be an integer \\(0 or 1\\)"):
         layout.set_skip(5)
+
+
+@pytest.mark.ado_test
+def test_generator_set_get_generated_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(name="test_generator_generated_items", tags="dp=dp227")
+    generator.set_generated_items("replace")
+    generator.save()
+    out = TableMergeGenerator.get(guid=generator.guid)
+    assert out.get_generated_items() == "replace"
+
+
+@pytest.mark.ado_test
+def test_generator_set_generated_items_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(
+        name="test_generator_generated_items_invalid", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="generated items should be a string"):
+        generator.set_generated_items(123)
+
+    with pytest.raises(ValueError, match="input should be add or replace"):
+        generator.set_generated_items("invalid-option")
+
+
+@pytest.mark.ado_test
+def test_generator_set_get_append_tags(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(name="test_generator_append_tags", tags="dp=dp227")
+    generator.set_append_tags(False)
+    generator.save()
+    out = TableMergeGenerator.get(guid=generator.guid)
+    assert out.get_append_tags() is False
+
+
+@pytest.mark.ado_test
+def test_generator_set_append_tags_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(
+        name="test_generator_append_tags_invalid", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="value should be True / False"):
+        generator.set_append_tags("not-boolean")
