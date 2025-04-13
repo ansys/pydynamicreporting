@@ -347,7 +347,7 @@ class Item(BaseModel):
     def find(cls, query="", **kwargs):
         if cls is Item:
             return super().find(query=query, **kwargs)
-        if "i_type|cont" in query:
+        if "i_type|" in query:
             raise ADRException(
                 extra_detail="The 'i_type' filter is not allowed if using a subclass of Item"
             )

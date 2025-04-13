@@ -166,7 +166,7 @@ class Template(BaseModel):
     def find(cls, query="", **kwargs):
         if cls is Template:
             return super().find(query=query, **kwargs)
-        if "t_types|cont" in query:
+        if "t_types|" in query:
             raise ADRException(
                 extra_detail="The 't_types' filter is not allowed if using a subclass of Template"
             )
