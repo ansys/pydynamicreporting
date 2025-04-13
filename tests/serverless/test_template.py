@@ -1,4 +1,4 @@
-from unittest import mock
+from uuid import uuid4
 
 import pytest
 
@@ -795,3 +795,101 @@ def test_generator_set_append_tags_invalid(adr_serverless):
 
     with pytest.raises(ValueError, match="value should be True / False"):
         generator.set_append_tags("not-boolean")
+
+
+@pytest.mark.ado_test
+def test_template_str(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_str", tags="dp=dp227")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert isinstance(str(out), str)
+    assert "PanelLayout" in str(out) and out.guid in str(out)
+
+
+@pytest.mark.ado_test
+def test_template_repr(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_repr", tags="dp=dp227")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert isinstance(repr(out), str)
+    assert "PanelLayout" in repr(out) and out.guid in repr(out)
+
+
+@pytest.mark.ado_test
+def test_template_delete(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_delete", tags="dp=dp227")
+    template.save()
+
+    template_guid = template.guid
+    template.delete()
+
+    with pytest.raises(PanelLayout.DoesNotExist):
+        PanelLayout.get(guid=template_guid)
+
+
+@pytest.mark.ado_test
+def test_template_get_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_get_success", tags="dp=dp227")
+    template.save()
+    out = PanelLayout.get(guid=template.guid)
+    assert out.guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_get_not_exist(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    with pytest.raises(PanelLayout.DoesNotExist):
+        PanelLayout.get(guid=str(uuid4()))
+
+
+@pytest.mark.ado_test
+def test_template_get_multiple(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    PanelLayout.create(name="test_template_get_multiple", tags="dp=dp227").save()
+    PanelLayout(name="test_template_get_multiple", tags="dp=dp227").save()
+
+    with pytest.raises(PanelLayout.MultipleObjectsReturned):
+        PanelLayout.get(name="test_template_get_multiple")
+
+
+@pytest.mark.ado_test
+def test_template_filter_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_filter_success", tags="dp=dp227")
+    template.save()
+    out = PanelLayout.filter(name="test_template_filter_success")
+    assert out[0].guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_find_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_find_success", tags="dp=dp227")
+    template.save()
+    out = PanelLayout.find(query="A|t_name|cont|test_template_find_success")
+    assert out[0].guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_find_raises_exception(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    with pytest.raises(ADRException):
+        PanelLayout.find(query="A|t_types|cont|panel")
