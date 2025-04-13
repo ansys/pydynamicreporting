@@ -366,6 +366,71 @@ def test_template_add_params_type_error(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_template_set_params_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_params_none", tags="dp=dp227")
+    template.set_params(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {}
+
+
+@pytest.mark.ado_test
+def test_template_add_params_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_params_none", tags="dp=dp227")
+    template.add_params(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {}
+
+
+@pytest.mark.ado_test
+def test_template_set_property_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_property_none", tags="dp=dp227")
+    template.set_property(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {}
+
+
+@pytest.mark.ado_test
+def test_template_add_property_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_property_none", tags="dp=dp227")
+    template.add_property(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {}
+
+
+@pytest.mark.ado_test
+def test_template_add_properties_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_properties_none", tags="dp=dp227")
+    template.add_properties(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {}
+
+
+@pytest.mark.ado_test
 def test_template_set_filter(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
@@ -845,6 +910,20 @@ def test_template_get_success(adr_serverless):
     template.save()
     out = PanelLayout.get(guid=template.guid)
     assert out.guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_get_invalid_kwargs(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_get_invalid_kwargs", tags="dp=dp227")
+    template.save()
+
+    with pytest.raises(
+        ValueError, match="'children' kwarg is not supported for get and filter methods"
+    ):
+        p1 = PanelLayout.create(name="test_template_get_invalid_kwargs1", tags="dp=dp227")
+        PanelLayout.get(children=[p1])
 
 
 @pytest.mark.ado_test
