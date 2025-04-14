@@ -58,7 +58,7 @@ adr_service.visualize_report()
 # ---------------------------------
 #
 # Now that you have a running Ansys Dynamic Reporting service, create a
-# second instance of the ``Reporting`` class and use it to
+# second instance of the ``Service`` class and use it to
 # connect to the database. Visualize the default report.
 
 connected_s = adr.Service()

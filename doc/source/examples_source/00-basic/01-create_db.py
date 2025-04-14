@@ -1,8 +1,8 @@
 """
 .. _ref_createdb:
 
-Create a database
-=================
+Create a database and populate it
+=================================
 
 This example shows how to use PyDynamicReporting to create an Ansys
 Dynamic Reporting service, create a database for this service, and
