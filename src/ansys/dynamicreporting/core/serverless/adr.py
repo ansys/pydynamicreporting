@@ -415,9 +415,7 @@ class ADR:
         if self._debug is not None:
             overrides["DEBUG"] = self._debug
 
-        # cannot be None
         overrides["MEDIA_ROOT"] = str(self._media_directory)
-
         if self._static_directory is not None:
             overrides["STATIC_ROOT"] = str(self._static_directory)
 
