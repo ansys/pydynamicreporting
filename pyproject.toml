@@ -16,7 +16,7 @@ authors = [
 
 maintainers = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "nexus@ansys.com"},
+    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
