@@ -880,3 +880,42 @@ def test_delete_templates(adr_serverless):
     temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_delete_templates;")
     count = temps.delete()
     assert count == 1, "No templates deleted"
+
+
+@pytest.mark.ado_test
+def test_render_report(monkeypatch, adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    # Create a dummy template so that Template.get() can find it.
+    dummy_template = adr_serverless.create_template(
+        BasicLayout, name="TestReport", parent=None, tags="dp=dp227"
+    )
+    dummy_template.set_params({"HTML": "<h1>Test Report</h1>"})
+    dummy_template.save()
+
+    # Patch django.template.loader.render_to_string to return a fixed string.
+    def fake_render_to_string(template_name, context, request):
+        # Ensure the expected template file is requested.
+        assert template_name == "reports/report_display_simple.html"
+        assert context == {"plotly": 1, "pwidth": "10.5", "dpi": "96."}
+        # Optionally, you could inspect the 'context' if needed.
+        return "dummy rendered content"
+
+    # Patch the django.template.loader.render_to_string function with our patched version.
+    monkeypatch.setattr("django.template.loader.render_to_string", fake_render_to_string)
+
+    # Call render_report; since no additional kwargs are provided, it will find the template by name.
+    result = adr_serverless.render_report(
+        name="TestReport",
+        context={"plotly": 1, "pwidth": "10.5", "dpi": "96."},
+        item_filter="A|i_tags|cont|dp=dp227;",
+    )
+
+    # Assert that the result is the string returned by our patched render_to_string.
+    assert result == "dummy rendered content"
+
+
+@pytest.mark.ado_test
+def test_render_no_kwarg(adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.render_report()
