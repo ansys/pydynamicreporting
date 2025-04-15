@@ -654,10 +654,9 @@ class ADR:
 
     def create_item(self, item_type: type[Item], **kwargs: Any) -> Item:
         if not issubclass(item_type, Item):
-            raise TypeError(f"{item_type} is not valid")
+            raise TypeError(f"{item_type.__name__} is not a subclass of Item")
         if not kwargs:
             raise ADRException("At least one keyword argument must be provided to create the item.")
-        kwargs["_in_memory"] = self._in_memory
         return item_type.create(
             session=kwargs.pop("session", self._session),
             dataset=kwargs.pop("dataset", self._dataset),
@@ -667,7 +666,7 @@ class ADR:
     @staticmethod
     def create_template(template_type: type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
-            raise TypeError(f"{template_type} is not valid")
+            raise TypeError(f"{template_type.__name__} is not a subclass of Template")
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to create the template."
@@ -688,34 +687,30 @@ class ADR:
         try:
             return Template.get(parent=None, **kwargs)
         except Exception as e:
-            raise e
+            raise ADRException(f"Report not found: {e}")
 
     @staticmethod
     def get_reports(*, fields: list | None = None, flat: bool = False) -> ObjectSet | list:
         # return list of reports by default.
         # if fields are mentioned, return value list
-        try:
-            out = Template.filter(parent=None)
-            if fields:
-                out = out.values_list(*fields, flat=flat)
-        except Exception as e:
-            raise e
-
+        out = Template.filter(parent=None)
+        if fields:
+            out = out.values_list(*fields, flat=flat)
         return out
 
-    def get_list_reports(self, *, r_type: str = "name") -> ObjectSet | list:
+    def get_list_reports(self, r_type: str | None = "name") -> ObjectSet | list:
         supported_types = ("name", "report")
-        if r_type not in supported_types:
+        if r_type and r_type not in supported_types:
             raise ADRException(f"r_type must be one of {supported_types}")
-        if r_type == "name":
-            return self.get_reports(
-                fields=[
-                    r_type,
-                ],
-                flat=True,
-            )
-        else:
+        if not r_type or r_type == "report":
             return self.get_reports()
+        # if r_type == "name":
+        return self.get_reports(
+            fields=[
+                r_type,
+            ],
+            flat=True,
+        )
 
     def render_report(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
@@ -739,7 +734,9 @@ class ADR:
         **kwargs: Any,
     ) -> ObjectSet:
         if not issubclass(query_type, (Item, Template, Session, Dataset)):
-            raise TypeError(f"{query_type} is not valid")
+            raise TypeError(
+                f"'{query_type.__name__}' is not a type of Item, Template, Session, or Dataset"
+            )
         return query_type.find(query=query, **kwargs)
 
     @staticmethod
@@ -751,7 +748,7 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
-            if kwargs.get("using", "default") != obj.db:
+            if target_db := kwargs.get("using", "default") != obj.db:
                 # required if copying across databases
                 obj.reinit()
             obj.save(**kwargs)
