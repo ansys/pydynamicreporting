@@ -186,9 +186,6 @@ def test_get_install_info_with_ceidev(monkeypatch, tmp_path):
     # Force the import of 'enve' to fail (so its candidate is not added).
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
-    # Monkeypatch Path.is_dir so that only our CEIDEVROOTDOS candidate returns True.
-    original_is_dir = Path.is_dir
-
     def fake_is_dir(self):
         if str(self) == str(ceidev_dir):
             return True

@@ -101,6 +101,33 @@ def test_item_get_w_content_error(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_item_get_w_session(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    intro_html = Item.create(
+        name="test_item_get_w_session",
+        type="html",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert Item.get(guid=intro_html.guid, session=adr_serverless.session).guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def get_orm_saved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML(
+        name="get_orm_saved",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert intro_html._orm_saved is False
+
+
+@pytest.mark.ado_test
 def test_item_filter(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
@@ -1159,3 +1186,12 @@ def test_is_enhanced_fails_on_non_enhanced_tiff(adr_serverless):
             )
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_objectset_empty(adr_serverless):
+    from ansys.dynamicreporting.core.serverless.base import Item, ObjectSet
+
+    # Create an empty ObjectSet
+    empty_set = ObjectSet(_model=Item, _orm_model=Item._orm_model_cls, _orm_queryset=None)
+    assert empty_set._obj_set == []
