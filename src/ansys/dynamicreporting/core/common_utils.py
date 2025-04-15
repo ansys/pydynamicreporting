@@ -66,7 +66,7 @@ def get_install_info(
         if "CEIDEVROOTDOS" in os.environ:
             dirs_to_check.append(Path(os.environ["CEIDEVROOTDOS"]))
         # Common, default install locations
-        if platform.system().startswith("Wind"):
+        if platform.system().startswith("Wind"):  # pragma: no cover
             install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{CURRENT_VERSION}\CEI")
         else:
             install_loc = Path(f"/ansys_inc/v{CURRENT_VERSION}/CEI")

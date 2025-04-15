@@ -1,16 +1,16 @@
-import os
 from pathlib import Path
+import platform
 
 import pytest
 
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
-from ansys.dynamicreporting.core.common_utils import get_install_info
+from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
-# Test 1: ansys_installation provided, valid using the "CEI" folder.
+# ansys_installation provided, valid using the "CEI" folder.
 @pytest.mark.ado_test
 def test_get_install_info_valid_cei(tmp_path):
     version = 252
@@ -31,7 +31,7 @@ def test_get_install_info_valid_cei(tmp_path):
     assert ver == version
 
 
-# Test 2: ansys_installation provided, valid using the base directory (when CEI folder is absent).
+# ansys_installation provided, valid using the base directory (when CEI folder is absent).
 @pytest.mark.ado_test
 def test_get_install_info_valid_base(tmp_path):
     version = 252
@@ -49,7 +49,7 @@ def test_get_install_info_valid_base(tmp_path):
     assert ver == version
 
 
-# Test 3: ansys_installation provided, but missing required nexus folder structure → raises InvalidAnsysPath.
+# ansys_installation provided, but missing required nexus folder structure → raises InvalidAnsysPath.
 @pytest.mark.ado_test
 def test_get_install_info_invalid_missing_manage(tmp_path):
     version = 252
@@ -62,7 +62,7 @@ def test_get_install_info_invalid_missing_manage(tmp_path):
         get_install_info(ansys_installation=str(install_dir))
 
 
-# Test 4: ansys_installation is None, but PYADR_ANSYS_INSTALLATION is set to a valid installation.
+# ansys_installation is None, but PYADR_ANSYS_INSTALLATION is set to a valid installation.
 @pytest.mark.ado_test
 def test_get_install_info_env_pyadr_valid(tmp_path, monkeypatch):
     version = 252
@@ -81,7 +81,7 @@ def test_get_install_info_env_pyadr_valid(tmp_path, monkeypatch):
     assert ver == version
 
 
-# Test 5: ansys_installation is None and AWP_ROOT{CURRENT_VERSION} is set to a valid installation.
+# ansys_installation is None and AWP_ROOT{CURRENT_VERSION} is set to a valid installation.
 @pytest.mark.ado_test
 def test_get_install_info_env_awp_valid(tmp_path, monkeypatch):
     version = 252
@@ -104,7 +104,7 @@ def test_get_install_info_env_awp_valid(tmp_path, monkeypatch):
     assert ver == version
 
 
-# Test 6: ansys_installation is None and no valid installation is found.
+# ansys_installation is None and no valid installation is found.
 # We simulate this by forcing all candidate directories to report they are not directories.
 @pytest.mark.ado_test
 def test_get_install_info_none_no_valid(monkeypatch):
@@ -120,7 +120,7 @@ def test_get_install_info_none_no_valid(monkeypatch):
     assert ver == CURRENT_VERSION
 
 
-# Test 7: ansys_installation provided with no version in its path but with a provided ansys_version.
+# ansys_installation provided with no version in its path but with a provided ansys_version.
 @pytest.mark.ado_test
 def test_get_install_info_provided_ansys_version(tmp_path):
     provided_version = 300
@@ -139,3 +139,64 @@ def test_get_install_info_provided_ansys_version(tmp_path):
     # Expect the base directory is returned and version equals the provided version.
     assert install == str(install_dir)
     assert ver == provided_version
+
+
+# Test the branch for a valid 'enve' candidate.
+@pytest.mark.ado_test
+def test_get_install_info_with_enve(monkeypatch, tmp_path):
+    # Create a fake candidate directory for enve.home().
+    fake_enve_dir = tmp_path / "fake_enve_home" / "v253"
+    fake_enve_dir.mkdir(parents=True)
+
+    # Create a fake enve module with a home() function returning our candidate.
+    fake_enve = type("FakeEnve", (), {"home": lambda: fake_enve_dir})
+    monkeypatch.setitem(__import__("sys").modules, "enve", fake_enve)
+
+    # Remove interfering environment variables.
+    for var in ["PYADR_ANSYS_INSTALLATION", "CEIDEVROOTDOS", f"AWP_ROOT{CURRENT_VERSION}"]:
+        monkeypatch.delenv(var, raising=False)
+
+    # Monkeypatch Path.is_dir so that our fake enve candidate is the only valid directory.
+    def fake_is_dir(self):
+        if str(self) == str(fake_enve_dir):
+            return True
+        return False
+
+    monkeypatch.setattr(Path, "is_dir", fake_is_dir)
+
+    install, ver = get_install_info()
+    assert install == str(fake_enve_dir)
+    # get_install_version should extract 253 from "v253".
+    assert ver == 253
+
+
+@pytest.mark.ado_test
+def test_get_install_info_with_ceidev(monkeypatch, tmp_path):
+    # Create a candidate directory for CEIDEVROOTDOS.
+    ceidev_dir = tmp_path / "ceidev_install" / f"v{CURRENT_VERSION}"
+    ceidev_dir.mkdir(parents=True)
+
+    # Set the environment variable CEIDEVROOTDOS to our candidate.
+    monkeypatch.setenv("CEIDEVROOTDOS", str(ceidev_dir))
+
+    # Remove other environment variables that may interfere.
+    monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
+    monkeypatch.delenv(f"AWP_ROOT{CURRENT_VERSION}", raising=False)
+
+    # Force the import of 'enve' to fail (so its candidate is not added).
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+
+    # Monkeypatch Path.is_dir so that only our CEIDEVROOTDOS candidate returns True.
+    original_is_dir = Path.is_dir
+
+    def fake_is_dir(self):
+        if str(self) == str(ceidev_dir):
+            return True
+        # For all other paths (e.g. the common default), return False.
+        return False
+
+    monkeypatch.setattr(Path, "is_dir", fake_is_dir)
+
+    install, ver = get_install_info()
+    assert install == str(ceidev_dir)
+    assert ver == CURRENT_VERSION
