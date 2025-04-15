@@ -534,7 +534,7 @@ class ADR:
         # close db connections
         try:
             connections.close_all()
-        except DatabaseError:
+        except DatabaseError:  # pragma: no cover
             pass
         # cleanup temp files
         for tmp_dir in self._tmp_dirs:
@@ -748,7 +748,7 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
-            if kwargs.get("using", "default") != obj.db:
+            if obj.db and kwargs.get("using", "default") != obj.db:
                 # required if copying across databases
                 obj.reinit()
             obj.save(**kwargs)
