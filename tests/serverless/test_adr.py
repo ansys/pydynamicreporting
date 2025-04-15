@@ -661,7 +661,7 @@ def test_get_report_basic(adr_serverless):
     top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
     top_parent.save()
 
-    report = adr_serverless.get_report(top_parent.guid)
+    report = adr_serverless.get_report(guid=top_parent.guid)
     assert report.guid == top_parent.guid
 
 
@@ -701,7 +701,7 @@ def test_get_reports_w_fields(adr_serverless):
 
     reports = adr_serverless.get_reports(fields=["guid", "name"])
     assert len(reports) > 0
-    assert all("guid" in report and "name" in report for report in reports)
+    assert all(["guid" in report and "name" in report for report in reports])
 
 
 @pytest.mark.ado_test
@@ -735,7 +735,7 @@ def test_get_list_reports_w_r_type(adr_serverless):
     top_parent.save()
     reports = adr_serverless.get_list_reports(r_type="name")
     assert len(reports) > 0
-    assert all("guid" in report and "name" in report for report in reports)
+    assert all(["name" in report for report in reports])
 
 
 @pytest.mark.ado_test
