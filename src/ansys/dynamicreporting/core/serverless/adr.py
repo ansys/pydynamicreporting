@@ -748,7 +748,7 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
-            if target_db := kwargs.get("using", "default") != obj.db:
+            if kwargs.get("using", "default") != obj.db:
                 # required if copying across databases
                 obj.reinit()
             obj.save(**kwargs)

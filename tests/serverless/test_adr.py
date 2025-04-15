@@ -701,7 +701,12 @@ def test_get_reports_w_fields(adr_serverless):
 
     reports = adr_serverless.get_reports(fields=["guid", "name"])
     assert len(reports) > 0
-    assert all(["guid" in report and "name" in report for report in reports])
+    assert all(
+        [
+            isinstance(uuid.UUID(report[0]), uuid.UUID) and isinstance(report[1], str)
+            for report in reports
+        ]
+    )
 
 
 @pytest.mark.ado_test
@@ -735,7 +740,7 @@ def test_get_list_reports_w_r_type(adr_serverless):
     top_parent.save()
     reports = adr_serverless.get_list_reports(r_type="name")
     assert len(reports) > 0
-    assert all(["name" in report for report in reports])
+    assert all([isinstance(name, str) for name in reports])
 
 
 @pytest.mark.ado_test
