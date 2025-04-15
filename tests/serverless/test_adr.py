@@ -459,10 +459,13 @@ def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path, mocker):
-    mocker.patch("django.core.management.call_command", side_effect=Exception("boom"))
-    with pytest.raises(ADRException, match="Backup failed: boom"):
-        adr_serverless.backup_database(output_directory=str(tmp_path))
+def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path):
+    with mock.patch(
+        "django.core.management.call_command",
+        side_effect=Exception("boom"),
+    ):
+        with pytest.raises(ADRException, match="Backup failed: boom"):
+            adr_serverless.backup_database(output_directory=str(tmp_path))
 
 
 @pytest.mark.ado_test
