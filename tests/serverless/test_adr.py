@@ -1,13 +1,12 @@
-import copy
-import os
 from pathlib import Path
 from random import random as r
+from unittest import mock
 
-from django.core.management.utils import get_random_secret_key
 import numpy as np
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import (
+    ADRException,
     ImproperlyConfiguredError,
     InvalidAnsysPath,
     InvalidPath,
@@ -429,10 +428,48 @@ def test_create_tree(adr_serverless):
     assert Tree.get(name="intro_tree").guid == tree.guid
 
 
+@pytest.mark.ado_test
 def test_backup_database(adr_serverless):
     adr_serverless.backup_database(compress=True)
     backup_files = list(Path(".").glob("*.gz"))
     assert len(backup_files) > 0, "No backup file found with .gz extension"
+
+
+@pytest.mark.ado_test
+def test_backup_in_memory_disallowed_with_mock(adr_serverless, tmp_path):
+    with mock.patch.object(adr_serverless, "_in_memory", True):
+        with pytest.raises(ADRException, match="Backup is not available in in-memory mode."):
+            adr_serverless.backup_database(output_directory=str(tmp_path))
+
+
+@pytest.mark.ado_test
+def test_backup_invalid_database_name_with_mock(adr_serverless, tmp_path):
+    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
+        with pytest.raises(ADRException, match="dest must be configured first"):
+            adr_serverless.backup_database(output_directory=str(tmp_path), database="dest")
+
+
+@pytest.mark.ado_test
+def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
+    # test path object and file at the same time
+    random_file = tmp_path / "not_created_yet.txt"
+    random_file.touch(exist_ok=True)
+    with pytest.raises(InvalidPath, match="not a valid directory"):
+        adr_serverless.backup_database(output_directory=random_file)
+
+
+@pytest.mark.ado_test
+def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path, mocker):
+    mocker.patch("django.core.management.call_command", side_effect=Exception("boom"))
+    with pytest.raises(ADRException, match="Backup failed: boom"):
+        adr_serverless.backup_database(output_directory=str(tmp_path))
+
+
+@pytest.mark.ado_test
+def test_backup_success_uncompressed_with_mock(adr_serverless, tmp_path):
+    adr_serverless.backup_database(output_directory=str(tmp_path), compress=False)
+    json_files = list(tmp_path.glob("*.json"))
+    assert any(f.name.startswith("backup_") for f in json_files)
 
 
 @pytest.mark.ado_test
