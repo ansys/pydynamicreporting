@@ -744,6 +744,20 @@ def test_get_list_reports_w_r_type(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_get_list_reports_w_r_type_reports(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, Template
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_list_reports_w_r_type_reports", parent=None
+    )
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+    reports = adr_serverless.get_list_reports(r_type=None)
+    assert len(reports) > 0
+    assert all([isinstance(rep, Template) for rep in reports])
+
+
+@pytest.mark.ado_test
 def test_get_list_reports_wrong_type(adr_serverless):
     with pytest.raises(ADRException, match="r_type must be one of"):
         adr_serverless.get_list_reports(r_type="wrong_type")
@@ -801,6 +815,22 @@ def test_query_no_templates(adr_serverless):
     )
 
     assert not temps and not temps2
+
+
+@pytest.mark.ado_test
+def test_create_objects(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, String
+
+    kwargs = {
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+    }
+    objs = [
+        HTML(name="test_create_objects_html", content="<h1>Heading 1</h1>", **kwargs),
+        String(name="test_create_objects_string", content="This is a test string.", **kwargs),
+    ]
+    count = adr_serverless.create_objects(objs)
+    assert count == 2, "No objects created"
 
 
 @pytest.mark.ado_test
