@@ -7,27 +7,8 @@ from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.serverless import ADR
 
 
-def reset_adr():
-    """Reset the ADR singleton instance and setup status."""
-    ADR._instance = None
-    ADR._is_setup = False
-
-
-# Reset ADR singleton before each function
-@pytest.fixture(scope="function")
-def reset_adr_singleton():
-    reset_adr()
-
-
-# Reset ADR singleton after the class is done
-@pytest.fixture(scope="class")
-def reset_adr_singleton_after_class():
-    yield
-    reset_adr()
-
-
 # Initialize ADR without setup
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=False)
 def adr_init(pytestconfig: pytest.Config) -> ADR:
     use_local = pytestconfig.getoption("use_local_launcher")
 
@@ -60,7 +41,7 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
 
 
 # Setup ADR after initialization
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=False)
 def adr_serverless(adr_init: ADR) -> ADR:
     adr_init.setup(collect_static=True)
     yield adr_init
