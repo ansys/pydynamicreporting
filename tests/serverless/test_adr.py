@@ -509,7 +509,7 @@ def test_restore_invalid_database_name_with_mock(adr_serverless, tmp_path):
         with pytest.raises(ADRException, match="dest must be configured first"):
             base_dir = Path(__file__).parent / "test_data"
             json_file = base_dir / "restoreme.json"
-            adr_serverless.restore_database(str(json_file))
+            adr_serverless.restore_database(str(json_file), database="dest")
 
 
 @pytest.mark.ado_test

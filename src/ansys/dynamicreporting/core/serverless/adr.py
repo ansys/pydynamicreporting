@@ -558,19 +558,21 @@ class ADR:
         # call django management command to dump the database
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
+        args = [
+            "dumpdata",
+            "--all",
+            "--database",
+            database,
+            "--output",
+            str(file_path),
+            "--verbosity",
+            0,
+            "--natural-foreign",
+        ]
+        if ignore_primary_keys:
+            args.append("--natural-primary")
         try:
-            management.call_command(
-                "dumpdata",
-                "--all",
-                "--natural-primary" if ignore_primary_keys else "",
-                "--natural-foreign",
-                "--database",
-                database,
-                "--output",
-                str(file_path),
-                "--verbosity",
-                0,
-            )
+            management.call_command(*args)
         except Exception as e:
             raise ADRException(f"Backup failed: {e}")
 
