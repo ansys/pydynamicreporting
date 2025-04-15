@@ -557,6 +557,7 @@ class ADR:
             management.call_command(
                 "dumpdata",
                 "--all",
+                "--natural-foreign",
                 "--database",
                 database,
                 "--output",
