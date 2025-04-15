@@ -486,7 +486,7 @@ def test_restore_invalid_file_path(adr_serverless, tmp_path):
     "restore_file",
     [
         "restoreme.json",
-        "restoreme.json.gz",
+        "restoremegz.json.gz",
     ],
 )
 @pytest.mark.ado_test
