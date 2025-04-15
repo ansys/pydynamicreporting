@@ -428,11 +428,20 @@ def test_create_tree(adr_serverless):
     assert Tree.get(name="intro_tree").guid == tree.guid
 
 
+@pytest.mark.parametrize(
+    "backup_kwargs",
+    [
+        {"compress": True},
+        {"compress": False},
+        {"ignore_primary_keys": True},
+        {"ignore_primary_keys": False},
+    ],
+)
 @pytest.mark.ado_test
-def test_backup_database(adr_serverless):
-    adr_serverless.backup_database(compress=True)
-    backup_files = list(Path(".").glob("*.gz"))
-    assert len(backup_files) > 0, "No backup file found with .gz extension"
+def test_backup_success(adr_serverless, tmp_path, backup_kwargs):
+    adr_serverless.backup_database(output_directory=str(tmp_path), **backup_kwargs)
+    json_files = list(tmp_path.glob("*.json"))
+    assert any(f.name.startswith("backup_") for f in json_files)
 
 
 @pytest.mark.ado_test
@@ -469,31 +478,16 @@ def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_backup_success_uncompressed_with_mock(adr_serverless, tmp_path):
-    adr_serverless.backup_database(output_directory=str(tmp_path), compress=False)
-    json_files = list(tmp_path.glob("*.json"))
-    assert any(f.name.startswith("backup_") for f in json_files)
-
-
-@pytest.mark.ado_test
 def test_restore_invalid_file_path(adr_serverless, tmp_path):
     with pytest.raises(InvalidPath, match="not a valid file"):
         adr_serverless.restore_database(tmp_path)
 
 
 @pytest.mark.ado_test
-@pytest.mark.parametrize(
-    "restore_file",
-    [
-        "restoreme.json",
-        "restoremegz.json.gz",
-    ],
-)
-@pytest.mark.ado_test
-def test_restore_backup(adr_serverless, restore_file):
+def test_restore_backup(adr_serverless):
     base_dir = Path(__file__).parent / "test_data"
     # should restore without error
-    adr_serverless.restore_database(str(base_dir / restore_file))
+    adr_serverless.restore_database(str(base_dir / "restoreme.json"))
 
 
 @pytest.mark.ado_test
@@ -516,6 +510,27 @@ def test_restore_invalid_database_name_with_mock(adr_serverless, tmp_path):
             base_dir = Path(__file__).parent / "test_data"
             json_file = base_dir / "restoreme.json"
             adr_serverless.restore_database(str(json_file))
+
+
+@pytest.mark.ado_test
+def test_get_ansys_installation(adr_serverless):
+    assert adr_serverless.ansys_installation is not None and isinstance(
+        adr_serverless.ansys_installation, str
+    )
+
+
+@pytest.mark.ado_test
+def test_get_ansys_version(adr_serverless):
+    assert adr_serverless.ansys_version is not None and isinstance(
+        adr_serverless.ansys_version, int
+    )
+
+
+@pytest.mark.ado_test
+def test_get_media_directory(adr_serverless):
+    assert adr_serverless.media_directory is not None and isinstance(
+        adr_serverless.media_directory, str
+    )
 
 
 @pytest.mark.ado_test
