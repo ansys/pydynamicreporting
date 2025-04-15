@@ -541,7 +541,7 @@ class ADR:
             tmp_dir.cleanup()
 
     def backup_database(
-        self, output_directory: str = ".", *, database: str = "default", compress=False
+        self, output_directory: str | Path = ".", *, database: str = "default", compress=False
     ) -> None:
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
