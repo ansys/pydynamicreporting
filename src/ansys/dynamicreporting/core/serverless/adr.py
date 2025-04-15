@@ -567,7 +567,7 @@ class ADR:
         except Exception as e:
             raise ADRException(f"Backup failed: {e}")
 
-    def restore_database(self, input_file: str, *, database: str = "default") -> None:
+    def restore_database(self, input_file: str | Path, *, database: str = "default") -> None:
         if database != "default" and database not in self._databases:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         backup_file = Path(input_file).resolve(strict=True)
