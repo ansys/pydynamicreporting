@@ -1,13 +1,55 @@
 # serverless
 
-# Import ADR directly
 from .adr import ADR
 
-# Expose ADR immediately
-__all__ = ["ADR"]
+# Item-related imports
+from .item import (
+    HTML,
+    Animation,
+    Dataset,
+    File,
+    Image,
+    Item,
+    Scene,
+    Session,
+    String,
+    Table,
+    Tree,
+)
 
-# for organization and to avoid repeating the same class names in multiple places
-_item_classes = [
+# Template-related imports
+from .template import (
+    BasicLayout,
+    BoxLayout,
+    CarouselLayout,
+    DataFilterLayout,
+    FooterLayout,
+    HeaderLayout,
+    ItemsComparisonGenerator,
+    IteratorGenerator,
+    IteratorLayout,
+    PanelLayout,
+    PPTXLayout,
+    PPTXSlideLayout,
+    ReportLinkLayout,
+    SliderLayout,
+    SQLQueryGenerator,
+    StatisticalGenerator,
+    TabLayout,
+    TableMergeGenerator,
+    TableMergeRCFilterGenerator,
+    TableMergeValueFilterGenerator,
+    TableReduceGenerator,
+    TableSortFilterGenerator,
+    TagPropertyLayout,
+    Template,
+    TOCLayout,
+    TreeMergeGenerator,
+    UserDefinedLayout,
+)
+
+__all__ = [
+    "ADR",
     "Session",
     "Dataset",
     "Item",
@@ -19,8 +61,6 @@ _item_classes = [
     "Animation",
     "Scene",
     "File",
-]
-_template_classes = [
     "Template",
     "BasicLayout",
     "PanelLayout",
@@ -49,16 +89,3 @@ _template_classes = [
     "StatisticalGenerator",
     "IteratorGenerator",
 ]
-
-# Dynamically import classes from item and template using importlib
-import importlib
-
-item_module = importlib.import_module(".item", package=__package__)
-template_module = importlib.import_module(".template", package=__package__)
-
-# Dynamically add these to the module namespace and __all__
-for cls_name in _item_classes + _template_classes:
-    cls = getattr(item_module, cls_name, None) or getattr(template_module, cls_name, None)
-    if cls:
-        globals()[cls_name] = cls
-        __all__.append(cls_name)
