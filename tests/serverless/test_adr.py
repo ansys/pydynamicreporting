@@ -476,6 +476,49 @@ def test_backup_success_uncompressed_with_mock(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
+def test_restore_invalid_file_path(adr_serverless, tmp_path):
+    with pytest.raises(InvalidPath, match="not a valid file"):
+        adr_serverless.restore_database(tmp_path)
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(
+    "restore_file",
+    [
+        "restoreme.json",
+        "restoreme.json.gz",
+    ],
+)
+@pytest.mark.ado_test
+def test_restore_backup(adr_serverless, restore_file):
+    base_dir = Path(__file__).parent / "test_data"
+    # should restore without error
+    adr_serverless.restore_database(str(base_dir / restore_file))
+
+
+@pytest.mark.ado_test
+def test_restore_django_command_failure(adr_serverless, tmp_path):
+    json_file = tmp_path / "bad.json"
+    json_file.write_text('[{"invalid": "bad"}]')
+
+    with mock.patch(
+        "django.core.management.call_command",
+        side_effect=Exception("load error"),
+    ):
+        with pytest.raises(ADRException, match="Restore failed: load error"):
+            adr_serverless.restore_database(str(json_file))
+
+
+@pytest.mark.ado_test
+def test_restore_invalid_database_name_with_mock(adr_serverless, tmp_path):
+    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
+        with pytest.raises(ADRException, match="dest must be configured first"):
+            base_dir = Path(__file__).parent / "test_data"
+            json_file = base_dir / "restoreme.json"
+            adr_serverless.restore_database(str(json_file))
+
+
+@pytest.mark.ado_test
 def test_create_demo_report(adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
