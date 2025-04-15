@@ -3,19 +3,7 @@
 from .adr import ADR
 
 # Item-related imports
-from .item import (
-    HTML,
-    Animation,
-    Dataset,
-    File,
-    Image,
-    Item,
-    Scene,
-    Session,
-    String,
-    Table,
-    Tree,
-)
+from .item import HTML, Animation, Dataset, File, Image, Item, Scene, Session, String, Table, Tree
 
 # Template-related imports
 from .template import (
