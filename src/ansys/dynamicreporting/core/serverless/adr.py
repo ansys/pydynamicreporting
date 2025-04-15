@@ -541,7 +541,12 @@ class ADR:
             tmp_dir.cleanup()
 
     def backup_database(
-        self, output_directory: str | Path = ".", *, database: str = "default", compress=False
+        self,
+        output_directory: str | Path = ".",
+        *,
+        database: str = "default",
+        compress: bool = False,
+        ignore_primary_keys: bool = False,
     ) -> None:
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
@@ -557,6 +562,7 @@ class ADR:
             management.call_command(
                 "dumpdata",
                 "--all",
+                "--natural-primary" if ignore_primary_keys else "",
                 "--natural-foreign",
                 "--database",
                 database,
