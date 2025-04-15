@@ -1,6 +1,7 @@
 from pathlib import Path
 from random import random as r
 from unittest import mock
+import uuid
 
 import numpy as np
 import pytest
@@ -165,6 +166,35 @@ def test_create_html(adr_serverless):
         source="sls-test",
     )
     assert HTML.get(name="intro_html").guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_create_item_type_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    with pytest.raises(TypeError, match="Template is not a subclass of Item"):
+        adr_serverless.create_item(Template, name="intro_html", content="lololol")
+
+
+@pytest.mark.ado_test
+def test_create_item_kwarg_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(TypeError, match="got an unexpected keyword argument 'foo'"):
+        adr_serverless.create_item(
+            HTML,
+            name="intro_html",
+            content="<h1>Heading 1</h1>",
+            foo="bar",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_item_empty_kwarg_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.create_item(HTML)
 
 
 @pytest.mark.ado_test
@@ -582,21 +612,96 @@ def test_create_demo_report(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_query_items(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import File, Item
+def test_create_template_toc(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TOCLayout
 
-    # file
-    adr_serverless.create_item(
-        File,
-        name="query_test_file",
-        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+    toc_layout = adr_serverless.create_template(
+        TOCLayout, name="test_create_template_toc", parent=None
     )
+    toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
+    toc_layout.save()
 
-    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|query_test_file;")
-    objs2 = adr_serverless.query(
-        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|query_test_file;"
+    assert TOCLayout.get(guid=toc_layout.guid).guid == toc_layout.guid
+
+
+@pytest.mark.ado_test
+def test_create_template_type_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import File
+
+    with pytest.raises(TypeError, match="File is not a subclass of Template"):
+        adr_serverless.create_template(File, name="test_create_template_toc", parent=None)
+
+
+@pytest.mark.ado_test
+def test_create_template_kwarg_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TOCLayout
+
+    with pytest.raises(TypeError, match="got an unexpected keyword argument 'foo'"):
+        adr_serverless.create_template(
+            TOCLayout,
+            name="test_create_template_toc",
+            parent=None,
+            foo="bar",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_template_kwarg_empty_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TOCLayout
+
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.create_template(TOCLayout)
+
+
+@pytest.mark.ado_test
+def test_get_report_basic(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(BasicLayout, name="test_get_report", parent=None)
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    report = adr_serverless.get_report(top_parent.guid)
+    assert report.guid == top_parent.guid
+
+
+@pytest.mark.ado_test
+def test_get_report_empty_kwarg_failure(adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.get_report()
+
+
+@pytest.mark.ado_test
+def test_get_report_invalid_guid(adr_serverless):
+    with pytest.raises(ADRException, match="Report not found"):
+        adr_serverless.get_report(guid=str(uuid.uuid4()))
+
+
+@pytest.mark.ado_test
+def test_get_reports(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(BasicLayout, name="test_get_reports", parent=None)
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    reports = adr_serverless.get_reports()
+    assert len(reports) > 0
+
+
+@pytest.mark.ado_test
+def test_get_reports_w_fields(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_reports_w_fields", parent=None
     )
-    assert len(objs) == 1 and len(objs2) == 1
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    reports = adr_serverless.get_reports(fields=["guid", "name"])
+    assert len(reports) > 0
+    assert all("guid" in report and "name" in report for report in reports)
 
 
 @pytest.mark.ado_test
@@ -615,8 +720,54 @@ def test_get_list_reports(adr_serverless):
     toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
     toc_layout.save()
 
-    count = len(adr_serverless.get_list_reports(r_type="name"))
-    assert count > 0, "No reports found"
+    reports = adr_serverless.get_list_reports()
+    assert len(reports) > 0
+
+
+@pytest.mark.ado_test
+def test_get_list_reports_w_r_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_list_reports_w_r_type", parent=None
+    )
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+    reports = adr_serverless.get_list_reports(r_type="name")
+    assert len(reports) > 0
+    assert all("guid" in report and "name" in report for report in reports)
+
+
+@pytest.mark.ado_test
+def test_get_list_reports_wrong_type(adr_serverless):
+    with pytest.raises(ADRException, match="r_type must be one of"):
+        adr_serverless.get_list_reports(r_type="wrong_type")
+
+
+@pytest.mark.ado_test
+def test_query_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import File, Item
+
+    # file
+    adr_serverless.create_item(
+        File,
+        name="query_test_file",
+        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+    )
+
+    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|query_test_file;")
+    objs2 = adr_serverless.query(
+        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|query_test_file;"
+    )
+    assert len(objs) == 1 and len(objs2) == 1
+
+
+@pytest.mark.ado_test
+def test_query_items_wrong_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    with pytest.raises(TypeError, match="is not a type of"):
+        adr_serverless.query(query_type=ADR, query="A|i_name|cont|query_test_file;")
 
 
 @pytest.mark.ado_test
