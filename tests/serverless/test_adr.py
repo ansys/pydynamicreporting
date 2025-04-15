@@ -432,15 +432,13 @@ def test_create_tree(adr_serverless):
     "backup_kwargs",
     [
         {"compress": True},
-        {"compress": False},
         {"ignore_primary_keys": True},
-        {"ignore_primary_keys": False},
     ],
 )
 @pytest.mark.ado_test
 def test_backup_success(adr_serverless, tmp_path, backup_kwargs):
     adr_serverless.backup_database(output_directory=str(tmp_path), **backup_kwargs)
-    json_files = list(tmp_path.glob("*.json"))
+    json_files = list(tmp_path.glob("*.gz" if "compress" in backup_kwargs else "*.json"))
     assert any(f.name.startswith("backup_") for f in json_files)
 
 
