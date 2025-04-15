@@ -1,4 +1,8 @@
+from uuid import uuid4
+
 import pytest
+
+from ansys.dynamicreporting.core.exceptions import ADRException
 
 
 @pytest.mark.ado_test
@@ -11,6 +15,33 @@ def test_create_template_cls(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_get_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    results_panel = PanelLayout(name="test_get_type", tags="dp=dp227")
+    results_panel.save()
+
+    assert PanelLayout.get(guid=results_panel.guid).type == "Layout:panel"
+
+
+@pytest.mark.ado_test
+def test_template_props(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = PPTXLayout(name="pptx")
+    pptx_template.input_pptx = "input.pptx"
+    pptx_template.output_pptx = "output-get.pptx"
+    pptx_template.use_all_slides = "1"
+    pptx_template.save()
+    out = PPTXLayout.get(guid=pptx_template.guid)
+    assert (
+        out.input_pptx == "input.pptx"
+        and out.output_pptx == "output-get.pptx"
+        and out.use_all_slides == "1"
+    )
+
+
+@pytest.mark.ado_test
 def test_init_template_cls(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
@@ -18,6 +49,32 @@ def test_init_template_cls(adr_serverless):
     results_panel.save()
 
     assert PanelLayout.get(name="test_init_template_cls").guid == results_panel.guid
+
+
+@pytest.mark.ado_test
+def test_init_template_super_cls(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    with pytest.raises(ADRException, match="Cannot instantiate Template directly"):
+        Template(name="test_init_template_super_cls", tags="dp=dp227", report_type="Layout:panel")
+
+
+@pytest.mark.ado_test
+def test_create_template_super_cls(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    template = Template.create(
+        name="test_create_template_super_cls", tags="dp=dp227", report_type="Layout:panel"
+    )
+    assert Template.get(guid=template.guid).guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_create_template_super_cls_no_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    with pytest.raises(ADRException):
+        Template.create(name="test_create_template_super_cls_no_type_error", tags="dp=dp227")
 
 
 @pytest.mark.ado_test
@@ -36,7 +93,6 @@ def test_edit_template(adr_serverless):
 
 @pytest.mark.ado_test
 def test_raise_child_type_init(adr_serverless):
-    # Templates/reports
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
     with pytest.raises(TypeError):
@@ -179,3 +235,740 @@ def test_create_template(adr_serverless):
     }
     template = BasicLayout.create(**template_kwargs)
     assert template.saved is True
+
+
+@pytest.mark.ado_test
+def test_template_set_property(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_property", tags="dp=dp227")
+    template.set_property({"custom_prop_1": "value1"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {"custom_prop_1": "value1"}
+
+
+@pytest.mark.ado_test
+def test_template_add_property(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_property", tags="dp=dp227")
+    template.set_property({"custom_prop_1": "value1"})
+    template.add_property({"custom_prop_2": "value2"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {
+        "custom_prop_1": "value1",
+        "custom_prop_2": "value2",
+    }
+
+
+@pytest.mark.ado_test
+def test_template_add_properties(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_properties", tags="dp=dp227")
+    template.set_property({"custom_prop_1": "value1"})
+    template.add_properties({"custom_prop_2": "value2", "custom_prop_3": "value3"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {
+        "custom_prop_1": "value1",
+        "custom_prop_2": "value2",
+        "custom_prop_3": "value3",
+    }
+
+
+@pytest.mark.ado_test
+def test_template_set_property_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_property_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.set_property(["not", "a", "dict"])
+
+
+@pytest.mark.ado_test
+def test_template_add_property_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_property_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.add_property("not-a-dict")
+
+
+@pytest.mark.ado_test
+def test_template_add_properties_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_properties_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.add_properties(1234)
+
+
+@pytest.mark.ado_test
+def test_template_set_params(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_params", tags="dp=dp227")
+    template.set_params({"param1": "value1"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {"param1": "value1"}
+
+
+@pytest.mark.ado_test
+def test_template_add_params(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_params", tags="dp=dp227")
+    template.set_params({"param1": "value1"})
+    template.add_params({"param2": "value2"})
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {
+        "param1": "value1",
+        "param2": "value2",
+    }
+
+
+@pytest.mark.ado_test
+def test_template_set_params_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_params_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.set_params("not-a-dict")
+
+
+@pytest.mark.ado_test
+def test_template_add_params_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_params_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="input must be a dictionary"):
+        template.add_params(1234)
+
+
+@pytest.mark.ado_test
+def test_template_set_params_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_params_none", tags="dp=dp227")
+    template.set_params(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {}
+
+
+@pytest.mark.ado_test
+def test_template_add_params_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_params_none", tags="dp=dp227")
+    template.add_params(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_params() == {}
+
+
+@pytest.mark.ado_test
+def test_template_set_property_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_property_none", tags="dp=dp227")
+    template.set_property(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {}
+
+
+@pytest.mark.ado_test
+def test_template_add_property_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_property_none", tags="dp=dp227")
+    template.add_property(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {}
+
+
+@pytest.mark.ado_test
+def test_template_add_properties_none(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_properties_none", tags="dp=dp227")
+    template.add_properties(None)
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_property() == {}
+
+
+@pytest.mark.ado_test
+def test_template_set_filter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter", tags="dp=dp227")
+    template.set_filter("A|i_tags|cont|dp=dp227;")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter() == "A|i_tags|cont|dp=dp227;"
+
+
+@pytest.mark.ado_test
+def test_template_add_filter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_filter", tags="dp=dp227")
+    template.set_filter("A|i_tags|cont|dp=dp227;")
+    template.add_filter("A|i_tags|cont|section=data;")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter() == "A|i_tags|cont|dp=dp227;A|i_tags|cont|section=data;"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="filter value should be a string"):
+        template.set_filter(123)
+
+
+@pytest.mark.ado_test
+def test_template_add_filter_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_filter_type_error", tags="dp=dp227")
+
+    with pytest.raises(TypeError, match="filter value should be a string"):
+        template.add_filter(456)
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_fields(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_fields", tags="dp=dp227")
+    template.set_sort_fields(["name", "date"])
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_fields() == ["name", "date"]
+
+
+@pytest.mark.ado_test
+def test_template_add_sort_fields(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_sort_fields", tags="dp=dp227")
+    template.set_sort_fields(["name"])
+    template.add_sort_fields(["date", "tags"])
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_fields() == ["name", "date", "tags"]
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_fields_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_fields_type_error", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="sorting filter is not a list"):
+        template.set_sort_fields("not-a-list")
+
+
+@pytest.mark.ado_test
+def test_template_add_sort_fields_type_error(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_add_sort_fields_type_error", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="sorting filter is not a list"):
+        template.add_sort_fields("field_should_be_list")
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_all(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_selection_all", tags="dp=dp227")
+    template.set_sort_selection("all")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_selection() == "all"
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_first(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_selection_first", tags="dp=dp227")
+    template.set_sort_selection("first")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_selection() == "first"
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_last(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_sort_selection_last", tags="dp=dp227")
+    template.set_sort_selection("last")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_sort_selection() == "last"
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_invalid_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_sort_selection_invalid_type", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="sort selection input should be a string"):
+        template.set_sort_selection(123)
+
+
+@pytest.mark.ado_test
+def test_template_set_sort_selection_invalid_value(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_sort_selection_invalid_value", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="sort selection not among the acceptable inputs"):
+        template.set_sort_selection("invalid-option")
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter_mode_items", tags="dp=dp227")
+    template.set_filter_mode("items")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter_mode() == "items"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_root_replace(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_filter_mode_root_replace", tags="dp=dp227"
+    )
+    template.set_filter_mode("root_replace")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter_mode() == "root_replace"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_root_append(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_set_filter_mode_root_append", tags="dp=dp227")
+    template.set_filter_mode("root_append")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert out.get_filter_mode() == "root_append"
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_invalid_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_filter_mode_invalid_type", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="filter mode input should be a string"):
+        template.set_filter_mode(123)
+
+
+@pytest.mark.ado_test
+def test_template_set_filter_mode_invalid_value(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(
+        name="test_template_set_filter_mode_invalid_value", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="filter mode not among the acceptable inputs"):
+        template.set_filter_mode("invalid-mode")
+
+
+@pytest.mark.ado_test
+def test_template_reorder_children(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    # Create parent template
+    parent = PanelLayout.create(name="test_template_reorder_children", tags="dp=dp227")
+
+    # Create child templates
+    child1 = BasicLayout.create(name="child1", parent=parent)
+    child2 = BasicLayout.create(name="child2", parent=parent)
+    child3 = BasicLayout.create(name="child3", parent=parent)
+
+    # Manually set the parent's children
+    parent.children = [child1, child2, child3]
+    parent._children_order = f"{child2.guid},{child3.guid},{child1.guid}"  # Desired order
+    parent.reorder_children()
+
+    # After reorder, check order
+    assert [child.name for child in parent.children] == ["child2", "child3", "child1"]
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_column_count(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_count", tags="dp=dp227")
+    layout.set_column_count(3)
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_column_count() == 3
+
+
+@pytest.mark.ado_test
+def test_layout_set_column_count_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_count_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="column count input should be an integer"):
+        layout.set_column_count("not-an-integer")
+
+    with pytest.raises(ValueError, match="column count input should be larger than 0"):
+        layout.set_column_count(0)
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_column_widths(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_widths", tags="dp=dp227")
+    layout.set_column_widths([1.0, 2.0])
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_column_widths() == [1.0, 2.0]
+
+
+@pytest.mark.ado_test
+def test_layout_set_column_widths_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_column_widths_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="column widths input should be a list"):
+        layout.set_column_widths("not-a-list")
+
+    with pytest.raises(
+        ValueError, match="column widths input should be a list of integers or floats"
+    ):
+        layout.set_column_widths([1, "bad", 3])
+
+    with pytest.raises(ValueError, match="column widths input should be larger than 0"):
+        layout.set_column_widths([1, -2])
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_html(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_html", tags="dp=dp227")
+    layout.set_html("<h1>Hello</h1>")
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_html() == "<h1>Hello</h1>"
+
+
+@pytest.mark.ado_test
+def test_layout_set_html_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_html_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be a string"):
+        layout.set_html(123)
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_comments(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_comments", tags="dp=dp227")
+    layout.set_comments("This is a comment")
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_comments() == "This is a comment"
+
+
+@pytest.mark.ado_test
+def test_layout_set_comments_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_comments_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be a string"):
+        layout.set_comments(456)
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_transpose(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_transpose", tags="dp=dp227")
+    layout.set_transpose(1)
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_transpose() == 1
+
+
+@pytest.mark.ado_test
+def test_layout_set_transpose_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_transpose_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be an integer"):
+        layout.set_transpose("not-integer")
+
+
+@pytest.mark.ado_test
+def test_layout_set_get_skip_empty(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_skip", tags="dp=dp227")
+    layout.set_skip(1)
+    layout.save()
+    out = PanelLayout.get(guid=layout.guid)
+    assert out.get_skip() == 1
+
+
+@pytest.mark.ado_test
+def test_layout_set_skip_empty_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_layout_skip_invalid", tags="dp=dp227")
+
+    with pytest.raises(ValueError, match="input needs to be an integer"):
+        layout.set_skip("invalid")
+
+    with pytest.raises(ValueError, match="input needs to be an integer \\(0 or 1\\)"):
+        layout.set_skip(5)
+
+
+@pytest.mark.ado_test
+def test_generator_set_get_generated_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(name="test_generator_generated_items", tags="dp=dp227")
+    generator.set_generated_items("replace")
+    generator.save()
+    out = TableMergeGenerator.get(guid=generator.guid)
+    assert out.get_generated_items() == "replace"
+
+
+@pytest.mark.ado_test
+def test_generator_set_generated_items_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(
+        name="test_generator_generated_items_invalid", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="generated items should be a string"):
+        generator.set_generated_items(123)
+
+    with pytest.raises(ValueError, match="input should be add or replace"):
+        generator.set_generated_items("invalid-option")
+
+
+@pytest.mark.ado_test
+def test_generator_set_get_append_tags(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(name="test_generator_append_tags", tags="dp=dp227")
+    generator.set_append_tags(False)
+    generator.save()
+    out = TableMergeGenerator.get(guid=generator.guid)
+    assert out.get_append_tags() is False
+
+
+@pytest.mark.ado_test
+def test_generator_set_append_tags_invalid(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TableMergeGenerator
+
+    generator = TableMergeGenerator.create(
+        name="test_generator_append_tags_invalid", tags="dp=dp227"
+    )
+
+    with pytest.raises(ValueError, match="value should be True / False"):
+        generator.set_append_tags("not-boolean")
+
+
+@pytest.mark.ado_test
+def test_template_str(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_str", tags="dp=dp227")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert isinstance(str(out), str)
+    assert "PanelLayout" in str(out) and out.guid in str(out)
+
+
+@pytest.mark.ado_test
+def test_template_repr(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_repr", tags="dp=dp227")
+    template.save()
+
+    out = PanelLayout.get(guid=template.guid)
+
+    assert isinstance(repr(out), str)
+    assert "PanelLayout" in repr(out) and out.guid in repr(out)
+
+
+@pytest.mark.ado_test
+def test_template_delete(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_delete", tags="dp=dp227")
+    template.save()
+
+    template_guid = template.guid
+    template.delete()
+
+    with pytest.raises(PanelLayout.DoesNotExist):
+        PanelLayout.get(guid=template_guid)
+
+
+@pytest.mark.ado_test
+def test_template_get_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_get_success", tags="dp=dp227")
+    template.save()
+    out = PanelLayout.get(guid=template.guid)
+    assert out.guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_get_invalid_kwargs(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_get_invalid_kwargs", tags="dp=dp227")
+    template.save()
+
+    with pytest.raises(
+        ValueError, match="'children' kwarg is not supported for get and filter methods"
+    ):
+        p1 = PanelLayout.create(name="test_template_get_invalid_kwargs1", tags="dp=dp227")
+        PanelLayout.get(children=[p1])
+
+
+@pytest.mark.ado_test
+def test_template_get_not_exist(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    with pytest.raises(PanelLayout.DoesNotExist):
+        PanelLayout.get(guid=str(uuid4()))
+
+
+@pytest.mark.ado_test
+def test_template_get_multiple(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    PanelLayout.create(name="test_template_get_multiple", tags="dp=dp227").save()
+    PanelLayout(name="test_template_get_multiple", tags="dp=dp227").save()
+
+    with pytest.raises(PanelLayout.MultipleObjectsReturned):
+        PanelLayout.get(name="test_template_get_multiple")
+
+
+@pytest.mark.ado_test
+def test_template_filter_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_filter_success", tags="dp=dp227")
+    template.save()
+    out = PanelLayout.filter(name="test_template_filter_success")
+    assert out[0].guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_find_success(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    template = PanelLayout.create(name="test_template_find_success", tags="dp=dp227")
+    template.save()
+    out = PanelLayout.find(query="A|t_name|cont|test_template_find_success")
+    assert out[0].guid == template.guid
+
+
+@pytest.mark.ado_test
+def test_template_find_raises_exception(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    with pytest.raises(ADRException):
+        PanelLayout.find(query="A|t_types|cont|panel")

@@ -739,6 +739,52 @@ def test_table_content_invalid_shape(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_table_item_properties(adr_serverless):
+    import numpy as np
+
+    from ansys.dynamicreporting.core.serverless import Table
+
+    # Create dummy 2D numpy array for content
+    dummy_array = np.array([[1, 2], [3, 4]], dtype="f8")
+
+    table_item = Table(
+        name="table-real-test",
+        content=dummy_array,
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+        source="sls-test",
+    )
+
+    # Set real properties
+    table_item.labels_row = ["X", "Sin", "Cos"]
+    table_item.set_tags("dp=dp227 section=data")
+    table_item.plot = "line"
+    table_item.xaxis = "X"
+    table_item.yaxis = ["Sin", "Cos"]
+    table_item.xaxis_format = "floatdot0"
+    table_item.yaxis_format = "floatdot1"
+    table_item.ytitle = "Values"
+    table_item.xtitle = "X"
+
+    table_item.save()
+
+    # Load it back
+    out = Table.get(guid=table_item.guid)
+
+    assert (
+        out.labels_row == ["X", "Sin", "Cos"]
+        and out.plot == "line"
+        and out.xaxis == "X"
+        and out.yaxis == ["Sin", "Cos"]
+        and out.xaxis_format == "floatdot0"
+        and out.yaxis_format == "floatdot1"
+        and out.ytitle == "Values"
+        and out.xtitle == "X"
+    )
+
+
+@pytest.mark.ado_test
 def test_create_tree_success(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Tree
 

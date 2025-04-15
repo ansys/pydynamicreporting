@@ -4,17 +4,20 @@ from uuid import uuid4
 import pytest
 
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
-from ansys.dynamicreporting.core.serverless import ADR, Item, Template
+from ansys.dynamicreporting.core.serverless import ADR
 
 
-@pytest.fixture(scope="session")
-def adr_serverless(pytestconfig: pytest.Config) -> ADR:
+# Initialize ADR without setup
+@pytest.fixture(scope="session", autouse=False)
+def adr_init(pytestconfig: pytest.Config) -> ADR:
     use_local = pytestconfig.getoption("use_local_launcher")
 
     base_dir = Path(__file__).parent / "test_data"
     local_db = base_dir / f"auto_delete_{uuid4().hex}"
     static_dir = base_dir / "static"
     static_dir.mkdir(exist_ok=True)
+    media_dir = base_dir / "media"
+    media_dir.mkdir(exist_ok=True)
 
     if use_local:
         adr = ADR(
@@ -30,12 +33,16 @@ def adr_serverless(pytestconfig: pytest.Config) -> ADR:
             docker_image=DOCKER_DEV_REPO_URL,
             db_directory=local_db,
             static_directory=static_dir,
+            media_directory=media_dir,
             media_url="/media1/",
             static_url="/static2/",
         )
-    adr.setup(collect_static=True)
+    return adr
 
-    yield adr
 
-    # Cleanup
-    adr.close()
+# Setup ADR after initialization
+@pytest.fixture(scope="session", autouse=False)
+def adr_serverless(adr_init: ADR) -> ADR:
+    adr_init.setup(collect_static=True)
+    yield adr_init
+    adr_init.close()

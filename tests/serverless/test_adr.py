@@ -1,9 +1,17 @@
 from pathlib import Path
 from random import random as r
+from unittest import mock
+import uuid
 
 import numpy as np
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import (
+    ADRException,
+    ImproperlyConfiguredError,
+    InvalidAnsysPath,
+    InvalidPath,
+)
 from ansys.dynamicreporting.core.serverless import ADR
 
 
@@ -158,6 +166,35 @@ def test_create_html(adr_serverless):
         source="sls-test",
     )
     assert HTML.get(name="intro_html").guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def test_create_item_type_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    with pytest.raises(TypeError, match="Template is not a subclass of Item"):
+        adr_serverless.create_item(Template, name="intro_html", content="lololol")
+
+
+@pytest.mark.ado_test
+def test_create_item_kwarg_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(TypeError, match="got an unexpected keyword argument 'foo'"):
+        adr_serverless.create_item(
+            HTML,
+            name="intro_html",
+            content="<h1>Heading 1</h1>",
+            foo="bar",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_item_empty_kwarg_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.create_item(HTML)
 
 
 @pytest.mark.ado_test
@@ -421,10 +458,107 @@ def test_create_tree(adr_serverless):
     assert Tree.get(name="intro_tree").guid == tree.guid
 
 
-def test_backup_database(adr_serverless):
-    adr_serverless.backup_database(compress=True)
-    backup_files = list(Path(".").glob("*.gz"))
-    assert len(backup_files) > 0, "No backup file found with .gz extension"
+@pytest.mark.parametrize(
+    "backup_kwargs",
+    [
+        {"compress": True},
+        {"ignore_primary_keys": True},
+    ],
+)
+@pytest.mark.ado_test
+def test_backup_success(adr_serverless, tmp_path, backup_kwargs):
+    adr_serverless.backup_database(output_directory=str(tmp_path), **backup_kwargs)
+    json_files = list(tmp_path.glob("*.gz" if "compress" in backup_kwargs else "*.json"))
+    assert any(f.name.startswith("backup_") for f in json_files)
+
+
+@pytest.mark.ado_test
+def test_backup_in_memory_disallowed_with_mock(adr_serverless, tmp_path):
+    with mock.patch.object(adr_serverless, "_in_memory", True):
+        with pytest.raises(ADRException, match="Backup is not available in in-memory mode."):
+            adr_serverless.backup_database(output_directory=str(tmp_path))
+
+
+@pytest.mark.ado_test
+def test_backup_invalid_database_name_with_mock(adr_serverless, tmp_path):
+    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
+        with pytest.raises(ADRException, match="dest must be configured first"):
+            adr_serverless.backup_database(output_directory=str(tmp_path), database="dest")
+
+
+@pytest.mark.ado_test
+def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
+    # test path object and file at the same time
+    random_file = tmp_path / "not_created_yet.txt"
+    random_file.touch(exist_ok=True)
+    with pytest.raises(InvalidPath, match="not a valid directory"):
+        adr_serverless.backup_database(output_directory=random_file)
+
+
+@pytest.mark.ado_test
+def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path):
+    with mock.patch(
+        "django.core.management.call_command",
+        side_effect=Exception("boom"),
+    ):
+        with pytest.raises(ADRException, match="Backup failed: boom"):
+            adr_serverless.backup_database(output_directory=str(tmp_path))
+
+
+@pytest.mark.ado_test
+def test_restore_invalid_file_path(adr_serverless, tmp_path):
+    with pytest.raises(InvalidPath, match="not a valid file"):
+        adr_serverless.restore_database(tmp_path)
+
+
+@pytest.mark.ado_test
+def test_restore_backup(adr_serverless):
+    base_dir = Path(__file__).parent / "test_data"
+    # should restore without error
+    adr_serverless.restore_database(str(base_dir / "restoreme.json"))
+
+
+@pytest.mark.ado_test
+def test_restore_django_command_failure(adr_serverless, tmp_path):
+    json_file = tmp_path / "bad.json"
+    json_file.write_text('[{"invalid": "bad"}]')
+
+    with mock.patch(
+        "django.core.management.call_command",
+        side_effect=Exception("load error"),
+    ):
+        with pytest.raises(ADRException, match="Restore failed: load error"):
+            adr_serverless.restore_database(str(json_file))
+
+
+@pytest.mark.ado_test
+def test_restore_invalid_database_name_with_mock(adr_serverless, tmp_path):
+    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
+        with pytest.raises(ADRException, match="dest must be configured first"):
+            base_dir = Path(__file__).parent / "test_data"
+            json_file = base_dir / "restoreme.json"
+            adr_serverless.restore_database(str(json_file), database="dest")
+
+
+@pytest.mark.ado_test
+def test_get_ansys_installation(adr_serverless):
+    assert adr_serverless.ansys_installation is not None and isinstance(
+        adr_serverless.ansys_installation, str
+    )
+
+
+@pytest.mark.ado_test
+def test_get_ansys_version(adr_serverless):
+    assert adr_serverless.ansys_version is not None and isinstance(
+        adr_serverless.ansys_version, int
+    )
+
+
+@pytest.mark.ado_test
+def test_get_media_directory(adr_serverless):
+    assert adr_serverless.media_directory is not None and isinstance(
+        adr_serverless.media_directory, str
+    )
 
 
 @pytest.mark.ado_test
@@ -478,21 +612,101 @@ def test_create_demo_report(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_query_items(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import File, Item
+def test_create_template_toc(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TOCLayout
 
-    # file
-    adr_serverless.create_item(
-        File,
-        name="query_test_file",
-        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+    toc_layout = adr_serverless.create_template(
+        TOCLayout, name="test_create_template_toc", parent=None
     )
+    toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
+    toc_layout.save()
 
-    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|query_test_file;")
-    objs2 = adr_serverless.query(
-        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|query_test_file;"
+    assert TOCLayout.get(guid=toc_layout.guid).guid == toc_layout.guid
+
+
+@pytest.mark.ado_test
+def test_create_template_type_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import File
+
+    with pytest.raises(TypeError, match="File is not a subclass of Template"):
+        adr_serverless.create_template(File, name="test_create_template_toc", parent=None)
+
+
+@pytest.mark.ado_test
+def test_create_template_kwarg_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TOCLayout
+
+    with pytest.raises(TypeError, match="got an unexpected keyword argument 'foo'"):
+        adr_serverless.create_template(
+            TOCLayout,
+            name="test_create_template_toc",
+            parent=None,
+            foo="bar",
+        )
+
+
+@pytest.mark.ado_test
+def test_create_template_kwarg_empty_failure(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import TOCLayout
+
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.create_template(TOCLayout)
+
+
+@pytest.mark.ado_test
+def test_get_report_basic(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(BasicLayout, name="test_get_report", parent=None)
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    report = adr_serverless.get_report(guid=top_parent.guid)
+    assert report.guid == top_parent.guid
+
+
+@pytest.mark.ado_test
+def test_get_report_empty_kwarg_failure(adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.get_report()
+
+
+@pytest.mark.ado_test
+def test_get_report_invalid_guid(adr_serverless):
+    with pytest.raises(ADRException, match="Report not found"):
+        adr_serverless.get_report(guid=str(uuid.uuid4()))
+
+
+@pytest.mark.ado_test
+def test_get_reports(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(BasicLayout, name="test_get_reports", parent=None)
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    reports = adr_serverless.get_reports()
+    assert len(reports) > 0
+
+
+@pytest.mark.ado_test
+def test_get_reports_w_fields(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_reports_w_fields", parent=None
     )
-    assert len(objs) == 1 and len(objs2) == 1
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+
+    reports = adr_serverless.get_reports(fields=["guid", "name"])
+    assert len(reports) > 0
+    assert all(
+        [
+            isinstance(uuid.UUID(report[0]), uuid.UUID) and isinstance(report[1], str)
+            for report in reports
+        ]
+    )
 
 
 @pytest.mark.ado_test
@@ -511,8 +725,68 @@ def test_get_list_reports(adr_serverless):
     toc_layout.set_filter("A|i_name|eq|__NonexistentName__;")
     toc_layout.save()
 
-    count = len(adr_serverless.get_list_reports(r_type="name"))
-    assert count > 0, "No reports found"
+    reports = adr_serverless.get_list_reports()
+    assert len(reports) > 0
+
+
+@pytest.mark.ado_test
+def test_get_list_reports_w_r_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_list_reports_w_r_type", parent=None
+    )
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+    reports = adr_serverless.get_list_reports(r_type="name")
+    assert len(reports) > 0
+    assert all([isinstance(name, str) for name in reports])
+
+
+@pytest.mark.ado_test
+def test_get_list_reports_w_r_type_reports(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, Template
+
+    top_parent = adr_serverless.create_template(
+        BasicLayout, name="test_get_list_reports_w_r_type_reports", parent=None
+    )
+    top_parent.set_filter("A|i_name|eq|__NonexistentName__;")
+    top_parent.save()
+    reports = adr_serverless.get_list_reports(r_type=None)
+    assert len(reports) > 0
+    assert all([isinstance(rep, Template) for rep in reports])
+
+
+@pytest.mark.ado_test
+def test_get_list_reports_wrong_type(adr_serverless):
+    with pytest.raises(ADRException, match="r_type must be one of"):
+        adr_serverless.get_list_reports(r_type="wrong_type")
+
+
+@pytest.mark.ado_test
+def test_query_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import File, Item
+
+    # file
+    adr_serverless.create_item(
+        File,
+        name="query_test_file",
+        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+    )
+
+    objs = adr_serverless.query(query_type=File, query="A|i_name|cont|query_test_file;")
+    objs2 = adr_serverless.query(
+        query_type=Item, query="A|i_type|cont|file;A|i_name|cont|query_test_file;"
+    )
+    assert len(objs) == 1 and len(objs2) == 1
+
+
+@pytest.mark.ado_test
+def test_query_items_wrong_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    with pytest.raises(TypeError, match="is not a type of"):
+        adr_serverless.query(query_type=ADR, query="A|i_name|cont|query_test_file;")
 
 
 @pytest.mark.ado_test
@@ -541,6 +815,22 @@ def test_query_no_templates(adr_serverless):
     )
 
     assert not temps and not temps2
+
+
+@pytest.mark.ado_test
+def test_create_objects(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML, String
+
+    kwargs = {
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+    }
+    objs = [
+        HTML(name="test_create_objects_html", content="<h1>Heading 1</h1>", **kwargs),
+        String(name="test_create_objects_string", content="This is a test string.", **kwargs),
+    ]
+    count = adr_serverless.create_objects(objs)
+    assert count == 2, "No objects created"
 
 
 @pytest.mark.ado_test
