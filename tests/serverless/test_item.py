@@ -1147,6 +1147,7 @@ def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
     from PIL import Image as PILImage
 
     from ansys.dynamicreporting.core.serverless import Image
+    from ansys.dynamicreporting.core.serverless import item as item_module
 
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -1156,7 +1157,7 @@ def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
     def fake_save(*args, **kwargs):
         raise OSError("Simulated save error")
 
-    monkeypatch.setattr("PIL.Image.Image.save", fake_save)
+    monkeypatch.setattr(item_module, "PILImage.save", fake_save)
 
     try:
         with pytest.raises(ADRException, match="Error converting image"):
