@@ -1055,7 +1055,7 @@ def test_copy_items_invalid_database(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Item
 
     tag = "dp=test_copy_items_invalid_database"
-    with pytest.raises(ADRException, match="Invalid database name"):
+    with pytest.raises(ADRException, match="must be configured first"):
         adr_serverless.copy_objects(Item, "invalid_db", query=f"A|i_tags|cont|{tag};")
 
 
