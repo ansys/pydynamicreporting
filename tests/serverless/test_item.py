@@ -1157,7 +1157,7 @@ def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
     def fake_save(*args, **kwargs):
         raise OSError("Simulated save error")
 
-    monkeypatch.setattr(item_module, "PILImage.save", fake_save)
+    monkeypatch.setattr(item_module, "PILImage.Image.save", fake_save)
 
     try:
         with pytest.raises(ADRException, match="Error converting image"):
