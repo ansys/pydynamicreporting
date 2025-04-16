@@ -945,6 +945,7 @@ def test_copy_sessions(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 
     tag = "dp=test_copy_sessions"
+    print(f"{adr_serverless._databases=}")
 
     Session.create(application="copy_sesh_1", tags=tag)
     Session.create(application="copy_sesh_2", tags=tag)

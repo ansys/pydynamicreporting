@@ -53,8 +53,8 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
             databases=database_config,
-            static_directory=static_dir,
             media_directory=source_db / "media",
+            static_directory=static_dir,
             media_url="/media1/",
             static_url="/static2/",
         )
