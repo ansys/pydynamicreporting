@@ -161,6 +161,7 @@ class ADR:
             opts = {}
         os.environ.update(opts)
 
+        print(databases)
         # database configuration
         if self._in_memory:
             self._databases = {
