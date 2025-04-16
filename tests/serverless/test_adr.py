@@ -834,6 +834,19 @@ def test_create_objects(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_create_objects_non_iter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    kwargs = {
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+    }
+    obj = HTML(name="test_create_objects_html", content="<h1>Heading 1</h1>", **kwargs)
+    with pytest.raises(ADRException, match="objects must be an iterable"):
+        adr_serverless.create_objects(obj)
+
+
+@pytest.mark.ado_test
 def test_delete_items(adr_serverless):
     from ansys.dynamicreporting.core.serverless import File, Item
 
@@ -919,3 +932,9 @@ def test_render_report(monkeypatch, adr_serverless):
 def test_render_no_kwarg(adr_serverless):
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.render_report()
+
+
+@pytest.mark.ado_test
+def test_render_invalid_template(adr_serverless):
+    with pytest.raises(ADRException, match="Report rendering failed"):
+        adr_serverless.render_report(name="InvalidTemplateName")
