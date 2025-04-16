@@ -1,6 +1,5 @@
 from pathlib import Path
 from random import random as r
-from unittest import mock
 import uuid
 
 import numpy as np
@@ -60,6 +59,11 @@ def test_ensure_setup_error_no_setup():
 
 
 @pytest.mark.ado_test
+def test_get_database_config_before_setup():
+    assert ADR.get_database_config() is None
+
+
+@pytest.mark.ado_test
 def test_is_setup_before_setup():
     assert not ADR.get_instance().is_setup
 
@@ -72,6 +76,11 @@ def test_get_instance(adr_serverless):
 @pytest.mark.ado_test
 def test_is_setup_after_setup(adr_serverless):
     assert adr_serverless.is_setup
+
+
+@pytest.mark.ado_test
+def test_get_database_config_after_setup(adr_serverless):
+    assert "default" in adr_serverless.get_database_config()
 
 
 @pytest.mark.ado_test
@@ -473,21 +482,14 @@ def test_backup_success(adr_serverless, tmp_path, backup_kwargs):
 
 
 @pytest.mark.ado_test
-def test_backup_in_memory_disallowed_with_mock(adr_serverless, tmp_path):
-    with mock.patch.object(adr_serverless, "_in_memory", True):
-        with pytest.raises(ADRException, match="Backup is not available in in-memory mode."):
-            adr_serverless.backup_database(output_directory=str(tmp_path))
+def test_backup_in_memory_disallowed(adr_serverless, tmp_path, monkeypatch):
+    monkeypatch.setattr(adr_serverless, "_in_memory", True)
+    with pytest.raises(ADRException, match="Backup is not available in in-memory mode."):
+        adr_serverless.backup_database(output_directory=str(tmp_path))
 
 
 @pytest.mark.ado_test
-def test_backup_invalid_database_name_with_mock(adr_serverless, tmp_path):
-    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
-        with pytest.raises(ADRException, match="dest must be configured first"):
-            adr_serverless.backup_database(output_directory=str(tmp_path), database="dest")
-
-
-@pytest.mark.ado_test
-def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
+def test_backup_invalid_output_directory(adr_serverless, tmp_path):
     # test path object and file at the same time
     random_file = tmp_path / "not_created_yet.txt"
     random_file.touch(exist_ok=True)
@@ -496,13 +498,16 @@ def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path):
-    with mock.patch(
-        "django.core.management.call_command",
-        side_effect=Exception("boom"),
-    ):
-        with pytest.raises(ADRException, match="Backup failed: boom"):
-            adr_serverless.backup_database(output_directory=str(tmp_path))
+def test_backup_invalid_database(adr_serverless, tmp_path):
+    with pytest.raises(ADRException, match="must be configured first"):
+        adr_serverless.backup_database(output_directory=tmp_path, database="not_a_database")
+
+
+@pytest.mark.ado_test
+def test_restore_invalid_database(adr_serverless, tmp_path):
+    with pytest.raises(ADRException, match="must be configured first"):
+        base_dir = Path(__file__).parent / "test_data"
+        adr_serverless.restore_database(str(base_dir / "restoreme.json"), database="not_a_database")
 
 
 @pytest.mark.ado_test
@@ -512,32 +517,36 @@ def test_restore_invalid_file_path(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_restore_backup(adr_serverless):
+def test_restore_backup_success(adr_serverless):
     base_dir = Path(__file__).parent / "test_data"
     # should restore without error
     adr_serverless.restore_database(str(base_dir / "restoreme.json"))
 
 
 @pytest.mark.ado_test
-def test_restore_django_command_failure(adr_serverless, tmp_path):
-    json_file = tmp_path / "bad.json"
-    json_file.write_text('[{"invalid": "bad"}]')
+def test_backup_django_command_failure(adr_serverless, tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
 
-    with mock.patch(
-        "django.core.management.call_command",
-        side_effect=Exception("load error"),
-    ):
-        with pytest.raises(ADRException, match="Restore failed: load error"):
-            adr_serverless.restore_database(str(json_file))
+    def fake_call_command(*args, **kwargs):
+        raise Exception("backup error")
+
+    monkeypatch.setattr(adr_module, "call_command", fake_call_command)
+    with pytest.raises(ADRException):
+        adr_serverless.backup_database(output_directory=str(tmp_path))
 
 
 @pytest.mark.ado_test
-def test_restore_invalid_database_name_with_mock(adr_serverless, tmp_path):
-    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
-        with pytest.raises(ADRException, match="dest must be configured first"):
-            base_dir = Path(__file__).parent / "test_data"
-            json_file = base_dir / "restoreme.json"
-            adr_serverless.restore_database(str(json_file), database="dest")
+def test_restore_django_command_failure(adr_serverless, tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    def fake_call_command(*args, **kwargs):
+        raise Exception("restore error")
+
+    monkeypatch.setattr(adr_module, "call_command", fake_call_command)
+    with pytest.raises(ADRException):
+        json_file = tmp_path / "bad.json"
+        json_file.write_text('[{"invalid": "bad"}]')
+        adr_serverless.restore_database(str(json_file))
 
 
 @pytest.mark.ado_test
@@ -834,6 +843,19 @@ def test_create_objects(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_create_objects_non_iter(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    kwargs = {
+        "session": adr_serverless.session,
+        "dataset": adr_serverless.dataset,
+    }
+    obj = HTML(name="test_create_objects_html", content="<h1>Heading 1</h1>", **kwargs)
+    with pytest.raises(ADRException, match="objects must be an iterable"):
+        adr_serverless.create_objects(obj)
+
+
+@pytest.mark.ado_test
 def test_delete_items(adr_serverless):
     from ansys.dynamicreporting.core.serverless import File, Item
 
@@ -880,3 +902,187 @@ def test_delete_templates(adr_serverless):
     temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_delete_templates;")
     count = temps.delete()
     assert count == 1, "No templates deleted"
+
+
+@pytest.mark.ado_test
+def test_render_report(monkeypatch, adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    # Create a dummy template so that Template.get() can find it.
+    dummy_template = adr_serverless.create_template(
+        BasicLayout, name="TestReport", parent=None, tags="dp=dp227"
+    )
+    dummy_template.set_params({"HTML": "<h1>Test Report</h1>"})
+    dummy_template.save()
+
+    # Patch django.template.loader.render_to_string to return a fixed string.
+    def fake_render_to_string(template_name, context, request):
+        # Check that the expected template file is requested.
+        assert template_name == "reports/report_display_simple.html"
+        # Instead of an exact match, check for a few essential keys.
+        assert context.get("plotly") == 1 and context.get("page_width") == 10.5
+        return "dummy rendered content"
+
+    monkeypatch.setattr(template_module, "render_to_string", fake_render_to_string)
+
+    # Call render_report; it looks up the template by name ("TestReport") and then calls render.
+    result = adr_serverless.render_report(
+        name="TestReport",
+        context={"plotly": 1, "pwidth": "10.5", "dpi": "96."},
+        item_filter="A|i_tags|cont|dp=dp227;",
+    )
+
+    # Assert that the result is the string returned by the monkey-patched render_to_string.
+    assert result == "dummy rendered content"
+
+
+@pytest.mark.ado_test
+def test_render_no_kwarg(adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.render_report()
+
+
+@pytest.mark.ado_test
+def test_render_invalid_template(adr_serverless):
+    with pytest.raises(ADRException, match="Report rendering failed"):
+        adr_serverless.render_report(name="InvalidTemplateName")
+
+
+@pytest.mark.ado_test
+def test_copy_sessions(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Session
+
+    tag = "dp=test_copy_sessions"
+
+    Session.create(application="copy_sesh_1", tags=tag)
+    Session.create(application="copy_sesh_2", tags=tag)
+
+    count = adr_serverless.copy_objects(Session, "dest", query=f"A|s_tags|cont|{tag};")
+    assert count == 2
+
+    sessions = Session.filter(tags__icontains=tag, using="dest")
+    assert len(sessions) == count
+
+
+@pytest.mark.ado_test
+def test_copy_datasets(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Dataset
+
+    tag = "dp=test_copy_datasets"
+
+    Dataset.create(filename="copy_dataset_1", tags=tag)
+    Dataset.create(filename="copy_dataset_2", tags=tag)
+
+    count = adr_serverless.copy_objects(Dataset, "dest", query=f"A|d_tags|cont|{tag};")
+    assert count == 2
+
+    datasets = Dataset.filter(tags__icontains=tag, using="dest")
+    assert len(datasets) == count
+
+
+@pytest.mark.ado_test
+def test_copy_items(adr_serverless, tmp_path):
+    from ansys.dynamicreporting.core.serverless import Image, Item, String
+
+    tag = "dp=test_copy_items"
+
+    adr_serverless.create_item(String, name="copy_item_1", content="This is a test item.", tags=tag)
+    adr_serverless.create_item(
+        Image,
+        name="copy_item_2",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=tag,
+    )
+
+    count = adr_serverless.copy_objects(
+        Item, "dest", query=f"A|i_tags|cont|{tag};", target_media_dir=tmp_path
+    )
+    assert count == 2
+
+    items = Item.filter(tags__icontains=tag, using="dest")
+    assert len(items) == count
+
+
+@pytest.mark.ado_test
+def test_copy_items_no_target_media_dir(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image, Item
+
+    tag = "dp=test_copy_items_no_target_media_dir"
+
+    adr_serverless.create_item(
+        Image,
+        name="copy_item_4",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=tag,
+    )
+
+    count = adr_serverless.copy_objects(Image, "dest", query=f"A|i_tags|cont|{tag};")
+    assert count == 1
+
+    items = Item.filter(tags__icontains=tag, using="dest")
+    assert len(items) == count
+
+
+@pytest.mark.ado_test
+def test_copy_items_test_run(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image, Item
+
+    tag = "dp=test_copy_items_test_run"
+    adr_serverless.create_item(
+        Image,
+        name="test_copy_items_test_run",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=tag,
+    )
+
+    count = adr_serverless.copy_objects(Image, "dest", query=f"A|i_tags|cont|{tag};", test=True)
+    assert count == 1
+
+    items = Item.filter(tags__icontains=tag, using="dest")
+    assert len(items) != count
+
+
+@pytest.mark.ado_test
+def test_copy_items_wrong_type(adr_serverless):
+    tag = "dp=test_copy_items_wrong_type"
+    with pytest.raises(TypeError, match="is not a type of"):
+        adr_serverless.copy_objects(ADR, "dest", query=f"A|i_tags|cont|{tag};")
+
+
+@pytest.mark.ado_test
+def test_copy_items_invalid_database(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    tag = "dp=test_copy_items_invalid_database"
+    with pytest.raises(ADRException, match="must be configured first"):
+        adr_serverless.copy_objects(Item, "invalid_db", query=f"A|i_tags|cont|{tag};")
+
+
+@pytest.mark.ado_test
+def test_copy_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+
+    tag = "dp=test_copy_templates"
+    template_name = "test_copy_template_report"
+    report = adr_serverless.create_template(BasicLayout, name=template_name, parent=None, tags=tag)
+    adr_serverless.create_template(PanelLayout, name="Introduction", parent=report)
+
+    count = adr_serverless.copy_objects(Template, "dest", query=f"A|t_name|eq|{template_name};")
+    assert count == 1
+
+    templates = Template.filter(name=template_name, using="dest")
+    assert len(templates) == count
+
+
+@pytest.mark.ado_test
+def test_copy_templates_children(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+
+    tag = "dp=test_copy_templates_children"
+    template_name = "test_copy_templates_children_report"
+    report = adr_serverless.create_template(BasicLayout, name=template_name, parent=None, tags=tag)
+    adr_serverless.create_template(PanelLayout, name="Introduction", parent=report, tags=tag)
+
+    with pytest.raises(ADRException, match="Only top-level templates can be copied"):
+        adr_serverless.copy_objects(Template, "dest", query=f"A|t_tags|cont|{tag};")

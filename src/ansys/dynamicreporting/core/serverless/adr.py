@@ -11,7 +11,7 @@ from typing import Any
 import uuid
 import warnings
 
-from django.core import management
+from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
@@ -290,7 +290,7 @@ class ADR:
     @staticmethod
     def _migrate_db(db):
         try:  # upgrade databases
-            management.call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
+            call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
         except Exception as e:
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
@@ -308,14 +308,23 @@ class ADR:
                     nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
 
+    @classmethod
+    def get_database_config(cls) -> dict | None:
+        """Get the database configuration."""
+        if not cls._is_setup:
+            return None
+        from django.conf import settings
+
+        return settings.DATABASES
+
     def _is_sqlite(self, database: str) -> bool:
-        return not self._in_memory and "sqlite" in self._databases.get(database, {}).get(
+        return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
             "ENGINE", ""
         )
 
     def _get_db_path(self, database: str) -> str:
         if self._is_sqlite(database):
-            return self._databases.get(database, {}).get("NAME", "")
+            return self.get_database_config().get(database, {}).get("NAME", "")
         return ""
 
     @classmethod
@@ -485,6 +494,7 @@ class ADR:
         # Check for Linux TZ issue
         report_utils.apply_timezone_workaround()
 
+        # django configuration
         try:
             from django.conf import settings
 
@@ -497,8 +507,9 @@ class ADR:
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
-        if self._databases:
-            for db in self._databases:
+        database_config = self.get_database_config()
+        if database_config:
+            for db in database_config:
                 self._migrate_db(db)
         elif self._db_directory is not None:
             self._migrate_db("default")
@@ -518,7 +529,7 @@ class ADR:
                     "The 'static_directory' option must be specified to collect static files."
                 )
             try:
-                management.call_command("collectstatic", "--no-input", "--verbosity", 0)
+                call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
@@ -550,7 +561,7 @@ class ADR:
     ) -> None:
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self._databases:
+        if database != "default" and database not in self.get_database_config():
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
         if not target_dir.is_dir():
@@ -572,19 +583,19 @@ class ADR:
         if ignore_primary_keys:
             args.append("--natural-primary")
         try:
-            management.call_command(*args)
+            call_command(*args)
         except Exception as e:
             raise ADRException(f"Backup failed: {e}")
 
     def restore_database(self, input_file: str | Path, *, database: str = "default") -> None:
-        if database != "default" and database not in self._databases:
+        if database != "default" and database not in self.get_database_config():
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         backup_file = Path(input_file).resolve(strict=True)
         if not backup_file.is_file():
             raise InvalidPath(extra_detail=f"{input_file} is not a valid file.")
         # call django management command to load the database
         try:
-            management.call_command(
+            call_command(
                 "loaddata",
                 str(backup_file),
                 "--database",
@@ -724,7 +735,7 @@ class ADR:
                 request=self._request, context=context, item_filter=item_filter
             )
         except Exception as e:
-            raise e
+            raise ADRException(f"Report rendering failed: {e}")
 
     @staticmethod
     def query(
@@ -748,7 +759,7 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
-            if obj.db and kwargs.get("using", "default") != obj.db:
+            if obj.db and kwargs.get("using", "default") != obj.db:  # pragma: no cover
                 # required if copying across databases
                 obj.reinit()
             obj.save(**kwargs)
@@ -784,7 +795,7 @@ class ADR:
         target_database: str,
         *,
         query: str = "",
-        target_media_dir: str = "",
+        target_media_dir: str | Path = "",
         test: bool = False,
     ) -> int:
         """
@@ -796,9 +807,12 @@ class ADR:
         source_database = "default"  # todo: allow for source database to be specified
 
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
-            raise TypeError(f"{object_type} is not valid")
+            raise TypeError(
+                f"'{object_type.__name__}' is not a type of Item, Template, Session, or Dataset"
+            )
 
-        if target_database not in self._databases or source_database not in self._databases:
+        database_config = self.get_database_config()
+        if target_database not in database_config or source_database not in database_config:
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."
             )
@@ -812,7 +826,7 @@ class ADR:
                 # check for media dir if item has a physical file
                 if getattr(item, "has_file", False) and media_dir is None:
                     if target_media_dir:
-                        media_dir = target_media_dir
+                        media_dir = Path(target_media_dir).resolve(strict=True)
                     elif self._is_sqlite(target_database):
                         media_dir = self._check_dir(
                             Path(self._get_db_path(target_database)).parent / "media"

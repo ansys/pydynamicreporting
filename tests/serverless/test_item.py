@@ -1,6 +1,5 @@
 from pathlib import Path
 import tempfile
-from unittest import mock
 from uuid import uuid4
 
 from PIL import Image as PILImage
@@ -98,6 +97,33 @@ def test_item_get_w_content_error(adr_serverless):
     )
     with pytest.raises(ValueError):
         Item.get(content=intro_html.content)
+
+
+@pytest.mark.ado_test
+def test_item_get_w_session(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    intro_html = Item.create(
+        name="test_item_get_w_session",
+        type="html",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert Item.get(guid=intro_html.guid, session=adr_serverless.session).guid == intro_html.guid
+
+
+@pytest.mark.ado_test
+def get_orm_saved(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import HTML
+
+    intro_html = HTML(
+        name="get_orm_saved",
+        content="<h1>Heading 1</h1>",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+    assert intro_html._orm_saved is False
 
 
 @pytest.mark.ado_test
@@ -1115,7 +1141,7 @@ def test_invalid_file_extension_fails(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_image_save_raises_adr_exception(adr_serverless):
+def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless import Image
 
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
@@ -1123,17 +1149,21 @@ def test_image_save_raises_adr_exception(adr_serverless):
         img = PILImage.new("RGB", (10, 10), color="red")
         img.save(tmp_path, "JPEG")
 
+    def fake_save(*args, **kwargs):
+        raise OSError("Simulated save error")
+
+    monkeypatch.setattr("PIL.Image.Image.save", fake_save)
+
     try:
-        with mock.patch("PIL.Image.Image.save", side_effect=OSError("Simulated save error")):
-            with pytest.raises(ADRException, match="Error converting image"):
-                Image.create(
-                    name="test_image_save_raises_adr_exception",
-                    content=str(tmp_path),
-                    tags="dp=dp227",
-                    session=adr_serverless.session,
-                    dataset=adr_serverless.dataset,
-                    source="sls-test",
-                )
+        with pytest.raises(ADRException, match="Error converting image"):
+            Image.create(
+                name="test_image_save_raises_adr_exception",
+                content=str(tmp_path),
+                tags="dp=dp227",
+                session=adr_serverless.session,
+                dataset=adr_serverless.dataset,
+                source="sls-test",
+            )
     finally:
         tmp_path.unlink(missing_ok=True)
 
@@ -1159,3 +1189,13 @@ def test_is_enhanced_fails_on_non_enhanced_tiff(adr_serverless):
             )
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+@pytest.mark.ado_test
+def test_objectset_empty(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+    from ansys.dynamicreporting.core.serverless.base import ObjectSet
+
+    # Create an empty ObjectSet
+    empty_set = ObjectSet(_model=Item, _orm_model=Item._orm_model_cls, _orm_queryset=None)
+    assert empty_set._obj_set == []
