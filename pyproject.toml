@@ -9,7 +9,7 @@ requires = [
 
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.1.dev0"
+version = "0.10.1"
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
