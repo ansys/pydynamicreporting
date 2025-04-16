@@ -11,7 +11,7 @@ from typing import Any
 import uuid
 import warnings
 
-from django.core import management
+from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
@@ -291,7 +291,7 @@ class ADR:
     @staticmethod
     def _migrate_db(db):
         try:  # upgrade databases
-            management.call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
+            call_command("migrate", "--no-input", "--database", db, "--verbosity", 0)
         except Exception as e:
             raise DatabaseMigrationError(extra_detail=str(e))
         else:
@@ -519,7 +519,7 @@ class ADR:
                     "The 'static_directory' option must be specified to collect static files."
                 )
             try:
-                management.call_command("collectstatic", "--no-input", "--verbosity", 0)
+                call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
 
@@ -573,7 +573,7 @@ class ADR:
         if ignore_primary_keys:
             args.append("--natural-primary")
         try:
-            management.call_command(*args)
+            call_command(*args)
         except Exception as e:
             raise ADRException(f"Backup failed: {e}")
 
@@ -585,7 +585,7 @@ class ADR:
             raise InvalidPath(extra_detail=f"{input_file} is not a valid file.")
         # call django management command to load the database
         try:
-            management.call_command(
+            call_command(
                 "loaddata",
                 str(backup_file),
                 "--database",
