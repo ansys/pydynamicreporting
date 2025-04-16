@@ -913,8 +913,8 @@ def test_render_report(monkeypatch, adr_serverless):
         assert template_name == "reports/report_display_simple.html"
         # Instead of an exact match, check for a few essential keys.
         assert context.get("plotly") == 1
-        assert context.get("pwidth") == "10.5"
-        assert context.get("dpi") == "96."
+        assert context.get("page_width") == "10.5"
+        assert context.get("page_dpi") == "96."
         return "dummy rendered content"
 
     monkeypatch.setattr(template_module, "render_to_string", fake_render_to_string)
