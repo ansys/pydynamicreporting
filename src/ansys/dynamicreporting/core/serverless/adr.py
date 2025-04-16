@@ -161,7 +161,6 @@ class ADR:
             opts = {}
         os.environ.update(opts)
 
-        print(databases)
         # database configuration
         if self._in_memory:
             self._databases = {
@@ -309,14 +308,23 @@ class ADR:
                     nexus_group.permissions.set(Permission.objects.all())
                 nexus_group.user_set.add(user)
 
+    @classmethod
+    def get_database_config(cls) -> dict | None:
+        """Get the database configuration."""
+        if not cls._is_setup:
+            return None
+        from django.conf import settings
+
+        return settings.DATABASES
+
     def _is_sqlite(self, database: str) -> bool:
-        return not self._in_memory and "sqlite" in self._databases.get(database, {}).get(
+        return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
             "ENGINE", ""
         )
 
     def _get_db_path(self, database: str) -> str:
         if self._is_sqlite(database):
-            return self._databases.get(database, {}).get("NAME", "")
+            return self.get_database_config().get(database, {}).get("NAME", "")
         return ""
 
     @classmethod
@@ -486,6 +494,7 @@ class ADR:
         # Check for Linux TZ issue
         report_utils.apply_timezone_workaround()
 
+        # django configuration
         try:
             from django.conf import settings
 
@@ -498,8 +507,9 @@ class ADR:
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
-        if self._databases:
-            for db in self._databases:
+        database_config = self.get_database_config()
+        if database_config:
+            for db in database_config:
                 self._migrate_db(db)
         elif self._db_directory is not None:
             self._migrate_db("default")
@@ -551,7 +561,7 @@ class ADR:
     ) -> None:
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self._databases:
+        if database != "default" and database not in self.get_database_config():
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
         if not target_dir.is_dir():
@@ -578,7 +588,7 @@ class ADR:
             raise ADRException(f"Backup failed: {e}")
 
     def restore_database(self, input_file: str | Path, *, database: str = "default") -> None:
-        if database != "default" and database not in self._databases:
+        if database != "default" and database not in self.get_database_config():
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         backup_file = Path(input_file).resolve(strict=True)
         if not backup_file.is_file():
@@ -799,7 +809,8 @@ class ADR:
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
             raise TypeError(f"{object_type} is not valid")
 
-        if target_database not in self._databases or source_database not in self._databases:
+        database_config = self.get_database_config()
+        if target_database not in database_config or source_database not in database_config:
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."
             )

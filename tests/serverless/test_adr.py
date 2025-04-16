@@ -59,6 +59,11 @@ def test_ensure_setup_error_no_setup():
 
 
 @pytest.mark.ado_test
+def test_get_database_config_before_setup():
+    assert ADR.get_database_config() is None
+
+
+@pytest.mark.ado_test
 def test_is_setup_before_setup():
     assert not ADR.get_instance().is_setup
 
@@ -72,6 +77,10 @@ def test_get_instance(adr_serverless):
 def test_is_setup_after_setup(adr_serverless):
     assert adr_serverless.is_setup
 
+
+@pytest.mark.ado_test
+def test_get_database_config_after_setup(adr_serverless):
+    assert "default" in adr_serverless.get_database_config()
 
 @pytest.mark.ado_test
 def test_setup_after_setup(adr_serverless):
