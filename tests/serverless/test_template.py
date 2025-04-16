@@ -975,30 +975,31 @@ def test_template_find_raises_exception(adr_serverless):
 
 
 # @pytest.mark.ado_test
-# def test_template_render(monkeypatch, adr_serverless):
-#     from ansys.dynamicreporting.core.serverless import BasicLayout
-#
-#     # Create a basic template instance.
-#     template = adr_serverless.create_template(
-#         BasicLayout, name="test_render_template", parent=None, tags="dp=dp227"
-#     )
-#
-#     # Patch django.template.loader.render_to_string to return a fixed string.
-#     def fake_render_to_string(template_name, context, request):
-#         # Ensure the expected template file is requested.
-#         assert template_name == "reports/report_display_simple.html"
-#         assert context == {"plotly": 1, "pwidth": "10.5", "dpi": "96."}
-#         # Optionally, you could inspect the 'context' if needed.
-#         return "dummy rendered content"
-#
-#     monkeypatch.setattr("django.template.loader.render_to_string", fake_render_to_string)
-#
-#     # Call the render method on the template.
-#     result = template.render(
-#         context={"plotly": 1, "pwidth": "10.5", "dpi": "96."},
-#         item_filter="A|i_tags|cont|dp=dp227;",
-#         request=None,
-#     )
-#
-#     # Assert that the final rendered content matches the fixed string.
-#     assert result == "dummy rendered content"
+def test_template_render(monkeypatch, adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    # Create a basic template instance.
+    template = adr_serverless.create_template(
+        BasicLayout, name="test_render_template", parent=None, tags="dp=dp227"
+    )
+
+    # Patch django.template.loader.render_to_string to return a fixed string.
+    def fake_render_to_string(template_name, context, request):
+        # Check that the expected template file is requested.
+        assert template_name == "reports/report_display_simple.html"
+        # Instead of an exact match, check for a few essential keys.
+        assert context.get("plotly") == 1 and context.get("page_width") == 10.5
+        return "dummy rendered content"
+
+    monkeypatch.setattr(template_module, "render_to_string", fake_render_to_string)
+
+    # Call the render method on the template.
+    result = template.render(
+        context={"plotly": 1, "pwidth": "10.5", "dpi": "96."},
+        item_filter="A|i_tags|cont|dp=dp227;",
+        request=None,
+    )
+
+    # Assert that the final rendered content matches the fixed string.
+    assert result == "dummy rendered content"
