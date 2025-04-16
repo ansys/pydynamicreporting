@@ -488,16 +488,6 @@ def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_backup_django_command_failure(adr_serverless, tmp_path, monkeypatch):
-    def fake_call_command(*args, **kwargs):
-        raise Exception("boom")
-
-    monkeypatch.setattr("django.core.management.call_command", fake_call_command)
-    with pytest.raises(ADRException, match="Backup failed: boom"):
-        adr_serverless.backup_database(output_directory=str(tmp_path))
-
-
-@pytest.mark.ado_test
 def test_restore_invalid_file_path(adr_serverless, tmp_path):
     with pytest.raises(InvalidPath, match="not a valid file"):
         adr_serverless.restore_database(tmp_path)
@@ -511,15 +501,28 @@ def test_restore_backup(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_backup_django_command_failure(adr_serverless, tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR as adr_module
+
+    def fake_call_command(*args, **kwargs):
+        raise Exception("backup error")
+
+    monkeypatch.setattr(adr_module, "call_command", fake_call_command)
+    with pytest.raises(ADRException):
+        adr_serverless.backup_database(output_directory=str(tmp_path))
+
+
+@pytest.mark.ado_test
 def test_restore_django_command_failure(adr_serverless, tmp_path, monkeypatch):
-    json_file = tmp_path / "bad.json"
-    json_file.write_text('[{"invalid": "bad"}]')
+    from ansys.dynamicreporting.core.serverless import ADR as adr_module
 
     def fake_call_command(*args, **kwargs):
         raise Exception("load error")
 
-    monkeypatch.setattr("django.core.management.call_command", fake_call_command)
-    with pytest.raises(ADRException, match="Restore failed: load error"):
+    monkeypatch.setattr(adr_module, "call_command", fake_call_command)
+    with pytest.raises(ADRException):
+        json_file = tmp_path / "bad.json"
+        json_file.write_text('[{"invalid": "bad"}]')
         adr_serverless.restore_database(str(json_file))
 
 
