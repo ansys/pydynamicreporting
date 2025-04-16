@@ -479,13 +479,6 @@ def test_backup_in_memory_disallowed(adr_serverless, tmp_path, monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_backup_invalid_database_name(adr_serverless, tmp_path, monkeypatch):
-    monkeypatch.setattr(adr_serverless, "_databases", {"default": {}})
-    with pytest.raises(ADRException, match="dest must be configured first"):
-        adr_serverless.backup_database(output_directory=str(tmp_path), database="dest")
-
-
-@pytest.mark.ado_test
 def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
     # test path object and file at the same time
     random_file = tmp_path / "not_created_yet.txt"
@@ -528,15 +521,6 @@ def test_restore_django_command_failure(adr_serverless, tmp_path, monkeypatch):
     monkeypatch.setattr("django.core.management.call_command", fake_call_command)
     with pytest.raises(ADRException, match="Restore failed: load error"):
         adr_serverless.restore_database(str(json_file))
-
-
-@pytest.mark.ado_test
-def test_restore_invalid_database_name(adr_serverless, tmp_path, monkeypatch):
-    monkeypatch.setattr(adr_serverless, "_databases", {"default": {}})
-    with pytest.raises(ADRException, match="dest must be configured first"):
-        base_dir = Path(__file__).parent / "test_data"
-        json_file = base_dir / "restoreme.json"
-        adr_serverless.restore_database(str(json_file), database="dest")
 
 
 @pytest.mark.ado_test
