@@ -1,6 +1,5 @@
 from pathlib import Path
 from random import random as r
-from unittest import mock
 import uuid
 
 import numpy as np
@@ -473,17 +472,17 @@ def test_backup_success(adr_serverless, tmp_path, backup_kwargs):
 
 
 @pytest.mark.ado_test
-def test_backup_in_memory_disallowed_with_mock(adr_serverless, tmp_path):
-    with mock.patch.object(adr_serverless, "_in_memory", True):
-        with pytest.raises(ADRException, match="Backup is not available in in-memory mode."):
-            adr_serverless.backup_database(output_directory=str(tmp_path))
+def test_backup_in_memory_disallowed(adr_serverless, tmp_path, monkeypatch):
+    monkeypatch.setattr(adr_serverless, "_in_memory", True)
+    with pytest.raises(ADRException, match="Backup is not available in in-memory mode."):
+        adr_serverless.backup_database(output_directory=str(tmp_path))
 
 
 @pytest.mark.ado_test
-def test_backup_invalid_database_name_with_mock(adr_serverless, tmp_path):
-    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
-        with pytest.raises(ADRException, match="dest must be configured first"):
-            adr_serverless.backup_database(output_directory=str(tmp_path), database="dest")
+def test_backup_invalid_database_name(adr_serverless, tmp_path, monkeypatch):
+    monkeypatch.setattr(adr_serverless, "_databases", {"default": {}})
+    with pytest.raises(ADRException, match="dest must be configured first"):
+        adr_serverless.backup_database(output_directory=str(tmp_path), database="dest")
 
 
 @pytest.mark.ado_test
@@ -496,13 +495,13 @@ def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_backup_django_command_failure_with_mock(adr_serverless, tmp_path):
-    with mock.patch(
-        "django.core.management.call_command",
-        side_effect=Exception("boom"),
-    ):
-        with pytest.raises(ADRException, match="Backup failed: boom"):
-            adr_serverless.backup_database(output_directory=str(tmp_path))
+def test_backup_django_command_failure(adr_serverless, tmp_path, monkeypatch):
+    def fake_call_command(*args, **kwargs):
+        raise Exception("boom")
+
+    monkeypatch.setattr("django.core.management.call_command", fake_call_command)
+    with pytest.raises(ADRException, match="Backup failed: boom"):
+        adr_serverless.backup_database(output_directory=str(tmp_path))
 
 
 @pytest.mark.ado_test
@@ -519,25 +518,25 @@ def test_restore_backup(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_restore_django_command_failure(adr_serverless, tmp_path):
+def test_restore_django_command_failure(adr_serverless, tmp_path, monkeypatch):
     json_file = tmp_path / "bad.json"
     json_file.write_text('[{"invalid": "bad"}]')
 
-    with mock.patch(
-        "django.core.management.call_command",
-        side_effect=Exception("load error"),
-    ):
-        with pytest.raises(ADRException, match="Restore failed: load error"):
-            adr_serverless.restore_database(str(json_file))
+    def fake_call_command(*args, **kwargs):
+        raise Exception("load error")
+
+    monkeypatch.setattr("django.core.management.call_command", fake_call_command)
+    with pytest.raises(ADRException, match="Restore failed: load error"):
+        adr_serverless.restore_database(str(json_file))
 
 
 @pytest.mark.ado_test
-def test_restore_invalid_database_name_with_mock(adr_serverless, tmp_path):
-    with mock.patch.object(adr_serverless, "_databases", {"default": {}}):
-        with pytest.raises(ADRException, match="dest must be configured first"):
-            base_dir = Path(__file__).parent / "test_data"
-            json_file = base_dir / "restoreme.json"
-            adr_serverless.restore_database(str(json_file), database="dest")
+def test_restore_invalid_database_name(adr_serverless, tmp_path, monkeypatch):
+    monkeypatch.setattr(adr_serverless, "_databases", {"default": {}})
+    with pytest.raises(ADRException, match="dest must be configured first"):
+        base_dir = Path(__file__).parent / "test_data"
+        json_file = base_dir / "restoreme.json"
+        adr_serverless.restore_database(str(json_file), database="dest")
 
 
 @pytest.mark.ado_test
@@ -945,9 +944,6 @@ def test_copy_sessions(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 
     tag = "dp=test_copy_sessions"
-    print(f"{adr_serverless._databases=}")
-    from django.conf import settings
-    print(f"{settings.DATABASES=}")
 
     Session.create(application="copy_sesh_1", tags=tag)
     Session.create(application="copy_sesh_2", tags=tag)

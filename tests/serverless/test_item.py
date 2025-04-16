@@ -1,6 +1,5 @@
 from pathlib import Path
 import tempfile
-from unittest import mock
 from uuid import uuid4
 
 from PIL import Image as PILImage
@@ -1142,7 +1141,11 @@ def test_invalid_file_extension_fails(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_image_save_raises_adr_exception(adr_serverless):
+def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
+    import tempfile
+
+    from PIL import Image as PILImage
+
     from ansys.dynamicreporting.core.serverless import Image
 
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
@@ -1150,17 +1153,21 @@ def test_image_save_raises_adr_exception(adr_serverless):
         img = PILImage.new("RGB", (10, 10), color="red")
         img.save(tmp_path, "JPEG")
 
+    def fake_save(*args, **kwargs):
+        raise OSError("Simulated save error")
+
+    monkeypatch.setattr("PIL.Image.Image.save", fake_save)
+
     try:
-        with mock.patch("PIL.Image.Image.save", side_effect=OSError("Simulated save error")):
-            with pytest.raises(ADRException, match="Error converting image"):
-                Image.create(
-                    name="test_image_save_raises_adr_exception",
-                    content=str(tmp_path),
-                    tags="dp=dp227",
-                    session=adr_serverless.session,
-                    dataset=adr_serverless.dataset,
-                    source="sls-test",
-                )
+        with pytest.raises(ADRException, match="Error converting image"):
+            Image.create(
+                name="test_image_save_raises_adr_exception",
+                content=str(tmp_path),
+                tags="dp=dp227",
+                session=adr_serverless.session,
+                dataset=adr_serverless.dataset,
+                source="sls-test",
+            )
     finally:
         tmp_path.unlink(missing_ok=True)
 
