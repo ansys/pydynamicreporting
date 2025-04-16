@@ -938,3 +938,69 @@ def test_render_no_kwarg(adr_serverless):
 def test_render_invalid_template(adr_serverless):
     with pytest.raises(ADRException, match="Report rendering failed"):
         adr_serverless.render_report(name="InvalidTemplateName")
+
+
+@pytest.mark.ado_test
+def test_copy_sessions(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Session
+
+    tag = "dp=test_copy_sessions"
+
+    Session.create(application="copy_sesh_1", tags=tag)
+    Session.create(application="copy_sesh_2", tags=tag)
+
+    count = adr_serverless.copy_objects(Session, "dest", query=f"A|s_tags|cont|{tag};")
+    assert count == 2
+
+    sessions = Session.filter(tags__icontains=tag, using="dest")
+    assert len(sessions) == count
+
+
+@pytest.mark.ado_test
+def test_copy_datasets(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Dataset
+
+    tag = "dp=test_copy_datasets"
+
+    Dataset.create(filename="copy_dataset_1", tags=tag)
+    Dataset.create(filename="copy_dataset_2", tags=tag)
+
+    count = adr_serverless.copy_objects(Dataset, "dest", query=f"A|d_tags|cont|{tag};")
+    assert count == 2
+
+    datasets = Dataset.filter(tags__icontains=tag, using="dest")
+    assert len(datasets) == count
+
+
+@pytest.mark.ado_test
+def test_copy_items(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item, String
+
+    tag = "dp=test_copy_items"
+
+    adr_serverless.create_item(String, name="copy_item_1", content="This is a test item.", tags=tag)
+    adr_serverless.create_item(String, name="copy_item_2", content="Another test item.", tags=tag)
+
+    count = adr_serverless.copy_objects(Item, "dest", query=f"A|i_tags|cont|{tag};")
+    assert count == 2
+
+    items = Item.filter(tags__icontains=tag, using="dest")
+    assert len(items) == count
+
+
+@pytest.mark.ado_test
+def test_copy_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, Template
+
+    tag = "dp=test_copy_templates"
+    template_name = "test_copy_template_report"
+
+    report = adr_serverless.create_template(BasicLayout, name=template_name, parent=None, tags=tag)
+    report.set_filter(f"A|i_tags|cont|{tag};")
+    report.save()
+
+    count = adr_serverless.copy_objects(Template, "dest", query=f"A|t_name|eq|{template_name};")
+    assert count == 1
+
+    templates = Template.filter(name=template_name, using="dest")
+    assert len(templates) == count
