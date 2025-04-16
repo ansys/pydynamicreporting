@@ -502,7 +502,7 @@ def test_restore_backup(adr_serverless):
 
 @pytest.mark.ado_test
 def test_backup_django_command_failure(adr_serverless, tmp_path, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import ADR as adr_module
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
 
     def fake_call_command(*args, **kwargs):
         raise Exception("backup error")
@@ -514,10 +514,10 @@ def test_backup_django_command_failure(adr_serverless, tmp_path, monkeypatch):
 
 @pytest.mark.ado_test
 def test_restore_django_command_failure(adr_serverless, tmp_path, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import ADR as adr_module
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
 
     def fake_call_command(*args, **kwargs):
-        raise Exception("load error")
+        raise Exception("restore error")
 
     monkeypatch.setattr(adr_module, "call_command", fake_call_command)
     with pytest.raises(ADRException):
