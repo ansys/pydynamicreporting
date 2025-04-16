@@ -724,7 +724,7 @@ class ADR:
                 request=self._request, context=context, item_filter=item_filter
             )
         except Exception as e:
-            raise e
+            raise ADRException(f"Report rendering failed: {e}")
 
     @staticmethod
     def query(
@@ -748,7 +748,7 @@ class ADR:
             raise ADRException("objects must be an iterable")
         count = 0
         for obj in objects:
-            if obj.db and kwargs.get("using", "default") != obj.db:
+            if obj.db and kwargs.get("using", "default") != obj.db:  # pragma: no cover
                 # required if copying across databases
                 obj.reinit()
             obj.save(**kwargs)
