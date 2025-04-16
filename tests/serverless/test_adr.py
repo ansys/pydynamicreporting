@@ -489,12 +489,25 @@ def test_backup_in_memory_disallowed(adr_serverless, tmp_path, monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_backup_invalid_output_directory_with_mock(adr_serverless, tmp_path):
+def test_backup_invalid_output_directory(adr_serverless, tmp_path):
     # test path object and file at the same time
     random_file = tmp_path / "not_created_yet.txt"
     random_file.touch(exist_ok=True)
     with pytest.raises(InvalidPath, match="not a valid directory"):
         adr_serverless.backup_database(output_directory=random_file)
+
+
+@pytest.mark.ado_test
+def test_backup_invalid_database(adr_serverless, tmp_path):
+    with pytest.raises(ADRException, match="must be configured first"):
+        adr_serverless.backup_database(output_directory=tmp_path, database="not_a_database")
+
+
+@pytest.mark.ado_test
+def test_restore_invalid_database(adr_serverless, tmp_path):
+    with pytest.raises(ADRException, match="must be configured first"):
+        base_dir = Path(__file__).parent / "test_data"
+        adr_serverless.restore_database(str(base_dir / "restoreme.json"), database="not_a_database")
 
 
 @pytest.mark.ado_test
@@ -504,7 +517,7 @@ def test_restore_invalid_file_path(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_restore_backup(adr_serverless):
+def test_restore_backup_success(adr_serverless):
     base_dir = Path(__file__).parent / "test_data"
     # should restore without error
     adr_serverless.restore_database(str(base_dir / "restoreme.json"))
@@ -969,15 +982,22 @@ def test_copy_datasets(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_copy_items(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Item, String
+def test_copy_items(adr_serverless, tmp_path):
+    from ansys.dynamicreporting.core.serverless import Image, Item, String
 
     tag = "dp=test_copy_items"
 
     adr_serverless.create_item(String, name="copy_item_1", content="This is a test item.", tags=tag)
-    adr_serverless.create_item(String, name="copy_item_2", content="Another test item.", tags=tag)
+    adr_serverless.create_item(
+        Image,
+        name="copy_item_2",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=tag,
+    )
 
-    count = adr_serverless.copy_objects(Item, "dest", query=f"A|i_tags|cont|{tag};")
+    count = adr_serverless.copy_objects(
+        Item, "dest", query=f"A|i_tags|cont|{tag};", target_media_dir=tmp_path
+    )
     assert count == 2
 
     items = Item.filter(tags__icontains=tag, using="dest")
@@ -985,18 +1005,84 @@ def test_copy_items(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_copy_items_no_target_media_dir(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image, Item
+
+    tag = "dp=test_copy_items_no_target_media_dir"
+
+    adr_serverless.create_item(
+        Image,
+        name="copy_item_4",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=tag,
+    )
+
+    count = adr_serverless.copy_objects(Image, "dest", query=f"A|i_tags|cont|{tag};")
+    assert count == 1
+
+    items = Item.filter(tags__icontains=tag, using="dest")
+    assert len(items) == count
+
+
+@pytest.mark.ado_test
+def test_copy_items_test_run(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Image, Item
+
+    tag = "dp=test_copy_items_test_run"
+    adr_serverless.create_item(
+        Image,
+        name="test_copy_items_test_run",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=tag,
+    )
+
+    count = adr_serverless.copy_objects(Image, "dest", query=f"A|i_tags|cont|{tag};", test=True)
+    assert count == 1
+
+    items = Item.filter(tags__icontains=tag, using="dest")
+    assert len(items) != count
+
+
+@pytest.mark.ado_test
+def test_copy_items_wrong_type(adr_serverless):
+    tag = "dp=test_copy_items_wrong_type"
+    with pytest.raises(TypeError, match="is not a type of"):
+        adr_serverless.copy_objects(ADR, "dest", query=f"A|i_tags|cont|{tag};")
+
+
+@pytest.mark.ado_test
+def test_copy_items_invalid_database(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Item
+
+    tag = "dp=test_copy_items_invalid_database"
+    with pytest.raises(ADRException, match="Invalid database name"):
+        adr_serverless.copy_objects(Item, "invalid_db", query=f"A|i_tags|cont|{tag};")
+
+
+@pytest.mark.ado_test
 def test_copy_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, Template
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
 
     tag = "dp=test_copy_templates"
     template_name = "test_copy_template_report"
-
     report = adr_serverless.create_template(BasicLayout, name=template_name, parent=None, tags=tag)
-    report.set_filter(f"A|i_tags|cont|{tag};")
-    report.save()
+    adr_serverless.create_template(PanelLayout, name="Introduction", parent=report)
 
     count = adr_serverless.copy_objects(Template, "dest", query=f"A|t_name|eq|{template_name};")
     assert count == 1
 
     templates = Template.filter(name=template_name, using="dest")
     assert len(templates) == count
+
+
+@pytest.mark.ado_test
+def test_copy_templates_children(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+
+    tag = "dp=test_copy_templates_children"
+    template_name = "test_copy_templates_children_report"
+    report = adr_serverless.create_template(BasicLayout, name=template_name, parent=None, tags=tag)
+    adr_serverless.create_template(PanelLayout, name="Introduction", parent=report, tags=tag)
+
+    with pytest.raises(ADRException, match="Only top-level templates can be copied"):
+        adr_serverless.copy_objects(Template, "dest", query=f"A|t_tags|cont|{tag};")
