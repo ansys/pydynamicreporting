@@ -82,6 +82,7 @@ def test_is_setup_after_setup(adr_serverless):
 def test_get_database_config_after_setup(adr_serverless):
     assert "default" in adr_serverless.get_database_config()
 
+
 @pytest.mark.ado_test
 def test_setup_after_setup(adr_serverless):
     with pytest.raises(RuntimeError):
