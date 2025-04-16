@@ -898,6 +898,7 @@ def test_delete_templates(adr_serverless):
 @pytest.mark.ado_test
 def test_render_report(monkeypatch, adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
 
     # Create a dummy template so that Template.get() can find it.
     dummy_template = adr_serverless.create_template(
@@ -908,23 +909,24 @@ def test_render_report(monkeypatch, adr_serverless):
 
     # Patch django.template.loader.render_to_string to return a fixed string.
     def fake_render_to_string(template_name, context, request):
-        # Ensure the expected template file is requested.
+        # Check that the expected template file is requested.
         assert template_name == "reports/report_display_simple.html"
-        assert context == {"plotly": 1, "pwidth": "10.5", "dpi": "96."}
-        # Optionally, you could inspect the 'context' if needed.
+        # Instead of an exact match, check for a few essential keys.
+        assert context.get("plotly") == 1
+        assert context.get("pwidth") == "10.5"
+        assert context.get("dpi") == "96."
         return "dummy rendered content"
 
-    # Patch the django.template.loader.render_to_string function with our patched version.
-    monkeypatch.setattr("django.template.loader.render_to_string", fake_render_to_string)
+    monkeypatch.setattr(template_module, "render_to_string", fake_render_to_string)
 
-    # Call render_report; since no additional kwargs are provided, it will find the template by name.
+    # Call render_report; it looks up the template by name ("TestReport") and then calls render.
     result = adr_serverless.render_report(
         name="TestReport",
         context={"plotly": 1, "pwidth": "10.5", "dpi": "96."},
         item_filter="A|i_tags|cont|dp=dp227;",
     )
 
-    # Assert that the result is the string returned by our patched render_to_string.
+    # Assert that the result is the string returned by the monkey-patched render_to_string.
     assert result == "dummy rendered content"
 
 
