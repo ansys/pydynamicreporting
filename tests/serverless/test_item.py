@@ -1190,7 +1190,8 @@ def test_is_enhanced_fails_on_non_enhanced_tiff(adr_serverless):
 
 @pytest.mark.ado_test
 def test_objectset_empty(adr_serverless):
-    from ansys.dynamicreporting.core.serverless.base import Item, ObjectSet
+    from ansys.dynamicreporting.core.serverless import Item
+    from ansys.dynamicreporting.core.serverless.base import ObjectSet
 
     # Create an empty ObjectSet
     empty_set = ObjectSet(_model=Item, _orm_model=Item._orm_model_cls, _orm_queryset=None)
