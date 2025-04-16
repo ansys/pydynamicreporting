@@ -795,7 +795,7 @@ class ADR:
         target_database: str,
         *,
         query: str = "",
-        target_media_dir: str = "",
+        target_media_dir: str | Path = "",
         test: bool = False,
     ) -> int:
         """
@@ -807,7 +807,9 @@ class ADR:
         source_database = "default"  # todo: allow for source database to be specified
 
         if not issubclass(object_type, (Item, Template, Session, Dataset)):
-            raise TypeError(f"{object_type} is not valid")
+            raise TypeError(
+                f"'{object_type.__name__}' is not a type of Item, Template, Session, or Dataset"
+            )
 
         database_config = self.get_database_config()
         if target_database not in database_config or source_database not in database_config:
@@ -824,7 +826,7 @@ class ADR:
                 # check for media dir if item has a physical file
                 if getattr(item, "has_file", False) and media_dir is None:
                     if target_media_dir:
-                        media_dir = target_media_dir
+                        media_dir = Path(target_media_dir).resolve(strict=True)
                     elif self._is_sqlite(target_database):
                         media_dir = self._check_dir(
                             Path(self._get_db_path(target_database)).parent / "media"
