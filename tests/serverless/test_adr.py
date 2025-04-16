@@ -946,6 +946,8 @@ def test_copy_sessions(adr_serverless):
 
     tag = "dp=test_copy_sessions"
     print(f"{adr_serverless._databases=}")
+    from django.conf import settings
+    print(f"{settings.DATABASES=}")
 
     Session.create(application="copy_sesh_1", tags=tag)
     Session.create(application="copy_sesh_2", tags=tag)
