@@ -1142,8 +1142,6 @@ def test_invalid_file_extension_fails(adr_serverless):
 
 @pytest.mark.ado_test
 def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
-    from PIL import Image as PILImage
-
     from ansys.dynamicreporting.core.serverless import Image
 
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
