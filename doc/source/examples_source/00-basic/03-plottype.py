@@ -154,7 +154,7 @@ heatmap.visualize()
 # ---------------------------
 
 ###############################################################################
-#.. note::
+# .. note::
 #   3D surface plots are supported starting at Ansysy Dynamic Reporting 25R2.
 #   You will therefore need to point to a 25R2 or newer Ansys Dynamic
 #   Reporting installation for this plot type.
@@ -270,7 +270,7 @@ sankey_plot.visualize()
 # ---------------------------
 
 ###############################################################################
-#.. note::
+# .. note::
 #   3D scatter plots are supported starting at Ansysy Dynamic Reporting 25R2.
 #   You will therefore need to point to a 25R2 or newer Ansys Dynamic
 #   Reporting installation for this plot type.
@@ -310,7 +310,7 @@ scatter_plot_3d.visualize()
 # ----------------------
 
 ###############################################################################
-#.. note::
+# .. note::
 #   Polar plots are supported starting at Ansysy Dynamic Reporting 25R2.
 #   You will therefore need to point to a 25R2 or newer Ansys Dynamic
 #   Reporting installation for this plot type.
