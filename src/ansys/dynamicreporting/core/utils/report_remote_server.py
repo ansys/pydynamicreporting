@@ -1276,12 +1276,20 @@ def create_new_local_database(
     except OSError as e:
         if not os.path.isdir(db_dir):
             if parent and has_qt:  # pragma: no cover
-                msg = QtWidgets.QApplication.translate(
-                    "nexus", "The selected directory could not be accessed."
-                )
+                if exec_basis and ansys_version:
+                    if trasnlated_dlg not in sys.modules:
+                        sys.path.append( os.path.join(exec_basis, "nexus" + report_ver, "template_editor", "translated_dlg.py"))
+                        import translated_dlg
+                    msg = translated_dlg.error_dir_selection()
+                    top_banner = translated_dlg.banner_error_dir_selection()
+                else:
+                    msg = QtWidgets.QApplication.translate(
+                        "nexus", "The selected directory could not be accessed."
+                    )
+                    top_banner = QtWidgets.QApplication.translate("nexus", "Invalid database location")
                 QtWidgets.QMessageBox.critical(
                     parent,
-                    QtWidgets.QApplication.translate("nexus", "Invalid database location"),
+                    top_banner,
                     msg,
                 )
 
@@ -1298,12 +1306,18 @@ def create_new_local_database(
         os.path.join(db_dir, "db.sqlite3")
     ):
         if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The selected directory already appears to have a database in it."
-            )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Invalid database location"), msg
-            )
+            if exec_basis and ansys_version:
+                if trasnlated_dlg not in sys.modules:
+                    sys.path.append( os.path.join(exec_basis, "nexus" + report_ver, "template_editor", "translated_dlg.py"))
+                    import translated_dlg
+                msg = translated_dlg.error_existing_db()
+                top_banner = translated_dlg.banner_error_existing_db()
+            else:
+                msg = QtWidgets.QApplication.translate(
+                    "nexus", "The selected directory already appears to have a database in it."
+                )
+                top_banner = QtWidgets.QApplication.translate("nexus", "Invalid database location")
+            QtWidgets.QMessageBox.critical(parent, top_banner, msg)
 
         if raise_exception:
             raise exceptions.DBExistsError(
@@ -1400,12 +1414,21 @@ def create_new_local_database(
 
     except Exception as e:
         if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The creation of a new, local database failed with the error:"
-            )
+            if exec_basis and ansys_version:
+                if trasnlated_dlg not in sys.modules:
+                    if trasnlated_dlg not in sys.modules:
+                        sys.path.append( os.path.join(exec_basis, "nexus" + report_ver, "template_editor", "translated_dlg.py"))
+                        import translated_dlg
+                msg = translated_dlg.error_generic_db()
+                top_banner = translated_dlg.banner_error_generic_db()
+            else:
+                msg = QtWidgets.QApplication.translate(
+                    "nexus", "The creation of a new, local database failed with the error:"
+                )
+                top_banner = QtWidgets.QApplication.translate("nexus", "Database creation failed")
             QtWidgets.QMessageBox.critical(
                 parent,
-                QtWidgets.QApplication.translate("nexus", "Database creation failed"),
+                top_banner,
                 msg + str(e),
             )
 
@@ -1421,12 +1444,21 @@ def create_new_local_database(
         return True
 
     if parent and has_qt:
-        msg = QtWidgets.QApplication.translate(
-            "nexus", "A new Nexus database has been created in the folder:"
-        )
+        if exec_basis and ansys_version:
+            if trasnlated_dlg not in sys.modules:
+                if trasnlated_dlg not in sys.modules:
+                    sys.path.append( os.path.join(exec_basis, "nexus" + report_ver, "template_editor", "translated_dlg.py"))
+                    import translated_dlg
+            msg = translated_dlg.success_db()
+            top_banner = translated_dlg.banner_success_db()
+        else:
+            msg = QtWidgets.QApplication.translate(
+                "nexus", "A new Nexus database has been created in the folder:"
+            )
+            top_banner = QtWidgets.QApplication.translate("nexus", "Database creation successful")
         QtWidgets.QMessageBox.information(
             parent,
-            QtWidgets.QApplication.translate("nexus", "Database creation successful"),
+            top_banner,
             msg + str(db_dir),
         )
     return True
