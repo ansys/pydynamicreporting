@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: PyAnsys code style checks
-        uses: ansys/actions/code-style@v8
+        uses: ansys/actions/code-style@v9.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           show-diff-on-failure: false
@@ -55,7 +55,7 @@ jobs:
         python-version: [ '3.10', '3.11', '3.12', '3.13' ]
     steps:
       - name: Build wheelhouse
-        uses: ansys/actions/build-wheelhouse@v8
+        uses: ansys/actions/build-wheelhouse@v9.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
@@ -75,7 +75,6 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12', '3.13' ]
-
     steps:
       - uses: actions/checkout@v4
 
@@ -118,7 +117,7 @@ jobs:
 #    needs: [docs-style]
     steps:
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v8
+        uses: ansys/actions/doc-build@v9.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
@@ -130,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v8
+        uses: ansys/actions/build-library@v9.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
@@ -142,17 +141,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Release to the public PyPI repository
-        uses: ansys/actions/release-pypi-public@v8
+        uses: ansys/actions/release-pypi-public@v9.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           twine-username: "__token__"
           twine-token: ${{ secrets.PYPI_TOKEN }}
 
       - name: Release to GitHub
-        uses: ansys/actions/release-github@v8
+        uses: ansys/actions/release-github@v9.0
         if: ${{ !env.ACT }}
         with:
           library-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   upload_dev_docs:
     name: Upload dev documentation
@@ -161,7 +161,7 @@ jobs:
     needs: [ docs, package ]
     steps:
       - name: Deploy the latest documentation
-        uses: ansys/actions/doc-deploy-dev@v8
+        uses: ansys/actions/doc-deploy-dev@v9.0
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
@@ -176,7 +176,7 @@ jobs:
     needs: [ docs, release ]
     steps:
       - name: Deploy the stable documentation
-        uses: ansys/actions/doc-deploy-stable@v8
+        uses: ansys/actions/doc-deploy-stable@v9.0
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
@@ -194,7 +194,7 @@ jobs:
       - name: Microsoft Teams Notification
         uses: jdcargile/ms-teams-notification@v1.4
         with:
-          github-token: ${{ github.token }} # this will use the runner's token.
+          github-token: ${{ github.token }}
           ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
           notification-summary: CI build failure
           notification-color: dc3545

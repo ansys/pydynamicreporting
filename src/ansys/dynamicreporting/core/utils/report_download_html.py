@@ -235,6 +235,7 @@ class ReportDownloadHTML:
             "DRACOLoader.js",
             "GLTFLoader.js",
             "OrbitControls.js",
+            "OBJLoader.js",
             "three.js",
             "VRButton.js",
         ]

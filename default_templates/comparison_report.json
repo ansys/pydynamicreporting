@@ -1,0 +1,720 @@
+{
+    "Template_0": {
+        "name": "Comparison Report",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|'Design Point';O|i_tags|cont|ReportType=Parametric;",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": null,
+        "guid": "0e12f6a6-6f97-4d92-85bb-0b93f54a471e",
+        "children": [
+            "Template_1",
+            "Template_2",
+            "Template_3",
+            "Template_4",
+            "Template_5",
+            "Template_6",
+            "Template_7",
+            "Template_8",
+            "Template_9"
+        ]
+    },
+    "Template_1": {
+        "name": "Top",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_10",
+            "Template_11",
+            "Template_12",
+            "Template_13"
+        ]
+    },
+    "Template_10": {
+        "name": "Logo",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|eq|AnsysLogo;O|i_name|eq|UserLogo;",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_11": {
+        "name": "Title",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|html;A|i_name|eq|ReportTitle;",
+        "params": {
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_12": {
+        "name": "Header",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|HeaderTableItem;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "1"
+            },
+            "HTML": "",
+            "skip_empty": 1
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_13": {
+        "name": "Table of Contents",
+        "report_type": "Layout:toc",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_nothing_selected_;",
+        "params": {
+            "HTML": "<h3>Table of Contents</h3>",
+            "TOCitems": 1,
+            "TOCtables": 0,
+            "TOCfigures": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_2": {
+        "name": "Design Points Table",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ParameterDesignPointsTable;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Design Points Table</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": []
+    },
+    "Template_3": {
+        "name": "Base Case Simulation Setup",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Base Case Simulation Setup</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_14",
+            "Template_15"
+        ]
+    },
+    "Template_14": {
+        "name": "Physics",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "panel_template_toggle": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Physics</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_3",
+        "children": [
+            "Template_16",
+            "Template_17",
+            "Template_18",
+            "Template_19",
+            "Template_20"
+        ]
+    },
+    "Template_16": {
+        "name": "Models",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ModelsTableItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Models</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_14",
+        "children": []
+    },
+    "Template_17": {
+        "name": "Material Properties",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|MaterialsTreeItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Material Properties</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_14",
+        "children": []
+    },
+    "Template_18": {
+        "name": "Cell Zone Conditions",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|CellZonesTreeItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>{{\"CellZones\"|nexus_anchor}}Cell Zone Conditions</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_14",
+        "children": []
+    },
+    "Template_19": {
+        "name": "Boundary Conditions",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|BoundaryZonesTreeItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>{{\"BoundaryZones\"|nexus_anchor}}Boundary Conditions</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_14",
+        "children": []
+    },
+    "Template_20": {
+        "name": "Reference Values",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|eq|ReferenceValuesTableItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "2",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Reference Values</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_14",
+        "children": []
+    },
+    "Template_15": {
+        "name": "Solver Settings",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_type|eq|tree;A|i_name|eq|SolverSettingsTreeItem;A|i_tags|cont|'Design Point'='Base DP';",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "1",
+                "pagebreak": "0"
+            },
+            "HTML": "<h2>Solver Settings</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_3",
+        "children": []
+    },
+    "Template_4": {
+        "name": "Parametric Plots",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Parametric Plots</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_21"
+        ]
+    },
+    "Template_21": {
+        "name": "ParametricPlotTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|cont|_parametric_plot;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_4",
+        "children": []
+    },
+    "Template_5": {
+        "name": "Mesh",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Mesh</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_22"
+        ]
+    },
+    "Template_22": {
+        "name": "MeshTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_5",
+        "children": [
+            "Template_23",
+            "Template_24"
+        ]
+    },
+    "Template_23": {
+        "name": "Mesh Slider",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Mesh = {{MeshName}}, Design Point = {{Design Point}}</h4>",
+                "show_nodes": "1"
+            },
+            "HTML": "<h2>Mesh Slider</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'MeshName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_22",
+        "children": []
+    },
+    "Template_24": {
+        "name": "Mesh Comparison",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_mesh;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Mesh = {{MeshName}}, Design Point = {{Design Point}}</h4>",
+                "image_comparison": "1",
+                "image_controls": "1",
+                "common_slider_tags": "[MeshName]",
+                "show_nodes": "1",
+                "rgb_diff_comparison": "1"
+            },
+            "HTML": "<h2>Mesh Comparison</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'MeshName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_22",
+        "children": []
+    },
+    "Template_6": {
+        "name": "Contours",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Contours</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_25"
+        ]
+    },
+    "Template_25": {
+        "name": "ContourTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_6",
+        "children": [
+            "Template_26",
+            "Template_27"
+        ]
+    },
+    "Template_26": {
+        "name": "Contours Slider",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Contour = {{ContourName}}, Design Point = {{Design Point}}</h4>",
+                "show_nodes": "1"
+            },
+            "HTML": "<h2>Contours Slider</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'ContourName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_25",
+        "children": []
+    },
+    "Template_27": {
+        "name": "Contours Comparison",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_contour;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Contour = {{ContourName}}, Design Point = {{Design Point}}</h4>",
+                "image_comparison": "1",
+                "image_controls": "1",
+                "common_slider_tags": "[ContourName]",
+                "show_nodes": "1",
+                "rgb_diff_comparison": "1"
+            },
+            "HTML": "<h2>Contours Comparison</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'ContourName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_25",
+        "children": []
+    },
+    "Template_7": {
+        "name": "Pathlines",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Pathlines</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_28"
+        ]
+    },
+    "Template_28": {
+        "name": "PathlineTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_7",
+        "children": [
+            "Template_29",
+            "Template_30"
+        ]
+    },
+    "Template_29": {
+        "name": "Pathlines Slider",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Pathline = {{PathlineName}}, Design Point = {{Design Point}}</h4>",
+                "show_nodes": "1"
+            },
+            "HTML": "<h2>Pathlines Slider</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'PathlineName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_28",
+        "children": []
+    },
+    "Template_30": {
+        "name": "Pathlines Comparison",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_pathline;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Pathline = {{PathlineName}}, Design Point = {{Design Point}}</h4>",
+                "image_comparison": "1",
+                "image_controls": "1",
+                "common_slider_tags": "[PathlineName]",
+                "show_nodes": "1",
+                "rgb_diff_comparison": "1"
+            },
+            "HTML": "<h2>Pathlines Comparison</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'PathlineName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_28",
+        "children": []
+    },
+    "Template_8": {
+        "name": "XY Plots",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_type|eq|table;A|i_name|cont|_xyplot;",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>XY Plots</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_31"
+        ]
+    },
+    "Template_31": {
+        "name": "Static Pressure",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_name|cont|top-wall_xyplot;",
+        "params": {},
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": [
+            "Template_32"
+        ]
+    },
+    "Template_32": {
+        "name": "plot_merge",
+        "report_type": "Generator:tablemerge",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_xyplot;",
+        "params": {
+            "merge_params": {
+                "column_labels_as_ids": 1,
+                "transpose_output": 0,
+                "force_numeric": 1,
+                "merge_type": "row",
+                "column_merge": "all",
+                "column_id_row": "0",
+                "collision_tag": "Design Point",
+                "unknown_value": "nan",
+                "table_name": "merged_xyplot",
+                "source_rows": "'top-wall_x|merge', '*|rename_nametag'"
+            },
+            "generate_merge": "replace",
+            "properties": {
+                "plot": "line",
+                "xaxis": "top-wall_x",
+                "line_marker": "none",
+                "xtitle": "Position [m]",
+                "Static Pressure [Pa]": "",
+                "xaxis_format": "floatdot3",
+                "yaxis_format": "scientific",
+                "ytitle": "Static Pressure [Pa]"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_31",
+        "children": []
+    },
+    "Template_9": {
+        "name": "Scenes",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0",
+                "panel_template_toggle": "1",
+                "pagebreak": "1"
+            },
+            "HTML": "<h2>Scenes</h2>",
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_33"
+        ]
+    },
+    "Template_33": {
+        "name": "SceneTabs",
+        "report_type": "Layout:tabs",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0"
+            },
+            "skip_empty": 0
+        },
+        "sort_selection": "",
+        "parent": "Template_9",
+        "children": [
+            "Template_34",
+            "Template_35"
+        ]
+    },
+    "Template_34": {
+        "name": "Scenes Slider",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_scene;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Scene = {{SceneName}}, Design Point = {{Design Point}}</h4>",
+                "show_nodes": "1"
+            },
+            "HTML": "<h2>Scenes Slider</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'SceneName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_33",
+        "children": []
+    },
+    "Template_35": {
+        "name": "Scenes Comparison",
+        "report_type": "Layout:slider",
+        "tags": "",
+        "item_filter": "A|i_type|eq|image;A|i_name|cont|_scene;",
+        "params": {
+            "properties": {
+                "TOCItem": "0",
+                "pagebreak": "0",
+                "image_title": "<h4>Scene = {{SceneName}}, Design Point = {{Design Point}}</h4>",
+                "image_comparison": "1",
+                "image_controls": "1",
+                "common_slider_tags": "[SceneName]",
+                "show_nodes": "1",
+                "rgb_diff_comparison": "1"
+            },
+            "HTML": "<h2>Scenes Comparison</h2>",
+            "skip_empty": 0,
+            "slider_tags": "'Design Point|natural_up', 'SceneName|text_up'"
+        },
+        "sort_selection": "",
+        "parent": "Template_33",
+        "children": []
+    }
+}

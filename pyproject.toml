@@ -9,14 +9,14 @@ requires = [
 
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.0.dev0"
+version = "0.10.2.dev0"
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
 
 maintainers = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "nexus@ansys.com"},
+    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
@@ -161,7 +161,7 @@ src_paths = ["doc", "src", "tests"]
 
 [tool.codespell]
 ignore-words = "doc/styles/Vocab/ANSYS/accept.txt"
-skip = '*.pyc,*.xml,*.gif,*.png,*.jpg,*.js,*.html,doc/source/examples/**/*.ipynb'
+skip = '*.pyc,*.xml,*.gif,*.png,*.jpg,*.js,*.html,doc/source/examples/**/*.ipynb,*.json,*.gz'
 quiet-level = 3
 
 [tool.bandit]

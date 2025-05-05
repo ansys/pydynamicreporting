@@ -2,6 +2,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
+from enum import Enum
 import importlib
 import inspect
 from itertools import chain
@@ -23,8 +24,8 @@ from django.db.models.manager import Manager
 from django.db.utils import IntegrityError as DBIntegrityError
 
 from ..exceptions import (
-    ADRException,
     IntegrityError,
+    InvalidFieldError,
     MultipleObjectsReturnedError,
     ObjectDoesNotExistError,
     ObjectNotSavedError,
@@ -44,7 +45,9 @@ def handle_field_errors(func):
         try:
             return func(*args, **kwargs)
         except (FieldError, FieldDoesNotExist, ValidationError, DataError) as e:
-            raise ADRException(extra_detail=f"One or more fields set or accessed are invalid: {e}")
+            raise InvalidFieldError(
+                extra_detail=f"One or more fields set or accessed are invalid: {e}"
+            )
 
     return wrapper
 
@@ -75,13 +78,11 @@ class BaseMeta(ABCMeta):
         if parents:
             # dynamically make the properties listed into class attrs
             if "_properties" in namespace:
-                dynamic_props_field = namespace["_properties"]
-                if hasattr(dynamic_props_field, "default"):
-                    props = dynamic_props_field.default
-                    new_namespace = {**namespace}
-                    for prop in props:
-                        new_namespace[prop] = None
-                    new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
+                props = namespace["_properties"]
+                new_namespace = {**namespace}
+                for prop in props:
+                    new_namespace[prop] = None
+                new_cls = super_new(mcs, cls_name, bases, new_namespace, **kwargs)
             # save every class extending BaseModel
             mcs._cls_registry[cls_name] = new_cls
             # add exceptions
@@ -143,6 +144,18 @@ class BaseModel(metaclass=BaseMeta):
     _orm_instance: Model = field(
         init=False, compare=False, default=None
     )  # tracks the corresponding ORM instance
+
+    # check if ADR is set up before creating instances
+    def __new__(cls, *args, **kwargs):
+        try:
+            from .adr import ADR
+
+            ADR.ensure_setup()
+        except RuntimeError as e:
+            raise RuntimeError(
+                f"ADR must be set up before creating instances of '{cls.__name__}': {e}"
+            )
+        return super().__new__(cls)
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.guid}>"
@@ -254,7 +267,7 @@ class BaseModel(metaclass=BaseMeta):
     def db(self):
         return self._orm_db
 
-    def as_dict(self):
+    def as_dict(self, recursive=False) -> dict[str, Any]:
         out_dict = {}
         # use a combination of vars and fields
         cls_fields = set(self._get_field_names() + self._get_var_field_names())
@@ -264,6 +277,9 @@ class BaseModel(metaclass=BaseMeta):
             value = getattr(self, field_, None)
             if value is None:  # skip and use defaults
                 continue
+            if isinstance(value, list) and recursive:
+                # convert to guids
+                value = [obj.guid for obj in value]
             out_dict[field_] = value
         return out_dict
 
@@ -281,7 +297,14 @@ class BaseModel(metaclass=BaseMeta):
                 continue
             if isinstance(value, list):
                 objs = [obj._orm_instance for obj in value]
-                getattr(self._orm_instance, field_).add(*objs)
+                try:
+                    getattr(self._orm_instance, field_).add(*objs)
+                except (ObjectDoesNotExist, ValueError) as e:
+                    if value:
+                        obj_cls = value[0].__class__
+                        raise obj_cls.NotSaved(extra_detail=str(e))
+                    else:
+                        raise ValueError(str(e))
             else:
                 if isinstance(value, BaseModel):  # relations
                     try:
@@ -328,7 +351,7 @@ class BaseModel(metaclass=BaseMeta):
     def from_db(cls, orm_instance, parent=None):
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(orm_instance)
-        obj = cls()
+        obj = cls.__new__(cls)  # Bypass __init__ to skip validation
         for field_ in model_fields:
             if field_ in cls_fields:
                 attr = field_
@@ -404,6 +427,11 @@ class BaseModel(metaclass=BaseMeta):
     @classmethod
     @handle_field_errors
     def get(cls, **kwargs):
+        """Get an object from the database using the ORM model."""
+        # convert basemodel instances to orm instances
+        for key, value in kwargs.items():
+            if isinstance(value, BaseModel):
+                kwargs[key] = value._orm_instance
         try:
             orm_instance = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).get(
                 **kwargs
@@ -417,39 +445,26 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     @handle_field_errors
-    def get_or_create(cls, **kwargs):
-        try:
-            return cls.get(**kwargs), False
-        except cls.DoesNotExist:
-            # Try to create an object using passed params.
-            try:
-                return cls.create(**kwargs), True
-            except cls.IntegrityError:
-                try:
-                    return cls.get(**kwargs), False
-                except cls.DoesNotExist:
-                    pass
-                raise
-
-    @classmethod
-    @handle_field_errors
-    def filter(cls, **kwargs):
+    def filter(cls, **kwargs) -> "ObjectSet":
+        for key, value in kwargs.items():
+            if isinstance(value, BaseModel):
+                kwargs[key] = value._orm_instance
         qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
     @handle_field_errors
-    def find(cls, query="", **kwargs):
+    def find(cls, query="", **kwargs) -> "ObjectSet":
         qs = cls._orm_model_cls.find(query=query, **kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
-    def get_tags(self):
+    def get_tags(self) -> str:
         return self.tags
 
-    def set_tags(self, tag_str):
+    def set_tags(self, tag_str: str) -> None:
         self.tags = tag_str
 
-    def add_tag(self, tag, value=None):
+    def add_tag(self, tag: str, value: str | None = None) -> None:
         self.rem_tag(tag)
         tags = shlex.split(self.get_tags())
         if value:
@@ -458,15 +473,15 @@ class BaseModel(metaclass=BaseMeta):
             tags.append(tag)
         self._rebuild_tags(tags)
 
-    def rem_tag(self, tag):
+    def rem_tag(self, tag: str) -> None:
         tags = shlex.split(self.get_tags())
-        for tag in list(tags):
-            if "=" in tag:
-                if tag.split("=")[0] == tag:
-                    tags.remove(tag)
-            elif tag == tag:
-                tags.remove(tag)
+        for t in tags:
+            if t == tag or t.split("=")[0] == tag:
+                tags.remove(t)
         self._rebuild_tags(tags)
+
+    def remove_tag(self, tag: str) -> None:
+        self.rem_tag(tag)
 
 
 @dataclass(eq=False, order=False, repr=False)
@@ -520,8 +535,8 @@ class ObjectSet:
 
     def values_list(self, *fields, flat=False):
         if flat and len(fields) > 1:
-            raise TypeError(
-                "'flat' is not valid when values_list is called with more than one " "field."
+            raise ValueError(
+                "'flat' is not valid when values_list is called with more than one field."
             )
         ret = []
         for obj in self._obj_set:
@@ -543,11 +558,19 @@ class Validator(ABC):
         return getattr(obj, self._name, self._default)
 
     def __set__(self, obj, value):
-        cleaned_value = None
-        if value is not None:
-            cleaned_value = self.process(value, obj)
+        cleaned_value = self.process(value, obj)
         setattr(obj, self._name, cleaned_value)
 
     @abstractmethod
     def process(self, value, obj):
-        pass
+        pass  # pragma: no cover
+
+
+class StrEnum(str, Enum):
+    """Enum with a str mixin."""
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.value

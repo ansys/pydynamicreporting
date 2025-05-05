@@ -28,6 +28,7 @@ except ImportError:  # pragma: no cover
 import warnings
 import webbrowser
 
+from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
 
 from .adr_item import Item
@@ -577,11 +578,11 @@ class Service:
             DEPRECATED. Use item_filter instead.
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
         item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
@@ -672,7 +673,7 @@ class Service:
         """
         Query the database.
 
-        .. _Query Expressions: https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html
+        .. _Query: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v251/en/adr_ug/adr_ug_query_expressions.html
 
         Parameters
         ----------
@@ -683,11 +684,11 @@ class Service:
             DEPRECATED. Use item_filter instead.
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
         item_filter : str, optional
             Query string for filtering. The default is ``""``. The syntax corresponds
             to the syntax for Ansys Dynamic Reporting. For more information, see
-            _Query Expressions in the documentation for Ansys Dynamic Reporting.
+            _Query in the documentation for Ansys Dynamic Reporting.
 
         Returns
         -------
@@ -977,7 +978,7 @@ class Service:
 
         try:
             self.serverobj.load_templates(templates_json, self.logger)
-        except report_remote_server.TemplateEditorJSONLoadingError as e:
+        except adr_utils_exceptions.TemplateEditorJSONLoadingError as e:
             self.logger.error(
                 "The loaded JSON file does not conform to the schema!\nPlease check your JSON file.\n"
                 f"Error details: {e}"

@@ -18,7 +18,7 @@ from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
-from .base import BaseModel, Validator
+from .base import BaseModel, StrEnum, Validator
 
 
 class Session(BaseModel):
@@ -61,11 +61,14 @@ class HTMLParser(BaseHTMLParser):
 
 class ItemContent(Validator):
     def process(self, value, obj):
-        return None
+        if value is None:
+            raise ValueError("Content cannot be None")
+        return value
 
 
 class StringContent(ItemContent):
     def process(self, value, obj):
+        value = super().process(value, obj)
         if not isinstance(value, str):
             raise TypeError("Expected content to be a string")
         return value
@@ -81,6 +84,7 @@ class HTMLContent(StringContent):
 
 class TableContent(ItemContent):
     def process(self, value, obj):
+        value = super().process(value, obj)
         if not isinstance(value, numpy.ndarray):
             raise TypeError("Expected content to be a numpy array")
         if value.dtype.kind not in ["S", "f"]:
@@ -121,6 +125,7 @@ class TreeContent(ItemContent):
             self._validate_tree_value(elem["value"])
 
     def process(self, value, obj):
+        value = super().process(value, obj)
         self._validate_tree(value)
         return value
 
@@ -134,7 +139,7 @@ class FileValidator(StringContent):
         if not file_path.is_file():
             raise ValueError(
                 f"Expected content to be a file path: "
-                f"'{file_path.name}' does not exist or is not a file."
+                f"'{file_path}' does not exist or is not a file."
             )
         with file_path.open(mode="rb") as f:
             file = DjangoFile(f)
@@ -201,16 +206,24 @@ class FilePayloadMixin:
     _file_ext: str = field(init=False, compare=False, default="")
 
     @property
-    def file_ext(self):
-        return self._file_ext
+    def file_path(self):
+        try:
+            return self._orm_instance.payloadfile.path
+        except (AttributeError, ValueError):
+            # If the file path is not set, return None
+            return None
 
     @property
     def has_file(self):
-        return self._file is not None
+        return self.file_path is not None and Path(self.file_path).is_file()
 
     @property
-    def file_path(self):
-        return self._orm_instance.payloadfile.path
+    def file_ext(self):
+        try:
+            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")
+        except (AttributeError, ValueError):
+            # If the file path is not set, return None
+            return None
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
@@ -231,7 +244,6 @@ class FilePayloadMixin:
                         out_file.write(chunk)
 
     def save(self, **kwargs):
-        # todo: check backward compatibility: _movie is now _anim.
         self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
         # Save file to the target path
         self._save_file(self.file_path, self._file)
@@ -245,6 +257,18 @@ class FilePayloadMixin:
         return super().delete(**kwargs)
 
 
+class ItemType(StrEnum):
+    STRING = "string"
+    HTML = "html"
+    TABLE = "table"
+    TREE = "tree"
+    IMAGE = "image"
+    ANIMATION = "anim"
+    SCENE = "scene"
+    FILE = "file"
+    NONE = "none"
+
+
 class Item(BaseModel):
     name: str = field(compare=False, kw_only=True, default="")
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
@@ -253,7 +277,7 @@ class Item(BaseModel):
     session: Session = field(compare=False, kw_only=True, default=None)
     dataset: Dataset = field(compare=False, kw_only=True, default=None)
     content: ItemContent = ItemContent()
-    type: str = "none"
+    type: str = ItemType.NONE  # todo: make this read-only
     _orm_model: str = "data.models.Item"
     _type_registry = {}  # Class-level registry of subclasses keyed by type
     _in_memory: bool = field(compare=False, kw_only=True, default=False)
@@ -264,9 +288,8 @@ class Item(BaseModel):
         Item._type_registry[cls.type] = cls
 
     def __post_init__(self):
-        # todo: can be bypassed by setting type at instantiation
-        if self.type == "none":
-            raise TypeError("Cannot instantiate Item directly. Use Item.create()")
+        if self.__class__ is Item:
+            raise ADRException("Cannot instantiate Item directly. Use the Item.create() method.")
         super().__post_init__()
 
     def save(self, **kwargs):
@@ -280,8 +303,6 @@ class Item(BaseModel):
             raise Dataset.NotSaved(
                 extra_detail="Failed to save item because the dataset is not saved"
             )
-        if self.content is None:
-            raise ADRException(extra_detail=f"The item {self.guid} must have some content to save")
         super().save(**kwargs)
 
     @classmethod
@@ -309,27 +330,26 @@ class Item(BaseModel):
         return super().create(**new_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().get(**new_kwargs)
+    def _validate_kwargs(cls, **kwargs):
+        if "content" in kwargs:
+            raise ValueError("'content' kwarg is not supported for get and filter methods")
+        return {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
 
     @classmethod
-    def get_or_create(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().get_or_create(**new_kwargs)
+    def get(cls, **kwargs):
+        return super().get(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):
-        new_kwargs = {"type": cls.type, **kwargs} if cls.type != "none" else kwargs
-        return super().filter(**new_kwargs)
+        return super().filter(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def find(cls, query="", **kwargs):
-        if cls.type == "none":
+        if cls is Item:
             return super().find(query=query, **kwargs)
-        if "i_type|cont" in query:
+        if "i_type|" in query:
             raise ADRException(
-                extra_detail="The 'i_type' filter is not required if using a subclass of Item"
+                extra_detail="The 'i_type' filter is not allowed if using a subclass of Item"
             )
         return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
 
@@ -354,17 +374,17 @@ class Item(BaseModel):
 
 class String(SimplePayloadMixin, Item):
     content: StringContent = StringContent()
-    type: str = "string"
+    type: str = ItemType.STRING
 
 
 class HTML(String):
     content: HTMLContent = HTMLContent()
-    type: str = "html"
+    type: str = ItemType.HTML
 
 
 class Table(Item):
     content: TableContent = TableContent()
-    type: str = "table"
+    type: str = ItemType.TABLE
     _properties: tuple = table_attr
 
     @classmethod
@@ -383,7 +403,7 @@ class Table(Item):
         payload = {
             "array": self.content,
         }
-        for prop in self._properties:
+        for prop in self.__class__._properties:
             value = getattr(self, prop, None)
             if value is not None:
                 payload[prop] = value
@@ -393,7 +413,7 @@ class Table(Item):
 
 class Tree(SimplePayloadMixin, Item):
     content: TreeContent = TreeContent()
-    type: str = "tree"
+    type: str = ItemType.TREE
 
 
 class Image(FilePayloadMixin, Item):
@@ -401,7 +421,7 @@ class Image(FilePayloadMixin, Item):
     _height: int = field(compare=False, init=False, default=0)
     _enhanced: bool = field(compare=False, init=False, default=False)
     content: ImageContent = ImageContent()
-    type: str = "image"
+    type: str = ItemType.IMAGE
 
     @property
     def width(self):
@@ -423,11 +443,13 @@ class Image(FilePayloadMixin, Item):
         target_ext = "png" if not self._enhanced else self._file_ext
         self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
         # Save the image
-        if target_ext == "png" and self._file_ext != target_ext:
+        if self._file_ext != target_ext and target_ext == "png":
+            # Convert to PNG format
+            self._file_ext = target_ext
             try:
-                image.save(self.file_path, format="PNG")
+                image.save(self.file_path, format=self._file_ext.upper())
             except OSError as e:
-                print(f"Error converting image to PNG: {e}")
+                raise ADRException(f"Error converting image to {self._file_ext}: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
             self._save_file(self.file_path, img_bytes)
         image.close()
@@ -436,12 +458,12 @@ class Image(FilePayloadMixin, Item):
 
 class Animation(FilePayloadMixin, Item):
     content: AnimContent = AnimContent()
-    type: str = "anim"
+    type: str = ItemType.ANIMATION
 
 
 class Scene(FilePayloadMixin, Item):
     content: SceneContent = SceneContent()
-    type: str = "scene"
+    type: str = ItemType.SCENE
 
     def save(self, **kwargs):
         super().save(**kwargs)
@@ -451,7 +473,7 @@ class Scene(FilePayloadMixin, Item):
 
 class File(FilePayloadMixin, Item):
     content: FileContent = FileContent()
-    type: str = "file"
+    type: str = ItemType.FILE
 
     def save(self, **kwargs):
         super().save(**kwargs)

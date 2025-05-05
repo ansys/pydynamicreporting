@@ -6,7 +6,39 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from ..exceptions import ADRException
-from .base import BaseModel
+from .base import BaseModel, StrEnum
+
+
+class ReportType(StrEnum):
+    DEFAULT = ""
+    # Layouts
+    BASIC_LAYOUT = "Layout:basic"
+    PANEL_LAYOUT = "Layout:panel"
+    BOX_LAYOUT = "Layout:box"
+    TABS_LAYOUT = "Layout:tabs"
+    CAROUSEL_LAYOUT = "Layout:carousel"
+    SLIDER_LAYOUT = "Layout:slider"
+    FOOTER_LAYOUT = "Layout:footer"
+    HEADER_LAYOUT = "Layout:header"
+    ITERATOR_LAYOUT = "Layout:iterator"
+    TAG_PROPS_LAYOUT = "Layout:tagprops"
+    TOC_LAYOUT = "Layout:toc"
+    REPORT_LINK_LAYOUT = "Layout:reportlink"
+    PPTX_LAYOUT = "Layout:pptx"
+    PPTX_SLIDE_LAYOUT = "Layout:pptxslide"
+    DATA_FILTER_LAYOUT = "Layout:datafilter"
+    USER_DEFINED_LAYOUT = "Layout:userdefined"
+    # Generators
+    TABLE_MERGE_GENERATOR = "Generator:tablemerge"
+    TABLE_REDUCE_GENERATOR = "Generator:tablereduce"
+    TABLE_ROW_COLUMN_FILTER_GENERATOR = "Generator:tablerowcolumnfilter"
+    TABLE_VALUE_FILTER_GENERATOR = "Generator:tablevaluefilter"
+    TABLE_SORT_FILTER_GENERATOR = "Generator:tablesortfilter"
+    TREE_MERGE_GENERATOR = "Generator:treemerge"
+    SQL_QUERIES_GENERATOR = "Generator:sqlqueries"
+    ITEMS_COMPARISON_GENERATOR = "Generator:itemscomparison"
+    STATISTICAL_GENERATOR = "Generator:statistical"
+    ITERATOR_GENERATOR = "Generator:iterator"
 
 
 class Template(BaseModel):
@@ -16,11 +48,11 @@ class Template(BaseModel):
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
+    report_type: str = ReportType.DEFAULT  # todo: make this read-only
     _children_order: str = field(
         compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)
-    report_type: str = ""
     _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
@@ -32,22 +64,15 @@ class Template(BaseModel):
         Template._type_registry[cls.report_type] = cls
 
     def __post_init__(self):
-        if self.report_type == "":
-            raise TypeError("Cannot instantiate Template directly. Use Template.create()")
+        if self.__class__ is Template:
+            raise ADRException(
+                "Cannot instantiate Template directly. Use the Template.create() method."
+            )
         super().__post_init__()
-
-    def __str__(self) -> str:
-        return f"<{self.__class__.__name__}: {self.name}>"
 
     @property
     def type(self):
         return self.report_type
-
-    @type.setter
-    def type(self, value):
-        if not isinstance(value, str):
-            raise ValueError(f"{value} must be a string")
-        self.report_type = value
 
     @property
     def children_order(self):
@@ -58,8 +83,8 @@ class Template(BaseModel):
         return self._master
 
     def save(self, **kwargs):
-        if self.parent is not None and not self.parent._saved:
-            raise Template.NotSaved(
+        if self.parent is not None and not self.parent.saved:
+            raise self.parent.__class__.NotSaved(
                 extra_detail="Failed to save template because its parent is not saved"
             )
         children_order = []
@@ -68,16 +93,16 @@ class Template(BaseModel):
                 raise TypeError(
                     f"Failed to save template because child '{child}' is not a Template object"
                 )
-            if not child._saved:
-                raise Template.NotSaved(
+            if not child.saved:
+                raise child.__class__.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
-            children_order.append(str(child.guid))
+            children_order.append(child.guid)
         self._children_order = ",".join(children_order)
         self._master = self.parent is None
         # set properties
         prop_dict = {}
-        for prop in self._properties:
+        for prop in self.__class__._properties:
             value = getattr(self, prop, None)
             if value is not None:
                 prop_dict[prop] = value
@@ -113,42 +138,43 @@ class Template(BaseModel):
         if cls is Template:
             # Get the class based on the type attribute
             try:
-                templ_cls = cls._type_registry[kwargs.pop("report_type")]
+                type_name = kwargs.pop("report_type")
             except KeyError:
                 raise ADRException("The 'report_type' must be passed when using the Template class")
+            # Get the class based on the type attribute
+            templ_cls = cls._type_registry[type_name]
             return templ_cls.create(**kwargs)
 
         new_kwargs = {"report_type": cls.report_type, **kwargs}
         return super().create(**new_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get(**new_kwargs)
+    def _validate_kwargs(cls, **kwargs):
+        if "children" in kwargs:
+            raise ValueError("'children' kwarg is not supported for get and filter methods")
+        return {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
 
     @classmethod
-    def get_or_create(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get_or_create(**new_kwargs)
+    def get(cls, **kwargs):
+        return super().get(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def filter(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().filter(**new_kwargs)
+        return super().filter(**cls._validate_kwargs(**kwargs))
 
     @classmethod
     def find(cls, query="", **kwargs):
-        if not cls.report_type:
+        if cls is Template:
             return super().find(query=query, **kwargs)
-        if "t_types|cont" in query:
+        if "t_types|" in query:
             raise ADRException(
-                extra_detail="The 't_types' filter is not required if using a subclass of Template"
+                extra_detail="The 't_types' filter is not allowed if using a subclass of Template"
             )
         query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
         return super().find(query=query_string, **kwargs)
 
     def reorder_children(self) -> None:
-        guid_to_child = {str(child.guid): child for child in self.children}
+        guid_to_child = {child.guid: child for child in self.children}
         sorted_guids = self.children_order.lower().split(",")
         # return the children based on the order of guids in children_order
         reordered = []
@@ -209,6 +235,9 @@ class Template(BaseModel):
         curr_props = params.get("properties", {})
         params["properties"] = curr_props | new_props
         self.set_params(params)
+
+    def add_properties(self, new_props: dict) -> None:
+        self.add_property(new_props)
 
     def get_sort_fields(self):
         return self.get_params().get("sort_fields", [])
@@ -359,67 +388,72 @@ class Layout(Template):
 
 
 class BasicLayout(Layout):
-    report_type: str = "Layout:basic"
+    report_type: str = ReportType.BASIC_LAYOUT
 
 
 class PanelLayout(Layout):
-    report_type: str = "Layout:panel"
+    report_type: str = ReportType.PANEL_LAYOUT
 
 
 class BoxLayout(Layout):
-    report_type: str = "Layout:box"
+    report_type: str = ReportType.BOX_LAYOUT
 
 
 class TabLayout(Layout):
-    report_type: str = "Layout:tabs"
+    report_type: str = ReportType.TABS_LAYOUT
 
 
 class CarouselLayout(Layout):
-    report_type: str = "Layout:carousel"
+    report_type: str = ReportType.CAROUSEL_LAYOUT
 
 
 class SliderLayout(Layout):
-    report_type: str = "Layout:slider"
+    report_type: str = ReportType.SLIDER_LAYOUT
 
 
 class FooterLayout(Layout):
-    report_type: str = "Layout:footer"
+    report_type: str = ReportType.FOOTER_LAYOUT
 
 
 class HeaderLayout(Layout):
-    report_type: str = "Layout:header"
+    report_type: str = ReportType.HEADER_LAYOUT
 
 
 class IteratorLayout(Layout):
-    report_type: str = "Layout:iterator"
+    report_type: str = ReportType.ITERATOR_LAYOUT
 
 
 class TagPropertyLayout(Layout):
-    report_type: str = "Layout:tagprops"
+    report_type: str = ReportType.TAG_PROPS_LAYOUT
 
 
 class TOCLayout(Layout):
-    report_type: str = "Layout:toc"
+    report_type: str = ReportType.TOC_LAYOUT
 
 
 class ReportLinkLayout(Layout):
-    report_type: str = "Layout:reportlink"
+    report_type: str = ReportType.REPORT_LINK_LAYOUT
 
 
 class PPTXLayout(Layout):
-    report_type: str = "Layout:pptx"
+    report_type: str = ReportType.PPTX_LAYOUT
+    _properties = ("input_pptx", "output_pptx", "use_all_slides")
 
 
 class PPTXSlideLayout(Layout):
-    report_type: str = "Layout:pptxslide"
+    report_type: str = ReportType.PPTX_SLIDE_LAYOUT
+    _properties = (
+        "source_slide",
+        "exclude_from_toc",
+    )
 
 
 class DataFilterLayout(Layout):
-    report_type: str = "Layout:datafilter"
+    report_type: str = ReportType.DATA_FILTER_LAYOUT
 
 
 class UserDefinedLayout(Layout):
-    report_type: str = "Layout:userdefined"
+    report_type: str = ReportType.USER_DEFINED_LAYOUT
 
 
 class Generator(Template):
@@ -447,40 +481,40 @@ class Generator(Template):
 
 
 class TableMergeGenerator(Generator):
-    report_type: str = "Generator:tablemerge"
+    report_type: str = ReportType.TABLE_MERGE_GENERATOR
 
 
 class TableReduceGenerator(Generator):
-    report_type: str = "Generator:tablereduce"
+    report_type: str = ReportType.TABLE_REDUCE_GENERATOR
 
 
 class TableMergeRCFilterGenerator(Generator):
-    report_type: str = "Generator:tablerowcolumnfilter"
+    report_type: str = ReportType.TABLE_ROW_COLUMN_FILTER_GENERATOR
 
 
 class TableMergeValueFilterGenerator(Generator):
-    report_type: str = "Generator:tablevaluefilter"
+    report_type: str = ReportType.TABLE_VALUE_FILTER_GENERATOR
 
 
 class TableSortFilterGenerator(Generator):
-    report_type: str = "Generator:tablesortfilter"
+    report_type: str = ReportType.TABLE_SORT_FILTER_GENERATOR
 
 
 class TreeMergeGenerator(Generator):
-    report_type: str = "Generator:treemerge"
+    report_type: str = ReportType.TREE_MERGE_GENERATOR
 
 
 class SQLQueryGenerator(Generator):
-    report_type: str = "Generator:sqlqueries"
+    report_type: str = ReportType.SQL_QUERIES_GENERATOR
 
 
 class ItemsComparisonGenerator(Generator):
-    report_type: str = "Generator:itemscomparison"
+    report_type: str = ReportType.ITEMS_COMPARISON_GENERATOR
 
 
 class StatisticalGenerator(Generator):
-    report_type: str = "Generator:statistical"
+    report_type: str = ReportType.STATISTICAL_GENERATOR
 
 
 class IteratorGenerator(Generator):
-    report_type: str = "Generator:iterator"
+    report_type: str = ReportType.ITERATOR_GENERATOR
