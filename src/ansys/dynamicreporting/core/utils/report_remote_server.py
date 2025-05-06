@@ -47,7 +47,6 @@ def single_dialog(exec_basis: str, ansys_version: str, input_msg: str):
         exec_basis = report_utils.enve_home()
     if exec_basis and ansys_version:
         if "trasnlated_dlg" not in sys.modules:
-            print("It is not imported yet")
             sys.path.append(
                 os.path.join(
                     exec_basis,
