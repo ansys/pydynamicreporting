@@ -39,12 +39,19 @@ from .encoders import BaseEncoder
 
 
 def single_dialog(exec_basis: str, ansys_version: str, input_msg: str):
+    if ansys_version is None:
+        ansys_version = str(report_utils.ceiversion_nexus_suffix())
+    else:
+        ansys_version = str(ansys_version)        
+    if exec_basis is None:
+        exec_basis = report_utils.enve_home()
     if exec_basis and ansys_version:
-        if trasnlated_dlg not in sys.modules:
+        if 'trasnlated_dlg' not in sys.modules:
+            print("It is not imported yet")
             sys.path.append(
                 os.path.join(
                     exec_basis,
-                    "nexus" + report_ver,
+                    "nexus" + ansys_version,
                     "template_editor",
                     "translated_dlg.py",
                 )
