@@ -114,7 +114,7 @@ class Item:
     def url(self):
         """URL corresponding to the item"""
         if self.serverobj.get_URL() is not None and self.item.guid is not None:
-            self._url = self.serverobj.get_URL() + "/reports/report_display/?usemenus=off&query=A%7Ci_guid%7C%eq%7C"
+            self._url = self.serverobj.get_URL() + "/reports/report_display/?usemenus=off&query=A%7Ci_guid%7Ceq%7C"
             self._url += str(self.item.guid)
         else:
             self._url = None
