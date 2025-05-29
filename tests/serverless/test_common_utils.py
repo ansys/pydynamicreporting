@@ -13,7 +13,7 @@ CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
 # ansys_installation provided, valid using the "CEI" folder.
 @pytest.mark.ado_test
 def test_get_install_info_valid_cei(tmp_path):
-    version = 252
+    version = 261
     # Create a fake installation directory with a "CEI" subfolder.
     install_dir = tmp_path / f"install_v{version}"
     install_dir.mkdir()
@@ -34,7 +34,7 @@ def test_get_install_info_valid_cei(tmp_path):
 # ansys_installation provided, valid using the base directory (when CEI folder is absent).
 @pytest.mark.ado_test
 def test_get_install_info_valid_base(tmp_path):
-    version = 252
+    version = 261
     # Create a fake installation directory without a "CEI" subfolder.
     install_dir = tmp_path / f"install_v{version}"
     install_dir.mkdir()
@@ -52,7 +52,7 @@ def test_get_install_info_valid_base(tmp_path):
 # ansys_installation provided, but missing required nexus folder structure → raises InvalidAnsysPath.
 @pytest.mark.ado_test
 def test_get_install_info_invalid_missing_manage(tmp_path):
-    version = 252
+    version = 261
     install_dir = tmp_path / f"install_v{version}"
     install_dir.mkdir()
     # Create a "CEI" folder but do not create the required nexus folder structure.
@@ -65,7 +65,7 @@ def test_get_install_info_invalid_missing_manage(tmp_path):
 # ansys_installation is None, but PYADR_ANSYS_INSTALLATION is set to a valid installation.
 @pytest.mark.ado_test
 def test_get_install_info_env_pyadr_valid(tmp_path, monkeypatch):
-    version = 252
+    version = 261
     env_dir = tmp_path / f"env_install_v{version}"
     env_dir.mkdir()
     # Create a valid CEI structure inside the env directory.
@@ -84,7 +84,7 @@ def test_get_install_info_env_pyadr_valid(tmp_path, monkeypatch):
 # ansys_installation is None and AWP_ROOT{CURRENT_VERSION} is set to a valid installation.
 @pytest.mark.ado_test
 def test_get_install_info_env_awp_valid(tmp_path, monkeypatch):
-    version = 252
+    version = 261
     awp_var = f"AWP_ROOT{CURRENT_VERSION}"
     awp_dir = tmp_path / f"awp_install_v{version}"
     awp_dir.mkdir()
