@@ -184,7 +184,7 @@ class Service:
             If this parameter is set to ``stdout``, the output will be printed
             to stdout.
         use_pim: bool, optional
-            Use pim configuration to start ADR, if available.
+            Use pim configuration to start ADR, if available. Default: True
         """
         self.serverobj = None
         self._session_guid = ""
@@ -204,9 +204,10 @@ class Service:
         if pim_is_available and use_pim:  # pragma: no cover
             if pypim.is_configured():
                 instance, pim = _prepare_pim(product_version=self._ansys_version)
-                ip_address=pim.get_instance(instance.name).services['http'].uri
+                ip_address = pim.get_instance(instance.name).services["http"].uri
                 self.connect(url=ip_address)
                 self._pim = [instance, pim]
+                return
 
         if ansys_installation == "docker":
             if not self._db_directory:
@@ -394,6 +395,11 @@ class Service:
             adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
             ret = adr_service.connect(url="http://localhost:8010", username='admin', password = 'mypsw')
         """
+
+        if self._pim is not None:  # pragma: no cover
+            self.logger.warning("Already connected to a dynamic reporting service via pim.\n")
+            return
+
         if self._url is not None:  # pragma: no cover
             self.logger.warning("Already connected to a dynamic reporting service.\n")
             return
@@ -480,6 +486,11 @@ class Service:
             db_directory = r'D:\\tmp\\new_db', port = 8020)
             session_guid = adr_service.start()
         """
+
+        if self._pim is not None:  # pragma: no cover
+            self.logger.warning("Already connected to a dynamic reporting service via pim.\n")
+            return
+
         if self._db_directory is None:
             self.logger.error("Error: There is no database associated with this Service.\n")
             raise DatabaseDirNotProvidedError
