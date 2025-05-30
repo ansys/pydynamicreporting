@@ -145,12 +145,8 @@ class Service:
         db_directory: str = None,
         port: int = DOCKER_DEFAULT_PORT,
         logfile: str = None,
-<<<<<<< HEAD
         ansys_installation: Optional[str] = None,
         use_pim: bool = True,
-=======
-        ansys_installation: str | None = None,
->>>>>>> main
     ) -> None:
         """
         Initialize an Ansys Dynamic Reporting object.
