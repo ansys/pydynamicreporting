@@ -75,11 +75,11 @@ ci =  "https://github.com/ansys/pydynamicreporting/actions"
 test = [
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
-    "psutil==6.0.0",
+    "psutil==7.0.0",
 ]
 test-extra = [
     "docker>=7.1.0",
-    "psutil==6.0.0",
+    "psutil==7.0.0",
     "exceptiongroup==1.0.0",
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
@@ -107,7 +107,7 @@ dev = [
     "numpy>=1.23.5,<3",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
-    "psutil==6.0.0",
+    "psutil==7.0.0",
     "docker>=7.1.0",
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
