@@ -13,14 +13,13 @@ CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
 # ansys_installation provided, valid using the "CEI" folder.
 @pytest.mark.ado_test
 def test_get_install_info_valid_cei(tmp_path):
-    version = 261
     # Create a fake installation directory with a "CEI" subfolder.
-    install_dir = tmp_path / f"install_v{version}"
+    install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
     cei_dir = install_dir / "CEI"
     cei_dir.mkdir()
     # Create the expected nexus folder structure inside CEI.
-    nexus_dir = cei_dir / f"nexus{version}" / "django"
+    nexus_dir = cei_dir / f"nexus{CURRENT_VERSION}" / "django"
     nexus_dir.mkdir(parents=True)
     manage_py = nexus_dir / "manage.py"
     manage_py.write_text("dummy content")
@@ -28,32 +27,30 @@ def test_get_install_info_valid_cei(tmp_path):
     install, ver = get_install_info(ansys_installation=str(install_dir))
     # Expect that get_install_info selects the CEI folder and extracts the version.
     assert install == str(cei_dir)
-    assert ver == version
+    assert ver == CURRENT_VERSION
 
 
 # ansys_installation provided, valid using the base directory (when CEI folder is absent).
 @pytest.mark.ado_test
 def test_get_install_info_valid_base(tmp_path):
-    version = 261
     # Create a fake installation directory without a "CEI" subfolder.
-    install_dir = tmp_path / f"install_v{version}"
+    install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
     # Create the required nexus folder structure directly in the base installation directory.
-    nexus_dir = install_dir / f"nexus{version}" / "django"
+    nexus_dir = install_dir / f"nexus{CURRENT_VERSION}" / "django"
     nexus_dir.mkdir(parents=True)
     (nexus_dir / "manage.py").write_text("dummy content")
 
     install, ver = get_install_info(ansys_installation=str(install_dir))
     # Since 'install_dir/CEI' does not exist, the function should pick install_dir.
     assert install == str(install_dir)
-    assert ver == version
+    assert ver == CURRENT_VERSION
 
 
 # ansys_installation provided, but missing required nexus folder structure → raises InvalidAnsysPath.
 @pytest.mark.ado_test
 def test_get_install_info_invalid_missing_manage(tmp_path):
-    version = 261
-    install_dir = tmp_path / f"install_v{version}"
+    install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
     # Create a "CEI" folder but do not create the required nexus folder structure.
     (install_dir / "CEI").mkdir()
@@ -65,33 +62,31 @@ def test_get_install_info_invalid_missing_manage(tmp_path):
 # ansys_installation is None, but PYADR_ANSYS_INSTALLATION is set to a valid installation.
 @pytest.mark.ado_test
 def test_get_install_info_env_pyadr_valid(tmp_path, monkeypatch):
-    version = 261
-    env_dir = tmp_path / f"env_install_v{version}"
+    env_dir = tmp_path / f"env_install_v{CURRENT_VERSION}"
     env_dir.mkdir()
     # Create a valid CEI structure inside the env directory.
     cei_dir = env_dir / "CEI"
     cei_dir.mkdir()
-    nexus_dir = cei_dir / f"nexus{version}" / "django"
+    nexus_dir = cei_dir / f"nexus{CURRENT_VERSION}" / "django"
     nexus_dir.mkdir(parents=True)
     (nexus_dir / "manage.py").write_text("dummy content")
 
     monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(env_dir))
     install, ver = get_install_info()
     assert install == str(cei_dir)
-    assert ver == version
+    assert ver == CURRENT_VERSION
 
 
 # ansys_installation is None and AWP_ROOT{CURRENT_VERSION} is set to a valid installation.
 @pytest.mark.ado_test
 def test_get_install_info_env_awp_valid(tmp_path, monkeypatch):
-    version = 261
     awp_var = f"AWP_ROOT{CURRENT_VERSION}"
-    awp_dir = tmp_path / f"awp_install_v{version}"
+    awp_dir = tmp_path / f"awp_install_v{CURRENT_VERSION}"
     awp_dir.mkdir()
     # Create a valid CEI structure.
     cei_dir = awp_dir / "CEI"
     cei_dir.mkdir()
-    nexus_dir = cei_dir / f"nexus{version}" / "django"
+    nexus_dir = cei_dir / f"nexus{CURRENT_VERSION}" / "django"
     nexus_dir.mkdir(parents=True)
     (nexus_dir / "manage.py").write_text("dummy content")
 
@@ -101,7 +96,7 @@ def test_get_install_info_env_awp_valid(tmp_path, monkeypatch):
 
     install, ver = get_install_info()
     assert install == str(cei_dir)
-    assert ver == version
+    assert ver == CURRENT_VERSION
 
 
 # ansys_installation is None and no valid installation is found.
