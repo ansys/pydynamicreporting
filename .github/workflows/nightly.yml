@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v8
+        uses: ansys/actions/build-library@v9
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
