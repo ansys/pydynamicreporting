@@ -18,7 +18,7 @@ def return_file_paths(request):
 
 
 @pytest.mark.ado_test
-def test_get_evsn_proxy_image(request) -> bool:
+def test_get_evsn_proxy_image(request) -> None:
     try:
         _ = gp.get_evsn_proxy_image(filename=return_file_paths(request)[6])
         success = True
@@ -28,27 +28,33 @@ def test_get_evsn_proxy_image(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_get_evsn_proxy_error(request) -> bool:
+def test_get_evsn_proxy_error(request) -> None:
     succ = gp.get_evsn_proxy_image(filename=return_file_paths(request)[5]) is None
     assert succ
 
 
 @pytest.mark.ado_test
-def test_file_can_have_proxy(request) -> bool:
+def test_file_can_have_proxy(request) -> None:
     scene = gp.file_can_have_proxy(return_file_paths(request)[1])
     img = gp.file_can_have_proxy(return_file_paths(request)[0])
     assert scene is True and img is False
 
 
 @pytest.mark.ado_test
-def test_file_is_3d_geometry(request) -> bool:
+def test_file_is_3d_geometry(request) -> None:
     scene = gp.file_is_3d_geometry(return_file_paths(request)[1], file_item_only=False)
     img = gp.file_is_3d_geometry(return_file_paths(request)[0])
     assert scene is True and img is False
 
 
 @pytest.mark.ado_test
-def test_rebuild_3d_geom_avz(request) -> bool:
+def test_get_avz_directory(request) -> None:
+    avz_dir = gp.get_avz_directory(return_file_paths(request)[1])
+    assert isinstance(avz_dir, str) and avz_dir != ""
+
+
+@pytest.mark.ado_test
+def test_rebuild_3d_geom_avz(request) -> None:
     _ = gp.rebuild_3d_geometry(
         csf_file=return_file_paths(request)[1], unique_id="abc", exec_basis="avz"
     )
@@ -58,7 +64,7 @@ def test_rebuild_3d_geom_avz(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_rebuild_3d_geom_ens(request) -> bool:
+def test_rebuild_3d_geom_ens(request) -> None:
     _ = gp.rebuild_3d_geometry(
         csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
     )
@@ -68,7 +74,7 @@ def test_rebuild_3d_geom_ens(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_rebuild_3d_geom_evsn(request) -> bool:
+def test_rebuild_3d_geom_evsn(request) -> None:
     _ = gp.rebuild_3d_geometry(
         csf_file=return_file_paths(request)[3], unique_id="abc", exec_basis="avz"
     )
@@ -78,7 +84,7 @@ def test_rebuild_3d_geom_evsn(request) -> bool:
 
 
 @pytest.mark.ado_test
-def test_rebuild_3d_geom_scdoc(request) -> bool:
+def test_rebuild_3d_geom_scdoc(request) -> None:
     _ = gp.rebuild_3d_geometry(
         csf_file=return_file_paths(request)[4], unique_id="abc", exec_basis="avz"
     )
@@ -87,7 +93,7 @@ def test_rebuild_3d_geom_scdoc(request) -> bool:
     assert isdir(new_dir)
 
 
-def test_rebuild_3d_geom_scdoc_second(request) -> bool:
+def test_rebuild_3d_geom_scdoc_second(request) -> None:
     _ = gp.rebuild_3d_geometry(
         csf_file=return_file_paths(request)[4], unique_id="abc", exec_basis="avz"
     )
@@ -96,7 +102,7 @@ def test_rebuild_3d_geom_scdoc_second(request) -> bool:
     assert isdir(new_dir)
 
 
-def test_rebuild_3d_geom_csf(request, get_exec) -> bool:
+def test_rebuild_3d_geom_csf(request, get_exec) -> None:
     exec_basis = get_exec
     if exec_basis:
         _ = gp.rebuild_3d_geometry(

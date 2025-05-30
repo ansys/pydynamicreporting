@@ -20,7 +20,7 @@ concurrency:
 
 env:
   DOCUMENTATION_CNAME: 'dynamicreporting.docs.pyansys.com'
-  MAIN_PYTHON_VERSION: '3.10'
+  MAIN_PYTHON_VERSION: '3.13'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
 
@@ -30,47 +30,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: PyAnsys code style checks
-        uses: ansys/actions/code-style@v8
+        uses: ansys/actions/code-style@v9.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           show-diff-on-failure: false
 
-#  docs-style:
-#    name: Documentation style check
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: PyAnsys documentation style checks
-#        uses: ansys/actions/doc-style@v4
-#        with:
-#          token: ${{ secrets.GITHUB_TOKEN }}
+  #  docs-style:
+  #    name: Documentation style check
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #      - name: PyAnsys documentation style checks
+  #        uses: ansys/actions/doc-style@v4
+  #        with:
+  #          token: ${{ secrets.GITHUB_TOKEN }}
 
-  smoke-tests:
+  smoketest:
     name: Build and smoke tests
     runs-on: ${{ matrix.os }}
-    needs: [style]
+    needs: [ style ]
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        os: [ ubuntu-latest, windows-latest ]
+        python-version: [ '3.10', '3.11', '3.12', '3.13' ]
     steps:
-      - name: Build wheelhouse and perform smoke test
-        uses: ansys/actions/build-wheelhouse@v8
+      - name: Build wheelhouse
+        uses: ansys/actions/build-wheelhouse@v9.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
-          library-namespace: ${{ env.PACKAGE_NAMESPACE }}
           operating-system: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
 
+      - name: Install library
+        run: python --version && python -m pip install ${{ env.install_target }}
+
+      - name: Run smoketest
+        run: make smoketest
+
   test:
     name: Testing
-    needs: [smoke-tests]
+    needs: [ smoketest ]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ '3.9', '3.10', '3.11', '3.12' ]
-
+        python-version: [ '3.10', '3.11', '3.12', '3.13' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -98,14 +102,14 @@ jobs:
         if: env.MAIN_PYTHON_VERSION == matrix.python-version
         uses: actions/upload-artifact@v4
         with:
-          name: coverage.xml
-          path: coverage.xml
+          name: coverage-html
+          path: coverage-html
           retention-days: 60
           if-no-files-found: error
 
       - name: Upload coverage to Codecov
-        if: env.MAIN_PYTHON_VERSION == matrix.python-version
-        uses: codecov/codecov-action@v4
+        if: matrix.python-version == env.MAIN_PYTHON_VERSION
+        uses: codecov/codecov-action@v5
 
   docs:
     name: Build docs
@@ -113,7 +117,7 @@ jobs:
 #    needs: [docs-style]
     steps:
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v8
+        uses: ansys/actions/doc-build@v9.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
@@ -121,11 +125,11 @@ jobs:
 
   package:
     name: Package library
-    needs: [test, docs]
+    needs: [ test ]
     runs-on: ubuntu-latest
     steps:
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v8
+        uses: ansys/actions/build-library@v9.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
@@ -133,30 +137,31 @@ jobs:
   release:
     name: Release project
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [package]
+    needs: [ package ]
     runs-on: ubuntu-latest
     steps:
       - name: Release to the public PyPI repository
-        uses: ansys/actions/release-pypi-public@v8
+        uses: ansys/actions/release-pypi-public@v9.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           twine-username: "__token__"
           twine-token: ${{ secrets.PYPI_TOKEN }}
 
       - name: Release to GitHub
-        uses: ansys/actions/release-github@v8
+        uses: ansys/actions/release-github@v9.0
         if: ${{ !env.ACT }}
         with:
           library-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   upload_dev_docs:
     name: Upload dev documentation
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: [package]
+    needs: [ docs, package ]
     steps:
       - name: Deploy the latest documentation
-        uses: ansys/actions/doc-deploy-dev@v8
+        uses: ansys/actions/doc-deploy-dev@v9.0
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
@@ -168,30 +173,29 @@ jobs:
     name: Upload release documentation
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: [ docs, release ]
     steps:
       - name: Deploy the stable documentation
-        uses: ansys/actions/doc-deploy-stable@v8
+        uses: ansys/actions/doc-deploy-stable@v9.0
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.GITHUB_TOKEN }}
           bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
           bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
   build-failure:
     name: Teams notify on failure
     if: failure() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref_type == 'tag')
-    needs: [ style, test]
+    needs: [ package ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Microsoft Teams Notification
         uses: jdcargile/ms-teams-notification@v1.4
         with:
-          github-token: ${{ github.token }} # this will use the runner's token.
-          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI }}
-          notification-summary: GitHub CI failure - ${{ github.event.pull_request.title }}
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
+          notification-summary: CI build failure
           notification-color: dc3545
           timezone: America/New_York

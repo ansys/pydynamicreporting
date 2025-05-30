@@ -144,13 +144,14 @@ Once you are connected to the session, you can query its items:
 .. code:: python
 
    all_items = adr_service.query()
-   only_images = adr_service.query(filter="A|i_type|cont|image|")
+   only_images = adr_service.query(item_filter="A|i_type|cont|image|")
 
 
 The :func:`query<ansys.dynamicreporting.core.Service.query>` method takes
 a filter input that allows you to select the items to return. The query
 string follows the same structure as the queries described in
-`Query Expressions <https://nexusdemo.ensight.com/docs/html/Nexus.html?QueryExpressions.html>`_
+`Query Expressions`_
+
 in the documentation for Ansys Dynamic Reporting.
 
 To get a list of the existing report templates in the database, use the

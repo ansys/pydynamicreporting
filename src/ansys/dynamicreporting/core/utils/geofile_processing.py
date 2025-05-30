@@ -5,11 +5,10 @@ These are generally applied when a file is uploaded or the Nexus version number 
 These functions will convert files supported by the UDRW interface into AVZ files and
 extract proxy data from AVZ and EVSN files to simplify their display.
 """
-import glob
+
 import io
 import os
 import platform
-import shutil
 import subprocess
 import typing
 import zipfile
@@ -24,7 +23,7 @@ except Exception:
     is_enve = False
 
 
-def get_evsn_proxy_image(filename: str) -> typing.Union[bytearray, None]:
+def get_evsn_proxy_image(filename: str) -> bytearray | None:
     """Extract and return any PNG proxy image that could be found in the input EVSN
     file."""
     # From liben/proxy_image.cpp
@@ -78,13 +77,13 @@ def get_evsn_proxy_image(filename: str) -> typing.Union[bytearray, None]:
     return None
 
 
-# The basic idea of the 3D geometry pipeline is that files in .csf, .ply, .scdoc, .avz or
-# .stl format (formats supported by udrws) are pushed into the MEDIA_ROOT directory on the
-# server. The server then launches cei_apexXY_udrw2avz to convert the files to the format
-# used by the server to generate entries in reports.  Currently, this operation results
-# in a new subdirectory named as the geometry filename w/o any extension that is read by
-# the view generation engine.  The system also tags the MEDIA_ROOT directory with a
-# file containing the version of cei_apexXY_udrw2avz that was used (-i).  The first
+# The basic idea of the 3D geometry pipeline is that files in .csf, .ply, .scdoc, .scdocx,
+#  .avz or.stl format (formats supported by udrws) are pushed into the MEDIA_ROOT directory
+# on the server. The server then launches cei_apexXY_udrw2avz to convert the files to the
+# format used by the server to generate entries in reports.  Currently, this operation
+# results in a new subdirectory named as the geometry filename w/o any extension that is
+# read by the view generation engine.  The system also tags the MEDIA_ROOT directory with
+# a file containing the version of cei_apexXY_udrw2avz that was used (-i).  The first
 # time the server is accessed, it checks this tag and if needed, will delete all
 # the existing output from previous runs of the tool and replace them with run of the
 # new version.  Thus, the version number of cei_apexXY_udrw2avz as reported with -i
@@ -95,18 +94,23 @@ def file_can_have_proxy(filename: str) -> bool:
     """For a given filename, return True if the file format could include a proxy
     image."""
     _, extension = os.path.splitext(filename)
-    return extension in (".csf", ".avz", ".evsn", ".ens", ".scdoc")
+    return extension in (".csf", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx")
 
 
 def file_is_3d_geometry(filename: str, file_item_only: bool = True) -> bool:
     """For a given filename, return True if the file format contains 3D geometry."""
     _, extension = os.path.splitext(filename)
     if file_item_only:
-        return extension in (".evsn", ".ens", ".scdoc")
-    return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc")
+        return extension in (".evsn", ".ens", ".scdoc", ".scdocx")
+    return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx")
 
 
-def rebuild_3d_geometry(csf_file: str, unique_id: str, exec_basis: str = None):
+def get_avz_directory(csf_file: str) -> str:
+    """Return the directory name for the AVZ file associated with the input CSF file."""
+    return os.path.splitext(csf_file)[0]
+
+
+def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = None):
     """Rebuild the media directory representation of the file (udrw format, avz, scdoc
     or evsn)"""
     # We are looking to convert the .csf or other udrw file to .avz with this command:
@@ -119,6 +123,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str, exec_basis: str = None):
     #
     # Three special cases:
     # '.scdoc' -> extract thumbnail image (if any)
+    # '.scdocx' -> extract thumbnail image (if any)
     # '.avz' -> just extract the proxy image (if any)
     # '.evsn' -> extract the proxy image (if any)
     # No file conversions needed in these cases, but the proxy image (if any) is extracted as:
@@ -127,13 +132,13 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str, exec_basis: str = None):
     # make the associated directory in all cases
     try:
         os.mkdir(avz_dir)
-    except OSError:
-        print(f"Warning: unable to create 3D geometry directory: {avz_dir}")
+    except OSError as e:
+        print(f"Warning: unable to create 3D geometry directory: {e}")
         return
     avz_filename = csf_file
-    # Easiest case, handle SCDOC files
-    if csf_ext.lower() == ".scdoc":
-        # SCDOC files can have a thumbnail as: docProps/thumbnail.png
+    # Easiest case, handle SCDOC and SCDOCX files
+    if csf_ext.lower() == ".scdoc" or csf_ext.lower() == ".scdocx":
+        # SCDOC / SCDOCX files can have a thumbnail as: docProps/thumbnail.png
         with zipfile.ZipFile(avz_filename) as archive:
             for name in archive.namelist():
                 if name.endswith("thumbnail.png"):

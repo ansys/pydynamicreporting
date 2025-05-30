@@ -8,6 +8,8 @@ statistics = True
 ignore =
   # Whitespace before ':'.
   E203,
+  # Whitespace after ':'.
+  E231,
   # Line too long (82 > 79 characters).
   E501,
   # Line break occurred before a binary operator.
@@ -38,3 +40,5 @@ ignore =
   B907
   # zip() without an explicit strict= parameter set.
   B905
+  # do not compare types, for exact checks use `is` / `is not`
+  E721

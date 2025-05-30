@@ -1,0 +1,575 @@
+{
+    "Template_0": {
+        "name": "Generic FEA Report",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|projectA;",
+        "params": {},
+        "sort_selection": "",
+        "parent": null,
+        "guid": "afefb5ec-c243-4d6d-b862-2204eb844cbf",
+        "children": [
+            "Template_1"
+        ]
+    },
+    "Template_1": {
+        "name": "Tag Conversion",
+        "report_type": "Layout:tagprops",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "parent": "Template_0",
+        "children": [
+            "Template_2",
+            "Template_3",
+            "Template_4",
+            "Template_5",
+            "Template_6",
+            "Template_7",
+            "Template_8",
+            "Template_9",
+            "Template_10",
+            "Template_11",
+            "Template_12",
+            "Template_13"
+        ]
+    },
+    "Template_2": {
+        "name": "Image",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|logo;",
+        "params": {
+            "filter_type": "root_append"
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_3": {
+        "name": "Header",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "HTML": ""
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_14"
+        ]
+    },
+    "Template_14": {
+        "name": "Title",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_nothing_;",
+        "params": {
+            "HTML": "<h1><b><center>FINITE ELEMENT ANALYSIS (FEA)<center><center></b></h1> <br>\n\n    <style>  \n      .center {  \n        text-align: center;  \n        font-weight: bold;  \n      }  \n    </style> \n",
+            "properties": {},
+            "column_count": 1,
+            "column_widths": [
+                1.0
+            ]
+        },
+        "sort_selection": "",
+        "parent": "Template_3",
+        "children": []
+    },
+    "Template_4": {
+        "name": "Title Page",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {},
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_15"
+        ]
+    },
+    "Template_15": {
+        "name": "Report Title",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_name|cont|_nothing_;",
+        "params": {
+            "HTML": "<h1>Structural-Thermal Analysis of [Component/System]</h1>\n<br>\n<h2>Project Name</h2>\n<br>\n<h3>Author(s) and Affiliation(s)</h3>\n<br>\n<h4>Date</h4>\n<br>"
+        },
+        "sort_selection": "",
+        "parent": "Template_4",
+        "children": []
+    },
+    "Template_5": {
+        "name": "Executive Summary",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "HTML": "<h2>Executive Summary</h2>"
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_16"
+        ]
+    },
+    "Template_16": {
+        "name": "Overview",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_name|cont|overview;",
+        "params": {
+            "HTML": "<p>Brief overview of the project</p>\n<br>\n<p>Key findings and results for structural and thermal analysis</p>\n<br>\n<p>Recommendations or conclusions</p>"
+        },
+        "sort_selection": "",
+        "parent": "Template_5",
+        "children": []
+    },
+    "Template_6": {
+        "name": "Table of Contents",
+        "report_type": "Layout:toc",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "HTML": "<h2>Table of Contents</h2>",
+            "properties": {},
+            "TOCfigures": 0,
+            "TOCitems": 1
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": []
+    },
+    "Template_7": {
+        "name": "Introduction",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "HTML": "<h2>Introduction</h2>",
+            "properties": {
+                "TOCItem": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_17",
+            "Template_18",
+            "Template_19",
+            "Template_20"
+        ]
+    },
+    "Template_17": {
+        "name": "Background",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=background;",
+        "params": {
+            "HTML": "<p>Background of the project</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_7",
+        "children": []
+    },
+    "Template_18": {
+        "name": "Problem Statement",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=problem;",
+        "params": {
+            "HTML": "<p>Problem statement</p>"
+        },
+        "sort_selection": "",
+        "parent": "Template_7",
+        "children": []
+    },
+    "Template_19": {
+        "name": "Objectives",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=objectives;",
+        "params": {
+            "HTML": "<p>Objectives of the structural-thermal analysis</p>"
+        },
+        "sort_selection": "",
+        "parent": "Template_7",
+        "children": []
+    },
+    "Template_20": {
+        "name": "Scope",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=scope;",
+        "params": {
+            "HTML": "<p>Scope and limitations</p>"
+        },
+        "sort_selection": "",
+        "parent": "Template_7",
+        "children": []
+    },
+    "Template_8": {
+        "name": "Methodology",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|chapter=methodology;",
+        "params": {
+            "HTML": "<h2>Methodology</h2>",
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_21",
+            "Template_22",
+            "Template_23",
+            "Template_24",
+            "Template_25"
+        ]
+    },
+    "Template_21": {
+        "name": "Geometry and Mesh Generation",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=mesh;",
+        "params": {
+            "HTML": "<p>Description of the geometry and mesh used for both structural and thermal analyses</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": []
+    },
+    "Template_22": {
+        "name": "Material Properties",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=materials;",
+        "params": {
+            "HTML": "<p>Material properties relevant to structural and thermal analyses</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": []
+    },
+    "Template_23": {
+        "name": "Structural Analysis",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=structural;",
+        "params": {
+            "HTML": "<p>Boundary conditions and loads</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": []
+    },
+    "Template_24": {
+        "name": "Thermal Analysis",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=thermal;",
+        "params": {
+            "HTML": "<p>Thermal boundary conditions</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": []
+    },
+    "Template_25": {
+        "name": "Coupling of Structural and Thermal Analysis",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=coupled;",
+        "params": {
+            "HTML": "<p>Description of the coupling method</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_8",
+        "children": []
+    },
+    "Template_9": {
+        "name": "Results",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|chapter=results;",
+        "params": {
+            "HTML": "<h2>Results</h2>",
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_26",
+            "Template_27",
+            "Template_28"
+        ]
+    },
+    "Template_26": {
+        "name": "Structural Analysis Results",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|result=structural;",
+        "params": {
+            "HTML": "<p>Stress, strain, and displacement distributions</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_9",
+        "children": []
+    },
+    "Template_27": {
+        "name": "Thermal Analysis Results",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=thermal;",
+        "params": {
+            "HTML": "<p>Temperature distributions</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_9",
+        "children": []
+    },
+    "Template_28": {
+        "name": "Coupled Structural-Thermal Results",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=coupled;",
+        "params": {
+            "HTML": "<p>Combined effects of structural and thermal loads</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_9",
+        "children": []
+    },
+    "Template_10": {
+        "name": "Discussion",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|chapter=discussion;",
+        "params": {
+            "HTML": "<h2>Discussion</h2>",
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_29",
+            "Template_30",
+            "Template_31"
+        ]
+    },
+    "Template_29": {
+        "name": "Structural Analysis Discussion",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=structural;",
+        "params": {
+            "HTML": "<p>Interpretation of stress, strain, and displacement results</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_10",
+        "children": []
+    },
+    "Template_30": {
+        "name": "Thermal Analysis Discussion",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=thermal;",
+        "params": {
+            "HTML": "<p>Interpretation of temperature and heat flux results</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_10",
+        "children": []
+    },
+    "Template_31": {
+        "name": "Coupled Structural-Thermal Discussion",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=coupled;",
+        "params": {
+            "HTML": "<p>Analysis of the combined effects of structural and thermal loads</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_10",
+        "children": []
+    },
+    "Template_11": {
+        "name": "References",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "",
+        "params": {
+            "HTML": "<h2>References</h2>",
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_32"
+        ]
+    },
+    "Template_32": {
+        "name": "Ref",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_name|cont|references;",
+        "params": {
+            "HTML": "<p>1. [Author(s) Last name, First initial(s)]. (Year of publication). Title of the journal article. _Title of the Journal, volume(issue)_, page range. DOI or URL</p>",
+            "properties": {
+                "TOCItem": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_11",
+        "children": []
+    },
+    "Template_12": {
+        "name": "Conclusions",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|chapter=conclusions;",
+        "params": {
+            "HTML": "<h2>Conclusions</h2>",
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_33",
+            "Template_34"
+        ]
+    },
+    "Template_33": {
+        "name": "Summary",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=summary;",
+        "params": {
+            "HTML": "<p>Summary of key findings</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_12",
+        "children": []
+    },
+    "Template_34": {
+        "name": "Recommendations",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=recommendations;",
+        "params": {
+            "HTML": "<p>Recommendations for further work or design improvements</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_12",
+        "children": []
+    },
+    "Template_13": {
+        "name": "Appendices",
+        "report_type": "Layout:panel",
+        "tags": "",
+        "item_filter": "A|i_name|cont|chapter=appendices;",
+        "params": {
+            "HTML": "<h2>Appendices</h2>",
+            "properties": {
+                "TOCItem": "1",
+                "TOCLevel": "0"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_1",
+        "children": [
+            "Template_35",
+            "Template_36"
+        ]
+    },
+    "Template_35": {
+        "name": "Appendix-A",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=appendixA;",
+        "params": {
+            "HTML": "<p>Appendix A</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_13",
+        "children": []
+    },
+    "Template_36": {
+        "name": "Appendix-B",
+        "report_type": "Layout:basic",
+        "tags": "",
+        "item_filter": "A|i_tags|cont|section=appendixB;",
+        "params": {
+            "HTML": "<p>Appendix B</p>",
+            "properties": {
+                "TOCLevel": "1"
+            }
+        },
+        "sort_selection": "",
+        "parent": "Template_13",
+        "children": []
+    }
+}

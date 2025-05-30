@@ -1,26 +1,27 @@
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-    "setuptools>=65.5.0",
+    "setuptools>=75.8.0",
     "setuptools-scm",
     "wheel>=0.37.0",
-    "pre-commit==3.3.3",
+    "pre-commit==4.0.1",
 ]
 
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.9.0.dev0"
+version = "0.10.2.dev0"
+
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
 
 maintainers = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "nexus@ansys.com"},
+    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
 license = {text = "MIT"}
 classifiers = [
@@ -29,10 +30,10 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
@@ -48,13 +49,15 @@ dependencies = [
     "build>=0.8.0",
     # core ADR dependencies
     "django~=4.2",
-    "djangorestframework~=3.14",
+    "djangorestframework~=3.15",
     "django-guardian~=2.4",
     "tzlocal~=5.0",
-    "numpy>=1.18.0,<2",
+    "numpy>=1.23.5,<3",
     "python-pptx==0.6.19",
-    "pandas~=2.0",
-    "statsmodels~=0.14",
+    "pandas>=2.0",
+    "statsmodels>=0.14",
+    "docutils>=0.21",
+    "psycopg[binary]>=3.2.3",
 ]
 
 [tool.setuptools.packages.find]
@@ -71,21 +74,26 @@ ci =  "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+    "psutil==6.0.0",
+]
+test-extra = [
     "docker>=7.1.0",
     "psutil==6.0.0",
     "exceptiongroup==1.0.0",
-    "pytest==8.3.3",
-    "pytest-cov==4.1.0",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
     "pyvista==0.44.1",
-    "vtk==9.3.1",
+    "vtk==9.4.0",
     "ansys-dpf-core==0.13.0",
 ]
 doc = [
-    "ansys-sphinx-theme==0.12.4",
+    "ansys-sphinx-theme==1.1.1",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
     "docker>=7.1.0",
-    "Sphinx==7.2.6",
+    "Sphinx==8.0.2",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.18.0",
 ]
@@ -96,23 +104,26 @@ dev = [
     "ipdb",
     "ipython",
     "whatsonpypi",
-    "ansys-sphinx-theme==0.12.4",
-    "numpy==1.25.1",
+    "ansys-sphinx-theme==1.1.1",
+    "numpy>=1.23.5,<3",
     "numpydoc==1.8.0",
     "pillow==10.4.0",
     "psutil==6.0.0",
     "docker>=7.1.0",
-    "pytest==8.3.3",
-    "pytest-cov==4.1.0",
-    "Sphinx==7.2.6",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+    "Sphinx==8.0.2",
     "sphinx-copybutton==0.5.2",
     "sphinx-gallery==0.18.0",
-    "pre-commit==3.3.3",
+    "pre-commit>=4.0.1",
+    "black>=25.0.0",
+    "isort>=6.0.0",
 ]
 
 [tool.pytest.ini_options]
+tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
-addopts = "--capture=tee-sys --tb=native -p no:warnings"
+addopts = "--capture=tee-sys --tb=native -p no:warnings -vv"
 markers =[
     "integration:Run integration tests",
     "smoke:Run the smoke tests",
@@ -151,7 +162,7 @@ src_paths = ["doc", "src", "tests"]
 
 [tool.codespell]
 ignore-words = "doc/styles/Vocab/ANSYS/accept.txt"
-skip = '*.pyc,*.xml,*.gif,*.png,*.jpg,*.js,*.html,doc/source/examples/**/*.ipynb'
+skip = '*.pyc,*.xml,*.gif,*.png,*.jpg,*.js,*.html,doc/source/examples/**/*.ipynb,*.json,*.gz'
 quiet-level = 3
 
 [tool.bandit]

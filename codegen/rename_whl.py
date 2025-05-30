@@ -8,6 +8,7 @@ for name in glob.glob("dist/*.whl"):
     if len(chunks) == 5:
         chunks.insert(2, date_tag)
         new_name = "-".join(chunks)
+        print(f"Renaming {name} to {new_name}...")
         os.rename(name, new_name)
 
 for name in glob.glob("dist/*.tar.gz"):
@@ -15,4 +16,5 @@ for name in glob.glob("dist/*.tar.gz"):
     if len(chunks) == 5:
         chunks[2] = f"{chunks[2]}-{date_tag}"
         new_name = ".".join(chunks)
+        print(f"Renaming {name} to {new_name}...")
         os.rename(name, new_name)

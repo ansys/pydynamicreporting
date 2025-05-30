@@ -1,13 +1,13 @@
 name: Nightly Documentation Build
 
 on:
-  schedule:  # UTC at 0400 - 12am EDT
-    - cron:  '0 4 * * *'
+  schedule: # UTC at 23:00 = 7pm EDT
+    - cron: '0 23 * * *'
   workflow_dispatch:
 
 env:
   DOCUMENTATION_CNAME: 'dynamicreporting.docs.pyansys.com'
-  MAIN_PYTHON_VERSION: '3.10'
+  MAIN_PYTHON_VERSION: '3.13'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

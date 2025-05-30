@@ -3,31 +3,6 @@
 Template Objects
 ================
 
-.. _here: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html
-.. _link: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html
-.. _Columns: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Columns.html
-.. _Panel: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Panel.html
-.. _Boxes: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Boxes.html
-.. _Tabs: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Tabs.html
-.. _Carousel: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Carousel.html
-.. _Slider: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Slider.html
-.. _Page Footer: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageFooter.html
-.. _Page Header: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageHeader.html
-.. _Iterator: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Iterator.html
-.. _Tag to Properties: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TagProperties.html
-.. _Table of Contents: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableofContents.html
-.. _Link Report: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LinkedReport.html
-.. _Table Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableMerge.html
-.. _Table Reduction: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableReduction.html
-.. _Table Row/Column Filter: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnFilter.html
-.. _Table Value Filter: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableValueFilter.html
-.. _Table Row/Column Sort: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnSort.html
-.. _SQL Query: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/SQLQuery.html
-.. _Tree Merge: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TreeMerge.html
-.. _Userdefined: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Userdefined.html
-.. _Generator templates: https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/GeneratorTemplates.html
-
-
 
 report_objects.TemplateREST object
 ----------------------------------
@@ -115,20 +90,20 @@ interested in for each field for sake of clarity and usability.
 **template.get_property()**
 
 Get the properties of the template as a dictionary. A general
-description of what properties are for a template can be found
-`here`_.
+description of what properties are for a template can be found in
+`Layout Templates`_ in the documentation of Ansys Dynamic Reporting.
 
 **template.set_property(property={})**
 
 Set the properties of the template. Input needs to be a dictionary. A
-general description of what properties are for a template can be found
-`here`_.
+general description of what properties are for a template can be found in
+`Layout Templates`_ in the documentation of Ansys Dynamic Reporting.
 
 **template.add_property(property={})**
 
 Add the properties of the template. Input needs to be a dictionary. A
-general description of what properties are for a template can be found
-`here`_.
+general description of what properties are for a template can be found in
+`Layout Templates`_ in the documentation of Ansys Dynamic Reporting.
 
 **template.get_sort_fields()**
 
@@ -139,7 +114,8 @@ Get the sorting filter of the template.
 Set the sorting filter of the template. This function takes a list as
 input. The list is generated with '+' for increasing, '-' for
 decreasing, followed by the property to sort by, with the same strings
-as reported at this `link`_. Example: setting the sort
+as reported in `Query Expressions`_ in the documentation for Ansys Dynamic
+Reporting. Example: setting the sort
 fields to be by increasing item date and decreasing by item name
 becomes: ['+i_date', '-i_name']
 
@@ -148,7 +124,8 @@ becomes: ['+i_date', '-i_name']
 Add elements to the sorting filter of the template. This function takes
 a list as input. The list is generated with '+' for increasing, '-' for
 decreasing, followed by the property to sort by, with the same strings
-as reported `link`_. Example: setting the sort
+as reported `Query Expressions`_ in the documentation for Ansys Dynamic
+Reporting. Example: setting the sort
 fields to be by increasing item date and decreasing by item name
 becomes: ['+i_date', '-i_name']
 
@@ -193,19 +170,20 @@ string.
 **template.get_filter()**
 
 Get the item filter of the template. The item filter is encoded as a
-string using the format explained `link`_.
+string using the format explained in `Query Expressions`_
+in the documentation for Ansys Dynamic Reporting.
 
 **template.set_filter(filter_str='')**
 
 Sets the item filter of the template. Takes as input a string. The item
-filter is encoded as a string using the format explained
-`link`_.
+filter is encoded as a string using the format explained in
+`Query Expressions`_ in the documentation for Ansys Dynamic Reporting.
 
 **template.add_filter(filter_str='')**
 
 Add filters to the item filter of the template. Takes as input a string.
-The item filter is encoded as a string using the format explained
-`link`_.
+The item filter is encoded as a string using the format explained in
+`Query Expressions`_ in the documentation for Ansys Dynamic Reporting.
 
 **template.get_filter_mode()**
 
@@ -339,7 +317,8 @@ LayoutREST class
 Inherits from TemplateREST
 
 Class that groups all the common attributes among Layout templates
-(for reference, see `here`_). Its specific methods are:
+(for reference, see `Layout Templates`_ in the documentation
+for Ansys Dynamic Reporting). Its specific methods are:
 
 **template.get_column_count()**
 
@@ -567,7 +546,7 @@ the new template:
 
    server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
    all_reports = server.get_objects(objtype=report_objects.TemplateREST)
-   my_parent = [x for x in all_reports if x.name == "Box reporttest"][0]
+   my_parent = [x for x in all_reports if x.name == "Box report test"][0]
    my_template = server.create_template(
        name="Box Template", parent=my_parent, report_type="Layout:box"
    )
@@ -587,7 +566,6 @@ the new template:
 
    server.put_objects([first_box, second_box, third_box])
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tabsREST:
 
@@ -716,7 +694,6 @@ lines of code to create the new template:
        ["timestep|numeric_up", "variable|text_up", "mode|text_down"]
    )
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _footerREST:
 
@@ -1061,7 +1038,6 @@ the lines of code to create the new template:
    my_template.set_use_labels(0)
    my_template.set_use_ids("Distance")
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablereduceREST:
 
@@ -1252,7 +1228,6 @@ These would be the lines of code to create the new template:
        operation="count",
    )
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablerowcolumnfilterREST:
 
@@ -1363,7 +1338,6 @@ These would be the lines of code to create the new template:
    my_template.set_filter_columns(["1", "Tria3", "Tetra\*"])
    my_template.set_table_name("RC_Filtered_Table")
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablevaluefilterREST:
 
@@ -1476,7 +1450,6 @@ the new template:
    my_template.set_filter_by(value=["row", "Quad4"])
    my_template.set_filter_value(value=["range", "100", ""])
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _tablesortfilterREST:
 
@@ -1567,7 +1540,6 @@ These would be the lines of code to create the new template:
    my_template.set_generated_items("replace")
    my_template.set_sort_columns(["+Labels"])
    server.put_objects(my_template)
-   server.put_objects(my_parent)
 
 .. _sqlqueriesREST:
 
@@ -1698,7 +1670,7 @@ no tree header be generated.
 .. _statisticalREST:
 
 statisticalREST object
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 Inherits from TemplateREST, GeneratorREST
 

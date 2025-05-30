@@ -1,27 +1,58 @@
 from dataclasses import field
 from datetime import datetime
 import json
-from typing import Optional
 
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from ..exceptions import ADRException
-from .base import BaseModel
+from .base import BaseModel, StrEnum
+
+
+class ReportType(StrEnum):
+    DEFAULT = ""
+    # Layouts
+    BASIC_LAYOUT = "Layout:basic"
+    PANEL_LAYOUT = "Layout:panel"
+    BOX_LAYOUT = "Layout:box"
+    TABS_LAYOUT = "Layout:tabs"
+    CAROUSEL_LAYOUT = "Layout:carousel"
+    SLIDER_LAYOUT = "Layout:slider"
+    FOOTER_LAYOUT = "Layout:footer"
+    HEADER_LAYOUT = "Layout:header"
+    ITERATOR_LAYOUT = "Layout:iterator"
+    TAG_PROPS_LAYOUT = "Layout:tagprops"
+    TOC_LAYOUT = "Layout:toc"
+    REPORT_LINK_LAYOUT = "Layout:reportlink"
+    PPTX_LAYOUT = "Layout:pptx"
+    PPTX_SLIDE_LAYOUT = "Layout:pptxslide"
+    DATA_FILTER_LAYOUT = "Layout:datafilter"
+    USER_DEFINED_LAYOUT = "Layout:userdefined"
+    # Generators
+    TABLE_MERGE_GENERATOR = "Generator:tablemerge"
+    TABLE_REDUCE_GENERATOR = "Generator:tablereduce"
+    TABLE_ROW_COLUMN_FILTER_GENERATOR = "Generator:tablerowcolumnfilter"
+    TABLE_VALUE_FILTER_GENERATOR = "Generator:tablevaluefilter"
+    TABLE_SORT_FILTER_GENERATOR = "Generator:tablesortfilter"
+    TREE_MERGE_GENERATOR = "Generator:treemerge"
+    SQL_QUERIES_GENERATOR = "Generator:sqlqueries"
+    ITEMS_COMPARISON_GENERATOR = "Generator:itemscomparison"
+    STATISTICAL_GENERATOR = "Generator:statistical"
+    ITERATOR_GENERATOR = "Generator:iterator"
 
 
 class Template(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     name: str = field(compare=False, kw_only=True, default="")
-    params: str = field(compare=False, kw_only=True, default="")
+    params: str = field(compare=False, kw_only=True, default="{}")
     item_filter: str = field(compare=False, kw_only=True, default="")
     parent: "Template" = field(compare=False, kw_only=True, default=None)
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
+    report_type: str = ReportType.DEFAULT  # todo: make this read-only
     _children_order: str = field(
         compare=False, init=False, default=""
     )  # computed from self.children
-    _master: bool = field(compare=False, init=False, default=None)  # computed from self.parent
-    report_type: str = ""
+    _master: bool = field(compare=False, init=False, default=True)
     _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
@@ -32,12 +63,65 @@ class Template(BaseModel):
         # Automatically register the subclass based on its type attribute
         Template._type_registry[cls.report_type] = cls
 
+    def __post_init__(self):
+        if self.__class__ is Template:
+            raise ADRException(
+                "Cannot instantiate Template directly. Use the Template.create() method."
+            )
+        super().__post_init__()
+
+    @property
+    def type(self):
+        return self.report_type
+
+    @property
+    def children_order(self):
+        return self._children_order
+
+    @property
+    def master(self):
+        return self._master
+
+    def save(self, **kwargs):
+        if self.parent is not None and not self.parent.saved:
+            raise self.parent.__class__.NotSaved(
+                extra_detail="Failed to save template because its parent is not saved"
+            )
+        children_order = []
+        for child in self.children:
+            if not isinstance(child, Template):
+                raise TypeError(
+                    f"Failed to save template because child '{child}' is not a Template object"
+                )
+            if not child.saved:
+                raise child.__class__.NotSaved(
+                    extra_detail="Failed to save template because its children are not saved"
+                )
+            children_order.append(child.guid)
+        self._children_order = ",".join(children_order)
+        self._master = self.parent is None
+        # set properties
+        prop_dict = {}
+        for prop in self.__class__._properties:
+            value = getattr(self, prop, None)
+            if value is not None:
+                prop_dict[prop] = value
+        if prop_dict:
+            self.add_property(prop_dict)
+        super().save(**kwargs)
+
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
         # Create a new instance of the correct subclass
         if cls is Template:
+            # the typename should be:  Class:Classname  where Class can be 'Layout' or 'Generator'
+            # originally, there were no Class values, so for backward compatibility, we prefix
+            # with 'Layout'...
+            type_name = orm_instance.report_type
+            if ":" not in type_name:
+                type_name = "Layout:" + type_name
             # Get the class based on the type attribute
-            templ_cls = cls._type_registry[orm_instance.report_type]
+            templ_cls = cls._type_registry[type_name]
             obj = templ_cls.from_db(orm_instance, **kwargs)
         else:
             obj = super().from_db(orm_instance, **kwargs)
@@ -48,46 +132,49 @@ class Template(BaseModel):
                 setattr(obj, prop, props[prop])
         return obj
 
-    def save(self, **kwargs):
-        if self.parent is not None and not self.parent._saved:
-            raise Template.NotSaved(
-                extra_detail="Failed to save template because its parent is not saved"
+    @classmethod
+    def create(cls, **kwargs):
+        # Create a new instance of the correct subclass
+        if cls is Template:
+            # Get the class based on the type attribute
+            try:
+                type_name = kwargs.pop("report_type")
+            except KeyError:
+                raise ADRException("The 'report_type' must be passed when using the Template class")
+            # Get the class based on the type attribute
+            templ_cls = cls._type_registry[type_name]
+            return templ_cls.create(**kwargs)
+
+        new_kwargs = {"report_type": cls.report_type, **kwargs}
+        return super().create(**new_kwargs)
+
+    @classmethod
+    def _validate_kwargs(cls, **kwargs):
+        if "children" in kwargs:
+            raise ValueError("'children' kwarg is not supported for get and filter methods")
+        return {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
+
+    @classmethod
+    def get(cls, **kwargs):
+        return super().get(**cls._validate_kwargs(**kwargs))
+
+    @classmethod
+    def filter(cls, **kwargs):
+        return super().filter(**cls._validate_kwargs(**kwargs))
+
+    @classmethod
+    def find(cls, query="", **kwargs):
+        if cls is Template:
+            return super().find(query=query, **kwargs)
+        if "t_types|" in query:
+            raise ADRException(
+                extra_detail="The 't_types' filter is not allowed if using a subclass of Template"
             )
-        for child in self.children:
-            if not child._saved:
-                raise Template.NotSaved(
-                    extra_detail="Failed to save template because its children are not saved"
-                )
-        # set properties
-        prop_dict = {}
-        for prop in self._properties:
-            value = getattr(self, prop, None)
-            if value is not None:
-                prop_dict[prop] = value
-        if prop_dict:
-            self.add_property(prop_dict)
-        super().save(**kwargs)
-
-    @property
-    def type(self):
-        return self.report_type
-
-    @type.setter
-    def type(self, value):
-        if not isinstance(value, str):
-            raise ValueError(f"{value} must be a string")
-        self.report_type = value
-
-    @property
-    def children_order(self):
-        return ",".join([str(child.guid) for child in self.children])
-
-    @property
-    def master(self):
-        return self.parent is None
+        query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
+        return super().find(query=query_string, **kwargs)
 
     def reorder_children(self) -> None:
-        guid_to_child = {str(child.guid): child for child in self.children}
+        guid_to_child = {child.guid: child for child in self.children}
         sorted_guids = self.children_order.lower().split(",")
         # return the children based on the order of guids in children_order
         reordered = []
@@ -101,12 +188,12 @@ class Template(BaseModel):
 
     def set_filter(self, filter_str):
         if not isinstance(filter_str, str):
-            raise TypeError("Error: filter value should be a string")
+            raise TypeError("filter value should be a string")
         self.item_filter = filter_str
 
     def add_filter(self, filter_str=""):
         if not isinstance(filter_str, str):
-            raise TypeError("Error: filter value should be a string")
+            raise TypeError("filter value should be a string")
         self.item_filter += filter_str
 
     def get_params(self) -> dict:
@@ -116,73 +203,107 @@ class Template(BaseModel):
         if new_params is None:
             new_params = {}
         if not isinstance(new_params, dict):
-            raise TypeError("Error: input must be a dictionary")
+            raise TypeError("input must be a dictionary")
         self.params = json.dumps(new_params)
 
     def add_params(self, new_params: dict):
         if new_params is None:
             new_params = {}
         if not isinstance(new_params, dict):
-            raise TypeError("Error: input must be a dictionary")
-        curr_params = json.loads(self.params)
-        self.params = json.dumps(curr_params | new_params)
+            raise TypeError("input must be a dictionary")
+        curr_params = self.get_params()
+        self.set_params(curr_params | new_params)
 
     def get_property(self):
-        params = json.loads(self.params)
-        return params.get("properties", {})
+        return self.get_params().get("properties", {})
 
     def set_property(self, new_props: dict):
         if new_props is None:
             new_props = {}
         if not isinstance(new_props, dict):
-            raise TypeError("Error: input must be a dictionary")
-        params = json.loads(self.params)
+            raise TypeError("input must be a dictionary")
+        params = self.get_params()
         params["properties"] = new_props
-        self.params = json.dumps(params)
+        self.set_params(params)
 
     def add_property(self, new_props: dict):
         if new_props is None:
             new_props = {}
         if not isinstance(new_props, dict):
-            raise TypeError("Error: input must be a dictionary")
-        params = json.loads(self.params)
+            raise TypeError("input must be a dictionary")
+        params = self.get_params()
         curr_props = params.get("properties", {})
         params["properties"] = curr_props | new_props
-        self.params = json.dumps(params)
+        self.set_params(params)
 
-    @classmethod
-    def get(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().get(**new_kwargs)
+    def add_properties(self, new_props: dict) -> None:
+        self.add_property(new_props)
 
-    @classmethod
-    def filter(cls, **kwargs):
-        new_kwargs = {"report_type": cls.report_type, **kwargs} if cls.report_type else kwargs
-        return super().filter(**new_kwargs)
+    def get_sort_fields(self):
+        return self.get_params().get("sort_fields", [])
 
-    @classmethod
-    def find(cls, **kwargs):
-        if not cls.report_type:
-            return super().find(**kwargs)
-        query = kwargs.pop("query", "")
-        if "t_types|cont" in query:
-            raise ADRException(
-                extra_detail="The 't_types' filter is not required if using a subclass of Template"
-            )
-        new_kwargs = {**kwargs, "query": f"A|t_types|cont|{cls.report_type};{query}"}
-        return super().find(**new_kwargs)
+    def set_sort_fields(self, sort_field):
+        if not isinstance(sort_field, list):
+            raise ValueError("sorting filter is not a list")
+        params = self.get_params()
+        params["sort_fields"] = sort_field
+        self.set_params(params)
 
-    def render(self, context=None, request=None, query="") -> str:
+    def add_sort_fields(self, sort_field):
+        if not isinstance(sort_field, list):
+            raise ValueError("sorting filter is not a list")
+        params = self.get_params()
+        params["sort_fields"].extend(sort_field)
+        self.set_params(params)
+
+    def get_sort_selection(self):
+        return self.get_params().get("sort_selection", "")
+
+    def set_sort_selection(self, value="all"):
+        if not isinstance(value, str):
+            raise ValueError("sort selection input should be a string")
+        if value not in ("all", "first", "last"):
+            raise ValueError("sort selection not among the acceptable inputs")
+        params = self.get_params()
+        params["sort_selection"] = value
+        self.set_params(params)
+
+    def get_filter_mode(self):
+        return self.get_params().get("filter_type", "items")
+
+    def set_filter_mode(self, value="items"):
+        if not isinstance(value, str):
+            raise ValueError("filter mode input should be a string")
+        if value not in ("items", "root_replace", "root_append"):
+            raise ValueError("filter mode not among the acceptable inputs")
+        params = self.get_params()
+        params["filter_type"] = value
+        self.set_params(params)
+
+    def render(self, *, context=None, item_filter="", request=None) -> str:
         if context is None:
             context = {}
-        ctx = {**context, "request": request, "ansys_version": None}
+        ctx = {
+            "request": request,
+            "ansys_version": None,
+            "plotly": int(context.get("plotly", 0)),  # default referenced in the header via static
+            "page_width": float(context.get("pwidth", "10.5")),
+            "page_dpi": float(context.get("dpi", "96.")),
+            "page_col_pixel_width": (float(context.get("pwidth", "10.5")) / 12.0)
+            * float(context.get("dpi", "96.")),
+            "date_date": datetime.now(timezone.get_current_timezone()).strftime("%x"),
+            "date_datetime": datetime.now(timezone.get_current_timezone()).strftime("%c"),
+            "date_iso": datetime.now(timezone.get_current_timezone()).isoformat(),
+            "date_year": datetime.now(timezone.get_current_timezone()).year,
+        }
+
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
 
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
-            items = Item.find(query=query)
+            items = Item.find(query=item_filter)
             # properties that can change during iteration need to go on the class as well as globals
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
@@ -199,112 +320,201 @@ class Template(BaseModel):
 
 
 class Layout(Template):
-    pass
+    def get_column_count(self):
+        return self.get_params().get("column_count", 1)
+
+    def set_column_count(self, value):
+        if not isinstance(value, int):
+            raise ValueError("column count input should be an integer")
+        if value <= 0:
+            raise ValueError("column count input should be larger than 0")
+        params = self.get_params()
+        params["column_count"] = value
+        self.set_params(params)
+
+    def get_column_widths(self):
+        return self.get_params().get("column_widths", [1.0])
+
+    def set_column_widths(self, value):
+        if not isinstance(value, list):
+            raise ValueError("column widths input should be a list")
+        if not all(isinstance(x, (int, float)) for x in value):
+            raise ValueError("column widths input should be a list of integers or floats")
+        if not all(x > 0 for x in value):
+            raise ValueError("column widths input should be larger than 0")
+        params = self.get_params()
+        params["column_widths"] = value
+        self.set_params(params)
+
+    def get_html(self):
+        return self.get_params().get("HTML", "")
+
+    def set_html(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("input needs to be a string")
+        params = self.get_params()
+        params["HTML"] = value
+        self.set_params(params)
+
+    def get_comments(self):
+        return self.get_params().get("comments", "")
+
+    def set_comments(self, value=""):
+        if not isinstance(value, str):
+            raise ValueError("input needs to be a string")
+        params = self.get_params()
+        params["comments"] = value
+        self.set_params(params)
+
+    def get_transpose(self):
+        return self.get_params().get("transpose", 0)
+
+    def set_transpose(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("input needs to be an integer")
+        params = self.get_params()
+        params["transpose"] = value
+        self.set_params(params)
+
+    def get_skip(self):
+        return self.get_params().get("skip_empty", 0)
+
+    def set_skip(self, value=0):
+        if not isinstance(value, int) or value not in (0, 1):
+            raise ValueError("input needs to be an integer (0 or 1)")
+        params = self.get_params()
+        params["skip_empty"] = value
+        self.set_params(params)
 
 
 class BasicLayout(Layout):
-    report_type: str = "Layout:basic"
+    report_type: str = ReportType.BASIC_LAYOUT
 
 
 class PanelLayout(Layout):
-    report_type: str = "Layout:panel"
+    report_type: str = ReportType.PANEL_LAYOUT
 
 
 class BoxLayout(Layout):
-    report_type: str = "Layout:box"
+    report_type: str = ReportType.BOX_LAYOUT
 
 
 class TabLayout(Layout):
-    report_type: str = "Layout:tabs"
+    report_type: str = ReportType.TABS_LAYOUT
 
 
 class CarouselLayout(Layout):
-    report_type: str = "Layout:carousel"
+    report_type: str = ReportType.CAROUSEL_LAYOUT
 
 
 class SliderLayout(Layout):
-    report_type: str = "Layout:slider"
+    report_type: str = ReportType.SLIDER_LAYOUT
 
 
 class FooterLayout(Layout):
-    report_type: str = "Layout:footer"
+    report_type: str = ReportType.FOOTER_LAYOUT
 
 
 class HeaderLayout(Layout):
-    report_type: str = "Layout:header"
+    report_type: str = ReportType.HEADER_LAYOUT
 
 
 class IteratorLayout(Layout):
-    report_type: str = "Layout:iterator"
+    report_type: str = ReportType.ITERATOR_LAYOUT
 
 
 class TagPropertyLayout(Layout):
-    report_type: str = "Layout:tagprops"
+    report_type: str = ReportType.TAG_PROPS_LAYOUT
 
 
 class TOCLayout(Layout):
-    report_type: str = "Layout:toc"
+    report_type: str = ReportType.TOC_LAYOUT
 
 
 class ReportLinkLayout(Layout):
-    report_type: str = "Layout:reportlink"
+    report_type: str = ReportType.REPORT_LINK_LAYOUT
 
 
 class PPTXLayout(Layout):
-    report_type: str = "Layout:pptx"
+    report_type: str = ReportType.PPTX_LAYOUT
+    _properties = ("input_pptx", "output_pptx", "use_all_slides")
 
 
 class PPTXSlideLayout(Layout):
-    report_type: str = "Layout:pptxslide"
+    report_type: str = ReportType.PPTX_SLIDE_LAYOUT
+    _properties = (
+        "source_slide",
+        "exclude_from_toc",
+    )
 
 
 class DataFilterLayout(Layout):
-    report_type: str = "Layout:datafilter"
+    report_type: str = ReportType.DATA_FILTER_LAYOUT
 
 
 class UserDefinedLayout(Layout):
-    report_type: str = "Layout:userdefined"
+    report_type: str = ReportType.USER_DEFINED_LAYOUT
 
 
 class Generator(Template):
-    pass
+    def get_generated_items(self):
+        return self.get_params().get("generate_merge", "add")
+
+    def set_generated_items(self, value):
+        if not isinstance(value, str):
+            raise ValueError("generated items should be a string")
+        if value not in ("add", "replace"):
+            raise ValueError("input should be add or replace")
+        params = self.get_params()
+        params["generate_merge"] = value
+        self.set_params(params)
+
+    def get_append_tags(self):
+        return self.get_params().get("generate_appendtags", True)
+
+    def set_append_tags(self, value=True):
+        if not isinstance(value, bool):
+            raise ValueError("value should be True / False")
+        params = self.get_params()
+        params["generate_appendtags"] = value
+        self.set_params(params)
 
 
 class TableMergeGenerator(Generator):
-    report_type: str = "Generator:tablemerge"
+    report_type: str = ReportType.TABLE_MERGE_GENERATOR
 
 
 class TableReduceGenerator(Generator):
-    report_type: str = "Generator:tablereduce"
+    report_type: str = ReportType.TABLE_REDUCE_GENERATOR
 
 
 class TableMergeRCFilterGenerator(Generator):
-    report_type: str = "Generator:tablerowcolumnfilter"
+    report_type: str = ReportType.TABLE_ROW_COLUMN_FILTER_GENERATOR
 
 
 class TableMergeValueFilterGenerator(Generator):
-    report_type: str = "Generator:tablevaluefilter"
+    report_type: str = ReportType.TABLE_VALUE_FILTER_GENERATOR
 
 
 class TableSortFilterGenerator(Generator):
-    report_type: str = "Generator:tablesortfilter"
+    report_type: str = ReportType.TABLE_SORT_FILTER_GENERATOR
 
 
 class TreeMergeGenerator(Generator):
-    report_type: str = "Generator:treemerge"
+    report_type: str = ReportType.TREE_MERGE_GENERATOR
 
 
 class SQLQueryGenerator(Generator):
-    report_type: str = "Generator:sqlqueries"
+    report_type: str = ReportType.SQL_QUERIES_GENERATOR
 
 
 class ItemsComparisonGenerator(Generator):
-    report_type: str = "Generator:itemscomparison"
+    report_type: str = ReportType.ITEMS_COMPARISON_GENERATOR
 
 
 class StatisticalGenerator(Generator):
-    report_type: str = "Generator:statistical"
+    report_type: str = ReportType.STATISTICAL_GENERATOR
 
 
 class IteratorGenerator(Generator):
-    report_type: str = "Generator:iterator"
+    report_type: str = ReportType.ITERATOR_GENERATOR

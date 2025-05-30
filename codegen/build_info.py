@@ -6,6 +6,7 @@ Usage
 
 `python build_info.py`
 """
+
 import datetime
 import os
 import subprocess

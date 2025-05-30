@@ -130,7 +130,8 @@ in the :func:`connect<ansys.dynamicreporting.core.Service.connect>` method:
    see the Ansys Dynamic Reporting `documentation`_.
 
 
-.. _documentation: https://nexusdemo.ensight.com/docs/is/html/Nexus.html
+.. _documentation: https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&pid=ansdynrep&lang=en
+
 
 Now, assume that you do not have a running Ansys Dynamic Reporting service
 accessible to you and that you must start one. You can use this simple

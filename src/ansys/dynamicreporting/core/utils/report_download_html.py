@@ -71,7 +71,7 @@ class ReportDownloadHTML:
         self._total_data_uri_size += size
         return True
 
-    def download(self, url: Optional[str] = None, directory: Optional[str] = None) -> None:
+    def download(self, url: str | None = None, directory: str | None = None) -> None:
         if url is not None:
             self._url = url
         if directory is not None:
@@ -235,6 +235,7 @@ class ReportDownloadHTML:
             "DRACOLoader.js",
             "GLTFLoader.js",
             "OrbitControls.js",
+            "OBJLoader.js",
             "three.js",
             "VRButton.js",
         ]
@@ -330,6 +331,8 @@ class ReportDownloadHTML:
         if name.upper().endswith(".AVZ"):
             return True
         if name.upper().endswith(".SCDOC"):
+            return True
+        if name.upper().endswith(".SCDOCX"):
             return True
         if name.upper().endswith(".GLB"):
             return True

@@ -1,7 +1,7 @@
 PyDynamicReporting
 ==================
 
-|pyansys| |python| |pypi| |GH-CI| |bandit| |MIT| |black|
+|pyansys| |python| |pypi| |GH-CI| |cov| |MIT| |black|
 
 .. |pyansys| image:: https://img.shields.io/badge/Py-Ansys-ffc107.svg?labelColor=black&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABDklEQVQ4jWNgoDfg5mD8vE7q/3bpVyskbW0sMRUwofHD7Dh5OBkZGBgW7/3W2tZpa2tLQEOyOzeEsfumlK2tbVpaGj4N6jIs1lpsDAwMJ278sveMY2BgCA0NFRISwqkhyQ1q/Nyd3zg4OBgYGNjZ2ePi4rB5loGBhZnhxTLJ/9ulv26Q4uVk1NXV/f///////69du4Zdg78lx//t0v+3S88rFISInD59GqIH2esIJ8G9O2/XVwhjzpw5EAam1xkkBJn/bJX+v1365hxxuCAfH9+3b9/+////48cPuNehNsS7cDEzMTAwMMzb+Q2u4dOnT2vWrMHu9ZtzxP9vl/69RVpCkBlZ3N7enoDXBwEAAA+YYitOilMVAAAAAElFTkSuQmCC
    :target: https://docs.pyansys.com/
@@ -19,9 +19,9 @@ PyDynamicReporting
    :target: https://github.com/ansys/pydynamicreporting/actions?query=branch%3Amain
    :alt: GH-CI
 
-.. |bandit| image:: https://img.shields.io/badge/security-bandit-yellow.svg
-    :target: https://github.com/PyCQA/bandit
-    :alt: Security Status
+.. |cov| image:: https://codecov.io/gh/ansys/pydynamicreporting/graph/badge.svg?token=WCAK7QRLR3
+   :target: https://codecov.io/gh/ansys/pydynamicreporting
+   :alt: codecov
 
 .. |MIT| image:: https://img.shields.io/badge/License-MIT-yellow.svg
    :target: https://opensource.org/licenses/MIT
@@ -66,7 +66,7 @@ To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@a
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.9 through 3.12 on
+The ``pydynamicreporting`` package supports Python 3.10 through 3.13 on
 Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -75,17 +75,6 @@ To install the package, simply run
 .. code::
 
    pip install ansys-dynamicreporting-core
-
-
-Alternatively, the user can download the repository and locally build the
-package. Two modes of installation are available:
-
-- Developer installation
-- User installation
-
-
-The code provided for both installation modes use a `virtual environment
-<https://docs.python.org/3/library/venv.html>`_.
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -101,16 +90,15 @@ run this code:
    source venv/bin/activate  # (.\venv\Scripts\activate for Windows shell)
    make install-dev  # install pydynamicreporting in editable mode
 
-
 The preceding code creates an "editable" installation that lets you develop and test
 PyDynamicReporting at the same time.
 
-User installation
-^^^^^^^^^^^^^^^^^
-To build and create a production-like installation:
+To build and create a production-like installation on Windows (not required on other OSes),
+first install `chocolatey <https://chocolatey.org/install>`_. Then:
 
 .. code::
 
+   choco install make  # install make on Windows
    make clean  # clean
    make build   # build
    # this replaces the editable installation done previously. If you don't want to replace,
@@ -119,11 +107,14 @@ To build and create a production-like installation:
    # you can skip the steps above and just do 'make all'
    make smoketest  # test import
 
-
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
 To run GitHub Actions on your local desktop (recommended), install the
 `act <https://github.com/nektos/act#readme>`_ package.
+
+.. code::
+
+   choco install act-cli
 
 To run a job, such as the ``style`` job from the ``ci_cd.yml`` file, use
 this command, where ``style`` is the job name:
@@ -137,10 +128,101 @@ Deploy and upload steps **must always** be ignored. If they are not ignored,
 before running GitHub Actions locally, add ``if: ${{ !env.ACT }}`` to the
 workflow step and commit this change if required.
 
+Local tests
+^^^^^^^^^^^
+To run tests on your local desktop (recommended), use the `make` target
+`test-dev`. This target runs the tests in the same way as GitHub Actions but using
+a local Ansys installation instead of Docker. You must specify the path to your Ansys
+installation and the test file you are trying to run.
+
+.. code::
+
+   make test-dev TEST_FILE="tests/test_service.py" INSTALL_PATH="C:\Program Files\ANSYS Inc\v252"
+
+Note that any tests that require Docker will obviously fail.
+
+Creating a Release
+------------------
+
+- Before creating a new branch, make sure your local repository is up to date:
+
+  .. code-block:: bash
+
+      git pull
+
+  This ensures you have the latest changes from the default branch (usually ``main`` or ``develop``).
+
+- Create a new branch for the release:
+
+  .. code-block:: bash
+
+      git checkout -b release/0.10
+
+  **Important:**
+  The release branch must only include the **major** and **minor** version numbers.
+  Do not include the patch version.
+  For example, use ``release/0.10``, not ``release/0.10.0``.
+
+- If creating a **patch release**, do not create a new branch.
+  Instead, reuse the existing ``release/0.10`` branch.
+
+- Update the version number in ``pyproject.toml``:
+
+  If the current version is:
+
+  .. code-block:: toml
+
+      version = "0.10.0.dev0"
+
+  bump it to:
+
+  .. code-block:: toml
+
+      version = "0.10.0"
+
+- **Important:**
+  Every time you create a development (``dev``) release, you should first release the corresponding stable version on PyPI before bumping the development version.
+
+  For example:
+
+  - If you are at ``0.10.0.dev0``, first release ``0.10.0`` on PyPI.
+  - Then, after the release, bump the version to ``0.10.1.dev0``.
+
+  Otherwise, it may feel confusing to have a ``dev`` version without a corresponding stable release.
+
+- Create a commit for the version bump:
+
+  .. code-block:: bash
+
+      git commit -am "MAINT: Bump version to v0.10.0"
+
+- Then push the branch:
+
+  .. code-block:: bash
+
+      git push --set-upstream origin release/0.10
+
+- Create a tag for the release:
+
+  .. code-block:: bash
+
+      git tag v0.10.0
+      git push origin v0.10.0
+
+  **Important:**
+  The release tag must always include the full **major.minor.patch** version number.
+  Always include the ``v`` prefix.
+  For example, use ``v0.10.0``, not ``v0.10``.
+  Creating and pushing the tag automatically triggers the release workflow in GitHub Actions.
+
+
 Dependencies
 ------------
 To use PyDynamicReporting, you must have a locally installed and licensed copy
 of Ansys 2023 R2 or later.
+
+To use PyDynamicReporting Serverless (ansys.dynamicreporting.core.serverless),
+you must have a locally installed and licensed copy of Ansys 2025 R1 or later.
 
 Basic usage
 -----------

@@ -39,7 +39,7 @@ class InvalidAnsysPath(ADRException):
 
 
 class InvalidPath(ADRException):
-    """Exception raised if ANSYS installation path is invalid."""
+    """Exception raised if file/dir path is invalid."""
 
     detail = "Invalid path provided"
 
@@ -86,6 +86,9 @@ class MissingReportError(ADRException):
     detail = "Can not find the corresponding report."
 
 
+"""Serverless exceptions."""
+
+
 class ImproperlyConfiguredError(ADRException):
     """Exception raised if ADR is not properly configured."""
 
@@ -96,6 +99,12 @@ class DatabaseMigrationError(ADRException):
     """Exception raised if database migrations fails."""
 
     detail = "The database setup failed to complete"
+
+
+class GeometryMigrationError(ADRException):
+    """Exception raised if database migrations fails."""
+
+    detail = "The geometry migration failed to complete"
 
 
 class StaticFilesCollectionError(ADRException):
@@ -120,3 +129,15 @@ class MultipleObjectsReturnedError(ADRException):
     """Exception raised if only one object was expected, but multiple were returned."""
 
     detail = "get() returned more than one object."
+
+
+class IntegrityError(ADRException):
+    """Exception raised if there is a constraint violation while saving an object in the database."""
+
+    detail = "A database integrity check failed."
+
+
+class InvalidFieldError(ADRException):
+    """Exception raised if a field is not valid."""
+
+    detail = "Field is invalid."

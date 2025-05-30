@@ -34,6 +34,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
+from ..adr_utils import build_query_url
 from .encoders import BaseEncoder
 
 
@@ -428,7 +429,7 @@ class Server:
         :param obj:
         :return:
         """
-        if hasattr(obj, "server_api_version"):  # only items; skip templates, etc.
+        if hasattr(obj, "server_api_version"):
             # if the object server version and the current server version do
             # not match, convert them (if possible)
             if (obj.server_api_version is not None) and (obj.server_api_version < self.api_version):
@@ -506,30 +507,28 @@ class Server:
                     print(f"Unable to push object {o}: {e}")
                 raise
 
-            # One special case: perhaps the session/dataset was deleted and the cache not invalidated?
-            # In this case, we would get a 400 back and the response text would include 'Invalid pk'.  So,
-            # we try to push the dataset and session again and then re-push the object.  Only try this once!
             if r.status_code == requests.codes.bad_request:  # pragma: no cover
-                if isinstance(o, report_objects.ItemREST):
-                    if "Invalid pk" in r.text:
-                        repushed = False
-                        if o.session == session.guid:
-                            error = self.put_objects([session])
-                            if error != requests.codes.ok:
-                                return error
-                            repushed = True
-                        if o.dataset == dataset.guid:
-                            error = self.put_objects([dataset])
-                            if error != requests.codes.ok:
-                                return error
-                            repushed = True
-                        # try one more time..
-                        if repushed:
-                            r = request_method(uri, auth=auth, data=data, headers=headers)
+                # One special case: perhaps the session/dataset was deleted and the cache not invalidated?
+                # In this case, we would get a 400 back and the response text would include 'Invalid pk'.  So,
+                # we try to push the dataset and session again and then re-push the object.  Only try this once!
+                if isinstance(o, report_objects.ItemREST) and "Invalid pk" in r.text:
+                    repushed = False
+                    if o.session == session.guid:
+                        error = self.put_objects([session])
+                        if error != requests.codes.ok:
+                            return error
+                        repushed = True
+                    if o.dataset == dataset.guid:
+                        error = self.put_objects([dataset])
+                        if error != requests.codes.ok:
+                            return error
+                        repushed = True
+                    # try one more time..
+                    if repushed:
+                        r = request_method(uri, auth=auth, data=data, headers=headers)
                 else:
-                    # the likely case here is that the session/dataset are no longer valid
                     self._last_error = r.text
-                    return r.status_code
+                    exceptions.raise_bad_request_error(r)
             elif r.status_code == requests.codes.forbidden:
                 raise exceptions.PermissionDenied(
                     r.json().get("detail", "You do not have permission to perform this action.")
@@ -579,6 +578,8 @@ class Server:
             ret = r.status_code
             # the output should be 204 no_content
             if ret != requests.codes.no_content:
+                if ret == requests.codes.bad_request:
+                    exceptions.raise_bad_request_error(r)
                 if ret == requests.codes.forbidden:
                     raise exceptions.PermissionDenied(
                         r.json().get("detail", "You do not have permission to perform this action.")
@@ -852,7 +853,7 @@ class Server:
         with open(file_path, "wb") as report:
             report.write(resp.content)
 
-    def build_url_with_query(self, report_guid, query, rest_api=False):
+    def build_url_with_query(self, report_guid, query, item_filter=None, rest_api=False):
         url = self.get_URL()
         if rest_api:
             url += f"/api/generate-report/?view={str(report_guid)}"
@@ -864,6 +865,9 @@ class Server:
                 url += f"&{key}"
             else:
                 url += f"&{key}={value}"
+        if item_filter:
+            query_str = build_query_url(logger=None, item_filter=item_filter)
+            url += query_str
         return url
 
     def export_report_as_html(
@@ -871,6 +875,7 @@ class Server:
         report_guid,
         directory_name,
         query=None,
+        item_filter=None,
         filename="index.html",
         no_inline_files=False,
         ansys_version=None,
@@ -881,7 +886,7 @@ class Server:
         directory_path = os.path.abspath(directory_name)
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
-        url = self.build_url_with_query(report_guid, query)
+        url = self.build_url_with_query(report_guid, query, item_filter)
         # ask the server for the Ansys version number. It will generally know it.
         _ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
         if ansys_version:
@@ -901,6 +906,7 @@ class Server:
         report_guid,
         file_name,
         query=None,
+        item_filter=None,
         page=None,
         parent=None,
         delay=None,
@@ -910,7 +916,7 @@ class Server:
         if query is None:
             query = {}
         query["print"] = "pdf"
-        url = self.build_url_with_query(report_guid, query)
+        url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
         if has_qt and (parent is not None):
             from .report_download_pdf import NexusPDFSave
@@ -971,6 +977,274 @@ class Server:
                     print(f"Unable to get pptx from report '{report_guid}': {e}")
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
+
+    def get_layout_types(self):
+        """
+        Return a list of valid layout types as in report types (not including BETA).
+
+        Note: When a new type is added, please remember to also add a corresponding name
+        description in ADO, rptframework/report_editor_main.py::_get_layout_type_item_names.
+        In addition, update the minor version to prevent build from failing.
+        """
+        return [
+            "Layout:basic",
+            "Layout:panel",
+            "Layout:box",
+            "Layout:tabs",
+            "Layout:carousel",
+            "Layout:slider",
+            "Layout:footer",
+            "Layout:header",
+            "Layout:iterator",
+            "Layout:tagprops",
+            "Layout:toc",
+            "Layout:reportlink",
+            "Layout:userdefined",
+            "Layout:datafilter",
+            "Layout:pptx",
+            "Layout:pptxslide",
+        ]
+
+    def get_generator_types(self):
+        """
+        Return a list of valid generator types as in report types.
+
+        Note: When a new type is added, please remember to also add a corresponding name
+        description in ADO, rptframework/report_editor_main.py::_get_generator_type_item_names.
+        In addition, update the minor version to prevent build from failing.
+        """
+        return [
+            "Generator:tablemerge",
+            "Generator:tablereduce",
+            "Generator:tablerowcolumnfilter",
+            "Generator:tablevaluefilter",
+            "Generator:tablesortfilter",
+            "Generator:sqlquery",
+            "Generator:treemerge",
+            "Generator:itemscomparison",
+            "Generator:statistical",
+            # "Generator:iterator",
+        ]
+
+    def get_report_types(self):
+        """
+        Return a list of valid report types
+        """
+        return self.get_layout_types() + self.get_generator_types()
+
+    def get_templates_as_json(self, root_guid):
+        """
+        Convert report templates rooted as root_guid to JSON
+        Return a python dictionary.
+        """
+        templates_data = {}
+        templates = self.get_objects(objtype=report_objects.TemplateREST)
+        template_guid_id_map = {root_guid: 0}
+        self._build_template_data(root_guid, templates_data, templates, template_guid_id_map)
+        return templates_data
+
+    def store_json(self, root_guid, filename):
+        """
+        Given a root guid, generate a JSON file rooted this guid, and store the file on disk
+        """
+        templates_data = self.get_templates_as_json(root_guid)
+        with open(filename, "w", encoding="utf-8") as json_file:
+            json.dump(templates_data, json_file, indent=4)
+
+        # Make the file read-only
+        os.chmod(filename, 0o444)
+
+    def load_templates(self, templates_json, logger=None):
+        """
+        Load templates given a json-format data
+        """
+        for template_id_str, template_attr in templates_json.items():
+            if template_attr["parent"] is None:
+                root_id_str = template_id_str
+                break
+
+        root_attr = templates_json[root_id_str]
+        root_template = self._populate_template(root_id_str, root_attr, None, logger)
+        self.put_objects(root_template)
+        id_template_map = {}
+        id_template_map[root_id_str] = root_template
+        self._build_templates_from_parent(root_id_str, id_template_map, templates_json, logger)
+
+    def _populate_template(self, id_str, attr, parent_template, logger=None):
+        self._check_template(id_str, attr, logger)
+        template = self.create_template(
+            name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+        )
+        template.set_params(attr["params"] if "params" in attr else {})
+        if "sort_selection" in attr and attr["sort_selection"] != "":
+            template.set_sort_selection(value=attr["sort_selection"])
+        template.set_tags(attr["tags"] if "tags" in attr else "")
+        template.set_filter(filter_str=attr["item_filter"] if "item_filter" in attr else "")
+
+        return template
+
+    def _build_templates_from_parent(self, id_str, id_template_map, templates_json, logger=None):
+        children_id_strs = templates_json[id_str]["children"]
+        if not children_id_strs:
+            return
+
+        child_templates = []
+        for child_id_str in children_id_strs:
+            child_attr = templates_json[child_id_str]
+            child_template = self._populate_template(
+                child_id_str, child_attr, id_template_map[id_str], logger
+            )
+            child_templates.append(child_template)
+            id_template_map[child_id_str] = child_template
+
+        self.put_objects(child_templates)
+
+        i = 0
+        for child_id_str in children_id_strs:
+            self._build_templates_from_parent(child_id_str, id_template_map, templates_json, logger)
+            i += 1
+
+    def _get_json_template_keys(self):
+        """
+        Return a list of the default allowed keys in the JSON templates
+        """
+        return self._get_json_necessary_keys() + self._get_json_unnecessary_keys()
+
+    def _get_json_necessary_keys(self):
+        """
+        Return a list of necessary keys in the JSON templates
+        """
+        return ["name", "report_type", "parent", "children"]
+
+    def _get_json_unnecessary_keys(self):
+        """
+        Return a list of unnecessary keys in the JSON templates
+        """
+        return ["tags", "params", "sort_selection", "item_filter"]
+
+    def _get_json_attr_keys(self):
+        """
+        Return a list of JSON keys that can be got directly by attribute rather than by getters
+        """
+        return ["name", "report_type", "tags", "item_filter"]
+
+    def _check_template(self, template_id_str, template_attr, logger=None):
+        # Check template_id_str
+        if not self._check_template_name_convention(template_id_str):
+            raise exceptions.TemplateEditorJSONLoadingError(
+                f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
+                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+            )
+
+        # Check parent and children template name convention
+        if not self._check_template_name_convention(template_attr["parent"]):
+            raise exceptions.TemplateEditorJSONLoadingError(
+                f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
+                f"that does not have the correct name convection under the key: 'parent' of '{template_id_str}'\n"
+                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+            )
+
+        for child_name in template_attr["children"]:
+            if not self._check_template_name_convention(child_name):
+                raise exceptions.TemplateEditorJSONLoadingError(
+                    f"The loaded JSON file has an invalid template name: '{child_name}' "
+                    f"that does not have the correct name convection under the key: 'children' of '{template_id_str}'\n"
+                    "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+                )
+
+        # Check missing necessary keys
+        necessary_keys = self._get_json_necessary_keys()
+        for necessary_key in necessary_keys:
+            if necessary_key not in template_attr.keys():
+                raise exceptions.TemplateEditorJSONLoadingError(
+                    f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
+                    f"Please check the entries under '{template_id_str}'."
+                )
+
+        # Add warnings to the logger about the extra keys
+        if logger:
+            default_allowed_keys = self._get_json_template_keys()
+            extra_keys = []
+            for key in template_attr.keys():
+                if key not in default_allowed_keys:
+                    extra_keys.append(key)
+            if extra_keys:
+                logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
+
+        # Check report_type
+        report_types = self.get_report_types()
+        if not template_attr["report_type"] in report_types:
+            raise exceptions.TemplateEditorJSONLoadingError(
+                f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
+            )
+
+        # Check item_filter
+        common_error_str = (
+            "The loaded JSON file does not follow the correct item_filter convention!\n"
+        )
+        for query_stanza in template_attr["item_filter"].split(";"):
+            if len(query_stanza) > 0:
+                parts = query_stanza.split("|")
+                if len(parts) != 4:
+                    raise exceptions.TemplateEditorJSONLoadingError(
+                        f"{common_error_str}Each part should be divided by '|', "
+                        f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 3 '|'s"
+                    )
+                if parts[0] not in ["A", "O"]:
+                    raise exceptions.TemplateEditorJSONLoadingError(
+                        f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
+                        f"while the first part of the input is '{parts[0]}' under '{template_id_str}'"
+                    )
+                prefix = ["i_", "s_", "d_", "t_"]
+                if parts[1][0:2] not in prefix:
+                    raise exceptions.TemplateEditorJSONLoadingError(
+                        f"{common_error_str}The second part of the filter can only be '{prefix}', "
+                        f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
+                    )
+        # TODO: check 'sort_selection' and 'params'
+
+    def _check_template_name_convention(self, template_name):
+        if template_name is None:
+            return True
+        parts = template_name.split("_")
+        return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
+
+    def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
+        curr_template = None
+        for template in templates:
+            if template.guid == guid:
+                curr_template = template
+
+        fields = self._get_json_attr_keys()
+        curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
+        templates_data[curr_template_key] = {}
+        for field in fields:
+            value = getattr(curr_template, field, None)
+            if value is None:
+                continue
+            templates_data[curr_template_key][field] = value
+
+        templates_data[curr_template_key]["params"] = curr_template.get_params()
+        templates_data[curr_template_key]["sort_selection"] = curr_template.get_sort_selection()
+        if curr_template.parent is None:
+            templates_data[curr_template_key]["parent"] = None
+            templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
+        else:
+            templates_data[curr_template_key][
+                "parent"
+            ] = f"Template_{template_guid_id_map[curr_template.parent]}"
+
+        templates_data[curr_template_key]["children"] = []
+        children_guids = curr_template.children
+        for child_guid in children_guids:
+            curr_size = len(template_guid_id_map)
+            template_guid_id_map[child_guid] = curr_size
+            templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
+
+        if not children_guids:
+            return
+        for child_guid in children_guids:
+            self._build_template_data(child_guid, templates_data, templates, template_guid_id_map)
 
 
 def create_new_local_database(
@@ -1189,7 +1463,7 @@ def delete_database(db_dir: str):
     if not validate_local_db(db_dir):
         # Validate the directory database before deleting it
         if print_allowed():
-            print(f"Error: we are asked to delete the database but {db_dir} is not a database dir")
+            print(f"Error: Unable to delete the database: {db_dir} is not a database dir")
     else:
         try:
             # Check if there is a nexus.status file. If yes, it means there is a Nexus service running on that
