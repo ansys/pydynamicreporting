@@ -1,0 +1,6 @@
+bar\_gap
+========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.bar_gap
