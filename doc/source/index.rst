@@ -9,6 +9,7 @@ PyDynamicReporting
    userguide/index
    class_documentation
    examples/index
+   serverless/index
    contributing
 
 .. _Nexus: https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&pid=ansdynrep&lang=en
@@ -36,6 +37,24 @@ PyDynamicReporting is part of the `PyAnsys <https://docs.pyansys.com>`_ ecosyste
 a Python client library that allows you to start and connect to an Ansys Dynamic Reporting
 service and control the database and reports. It also provides you with quick access to web
 components so that you can easily embed items or reports in other apps.
+
+Serverless ADR
+--------------
+Serverless ADR is a standalone implementation of ADR integrated into pydynamicreporting
+that does not require launching the ADR service.
+It avoids all service overhead and can be used in Python applications directly for local or isolated use cases.
+
+It supports:
+
+- Single-database mode (typically SQLite)
+- Multi-database setups, including PostgreSQL
+- Docker-based initialization
+- Media and static asset handling
+- Full HTML report rendering without a server
+
+This is useful for lightweight workflows or embedding reporting into your own apps.
+
+See :doc:`Serverless ADR documentation <serverless/index>` for full details.
 
 Documentation and issues
 ------------------------
