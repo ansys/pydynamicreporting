@@ -66,7 +66,6 @@ Explore the docs
    embedding_reports
    copying_objects
    deleting_objects
-   examples
    troubleshooting
    faq
 
