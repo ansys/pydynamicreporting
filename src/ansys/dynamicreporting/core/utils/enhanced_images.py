@@ -41,6 +41,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         model: dpf.Model,
         var_field: dpf.Field,
         part_name: str,
+        var_name: str,
         output_file_name: str,
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
         component: str = None,
@@ -65,23 +66,25 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             For vector variable, specify which component to plot, 'X', 'Y' or 'Z'.
             Leave it unfilled if it is a scalar variable.
         """
-        _generate_enhanced_image(model, var_field, part_name, output_file_name, rotation, component)
+        _generate_enhanced_image(model, var_field, part_name, var_name, output_file_name, rotation, component)
         
     def generate_enhanced_image_as_tiff_multi_var_pages(
         model: dpf.Model,
         var_fields: list[Tuple[dpf.Field, str]],  # a list of dpf.Field and component
         part_name: str,
+        var_name: str,
         output_file_name: str,
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ):
         _generate_enhanced_image_multi_var_pages(
-            model, var_fields, part_name, output_file_name, rotation
+            model, var_fields, part_name, var_name, output_file_name, rotation
         )
 
     def generate_enhanced_image_in_memory(
         model: dpf.Model,
         var_field: dpf.Field,
         part_name: str,
+        var_name: str,
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
         component: str = None,
     ) -> io.BytesIO:
@@ -111,7 +114,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
-        _generate_enhanced_image(model, var_field, part_name, buffer, rotation, component)
+        _generate_enhanced_image(model, var_field, part_name, var_name, buffer, rotation, component)
         buffer.seek(0)
         return buffer
 
@@ -475,6 +478,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         model: dpf.Model,
         var_fields: list[Tuple[dpf.Field, str]], # a list of dpf.Field and component
         part_name: str,
+        var_name: str,
         output: Union[str, io.BytesIO],
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> None:
@@ -575,6 +579,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         model: dpf.Model,
         var_field: dpf.Field,
         part_name: str,
+        var_name: str,
         output: Union[str, io.BytesIO],
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
         component: str = None,
@@ -617,7 +622,6 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
 
         # Get components for metadata
         var_unit: str = var_field.unit
-        var_name = var_field.name  # TODO: var_name should be user input
         dpf_unit_system = model.metadata.result_info.unit_system_name
         unit_system_to_name = dpf_unit_system.split(":", 1)[0]
         meshed_region = model.metadata.meshed_region  # Whole mesh region
