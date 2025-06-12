@@ -70,17 +70,17 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         _generate_enhanced_image(model, [(var_field, component)], part_name, var_name, output_file_name, rotation)
         
-    def generate_enhanced_image_as_tiff_multi_var_pages(
-        model: dpf.Model,
-        var_fields: list[Tuple[dpf.Field, str]],  # a list of dpf.Field and component
-        part_name: str,
-        var_name: str,
-        output_file_name: str,
-        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-    ):
-        _generate_enhanced_image(
-            model, var_fields, part_name, var_name, output_file_name, rotation
-        )
+    # def generate_enhanced_image_as_tiff_multi_var_pages(
+    #     model: dpf.Model,
+    #     var_fields: list[Tuple[dpf.Field, str]],  # a list of dpf.Field and component
+    #     part_name: str,
+    #     var_name: str,
+    #     output_file_name: str,
+    #     rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+    # ):
+    #     _generate_enhanced_image(
+    #         model, var_fields, part_name, var_name, output_file_name, rotation
+    #     )
 
     def generate_enhanced_image_in_memory(
         model: dpf.Model,
