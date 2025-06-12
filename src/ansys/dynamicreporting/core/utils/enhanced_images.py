@@ -122,7 +122,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         """
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
-        _generate_enhanced_image(model, var_field, part_name, var_name, buffer, rotation, component)
+        _generate_enhanced_image(model, [(var_field, component)], part_name, var_name, buffer, rotation)
         buffer.seek(0)
         return buffer
 
