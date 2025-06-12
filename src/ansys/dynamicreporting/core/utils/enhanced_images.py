@@ -382,50 +382,6 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         width, height = render_window.GetSize()
         np_buffer = np_buffer.reshape(height, width)
         return np_buffer
-
-    # def _form_enhanced_image(
-    #     json_data: Dict,
-    #     rgb_buffer: np.ndarray,
-    #     pick_buffer: np.ndarray,
-    #     var_buffer: np.ndarray,
-    #     output: Union[str, io.BytesIO],
-    # ) -> None:
-    #     """
-    #     A helper function. Build up an enhanced image and output to either a TIFF file on
-    #     disk or to a byte buffer.
-
-    #     Parameters
-    #     ----------
-    #     json_data: Dict
-    #         A dictionary that contains "parts" and "variables" sections.
-    #     rgb_buffer: np.ndarray
-    #         An int8 buffer with RGB values. Its dimension is [height, width, 3].
-    #     pick_buffer: np.ndarray
-    #         An int8 buffer with pick data. Its dimension is [height, width, 3].
-    #     var_buffer: np.ndarray
-    #         An float32 buffer with variable data. Its dimension is [height, width].
-    #     output: Union[str, io.BytesIo]
-    #         Specify the output to be either a file name or a byte buffer.
-    #     """
-    #     # json_data as metadata called image_description to store in the enhanced image
-    #     image_description = json.dumps(json_data)
-
-    #     # Create 3 images for each page
-    #     rgb_image = Image.fromarray(rgb_buffer, mode="RGB")
-    #     pick_image = Image.fromarray(pick_buffer, mode="RGBA")
-    #     var_image = Image.fromarray(var_buffer, mode="F")
-
-    #     # Set up the metadata
-    #     tiffinfo = TiffImagePlugin.ImageFileDirectory_v2()
-    #     tiffinfo[TiffImagePlugin.IMAGEDESCRIPTION] = image_description
-
-    #     rgb_image.save(
-    #         output,
-    #         format="TIFF",
-    #         save_all=True,
-    #         append_images=[pick_image, var_image],
-    #         tiffinfo=tiffinfo,
-    #     )
         
     def _form_enhanced_image(
         json_data: Dict,
