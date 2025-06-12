@@ -9,9 +9,11 @@ A group of functions that mainly create:
 Then combine these 3 buffers along with a JSON metadata to generate a 3-page
 enhanced image.
 """
+
+from collections.abc import Callable
 import io
 import json
-from typing import Callable, Dict, Tuple, Union
+from typing import Dict, Tuple, Union
 
 from PIL import Image, TiffImagePlugin
 import numpy as np
@@ -43,7 +45,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         part_name: str,
         var_name: str,
         output_file_name: str,
-        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
         component: str = None,
     ):
         """
@@ -68,8 +70,10 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             For vector variable, specify which component to plot, 'X', 'Y' or 'Z'.
             Leave it unfilled if it is a scalar variable.
         """
-        _generate_enhanced_image(model, [(var_field, component)], part_name, var_name, output_file_name, rotation)
-        
+        _generate_enhanced_image(
+            model, [(var_field, component)], part_name, var_name, output_file_name, rotation
+        )
+
     # def generate_enhanced_image_as_tiff_multi_var_pages(
     #     model: dpf.Model,
     #     var_fields: list[Tuple[dpf.Field, str]],  # a list of dpf.Field and component
@@ -87,7 +91,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         var_field: dpf.Field,
         part_name: str,
         var_name: str,
-        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
         component: str = None,
     ) -> io.BytesIO:
         """
@@ -123,8 +127,8 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         return buffer
 
     def _setup_render_routine(
-        poly_data: vtk.vtkPolyData, rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-    ) -> Tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
+        poly_data: vtk.vtkPolyData, rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    ) -> tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
         """
         Set up VTK render routine, including mapper, actor, renderer and render window.
 
@@ -386,13 +390,13 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         width, height = render_window.GetSize()
         np_buffer = np_buffer.reshape(height, width)
         return np_buffer
-        
+
     def _form_enhanced_image(
-        json_data: Dict,
+        json_data: dict,
         rgb_buffer: np.ndarray,
         pick_buffer: np.ndarray,
         var_buffers: list[np.ndarray],
-        output: Union[str, io.BytesIO],
+        output: str | io.BytesIO,
     ) -> None:
         """
         A helper function. Build up an enhanced image and output to either a TIFF file on
@@ -433,9 +437,10 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             append_images=[pick_image] + var_images,
             tiffinfo=tiffinfo,
         )
-        
+
     def _trim_vector_data(
-        var_name: str, col: int, get_data: Callable[[], vtk.vtkDataSetAttributes]) -> None:
+        var_name: str, col: int, get_data: Callable[[], vtk.vtkDataSetAttributes]
+    ) -> None:
         data = get_data()
         vtk_array = data.GetArray(var_name)
         var_array = vtk_to_numpy(vtk_array)
@@ -448,11 +453,11 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
 
     def _generate_enhanced_image(
         model: dpf.Model,
-        var_fields: list[Tuple[dpf.Field, str]], # a list of dpf.Field and component
+        var_fields: list[tuple[dpf.Field, str]],  # a list of dpf.Field and component
         part_name: str,
         var_name: str,
-        output: Union[str, io.BytesIO],
-        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        output: str | io.BytesIO,
+        rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> None:
         """
         Essential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
@@ -483,7 +488,6 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         for var_field, component in var_fields:
             # Todo: vector data support: is_scalar_data = var_data.ndim == 1
             is_vector_var = var_field.data.ndim > 1
-            print(f"is vector variable: {is_vector_var}")
             if is_vector_var:  # if it is a vector variable
                 if component is None:
                     raise ValueError(
@@ -534,23 +538,21 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
 
                 vtk_scalar_mode = _get_vtk_scalar_mode(poly_data, var_name)
                 if vtk_scalar_mode == vtk.VTK_SCALAR_MODE_USE_POINT_FIELD_DATA:
-                    print("It is a point data variable.")
                     _trim_vector_data(var_name, col, poly_data.GetPointData)
                 else:
-                    print("It is a cell data variable.")
                     _trim_vector_data(var_name, col, poly_data.GetCellData)
-            
+
             renderer, render_window = _setup_render_routine(poly_data, rotation)
             if count == 0:
                 rgb_buffer = _get_rgb_value(render_window)
                 # Assign the pick data
                 _add_pick_data(poly_data, 3456)
                 pick_buffer = _render_pick_data(poly_data, renderer, render_window)
-            
+
             var_buffer = _render_var_data(poly_data, renderer, render_window, var_name)
             var_buffers.append(var_buffer)
             count += 1
-            
+
         json_data = {
             "parts": [
                 {
