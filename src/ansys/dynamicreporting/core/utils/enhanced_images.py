@@ -58,6 +58,8 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             the variable in interest to visualize in an enhanced image.
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
+        var_name: str
+            The name of the variable. It will showed on the interactive enhanced image in ADR.
         output_file_name: str
             output TIFF file name with extension of .tiff or .tif.
         rotation: Tuple[float, float, float]
@@ -66,7 +68,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             For vector variable, specify which component to plot, 'X', 'Y' or 'Z'.
             Leave it unfilled if it is a scalar variable.
         """
-        _generate_enhanced_image(model, var_field, part_name, var_name, output_file_name, rotation, component)
+        _generate_enhanced_image(model, [(var_field, component)], part_name, var_name, output_file_name, rotation)
         
     def generate_enhanced_image_as_tiff_multi_var_pages(
         model: dpf.Model,
@@ -76,7 +78,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         output_file_name: str,
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ):
-        _generate_enhanced_image_multi_var_pages(
+        _generate_enhanced_image(
             model, var_fields, part_name, var_name, output_file_name, rotation
         )
 
@@ -100,6 +102,8 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             the variable in interest to visualize in an enhanced image.
         part_name: str
             The name of the part. It will showed on the interactive enhanced image in ADR.
+         var_name: str
+            The name of the variable. It will showed on the interactive enhanced image in ADR.
         rotation: Tuple[float, float, float]
             Rotation degrees about X, Y, Z axes. Note not in radians.
         component: str
@@ -430,7 +434,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             tiffinfo=tiffinfo,
         )
 
-    def _generate_enhanced_image_multi_var_pages(
+    def _generate_enhanced_image(
         model: dpf.Model,
         var_fields: list[Tuple[dpf.Field, str]], # a list of dpf.Field and component
         part_name: str,
@@ -438,31 +442,50 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         output: Union[str, io.BytesIO],
         rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ) -> None:
+        """
+        Essential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
+        data buffer and variable data buffer from a DPF model object and a DPF field object.
+
+        Parameters
+        ----------
+        model: dpf.Model
+            A DPF model object.
+        var_field: list[Tuple[dpf.Field, str]]
+            A list of dpf.Field and component pairs, where,
+            1. the component is denoted as a string of 'X', 'Y' or 'Z' to indicate which component to plot
+               if the field is a vector variable. Otherwise, leave it as None if scalar.
+            2. the DPF field object comes from the given model. The field is essentially the variable
+               in interest to visualize in an enhanced image.
+        part_name: str
+            The name of the part. It will showed on the interactive enhanced image in ADR.
+        var_name: str
+            The name of the variable. It will showed on the interactive enhanced image in ADR.
+        rotation: Tuple[float, float, float]
+            Rotation degrees about X, Y, Z axes. Note not in radians.
+        """
         count = 0
         rgb_buffer = None
         pick_buffer = None
         var_buffers = []
         json_data_variables = []
         for var_field, component in var_fields:
+            # Todo: vector data support: is_scalar_data = var_data.ndim == 1
             is_vector_var = var_field.data.ndim > 1
             if is_vector_var:  # if it is a vector variable
                 if component is None:
-                    print(
-                        "Error when generating an enhanced image: The field data is vector variable. "
+                    raise ValueError(
+                        "Error when generating an enhanced image: The field data is a vector variable. "
                         "Currently, we do not fully support vector variables. "
-                        "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'"
+                        "Please specify which component you want to plot upon: 'X', 'Y', or 'Z'."
                     )
-                    return
                 if component not in ("X", "Y", "Z"):
-                    print(
+                    raise ValueError(
                         "Error when generating an enhanced image: "
-                        "The parameter 'component' only takes 'X', 'Y' or 'Z'"
+                        "The parameter 'component' only accepts 'X', 'Y', or 'Z'."
                     )
-                    return
 
             # Get components for metadata
             var_unit: str = var_field.unit
-            var_name = var_field.name + "" if component is None else f"[{component}]" # TODO: var_name should be user input
             dpf_unit_system = model.metadata.result_info.unit_system_name
             unit_system_to_name = dpf_unit_system.split(":", 1)[0]
             meshed_region = model.metadata.meshed_region  # Whole mesh region
@@ -531,121 +554,121 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         _form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffers, output)
 
 
-    def _generate_enhanced_image(
-        model: dpf.Model,
-        var_field: dpf.Field,
-        part_name: str,
-        var_name: str,
-        output: Union[str, io.BytesIO],
-        rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
-    ) -> None:
-        """
-        Essential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
-        data buffer and variable data buffer from a DPF model object and a DPF field object.
+    # def _generate_enhanced_image(
+    #     model: dpf.Model,
+    #     var_field: dpf.Field,
+    #     part_name: str,
+    #     var_name: str,
+    #     output: Union[str, io.BytesIO],
+    #     rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+    #     component: str = None,
+    # ) -> None:
+    #     """
+    #     Essential helper function for DPF inputs. Generate json metadata, rgb buffer, pick
+    #     data buffer and variable data buffer from a DPF model object and a DPF field object.
 
-        Parameters
-        ----------
-        model: dpf.Model
-            A DPF model object.
-        var_field: dpf.Field
-            A DPF field object that comes from the given model. The field is essentially
-            the variable in interest to visualize in an enhanced image.
-        part_name: str
-            The name of the part. It will showed on the interactive enhanced image in ADR.
-        rotation: Tuple[float, float, float]
-            Rotation degrees about X, Y, Z axes. Note not in radians.
-        component: str
-            For vector variable, specify which component to plot, 'X', 'Y' or 'Z'
-            Leave it unfilled if it is a scalar variable.
-        """
-        # Todo: vector data support: is_scalar_data = var_data.ndim == 1
-        is_vector_var = var_field.data.ndim > 1
-        if is_vector_var:  # if it is a vector variable
-            if component is None:
-                print(
-                    "Error when generating an enhanced image: The field data is vector variable. "
-                    "Currently, we do not fully support vector variables. "
-                    "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'"
-                )
-                return
-            if component not in ("X", "Y", "Z"):
-                print(
-                    "Error when generating an enhanced image: "
-                    "The parameter 'component' only takes 'X', 'Y' or 'Z'"
-                )
-                return
+    #     Parameters
+    #     ----------
+    #     model: dpf.Model
+    #         A DPF model object.
+    #     var_field: dpf.Field
+    #         A DPF field object that comes from the given model. The field is essentially
+    #         the variable in interest to visualize in an enhanced image.
+    #     part_name: str
+    #         The name of the part. It will showed on the interactive enhanced image in ADR.
+    #     rotation: Tuple[float, float, float]
+    #         Rotation degrees about X, Y, Z axes. Note not in radians.
+    #     component: str
+    #         For vector variable, specify which component to plot, 'X', 'Y' or 'Z'
+    #         Leave it unfilled if it is a scalar variable.
+    #     """
+    #     # Todo: vector data support: is_scalar_data = var_data.ndim == 1
+    #     is_vector_var = var_field.data.ndim > 1
+    #     if is_vector_var:  # if it is a vector variable
+    #         if component is None:
+    #             print(
+    #                 "Error when generating an enhanced image: The field data is vector variable. "
+    #                 "Currently, we do not fully support vector variables. "
+    #                 "Please specify which component you want to plot upon, 'X', 'Y' or 'Z'"
+    #             )
+    #             return
+    #         if component not in ("X", "Y", "Z"):
+    #             print(
+    #                 "Error when generating an enhanced image: "
+    #                 "The parameter 'component' only takes 'X', 'Y' or 'Z'"
+    #             )
+    #             return
 
-        # Get components for metadata
-        var_unit: str = var_field.unit
-        dpf_unit_system = model.metadata.result_info.unit_system_name
-        unit_system_to_name = dpf_unit_system.split(":", 1)[0]
-        meshed_region = model.metadata.meshed_region  # Whole mesh region
+    #     # Get components for metadata
+    #     var_unit: str = var_field.unit
+    #     dpf_unit_system = model.metadata.result_info.unit_system_name
+    #     unit_system_to_name = dpf_unit_system.split(":", 1)[0]
+    #     meshed_region = model.metadata.meshed_region  # Whole mesh region
 
-        # Convert DPF to a pyvista UnstructuredGrid, which inherits from vtk
-        grid = vtk_helper.dpf_mesh_to_vtk(meshed_region)
-        # Add variable data
-        grid = vtk_helper.append_field_to_grid(var_field, meshed_region, grid, var_name)
+    #     # Convert DPF to a pyvista UnstructuredGrid, which inherits from vtk
+    #     grid = vtk_helper.dpf_mesh_to_vtk(meshed_region)
+    #     # Add variable data
+    #     grid = vtk_helper.append_field_to_grid(var_field, meshed_region, grid, var_name)
 
-        geometry_filter = vtk.vtkGeometryFilter()
-        geometry_filter.SetInputData(grid)
-        geometry_filter.Update()
-        poly_data = geometry_filter.GetOutput()
+    #     geometry_filter = vtk.vtkGeometryFilter()
+    #     geometry_filter.SetInputData(grid)
+    #     geometry_filter.Update()
+    #     poly_data = geometry_filter.GetOutput()
 
-        # Assign the pick data
-        _add_pick_data(poly_data, 3456)
+    #     # Assign the pick data
+    #     _add_pick_data(poly_data, 3456)
 
-        # Extract the required component from the vector data
-        if is_vector_var:
-            if component == "X":
-                col = 0
-            elif component == "Y":
-                col = 1
-            else:
-                col = 2
+    #     # Extract the required component from the vector data
+    #     if is_vector_var:
+    #         if component == "X":
+    #             col = 0
+    #         elif component == "Y":
+    #             col = 1
+    #         else:
+    #             col = 2
 
-            point_data = poly_data.GetPointData()
-            vtk_array = point_data.GetArray(var_name)
-            var_array = vtk_to_numpy(vtk_array)
-            idx_array = var_array[:, col]
+    #         point_data = poly_data.GetPointData()
+    #         vtk_array = point_data.GetArray(var_name)
+    #         var_array = vtk_to_numpy(vtk_array)
+    #         idx_array = var_array[:, col]
 
-            trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
-            trimmed_vtk_array.SetName(var_name)
-            point_data.RemoveArray(var_name)
-            point_data.AddArray(trimmed_vtk_array)
+    #         trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
+    #         trimmed_vtk_array.SetName(var_name)
+    #         point_data.RemoveArray(var_name)
+    #         point_data.AddArray(trimmed_vtk_array)
 
-        renderer, render_window = _setup_render_routine(poly_data, rotation)
-        rgb_buffer = _get_rgb_value(render_window)
-        pick_buffer = _render_pick_data(poly_data, renderer, render_window)
-        var_buffer = _render_var_data(poly_data, renderer, render_window, var_name)
+    #     renderer, render_window = _setup_render_routine(poly_data, rotation)
+    #     rgb_buffer = _get_rgb_value(render_window)
+    #     pick_buffer = _render_pick_data(poly_data, renderer, render_window)
+    #     var_buffer = _render_var_data(poly_data, renderer, render_window, var_name)
 
-        # Todo: automatic colorby_var support
-        # global colorby_var_id
-        # colorby_var_int = colorby_var_id
-        # colorby_var_id += 1
-        # colorby_var_decimal = 0 if is_scalar_data else 1
-        # Todo: .1, .2, .3 corresponds to x, y, z dimension. Only supports scalar for now
-        # colorby_var = f"{colorby_var_int}.{colorby_var_decimal}"
+    #     # Todo: automatic colorby_var support
+    #     # global colorby_var_id
+    #     # colorby_var_int = colorby_var_id
+    #     # colorby_var_id += 1
+    #     # colorby_var_decimal = 0 if is_scalar_data else 1
+    #     # Todo: .1, .2, .3 corresponds to x, y, z dimension. Only supports scalar for now
+    #     # colorby_var = f"{colorby_var_int}.{colorby_var_decimal}"
 
-        # For now, it only supports one part with one variable
-        json_data = {
-            "parts": [
-                {
-                    "name": part_name,
-                    "id": "3456",  # Todo: optimize hardcoded part ID
-                    "colorby_var": "1.0",  # colorby_var
-                }
-            ],
-            "variables": [
-                {
-                    "name": var_name,
-                    "id": "3456",  # Todo: optimize hardcoded part ID
-                    "pal_id": "1",  # colorby_var_int,
-                    "unit_dims": "",
-                    "unit_system_to_name": unit_system_to_name,
-                    "unit_label": var_unit,
-                }
-            ],
-        }
+    #     # For now, it only supports one part with one variable
+    #     json_data = {
+    #         "parts": [
+    #             {
+    #                 "name": part_name,
+    #                 "id": "3456",  # Todo: optimize hardcoded part ID
+    #                 "colorby_var": "1.0",  # colorby_var
+    #             }
+    #         ],
+    #         "variables": [
+    #             {
+    #                 "name": var_name,
+    #                 "id": "3456",  # Todo: optimize hardcoded part ID
+    #                 "pal_id": "1",  # colorby_var_int,
+    #                 "unit_dims": "",
+    #                 "unit_system_to_name": unit_system_to_name,
+    #                 "unit_label": var_unit,
+    #             }
+    #         ],
+    #     }
 
-        _form_enhanced_image(json_data, rgb_buffer, pick_buffer, [var_buffer], output)
+    #     _form_enhanced_image(json_data, rgb_buffer, pick_buffer, [var_buffer], output)
