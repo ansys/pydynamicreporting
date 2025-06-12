@@ -11,7 +11,7 @@ enhanced image.
 """
 import io
 import json
-from typing import Dict, Tuple, Union
+from typing import Callable, Dict, Tuple, Union
 
 from PIL import Image, TiffImagePlugin
 import numpy as np
@@ -433,6 +433,18 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
             append_images=[pick_image] + var_images,
             tiffinfo=tiffinfo,
         )
+        
+    def _trim_vector_data(
+        var_name: str, col: int, get_data: Callable[[], vtk.vtkDataSetAttributes]) -> None:
+        data = get_data()
+        vtk_array = data.GetArray(var_name)
+        var_array = vtk_to_numpy(vtk_array)
+        idx_array = var_array[:, col]
+
+        trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
+        trimmed_vtk_array.SetName(var_name)
+        data.RemoveArray(var_name)
+        data.AddArray(trimmed_vtk_array)
 
     def _generate_enhanced_image(
         model: dpf.Model,
@@ -471,6 +483,7 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         for var_field, component in var_fields:
             # Todo: vector data support: is_scalar_data = var_data.ndim == 1
             is_vector_var = var_field.data.ndim > 1
+            print(f"is vector variable: {is_vector_var}")
             if is_vector_var:  # if it is a vector variable
                 if component is None:
                     raise ValueError(
@@ -519,15 +532,13 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
                 else:
                     col = 2
 
-                point_data = poly_data.GetPointData()
-                vtk_array = point_data.GetArray(var_name)
-                var_array = vtk_to_numpy(vtk_array)
-                idx_array = var_array[:, col]
-
-                trimmed_vtk_array = numpy_to_vtk(idx_array, deep=True)
-                trimmed_vtk_array.SetName(var_name)
-                point_data.RemoveArray(var_name)
-                point_data.AddArray(trimmed_vtk_array)
+                vtk_scalar_mode = _get_vtk_scalar_mode(poly_data, var_name)
+                if vtk_scalar_mode == vtk.VTK_SCALAR_MODE_USE_POINT_FIELD_DATA:
+                    print("It is a point data variable.")
+                    _trim_vector_data(var_name, col, poly_data.GetPointData)
+                else:
+                    print("It is a cell data variable.")
+                    _trim_vector_data(var_name, col, poly_data.GetCellData)
             
             renderer, render_window = _setup_render_routine(poly_data, rotation)
             if count == 0:
