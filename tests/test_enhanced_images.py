@@ -25,7 +25,7 @@ def setup_dpf_tiff_generation():
     model, field = get_dpf_model_field_example()
 
     tiff_name = "dpf_find_electric_therm.tiff"
-    ei.generate_enhanced_image_as_tiff(model, field, "DPF Sample", tiff_name)
+    ei.generate_enhanced_image_as_tiff(model, field, "DPF Sample", "var", tiff_name)
 
     image = Image.open(tiff_name)
     yield image
@@ -34,7 +34,7 @@ def setup_dpf_tiff_generation():
 
 def setup_dpf_inmem_generation():
     model, field = get_dpf_model_field_example()
-    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample")
+    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "var")
 
     image = Image.open(buffer)
     yield image
@@ -76,13 +76,13 @@ def test_image_description(setup_generation_flow):
 
         assert (
             part_info["name"] == "DPF Sample"
-            and part_info["id"] == "1"
+            and part_info["id"] == "3456"
             and part_info["colorby_var"] == "1.0"
         )
 
         assert (
-            var_info["name"] == "electric_potential_1.s"
-            and var_info["id"] == "1"
+            var_info["name"] == "var"
+            and var_info["id"] == "3456"
             and var_info["pal_id"] == "1"
             and var_info["unit_dims"] == ""
             and var_info["unit_system_to_name"] == "MKS"
