@@ -90,7 +90,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_gallery.gen_gallery",
-    # "ansys_sphinx_theme",
+    # "ansys_sphinx_theme",  # causes build errors
 ]
 
 autoapi_options = [
