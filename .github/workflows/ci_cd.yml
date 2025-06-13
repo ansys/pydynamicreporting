@@ -77,7 +77,6 @@ jobs:
 
   test:
     name: Testing
-    needs: [ smoketest ]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
