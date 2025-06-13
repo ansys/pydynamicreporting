@@ -80,7 +80,7 @@ html_theme_options = {
 
 # Sphinx extensions
 extensions = [
-    # "sphinx.ext.napoleon",
+    # "sphinx.ext.napoleon",  # Use this if you want to use Google style docstrings
     "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -90,7 +90,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_gallery.gen_gallery",
-    # "ansys_sphinx_theme",
+    "ansys_sphinx_theme",
 ]
 
 autoapi_options = [
