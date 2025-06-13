@@ -90,7 +90,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_gallery.gen_gallery",
-    "ansys_sphinx_theme",
+    # "ansys_sphinx_theme",
 ]
 
 autoapi_options = [
@@ -144,9 +144,13 @@ sphinx_gallery_conf = {
     # convert rst to md for ipynb
     "pypandoc": False,
     # path to your examples scripts
-    "examples_dirs": [examples_source,],
+    "examples_dirs": [
+        examples_source,
+    ],
     # path where to save gallery generated examples
-    "gallery_dirs": ["examples",],
+    "gallery_dirs": [
+        "examples",
+    ],
     # Pattern to search for example files
     "filename_pattern": r"\.py",
     # Remove the "Download all examples" button from the top level gallery
