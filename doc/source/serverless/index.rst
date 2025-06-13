@@ -68,13 +68,3 @@ Explore the docs
    deleting_objects
    troubleshooting
    faq
-
-Examples
-========
-
-The following runnable examples demonstrate how to use Serverless ADR.
-
-.. toctree::
-   :maxdepth: 1
-
-   examples/index
