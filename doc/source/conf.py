@@ -80,7 +80,7 @@ html_theme_options = {
 
 # Sphinx extensions
 extensions = [
-    # "sphinx.ext.napoleon",
+    # "sphinx.ext.napoleon",  # Use this if you want to use Google style docstrings
     "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -90,7 +90,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_gallery.gen_gallery",
-    # "ansys_sphinx_theme",
+    # "ansys_sphinx_theme",  # causes build errors
 ]
 
 autoapi_options = [
@@ -138,14 +138,19 @@ numpydoc_validation_checks = {
 
 # -- Sphinx Gallery Options
 examples_source = os.path.join(os.path.dirname(__file__), "examples_source")
+sls_examples_source = os.path.join(os.path.dirname(__file__), "serverless", "examples")
 
 sphinx_gallery_conf = {
     # convert rst to md for ipynb
     "pypandoc": False,
     # path to your examples scripts
-    "examples_dirs": [examples_source],
+    "examples_dirs": [
+        examples_source,
+    ],
     # path where to save gallery generated examples
-    "gallery_dirs": ["examples"],
+    "gallery_dirs": [
+        "examples",
+    ],
     # Pattern to search for example files
     "filename_pattern": r"\.py",
     # Remove the "Download all examples" button from the top level gallery
