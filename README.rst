@@ -85,15 +85,17 @@ run this code:
 
    git clone https://github.com/ansys/pydynamicreporting
    cd pydynamicreporting
-   pip install virtualenv
-   virtualenv venv  # create virtual environment
-   source venv/bin/activate  # (.\venv\Scripts\activate for Windows shell)
-   make install-dev  # install pydynamicreporting in editable mode
+   pip install uv
+   uv sync
+   source .venv/bin/activate  # (.\.venv\Scripts\activate for Windows shell)
+   make install  # install pydynamicreporting in editable mode
 
 The preceding code creates an "editable" installation that lets you develop and test
 PyDynamicReporting at the same time.
 
-To build and create a production-like installation on Windows (not required on other OSes),
+To build using make, you must have `make` installed on your system.
+If you are on Linux or macOS, you probably already have it installed.
+If you are on Windows, you can use the `chocolatey <https://chocolatey.org/install>`_ package manager to
 first install `chocolatey <https://chocolatey.org/install>`_. Then:
 
 .. code::
@@ -101,11 +103,9 @@ first install `chocolatey <https://chocolatey.org/install>`_. Then:
    choco install make  # install make on Windows
    make clean  # clean
    make build   # build
+   pip install dist/*.whl
    # this replaces the editable installation done previously. If you don't want to replace,
    # switch your virtual environments to test the new install separately.
-   make install
-   # you can skip the steps above and just do 'make all'
-   make smoketest  # test import
 
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
@@ -128,19 +128,6 @@ Deploy and upload steps **must always** be ignored. If they are not ignored,
 before running GitHub Actions locally, add ``if: ${{ !env.ACT }}`` to the
 workflow step and commit this change if required.
 
-Local tests
-^^^^^^^^^^^
-To run tests on your local desktop (recommended), use the `make` target
-`test-dev`. This target runs the tests in the same way as GitHub Actions but using
-a local Ansys installation instead of Docker. You must specify the path to your Ansys
-installation and the test file you are trying to run.
-
-.. code::
-
-   make test-dev TEST_FILE="tests/test_service.py" INSTALL_PATH="C:\Program Files\ANSYS Inc\v252"
-
-Note that any tests that require Docker will obviously fail.
-
 Creating a Release
 ------------------
 
@@ -150,9 +137,9 @@ Creating a Release
 
       git pull
 
-  This ensures you have the latest changes from the default branch (usually ``main`` or ``develop``).
+  This ensures you have the latest changes from the default branch (usually ``main``).
 
-- Create a new branch for the release:
+- Create a new branch for the release, based on the main branch:
 
   .. code-block:: bash
 
@@ -166,35 +153,13 @@ Creating a Release
 - If creating a **patch release**, do not create a new branch.
   Instead, reuse the existing ``release/0.10`` branch.
 
-- Update the version number in ``pyproject.toml``:
+- Version bumps are automatically handled by the `hatch-vcs` build system based on the latest
+  git tag. **Please do not manually change the version number in the code.**
 
-  If the current version is:
+- Use `make version` to check the current version number.
+  This command will display the current version based on the latest git tag.
 
-  .. code-block:: toml
-
-      version = "0.10.0.dev0"
-
-  bump it to:
-
-  .. code-block:: toml
-
-      version = "0.10.0"
-
-- **Important:**
-  Every time you create a development (``dev``) release, you should first release the corresponding stable version on PyPI before bumping the development version.
-
-  For example:
-
-  - If you are at ``0.10.0.dev0``, first release ``0.10.0`` on PyPI.
-  - Then, after the release, bump the version to ``0.10.1.dev0``.
-
-  Otherwise, it may feel confusing to have a ``dev`` version without a corresponding stable release.
-
-- Create a commit for the version bump:
-
-  .. code-block:: bash
-
-      git commit -am "MAINT: Bump version to v0.10.0"
+- Make sure the changelog at [CHANGELOG.md](./CHANGELOG.md) is up to date.
 
 - Then push the branch:
 
@@ -206,22 +171,23 @@ Creating a Release
 
   .. code-block:: bash
 
-      git tag v0.10.0
-      git push origin v0.10.0
+      make tag
 
   **Important:**
-  The release tag must always include the full **major.minor.patch** version number.
+  GitHub release tags must always include the full **major.minor.patch** version number.
   Always include the ``v`` prefix.
   For example, use ``v0.10.0``, not ``v0.10``.
-  Creating and pushing the tag automatically triggers the release workflow in GitHub Actions.
-
+- Creating and pushing the tag automatically triggers the release workflow in GitHub Actions and
+  also creates a draft release in the GitHub repository.
+- After the workflow completes successfully, you can review the draft release and publish it, which
+  will make the release available to users and also upload the release artifacts to PyPI.
 
 Dependencies
 ------------
 To use PyDynamicReporting, you must have a locally installed and licensed copy
 of Ansys 2023 R2 or later.
 
-To use PyDynamicReporting Serverless (ansys.dynamicreporting.core.serverless),
+To use PyDynamicReporting Serverless (`ansys.dynamicreporting.core.serverless`),
 you must have a locally installed and licensed copy of Ansys 2025 R1 or later.
 
 Basic usage
