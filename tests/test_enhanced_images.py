@@ -44,11 +44,9 @@ def setup_dpf_inmem_generation():
 @pytest.fixture(params=["tiff", "inmem"])
 def setup_generation_flow(request):
     if request.param == "tiff":
-        for image in setup_dpf_tiff_generation():
-            yield image
+        yield from setup_dpf_tiff_generation()
     else:
-        for image in setup_dpf_inmem_generation():
-            yield image
+        yield from setup_dpf_inmem_generation()
 
 
 @pytest.mark.ado_test
