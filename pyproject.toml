@@ -109,13 +109,14 @@ timestamp_format = "long"
 [tool.hatch.build]
 include = [
   "src/**",
+  "codegen/**",
   "README.md",
   "LICENSE",
   "CHANGELOG.md"
 ]
 
 [tool.hatch.build.hooks.custom]
-path = "scripts.codegen_hook:CodegenHook"
+path = "codegen/build_hook.py"
 
 [tool.hatch.build.targets.wheel]
 # Include everything under src/ansys/ to support multi-package namespace
@@ -126,6 +127,7 @@ packages = ["ansys"]
 
 [tool.hatch.envs.default]
 path = ".venv"
+env-vars = { PYTHONPATH = "." }
 
 [tool.uv]
 default-groups = "all"
