@@ -124,7 +124,7 @@ If they are not ignored, before running GitHub Actions locally, add `if: ${{ !en
 
 - Creating and pushing the tag automatically triggers the release workflow in GitHub Actions and also creates a draft release in the GitHub repository.
 
-- After the workflow completes successfully, you can review the draft release and publish it, which will make the release available to users and also upload the release artifacts to PyPI.
+- After the workflow completes successfully, you can review the draft release and publish it, which will make the release available on GitHub and also upload the release artifacts to PyPI.
 
 ## Dependencies
 
