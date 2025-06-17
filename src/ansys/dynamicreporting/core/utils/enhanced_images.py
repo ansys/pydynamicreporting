@@ -23,7 +23,7 @@ try:
     from vtk.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 
     HAS_VTK = True
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     HAS_VTK = False
     print(e)
 
@@ -32,12 +32,12 @@ try:
     from ansys.dpf.core import vtk_helper
 
     HAS_DPF = True
-except (ImportError, ValueError) as e:
+except (ImportError, ValueError) as e:  # pragma: no cover
     HAS_DPF = False
     print(e)
 
 
-if HAS_VTK and HAS_DPF:  # pragma: no cover
+if HAS_VTK and HAS_DPF:
 
     def generate_enhanced_image_as_tiff(
         model: dpf.Model,
@@ -149,7 +149,6 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         mapper.SetInputData(poly_data)
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
-        actor.GetProperty().BackfaceCullingOn()  # TODO: should be removed after VTK bug is solved because it is not a ultimate solution
         actor.RotateX(rotation[0])
         actor.RotateY(rotation[1])
         actor.RotateZ(rotation[2])
@@ -163,9 +162,6 @@ if HAS_VTK and HAS_DPF:  # pragma: no cover
         render_window.SetOffScreenRendering(1)
         render_window.SetSize(3840, 2160)
 
-        # TODO: can be removed after the vtk bug is resolved
-        render_window.SetMultiSamples(0)
-        render_window.SetAlphaBitPlanes(1)  # Enable alpha bit planes for depth peeling
         render_window.AddRenderer(renderer)
 
         # Enable depth peeling for accurate depth sorting
