@@ -25,7 +25,6 @@ try:
     HAS_VTK = True
 except ImportError as e:  # pragma: no cover
     HAS_VTK = False
-    print(e)
 
 try:
     from ansys.dpf import core as dpf
@@ -34,7 +33,6 @@ try:
     HAS_DPF = True
 except (ImportError, ValueError) as e:  # pragma: no cover
     HAS_DPF = False
-    print(e)
 
 
 if HAS_VTK and HAS_DPF:
