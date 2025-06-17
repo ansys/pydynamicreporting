@@ -39,7 +39,7 @@ except (ImportError, ValueError) as e:  # pragma: no cover
 
 
 if HAS_VTK and HAS_DPF:
-
+    logging.info("!!!!!!!!!!!!!!!!!!VTK and DPF are available. Enhanced image generation is enabled.")
     def generate_enhanced_image_as_tiff(
         model: dpf.Model,
         var_field: dpf.Field,
