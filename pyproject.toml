@@ -114,6 +114,9 @@ include = [
   "CHANGELOG.md"
 ]
 
+[tool.hatch.build.hooks.custom]
+path = "tools.codegen_hook:CodegenHook"
+
 [tool.hatch.build.targets.wheel]
 # Include everything under src/ansys/ to support multi-package namespace
 packages = ["ansys"]
