@@ -19,6 +19,13 @@ repos:
         name: markdownlint
         args: [ --fix, --disable, MD024 ]
 
+  - repo: https://github.com/ansys/pre-commit-hooks
+    rev: v0.5.2
+    hooks:
+    - id: add-license-headers
+      args:
+      - --start_year=2023
+
   - repo: local
     hooks:
       - id: black
