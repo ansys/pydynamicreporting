@@ -29,8 +29,11 @@ jobs:
       - name: Run version checks
         run: make check-version
 
-      - name: Build package
-        run: make build
+      - name: Build library source and wheel artifacts
+        uses: ansys/actions/build-library@v10
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
       - name: Check for existing release
         run: |
