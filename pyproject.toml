@@ -68,7 +68,7 @@ test = [
 test-extra = [
     "pyvista==0.44.1",
     "vtk==9.4.0",
-    "ansys-dpf-core==0.13.0",
+    "ansys-dpf-core==0.13.8",
 ]
 doc = [
     "ansys-sphinx-theme>=1.1.1",
