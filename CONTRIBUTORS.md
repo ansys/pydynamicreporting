@@ -12,6 +12,7 @@
 * [JennaPaikowsky](https://github.com/JennaPaikowsky)
 * [Kathy Pippert](https://github.com/PipKat)
 * [Mario Ostieri](https://github.com/mariostieriansys)
+* [Om Patel](https://github.com/ompat5)
 * [Phillip Chen](https://github.com/phchen95)
 * [Randy Frank](https://github.com/randallfrank)
 * [Roberto Pastor Muela](https://github.com/RobPasMue)

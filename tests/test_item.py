@@ -152,7 +152,7 @@ def test_get_url(adr_service_query) -> None:
 
 
 @pytest.mark.ado_test
-def test_create_table(adr_service_create) -> None:
+def test_create_line_plot(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()
@@ -214,6 +214,8 @@ def test_create_table(adr_service_create) -> None:
     my_table.table_cond_format = ""
     my_table.row_tags = ["dp=0", "dp=2"]
     my_table.col_tags = ["a", "b", "c", "d", "e", "f"]
+    my_table.xaxis_tick_delta = 2
+    my_table.yaxis_tick_delta = 5
     new_table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     assert len(new_table_items) == (len(table_items) + 1)
 
