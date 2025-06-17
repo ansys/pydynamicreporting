@@ -1,0 +1,23 @@
+{
+  "template": "https://github.com/viseshrp/yapc",
+  "commit": "65c97a846c9245a9924e1c6aa7740b35b96a32ab",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "author": "ANSYS, Inc.",
+      "email": "pyansys.core@ansys.com",
+      "github_username": "ansys",
+      "pypi_username": "ansys",
+      "project_name": "pydynamicreporting",
+      "project_slug": "pydynamicreporting",
+      "project_description": "This is a template repository for Python projects that use uv for their dependency management.",
+      "cli_tool": "n",
+      "codecov": "y",
+      "git_init": "n",
+      "github_actions": "y",
+      "_template": "https://github.com/viseshrp/yapc",
+      "_commit": "65c97a846c9245a9924e1c6aa7740b35b96a32ab"
+    }
+  },
+  "directory": null
+}
