@@ -42,7 +42,7 @@ jobs:
             exit 1
           fi
         env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secret.GITHUB_TOKEN }}
 
       - name: Create Draft GitHub Release with Artifacts
         run: |
@@ -52,4 +52,4 @@ jobs:
             --draft \
             dist/*
         env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secret.GITHUB_TOKEN }}

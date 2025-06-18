@@ -37,8 +37,8 @@ jobs:
       - name: Enable auto-merge
         uses: peter-evans/enable-pull-request-automerge@v3
         env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secret.GITHUB_TOKEN }}
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secret.GITHUB_TOKEN }}
           merge-method: squash
           pull-request-number: ${{ github.event.pull_request.number }}

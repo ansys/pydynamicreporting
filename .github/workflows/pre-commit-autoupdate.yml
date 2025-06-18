@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0  # Required for hatch-vcs to generate full version
           fetch-tags: true
           ref: main
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secret.GITHUB_TOKEN }}
 
       - name: Cache pre-commit hooks
         uses: actions/cache@v4
@@ -54,12 +54,12 @@ jobs:
           gh label create chore --description "Chores and maintenance" --color 00CED1 || echo "Label 'chore' already exists"
           gh label create automerge --description "automerge" --color 3E0651 || echo "Label 'automerge' already exists"
         env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secret.GITHUB_TOKEN }}
 
       - name: Create Pull Request for Updated Hooks
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secret.GITHUB_TOKEN }}
           base: main
           branch: chore/pre-commit-update
           title: "chore(pre-commit): Update pre-commit hooks"
