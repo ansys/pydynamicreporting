@@ -61,9 +61,9 @@ test = [
     "pytest-cov>=6.0.0",
 ]
 test-extra = [
-    "pyvista==0.44.1",
-    "vtk==9.4.0",
-    "ansys-dpf-core==0.13.0",
+    "pyvista==0.45.2",
+    "vtk==9.4.2",
+    "ansys-dpf-core==0.13.8",
 ]
 doc = [
     "ansys-sphinx-theme>=1.1.1",
