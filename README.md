@@ -36,7 +36,7 @@ To clone and install the `pydynamicreporting` package in development mode, run t
 git clone https://github.com/ansys/pydynamicreporting
 cd pydynamicreporting
 pip install uv
-uv sync
+uv sync --all-extras
 source .venv/bin/activate  # (.\.venv\Scripts\activate for Windows shell)
 make install  # install pydynamicreporting in editable mode
 ```
@@ -75,25 +75,15 @@ If they are not ignored, before running GitHub Actions locally, add `if: ${{ !en
 
 ## Creating a Release
 
-- Before creating a new branch, make sure your local repository is up to date:
+- Do not create a release branch.  
+  Releases are created directly from the `main` branch.
+
+- Checkout the `main` branch and make sure it is up to date:
 
   ```
-  git pull
+  git checkout main
+  git pull origin main
   ```
-
-- Create a new branch for the release, based on the main branch:
-
-  ```
-  git checkout -b release/0.10
-  ```
-
-  **Important:**  
-  The release branch must only include the **major** and **minor** version numbers.  
-  Do not include the patch version.  
-  For example, use `release/0.10`, not `release/0.10.0`.
-
-- If creating a **patch release**, do not create a new branch.  
-  Instead, reuse the existing `release/0.10` branch.
 
 - Version bumps are automatically handled by the `hatch-vcs` build system based on the latest git tag.  
   **Please do not manually change the version number in the code.**
@@ -101,12 +91,6 @@ If they are not ignored, before running GitHub Actions locally, add `if: ${{ !en
 - Use `make version` to check the current version number.
 
 - Make sure the changelog at [CHANGELOG.md](./CHANGELOG.md) is up to date.
-
-- Then push the branch:
-
-  ```
-  git push --set-upstream origin release/0.10
-  ```
 
 - Create a tag for the release:
 
