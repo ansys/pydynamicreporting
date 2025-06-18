@@ -134,7 +134,7 @@ default-groups = "all"
 
 [tool.mypy]
 files = [
-    "hatch_timestamp_version"
+    "src"
 ]
 disallow_untyped_defs = true
 no_implicit_optional = true
