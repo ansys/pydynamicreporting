@@ -29,9 +29,7 @@ using ``<iframe></iframe>`` to fetch and embed a report in the external web appl
 #   file structure of this example is demonstrated at the end of the tutorial.
 
 
-from random import random as r
 
-import numpy as np
 
 import ansys.dynamicreporting.core as adr
 from ansys.dynamicreporting.core.utils import report_utils
@@ -104,8 +102,8 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #  .. code-block:: python
 #     :emphasize-lines: 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24
 #
-#      from flask import Flask, Response, redirect, request  # noqa: F811, E402
-#      from requests import get  # noqa: F811, E402
+#      from flask import Flask, Response, redirect, request
+#      from requests import get
 #
 #       # init Flask app
 #       app = Flask(__name__)
@@ -227,7 +225,7 @@ my_report = adr_service.get_report(report_name="Top Level Report")
 #  .. code-block:: python
 #     :emphasize-lines: 13
 #
-#      from flask import render_template, url_for  # noqa: F811, E402
+#      from flask import render_template, url_for
 #
 #      # root domain
 #      @app.route("/")

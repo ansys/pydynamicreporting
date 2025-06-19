@@ -49,7 +49,7 @@ session_guid = adr_service.start(create_db=True)
 def create_items(dp=0) -> None:
     intro_text = adr_service.create_item()
     intro_text.item_text = "This section describes the settings for the simulation: initial conditions, solver settings, and such."
-    intro_text.set_tags(f"dp=dp{str(dp)} section=intro")
+    intro_text.set_tags(f"dp=dp{dp!s} section=intro")
 
     intro_tree = adr_service.create_item()
     mytree = []
@@ -58,7 +58,7 @@ def create_items(dp=0) -> None:
     mytree.append({"key": "root", "name": "Mesh Size", "value": "1.0 mm^3"})
     mytree.append({"key": "root", "name": "Mesh Type", "value": "Hex8"})
     intro_tree.item_tree = mytree
-    intro_tree.set_tags(f"dp=dp{str(dp)} section=intro")
+    intro_tree.set_tags(f"dp=dp{dp!s} section=intro")
 
     data_table = adr_service.create_item()
     ics = []
@@ -71,7 +71,7 @@ def create_items(dp=0) -> None:
 
     data_table.item_table = np.array([ics, ips, zet], dtype="|S20")
     data_table.labels_row = ["X", "Sin", "Cos"]
-    data_table.set_tags(f"dp=dp{str(dp)} section=data")
+    data_table.set_tags(f"dp=dp{dp!s} section=data")
     data_table.plot = "line"
     data_table.xaxis = "X"
     data_table.yaxis = ["Sin", "Cos"]

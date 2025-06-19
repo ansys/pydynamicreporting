@@ -361,4 +361,3 @@ The following example includes examples of all of the various options:
    )
    item = server.create_item(name="Tree List Example", source="externalAPI", sequence=0)
    item.set_payload_tree(tree)
-
