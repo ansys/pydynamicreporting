@@ -169,9 +169,7 @@ class Service:
                 try:
                     os.mkdir(self._db_directory, mode=0o755)
                 except Exception as e:  # pragma: no cover
-                    self.logger.error(
-                        f"Can't create db_directory {self._db_directory}.\n{e!s}\n"
-                    )
+                    self.logger.error(f"Can't create db_directory {self._db_directory}.\n{e!s}\n")
                     raise CannotCreateDatabaseError(f"{self._db_directory} : {e!s}")
 
             if not data_directory:
@@ -194,9 +192,7 @@ class Service:
             try:
                 self._docker_launcher.pull_image()
             except Exception as e:
-                self.logger.error(
-                    f"Error pulling the Docker image {self._docker_image}.\n{e!s}\n"
-                )
+                self.logger.error(f"Error pulling the Docker image {self._docker_image}.\n{e!s}\n")
                 raise e
 
             try:
@@ -431,9 +427,7 @@ class Service:
                     port=self._port, allow_iframe_embedding=True
                 )
             except Exception as e:  # pragma: no cover
-                self.logger.error(
-                    f"Error starting the service in the Docker container.\n{e!s}\n"
-                )
+                self.logger.error(f"Error starting the service in the Docker container.\n{e!s}\n")
                 self.logger.error(f"Service started on port {self._port}")
                 raise StartingServiceError
             self.serverobj = report_remote_server.Server(
@@ -546,9 +540,7 @@ class Service:
                     self.logger.info(f"Deleting directory: {self._data_directory}\n")
                     shutil.rmtree(self._data_directory)
             except Exception as e:
-                self.logger.warning(
-                    f"Problem deleting directory {self._data_directory}\n{e!s}\n"
-                )
+                self.logger.warning(f"Problem deleting directory {self._data_directory}\n{e!s}\n")
                 pass
 
         self.serverobj = None

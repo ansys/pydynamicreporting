@@ -40,17 +40,11 @@ variables = ["enthalpy", "statictemperature"]
 for v in variables:
     for i in range(7):
         if i % 3 == 0:
-            new_image = adr_service.create_item(
-                obj_name=f"Image {i + 1!s}", source="Application X"
-            )
+            new_image = adr_service.create_item(obj_name=f"Image {i + 1!s}", source="Application X")
         elif i % 3 == 1:
-            new_image = adr_service.create_item(
-                obj_name=f"Image {i + 1!s}", source="Application Y"
-            )
+            new_image = adr_service.create_item(obj_name=f"Image {i + 1!s}", source="Application Y")
         elif i % 3 == 2:
-            new_image = adr_service.create_item(
-                obj_name=f"Image {i + 1!s}", source="Application Z"
-            )
+            new_image = adr_service.create_item(obj_name=f"Image {i + 1!s}", source="Application Z")
         filename = f"{v}_{str(i + 1).zfill(3)}.png"
         new_image.item_image = examples.download_file(filename, "input_data")
         new_image.set_tags(f"var={v} clip=-{float(i) * 0.01}")

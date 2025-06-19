@@ -29,8 +29,6 @@ using ``<iframe></iframe>`` to fetch and embed a report in the external web appl
 #   file structure of this example is demonstrated at the end of the tutorial.
 
 
-
-
 import ansys.dynamicreporting.core as adr
 from ansys.dynamicreporting.core.utils import report_utils
 
