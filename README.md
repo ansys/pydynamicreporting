@@ -43,8 +43,8 @@ make install  # install pydynamicreporting in editable mode
 
 The preceding code creates an "editable" installation that lets you develop and test PyDynamicReporting at the same time.
 
-To build using make, you must have `make` installed on your system.  
-If you are on Linux or macOS, you probably already have it installed.  
+To build using make, you must have `make` installed on your system.
+If you are on Linux or macOS, you probably already have it installed.
 If you are on Windows, you can use the [chocolatey](https://chocolatey.org/install) package manager to install it:
 
 ```
@@ -70,12 +70,12 @@ To run a job, such as the `style` job from the `ci_cd.yml` file, use this comman
 act -W '.github/workflows/ci_cd.yml' -j style --bind
 ```
 
-Deploy and upload steps **must always** be ignored.  
+Deploy and upload steps **must always** be ignored.
 If they are not ignored, before running GitHub Actions locally, add `if: ${{ !env.ACT }}` to the workflow step and commit this change if required.
 
 ## Creating a Release
 
-- Do not create a release branch.  
+- Do not create a release branch.
   Releases are created directly from the `main` branch.
 
 - Checkout the `main` branch and make sure it is up to date:
@@ -85,7 +85,7 @@ If they are not ignored, before running GitHub Actions locally, add `if: ${{ !en
   git pull origin main
   ```
 
-- Version bumps are automatically handled by the `hatch-vcs` build system based on the latest git tag.  
+- Version bumps are automatically handled by the `hatch-vcs` build system based on the latest git tag.
   **Please do not manually change the version number in the code.**
 
 - Use `make version` to check the current version number.
@@ -101,9 +101,9 @@ If they are not ignored, before running GitHub Actions locally, add `if: ${{ !en
   If there has been any commits since the last tag, the `make tag` command will automatically bump the patch version number.
   If you want to create a tag for a **minor** or **major** release, look at the make target and do it manually.
 
-  **Important:**  
-  GitHub release tags must always include the full **major.minor.patch** version number.  
-  Always include the `v` prefix.  
+  **Important:**
+  GitHub release tags must always include the full **major.minor.patch** version number.
+  Always include the `v` prefix.
   For example, use `v0.10.0`, not `v0.10`.
 
 - Creating and pushing the tag automatically triggers the release workflow in GitHub Actions and also creates a draft release in the GitHub repository.
@@ -131,8 +131,8 @@ To use PyDynamicReporting Serverless (`ansys.dynamicreporting.core.serverless`),
 
 PyDynamicReporting is licensed under the MIT license.
 
-PyDynamicReporting makes no commercial claim over Ansys whatsoever.  
-This library extends the functionality of Ansys Dynamic Reporting by adding a Python interface to Ansys Dynamic Reporting without changing the core behavior or license of the original software.  
+PyDynamicReporting makes no commercial claim over Ansys whatsoever.
+This library extends the functionality of Ansys Dynamic Reporting by adding a Python interface to Ansys Dynamic Reporting without changing the core behavior or license of the original software.
 The use of PyDynamicReporting requires a legally licensed copy of an Ansys product that supports Ansys Dynamic Reporting.
 
 To get a copy of Ansys, visit the [Ansys](https://www.ansys.com/) website.
