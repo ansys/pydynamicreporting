@@ -31,9 +31,9 @@ def generate() -> None:
                 in_prop = False
             if in_prop:
                 for ch in line:
-                    if "[" == ch:
+                    if ch == "[":
                         count_parenthesis += 1
-                    elif "]" == ch:
+                    elif ch == "]":
                         count_parenthesis -= 1
                     if count_parenthesis == 3:
                         tmp_item_type += ch

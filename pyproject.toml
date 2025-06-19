@@ -1,19 +1,18 @@
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.2.dev0"
-authors = [
-    {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-]
-
-maintainers = [
-    {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
-]
 description = "Python interface to Ansys Dynamic Reporting"
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
-license = {text = "MIT"}
+dynamic = ["version"]
+authors = [
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
+]
+maintainers = [
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
+    { name = "Ansys ADR Team", email = "adrteam@ansys.com" },
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -48,17 +47,13 @@ dependencies = [
     "psycopg[binary]>=3.2.3",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["ansys.dynamicreporting*"]
-
 [project.urls]
 homepage = "https://github.com/ansys/pydynamicreporting"
 documentation = "https://dynamicreporting.docs.pyansys.com/"
-changelog  = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.rst"
-"Bug Tracker" = "https://github.com/ansys/pydynamicreporting/issues"
-repository =  "https://github.com/ansys/pydynamicreporting"
-ci =  "https://github.com/ansys/pydynamicreporting/actions"
+changelog = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.md"
+repository = "https://github.com/ansys/pydynamicreporting"
+bug_tracker = "https://github.com/ansys/pydynamicreporting/issues"
+ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
@@ -78,28 +73,84 @@ doc = [
     "sphinx-gallery>=0.18.0",
 ]
 dev = [
-    "build",
-    "packaging",
-    "twine",
     "ipdb",
-    "ipython",
-    "pre-commit>=4.0.1",
-    "black>=25.0.0",
-    "isort>=6.0.0",
+    "uv",
+    "tox",
+    "tox-uv",
+    "tox-gh-actions",
+    "pytest",
+    "pytest-cov",
+    "pre-commit",
+    "black",
+    "ruff",
+    "pip-audit",
+    "bandit[toml]",
+    "codespell",
+    "mypy",
+    "vulture",
+    "deptry",
+    "twine",
+    "hatch",
 ]
 
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools>=75.8.0",
-    "setuptools-scm",
+requires = ["hatchling", "hatch-timestamp-version"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/ansys/dynamicreporting/core/_version.py"
+source = "vcs-dev-timestamp"
+validate-bump = true
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+timestamp_format = "long"
+
+[tool.hatch.build]
+include = [
+  "src/**",
+  "codegen/**",
+  "README.md",
+  "LICENSE",
+  "CHANGELOG.md"
 ]
+
+[tool.hatch.build.hooks.custom]
+path = "codegen/build_hook.py"
+
+[tool.hatch.build.targets.wheel]
+# Include everything under src/ansys/ to support multi-package namespace
+packages = ["ansys"]
+
+[tool.hatch.build.targets.editable]
+packages = ["ansys"]
+
+[tool.hatch.envs.default]
+path = ".venv"
+env-vars = { PYTHONPATH = "." }
+
+[tool.uv]
+default-groups = "all"
+
+[tool.mypy]
+files = [
+    "src"
+]
+disallow_untyped_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+ignore_missing_imports = true
+follow_imports = "silent"
+disable_error_code = ["import-untyped"]
 
 [tool.pytest.ini_options]
 tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
 addopts = "--capture=tee-sys --tb=native -p no:warnings -vv"
-markers =[
+markers = [
     "integration:Run integration tests",
     "smoke:Run the smoke tests",
     "unit:Run the unit tests",
@@ -114,26 +165,103 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-omit = ["*/ansys/dynamicreporting/core/adr_utils.py", "*/ansys/dynamicreporting/core/build_info.py"]
 branch = true
+source = [
+    "ansys.dynamicreporting.core",
+]
+omit = [
+    "*/ansys/dynamicreporting/core/adr_utils.py",
+    "*/ansys/dynamicreporting/core/build_info.py",
+    "*/ansys/dynamicreporting/core/_version.py",
+]
 
+# Configuration for coverage.py
 [tool.coverage.report]
 show_missing = true
-ignore_errors = true
+skip_covered = true
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+]
 
 [tool.coverage.html]
 show_contexts = true
 
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+fix = true
+exclude = [".venv", "__init__.py"]
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+select = [
+    # flake8-2020
+    "YTT",
+    # flake8-bandit
+    "S",
+    # flake8-bugbear
+    "B",
+    # flake8-builtins
+    "A",
+    # flake8-comprehensions
+    "C4",
+    # flake8-debugger
+    "T10",
+    # flake8-simplify
+    "SIM",
+    # isort (keep this if you want Ruff to sort imports)
+    "I",
+    # mccabe
+    "C90",
+    # pycodestyle
+    "E", "W",
+    # pep8-naming rules
+    "N",
+    # pyflakes
+    "F",
+    # pygrep-hooks
+    "PGH",
+    # pyupgrade
+    "UP",
+    # ruff-native rules
+    "RUF",
+    # try/except linting
+    "TRY",
+    # Disallow print statements
+    "T201",
+]
+ignore = [
+    "C901", # Function is too complex
+    "PGH003" # blanket-type-ignore
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S603", "S607", "UP022"]
+"scripts/*.py" = ["T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ansys", "tests"]
+force-sort-within-sections = true
+
 [tool.black]
 line-length = 100
-
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-force_sort_within_sections = true
-line_length = 100
-default_section = "THIRDPARTY"
-src_paths = ["doc", "src", "tests"]
+target-version = ["py310"]
 
 [tool.codespell]
 ignore-words = "doc/styles/Vocab/ANSYS/accept.txt"
@@ -142,8 +270,22 @@ quiet-level = 3
 
 [tool.bandit]
 targets = ["src"]
-recursive = true
-number = 3
-severity_level = "high"
-require_serial = true
-exclude_dirs = [ "venv/*","setup.py","test_cleanup.py","tests/*","doc/*" ]
+exclude_dirs = [
+  "venv",
+  ".venv",
+  "test_cleanup.py",
+  "tests",
+  "doc"
+]
+
+[tool.deptry]
+exclude = ["venv/.*", ".venv/.*", "scripts/.*", "doc/.*"]
+
+[tool.vulture]
+paths = ["src", "tests"]
+min_confidence = 80
+sort_by_size = true
+exclude = ["venv/", ".venv/", "scripts/", "doc/"]
+
+[tool.pre-commit.default_language_versions]
+python = "3.13"

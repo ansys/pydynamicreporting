@@ -12,7 +12,6 @@ import sys
 import uuid
 import weakref
 
-from PIL import Image
 import dateutil
 import dateutil.parser
 import pytz
@@ -712,14 +711,12 @@ class ItemCategoryREST(BaseRESTObject):
             owner_groups = value.get("own_itemcategory")
             if not owner_groups:
                 raise ValueError(
-                    "The category '{}' must have at least one owner.({},'{}')".format(
-                        str(self.guid), str(self), value
-                    )
+                    f"The category '{self.guid!s}' must have at least one owner.({self!s},'{value}')"
                 )
 
     def _validate_group(self, group):
         if not group or not isinstance(group, report_utils.text_type):
-            raise ValueError(f"Group names must be valid strings ({str(self)},'{group}')")
+            raise ValueError(f"Group names must be valid strings ({self!s},'{group}')")
 
     def _validate_groups(self, groups):
         if isinstance(groups, (list, tuple, set)):
@@ -1105,10 +1102,10 @@ class ItemREST(BaseRESTObject):
                     type(None),
                     unicode,
                 ]:
-                    raise ValueError(f"{str(type_)} is not a valid Tree payload 'value' type")
+                    raise ValueError(f"{type_!s} is not a valid Tree payload 'value' type")
             else:
                 if type_ not in [float, int, datetime.datetime, str, bool, uuid.UUID, type(None)]:
-                    raise ValueError(f"{str(type_)} is not a valid Tree payload 'value' type")
+                    raise ValueError(f"{type_!s} is not a valid Tree payload 'value' type")
 
     @staticmethod
     def validate_tree(t):
@@ -3186,7 +3183,7 @@ class sqlqueriesREST(GeneratorREST):
         valid = True
         p = json.loads(self.params)
         out_msg = ""
-        if "SQLite" == p.get("typedb", "SQLite"):
+        if p.get("typedb", "SQLite") == "SQLite":
             filename = p.get("sqldb", "")
             if not report_utils.isSQLite3(filename):
                 valid = False

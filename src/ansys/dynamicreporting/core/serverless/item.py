@@ -7,11 +7,11 @@ import pickle
 import platform
 import uuid
 
-from PIL import Image as PILImage
 from django.core.files import File as DjangoFile
 from django.template.loader import render_to_string
 from django.utils import timezone
 import numpy
+from PIL import Image as PILImage
 
 from ..adr_utils import table_attr
 from ..exceptions import ADRException
@@ -105,7 +105,7 @@ class TreeContent(ItemContent):
         else:
             type_ = type(value)
             if type_ not in self.ALLOWED_VALUE_TYPES:
-                raise ValueError(f"{str(type_)} is not a valid 'value' type in a tree")
+                raise ValueError(f"{type_!s} is not a valid 'value' type in a tree")
 
     def _validate_tree(self, tree):
         if not isinstance(tree, list):
@@ -351,7 +351,7 @@ class Item(BaseModel):
             raise ADRException(
                 extra_detail="The 'i_type' filter is not allowed if using a subclass of Item"
             )
-        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)  # noqa: E702
+        return super().find(query=f"A|i_type|cont|{cls.type};{query}", **kwargs)
 
     def render(self, *, context=None, request=None) -> str | None:
         if context is None:

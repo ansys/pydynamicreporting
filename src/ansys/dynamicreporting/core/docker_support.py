@@ -20,7 +20,6 @@ import random
 import re
 import string
 import tarfile
-from typing import Optional
 
 import docker
 
@@ -103,7 +102,7 @@ class DockerLauncher:
         try:
             self._container = self._client.containers.create(self._image)
         except Exception as e:
-            raise RuntimeError(f"Can't create Docker container: \n\n{str(e)}")
+            raise RuntimeError(f"Can't create Docker container: \n\n{e!s}")
         return self._container
 
     def copy_to_host(self, src: str, *, dest: str = ".") -> None:
@@ -123,7 +122,7 @@ class DockerLauncher:
             # Remove the tar archive
             tar_file_path.unlink()
         except Exception as e:
-            raise RuntimeError(f"Can't copy files from container: {src}\n\n{str(e)}")
+            raise RuntimeError(f"Can't copy files from container: {src}\n\n{e!s}")
 
     def start(self, host_directory: str, db_directory: str, port: int, ansys_version: int) -> None:
         """
@@ -520,13 +519,13 @@ class DockerLauncher:
         except Exception as e:
             raise RuntimeWarning(
                 f"Problem stopping and cleaning up Nexus service\n"
-                f"in the Docker container.\n{str(e)}"
+                f"in the Docker container.\n{e!s}"
             )
         # Stop the container
         try:
             self._container.stop()
         except Exception as e:
-            raise RuntimeWarning(f"Problem stopping the Docker container.\n{str(e)}")
+            raise RuntimeWarning(f"Problem stopping the Docker container.\n{e!s}")
 
     def remove(self, *, exclude_image=True, force=False) -> None:
         """Remove the Docker container."""
@@ -535,7 +534,7 @@ class DockerLauncher:
             if not exclude_image:
                 self._image.remove(force=force)
         except Exception as e:
-            raise RuntimeWarning(f"Problem removing the Docker container.\n{str(e)}")
+            raise RuntimeWarning(f"Problem removing the Docker container.\n{e!s}")
         self._container = None
         self._image = None
 

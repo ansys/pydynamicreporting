@@ -18,10 +18,7 @@ Examples
     my_report.visualize()
 """
 
-import json
-import os
 import sys
-from typing import Optional
 import warnings
 import webbrowser
 
@@ -670,7 +667,7 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error(f"Can not export pdf report: {str(e)}")
+            self.service.logger.error(f"Can not export pdf report: {e!s}")
         return success
 
     def export_html(
@@ -736,7 +733,7 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error(f"Can not export static HTML report: {str(e)}")
+            self.service.logger.error(f"Can not export static HTML report: {e!s}")
         return success
 
     def export_json(self, json_file_path: str) -> None:

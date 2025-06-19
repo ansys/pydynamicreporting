@@ -169,10 +169,8 @@ class Service:
                 try:
                     os.mkdir(self._db_directory, mode=0o755)
                 except Exception as e:  # pragma: no cover
-                    self.logger.error(
-                        f"Can't create db_directory {self._db_directory}.\n{str(e)}\n"
-                    )
-                    raise CannotCreateDatabaseError(f"{self._db_directory} : {str(e)}")
+                    self.logger.error(f"Can't create db_directory {self._db_directory}.\n{e!s}\n")
+                    raise CannotCreateDatabaseError(f"{self._db_directory} : {e!s}")
 
             if not data_directory:
                 self._data_directory = tempfile.mkdtemp()
@@ -188,15 +186,13 @@ class Service:
             try:
                 self._docker_launcher = DockerLauncher(image_url=docker_image)
             except Exception as e:
-                self.logger.error(f"Error initializing the Docker Container object.\n{str(e)}\n")
+                self.logger.error(f"Error initializing the Docker Container object.\n{e!s}\n")
                 raise e
 
             try:
                 self._docker_launcher.pull_image()
             except Exception as e:
-                self.logger.error(
-                    f"Error pulling the Docker image {self._docker_image}.\n{str(e)}\n"
-                )
+                self.logger.error(f"Error pulling the Docker image {self._docker_image}.\n{e!s}\n")
                 raise e
 
             try:
@@ -210,7 +206,7 @@ class Service:
                     ansys_version=ansys_version,
                 )
             except Exception as e:  # pragma: no cover
-                self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
+                self.logger.error(f"Error starting the Docker Container.\n{e!s}\n")
                 raise e
 
             self._ansys_installation, self._ansys_version = (ansys_installation, ansys_version)
@@ -431,9 +427,7 @@ class Service:
                     port=self._port, allow_iframe_embedding=True
                 )
             except Exception as e:  # pragma: no cover
-                self.logger.error(
-                    f"Error starting the service in the Docker container.\n{str(e)}\n"
-                )
+                self.logger.error(f"Error starting the service in the Docker container.\n{e!s}\n")
                 self.logger.error(f"Service started on port {self._port}")
                 raise StartingServiceError
             self.serverobj = report_remote_server.Server(
@@ -467,7 +461,7 @@ class Service:
                 self.logger.error(
                     "Error starting the service.\n"
                     + f"db_directory: {self._db_directory}\n"
-                    + f"{str(e)}\n"
+                    + f"{e!s}\n"
                 )
                 raise StartingServiceError
 
@@ -526,7 +520,7 @@ class Service:
                     self.logger.info("Shutting down service.\n")
                     self.serverobj.stop_local_server()
             except Exception as e:
-                self.logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
+                self.logger.error(f"Problem shutting down container/service.\n{e!s}\n")
                 pass
 
         if self._delete_db and self._db_directory:
@@ -537,7 +531,7 @@ class Service:
                     self.logger.info(f"Deleting directory: {self._db_directory}\n")
                     shutil.rmtree(self._db_directory)
             except Exception as e:
-                self.logger.warning(f"Problem deleting directory {self._db_directory}\n{str(e)}\n")
+                self.logger.warning(f"Problem deleting directory {self._db_directory}\n{e!s}\n")
                 pass
 
         if self._data_directory:
@@ -546,9 +540,7 @@ class Service:
                     self.logger.info(f"Deleting directory: {self._data_directory}\n")
                     shutil.rmtree(self._data_directory)
             except Exception as e:
-                self.logger.warning(
-                    f"Problem deleting directory {self._data_directory}\n{str(e)}\n"
-                )
+                self.logger.warning(f"Problem deleting directory {self._data_directory}\n{e!s}\n")
                 pass
 
         self.serverobj = None
