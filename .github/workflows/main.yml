@@ -120,6 +120,12 @@ jobs:
   build-dev-docs:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
       - name: Set up environment variables
         uses: ./.github/actions/setup-env
 
@@ -176,6 +182,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build-dev-docs, publish-to-azure-pypi ]
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
       - name: Set up environment variables
         uses: ./.github/actions/setup-env
 
