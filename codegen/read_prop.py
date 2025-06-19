@@ -21,7 +21,7 @@ def generate() -> None:
             else:
                 new_file.write(line)
                 for elem in root:
-                    if "TABLE" == elem.attrib["Type"].upper():
+                    if elem.attrib["Type"].upper() == "TABLE":
                         list_table_attr = []
                         for subelem in elem:
                             list_table_attr.append(subelem.attrib["attribute"])
@@ -48,7 +48,7 @@ def generate() -> None:
             else:
                 new_file.write(line)
                 for elem in root:
-                    if "TABLE" == elem.attrib["Type"].upper():
+                    if elem.attrib["Type"].upper() == "TABLE":
                         for subelem in elem:
                             new_file.write(
                                 "        self." + subelem.attrib["attribute"] + " = None\n"

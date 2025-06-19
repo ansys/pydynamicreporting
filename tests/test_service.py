@@ -228,19 +228,19 @@ def test_get_sessionid(adr_service_create) -> None:
 @pytest.mark.ado_test
 def test_query_sessions(adr_service_query) -> None:
     len_queried = len(adr_service_query.query(query_type="Session"))
-    assert 3 == len_queried
+    assert len_queried == 3
 
 
 @pytest.mark.ado_test
 def test_query_dataset(adr_service_query) -> None:
     len_queried = len(adr_service_query.query(query_type="Dataset"))
-    assert 4 == len_queried
+    assert len_queried == 4
 
 
 def test_query_table(adr_service_query) -> None:
     all_items = adr_service_query.query(query_type="Item")
     only_table = [x for x in all_items if x.type == "table"]
-    assert 1 == len(only_table)
+    assert len(only_table) == 1
 
 
 @pytest.mark.ado_test

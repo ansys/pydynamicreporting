@@ -421,7 +421,7 @@ def test_layout_transport() -> None:
     a.set_transpose(value=1)
     a.set_html(value="aa")
     res = a.get_transpose()
-    assert 0 == zero and success and successtwo and res == "aa"
+    assert zero == 0 and success and successtwo and res == "aa"
 
 
 @pytest.mark.ado_test

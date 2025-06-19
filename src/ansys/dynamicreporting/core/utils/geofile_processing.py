@@ -10,7 +10,6 @@ import io
 import os
 import platform
 import subprocess
-import typing
 import zipfile
 
 from django.conf import settings
@@ -18,7 +17,6 @@ from django.conf import settings
 try:
     is_enve = True
     import enve
-    from reports.engine import TemplateEngine
 except Exception:
     is_enve = False
 
@@ -148,7 +146,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                             with open(os.path.join(avz_dir, "proxy.png"), "wb") as output_file:
                                 output_file.write(data)
                         except OSError as e:
-                            print(f"Warning: unable to extract SCDOC proxy image: {str(e)}")
+                            print(f"Warning: unable to extract SCDOC proxy image: {e!s}")
         # SCDOC processing is complete
         return
     # Easy case, handle EVSN
@@ -160,7 +158,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                 with open(os.path.join(avz_dir, "proxy.png"), "wb") as output_file:
                     output_file.write(png)
             except OSError as e:
-                print(f"Warning: unable to extract EVSN proxy image: {str(e)}")
+                print(f"Warning: unable to extract EVSN proxy image: {e!s}")
         # EVSN processing is complete
         return
     # Handle the ENS (EnSight session file) case
@@ -175,7 +173,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                             with open(os.path.join(avz_dir, "proxy.png"), "wb") as output_file:
                                 output_file.write(data)
                         except OSError as e:
-                            print(f"Warning: unable to extract ENS proxy image: {str(e)}")
+                            print(f"Warning: unable to extract ENS proxy image: {e!s}")
         # ENS processing is complete
         return
     # A little sneaky here as the udrw2avz conversion can create an AVZ file with
@@ -204,7 +202,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                 creationflags=create_flags,
             )
         except Exception as e:
-            print(f"Warning: unable to convert '{csf_file}' into AVZ format: {str(e)}")
+            print(f"Warning: unable to convert '{csf_file}' into AVZ format: {e!s}")
     # At this point, if we have an original AVZ file or a converted udrw file, we
     # still look for proxy images.
     try:
@@ -218,4 +216,4 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                             output_file.write(data)
                     break
     except Exception as e:
-        print(f"Warning: unable to extract AVZ proxy image: {str(e)}")
+        print(f"Warning: unable to extract AVZ proxy image: {e!s}")

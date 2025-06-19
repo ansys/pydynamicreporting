@@ -246,7 +246,7 @@ class ADR:
                 docker_launcher.pull_image()
                 docker_launcher.create_container()
             except Exception as e:
-                error_message = f"Error during Docker setup: {str(e)}\n"
+                error_message = f"Error during Docker setup: {e!s}\n"
                 self._logger.error(error_message)
                 raise ADRException(error_message)
 
@@ -257,7 +257,7 @@ class ADR:
                 # Copy the installation from the container to the host
                 docker_launcher.copy_to_host("/Nexus/CEI", dest=tmp_install_dir.name)
             except Exception as e:  # pragma: no cover
-                error_message = f"Error copying the installation from the container: {str(e)}"
+                error_message = f"Error copying the installation from the container: {e!s}"
                 self._logger.error(error_message)
                 raise ADRException(error_message)
 
@@ -265,7 +265,7 @@ class ADR:
             try:
                 docker_launcher.cleanup(close=True)
             except Exception as e:
-                self._logger.warning(f"Problem shutting down container/service: {str(e)}")
+                self._logger.warning(f"Problem shutting down container/service: {e!s}")
 
             # Set the installation directory
             install_dir, self._ansys_version = get_install_info(

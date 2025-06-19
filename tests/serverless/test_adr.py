@@ -7,8 +7,6 @@ import pytest
 
 from ansys.dynamicreporting.core.exceptions import (
     ADRException,
-    ImproperlyConfiguredError,
-    InvalidAnsysPath,
     InvalidPath,
 )
 from ansys.dynamicreporting.core.serverless import ADR
@@ -32,7 +30,7 @@ def test_get_instance_error():
 def test_get_instance_no_setup():
     from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
-    adr = ADR(  # noqa: F841
+    adr = ADR(
         ansys_installation="docker",
         docker_image=DOCKER_DEV_REPO_URL,
         media_url="/media1/",
@@ -896,7 +894,7 @@ def test_delete_datasets(adr_serverless):
 
 @pytest.mark.ado_test
 def test_delete_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Template, TOCLayout
+    from ansys.dynamicreporting.core.serverless import TOCLayout
 
     _ = adr_serverless.create_template(TOCLayout, name="test_delete_templates")
     temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_delete_templates;")
