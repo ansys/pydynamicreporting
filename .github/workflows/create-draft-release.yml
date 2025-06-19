@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # needed to create a release & upload artifacts
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
