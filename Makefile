@@ -11,7 +11,7 @@ endif
 .PHONY: install
 install: ## 🚀 Set up environment and install project
 	@echo "🚀 Syncing dependencies with uv..."
-	uv sync --frozen
+	uv sync --frozen --all-extras
 	@echo "🔧 Installing project in editable mode..."
 	uv pip install -e .
 
