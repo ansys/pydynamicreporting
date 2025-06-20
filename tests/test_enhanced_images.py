@@ -1,4 +1,5 @@
 import json
+import os
 
 from PIL import Image
 from PIL.TiffTags import TAGS
@@ -11,6 +12,10 @@ from ansys.dynamicreporting.core.utils import report_utils as ru
 
 
 def get_dpf_model_field_example():
+    file_path = examples.find_electric_therm()
+    if not os.path.exists(file_path):
+        print("No no no")
+        raise FileNotFoundError(f"Example file not found at {file_path}")
     data_source = dpf.DataSources(result_path=examples.find_electric_therm())
     print(f"!!!!!!!Path: {examples.find_electric_therm()}")
     model = dpf.Model(data_source)
