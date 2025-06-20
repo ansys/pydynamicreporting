@@ -1,0 +1,793 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta property="og:site_name" content="PyAnsys" />
+    <title>Sessions and Datasets &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=ce7f2556" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=ce7f2556" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=e64b9b8a"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'serverless/sessions_and_datasets';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Items" href="items.html" />
+    <link rel="prev" title="Instantiation" href="instantiation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.10.2.dev0" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/serverless/sessions_and_datasets.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Serverless ADR
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instantiation.html">Instantiation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Sessions and Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="items.html">Items</a></li>
+<li class="toctree-l1"><a class="reference internal" href="templates.html">Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="querying.html">Querying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="media_and_static.html">Media and Static Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embedding_reports.html">Embedding Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="copying_objects.html">Copying Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deleting_objects.html">Deleting Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="caveats.html">Caveats</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="index.html" class="nav-link">Serverless ADR</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Sessions and Datasets</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="sessions-and-datasets">
+<h1>Sessions and Datasets<a class="headerlink" href="#sessions-and-datasets" title="Link to this heading">#</a></h1>
+<section id="conceptual-overview">
+<h2>Conceptual Overview<a class="headerlink" href="#conceptual-overview" title="Link to this heading">#</a></h2>
+<p>In this API, a <strong>Session</strong> represents a logical grouping or “push” of data from an external source
+(such as a solver or post-processor) into the ADR system. It captures metadata about when, where,
+and how the data was ingested.</p>
+<p>A <strong>Dataset</strong> contains the actual simulation or analysis data associated with a Session. This could
+include files, tables, images, or other artifacts generated during the simulation.</p>
+<p>By associating report items with Sessions and Datasets, the API maintains clear context and
+provenance, enabling organized, meaningful reports that trace back to the original data source.</p>
+<p>This API provides methods to create, manage, and fetch Sessions and Datasets to support
+flexible and efficient report generation workflows.</p>
+</section>
+<section id="key-entities">
+<h2>Key Entities<a class="headerlink" href="#key-entities" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>Session</strong>: Stores metadata about the session or logical grouping of data imported into ADR during a single</p></li>
+</ul>
+<p>data push or analysis run, such as date, hostname, platform, and application version.
+- <strong>Dataset</strong>: Stores metadata about the dataset or collection of simulation or analysis data, such as files,
+formats, and element counts.</p>
+</section>
+<section id="session-and-dataset-properties-and-metadata">
+<h2>Session and Dataset Properties and Metadata<a class="headerlink" href="#session-and-dataset-properties-and-metadata" title="Link to this heading">#</a></h2>
+<p>Sessions and Datasets include important properties and metadata fields that help organize and contextualize your data:</p>
+<ul class="simple">
+<li><p><strong>Session properties:</strong>
+- <strong>guid</strong>: Unique identifier for the session.
+- <strong>date</strong>: Timestamp of when the session was created or recorded.
+- <strong>hostname</strong>: The machine or environment where the data push originated.
+- <strong>platform</strong>: Operating system or platform information.
+- <strong>application</strong>: Name of the application or tool that created the session.
+- <strong>version</strong>: Version of the application or tool.
+- <strong>tags</strong>: Space-separated string of key or key=value tags for filtering and classification.</p></li>
+<li><p><strong>Dataset properties:</strong>
+- <strong>guid</strong>: Unique identifier for the dataset.
+- <strong>filename</strong>: Name of the data file associated with the dataset.
+- <strong>dirname</strong>: Directory path or location related to the dataset.
+- <strong>format</strong>: Data format descriptor (e.g., CDB, CSV).
+- <strong>numparts</strong>: Number of parts or segments in the dataset.
+- <strong>numelements</strong>: Number of elements (e.g., mesh elements) in the dataset.
+- <strong>tags</strong>: Space-separated string of key or key=value tags for filtering and classification.</p></li>
+</ul>
+<p>Both Sessions and Datasets play a key role in associating your report items with the proper data context and provenance.</p>
+</section>
+<section id="creating-sessions-and-datasets">
+<h2>Creating Sessions and Datasets<a class="headerlink" href="#creating-sessions-and-datasets" title="Link to this heading">#</a></h2>
+<p>You can create new sessions and datasets using the <code class="docutils literal notranslate"><span class="pre">create</span></code> class method, which
+saves the object to the database immediately.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">Session</span><span class="p">,</span> <span class="n">Dataset</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">application</span><span class="o">=</span><span class="s2">&quot;My Simulation Run&quot;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;project=abc&quot;</span><span class="p">)</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;results.cdb&quot;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;project=abc&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="setting-defaults-in-adr">
+<h2>Setting Defaults in ADR<a class="headerlink" href="#setting-defaults-in-adr" title="Link to this heading">#</a></h2>
+<p>The ADR singleton instance keeps track of default session and dataset objects.
+This helps when creating report items without specifying them explicitly.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+
+<span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
+<span class="n">adr</span><span class="o">.</span><span class="n">set_default_session</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+<span class="n">adr</span><span class="o">.</span><span class="n">set_default_dataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="accessing-current-session-and-dataset">
+<h2>Accessing Current Session and Dataset<a class="headerlink" href="#accessing-current-session-and-dataset" title="Link to this heading">#</a></h2>
+<p>You can also access the current session and dataset through the ADR instance:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">current_session</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">session</span>
+<span class="n">current_dataset</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">dataset</span>
+</pre></div>
+</div>
+</section>
+<section id="fetching-existing-sessions-and-datasets">
+<h2>Fetching Existing Sessions and Datasets<a class="headerlink" href="#fetching-existing-sessions-and-datasets" title="Link to this heading">#</a></h2>
+<p>You can fetch existing sessions or datasets by GUID or filter queries.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">Session</span><span class="p">,</span> <span class="n">Dataset</span>
+
+<span class="c1"># Fetch by GUID (unique identifier)</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="s2">&quot;4ee905f0-f611-11e6-8901-ae3af682bb6a&quot;</span><span class="p">)</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="s2">&quot;fa473009-deee-34eb-b6b8-8326236ca9a6&quot;</span><span class="p">)</span>
+
+<span class="c1"># Filter sessions by guid or other attributes</span>
+<span class="n">sessions</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="s2">&quot;4ee905f0-f611-11e6-8901-ae3af682bb6a&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="using-sessions-and-datasets-when-creating-items">
+<h2>Using Sessions and Datasets When Creating Items<a class="headerlink" href="#using-sessions-and-datasets-when-creating-items" title="Link to this heading">#</a></h2>
+<p>When you create report items, the current default session and dataset are used
+unless you specify different ones explicitly.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">String</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="s2">&quot;4ee905f0-f611-11e6-8901-ae3af682bb6a&quot;</span><span class="p">)</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="s2">&quot;fa473009-deee-34eb-b6b8-8326236ca9a6&quot;</span><span class="p">)</span>
+
+<span class="n">item</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span>
+    <span class="n">String</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;summary_text&quot;</span><span class="p">,</span>
+    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;Simulation results summary.&quot;</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;section=summary&quot;</span><span class="p">,</span>
+    <span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">,</span>
+    <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="lifecycle-notes">
+<h2>Lifecycle Notes<a class="headerlink" href="#lifecycle-notes" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Sessions and datasets must be saved before creating dependent items.</p></li>
+<li><p>Changing the default session or dataset affects all subsequent item creations
+that rely on defaults.</p></li>
+<li><p>You can delete sessions or datasets if they are no longer needed, but ensure
+associated items are handled appropriately.</p></li>
+</ul>
+</section>
+<section id="exceptions-and-validation">
+<h2>Exceptions and Validation<a class="headerlink" href="#exceptions-and-validation" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Creating or modifying sessions and datasets will raise errors if required fields
+are missing or invalid.</p></li>
+<li><p>Querying items with incorrect syntax or unsupported operations raises an <cite>ADRException</cite>.</p></li>
+<li><p>Fetching non-existent sessions or datasets by GUID raises a <code class="docutils literal notranslate"><span class="pre">DoesNotExist</span></code> error.</p></li>
+<li><p>Multiple objects returned for a single fetch raises a <code class="docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code> error.</p></li>
+</ul>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>Sessions and Datasets provide the structural context for your report items and
+allow you to organize simulation data meaningfully.</p>
+<p>Next, learn about the different kinds of report items you can create in the
+<a class="reference internal" href="items.html"><span class="doc">Items</span></a> guide.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#conceptual-overview">Conceptual Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-entities">Key Entities</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#session-and-dataset-properties-and-metadata">Session and Dataset Properties and Metadata</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-sessions-and-datasets">Creating Sessions and Datasets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setting-defaults-in-adr">Setting Defaults in ADR</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#accessing-current-session-and-dataset">Accessing Current Session and Dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fetching-existing-sessions-and-datasets">Fetching Existing Sessions and Datasets</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-sessions-and-datasets-when-creating-items">Using Sessions and Datasets When Creating Items</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lifecycle-notes">Lifecycle Notes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exceptions-and-validation">Exceptions and Validation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/serverless/sessions_and_datasets.rst">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/serverless/sessions_and_datasets.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.5.2. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
