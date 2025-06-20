@@ -139,6 +139,7 @@ Exceptions and Validation
 
 - Creating or modifying sessions and datasets will raise errors if required fields
   are missing or invalid.
+- Querying items with incorrect syntax or unsupported operations raises an `ADRException`.
 - Fetching non-existent sessions or datasets by GUID raises a ``DoesNotExist`` error.
 - Multiple objects returned for a single fetch raises a ``MultipleObjectsReturned`` error.
 
