@@ -2,7 +2,31 @@ name: CI-CD
 
 # run only on main branch.  This avoids duplicated actions on PRs
 on:
+  workflow_call:
+    inputs:
+      ANSYS_VERSION:
+        description: 'ANSYS version to use'
+        required: false
+        type: string
+        default: '252'
+      standalone_suffix:
+        description: "Suffix of the branch on standalone"
+        required: false
+        type: string
+        default: ''
+
   workflow_dispatch:
+    inputs:
+      ANSYS_VERSION:
+        description: 'ANSYS version to use'
+        required: false
+        default: '252'
+      standalone_suffix:
+        description: "Suffix of the branch on standalone"
+        required: false
+        type: string
+        default: '' 
+
   pull_request:
     branches:
       - main
@@ -102,9 +126,9 @@ jobs:
         id: set-server-path
         uses: ansys/pydpf-actions/install-dpf-server@v2.3
         with:
-          dpf-standalone-TOKEN: ${{secrets.DPF_PIPELINE}}
+          dpf-standalone-TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           standalone_suffix: ${{ inputs.standalone_suffix }}
-          ANSYS_VERSION : ${{ inputs.ANSYS_VERSION || vars.ANSYS_VERSION_DEFAULT }}
+          ANSYS_VERSION : ${{ inputs.ANSYS_VERSION }}
 
       - name: Run pytest
         run: make test
