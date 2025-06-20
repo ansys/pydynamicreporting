@@ -125,8 +125,8 @@ unless you specify different ones explicitly.
         dataset=dataset,
     )
 
-Sessions and Datasets Lifecycle Notes
--------------------------------------
+Lifecycle Notes
+---------------
 
 - Sessions and datasets must be saved before creating dependent items.
 - Changing the default session or dataset affects all subsequent item creations
