@@ -131,6 +131,83 @@ Error Handling
 
 If rendering fails, the output HTML will contain an error message for easier debugging.
 
+Template Properties
+-------------------
+
+Templates support a flexible set of properties stored within the ``params`` JSON field.
+These properties allow you to control fine-grained behavior of layouts and generators
+and customize rendering without subclassing.
+
+Common Properties
+~~~~~~~~~~~~~~~~~
+
+- **HTML**
+  Raw HTML content to include directly in the template output. Useful for static text or custom markup.
+
+- **comments**
+  User-defined comments or notes related to the template. These are not rendered but stored for reference.
+
+- **column_count** (layouts only)
+  Number of columns in multi-column layouts.
+
+- **column_widths** (layouts only)
+  List of floats defining relative widths of columns, e.g., ``[1.0, 2.0, 1.0]``.
+
+- **transpose** (layouts only)
+  Integer flag (0 or 1) to indicate whether tabular content should be transposed.
+
+- **skip_empty** (layouts only)
+  Integer flag (0 or 1) to skip rendering empty items or not.
+
+- **sort_fields**
+  List of fields by which to sort included items.
+
+- **sort_selection**
+  Determines which items to select after sorting. Allowed values:
+  ``"all"``, ``"first"``, ``"last"``.
+
+- **filter_type**
+  Controls filter application mode. Options include:
+  ``"items"``, ``"root_replace"``, ``"root_append"``.
+
+Adding and Modifying Properties
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can use the following methods on a template instance to interact with properties:
+
+.. code-block:: python
+
+    # Get all properties dictionary
+    props = template.get_property()
+
+    # Set all properties at once (replaces existing)
+    template.set_property({"column_count": 3, "skip_empty": 1})
+
+    # Add or update specific properties without overwriting others
+    template.add_property({"comments": "Reviewed on 2025-06-20"})
+
+Examples
+~~~~~~~~
+
+.. code-block:: python
+
+    # Set multiple properties at creation
+    layout = adr.create_template(
+        BasicLayout,
+        name="Summary Section",
+        tags="section=summary",
+    )
+    layout.set_property({
+        "column_count": 2,
+        "column_widths": [1.0, 1.5],
+        "skip_empty": 1,
+    })
+    layout.save()
+
+    # Update an existing property
+    layout.add_property({"comments": "Updated to include additional charts"})
+    layout.save()
+
 Lifecycle Notes
 ---------------
 
@@ -146,6 +223,7 @@ Exceptions and Validation
 - Attempting to instantiate the base ``Template`` class directly raises an error.
 - Filters using restricted keys (like ``t_types|``) are disallowed on subclasses.
 - Invalid parent references or child types will raise type or integrity errors during saving.
+- Only top-level templates (parent=None) can be copied between databases.
 
 Example: Creating a Nested Template Structure
 ---------------------------------------------
