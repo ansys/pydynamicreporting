@@ -100,7 +100,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: "Set licensing if necessary"
-        if: ${{ (env.ANSYS_VERSION || vars.ANSYS_VERSION_DEFAULT) > '231' }}
+        if: ${{ env.ANSYS_VERSION > '231' }}
         shell: bash
         run: |
           echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
