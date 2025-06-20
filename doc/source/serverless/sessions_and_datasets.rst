@@ -17,13 +17,11 @@ provenance, enabling organized, meaningful reports that trace back to the origin
 This API provides methods to create, manage, and fetch Sessions and Datasets to support
 flexible and efficient report generation workflows.
 
-Overview
---------
+Key Entities
+------------
 
-- A **Session** represents a logical reporting session, including metadata like date,
-  hostname, platform, and application version.
-- A **Dataset** represents a collection of simulation or analysis data, such as files,
-  formats, and element counts.
+- **Session**: A logical reporting session with metadata like date, hostname, platform, and application version.
+- **Dataset**: A collection of simulation or analysis data, such as files, formats, and element counts.
 
 Creating Sessions and Datasets
 ------------------------------
