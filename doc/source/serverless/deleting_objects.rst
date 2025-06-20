@@ -23,7 +23,7 @@ Example:
 
    Query sets (``ObjectSet``) returned by ``filter()``, ``find()``, or ADR’s ``query()`` method support a bulk ``.delete()`` method that deletes all objects in the set.
 
-   .. code-block:: python
+.. code-block:: python
 
    items_to_delete = adr.query(Item, query="A|i_tags|cont|old_project;")
    count_deleted = items_to_delete.delete()
