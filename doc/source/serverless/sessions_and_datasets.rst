@@ -20,7 +20,8 @@ flexible and efficient report generation workflows.
 Key Entities
 ------------
 
-- **Session**: A logical reporting session with metadata like date, hostname, platform, and application version.
+- **Session**: Represents a logical grouping of data imported into ADR during a single data push or analysis run,
+capturing metadata such as date, hostname, platform, and application version.
 - **Dataset**: A collection of simulation or analysis data, such as files, formats, and element counts.
 
 Creating Sessions and Datasets
