@@ -20,9 +20,10 @@ flexible and efficient report generation workflows.
 Key Entities
 ------------
 
-- **Session**: Represents a logical grouping of data imported into ADR during a single data push or analysis run,
-capturing metadata such as date, hostname, platform, and application version.
-- **Dataset**: A collection of simulation or analysis data, such as files, formats, and element counts.
+- **Session**: Stores metadata about the session or logical grouping of data imported into ADR during a single
+data push or analysis run, such as date, hostname, platform, and application version.
+- **Dataset**: Stores metadata about the dataset or collection of simulation or analysis data, such as files,
+formats, and element counts.
 
 Creating Sessions and Datasets
 ------------------------------
@@ -54,16 +55,12 @@ This helps when creating report items without specifying them explicitly.
 Accessing Current Session and Dataset
 -------------------------------------
 
-You can also access or change the current session and dataset through the ADR instance:
+You can also access the current session and dataset through the ADR instance:
 
 .. code-block:: python
 
     current_session = adr.session
     current_dataset = adr.dataset
-
-    # To change the default session or dataset:
-    adr.session = session
-    adr.dataset = dataset
 
 Fetching Existing Sessions and Datasets
 ---------------------------------------
@@ -78,8 +75,8 @@ You can fetch existing sessions or datasets by GUID or filter queries.
     session = Session.get(guid="4ee905f0-f611-11e6-8901-ae3af682bb6a")
     dataset = Dataset.get(guid="fa473009-deee-34eb-b6b8-8326236ca9a6")
 
-    # Filter sessions by tag
-    sessions = Session.filter(tags__icontains="project=abc")
+    # Filter sessions by guid or other attributes
+    sessions = Session.filter(guid="4ee905f0-f611-11e6-8901-ae3af682bb6a")
 
 Using Sessions and Datasets When Creating Items
 -----------------------------------------------
@@ -91,11 +88,16 @@ unless you specify different ones explicitly.
 
     from ansys.dynamicreporting.core.serverless import String
 
+    session = Session.get(guid="4ee905f0-f611-11e6-8901-ae3af682bb6a")
+    dataset = Dataset.get(guid="fa473009-deee-34eb-b6b8-8326236ca9a6")
+
     item = adr.create_item(
         String,
         name="summary_text",
         content="Simulation results summary.",
         tags="section=summary",
+        session=session,
+        dataset=dataset,
     )
 
 Sessions and Datasets Lifecycle Notes
