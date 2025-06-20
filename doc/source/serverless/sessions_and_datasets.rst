@@ -1,8 +1,21 @@
 Sessions and Datasets
 =====================
 
-Sessions and Datasets are foundational entities in Serverless ADR. They organize and
-contextualize the data and report items you create.
+Conceptual Overview
+-------------------
+
+In this API, a **Session** represents a logical grouping or “push” of data from an external source
+(such as a solver or post-processor) into the ADR system. It captures metadata about when, where,
+and how the data was ingested.
+
+A **Dataset** contains the actual simulation or analysis data associated with a Session. This could
+include files, tables, images, or other artifacts generated during the simulation.
+
+By associating report items with Sessions and Datasets, the API maintains clear context and
+provenance, enabling organized, meaningful reports that trace back to the original data source.
+
+This API provides methods to create, manage, and fetch Sessions and Datasets to support
+flexible and efficient report generation workflows.
 
 Overview
 --------
