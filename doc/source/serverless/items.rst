@@ -124,6 +124,8 @@ Lifecycle Notes
 - Deleting an item removes it from the database and deletes associated media files, if any.
 - Proper session and dataset management is critical to maintain report integrity and provenance.
 - Validation errors are raised if content does not meet item-specific requirements.
+- Attempting to instantiate an item type directly (e.g., `Item()`) raises an error;
+  always use the specific item classes like `String`, `Table`, etc.
 
 Exceptions and Validation
 -------------------------
