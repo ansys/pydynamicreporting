@@ -21,7 +21,7 @@ Example:
 
 2. **Delete Multiple Objects via Query**
 
-   Query sets (``ObjectSet``) returned by ``filter()``, ``find()``, or ADR’s ``query()`` method support a bulk ``.delete()`` method that deletes all objects in the set.
+Query sets (``ObjectSet``) returned by ``filter()``, ``find()``, or ADR’s ``query()`` method support a bulk ``.delete()`` method that deletes all objects in the set.
 
 .. code-block:: python
 
