@@ -4,6 +4,7 @@ Templates
 Templates in Serverless ADR define the **layout**, **organization**, and **presentation**
 of your report content. They control how Items are arranged, filtered, and rendered
 within a report, enabling flexible, reusable, and dynamic reporting structures.
+The represent report layouts or data generators that organize and present report items.
 
 Overview
 --------
@@ -14,25 +15,6 @@ Templates are Python classes derived from the base ``Template`` model. They come
 - **Generators**: Automate dynamic content generation by iterating, merging, filtering, or sorting Items.
 
 Templates can be nested hierarchically to form complex reports with multiple sections and subsections.
-
-Key Template Types
-------------------
-
-Some common built-in layout types:
-
-- ``BasicLayout``: Simple container for report content with minimal structure.
-- ``PanelLayout``: Defines a panel section, often used for grouping related content.
-- ``BoxLayout``, ``TabLayout``, ``CarouselLayout``, ``SliderLayout``: Provide different UI paradigms for organizing items.
-- ``TOCLayout``: Automatically generates a table of contents.
-- ``HeaderLayout`` and ``FooterLayout``: Static header and footer regions.
-- ``PPTXLayout`` and ``PPTXSlideLayout``: For PowerPoint integration and slide control.
-
-Some important generator types:
-
-- ``IteratorGenerator``: Iterates over a set of items and applies a sub-template.
-- ``TableMergeGenerator`` and related filter generators: Merge, reduce, or filter tabular data.
-- ``StatisticalGenerator``: Produces statistics or aggregated views of data.
-- ``SQLQueryGenerator``: Executes SQL queries to produce data-driven content.
 
 Creating Templates
 ------------------
@@ -53,10 +35,70 @@ Use the ADR instance’s ``create_template()`` method to create a new template o
     top_template.set_filter("A|i_tags|cont|project=wing_sim;")
     top_template.save()
 
-Parent-child relationships can be established by passing a ``parent`` template during creation or by appending to ``parent.children`` and saving both.
+Parent-child relationships can be established by passing a ``parent``
+template during creation or by appending to ``parent.children`` and saving both.
 
-Template Parameters and Properties
-----------------------------------
+Template Types
+--------------
+
+Common layout types include:
+
+- BasicLayout
+- PanelLayout
+- BoxLayout
+- TabLayout
+- CarouselLayout
+- SliderLayout
+- FooterLayout
+- HeaderLayout
+- IteratorLayout
+- TagPropertyLayout
+- TOCLayout
+- ReportLinkLayout
+- PPTXLayout
+- PPTXSlideLayout
+- DataFilterLayout
+- UserDefinedLayout
+
+Generator types include:
+
+- TableMergeGenerator
+- TableReduceGenerator
+- TableMergeRCFilterGenerator
+- TableMergeValueFilterGenerator
+- TableSortFilterGenerator
+- TreeMergeGenerator
+- SQLQueryGenerator
+- ItemsComparisonGenerator
+- StatisticalGenerator
+- IteratorGenerator
+
+Template Attributes and Methods
+-------------------------------
+
+Templates have several important properties and methods:
+
+- ``name``: The template’s unique name.
+- ``params``: JSON-encoded string storing rendering parameters and properties.
+- ``item_filter``: Query string filter to select items included in this template.
+- ``parent``: Reference to the parent template or None for root templates.
+- ``children``: List of child templates for hierarchical organization.
+- ``report_type``: String representing the template’s layout or generator type.
+
+Common methods include:
+
+- ``set_filter(filter_str)``: Replace the item filter string.
+- ``add_filter(filter_str)``: Append to the existing item filter.
+- ``get_params()``: Return parsed parameters as a dictionary.
+- ``set_params(params_dict)``: Set parameters, replacing existing ones.
+- ``add_params(params_dict)``: Add or update parameters without overwriting others.
+- ``get_property()``: Shortcut to get the “properties” sub-dictionary from parameters.
+- ``set_property(props_dict)``: Replace the “properties” dictionary.
+- ``add_property(props_dict)``: Add/update keys within the “properties” dictionary.
+- ``render(context=None, item_filter="", request=None)``: Render the template to HTML string.
+
+Template Parameters
+-------------------
 
 Each template stores configuration and state in its ``params`` field, a JSON string representing:
 
@@ -64,7 +106,7 @@ Each template stores configuration and state in its ``params`` field, a JSON str
 - Layout-specific options (e.g., column counts, widths)
 - Filter parameters and modes controlling which Items are included
 - Sorting options (fields, order, selection)
-- Custom properties for user-defined metadata
+- Custom properties for configuration and behavior
 
 You can manipulate these through provided methods:
 
@@ -82,55 +124,6 @@ Example modifying parameters:
     top_template.set_params(params)
     top_template.save()
 
-Filters
--------
-
-Filters control which Items are included in a template’s rendered output.
-
-- Set via ``set_filter(filter_str)``, where ``filter_str`` is a query string, e.g.,
-  ``"A|i_tags|cont|section=intro;"`` selects items tagged "section=intro".
-
-- Filters can be extended via ``add_filter()``.
-
-Sorting
--------
-
-Templates can specify sorting of items by fields using:
-
-- ``set_sort_fields([...])`` for sorting keys (e.g., ``["date", "name"]``)
-- ``set_sort_selection("all" | "first" | "last")`` to choose which items from sorted groups to show.
-
-Child Templates and Ordering
-----------------------------
-
-Templates maintain ordered children to compose hierarchical reports.
-
-- The ``children`` attribute holds nested templates.
-- ``children_order`` is a string of comma-separated GUIDs determining rendering order.
-- Call ``reorder_children()`` to sync children list order with ``children_order`` field.
-
-Rendering Templates
-------------------
-
-Templates can render themselves into complete HTML content using the ``render()`` method.
-
-.. code-block:: python
-
-    html_report = top_template.render(context={}, item_filter="A|i_tags|cont|project=wing_sim;")
-    with open("report.html", "w", encoding="utf-8") as f:
-        f.write(html_report)
-
-Rendering context supports options like:
-
-- ``plotly`` flag to enable interactive plots
-- Page dimensions and DPI for layout calculations
-- Date and time formatting
-
-Error Handling
---------------
-
-If rendering fails, the output HTML will contain an error message for easier debugging.
-
 Template Properties
 -------------------
 
@@ -140,12 +133,6 @@ and customize rendering without subclassing.
 
 Common Properties
 ~~~~~~~~~~~~~~~~~
-
-- **HTML**
-  Raw HTML content to include directly in the template output. Useful for static text or custom markup.
-
-- **comments**
-  User-defined comments or notes related to the template. These are not rendered but stored for reference.
 
 - **column_count** (layouts only)
   Number of columns in multi-column layouts.
@@ -170,6 +157,8 @@ Common Properties
   Controls filter application mode. Options include:
   ``"items"``, ``"root_replace"``, ``"root_append"``.
 
+  ... and many more depending on the specific layout or generator.
+
 Adding and Modifying Properties
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -184,7 +173,7 @@ You can use the following methods on a template instance to interact with proper
     template.set_property({"column_count": 3, "skip_empty": 1})
 
     # Add or update specific properties without overwriting others
-    template.add_property({"comments": "Reviewed on 2025-06-20"})
+    template.add_property({"column_count": 2})
 
 Examples
 ~~~~~~~~
@@ -208,22 +197,40 @@ Examples
     layout.add_property({"comments": "Updated to include additional charts"})
     layout.save()
 
-Lifecycle Notes
----------------
+Notes
+~~~~~
 
-- Templates must be saved to persist changes.
-- Parent templates must be saved before saving children.
-- Children templates must be saved before their parent saves can complete successfully.
-- Deleting a template typically requires handling or deleting its children to avoid orphaned templates.
+- Properties are stored as JSON under ``params`` → ``properties``.
+- They provide a flexible way to extend template capabilities without subclassing.
+- Some specialized layouts and generators may define their own additional properties accessible through their own APIs.
 
-Exceptions and Validation
--------------------------
+Filters
+-------
 
-- Creating or fetching templates with missing or invalid fields raises validation errors.
-- Attempting to instantiate the base ``Template`` class directly raises an error.
-- Filters using restricted keys (like ``t_types|``) are disallowed on subclasses.
-- Invalid parent references or child types will raise type or integrity errors during saving.
-- Only top-level templates (parent=None) can be copied between databases.
+Filters control which Items are included in a template’s rendered output.
+
+- Set via ``set_filter(filter_str)``, where ``filter_str`` is a query string, e.g.,
+  ``"A|i_tags|cont|section=intro;"`` selects items tagged "section=intro".
+
+- Filters can be extended via ``add_filter()``.
+
+Sorting
+-------
+
+Templates can specify sorting of items by fields using:
+
+- ``set_sort_fields([...])`` for sorting keys (e.g., ``["date", "name"]``)
+- ``set_sort_selection("all" | "first" | "last")`` to choose which items from sorted groups to show.
+
+Working with Template Hierarchies
+---------------------------------
+
+Templates can be organized in parent-child relationships to structure complex reports.
+
+- Use the ``parent`` argument to specify a template’s parent during creation.
+- The ``children`` list contains all direct child templates.
+- The ``children_order`` property stores the ordered GUIDs of children for rendering order.
+- The ``reorder_children()`` method will reorder the ``children`` list based on the stored order.
 
 Example: Creating a Nested Template Structure
 ---------------------------------------------
@@ -252,6 +259,54 @@ Example: Creating a Nested Template Structure
 
     top_template.children.append(results_panel)
     top_template.save()
+
+
+Rendering Templates
+------------------
+
+Templates can render themselves into complete HTML content using the ``render()`` method.
+
+.. code-block:: python
+
+    html_report = top_template.render(context={}, item_filter="A|i_tags|cont|project=wing_sim;")
+    with open("report.html", "w", encoding="utf-8") as f:
+        f.write(html_report)
+
+This method generates the full HTML output, including all nested templates and items,
+and applies any specified filters. The ``context`` parameter can be used to pass additional
+data for rendering, such as user-defined variables or configuration settings.
+
+Rendering context supports options like:
+
+- ``plotly`` flag to enable interactive plots
+- Page dimensions and DPI for layout calculations
+- Date and time formatting
+
+- If rendering fails, the output HTML will contain an error message for easier debugging.
+
+- If you would like more information on the error, set the ``debug`` flag to ``True`` when instantiating
+  the ``ADR`` class.
+
+Lifecycle Notes
+---------------
+
+- Templates must be saved to persist changes.
+- Parent templates must be saved before saving children.
+- Children templates must be saved before their parent saves can complete successfully.
+- Deleting a template typically requires handling or deleting its children to avoid orphaned templates.
+
+Exceptions and Validation
+-------------------------
+
+- Creating or fetching templates with missing or invalid fields raises validation errors.
+- Attempting to instantiate the base ``Template`` class directly raises an error.
+- Filters using restricted keys (like ``t_types|``) are disallowed on subclasses.
+- Invalid parent references or child types will raise type or integrity errors during saving.
+- Only top-level templates (parent=None) can be copied between databases.
+- Templates must have their parents and children saved before saving themselves to ensure integrity.
+- Invalid property types or malformed filters raise errors.
+- Fetching non-existent templates raises ``DoesNotExist`` errors.
+- Using invalid filter keys in subclasses raises ``ADRException``.
 
 Summary
 -------
