@@ -11,14 +11,23 @@ Query Methods
 The main query methods are available on each model class:
 
 - ``get(**kwargs)``
+
   Retrieve a single object matching the given field filters.
   Raises an exception if zero or multiple objects are found.
 
 - ``filter(**kwargs)``
+
   Return an ``ObjectSet`` containing all objects matching the filters.
 
 - ``find(query: str, **kwargs)``
+
   Perform an advanced query using the ADR query language syntax.
+
+- ``ADR.query(query_type, *, query="", **kwargs)``
+
+  A static method that allows querying across any of the core object types
+  by specifying the type explicitly (`Item`, `Template`, `Session`, or `Dataset`).
+  Returns an ``ObjectSet`` of matching objects.
 
 Examples
 --------
@@ -51,6 +60,16 @@ Examples
     matching_items = Item.find(query=query_str)
     print(f"Found {len(matching_items)} matching items")
 
+**Use the static ADR query method to find Sessions with a name:**
+
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import ADR, Session
+
+    sessions = ADR.query(Session, query="A|s_name|eq|Test Session;")
+    for s in sessions:
+        print(s.guid, s.date)
+
 Subclass Queries
 ----------------
 
@@ -78,10 +97,9 @@ Understanding ADR Query Strings
 
 ADR queries use the format:
 
-``Scope|Field|Operation|Value;``
+``Connector|Field|Operation|Value;``
 
-
-- **Scope**: Object scope, e.g., ``A`` for all items.
+- **Connector**: Connector to chain multiple queries, e.g., ``A`` for 'AND' and ``O`` for 'OR'.
 - **Field**: Field name, e.g., ``i_tags`` for item tags.
 - **Operation**: Comparison operator, e.g., ``cont`` (contains), ``eq`` (equals).
 - **Value**: The value to compare.
@@ -89,6 +107,7 @@ ADR queries use the format:
 Multiple filters are combined with a logical AND.
 
 Example:
+
 ``A|i_tags|cont|project=wing_sim;A|i_name|eq|summary_text;``
 
 Matches items tagged ``project=wing_sim`` AND named ``summary_text``.
@@ -119,7 +138,7 @@ Working with Query Results
 --------------------------
 
 - ``get()`` returns a single model instance.
-- ``filter()`` and ``find()`` return an ``ObjectSet`` that behaves like a list.
+- ``filter()``, ``find()``, and ``ADR.query()`` return an ``ObjectSet`` that behaves like a list.
 
 You can iterate over results, use ``len()``, or index them:
 
@@ -137,6 +156,7 @@ Error Handling
 - ``DoesNotExist``: Raised when ``get()`` finds no match.
 - ``MultipleObjectsReturned``: Raised when ``get()`` finds multiple matches.
 - ``ADRException``: Raised for invalid queries or disallowed filters.
+- ``TypeError``: Raised by ``ADR.query()`` if an invalid model type is passed.
 
 Example:
 
@@ -146,6 +166,8 @@ Example:
         session = Session.get(guid="non-existent-guid")
     except Session.DoesNotExist:
         print("Session not found")
+    except Session.MultipleObjectsReturned:
+        print("Multiple sessions matched")
 
 Summary
 -------
