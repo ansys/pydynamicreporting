@@ -25,7 +25,7 @@ on:
         description: "Suffix of the branch on standalone"
         required: false
         type: string
-        default: '' 
+        default: ''
 
   pull_request:
     branches:
