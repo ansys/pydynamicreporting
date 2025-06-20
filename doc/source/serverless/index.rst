@@ -61,7 +61,6 @@ Explore the docs
    sessions_and_datasets
    items
    templates
-   rendering
    querying
    media_and_static
    embedding_reports
