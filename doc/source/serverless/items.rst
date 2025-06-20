@@ -93,6 +93,30 @@ Example: Creating and saving an image item
     )
     image_item.save()
 
+After saving, the file is copied into the configured media directory. You can access the uploaded file's storage path using the `file_path` property:
+
+.. code-block:: python
+
+    # Print the absolute path where the media file is stored
+    print(f"Media file stored at: {image_item.file_path}")
+
+This path points to the location within the media directory configured during ADR setup.
+You can use this path for verification, further processing, or serving the media file in your application.
+
+When rendering reports or templates that include media items, the HTML references media files using relative URLs, typically prefixed by the configured media URL (default is `/media/`):
+
+.. code-block:: html
+
+    <img src="/media/d3350c20-b298-11ef-a852-906584e7f693_image.png"
+         alt="Image file not found" class="img-fluid" />
+
+Ensure your web server is configured to serve these media URLs from the media directory where files are stored.
+
+Summary:
+- Set the `content` of file-based items to the local file path before saving.
+- After saving, `file_path` gives the full path to the uploaded media file.
+- Rendered reports use relative media URLs; configure your web server accordingly.
+
 Rendering Items
 ---------------
 
