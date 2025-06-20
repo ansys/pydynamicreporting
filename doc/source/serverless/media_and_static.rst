@@ -67,7 +67,7 @@ File Storage and Access
 - Items with associated files use the ``FilePayloadMixin`` to manage file storage and retrieval.
 - The media directory should be accessible by any server or process serving reports or web content.
 - Static files are collected during setup if ``collect_static=True`` is passed to ``ADR.setup()``.
-- Static files can be served by any compatible web server or via built-in mechanisms in web frameworks.
+- Static files can be served by any compatible web server (eg. NGINX) or via built-in mechanisms in web frameworks.
 - Items without files do not consume media storage.
 
 Managing Media Files in Items
