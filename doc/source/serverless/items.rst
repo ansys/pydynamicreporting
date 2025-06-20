@@ -44,11 +44,14 @@ Items automatically link to the current default session and dataset unless speci
     string_item.save()
 
     # Create a table item with data
-    data = np.array([
-        [0.0, 10.0, 101325.0],
-        [0.5, 12.5, 101300.0],
-        [1.0, 15.0, 101280.0],
-    ], dtype="float")
+    data = np.array(
+        [
+            [0.0, 10.0, 101325.0],
+            [0.5, 12.5, 101300.0],
+            [1.0, 15.0, 101280.0],
+        ],
+        dtype="float",
+    )
 
     table_item = adr.create_item(
         Table,
@@ -136,8 +139,7 @@ You can query items using the ADR `query()` method with filters based on tags, n
 .. code-block:: python
 
     items = adr.query(
-        query_type=String,
-        query="A|i_tags|cont|project=wing_sim;A|i_name|cont|summary;"
+        query_type=String, query="A|i_tags|cont|project=wing_sim;A|i_name|cont|summary;"
     )
 
 Lifecycle Notes

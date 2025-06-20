@@ -21,11 +21,11 @@ Use the ``copy_objects()`` method on an ADR instance:
 .. code-block:: python
 
     count = adr.copy_objects(
-        object_type=Item,                  # Class of objects to copy (Item, Template, Session, Dataset)
-        target_database="dest",            # Target database key
+        object_type=Item,  # Class of objects to copy (Item, Template, Session, Dataset)
+        target_database="dest",  # Target database key
         query="A|i_tags|cont|project=wing_sim;",  # ADR query string to filter objects
         target_media_dir="/path/to/media",  # Required if copying Items with media in SQLite
-        test=False                        # If True, only logs number of objects to be copied, no actual copy
+        test=False,  # If True, only logs number of objects to be copied, no actual copy
     )
     print(f"Copied {count} objects.")
 

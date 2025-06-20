@@ -28,7 +28,7 @@ report or a subset of it as HTML.
     html_report = adr.render_report(
         name="My Simulation Report",
         context={"plotly": 1},
-        item_filter="A|i_tags|cont|project=my_project;"
+        item_filter="A|i_tags|cont|project=my_project;",
     )
 
 The resulting HTML string can then be inserted into your web page or
@@ -55,8 +55,7 @@ rendering child templates individually:
 .. code-block:: python
 
     partial_html = top_template.render(
-        context={},
-        item_filter="A|i_tags|cont|section=results;"
+        context={}, item_filter="A|i_tags|cont|section=results;"
     )
 
 Integration Tips
@@ -83,13 +82,18 @@ Example with Flask:
 .. code-block:: python
 
     from flask import Flask, render_template_string
+
     app = Flask(__name__)
+
 
     @app.route("/embedded-report")
     def embedded_report():
-        my_app_html =  "<!-- Your app's HTML here -->"
+        from ansys.dynamicreporting.core.serverless import ADR
+
+        adr = ADR.get_instance()
+        my_app_html = "<!-- Your app's HTML here -->"
         html = adr.render_report(name="My Simulation Report")
-        return render_template_string("""
+        return f"""
             <html>
                 <head>
                     <title>Embedded Report</title>
@@ -101,7 +105,7 @@ Example with Flask:
                     </div>
                 </body>
             </html>
-        """, my_app_html=my_app_html, html=html))
+        """
 
 Security Considerations
 -----------------------

@@ -27,11 +27,13 @@ Example: Multiprocessing with Serverless ADR
     import multiprocessing
     from ansys.dynamicreporting.core.serverless import ADR
 
+
     def worker_task():
         adr = ADR.get_instance()
         if not adr.is_setup:
             adr.setup()
         # Proceed with Serverless ADR API calls here
+
 
     if __name__ == "__main__":
         adr = ADR(ansys_installation="/path/to/ansys", db_directory="/path/to/db")
@@ -65,10 +67,12 @@ Example: Threading with Serverless ADR
     import threading
     from ansys.dynamicreporting.core.serverless import ADR
 
+
     def thread_task():
         adr = ADR.get_instance()
         # ADR is already setup in main thread, so just use it directly
         # Make ADR API calls here
+
 
     if __name__ == "__main__":
         adr = ADR(ansys_installation="/path/to/ansys", db_directory="/path/to/db")

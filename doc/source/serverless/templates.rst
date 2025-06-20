@@ -209,11 +209,13 @@ Examples
         name="Summary Section",
         tags="section=summary",
     )
-    layout.set_property({
-        "column_count": 2,
-        "column_widths": [1.0, 1.5],
-        "skip_empty": 1,
-    })
+    layout.set_property(
+        {
+            "column_count": 2,
+            "column_widths": [1.0, 1.5],
+            "skip_empty": 1,
+        }
+    )
     layout.save()
 
     # Update an existing property
@@ -291,7 +293,9 @@ Templates can render themselves into complete HTML content using the ``render()`
 
 .. code-block:: python
 
-    html_report = top_template.render(context={}, item_filter="A|i_tags|cont|project=wing_sim;")
+    html_report = top_template.render(
+        context={}, item_filter="A|i_tags|cont|project=wing_sim;"
+    )
     with open("report.html", "w", encoding="utf-8") as f:
         f.write(html_report)
 

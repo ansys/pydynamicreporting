@@ -35,7 +35,7 @@ Use this method when working with multiple databases, e.g., PostgreSQL or databa
 
     install_loc = r"C:\Program Files\ANSYS Inc\v252"
     db_dir = r"C:\ADR\DBs\ogdocex"
-    dest_dir = fr"{db_dir}_dest"
+    dest_dir = rf"{db_dir}_dest"
 
     database_config = {
         "default": {
@@ -59,7 +59,7 @@ Use this method when working with multiple databases, e.g., PostgreSQL or databa
     adr = ADR(
         ansys_installation=install_loc,
         databases=database_config,
-        media_directory=fr"{db_dir}\media",
+        media_directory=rf"{db_dir}\media",
     )
     adr.setup()
 
@@ -98,7 +98,7 @@ Use a Docker image to run ADR in containerized environments.
         ansys_installation="docker",
         docker_image="ghcr.io/ansys-internal/nexus_dev",
         db_directory=db_dir,
-        media_directory=fr"{db_dir}\media",
+        media_directory=rf"{db_dir}\media",
     )
     adr.setup()
 
