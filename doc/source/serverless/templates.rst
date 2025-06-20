@@ -175,6 +175,29 @@ You can use the following methods on a template instance to interact with proper
     # Add or update specific properties without overwriting others
     template.add_property({"column_count": 2})
 
+Direct Attribute Access
+~~~~~~~~~~~~~~~~~~~~~~
+
+Alternatively, some common properties can also be accessed or set using standard attribute
+syntax on the template instance. For example:
+
+.. code-block:: python
+
+    # Set a property using attribute assignment
+    pptx_template.use_all_slides = 0
+
+    # Get a property value via attribute access
+    output_pptx = pptx_template.output_pptx
+
+You can also use Python’s built-in ``setattr()`` function to set properties dynamically:
+
+.. code-block:: python
+
+    setattr(template, "output_pptx", "report.pptx")
+
+Note that attribute access is a convenient shortcut for common properties.
+Under the hood, these are proxied to the underlying JSON ``params`` data.
+
 Examples
 ~~~~~~~~
 
