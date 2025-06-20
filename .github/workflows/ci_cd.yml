@@ -128,7 +128,7 @@ jobs:
         with:
           dpf-standalone-TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           standalone_suffix: ${{ inputs.standalone_suffix }}
-          ANSYS_VERSION : ${{ inputs.ANSYS_VERSION }}
+          ANSYS_VERSION : '252'
 
       - name: Run pytest
         run: make test
