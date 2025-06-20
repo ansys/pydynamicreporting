@@ -1,97 +1,152 @@
 Copying Objects
 ==============
 
-Serverless ADR allows you to copy collections of report objects between databases.
-This is useful for migrating reports, backing up data, or synchronizing environments.
+Serverless ADR supports copying collections of report objects—including **Items**, **Templates**, **Sessions**, and **Datasets**—from one database to another. This functionality facilitates data migration, backup, synchronization, or environment replication.
 
-Supported Object Types
-----------------------
+Copying ensures that GUIDs (unique identifiers) are preserved and that related Sessions and Datasets referenced by Items are copied as well to maintain data integrity.
 
-You can copy the following object types:
+Prerequisites
+-------------
 
-- **Items**: Individual report content such as text, tables, images.
-- **Templates**: Report layouts and generators defining report structure.
-- **Sessions**: Contextual grouping of report data.
-- **Datasets**: Collections of simulation or analysis data.
+- Multiple database configurations must be set up in the ADR instance.
+- The source and target databases must be properly configured and accessible.
+- For objects referencing media files (e.g., images, animations), a valid media directory must be specified for the target database.
+- Only top-level Templates (those without parents) can be copied; their children are copied recursively.
 
-Copying ensures that related sessions and datasets are preserved and linked correctly.
+API Usage
+---------
 
-Copying Workflow
-----------------
-
-To copy objects, use the ``copy_objects()`` method on the ADR instance:
+Use the ``copy_objects()`` method on an ADR instance:
 
 .. code-block:: python
 
     count = adr.copy_objects(
-        object_type=Item,
-        target_database="remote_db",
-        query="A|i_tags|cont|project=wing_sim;",
-        target_media_dir="/path/to/media",
-        test=False,
+        object_type=Item,                  # Class of objects to copy (Item, Template, Session, Dataset)
+        target_database="dest",            # Target database key
+        query="A|i_tags|cont|project=wing_sim;",  # ADR query string to filter objects
+        target_media_dir="/path/to/media",  # Required if copying Items with media in SQLite
+        test=False                        # If True, only logs number of objects to be copied, no actual copy
     )
     print(f"Copied {count} objects.")
 
-Parameters:
+Parameters
+----------
 
-- ``object_type``: The class of objects to copy (e.g., ``Item``, ``Template``).
-- ``target_database``: The destination database key as configured in ADR.
-- ``query``: An optional ADR query string to select which objects to copy.
-- ``target_media_dir``: Directory to copy media files if objects reference files.
-- ``test``: If True, only logs the number of objects to copy without performing the copy.
+- ``object_type`` (`type`): The class of objects to copy. Must be a subclass of ``Item``, ``Template``, ``Session``, or ``Dataset``.
+- ``target_database`` (`str`): The configured target database key.
+- ``query`` (`str`, optional): ADR query string to select which objects to copy. Defaults to copying all.
+- ``target_media_dir`` (`str` or `Path`, optional): Directory to copy media files to when copying Items.
+- ``test`` (`bool`, optional): If True, no copying occurs; only the count of matching objects is returned.
 
-Copying Templates
------------------
+Copying Logic Details
+---------------------
 
-Only top-level templates (those with no parent) can be copied directly.
-Child templates are recursively copied along with their parent to maintain hierarchy.
+1. **Validation**
 
-Handling Media Files
---------------------
+   - Checks that ``object_type`` is valid.
+   - Validates that both source ("default") and target databases exist in ADR's configuration.
 
-When copying items with media files (e.g., images or geometry files), the
-media files are copied to the specified target media directory.
+2. **Querying Objects**
 
-You must specify ``target_media_dir`` if the target database uses SQLite or
-does not provide media storage paths.
+   - Uses the ADR query interface to fetch objects matching the query string.
+
+3. **Handling Items**
+
+   - Checks if any Items reference media files.
+   - Determines the target media directory:
+     - Uses provided ``target_media_dir`` if specified.
+     - If using SQLite for the target DB, attempts to resolve the media directory adjacent to the DB.
+     - Throws an exception if no suitable media directory can be determined.
+   - For each Item, attempts to fetch or create the corresponding Session and Dataset in the target DB.
+   - Updates Items to reference the copied Sessions and Datasets.
+
+4. **Handling Templates**
+
+   - Only copies top-level Templates.
+   - Recursively copies child Templates preserving hierarchy and order.
+
+5. **Handling Sessions and Datasets**
+
+   - Copies queried Sessions or Datasets as-is.
+
+6. **Test Mode**
+
+   - If ``test=True``, logs and returns the number of objects that *would* be copied, without performing any write operations.
+
+7. **Performing Copy**
+
+   - Saves all copied objects to the target database.
+   - Copies media files referenced by Items to the target media directory.
+   - Rebuilds 3D geometry files if applicable.
+
+Example: Copy Sessions
+
+.. code-block:: python
+
+    session_count = adr.copy_objects(
+        object_type=Session,
+        target_database="dest",
+        query="A|s_tags|cont|dp=;",
+    )
+    print(f"Copied {session_count} sessions.")
+
+Example: Copy Items with Media
+
+.. code-block:: python
+
+    item_count = adr.copy_objects(
+        Item,
+        target_database="dest",
+        query="A|i_tags|cont|dp=dp227;",
+        target_media_dir=r"C:\ansys\dest_db\media",
+    )
+    print(f"Copied {item_count} items with media.")
+
+Example: Copy Top-Level Template and Its Children
+
+.. code-block:: python
+
+    template_count = adr.copy_objects(
+        Template,
+        target_database="dest",
+        query="A|t_name|eq|Serverless Simulation Report;",
+    )
+    print(f"Copied {template_count} templates.")
 
 Error Handling
 --------------
 
-- Raises ``ADRException`` if unsupported object types are passed.
-- Raises errors if the source or target database configurations are missing.
-- Raises errors if media directory is missing when required.
+- Raises ``TypeError`` if ``object_type`` is not a valid ADR model subclass.
+- Raises ``ADRException`` if databases are misconfigured.
+- Raises ``ADRException`` if attempting to copy non top-level Templates.
+- Raises ``ADRException`` if ``target_media_dir`` is missing when required.
+- Exceptions from saving or media copying are caught and re-raised as ``ADRException``.
 
-Example Copying Items with Media
+Implementation Notes
+--------------------
 
-.. code-block:: python
-
-    try:
-        copied_count = adr.copy_objects(
-            Item,
-            target_database="remote_db",
-            query="A|i_tags|cont|section=results;",
-            target_media_dir="/data/remote/media",
-        )
-        print(f"Successfully copied {copied_count} items with media.")
-    except ADRException as e:
-        print(f"Copying failed: {e}")
+- The copying uses a deep copy of Template objects to preserve the hierarchy.
+- For Items, Session and Dataset references are fetched or created in the target database to maintain links.
+- Media files are copied using standard filesystem operations; ensure appropriate permissions.
+- The method supports extensions for future support of source database selection (currently hardcoded to "default").
 
 Best Practices
 --------------
 
 - Ensure the target database is properly configured and accessible before copying.
-- Verify that media directories have appropriate permissions for file copying.
-- Use the ``test=True`` option initially to verify which objects will be copied.
 - Copy related sessions and datasets automatically by copying items or templates.
+- Always use ``test=True`` initially to preview the number of objects to be copied.
+- Ensure media directories have sufficient space and permissions.
+- Use descriptive ADR query strings to limit copy scope.
+- Avoid copying Templates with parents; copy only top-level templates to prevent hierarchy issues.
+- Call ``adr.setup()`` before copying to ensure proper configuration.
 
 Summary
 -------
 
-Copying objects in Serverless ADR is a powerful tool to migrate and synchronize
-report content, preserving relationships and media assets across environments.
+The ``copy_objects()`` method provides robust, automated transfer of ADR report content and metadata between databases, preserving references and media assets to support backup, migration, and distributed workflows.
 
 Next Steps
 ----------
 
-Learn about :doc:`deleting_objects` to manage and clean up unwanted report data after copying.
+Learn how to manage unwanted data after copying with :doc:`deleting_objects`.
