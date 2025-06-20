@@ -132,6 +132,7 @@ Exceptions and Validation
 
 - Attempting to create or save items without required fields or with invalid content raises validation errors.
 - File-based items validate file existence and format before saving.
+- Querying items with incorrect syntax or unsupported operations raises an `ADRException`.
 - Fetching or querying non-existent items raises a `DoesNotExist` exception.
 - Multiple items matching a single fetch criteria raise a `MultipleObjectsReturned` exception.
 
