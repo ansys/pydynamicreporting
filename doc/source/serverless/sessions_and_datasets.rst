@@ -25,6 +25,31 @@ data push or analysis run, such as date, hostname, platform, and application ver
 - **Dataset**: Stores metadata about the dataset or collection of simulation or analysis data, such as files,
 formats, and element counts.
 
+Session and Dataset Properties and Metadata
+-------------------------------------------
+
+Sessions and Datasets include important properties and metadata fields that help organize and contextualize your data:
+
+- **Session properties:**
+  - **guid**: Unique identifier for the session.
+  - **date**: Timestamp of when the session was created or recorded.
+  - **hostname**: The machine or environment where the data push originated.
+  - **platform**: Operating system or platform information.
+  - **application**: Name of the application or tool that created the session.
+  - **version**: Version of the application or tool.
+  - **tags**: Space-separated string of key or key=value tags for filtering and classification.
+
+- **Dataset properties:**
+  - **guid**: Unique identifier for the dataset.
+  - **filename**: Name of the data file associated with the dataset.
+  - **dirname**: Directory path or location related to the dataset.
+  - **format**: Data format descriptor (e.g., CDB, CSV).
+  - **numparts**: Number of parts or segments in the dataset.
+  - **numelements**: Number of elements (e.g., mesh elements) in the dataset.
+  - **tags**: Space-separated string of key or key=value tags for filtering and classification.
+
+Both Sessions and Datasets play a key role in associating your report items with the proper data context and provenance.
+
 Creating Sessions and Datasets
 ------------------------------
 
