@@ -11,7 +11,8 @@ from ansys.dynamicreporting.core.utils import report_utils as ru
 
 
 def get_dpf_model_field_example():
-    model = dpf.Model(examples.find_electric_therm())
+    data_source = dpf.DataSources(result_path=examples.find_electric_therm())
+    model = dpf.Model(data_source)
 
     results = model.results
     electric_potential = results.electric_potential()
