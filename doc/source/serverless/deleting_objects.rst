@@ -1,19 +1,23 @@
 Deleting Objects
 ================
 
-Serverless ADR allows you to delete report objects such as **Items**, **Templates**, **Sessions**, and **Datasets** either individually or in bulk via query results. Proper deletion helps maintain a clean database and remove obsolete or unwanted report data.
+Serverless ADR provides robust APIs for deleting report-related objects, including **Items**, **Templates**, **Sessions**, and **Datasets**. These operations allow you to remove outdated or unnecessary data from your reporting system efficiently.
 
-Methods for Deletion
--------------------
+Deletion Methods
+----------------
 
-1. **Delete Individual Objects**
+1. **Deleting Individual Objects**
 
-   Each object instance supports a ``.delete()`` method to remove itself from the database.
+Every model instance exposes a `.delete()` method that permanently removes that object from the database.
 
-   .. code-block:: python
+Example:
 
-       item = Item.get(name="obsolete_item")
-       item.delete()
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import Item
+
+    item = Item.get(name="intro_text")
+    item.delete()
 
 2. **Delete Multiple Objects via Query**
 
@@ -21,12 +25,12 @@ Methods for Deletion
 
    .. code-block:: python
 
-       items_to_delete = adr.query(Item, query="A|i_tags|cont|old_project;")
-       count_deleted = items_to_delete.delete()
-       print(f"Deleted {count_deleted} items.")
+   items_to_delete = adr.query(Item, query="A|i_tags|cont|old_project;")
+   count_deleted = items_to_delete.delete()
+   print(f"Deleted {count_deleted} items.")
 
-Usage Examples
---------------
+Example Usage Patterns
+----------------------
 
 **Deleting a Single Session:**
 
@@ -39,47 +43,80 @@ Usage Examples
 
 .. code-block:: python
 
-    old_datasets = Dataset.filter(tags__icontains="deprecated")
+    old_datasets = Dataset.filter(tags__contains="deprecated")
     deleted_count = old_datasets.delete()
     print(f"Deleted {deleted_count} datasets.")
 
-**Deleting All Templates with a Specific Name:**
+
+**Deleting Sessions by Tag**
 
 .. code-block:: python
 
-    templates = Template.filter(name="Old Report Template")
-    deleted_count = templates.delete()
-    print(f"Deleted {deleted_count} templates.")
+    from ansys.dynamicreporting.core.serverless import Session
 
-Important Considerations
-------------------------
+    old_sessions = Session.filter(tags__contains="deprecated")
+    count = old_sessions.delete()
+    print(f"Deleted {count} sessions.")
 
-- Deleting a Template does not automatically delete its child Templates or associated Items. Handle dependent objects accordingly to avoid orphaned data.
-- Similarly, deleting Sessions or Datasets does not cascade to associated Items; manually delete dependent Items if needed.
-- Deletion operations are permanent and cannot be undone. Ensure backups or exports are made if data recovery is required.
-- You may need appropriate database permissions to perform deletions.
-- Use precise query filters to avoid unintended data loss.
+**Deleting Datasets with Specific Filename Patterns**
+
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import Dataset
+
+    datasets_to_remove = Dataset.filter(filename="test_data")
+    deleted = datasets_to_remove.delete()
+    print(f"Deleted {deleted} datasets.")
+
+**Deleting Templates by Name**
+
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import Template
+
+    templates = Template.filter(name="Old Layout")
+    deleted = templates.delete()
+    print(f"Deleted {deleted} templates.")
+
+Important Notes and Caveats
+---------------------------
+
+- **Automatic Cascading:**
+  Deleting a **Template** automatically deletes its child templates but not the associated Items.
+  Similarly, deleting a **Session** or **Dataset** will delete dependent Items.
+
+- **Permanent Action:**
+  Deletions are irreversible through the API. Always ensure that critical data is backed up before deletion.
+
+- **Permissions:**
+  Ensure you have proper database access permissions to perform deletion operations.
+
+- **Query Precision:**
+  Use precise query filters to prevent accidental mass deletions.
 
 Error Handling
 --------------
 
-- Attempting to delete non-existent objects will raise a ``DoesNotExist`` error.
-- Database-level integrity errors may occur if cascading constraints exist; handle exceptions accordingly.
+- **DoesNotExist Exception:**
+  Raised when `.delete()` is called on an object that no longer exists in the database.
+
+- **Database Integrity Errors:**
+  If database constraints prevent deletion (e.g., foreign key constraints), exceptions will be raised. Handle these to avoid partial deletions.
+
+- **Invalid Query Filters:**
+  Malformed or unsupported query filters will raise an `ADRException` during query or delete calls.
 
 Best Practices
 --------------
 
-- Perform queries with care and review the list of objects to delete before calling ``.delete()``.
-- Consider backing up data before bulk deletion.
-- When deleting Templates, consider recursively deleting or archiving child Templates and related Items.
-- Use transaction management to ensure atomicity for bulk deletes in complex workflows.
+- **Preview Objects Before Deletion:**
+  Always iterate over query results or inspect objects before deleting to confirm correctness.
 
-Summary
--------
+- **Backup Important Data:**
+  Before bulk deletes, create database backups or export data.
 
-Deletion APIs in Serverless ADR provide flexible, efficient removal of report-related objects to keep your reporting system clean and relevant.
+- **Use Soft Deletes If Needed:**
+  If deletion safety is a concern, consider implementing a "soft delete" flag in your application logic.
 
-Next Steps
-----------
-
-Explore the :doc:`copying_objects` guide to learn how to safely duplicate report content across databases.
+- **Clean-Up Orphaned Data:**
+  After deletion, ensure no orphaned references remain that could cause errors.
