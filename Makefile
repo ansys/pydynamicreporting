@@ -52,4 +52,10 @@ clean:
 test_clean:
 	python test_cleanup.py
 
+docs:
+	$(MAKE) -C doc html
+
+docs-clean:
+	$(MAKE) -C doc clean
+
 all: clean build install
