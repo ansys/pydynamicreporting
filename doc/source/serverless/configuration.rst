@@ -63,9 +63,15 @@ The primary configuration options for the ``ADR`` class constructor are:
 Environment Variables
 =====================
 
-Serverless ADR supports several environment variables to configure its runtime behavior,
-database connections, security settings, and media/static file handling. These variables
-can be used for legacy configurations or advanced deployments.
+.. warning::
+
+   **Use of environment variables for Serverless ADR configuration is strongly discouraged.**
+   Environment variables represent a legacy configuration method and can lead to hidden,
+   hard-to-debug issues, security risks (such as leaking secrets), and inconsistent behavior
+   especially in multi-instance or containerized deployments.
+
+   It is highly recommended to use explicit constructor parameters and configuration files
+   for all setup and runtime options instead.
 
 Core Variables
 --------------
@@ -166,12 +172,6 @@ Remote Session Configuration
 
 Usage Notes
 -----------
-
-- When running a non-debug local server, use the following command to enable static file serving:
-
-  .. code-block:: bash
-
-     python manage.py runserver --insecure 0.0.0.0:8000
 
 - Environment variables override constructor parameters if both are set.
 
