@@ -13,12 +13,7 @@ from ansys.dynamicreporting.core.utils import report_utils as ru
 
 def get_dpf_model_field_example():
     file_path = examples.find_electric_therm()
-    if not os.path.exists(file_path):
-        print("No no no")
-        raise FileNotFoundError(f"Example file not found at {file_path}")
-
-    data_path = examples.find_electric_therm()
-    server_data_path = dpf.upload_file_in_tmp_folder(data_path)
+    server_data_path = dpf.upload_file_in_tmp_folder(file_path)
     model = dpf.Model(server_data_path)
 
     results = model.results
