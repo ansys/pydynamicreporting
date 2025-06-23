@@ -3,7 +3,7 @@ Media and Static Files
 
 Serverless ADR manages two key asset categories essential for rich report presentation:
 
-- **Media files**: User-uploaded or generated files such as images, animations, 3D models, and other payloads associated with Items.
+- **Media files**: User-uploaded or generated files such as images, animations, 3D models, and other content associated with Items.
 - **Static files**: Framework assets including CSS, JavaScript, fonts, and icons required to render reports and web interfaces correctly.
 
 This guide covers the storage, access, lifecycle, and best practices for managing these files in Serverless ADR.
@@ -64,7 +64,6 @@ File Storage and Access
 -----------------------
 
 - Media files are saved with unique names based on the Item GUID and type, e.g., ``<guid>_image.png``.
-- Items with associated files use the ``FilePayloadMixin`` to manage file storage and retrieval.
 - The media directory should be accessible by any server or process serving reports or web content.
 - Static files are collected during setup if ``collect_static=True`` is passed to ``ADR.setup()``.
 - Static files can be served by any compatible web server (eg. NGINX) or via built-in mechanisms in web frameworks.
@@ -100,7 +99,6 @@ Example: Creating and saving an Image Item with a file
         content="C:\\images\\wing_profile.png",
         tags="section=geometry",
     )
-    img_item.save()
 
 Working with Media Files Directly
 --------------------------------
@@ -130,6 +128,7 @@ Static Files Collection and Serving
 - Static files are typically collected from ADR’s installed packages during setup by calling:
 
   ``adr.setup(collect_static=True)``
+
 - This process copies necessary CSS, JS, fonts, and icons into the configured static directory.
 - Static files must be served by your web server or framework to enable proper report rendering.
 - The static URL prefix (e.g., ``/static/``) must correspond to your web server configuration.
@@ -138,8 +137,8 @@ In-Memory Mode and Temporary Files
 ----------------------------------
 
 - When using ADR in in-memory mode (``in_memory=True``), media and static files are stored in temporary directories.
-- These directories are automatically cleaned up when ADR closes, so media files do not persist beyond the session.
-- This mode is useful for testing or transient report generation but not for production.
+- These directories are automatically cleaned up when ADR closes, so files do not persist beyond the session.
+- This mode is useful for testing or transient report generation.
 
 Best Practices
 --------------

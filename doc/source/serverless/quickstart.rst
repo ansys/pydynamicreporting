@@ -35,7 +35,6 @@ Create report items such as text or tables tied to the default session and datas
         tags="section=intro",
         source="quickstart-example",
     )
-    item.save()
 
 Building Templates
 ------------------

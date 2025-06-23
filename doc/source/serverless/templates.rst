@@ -78,7 +78,10 @@ Template Attributes and Methods
 
 Templates have several important properties and methods:
 
+- ``guid``: Unique identifier for the template.
 - ``name``: The template’s unique name.
+- ``date``: The date when the template was created.
+- ``tags``: A string of tags for categorization and filtering.
 - ``params``: JSON-encoded string storing rendering parameters and properties.
 - ``item_filter``: Query string filter to select items included in this template.
 - ``parent``: Reference to the parent template or None for root templates.
@@ -102,11 +105,11 @@ Template Parameters
 
 Each template stores configuration and state in its ``params`` field, a JSON string representing:
 
-- HTML content or raw strings (e.g., ``"HTML"``)
+- HTML header (e.g., ``"HTML"``)
 - Layout-specific options (e.g., column counts, widths)
 - Filter parameters and modes controlling which Items are included
 - Sorting options (fields, order, selection)
-- Custom properties for configuration and behavior
+- Other custom properties for configuration and behavior
 
 You can manipulate these through provided methods:
 
@@ -282,10 +285,6 @@ Example: Creating a Nested Template Structure
     results_panel.set_filter("A|i_tags|cont|section=results;")
     results_panel.save()
 
-    top_template.children.append(results_panel)
-    top_template.save()
-
-
 Rendering Templates
 ------------------
 
@@ -319,7 +318,6 @@ Lifecycle Notes
 
 - Templates must be saved to persist changes.
 - Parent templates must be saved before saving children.
-- Children templates must be saved before their parent saves can complete successfully.
 - Deleting a template typically requires handling or deleting its children to avoid orphaned templates.
 
 Exceptions and Validation
@@ -327,7 +325,7 @@ Exceptions and Validation
 
 - Creating or fetching templates with missing or invalid fields raises validation errors.
 - Attempting to instantiate the base ``Template`` class directly raises an error.
-- Filters using restricted keys (like ``t_types|``) are disallowed on subclasses.
+- Filters using keys mentioning the type (like ``t_types|``) are disallowed on subclasses.
 - Invalid parent references or child types will raise type or integrity errors during saving.
 - Only top-level templates (parent=None) can be copied between databases.
 - Templates must have their parents and children saved before saving themselves to ensure integrity.
@@ -341,6 +339,3 @@ Summary
 Templates are the backbone of report structure in Serverless ADR. They let you create
 rich, dynamic, and highly customizable reports by defining layouts and generators,
 setting filters and parameters, and nesting templates to build complex hierarchical reports.
-
-Next, move on to the :doc:`rendering` guide to learn how to convert templates and items
-into final HTML reports for presentation or web serving.

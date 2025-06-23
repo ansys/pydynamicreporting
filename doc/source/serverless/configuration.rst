@@ -193,50 +193,6 @@ Examples
     )
     adr.setup(collect_static=True)
 
-**Multi-database PostgreSQL and SQLite setup:**
-
-.. code-block:: python
-
-    database_config = {
-        "default": {
-            "ENGINE": "postgresql",
-            "NAME": "adr_db",
-            "USER": "adr_user",
-            "PASSWORD": "password",
-            "HOST": "localhost",
-            "PORT": "5432",
-        },
-        "sqlite_local": {
-            "ENGINE": "sqlite3",
-            "NAME": r"C:\Reports\DB\local.sqlite3",
-        },
-    }
-
-    adr = ADR(
-        ansys_installation=r"/opt/ansys",
-        databases=database_config,
-        media_directory=r"/opt/reports/media",
-        static_directory=r"/opt/reports/static",
-        media_url="/media/",
-        static_url="/static/",
-    )
-    adr.setup()
-
-**Docker-based Ansys installation:**
-
-.. code-block:: python
-
-    adr = ADR(
-        ansys_installation="docker",
-        docker_image="ghcr.io/ansys-internal/nexus_dev",
-        db_directory=r"C:\Reports\DB",
-        media_directory=r"C:\Reports\Media",
-        static_directory=r"C:\Reports\Static",
-        media_url="/media/",
-        static_url="/static/",
-    )
-    adr.setup()
-
 Troubleshooting
 ---------------
 

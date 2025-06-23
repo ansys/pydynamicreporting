@@ -21,7 +21,7 @@ Generating Embed-Ready HTML
 ---------------------------
 
 Use the ``render_report()`` method of the ADR instance to render a complete
-report or a subset of it as HTML.
+report.
 
 .. code-block:: python
 
@@ -42,8 +42,6 @@ You can also render individual report items using their ``render()`` method:
 .. code-block:: python
 
     item = adr.create_item(String, name="summary_text", content="Summary content here.")
-    item.save()
-
     html_snippet = item.render(context={"plotly": 0})
 
 Embedding Partial Templates or Sections
@@ -63,7 +61,7 @@ Integration Tips
 
 - Make sure your embedded HTML includes references to static and media URLs
   configured during ADR setup so that assets like images and stylesheets
-  load correctly.
+  load correctly and your web server is configured to serve them.
 
 - Use the ``context`` parameter to pass additional context variables
   needed for rendering.
@@ -81,6 +79,7 @@ Example with Flask:
 
 .. code-block:: python
 
+    from ansys.dynamicreporting.core.serverless import ADR
     from flask import Flask, render_template_string
 
     app = Flask(__name__)
@@ -88,8 +87,6 @@ Example with Flask:
 
     @app.route("/embedded-report")
     def embedded_report():
-        from ansys.dynamicreporting.core.serverless import ADR
-
         adr = ADR.get_instance()
         my_app_html = "<!-- Your app's HTML here -->"
         html = adr.render_report(name="My Simulation Report")
@@ -112,7 +109,7 @@ Security Considerations
 
 - Validate and sanitize any dynamic input used in filters or templates
   to avoid injection attacks.
-- Limit exposure of internal data by controlling which templates or items
+- Limit exposure of data by controlling which templates or items
   are accessible for embedding.
 
 Summary
