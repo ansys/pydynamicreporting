@@ -1,0 +1,6 @@
+height
+======
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.height

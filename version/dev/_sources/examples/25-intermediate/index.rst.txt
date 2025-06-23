@@ -1,0 +1,86 @@
+
+
+.. _sphx_glr_examples_25-intermediate:
+
+.. _intermediate-gallery:
+
+Intermediate examples
+=====================
+
+Intermediate examples show how to use PyDynamicReporting
+to query an Ansys Dynamic Reporting database, modify its items,
+and get their corresponding web components.
+
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Tagging is an important feature of Ansys Dynamic Reporting. Adding tags to items allows the database to organize them and the templates to create reports in a precise and effective manner. This example shows how to add, modify, query, and delete tags on items.">
+
+.. only:: html
+
+  .. image:: /examples/25-intermediate/images/thumb/sphx_glr_00-tagging_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_25-intermediate_00-tagging.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Tagging</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="The Ansys Dynamic Reporting database can contain any number of items, from a few to tens of thousands. To handle all this data, the queryansys.dynamicreporting.core.Service.query&gt; method allows you to quickly slice the database to select a subset of items.">
+
+.. only:: html
+
+  .. image:: /examples/25-intermediate/images/thumb/sphx_glr_01-queries_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_25-intermediate_01-queries.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Item queries</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Ansys Dynamic Reporting provides a seamless solution for serializing and deserializing report templates. It allows you to export templates as local JSON files and rebuild them through JSON imports. This section describes the process of converting a report template and loading it back in.">
+
+.. only:: html
+
+  .. image:: /examples/25-intermediate/images/thumb/sphx_glr_02-json_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_25-intermediate_02-json.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Import or export report template using JSON</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /examples/25-intermediate/00-tagging
+   /examples/25-intermediate/01-queries
+   /examples/25-intermediate/02-json
+
