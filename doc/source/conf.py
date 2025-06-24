@@ -8,7 +8,7 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 from ansys.dynamicreporting.core import __version__
 
-cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com/")
+cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com")
 """The canonical name of the webpage hosting the documentation."""
 
 # Project information
