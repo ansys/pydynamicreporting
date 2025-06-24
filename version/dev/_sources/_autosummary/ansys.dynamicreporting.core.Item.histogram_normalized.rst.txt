@@ -1,0 +1,6 @@
+histogram\_normalized
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.histogram_normalized

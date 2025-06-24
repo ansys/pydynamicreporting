@@ -1,0 +1,86 @@
+
+
+.. _sphx_glr_examples_00-basic:
+
+.. _basic-gallery:
+
+Examples
+--------
+
+Introductory examples show how to use PyDynamicReporting to create or connect to
+an Ansys Dynamic Reporting service, create a database for a new service, and
+create and visualize items in a database.
+
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows how to use PyDynamicReporting to create an Ansys Dynamic Reporting service, create a database for this service, and create items in this database.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_00-create_db_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_00-create_db.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Create a database</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows how to start an Ansys Dynamic Reporting service via a Docker image, create a second instance of the Service class, and connect it to the already running service. It then shows how to create and modify items in the original database with this new instance.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_01-connect_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_01-connect.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Connect services</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows how to start an Ansys Dynamic Reporting service via a Docker image and create different plot items. The example focuses on showing how to use the API to generate different plot types.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_02-plottype_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_02-plottype.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Plot types</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /examples/00-basic/00-create_db
+   /examples/00-basic/01-connect
+   /examples/00-basic/02-plottype
+
