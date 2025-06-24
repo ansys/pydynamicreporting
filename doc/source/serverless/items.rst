@@ -41,7 +41,6 @@ Items automatically link to the current default session and dataset unless speci
         content="This simulation demonstrates fluid flow around a wing.",
         tags="section=summary project=wing_sim",
     )
-    string_item.save()
 
     # Create a table item with data
     data = np.array(
@@ -71,7 +70,10 @@ Item Properties and Metadata
 
 Items support several useful properties and metadata fields:
 
+- **guid**: Unique identifier for the item, automatically generated.
 - **name**: Unique identifier for the item within the dataset.
+- **type**: The item type (e.g., `string`, `table`, etc.).
+- **date**: Timestamp indicating when the item was created.
 - **content**: The primary payload of the item, type-dependent.
 - **tags**: A space-separated string of key or key=value tags for querying and filtering.
 - **source**: String to track the data origin or generating process.
@@ -94,7 +96,6 @@ Example: Creating and saving an image item
         content="path/to/wing_profile.png",
         tags="section=images project=wing_sim",
     )
-    image_item.save()
 
 After saving, the file is copied into the configured media directory. You can access the uploaded file's storage path using the `file_path` property:
 
@@ -106,7 +107,8 @@ After saving, the file is copied into the configured media directory. You can ac
 This path points to the location within the media directory configured during ADR setup.
 You can use this path for verification, further processing, or serving the media file in your application.
 
-When rendering reports or templates that include media items, the HTML references media files using relative URLs, typically prefixed by the configured media URL (default is `/media/`):
+When rendering reports or templates that include media items, the HTML references media files using relative URLs,
+typically prefixed by the configured media URL (default is `/media/`):
 
 .. code-block:: html
 
@@ -118,7 +120,10 @@ Ensure your web server is configured to serve these media URLs from the media di
 Summary:
 - Set the `content` of file-based items to the local file path before saving.
 - After saving, `file_path` gives the full path to the uploaded media file.
+- When the item is loaded again from the database, `content` will be the relative path to the media file.
 - Rendered reports use relative media URLs; configure your web server accordingly.
+- Use the `media_url` property to get the URL prefix for serving media files.
+- The media URL is typically `/media/` by default.
 
 Rendering Items
 ---------------

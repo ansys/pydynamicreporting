@@ -19,15 +19,14 @@ want to:
 
 - Create, manage, and render reports locally using Python
 - Avoid setting up a centralized ADR service or HTTP connection
-- Maintain full fidelity with the ADR schema (items, templates, layout logic)
-- Output HTML content and media assets for web apps, automation, or
-  documentation pipelines
+- Maintain full fidelity with the ADR schema (items, templates, etc.)
+- Output HTML content and media assets for web and desktop apps.
 
 Serverless ADR is ideal for:
 
 - Local, file-based workflows (e.g., building offline reports)
+- Embedding reports in web or desktop applications
 - Use in batch scripts, Python notebooks, or simulations
-- Building and verifying templates before pushing to production ADR services
 
 Key features
 ============

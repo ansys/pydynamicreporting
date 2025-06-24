@@ -87,20 +87,19 @@ Example: Threading with Serverless ADR
         for t in threads:
             t.join()
 
-Common Pitfalls and Solutions
------------------------------
+Serverless ADR Usage Within Django Apps
+--------------------------------------
 
-- **Error: "ADR has not been set up" in worker processes**
-
-  _Cause_: ``ADR.setup()`` was not called in the worker process.
-
-  _Solution_: Call ``adr.setup()`` early in each new process, as shown above.
-
-- **Race conditions or inconsistent state due to multiple ``setup()`` calls**
-
-  _Cause_: Concurrent calls to ``setup()`` from multiple threads.
-
-  _Solution_: Call ``setup()`` only once in the main thread before spawning workers.
+- Serverless ADR internally configures Django settings and environment variables at the
+  process level during ``ADR.setup()``.
+- Because Django settings are designed to be configured once per process, **attempting
+  to initialize Serverless ADR inside an existing Django application causes conflicts.**
+- Specifically, setting up Serverless ADR tries to configure Django a second time, which
+  is unsupported and results in errors or unpredictable behavior.
+- This means **embedding or using Serverless ADR as a Django app within another Django
+  project is not currently supported and strongly discouraged.**
+- If you require integration, consider separating Serverless ADR usage into a dedicated
+  process or microservice to avoid Django settings conflicts.
 
 Summary and Best Practices
 --------------------------
@@ -109,7 +108,8 @@ Summary and Best Practices
 - In multiprocessing scenarios, call ``setup()`` separately in each spawned process.
 - Avoid calling ``setup()`` multiple times or concurrently within the same process.
 - Share the ADR instance across threads within a process after setup completes.
+- Avoid embedding Serverless ADR within other Django apps due to Django configuration conflicts.
 - If unsure whether setup is needed, check ``adr.is_setup`` before calling.
 
 By following these guidelines, you ensure stable and consistent Serverless ADR usage
-in complex multi-threaded or multi-process environments.
+in complex multi-threaded or multi-process environments without risking Django conflicts.

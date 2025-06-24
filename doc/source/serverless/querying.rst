@@ -60,13 +60,14 @@ Examples
     matching_items = Item.find(query=query_str)
     print(f"Found {len(matching_items)} matching items")
 
-**Use the static ADR query method to find Sessions with a name:**
+**Use the ADR query method to find Sessions with a name:**
 
 .. code-block:: python
 
     from ansys.dynamicreporting.core.serverless import ADR, Session
 
-    sessions = ADR.query(Session, query="A|s_name|eq|Test Session;")
+    adr = ADR.get_instance()
+    sessions = adr.query(Session, query="A|s_name|eq|Test Session;")
     for s in sessions:
         print(s.guid, s.date)
 
@@ -138,7 +139,7 @@ Working with Query Results
 --------------------------
 
 - ``get()`` returns a single model instance.
-- ``filter()``, ``find()``, and ``ADR.query()`` return an ``ObjectSet`` that behaves like a list.
+- ``filter()``, ``find()``, and ``ADR.query()`` return an ``ObjectSet`` that behaves like a list and can be cast to a list or iterated over.
 
 You can iterate over results, use ``len()``, or index them:
 
@@ -175,7 +176,6 @@ Summary
 Querying in Serverless ADR allows precise and flexible data retrieval using:
 
 - Field filters for common attributes
-- Tag substring filters
 - Powerful ADR query language strings
 - Subclass-specific automatic type filtering
 
