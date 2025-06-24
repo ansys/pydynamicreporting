@@ -10,7 +10,7 @@ Key Benefits
 - Runs entirely within your Python process — no external server needed.
 - Supports both SQLite and PostgreSQL databases.
 - Uses the same core schema as the traditional ADR service.
-- Enables offline report generation with full fidelity (items, templates, layouts).
+- Enables offline report generation with full fidelity (items, templates, etc.).
 - Suitable for local workflows, batch processing, and embedding in Python applications.
 - Fully backwards compatible with the service-based ADR API.
 

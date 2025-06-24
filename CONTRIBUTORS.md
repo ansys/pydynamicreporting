@@ -15,6 +15,7 @@
 * [Om Patel](https://github.com/ompat5)
 * [Phillip Chen](https://github.com/phchen95)
 * [Randy Frank](https://github.com/randallfrank)
+* [Revathy Venugopal](https://github.com/Revathyvenugopal162)
 * [Roberto Pastor Muela](https://github.com/RobPasMue)
 * [Visesh Rajendraprasad](https://github.com/viseshrp)
 * [Yuanrui Zhang](https://github.com/zhang-yuanrui)
