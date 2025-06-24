@@ -41,9 +41,10 @@ dependencies = [
     "django-guardian~=2.4",
     "tzlocal~=5.0",
     "numpy>=1.23.5,<3",
-    "python-pptx==0.6.19",
+    "python-pptx>=0.6.19,<1",
     "pandas>=2.0",
     "statsmodels>=0.14",
+    "scipy<=1.15.3",  # breaks ADR if not included. Remove when statsmodels is updated
     "docutils>=0.21",
     "psycopg[binary]>=3.2.3",
 ]

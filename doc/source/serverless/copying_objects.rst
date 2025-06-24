@@ -134,7 +134,7 @@ Best Practices
 --------------
 
 - Ensure the target database is properly configured and accessible before copying.
-- Copy related sessions and datasets automatically by copying items or templates.
+- Copy related sessions and datasets automatically by copying items.
 - Always use ``test=True`` initially to preview the number of objects to be copied.
 - Ensure media directories have sufficient space and permissions.
 - Use descriptive ADR query strings to limit copy scope.
