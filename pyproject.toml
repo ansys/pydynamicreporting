@@ -43,7 +43,7 @@ dependencies = [
     "numpy>=1.23.5,<3",
     "python-pptx==0.6.19",
     "pandas>=2.0",
-    "statsmodels==0.14.3",  # later versions break ADR
+    "statsmodels==0.14.2",  # later versions break ADR
     "docutils>=0.21",
     "psycopg[binary]>=3.2.3",
 ]
