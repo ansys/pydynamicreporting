@@ -8,8 +8,7 @@ In this API, a **Session** represents a logical grouping or “push” of data f
 (such as a solver or post-processor) into the ADR system. It captures metadata about when, where,
 and how the data was ingested.
 
-A **Dataset** contains the actual simulation or analysis data associated with a Session. This could
-include files, tables, images, or other artifacts generated during the simulation.
+A **Dataset** contains the metadata about actual simulation or analysis data associated with a Session.
 
 By associating report items with Sessions and Datasets, the API maintains clear context and
 provenance, enabling organized, meaningful reports that trace back to the original data source.
@@ -20,10 +19,9 @@ flexible and efficient report generation workflows.
 Key Entities
 ------------
 
-- **Session**: Stores metadata about the session or logical grouping of data imported into ADR during a single
-data push or analysis run, such as date, hostname, platform, and application version.
-- **Dataset**: Stores metadata about the dataset or collection of simulation or analysis data, such as files,
-formats, and element counts.
+- **Session**: Stores metadata about the session or logical grouping of data imported into ADR during a single data push or analysis run, such as date, hostname, platform, and application version.
+
+- **Dataset**: Stores metadata about the dataset or collection of simulation or analysis data, such as files, formats, and element counts.
 
 Session and Dataset Properties and Metadata
 -------------------------------------------
@@ -31,21 +29,35 @@ Session and Dataset Properties and Metadata
 Sessions and Datasets include important properties and metadata fields that help organize and contextualize your data:
 
 - **Session properties:**
+
   - **guid**: Unique identifier for the session.
+
   - **date**: Timestamp of when the session was created or recorded.
+
   - **hostname**: The machine or environment where the data push originated.
+
   - **platform**: Operating system or platform information.
+
   - **application**: Name of the application or tool that created the session.
+
   - **version**: Version of the application or tool.
+
   - **tags**: Space-separated string of key or key=value tags for filtering and classification.
 
 - **Dataset properties:**
+
   - **guid**: Unique identifier for the dataset.
+
   - **filename**: Name of the data file associated with the dataset.
+
   - **dirname**: Directory path or location related to the dataset.
+
   - **format**: Data format descriptor (e.g., CDB, CSV).
+
   - **numparts**: Number of parts or segments in the dataset.
+
   - **numelements**: Number of elements (e.g., mesh elements) in the dataset.
+
   - **tags**: Space-separated string of key or key=value tags for filtering and classification.
 
 Both Sessions and Datasets play a key role in associating your report items with the proper data context and provenance.
@@ -139,7 +151,7 @@ Exceptions and Validation
 
 - Creating or modifying sessions and datasets will raise errors if required fields
   are missing or invalid.
-- Querying items with incorrect syntax or unsupported operations raises an `ADRException`.
+- Querying items with incorrect syntax or unsupported operations raises an ``ADRException``.
 - Fetching non-existent sessions or datasets by GUID raises a ``DoesNotExist`` error.
 - Multiple objects returned for a single fetch raises a ``MultipleObjectsReturned`` error.
 
