@@ -13,12 +13,14 @@ from ansys.dynamicreporting.core.utils import report_utils as ru
 
 def get_dpf_model_field_example():
     file_path = examples.find_electric_therm()
-    print(f"Using file: {file_path}")
-    print(f"DPF operator name!!!!!!!: {dpf.dpf_operator.available_operator_names()}")
+
+    operators = dpf.dpf_operator.available_operator_names()
+    operator_size = len(set(operators))
+    mapdls = list(filter(lambda name: "mapdl" in name, operators))
+    print(f"operator size!!!!!!!!: {operator_size}")
+    print(f"mapdl size: {len(mapdls)}\nmapdl operators*************: {mapdls}")
     # server_data_path = dpf.upload_file_in_tmp_folder(file_path)
     model = dpf.Model(file_path)
-    print(f"Model created: {model}")
-    print(f"Model results: {model.results}")
 
     results = model.results
     electric_potential = results.electric_potential()
