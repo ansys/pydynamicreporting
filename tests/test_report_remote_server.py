@@ -1,8 +1,8 @@
 import logging
-from os import environ
-from random import randint
 import re
 import uuid
+from os import environ
+from random import randint
 
 import pytest
 import requests
@@ -12,7 +12,10 @@ from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
-from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
+from ansys.dynamicreporting.core.utils.exceptions import (
+    BadRequestError,
+    DBCreationFailedError,
+)
 
 
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:

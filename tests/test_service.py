@@ -1,9 +1,9 @@
 """This module allows pytest to perform unit testing."""
 
+import warnings
 from os import path
 from pathlib import Path
 from random import randint
-import warnings
 
 import pytest
 

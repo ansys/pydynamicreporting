@@ -1,6 +1,6 @@
 import os
-from os.path import join
 import platform
+from os.path import join
 
 import pytest
 

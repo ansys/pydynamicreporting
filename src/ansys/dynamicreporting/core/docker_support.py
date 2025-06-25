@@ -15,11 +15,11 @@ Examples:
 """
 
 import os
-from pathlib import Path
 import random
 import re
 import string
 import tarfile
+from pathlib import Path
 
 import docker
 

@@ -1,22 +1,26 @@
-from dataclasses import field
-from datetime import datetime
-from html.parser import HTMLParser as BaseHTMLParser
 import io
-from pathlib import Path
 import pickle
 import platform
 import uuid
+from dataclasses import field
+from datetime import datetime
+from html.parser import HTMLParser as BaseHTMLParser
+from pathlib import Path
 
+import numpy
 from django.core.files import File as DjangoFile
 from django.template.loader import render_to_string
 from django.utils import timezone
-import numpy
 from PIL import Image as PILImage
 
 from ..adr_utils import table_attr
 from ..exceptions import ADRException
 from ..utils import report_utils
-from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
+from ..utils.geofile_processing import (
+    file_is_3d_geometry,
+    get_avz_directory,
+    rebuild_3d_geometry,
+)
 from ..utils.report_utils import is_enhanced
 from .base import BaseModel, StrEnum, Validator
 

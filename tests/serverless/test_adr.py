@@ -1,14 +1,11 @@
+import uuid
 from pathlib import Path
 from random import random as r
-import uuid
 
 import numpy as np
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import (
-    ADRException,
-    InvalidPath,
-)
+from ansys.dynamicreporting.core.exceptions import ADRException, InvalidPath
 from ansys.dynamicreporting.core.serverless import ADR
 
 
@@ -1059,7 +1056,11 @@ def test_copy_items_invalid_database(adr_serverless):
 
 @pytest.mark.ado_test
 def test_copy_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+    from ansys.dynamicreporting.core.serverless import (
+        BasicLayout,
+        PanelLayout,
+        Template,
+    )
 
     tag = "dp=test_copy_templates"
     template_name = "test_copy_template_report"
@@ -1075,7 +1076,11 @@ def test_copy_templates(adr_serverless):
 
 @pytest.mark.ado_test
 def test_copy_templates_children(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+    from ansys.dynamicreporting.core.serverless import (
+        BasicLayout,
+        PanelLayout,
+        Template,
+    )
 
     tag = "dp=test_copy_templates_children"
     template_name = "test_copy_templates_children_report"

@@ -1,5 +1,5 @@
-from functools import partial
 import os
+from functools import partial
 
 try:
     from PyQt5 import QtCore, QtGui, QtWebEngineWidgets

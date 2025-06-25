@@ -1,9 +1,9 @@
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from uuid import uuid4
 
-from PIL import Image as PILImage
 import pytest
+from PIL import Image as PILImage
 
 from ansys.dynamicreporting.core.exceptions import ADRException
 

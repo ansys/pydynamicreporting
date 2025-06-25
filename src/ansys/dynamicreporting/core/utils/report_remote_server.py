@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import os.path
-from pathlib import Path
 import pickle
 import platform
 import shutil
@@ -26,8 +25,9 @@ import subprocess
 import sys
 import tempfile
 import time
-from urllib.parse import urlparse
 import uuid
+from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -884,7 +884,9 @@ class Server:
             query = {}
         query["print"] = "html"
         directory_path = os.path.abspath(directory_name)
-        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
+        from ansys.dynamicreporting.core.utils.report_download_html import (
+            ReportDownloadHTML,
+        )
 
         url = self.build_url_with_query(report_guid, query, item_filter)
         # ask the server for the Ansys version number. It will generally know it.

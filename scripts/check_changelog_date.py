@@ -3,9 +3,9 @@
 Check release date for a given version in CHANGELOG.md.
 """
 
+import sys
 from datetime import date
 from pathlib import Path
-import sys
 
 CHANGELOG_PATH = Path("CHANGELOG.md")
 

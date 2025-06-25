@@ -1,15 +1,15 @@
-from collections.abc import Iterable
 import copy
-from datetime import datetime
 import os
-from pathlib import Path
 import platform
 import shutil
 import sys
 import tempfile
-from typing import Any
 import uuid
 import warnings
+from collections.abc import Iterable
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key

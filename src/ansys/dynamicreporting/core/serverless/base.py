@@ -1,14 +1,14 @@
+import importlib
+import inspect
+import shlex
+import uuid
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
 from enum import Enum
-import importlib
-import inspect
 from itertools import chain
-import shlex
 from typing import Any, get_args, get_origin
-import uuid
 
 from django.core.exceptions import (
     FieldDoesNotExist,

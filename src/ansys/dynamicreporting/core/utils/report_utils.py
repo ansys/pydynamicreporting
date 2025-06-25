@@ -1,6 +1,5 @@
 import array
 import base64
-from html.parser import HTMLParser as BaseHTMLParser
 import io
 import json
 import os
@@ -9,10 +8,11 @@ import platform
 import socket
 import sys
 import tempfile
+from html.parser import HTMLParser as BaseHTMLParser
 
+import requests
 from PIL import Image
 from PIL.TiffTags import TAGS
-import requests
 
 try:
     import ceiversion
