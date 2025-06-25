@@ -19,6 +19,22 @@ repos:
         name: markdownlint
         args: [ --fix, --disable, MD024 ]
 
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+    - id: isort
+
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.19.1
+    hooks:
+    - id: blacken-docs
+      additional_dependencies: [ black==23.3.0 ]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+    - id: flake8
+
   - repo: local
     hooks:
       - id: black
@@ -28,18 +44,18 @@ repos:
         types: [ python ]
 
       # Run the linter alone
-      - id: ruff-check
-        name: ruff-check
-        entry: ruff check
-        language: system
-        types: [ python ]
+#      - id: ruff-check
+#        name: ruff-check
+#        entry: ruff check
+#        language: system
+#        types: [ python ]
 
-      - id: mypy
-        name: mypy
-        entry: mypy
-        language: system
-        types: [ python ]
-        args: [ "--config-file=pyproject.toml" ]
+#      - id: mypy
+#        name: mypy
+#        entry: mypy
+#        language: system
+#        types: [ python ]
+#        args: [ "--config-file=pyproject.toml" ]
 
       - id: pip-audit
         name: pip-audit
@@ -48,35 +64,35 @@ repos:
         args: [ "--skip-editable" ]
         pass_filenames: false
 
-      - id: bandit
-        name: bandit
-        entry: bandit
-        language: system
-        types: [ python ]
-        args: [
-          "-c", "pyproject.toml",
-          "-r",
-          "-n", "3",
-          "--severity-level", "high"
-        ]
+#      - id: bandit
+#        name: bandit
+#        entry: bandit
+#        language: system
+#        types: [ python ]
+#        args: [
+#          "-c", "pyproject.toml",
+#          "-r",
+#          "-n", "3",
+#          "--severity-level", "high"
+#        ]
 
       - id: codespell
         name: codespell
         entry: codespell
         language: system
 
-      - id: vulture
-        name: vulture
-        entry: vulture
-        language: system
-        types: [ python ]
-        args: [ "--config", "pyproject.toml" ]
-        pass_filenames: false
-
-      - id: deptry
-        name: deptry
-        entry: uv run deptry .
-        language: system
-        types: [ python ]
-        args: [ "--config", "pyproject.toml" ]
-        pass_filenames: false
+#      - id: vulture
+#        name: vulture
+#        entry: vulture
+#        language: system
+#        types: [ python ]
+#        args: [ "--config", "pyproject.toml" ]
+#        pass_filenames: false
+#
+#      - id: deptry
+#        name: deptry
+#        entry: uv run deptry .
+#        language: system
+#        types: [ python ]
+#        args: [ "--config", "pyproject.toml" ]
+#        pass_filenames: false

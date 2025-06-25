@@ -260,6 +260,9 @@ max-complexity = 10
 known-first-party = ["ansys", "tests"]
 force-sort-within-sections = true
 
+[tool.isort]
+profile = "black"
+
 [tool.black]
 line-length = 100
 target-version = ["py310"]
