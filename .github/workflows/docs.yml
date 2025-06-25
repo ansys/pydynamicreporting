@@ -52,6 +52,6 @@ jobs:
         with:
           github-token: ${{ github.token }}
           ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
-          notification-summary: CI build failure
+          notification-summary: Release documentation build failure
           notification-color: dc3545
           timezone: America/New_York
