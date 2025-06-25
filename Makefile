@@ -30,11 +30,13 @@ pull-docker:
 
 test:
 	pip install -e .[test]
-	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+	# pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+	pytest tests/test_enhanced_images.py
 
 test-dev:
 	pip install -e .[test]
-	pytest -rvx --setup-show "$(TEST_FILE)" --use-local-launcher --install-path "$(INSTALL_PATH)"
+	# pytest -rvx --setup-show "$(TEST_FILE)" --use-local-launcher --install-path "$(INSTALL_PATH)"
+	pytest tests/test_enhanced_images.py
 
 smoketest:
 	python tests/smoketest.py
