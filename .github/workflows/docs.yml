@@ -42,7 +42,7 @@ jobs:
 
   ci-failure:
     name: Teams notify on failure
-    if: failure() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    if: failure()
     needs: [ docs, upload_docs_release ]
     runs-on: ubuntu-latest
     steps:
