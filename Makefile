@@ -91,6 +91,12 @@ clean: ## Clean build artifacts
 test-clean:
 	uv run python scripts/test_cleanup.py
 
+docs:
+	$(MAKE) -C doc html
+
+docs-clean:
+	$(MAKE) -C doc clean
+
 .PHONY: help
 help:
 	uv run python -c "import re; \

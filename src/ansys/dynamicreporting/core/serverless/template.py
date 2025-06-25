@@ -53,7 +53,7 @@ class Template(BaseModel):
         compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)
-    _properties: tuple = tuple()  # todo: add properties of each type ref: report_objects
+    _properties: tuple = tuple()  # todo: add properties for each type ref: report_objects
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
     _type_registry = {}
