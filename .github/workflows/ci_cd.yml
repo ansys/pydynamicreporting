@@ -118,21 +118,21 @@ jobs:
         shell: bash
         run: |
             ls -al dpf-standalone/v251
-            # ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
+            ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre1/dpf/bin/linx64/libmapdlOperatorsCore.so
 
       - name: Run pytest
         run: |
-          # echo $ANSYS_ROOT_FOLDER
+          echo $ANSYS_ROOT_FOLDER
           pip install -e .[test]
           echo "====================="
           pip freeze
           echo "====================="
-          #   ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
+          ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre1/dpf/bin/linx64/libmapdlOperatorsCore.so
           echo "====================="
           pytest tests/test_enhanced_images.py
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
-          #   ANSYS_ROOT_FOLDER: ${{ github.workspace }}/dpf-standalone/v251/ansys/dpf/server_2025_1_pre0
+          ANSYS_ROOT_FOLDER: ${{ github.workspace }}/dpf-standalone/v251/ansys/dpf/server_2025_1_pre1
 
     #   - name: Run pytest
     #     run: make test
