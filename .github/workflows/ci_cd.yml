@@ -126,6 +126,8 @@ jobs:
           echo "====================="
           pip freeze
           echo "====================="
+          ldd dpf-standalone/v252/ansys/dpf/server_2025_2_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
+          echo "====================="
           pytest tests/test_enhanced_images.py
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
