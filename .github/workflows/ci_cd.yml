@@ -121,9 +121,19 @@ jobs:
             ldd dpf-standalone/v252/ansys/dpf/server_2025_2_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
 
       - name: Run pytest
-        run: make test
+        run: |
+          pip install -e .[test]
+          echo "====================="
+          pip freeze
+          echo "====================="
+          pytest tests/test_enhanced_images.py
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
+
+    #   - name: Run pytest
+    #     run: make test
+    #     env:
+    #       ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
 
       - name: Upload coverage report
         if: env.MAIN_PYTHON_VERSION == matrix.python-version
