@@ -118,7 +118,7 @@ jobs:
         shell: bash
         run: |
             ls -al dpf-standalone/v252
-            ldd dpf-standalone/v252/aisol/bin/linx64/libmapdlOperatorsCore.so
+            ldd dpf-standalone/v252/ansys/dpf/server_2025_2_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
 
       - name: Run pytest
         run: make test
