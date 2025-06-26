@@ -113,6 +113,12 @@ jobs:
           dpf-standalone-TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           standalone_suffix: ${{ env.DPF_STANDALONE_SUFFIX }}
           ANSYS_VERSION : ${{ env.ANSYS_VERSION }}
+    
+      - name: "Debug Operator"
+        shell: bash
+        run: |
+            ls -al dpf-standalone/v252
+            ldd dpf-standalone/v252/aisol/bin/linx64/libmapdlOperatorsCore.so
 
       - name: Run pytest
         run: make test
