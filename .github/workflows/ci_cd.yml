@@ -20,7 +20,7 @@ env:
   MAIN_PYTHON_VERSION: '3.13'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
-  ANSYS_VERSION: '251'
+  ANSYS_VERSION: '252'
   DPF_STANDALONE_SUFFIX: ''
 
 jobs:
@@ -117,10 +117,18 @@ jobs:
       - name: "Debug Operator"
         shell: bash
         run: |
-            ls -al dpf-standalone/v251
-            ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre1/dpf/bin/linx64/libmapdlOperatorsCore.so
+            ls -al dpf-standalone/v252
+            ldd dpf-standalone/v252/ansys/dpf/server_2025_2_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
             echo "!!!!!!!!!!!!!!!!!"
-            ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre1/aisol/dll/linx64/libDataProcessingCore.so
+            ldd dpf-standalone/v252/ansys/dpf/server_2025_2_pre0/aisol/dll/linx64/libDataProcessingCore.so
+
+      - name: "Update packages"
+        shell: bash
+        run: |
+            apt update && apt install -y
+            libx11-dev \
+            libgl1-mesa-dev \
+            libxrender1 \
 
       - name: "Install python dependencies"
         run: pip install -e .[test]
@@ -142,12 +150,12 @@ jobs:
           echo "====================="
           pip freeze
           echo "====================="
-          ldd dpf-standalone/v251/ansys/dpf/server_2025_1_pre1/dpf/bin/linx64/libmapdlOperatorsCore.so
+          ldd dpf-standalone/v252/ansys/dpf/server_2025_2_pre0/dpf/bin/linx64/libmapdlOperatorsCore.so
           echo "====================="
           pytest tests/test_enhanced_images.py
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
-          ANSYS_ROOT_FOLDER: ${{ github.workspace }}/dpf-standalone/v251/ansys/dpf/server_2025_1_pre1
+          ANSYS_ROOT_FOLDER: ${{ github.workspace }}/dpf-standalone/v252/ansys/dpf/server_2025_2_pre0
 
     #   - name: Run pytest
     #     run: make test
