@@ -130,10 +130,19 @@ jobs:
       - name: "Install python dependencies"
         run: pip install -e .[test]
 
+      - uses: jannekem/run-python-script-action@v1
+        with:
+          script: |
+            from ansys.dpf import core as dpf
+            try:
+              dpf.load_library("mapdlOperatorsCore", "mapdl")
+            except Exception as e:
+              print(f"!!!!!!!!!!!!!!!!!Error occurred while loading library: {e}")
+        name: "Run DPF python script"
+
       - name: Run pytest
         run: |
           echo $ANSYS_ROOT_FOLDER
-          pip install -e .[test]
           echo "====================="
           pip freeze
           echo "====================="
