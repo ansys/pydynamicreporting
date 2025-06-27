@@ -17,6 +17,7 @@ import dateutil
 import dateutil.parser
 import pytz
 
+from ..serverless.item import HTMLParser
 from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
@@ -1079,10 +1080,35 @@ class ItemREST(BaseRESTObject):
         self._payloaddata = ""
 
     def set_payload_string(self, s):
+        if not isinstance(s, str):
+            raise TypeError("Payload must be a string.")
+    
+        if not s.strip():
+            raise ValueError("Payload string cannot be empty or whitespace.")
+        
+        try:
+            s.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError("Payload string must be a valid UTF-8 string.")
+        
         self.type = ItemREST.type_str
         self._payloaddata = s
 
     def set_payload_html(self, s):
+        if not isinstance(s, str):
+            raise TypeError("Payload must be a string containing HTML.")
+
+        if not s.strip():
+            raise ValueError("Payload HTML string cannot be empty or whitespace.")
+        
+        try:
+            s.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError("HTML content must be a valid UTF-8 string.")
+        
+        if not HTMLParser().validate(s):
+            raise ValueError("Expected content to contain valid HTML")
+        
         self.type = ItemREST.type_html
         self._payloaddata = s
 
@@ -1220,6 +1246,9 @@ class ItemREST(BaseRESTObject):
         shape = array.shape
         size = array.size
 
+        if size == 0:
+            raise ValueError("Table array must not be empty.")
+
         nrows = 0
         ncols = 0
         # labels
@@ -1240,6 +1269,11 @@ class ItemREST(BaseRESTObject):
             array.shape = shape
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
+        
+        if rowlbls and len(rowlbls) != array.shape[0]:
+            raise ValueError("Number of row labels does not match number of rows in the array.")
+        if collbls and len(collbls) != array.shape[1]:
+            raise ValueError("Number of column labels does not match number of columns in the array.")
 
         # update after validation
         value.update(
@@ -1335,20 +1369,42 @@ class ItemREST(BaseRESTObject):
         self.fileobj = io.BytesIO(self.image_data)
         self.fileurl = "image.png"
 
+    def validate_file(input_path, description):
+        if not isinstance(input_path, str):
+            raise TypeError(f"The input must be a string representing the file path.")
+        
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(f"The specified {description} path does not exist: {input_path}")
+        
+        if not os.path.isfile(input_path):
+            raise ValueError(f"The specified {description} is not a file: {input_path}")
+        
+        if os.path.getsize(input_path) == 0:
+            raise ValueError(f"The specified {description} is empty: {input_path}")
+        
+        try:
+            with open(input_path, "rb"):
+                pass
+        except:
+            raise IOError(f"Unable to open the {description} for reading")
+    
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(mp4_filename, "animation file")
         self.type = ItemREST.type_anim
         self.fileobj = open(mp4_filename, "rb")
         self.fileurl = mp4_filename
 
     def set_payload_file(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(filename, "file")
         self.type = ItemREST.type_file
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
 
     def set_payload_scene(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(filename, "scene file")
         self.type = ItemREST.type_scn
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
