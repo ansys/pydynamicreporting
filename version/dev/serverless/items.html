@@ -1,0 +1,816 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta property="og:site_name" content="PyAnsys" />
+    <title>Items &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=ce7f2556" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=ce7f2556" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=e64b9b8a"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'serverless/items';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Templates" href="templates.html" />
+    <link rel="prev" title="Sessions and Datasets" href="sessions_and_datasets.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.10.2.dev0" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/serverless/items.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Serverless ADR
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instantiation.html">Instantiation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sessions_and_datasets.html">Sessions and Datasets</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Items</a></li>
+<li class="toctree-l1"><a class="reference internal" href="templates.html">Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="querying.html">Querying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="media_and_static.html">Media and Static Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embedding_reports.html">Embedding Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="copying_objects.html">Copying Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deleting_objects.html">Deleting Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caveats.html">Caveats</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="index.html" class="nav-link">Serverless ADR</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Items</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="items">
+<h1>Items<a class="headerlink" href="#items" title="Link to this heading">#</a></h1>
+<p>In Serverless ADR, <strong>Items</strong> are the fundamental content units that form the building blocks of your reports.
+They encapsulate individual pieces of data or visual content, such as text, tables, images, animations, and files,
+which you can organize, query, and render within report templates.</p>
+<section id="core-concepts">
+<h2>Core Concepts<a class="headerlink" href="#core-concepts" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Items are fully fledged Python classes with type-specific validation and behavior.</p></li>
+<li><p>Each item must be associated with a <strong>Session</strong> and a <strong>Dataset</strong> to maintain provenance.</p></li>
+<li><p>Items support rich metadata through tags, ordering via sequence numbers, and source attribution.</p></li>
+<li><p>Valid content types and file formats are enforced to ensure data integrity.</p></li>
+<li><p>Common item types include:</p>
+<ul>
+<li><p><cite>String</cite>: Plain text content.</p></li>
+<li><p><cite>HTML</cite>: Valid HTML content, validated for proper structure.</p></li>
+<li><p><cite>Table</cite>: Two-dimensional numpy arrays representing tabular data, with additional metadata like labels and plot settings.</p></li>
+<li><p><cite>Tree</cite>: Hierarchical data represented as nested dictionaries with keys <cite>key</cite>, <cite>name</cite>, <cite>value</cite>, and optional <cite>children</cite>.</p></li>
+<li><p><cite>Image</cite>: Images in PNG, JPG, and enhanced TIFF formats, supporting embedded metadata.</p></li>
+<li><p><cite>Animation</cite>: Video files, typically MP4 format.</p></li>
+<li><p><cite>Scene</cite>: 3D scene files such as STL, PLY, AVZ, CSF, and related formats.</p></li>
+<li><p><cite>File</cite>: Generic files linked to your reports.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="creating-items">
+<h2>Creating Items<a class="headerlink" href="#creating-items" title="Link to this heading">#</a></h2>
+<p>Create new items via the ADR instance’s <cite>create_item()</cite> method.
+Items automatically link to the current default session and dataset unless specified explicitly.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">String</span><span class="p">,</span> <span class="n">Table</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># Create a string item</span>
+<span class="n">string_item</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span>
+    <span class="n">String</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;summary&quot;</span><span class="p">,</span>
+    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;This simulation demonstrates fluid flow around a wing.&quot;</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;section=summary project=wing_sim&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Create a table item with data</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">101325.0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">12.5</span><span class="p">,</span> <span class="mf">101300.0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">101280.0</span><span class="p">],</span>
+    <span class="p">],</span>
+    <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">table_item</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span>
+    <span class="n">Table</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;pressure_data&quot;</span><span class="p">,</span>
+    <span class="n">content</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;section=data project=wing_sim&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># Set additional table metadata</span>
+<span class="n">table_item</span><span class="o">.</span><span class="n">labels_row</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Time (s)&quot;</span><span class="p">,</span> <span class="s2">&quot;Velocity (m/s)&quot;</span><span class="p">,</span> <span class="s2">&quot;Pressure (Pa)&quot;</span><span class="p">]</span>
+<span class="n">table_item</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="s2">&quot;line&quot;</span>
+<span class="n">table_item</span><span class="o">.</span><span class="n">xaxis</span> <span class="o">=</span> <span class="s2">&quot;Time (s)&quot;</span>
+<span class="n">table_item</span><span class="o">.</span><span class="n">yaxis</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Velocity (m/s)&quot;</span><span class="p">,</span> <span class="s2">&quot;Pressure (Pa)&quot;</span><span class="p">]</span>
+<span class="n">table_item</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="item-properties-and-metadata">
+<h2>Item Properties and Metadata<a class="headerlink" href="#item-properties-and-metadata" title="Link to this heading">#</a></h2>
+<p>Items support several useful properties and metadata fields:</p>
+<ul class="simple">
+<li><p><strong>guid</strong>: Unique identifier for the item, automatically generated.</p></li>
+<li><p><strong>name</strong>: Unique identifier for the item within the dataset.</p></li>
+<li><p><strong>type</strong>: The item type (e.g., <cite>string</cite>, <cite>table</cite>, etc.).</p></li>
+<li><p><strong>date</strong>: Timestamp indicating when the item was created.</p></li>
+<li><p><strong>content</strong>: The primary payload of the item, type-dependent.</p></li>
+<li><p><strong>tags</strong>: A space-separated string of key or key=value tags for querying and filtering.</p></li>
+<li><p><strong>source</strong>: String to track the data origin or generating process.</p></li>
+<li><p><strong>sequence</strong>: Integer to order items in reports or presentations.</p></li>
+<li><p><strong>session</strong> and <strong>dataset</strong>: Associations to link items to specific data contexts.</p></li>
+</ul>
+</section>
+<section id="working-with-file-based-items">
+<h2>Working With File-Based Items<a class="headerlink" href="#working-with-file-based-items" title="Link to this heading">#</a></h2>
+<p>Items like <cite>Image</cite>, <cite>Animation</cite>, <cite>Scene</cite>, and <cite>File</cite> accept file paths as content.
+The files are validated for existence and allowed formats before being saved into the configured media directory.</p>
+<p>Example: Creating and saving an image item</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">image_item</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span>
+    <span class="n">Image</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;wing_profile&quot;</span><span class="p">,</span>
+    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;path/to/wing_profile.png&quot;</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;section=images project=wing_sim&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>After saving, the file is copied into the configured media directory. You can access the uploaded file’s storage path using the <cite>file_path</cite> property:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Print the absolute path where the media file is stored</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Media file stored at: </span><span class="si">{</span><span class="n">image_item</span><span class="o">.</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This path points to the location within the media directory configured during ADR setup.
+You can use this path for verification, further processing, or serving the media file in your application.</p>
+<p>When rendering reports or templates that include media items, the HTML references media files using relative URLs,
+typically prefixed by the configured media URL (default is <cite>/media/</cite>):</p>
+<div class="highlight-html notranslate"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">img</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;/media/d3350c20-b298-11ef-a852-906584e7f693_image.png&quot;</span>
+     <span class="na">alt</span><span class="o">=</span><span class="s">&quot;Image file not found&quot;</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;img-fluid&quot;</span> <span class="p">/&gt;</span>
+</pre></div>
+</div>
+<p>Ensure your web server is configured to serve these media URLs from the media directory where files are stored.</p>
+<p>Summary:
+- Set the <cite>content</cite> of file-based items to the local file path before saving.
+- After saving, <cite>file_path</cite> gives the full path to the uploaded media file.
+- When the item is loaded again from the database, <cite>content</cite> will be the relative path to the media file.
+- Rendered reports use relative media URLs; configure your web server accordingly.
+- Use the <cite>media_url</cite> property to get the URL prefix for serving media files.
+- The media URL is typically <cite>/media/</cite> by default.</p>
+</section>
+<section id="rendering-items">
+<h2>Rendering Items<a class="headerlink" href="#rendering-items" title="Link to this heading">#</a></h2>
+<p>Items can be rendered individually into HTML fragments using the <cite>render()</cite> method.
+This HTML can then be embedded in reports or served directly.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">html_fragment</span> <span class="o">=</span> <span class="n">string_item</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="p">{})</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">html_fragment</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="querying-items">
+<h2>Querying Items<a class="headerlink" href="#querying-items" title="Link to this heading">#</a></h2>
+<p>You can query items using the ADR <cite>query()</cite> method with filters based on tags, names, types, and other metadata.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">items</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+    <span class="n">query_type</span><span class="o">=</span><span class="n">String</span><span class="p">,</span> <span class="n">query</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|project=wing_sim;A|i_name|cont|summary;&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="lifecycle-notes">
+<h2>Lifecycle Notes<a class="headerlink" href="#lifecycle-notes" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Items must be associated with saved Sessions and Datasets before calling <cite>save()</cite>.</p></li>
+<li><p>Modifying an item’s content or metadata requires calling <cite>save()</cite> again to persist changes.</p></li>
+<li><p>Deleting an item removes it from the database and deletes associated media files, if any.</p></li>
+<li><p>Proper session and dataset management is critical to maintain report integrity and provenance.</p></li>
+<li><p>Validation errors are raised if content does not meet item-specific requirements.</p></li>
+<li><p>Attempting to instantiate an item type directly (e.g., <cite>Item()</cite>) raises an error;
+always use the specific item classes like <cite>String</cite>, <cite>Table</cite>, etc.</p></li>
+</ul>
+</section>
+<section id="exceptions-and-validation">
+<h2>Exceptions and Validation<a class="headerlink" href="#exceptions-and-validation" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Attempting to create or save items without required fields or with invalid content raises validation errors.</p></li>
+<li><p>File-based items validate file existence and format before saving.</p></li>
+<li><p>Querying items with incorrect syntax or unsupported operations raises an <cite>ADRException</cite>.</p></li>
+<li><p>Fetching or querying non-existent items raises a <cite>DoesNotExist</cite> exception.</p></li>
+<li><p>Multiple items matching a single fetch criteria raise a <cite>MultipleObjectsReturned</cite> exception.</p></li>
+</ul>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>Items encapsulate the actual data and content in your reports. Understanding item types, content validation, and lifecycle management is essential for effective Serverless ADR usage.</p>
+<p>Next, explore the <a class="reference internal" href="templates.html"><span class="doc">Templates</span></a> guide to learn how to arrange items into complex, reusable report layouts.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#core-concepts">Core Concepts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-items">Creating Items</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#item-properties-and-metadata">Item Properties and Metadata</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#working-with-file-based-items">Working With File-Based Items</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rendering-items">Rendering Items</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#querying-items">Querying Items</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lifecycle-notes">Lifecycle Notes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exceptions-and-validation">Exceptions and Validation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/serverless/items.rst">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/serverless/items.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.5.2. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

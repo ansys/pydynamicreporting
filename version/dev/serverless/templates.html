@@ -1,0 +1,982 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta property="og:site_name" content="PyAnsys" />
+    <title>Templates &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=ce7f2556" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=ce7f2556" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=e64b9b8a"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'serverless/templates';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Querying" href="querying.html" />
+    <link rel="prev" title="Items" href="items.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.10.2.dev0" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/serverless/templates.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Serverless ADR
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="instantiation.html">Instantiation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sessions_and_datasets.html">Sessions and Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="items.html">Items</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="querying.html">Querying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="media_and_static.html">Media and Static Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embedding_reports.html">Embedding Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="copying_objects.html">Copying Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deleting_objects.html">Deleting Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caveats.html">Caveats</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="index.html" class="nav-link">Serverless ADR</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Templates</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="templates">
+<h1>Templates<a class="headerlink" href="#templates" title="Link to this heading">#</a></h1>
+<p>Templates in Serverless ADR define the <strong>layout</strong>, <strong>organization</strong>, and <strong>presentation</strong>
+of your report content. They control how Items are arranged, filtered, and rendered
+within a report, enabling flexible, reusable, and dynamic reporting structures.
+The represent report layouts or data generators that organize and present report items.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
+<p>Templates are Python classes derived from the base <code class="docutils literal notranslate"><span class="pre">Template</span></code> model. They come in two main flavors:</p>
+<ul class="simple">
+<li><p><strong>Layouts</strong>: Define static or semi-static page structures (e.g., panels, tabs, carousels).</p></li>
+<li><p><strong>Generators</strong>: Automate dynamic content generation by iterating, merging, filtering, or sorting Items.</p></li>
+</ul>
+<p>Templates can be nested hierarchically to form complex reports with multiple sections and subsections.</p>
+</section>
+<section id="creating-templates">
+<h2>Creating Templates<a class="headerlink" href="#creating-templates" title="Link to this heading">#</a></h2>
+<p>Use the ADR instance’s <code class="docutils literal notranslate"><span class="pre">create_template()</span></code> method to create a new template object.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">BasicLayout</span>
+
+<span class="n">top_template</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">BasicLayout</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Wing Simulation Report&quot;</span><span class="p">,</span>
+    <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;project=wing_sim&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">top_template</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;HTML&quot;: &quot;&lt;h1&gt;Wing Simulation Report&lt;/h1&gt;&quot;}&#39;</span>
+<span class="n">top_template</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_tags|cont|project=wing_sim;&quot;</span><span class="p">)</span>
+<span class="n">top_template</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Parent-child relationships can be established by passing a <code class="docutils literal notranslate"><span class="pre">parent</span></code>
+template during creation or by appending to <code class="docutils literal notranslate"><span class="pre">parent.children</span></code> and saving both.</p>
+</section>
+<section id="template-types">
+<h2>Template Types<a class="headerlink" href="#template-types" title="Link to this heading">#</a></h2>
+<p>Common layout types include:</p>
+<ul class="simple">
+<li><p>BasicLayout</p></li>
+<li><p>PanelLayout</p></li>
+<li><p>BoxLayout</p></li>
+<li><p>TabLayout</p></li>
+<li><p>CarouselLayout</p></li>
+<li><p>SliderLayout</p></li>
+<li><p>FooterLayout</p></li>
+<li><p>HeaderLayout</p></li>
+<li><p>IteratorLayout</p></li>
+<li><p>TagPropertyLayout</p></li>
+<li><p>TOCLayout</p></li>
+<li><p>ReportLinkLayout</p></li>
+<li><p>PPTXLayout</p></li>
+<li><p>PPTXSlideLayout</p></li>
+<li><p>DataFilterLayout</p></li>
+<li><p>UserDefinedLayout</p></li>
+</ul>
+<p>Generator types include:</p>
+<ul class="simple">
+<li><p>TableMergeGenerator</p></li>
+<li><p>TableReduceGenerator</p></li>
+<li><p>TableMergeRCFilterGenerator</p></li>
+<li><p>TableMergeValueFilterGenerator</p></li>
+<li><p>TableSortFilterGenerator</p></li>
+<li><p>TreeMergeGenerator</p></li>
+<li><p>SQLQueryGenerator</p></li>
+<li><p>ItemsComparisonGenerator</p></li>
+<li><p>StatisticalGenerator</p></li>
+<li><p>IteratorGenerator</p></li>
+</ul>
+</section>
+<section id="template-attributes-and-methods">
+<h2>Template Attributes and Methods<a class="headerlink" href="#template-attributes-and-methods" title="Link to this heading">#</a></h2>
+<p>Templates have several important properties and methods:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">guid</span></code>: Unique identifier for the template.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: The template’s unique name.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">date</span></code>: The date when the template was created.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tags</span></code>: A string of tags for categorization and filtering.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">params</span></code>: JSON-encoded string storing rendering parameters and properties.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">item_filter</span></code>: Query string filter to select items included in this template.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: Reference to the parent template or None for root templates.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">children</span></code>: List of child templates for hierarchical organization.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">report_type</span></code>: String representing the template’s layout or generator type.</p></li>
+</ul>
+<p>Common methods include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">set_filter(filter_str)</span></code>: Replace the item filter string.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_filter(filter_str)</span></code>: Append to the existing item filter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_params()</span></code>: Return parsed parameters as a dictionary.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_params(params_dict)</span></code>: Set parameters, replacing existing ones.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_params(params_dict)</span></code>: Add or update parameters without overwriting others.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_property()</span></code>: Shortcut to get the “properties” sub-dictionary from parameters.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_property(props_dict)</span></code>: Replace the “properties” dictionary.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_property(props_dict)</span></code>: Add/update keys within the “properties” dictionary.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">render(context=None,</span> <span class="pre">item_filter=&quot;&quot;,</span> <span class="pre">request=None)</span></code>: Render the template to HTML string.</p></li>
+</ul>
+</section>
+<section id="template-parameters">
+<h2>Template Parameters<a class="headerlink" href="#template-parameters" title="Link to this heading">#</a></h2>
+<p>Each template stores configuration and state in its <code class="docutils literal notranslate"><span class="pre">params</span></code> field, a JSON string representing:</p>
+<ul class="simple">
+<li><p>HTML header (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;HTML&quot;</span></code>)</p></li>
+<li><p>Layout-specific options (e.g., column counts, widths)</p></li>
+<li><p>Filter parameters and modes controlling which Items are included</p></li>
+<li><p>Sorting options (fields, order, selection)</p></li>
+<li><p>Other custom properties for configuration and behavior</p></li>
+</ul>
+<p>You can manipulate these through provided methods:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_params()</span></code> / <code class="docutils literal notranslate"><span class="pre">set_params(dict)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_params(dict)</span></code> to merge parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_property()</span></code> / <code class="docutils literal notranslate"><span class="pre">set_property(dict)</span></code> / <code class="docutils literal notranslate"><span class="pre">add_property(dict)</span></code> for the <code class="docutils literal notranslate"><span class="pre">properties</span></code> subset</p></li>
+<li><p>Sorting and filtering helpers (e.g., <code class="docutils literal notranslate"><span class="pre">get_sort_fields()</span></code>, <code class="docutils literal notranslate"><span class="pre">set_sort_fields()</span></code>, <code class="docutils literal notranslate"><span class="pre">get_filter_mode()</span></code>, <code class="docutils literal notranslate"><span class="pre">set_filter_mode()</span></code>)</p></li>
+</ul>
+<p>Example modifying parameters:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="n">top_template</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
+<span class="n">params</span><span class="p">[</span><span class="s2">&quot;HTML&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&lt;h1&gt;Updated Report Title&lt;/h1&gt;&quot;</span>
+<span class="n">top_template</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">top_template</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="template-properties">
+<h2>Template Properties<a class="headerlink" href="#template-properties" title="Link to this heading">#</a></h2>
+<p>Templates support a flexible set of properties stored within the <code class="docutils literal notranslate"><span class="pre">params</span></code> JSON field.
+These properties allow you to control fine-grained behavior of layouts and generators
+and customize rendering without subclassing.</p>
+<section id="common-properties">
+<h3>Common Properties<a class="headerlink" href="#common-properties" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><strong>column_count</strong> (layouts only)
+Number of columns in multi-column layouts.</p></li>
+<li><p><strong>column_widths</strong> (layouts only)
+List of floats defining relative widths of columns, e.g., <code class="docutils literal notranslate"><span class="pre">[1.0,</span> <span class="pre">2.0,</span> <span class="pre">1.0]</span></code>.</p></li>
+<li><p><strong>transpose</strong> (layouts only)
+Integer flag (0 or 1) to indicate whether tabular content should be transposed.</p></li>
+<li><p><strong>skip_empty</strong> (layouts only)
+Integer flag (0 or 1) to skip rendering empty items or not.</p></li>
+<li><p><strong>sort_fields</strong>
+List of fields by which to sort included items.</p></li>
+<li><p><strong>sort_selection</strong>
+Determines which items to select after sorting. Allowed values:
+<code class="docutils literal notranslate"><span class="pre">&quot;all&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;first&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;last&quot;</span></code>.</p></li>
+<li><p><strong>filter_type</strong>
+Controls filter application mode. Options include:
+<code class="docutils literal notranslate"><span class="pre">&quot;items&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;root_replace&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;root_append&quot;</span></code>.</p>
+<p>… and many more depending on the specific layout or generator.</p>
+</li>
+</ul>
+</section>
+<section id="adding-and-modifying-properties">
+<h3>Adding and Modifying Properties<a class="headerlink" href="#adding-and-modifying-properties" title="Link to this heading">#</a></h3>
+<p>You can use the following methods on a template instance to interact with properties:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get all properties dictionary</span>
+<span class="n">props</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">get_property</span><span class="p">()</span>
+
+<span class="c1"># Set all properties at once (replaces existing)</span>
+<span class="n">template</span><span class="o">.</span><span class="n">set_property</span><span class="p">({</span><span class="s2">&quot;column_count&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;skip_empty&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+
+<span class="c1"># Add or update specific properties without overwriting others</span>
+<span class="n">template</span><span class="o">.</span><span class="n">add_property</span><span class="p">({</span><span class="s2">&quot;column_count&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
+</pre></div>
+</div>
+</section>
+<section id="direct-attribute-access">
+<h3>Direct Attribute Access<a class="headerlink" href="#direct-attribute-access" title="Link to this heading">#</a></h3>
+<p>Alternatively, some common properties can also be accessed or set using standard attribute
+syntax on the template instance. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set a property using attribute assignment</span>
+<span class="n">pptx_template</span><span class="o">.</span><span class="n">use_all_slides</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="c1"># Get a property value via attribute access</span>
+<span class="n">output_pptx</span> <span class="o">=</span> <span class="n">pptx_template</span><span class="o">.</span><span class="n">output_pptx</span>
+</pre></div>
+</div>
+<p>You can also use Python’s built-in <code class="docutils literal notranslate"><span class="pre">setattr()</span></code> function to set properties dynamically:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">setattr</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="s2">&quot;output_pptx&quot;</span><span class="p">,</span> <span class="s2">&quot;report.pptx&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that attribute access is a convenient shortcut for common properties.
+Under the hood, these are proxied to the underlying JSON <code class="docutils literal notranslate"><span class="pre">params</span></code> data.</p>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set multiple properties at creation</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">BasicLayout</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Summary Section&quot;</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;section=summary&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;column_count&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="s2">&quot;column_widths&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">],</span>
+        <span class="s2">&quot;skip_empty&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+<span class="c1"># Update an existing property</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">add_property</span><span class="p">({</span><span class="s2">&quot;comments&quot;</span><span class="p">:</span> <span class="s2">&quot;Updated to include additional charts&quot;</span><span class="p">})</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Properties are stored as JSON under <code class="docutils literal notranslate"><span class="pre">params</span></code> → <code class="docutils literal notranslate"><span class="pre">properties</span></code>.</p></li>
+<li><p>They provide a flexible way to extend template capabilities without subclassing.</p></li>
+<li><p>Some specialized layouts and generators may define their own additional properties accessible through their own APIs.</p></li>
+</ul>
+</section>
+</section>
+<section id="filters">
+<h2>Filters<a class="headerlink" href="#filters" title="Link to this heading">#</a></h2>
+<p>Filters control which Items are included in a template’s rendered output.</p>
+<ul class="simple">
+<li><p>Set via <code class="docutils literal notranslate"><span class="pre">set_filter(filter_str)</span></code>, where <code class="docutils literal notranslate"><span class="pre">filter_str</span></code> is a query string, e.g.,
+<code class="docutils literal notranslate"><span class="pre">&quot;A|i_tags|cont|section=intro;&quot;</span></code> selects items tagged “section=intro”.</p></li>
+<li><p>Filters can be extended via <code class="docutils literal notranslate"><span class="pre">add_filter()</span></code>.</p></li>
+</ul>
+</section>
+<section id="sorting">
+<h2>Sorting<a class="headerlink" href="#sorting" title="Link to this heading">#</a></h2>
+<p>Templates can specify sorting of items by fields using:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">set_sort_fields([...])</span></code> for sorting keys (e.g., <code class="docutils literal notranslate"><span class="pre">[&quot;date&quot;,</span> <span class="pre">&quot;name&quot;]</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_sort_selection(&quot;all&quot;</span> <span class="pre">|</span> <span class="pre">&quot;first&quot;</span> <span class="pre">|</span> <span class="pre">&quot;last&quot;)</span></code> to choose which items from sorted groups to show.</p></li>
+</ul>
+</section>
+<section id="working-with-template-hierarchies">
+<h2>Working with Template Hierarchies<a class="headerlink" href="#working-with-template-hierarchies" title="Link to this heading">#</a></h2>
+<p>Templates can be organized in parent-child relationships to structure complex reports.</p>
+<ul class="simple">
+<li><p>Use the <code class="docutils literal notranslate"><span class="pre">parent</span></code> argument to specify a template’s parent during creation.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">children</span></code> list contains all direct child templates.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">children_order</span></code> property stores the ordered GUIDs of children for rendering order.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">reorder_children()</span></code> method will reorder the <code class="docutils literal notranslate"><span class="pre">children</span></code> list based on the stored order.</p></li>
+</ul>
+</section>
+<section id="example-creating-a-nested-template-structure">
+<h2>Example: Creating a Nested Template Structure<a class="headerlink" href="#example-creating-a-nested-template-structure" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">toc</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">TOCLayout</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Table of Contents&quot;</span><span class="p">,</span>
+    <span class="n">parent</span><span class="o">=</span><span class="n">top_template</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;project=wing_sim&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">toc</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;HTML&quot;: &quot;&lt;h2&gt;Contents&lt;/h2&gt;&quot;}&#39;</span>
+<span class="n">toc</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_name|eq|__NonexistentName__;&quot;</span><span class="p">)</span>
+<span class="n">toc</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+<span class="n">results_panel</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">PanelLayout</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Results&quot;</span><span class="p">,</span>
+    <span class="n">parent</span><span class="o">=</span><span class="n">top_template</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;project=wing_sim&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">results_panel</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;HTML&quot;: &quot;&lt;h2&gt;Results&lt;/h2&gt;&lt;p&gt;Simulation data and figures.&lt;/p&gt;&quot;}&#39;</span>
+<span class="n">results_panel</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_tags|cont|section=results;&quot;</span><span class="p">)</span>
+<span class="n">results_panel</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="rendering-templates">
+<h2>Rendering Templates<a class="headerlink" href="#rendering-templates" title="Link to this heading">#</a></h2>
+<p>Templates can render themselves into complete HTML content using the <code class="docutils literal notranslate"><span class="pre">render()</span></code> method.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">html_report</span> <span class="o">=</span> <span class="n">top_template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+    <span class="n">context</span><span class="o">=</span><span class="p">{},</span> <span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|project=wing_sim;&quot;</span>
+<span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;report.html&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">html_report</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This method generates the full HTML output, including all nested templates and items,
+and applies any specified filters. The <code class="docutils literal notranslate"><span class="pre">context</span></code> parameter can be used to pass additional
+data for rendering, such as user-defined variables or configuration settings.</p>
+<p>Rendering context supports options like:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly</span></code> flag to enable interactive plots</p></li>
+<li><p>Page dimensions and DPI for layout calculations</p></li>
+<li><p>Date and time formatting</p></li>
+<li><p>If rendering fails, the output HTML will contain an error message for easier debugging.</p></li>
+<li><p>If you would like more information on the error, set the <code class="docutils literal notranslate"><span class="pre">debug</span></code> flag to <code class="docutils literal notranslate"><span class="pre">True</span></code> when instantiating
+the <code class="docutils literal notranslate"><span class="pre">ADR</span></code> class.</p></li>
+</ul>
+</section>
+<section id="lifecycle-notes">
+<h2>Lifecycle Notes<a class="headerlink" href="#lifecycle-notes" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Templates must be saved to persist changes.</p></li>
+<li><p>Parent templates must be saved before saving children.</p></li>
+<li><p>Deleting a template typically requires handling or deleting its children to avoid orphaned templates.</p></li>
+</ul>
+</section>
+<section id="exceptions-and-validation">
+<h2>Exceptions and Validation<a class="headerlink" href="#exceptions-and-validation" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Creating or fetching templates with missing or invalid fields raises validation errors.</p></li>
+<li><p>Attempting to instantiate the base <code class="docutils literal notranslate"><span class="pre">Template</span></code> class directly raises an error.</p></li>
+<li><p>Filters using keys mentioning the type (like <code class="docutils literal notranslate"><span class="pre">t_types|</span></code>) are disallowed on subclasses.</p></li>
+<li><p>Invalid parent references or child types will raise type or integrity errors during saving.</p></li>
+<li><p>Only top-level templates (parent=None) can be copied between databases.</p></li>
+<li><p>Templates must have their parents and children saved before saving themselves to ensure integrity.</p></li>
+<li><p>Invalid property types or malformed filters raise errors.</p></li>
+<li><p>Fetching non-existent templates raises <code class="docutils literal notranslate"><span class="pre">DoesNotExist</span></code> errors.</p></li>
+<li><p>Using invalid filter keys in subclasses raises <code class="docutils literal notranslate"><span class="pre">ADRException</span></code>.</p></li>
+</ul>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>Templates are the backbone of report structure in Serverless ADR. They let you create
+rich, dynamic, and highly customizable reports by defining layouts and generators,
+setting filters and parameters, and nesting templates to build complex hierarchical reports.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-templates">Creating Templates</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-types">Template Types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-attributes-and-methods">Template Attributes and Methods</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-parameters">Template Parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-properties">Template Properties</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#common-properties">Common Properties</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-and-modifying-properties">Adding and Modifying Properties</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#direct-attribute-access">Direct Attribute Access</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notes">Notes</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#filters">Filters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sorting">Sorting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#working-with-template-hierarchies">Working with Template Hierarchies</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#example-creating-a-nested-template-structure">Example: Creating a Nested Template Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rendering-templates">Rendering Templates</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lifecycle-notes">Lifecycle Notes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exceptions-and-validation">Exceptions and Validation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/serverless/templates.rst">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/serverless/templates.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.5.2. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
