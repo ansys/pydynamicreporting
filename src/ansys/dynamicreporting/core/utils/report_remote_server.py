@@ -38,6 +38,30 @@ from ..adr_utils import build_query_url
 from .encoders import BaseEncoder
 
 
+def single_dialog(exec_basis: str, ansys_version: str, input_msg: str):
+    if ansys_version is None:
+        ansys_version = str(report_utils.ceiversion_nexus_suffix())
+    else:
+        ansys_version = str(ansys_version)
+    if exec_basis is None:
+        exec_basis = report_utils.enve_home()
+    if exec_basis and ansys_version:
+        if "trasnlated_dlg" not in sys.modules:
+            sys.path.append(
+                os.path.join(
+                    exec_basis,
+                    "nexus" + ansys_version,
+                    "template_editor",
+                    "translated_dlg.py",
+                )
+            )
+            import translated_dlg
+        tr_widget = translated_dlg.transl_qwid(input_msg)
+    else:
+        tr_widget = QtWidgets.QApplication.translate("nexus", input_msg)
+    return tr_widget
+
+
 def disable_warn_logging(func):
     # Decorator to suppress harmless warning messages
     @functools.wraps(func)
@@ -721,8 +745,8 @@ class Server:
                 nobjs += 1
         n = 0
         if progress:
-            if progress_qt and has_qt:
-                s = QtWidgets.QApplication.translate("nexus", "Importing:")
+            if progress_qt and has_qt:  # pragma: no cover
+                s = single_dialog(exec_basis, ansys_version, "Importing:")
                 s += report_utils.from_local_8bit(obj_type)
             else:
                 s = f"Importing: {obj_type}"
@@ -918,7 +942,7 @@ class Server:
         query["print"] = "pdf"
         url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
-        if has_qt and (parent is not None):
+        if has_qt and (parent is not None):  # pragma: no cover
             from .report_download_pdf import NexusPDFSave
 
             app = QtGui.QGuiApplication.instance()
@@ -1259,8 +1283,8 @@ def create_new_local_database(
     """Create a new, empty sqlite database  If parent is not None, a QtGui will be
     used."""
     if parent and has_qt:  # pragma: no cover
-        title = QtWidgets.QApplication.translate(
-            "nexus", "Select an empty folder to create the database in"
+        title = single_dialog(
+            exec_basis, ansys_version, "Select an empty folder to create the database in"
         )
         fn = QtWidgets.QFileDialog.getExistingDirectory(parent, title, directory)
         if len(fn) == 0:
@@ -1276,12 +1300,13 @@ def create_new_local_database(
     except OSError as e:
         if not os.path.isdir(db_dir):
             if parent and has_qt:  # pragma: no cover
-                msg = QtWidgets.QApplication.translate(
-                    "nexus", "The selected directory could not be accessed."
+                msg = single_dialog(
+                    exec_basis, ansys_version, "The selected directory could not be accessed."
                 )
+                top_banner = single_dialog(exec_basis, ansys_version, "Invalid database location")
                 QtWidgets.QMessageBox.critical(
                     parent,
-                    QtWidgets.QApplication.translate("nexus", "Invalid database location"),
+                    top_banner,
                     msg,
                 )
 
@@ -1298,12 +1323,13 @@ def create_new_local_database(
         os.path.join(db_dir, "db.sqlite3")
     ):
         if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The selected directory already appears to have a database in it."
+            msg = single_dialog(
+                exec_basis,
+                ansys_version,
+                "The selected directory already appears to have a database in it.",
             )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Invalid database location"), msg
-            )
+            top_banner = single_dialog(exec_basis, ansys_version, "Invalid database location")
+            QtWidgets.QMessageBox.critical(parent, top_banner, msg)
 
         if raise_exception:
             raise exceptions.DBExistsError(
@@ -1400,12 +1426,15 @@ def create_new_local_database(
 
     except Exception as e:
         if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The creation of a new, local database failed with the error:"
+            msg = single_dialog(
+                exec_basis,
+                ansys_version,
+                "The creation of a new, local database failed with the error:",
             )
+            top_banner = single_dialog(exec_basis, ansys_version, "Database creation failed")
             QtWidgets.QMessageBox.critical(
                 parent,
-                QtWidgets.QApplication.translate("nexus", "Database creation failed"),
+                top_banner,
                 msg + str(e),
             )
 
@@ -1421,12 +1450,13 @@ def create_new_local_database(
         return True
 
     if parent and has_qt:
-        msg = QtWidgets.QApplication.translate(
-            "nexus", "A new Nexus database has been created in the folder:"
+        msg = single_dialog(
+            exec_basis, ansys_version, "A new Nexus database has been created in the folder:"
         )
+        top_banner = single_dialog(exec_basis, ansys_version, "Database creation successful")
         QtWidgets.QMessageBox.information(
             parent,
-            QtWidgets.QApplication.translate("nexus", "Database creation successful"),
+            top_banner,
             msg + str(db_dir),
         )
     return True
@@ -1705,10 +1735,10 @@ def launch_local_database_server(
         if no_directory_prompt:
             db_dir = os.path.abspath(directory)
         else:
-            f = QtWidgets.QApplication.translate("nexus", "Nexus database (db.sqlite3)")
+            f = single_dialog(exec_basis, ansys_version, "Nexus database (db.sqlite3)")
             fn = QtWidgets.QFileDialog.getOpenFileName(
                 parent,
-                QtWidgets.QApplication.translate("nexus", "Select the database file"),
+                single_dialog(exec_basis, ansys_version, "Select the database file"),
                 directory,
                 f,
                 f,
@@ -1722,12 +1752,13 @@ def launch_local_database_server(
 
         # we expect to see: 'manage.py' and 'media' in this folder
         if not validate_local_db(db_dir):
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The selected database file does not appear to be a valid database."
+            msg = single_dialog(
+                exec_basis,
+                ansys_version,
+                "The selected database file does not appear to be a valid database.",
             )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Invalid database"), msg
-            )
+            top_banner = single_dialog(exec_basis, ansys_version, "Invalid database")
+            QtWidgets.QMessageBox.critical(parent, top_banner, msg)
             if local_lock:
                 local_lock.release()
             if raise_exception:
@@ -1796,13 +1827,14 @@ def launch_local_database_server(
         # validate will throw exceptions or return a float.
         _ = tmp_server.validate()
         # if we have a valid version number, then do not start a server!!!
-        if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus",
+        if parent and has_qt:  # pragma: no cover
+            msg = single_dialog(
+                exec_basis,
+                ansys_version,
                 "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port.",
             )
             QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Server already running"), msg
+                parent, single_dialog(exec_basis, ansys_version, "Server already running"), msg
             )
         if local_lock:
             local_lock.release()
@@ -1815,7 +1847,7 @@ def launch_local_database_server(
         pass
 
     # Start the busy cursor
-    if parent and has_qt:
+    if parent and has_qt:  # pragma: no cover
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
 
     # Here we run nexus_launcher with the following command line:
@@ -1883,13 +1915,15 @@ def launch_local_database_server(
         # Note: this process only returns if the server is shutdown or there is an error
         monitor_process = subprocess.Popen(command, **params)
     except Exception as e:
-        if parent and has_qt:
+        if parent and has_qt:  # pragma: no cover
             QtWidgets.QApplication.restoreOverrideCursor()
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "Launching a server for the selected local database failed. Error:"
+            msg = single_dialog(
+                exec_basis,
+                ansys_version,
+                "Launching a server for the selected local database failed. Error:",
             )
             QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Unable to launch"), msg + str(e)
+                parent, single_dialog(exec_basis, ansys_version, "Unable to launch"), msg + str(e)
             )
         if local_lock:
             local_lock.release()
@@ -1905,13 +1939,15 @@ def launch_local_database_server(
         monitor_alive = monitor_process.poll() is None
         # if we ran out of patience or the monitor process is dead, we have an error
         if ((time.time() - t0) > server_timeout) or (not monitor_alive):
-            if parent and has_qt:
+            if parent and has_qt:  # pragma: no cover
                 QtWidgets.QApplication.restoreOverrideCursor()
-                msg = QtWidgets.QApplication.translate(
-                    "nexus", "Unable to connect to the launched local Nexus server."
+                msg = single_dialog(
+                    exec_basis,
+                    ansys_version,
+                    "Unable to connect to the launched local Nexus server.",
                 )
                 QtWidgets.QMessageBox.critical(
-                    parent, QtWidgets.QApplication.translate("nexus", "Unable to launch"), msg
+                    parent, single_dialog(exec_basis, ansys_version, "Unable to launch"), msg
                 )
             # If it is still alive, try to tell the monitor to shut down
             if monitor_alive:
@@ -1954,14 +1990,14 @@ def launch_local_database_server(
     if local_lock:
         local_lock.release()
 
-    if parent and has_qt:
+    if parent and has_qt:  # pragma: no cover
         QtWidgets.QApplication.restoreOverrideCursor()
         if verbose:
             hostname = settings.get("server_hostname", "127.0.0.1")
-            msg = QtWidgets.QApplication.translate("nexus", "A new server has been launched at")
+            msg = single_dialog(exec_basis, ansys_version, "A new server has been launched at")
             msg += f" <a href='http://{hostname}:{port}'>http://{hostname}:{port}</a>"
             QtWidgets.QMessageBox.information(
-                parent, QtWidgets.QApplication.translate("nexus", "Nexus server launched"), msg
+                parent, single_dialog(exec_basis, ansys_version, "Nexus server launched"), msg
             )
     # go ahead and assign the connection to any server we were passed
     if connect is not None:
