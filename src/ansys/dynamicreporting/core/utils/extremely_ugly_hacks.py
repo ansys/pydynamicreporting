@@ -100,7 +100,7 @@ def safe_unpickle(input_data, item_type=None):
                 return data
 
     except Exception as e:
-        raise Exception(f"Unable to decode the payload:: {str(e)}")
+        raise Exception(f"Unable to decode the payload:: {e!s}")
 
     # if the input wasn't bytes or string or anything that evaluated to False, return it back
     return input_data

@@ -2,11 +2,7 @@
 
 import logging
 import os
-from pathlib import Path
-import re
 from urllib import parse, request
-
-import ansys.dynamicreporting.core as adr
 
 
 class RemoteFileNotFoundError(FileNotFoundError):

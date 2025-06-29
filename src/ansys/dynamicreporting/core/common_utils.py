@@ -1,7 +1,7 @@
 import os
-from pathlib import Path
 import platform
 import re
+from pathlib import Path
 
 from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
 from .exceptions import InvalidAnsysPath

@@ -1,16 +1,11 @@
+import uuid
 from pathlib import Path
 from random import random as r
-import uuid
 
 import numpy as np
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import (
-    ADRException,
-    ImproperlyConfiguredError,
-    InvalidAnsysPath,
-    InvalidPath,
-)
+from ansys.dynamicreporting.core.exceptions import ADRException, InvalidPath
 from ansys.dynamicreporting.core.serverless import ADR
 
 
@@ -32,7 +27,7 @@ def test_get_instance_error():
 def test_get_instance_no_setup():
     from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 
-    adr = ADR(  # noqa: F841
+    adr = ADR(
         ansys_installation="docker",
         docker_image=DOCKER_DEV_REPO_URL,
         media_url="/media1/",
@@ -896,7 +891,7 @@ def test_delete_datasets(adr_serverless):
 
 @pytest.mark.ado_test
 def test_delete_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Template, TOCLayout
+    from ansys.dynamicreporting.core.serverless import TOCLayout
 
     _ = adr_serverless.create_template(TOCLayout, name="test_delete_templates")
     temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_delete_templates;")
@@ -1061,7 +1056,11 @@ def test_copy_items_invalid_database(adr_serverless):
 
 @pytest.mark.ado_test
 def test_copy_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+    from ansys.dynamicreporting.core.serverless import (
+        BasicLayout,
+        PanelLayout,
+        Template,
+    )
 
     tag = "dp=test_copy_templates"
     template_name = "test_copy_template_report"
@@ -1077,7 +1076,11 @@ def test_copy_templates(adr_serverless):
 
 @pytest.mark.ado_test
 def test_copy_templates_children(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout, Template
+    from ansys.dynamicreporting.core.serverless import (
+        BasicLayout,
+        PanelLayout,
+        Template,
+    )
 
     tag = "dp=test_copy_templates_children"
     template_name = "test_copy_templates_children_report"

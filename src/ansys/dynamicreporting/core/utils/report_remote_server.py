@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import os.path
-from pathlib import Path
 import pickle
 import platform
 import shutil
@@ -26,15 +25,16 @@ import subprocess
 import sys
 import tempfile
 import time
-from urllib.parse import urlparse
 import uuid
+from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
+from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
 
@@ -856,9 +856,9 @@ class Server:
     def build_url_with_query(self, report_guid, query, item_filter=None, rest_api=False):
         url = self.get_URL()
         if rest_api:
-            url += f"/api/generate-report/?view={str(report_guid)}"
+            url += f"/api/generate-report/?view={report_guid!s}"
         else:
-            url += f"/reports/report_display/?view={str(report_guid)}"
+            url += f"/reports/report_display/?view={report_guid!s}"
         for key in query:
             value = query[key]
             if value is None:
@@ -884,7 +884,9 @@ class Server:
             query = {}
         query["print"] = "html"
         directory_path = os.path.abspath(directory_name)
-        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
+        from ansys.dynamicreporting.core.utils.report_download_html import (
+            ReportDownloadHTML,
+        )
 
         url = self.build_url_with_query(report_guid, query, item_filter)
         # ask the server for the Ansys version number. It will generally know it.
@@ -1173,7 +1175,7 @@ class Server:
 
         # Check report_type
         report_types = self.get_report_types()
-        if not template_attr["report_type"] in report_types:
+        if template_attr["report_type"] not in report_types:
             raise exceptions.TemplateEditorJSONLoadingError(
                 f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
             )
@@ -1442,7 +1444,7 @@ def stop_background_local_server(server_dirname: str, reason: str = "pythonserve
     except Exception as e:
         if print_allowed():
             print(
-                f"Error: unable to cause the Nexus server in {server_dirname} to shutdown.\n{str(e)}"
+                f"Error: unable to cause the Nexus server in {server_dirname} to shutdown.\n{e!s}"
             )
     # Wait for the status file to be removed.  One of the last steps in
     # the Nexus server shutdown sequence is to remove this file.  We will
@@ -1492,7 +1494,7 @@ def delete_database(db_dir: str):
                             break
         except Exception as e:
             if print_allowed():
-                print(f"Error: can not delete {db_dir} with error:\n{str(e)}")
+                print(f"Error: can not delete {db_dir} with error:\n{e!s}")
 
 
 def validate_local_db_version(db_dir, version_max=None, version_min=None):

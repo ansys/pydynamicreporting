@@ -1,0 +1,215 @@
+name: Main
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
+      - release/*
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up environment variables
+        uses: ./.github/actions/setup-env
+
+      - name: Set up Python + Environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run code quality checks
+        run: make check
+
+  smoketest:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up environment variables
+        uses: ./.github/actions/setup-env
+
+      - name: Build wheelhouse
+        uses: ansys/actions/build-wheelhouse@v10
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          operating-system: ${{ matrix.os }}
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install from wheelhouse
+        run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
+
+      - name: Run smoketest
+        run: make smoketest
+
+  tests:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        python-version: [ '3.10', '3.11', '3.12', '3.13' ]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up environment variables
+        uses: ./.github/actions/setup-env
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Docker container
+        run: make pull-docker
+
+      - name: Set up Python + Environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run pytest
+        run: make test
+        env:
+          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == env.MAIN_PYTHON_VERSION
+        uses: codecov/codecov-action@v5
+
+  build-dev-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up environment variables
+        uses: ./.github/actions/setup-env
+
+      - name: Run Ansys documentation building action
+        uses: ansys/actions/doc-build@v10
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          check-links: false
+          sphinxopts: '-j auto'
+
+  publish-to-azure-pypi:
+    if: github.ref == 'refs/heads/main'
+    needs: [ quality, smoketest, tests ]
+    runs-on: ubuntu-latest
+    environment:
+      name: test-pypi
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up Python + Environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run version checks
+        run: make check-version
+
+      - name: Build project
+        run: make build
+
+      - name: Check dist
+        run: make check-dist
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifacts
+          path: dist/
+          retention-days: 7
+
+      - name: Publish to Azure PyPI
+        if: ${{ !env.ACT }}
+        run: make publish-test
+        env:
+          AZURE_PYPI_TOKEN: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
+          AZURE_PYPI_URL: ${{ secrets.PRIVATE_PYPI_URL }}
+
+  upload-dev-docs:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [ build-dev-docs, publish-to-azure-pypi ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up environment variables
+        uses: ./.github/actions/setup-env
+
+      - name: Deploy the latest documentation
+        uses: ansys/actions/doc-deploy-dev@v10
+        if: ${{ !env.ACT }}
+        with:
+          cname: ${{ env.DOCUMENTATION_CNAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
+          bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
+
+  notify-ci-failure:
+    if: failure() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    needs: [ quality, smoketest, tests, build-dev-docs, upload-dev-docs, publish-to-azure-pypi ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Microsoft Teams Notification
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
+          notification-summary: "❌ CI Failure in workflow `${{ github.workflow }}` on `${{ github.ref_name }}` by `${{ github.actor }}`"
+          notification-color: dc3545
+          timezone: America/New_York

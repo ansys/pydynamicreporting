@@ -1,6 +1,5 @@
 import array
 import base64
-from html.parser import HTMLParser as BaseHTMLParser
 import io
 import json
 import os
@@ -9,11 +8,11 @@ import platform
 import socket
 import sys
 import tempfile
-from typing import List, Optional
+from html.parser import HTMLParser as BaseHTMLParser
 
+import requests
 from PIL import Image
 from PIL.TiffTags import TAGS
-import requests
 
 try:
     import ceiversion
@@ -595,7 +594,7 @@ class nexus_array:
         else:
             index = 0
             mult = 1
-            for v, d in zip(reversed(key), reversed(self.shape)):
+            for v, d in zip(reversed(key), reversed(self.shape), strict=False):
                 index += mult * v
                 mult = mult * d
         if self.dtype[0] == "S":
@@ -632,7 +631,7 @@ class nexus_array:
         :returns: array module type specification
         """
         if has_numpy and isinstance(np_dtype, numpy.dtype):
-            dtype_str = f"{str(np_dtype.kind)}{str(np_dtype.itemsize)}"
+            dtype_str = f"{np_dtype.kind!s}{np_dtype.itemsize!s}"
         else:
             dtype_str = np_dtype
 
@@ -670,7 +669,7 @@ class nexus_array:
         :returns: nexus_array type specification
         """
         if has_numpy and isinstance(np_dtype, numpy.dtype):
-            dtype_str = f"{str(np_dtype.kind)}{str(np_dtype.itemsize)}"
+            dtype_str = f"{np_dtype.kind!s}{np_dtype.itemsize!s}"
         else:
             dtype_str = np_dtype
 

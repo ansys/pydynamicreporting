@@ -2,7 +2,6 @@ import base64
 import os
 import os.path
 import re
-from typing import Optional
 import urllib.parse
 
 import requests
@@ -324,7 +323,7 @@ class ReportDownloadHTML:
         if not os.path.exists(pathname):
             return name
         self._collision_count += 1
-        return f"{str(self._collision_count)}_{name}"
+        return f"{self._collision_count!s}_{name}"
 
     @staticmethod
     def _is_scene_file(name: str) -> bool:
