@@ -14,7 +14,6 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
 
     base_dir = Path(__file__).parent / "test_data"
     static_dir = base_dir / "static"
-    static_dir.mkdir(exist_ok=True)
 
     if use_local:
         local_db = base_dir / f"auto_delete_{uuid4().hex}"
