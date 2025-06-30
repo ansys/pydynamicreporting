@@ -209,6 +209,7 @@ class ADR:
                     " or the 'databases' option."
                 )
 
+        # create static and media directories
         if self._in_memory:
             tmp_media_dir = tempfile.TemporaryDirectory()
             self._media_directory = self._check_dir(Path(tmp_media_dir.name))
@@ -234,7 +235,13 @@ class ADR:
                 )
             # check the static directory
             if static_directory is not None:
-                self._static_directory = self._check_dir(static_directory)
+                try:
+                    self._static_directory = self._check_dir(static_directory)
+                except InvalidPath:
+                    # dir creation
+                    self._static_directory = Path(static_directory)
+                    self._static_directory.mkdir(parents=True, exist_ok=True)
+
                 os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
             elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
