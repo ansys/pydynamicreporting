@@ -1,7 +1,7 @@
 repos:
 
 - repo: https://github.com/psf/black
-  rev: 24.10.0  # IF VERSION CHANGES --> MODIFY "blacken-docs" MANUALLY AS WELL!!
+  rev: 24.10.0
   hooks:
   - id: black
 
@@ -9,7 +9,8 @@ repos:
   rev: 1.19.1
   hooks:
   - id: blacken-docs
-    additional_dependencies: [ black==23.3.0 ]
+    additional_dependencies:
+    - black==23.3.0
 
 - repo: https://github.com/pycqa/isort
   rev: 5.13.2
@@ -25,19 +26,23 @@ repos:
   rev: v2.4.0
   hooks:
   - id: codespell
-    args: ["--toml", "pyproject.toml"]
-    additional_dependencies: [ "tomli" ]
+    args:
+    - --toml
+    - pyproject.toml
+    additional_dependencies:
+    - tomli
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
   rev: 0.31.0
   hooks:
-    - id: check-github-workflows
+  - id: check-github-workflows
 
 - repo: https://github.com/asottile/pyupgrade
   rev: v3.19.1
   hooks:
   - id: pyupgrade
-    args: [ --py310-plus ]
+    args:
+    - --py310-plus
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0
@@ -49,28 +54,9 @@ repos:
   - id: check-merge-conflict
   - id: trailing-whitespace
 
-# TO BE ACTIVATED EVENTUALLY - EXISTING ERRORS SHOULD BE SOLVED
-#
-# - repo: https://github.com/PyCQA/bandit
-#   rev: 1.7.5
-#   hooks:
-#   - id: bandit
-#     args: [ "-c", "pyproject.toml"]
-#     additional_dependencies: [ "bandit[toml]" ]
-
-# Currently not working till docformatter works with latest pre-commit
-#
-#- repo: https://github.com/PyCQA/docformatter
-#  rev: v1.7.4
-#  hooks:
-#  - id: docformatter
-#    additional_dependencies: [ "tomli" ]
-
-# TO BE ACTIVATED EVENTUALLY - FORCES PROPER DOCSTRINGS
-#
-# - repo: https://github.com/pycqa/pydocstyle
-#   rev: 6.3.0
-#   hooks:
-#   - id: pydocstyle
-#     additional_dependencies: [ "tomli" ]
-#     exclude: "tests/"
+- repo: https://github.com/ansys/pre-commit-hooks
+  rev: v0.5.2
+  hooks:
+  - id: add-license-headers
+    args:
+    - --start_year=2023
