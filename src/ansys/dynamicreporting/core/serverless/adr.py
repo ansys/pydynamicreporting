@@ -172,7 +172,7 @@ class ADR:
         else:
             self._databases = databases or {}
 
-        # check the database directory
+        # check/create the database directory
         if not self._databases:
             if db_directory is not None:
                 try:
@@ -219,7 +219,13 @@ class ADR:
         else:
             # check the media directory
             if media_directory is not None:
-                self._media_directory = self._check_dir(media_directory)
+                try:
+                    self._media_directory = self._check_dir(media_directory)
+                except InvalidPath:
+                    # dir creation
+                    self._media_directory = Path(media_directory)
+                    self._media_directory.mkdir(parents=True, exist_ok=True)
+
                 os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
             # the env var here is actually the parent directory that contains the media directory
             elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
