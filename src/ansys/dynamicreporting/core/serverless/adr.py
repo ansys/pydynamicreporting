@@ -222,7 +222,6 @@ class ADR:
                 try:
                     self._media_directory = self._check_dir(media_directory)
                 except InvalidPath:
-                    # dir creation
                     self._media_directory = Path(media_directory)
                     self._media_directory.mkdir(parents=True, exist_ok=True)
 
@@ -244,7 +243,6 @@ class ADR:
                 try:
                     self._static_directory = self._check_dir(static_directory)
                 except InvalidPath:
-                    # dir creation
                     self._static_directory = Path(static_directory)
                     self._static_directory.mkdir(parents=True, exist_ok=True)
 
