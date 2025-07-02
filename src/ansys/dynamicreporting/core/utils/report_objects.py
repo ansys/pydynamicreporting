@@ -1369,7 +1369,7 @@ class ItemREST(BaseRESTObject):
         self.fileobj = io.BytesIO(self.image_data)
         self.fileurl = "image.png"
 
-    def validate_file(input_path, description):
+    def validate_file(self, input_path, description):
         if not isinstance(input_path, str):
             raise TypeError(f"The input must be a string representing the file path.")
         
