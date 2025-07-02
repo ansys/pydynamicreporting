@@ -16,7 +16,7 @@ from PIL import Image
 import dateutil
 import dateutil.parser
 import pytz
-
+from pathlib import Path
 from ..serverless.item import HTMLParser
 from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
@@ -1369,7 +1369,7 @@ class ItemREST(BaseRESTObject):
         self.fileobj = io.BytesIO(self.image_data)
         self.fileurl = "image.png"
 
-    def validate_file(self, input_path, description):
+    def validate_file(self, input_path, description, allowed_extensions=None):
         if not isinstance(input_path, str):
             raise TypeError(f"The input must be a string representing the file path.")
         
@@ -1382,6 +1382,10 @@ class ItemREST(BaseRESTObject):
         if os.path.getsize(input_path) == 0:
             raise ValueError(f"The specified {description} is empty: {input_path}")
         
+        ext = Path(input_path).suffix.lower().lstrip(".")
+        if allowed_extensions is not None and ext not in allowed_extensions:
+            raise ValueError(f"The file type '.{ext}' is not supported. Allowed types: {allowed_extensions}")
+        
         try:
             with open(input_path, "rb"):
                 pass
@@ -1390,7 +1394,7 @@ class ItemREST(BaseRESTObject):
     
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
-        self.validate_file(mp4_filename, "animation file")
+        self.validate_file(mp4_filename, "animation file", ["mp4"])
         self.type = ItemREST.type_anim
         self.fileobj = open(mp4_filename, "rb")
         self.fileurl = mp4_filename
@@ -1404,7 +1408,7 @@ class ItemREST(BaseRESTObject):
 
     def set_payload_scene(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
-        self.validate_file(filename, "scene file")
+        self.validate_file(filename, "scene file", ["stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"])
         self.type = ItemREST.type_scn
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
