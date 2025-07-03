@@ -68,7 +68,6 @@ html_theme_options = {
         "json_url": f"https://{cname}/versions.json",
         "version_match": switcher_version,
     },
-    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     "github_url": "https://github.com/ansys/pydynamicreporting/",
     "show_prev_next": False,
     "show_breadcrumbs": True,
