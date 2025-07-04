@@ -1,10 +1,13 @@
 from dataclasses import field
 from datetime import datetime
 import json
+import os
+import uuid
 
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from ..common_utils import get_json_attr_keys
 from ..exceptions import ADRException
 from .base import BaseModel, StrEnum
 
@@ -317,6 +320,63 @@ class Template(BaseModel):
             ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
+
+    def _build_template_data(self, templates_data, template_guid_id_map):
+        attr_fields = get_json_attr_keys()
+        curr_template_key = f"Template_{template_guid_id_map[self.guid]}"
+        templates_data[curr_template_key] = {}
+        for attr_field in attr_fields:
+            value = getattr(self, attr_field, None)
+            if value is None:
+                continue
+            templates_data[curr_template_key][attr_field] = value
+
+        templates_data[curr_template_key]["params"] = self.get_params()
+        templates_data[curr_template_key]["sort_selection"] = self.get_sort_selection()
+        if self.parent is None:
+            templates_data[curr_template_key]["parent"] = None
+            templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
+        else:
+            templates_data[curr_template_key][
+                "parent"
+            ] = f"Template_{template_guid_id_map[self.parent.guid]}"
+
+        templates_data[curr_template_key]["children"] = []
+        children_templates = self.children
+        for child_template in children_templates:
+            curr_size = len(template_guid_id_map)
+            template_guid_id_map[child_template.guid] = curr_size
+            templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
+
+        # Don't combine these 2 for loops, as we want to have consecutive IDs for children
+        for child_template in children_templates:
+            child_template._build_template_data(templates_data, template_guid_id_map)
+
+    def get_templates_as_json(self, root_guid):
+        """
+        Convert report templates rooted with all its children to JSON
+        Return a python dictionary.
+        """
+        templates_data = {}
+        template_guid_id_map = {root_guid: 0}
+        self._build_template_data(root_guid, templates_data, template_guid_id_map)
+        return templates_data
+
+    def store_json(self, filename: str) -> None:
+        """
+        Store the template as a JSON file. If this template is not a root template,
+        it will trace all the way up to the root template and store that instead.
+        """
+        root_template = self
+        while root_template.parent:
+            root_template = root_template.parent
+
+        templates_data = root_template.get_templates_as_json()
+        with open(filename, "w", encoding="utf-8") as json_file:
+            json.dump(templates_data, json_file, indent=4)
+
+        # Make the file read-only
+        os.chmod(filename, 0o444)
 
 
 class Layout(Template):
