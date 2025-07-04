@@ -17,7 +17,6 @@ import dateutil
 import dateutil.parser
 import pytz
 from pathlib import Path
-from ..serverless.item import HTMLParser
 from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
@@ -1105,9 +1104,6 @@ class ItemREST(BaseRESTObject):
             s.encode("utf-8")
         except UnicodeEncodeError:
             raise ValueError("HTML content must be a valid UTF-8 string.")
-        
-        if not HTMLParser().validate(s):
-            raise ValueError("Expected content to contain valid HTML")
         
         self.type = ItemREST.type_html
         self._payloaddata = s
