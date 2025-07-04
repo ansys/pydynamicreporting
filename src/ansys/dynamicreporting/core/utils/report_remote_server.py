@@ -35,6 +35,7 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
+from ..common_utils import get_json_attr_keys
 from .encoders import BaseEncoder
 
 
@@ -1122,12 +1123,6 @@ class Server:
         """
         return ["tags", "params", "sort_selection", "item_filter"]
 
-    def _get_json_attr_keys(self):
-        """
-        Return a list of JSON keys that can be got directly by attribute rather than by getters
-        """
-        return ["name", "report_type", "tags", "item_filter"]
-
     def _check_template(self, template_id_str, template_attr, logger=None):
         # Check template_id_str
         if not self._check_template_name_convention(template_id_str):
@@ -1215,7 +1210,7 @@ class Server:
             if template.guid == guid:
                 curr_template = template
 
-        fields = self._get_json_attr_keys()
+        fields = get_json_attr_keys()
         curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
         templates_data[curr_template_key] = {}
         for field in fields:
@@ -1241,8 +1236,7 @@ class Server:
             template_guid_id_map[child_guid] = curr_size
             templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
 
-        if not children_guids:
-            return
+        # Don't combine these 2 for loops, as we want to have consecutive IDs for children
         for child_guid in children_guids:
             self._build_template_data(child_guid, templates_data, templates, template_guid_id_map)
 

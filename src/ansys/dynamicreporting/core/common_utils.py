@@ -95,3 +95,10 @@ def get_install_info(
     # if it is not found and the user did not provide a path, return None
     # This is for backwards compatibility with the old behavior in the Service class
     return str(install_dir) if install_dir is not None else None, version
+
+
+def get_json_attr_keys():
+    """
+    Return a list of JSON keys that can be got directly by attribute rather than by getters
+    """
+    return ["name", "report_type", "tags", "item_filter"]
