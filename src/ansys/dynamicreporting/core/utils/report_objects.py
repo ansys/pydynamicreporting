@@ -1236,7 +1236,7 @@ class ItemREST(BaseRESTObject):
             kind = array.dtype[0]
 
         # valid array types are bytes and float for now
-        if kind not in ["S", "f"]:
+        if kind not in ("S", "f"):
             raise ValueError("Table array must be a bytes or float type.")
 
         shape = array.shape

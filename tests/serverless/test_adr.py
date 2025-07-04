@@ -79,6 +79,12 @@ def test_is_setup_after_setup(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_has_static_files(adr_serverless):
+    static_dir = adr_serverless.static_directory
+    assert (Path(static_dir) / "admin" / "css" / "base.css").exists()
+
+
+@pytest.mark.ado_test
 def test_get_database_config_after_setup(adr_serverless):
     assert "default" in adr_serverless.get_database_config()
 
