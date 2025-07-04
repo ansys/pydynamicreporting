@@ -1367,7 +1367,7 @@ class ItemREST(BaseRESTObject):
 
     def validate_file(self, input_path, description, allowed_extensions=None):
         if not isinstance(input_path, str):
-            raise TypeError(f"The input must be a string representing the file path.")
+            raise TypeError("The input must be a string representing the file path.")
         
         if not os.path.exists(input_path):
             raise FileNotFoundError(f"The specified {description} path does not exist: {input_path}")
@@ -1385,7 +1385,7 @@ class ItemREST(BaseRESTObject):
         try:
             with open(input_path, "rb"):
                 pass
-        except:
+        except OSError:
             raise IOError(f"Unable to open the {description} for reading")
     
     def set_payload_animation(self, mp4_filename):
