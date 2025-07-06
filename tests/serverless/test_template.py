@@ -1036,7 +1036,7 @@ def test_store_json(adr_serverless):
         tags="dp=dp4",
         params='{"HTML": "<h2>Basic D</h2>"}')
 
-    file_path = "tests/test_data/json/test.json"
+    file_path = os.path.join(adr_serverless.static_directory, "test.json")
     C.store_json(file_path)
     
     with open(file_path, "r", encoding="utf-8") as json_file:
