@@ -42,6 +42,7 @@ file_list.append("mypresentation")
 file_list.append("mytest.pdf")
 file_list.append("tests/again_mytest.pdf")
 file_list.append("tests/again_mytest_filter.pdf")
+file_list.append("tests/test_data/json/*.json")
 for i_file in file_list:
     try:
         os.remove(i_file)
