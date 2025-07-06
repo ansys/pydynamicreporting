@@ -352,14 +352,14 @@ class Template(BaseModel):
         for child_template in children_templates:
             child_template._build_template_data(templates_data, template_guid_id_map)
 
-    def get_templates_as_json(self, root_guid):
+    def get_templates_as_json(self):
         """
         Convert report templates rooted with all its children to JSON
         Return a python dictionary.
         """
         templates_data = {}
-        template_guid_id_map = {root_guid: 0}
-        self._build_template_data(root_guid, templates_data, template_guid_id_map)
+        template_guid_id_map = {self.guid: 0}
+        self._build_template_data(templates_data, template_guid_id_map)
         return templates_data
 
     def store_json(self, filename: str) -> None:
