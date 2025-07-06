@@ -1004,44 +1004,38 @@ def test_template_render(monkeypatch, adr_serverless):
     # Assert that the final rendered content matches the fixed string.
     assert result == "dummy rendered content"
 
+
 @pytest.mark.ado_test
 def test_store_json(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import PanelLayout, BasicLayout
     import json
     import os
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
     A = adr_serverless.create_template(
         BasicLayout,
         name="A",
         parent=None,
         tags="dp=dp1",
-        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}')
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
 
-    B = adr_serverless.create_template(
-        PanelLayout,
-        name="B",
-        parent=A,
-        tags="dp=dp2")
+    adr_serverless.create_template(PanelLayout, name="B", parent=A, tags="dp=dp2")
 
     C = adr_serverless.create_template(
-        BasicLayout,
-        name="C",
-        parent=A,
-        tags="dp=dp3",
-        params='{"HTML": "<h2>Basic C</h2>"}')
+        BasicLayout, name="C", parent=A, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
+    )
 
-    D = adr_serverless.create_template(
-        BasicLayout,
-        name="D",
-        parent=C,
-        tags="dp=dp4",
-        params='{"HTML": "<h2>Basic D</h2>"}')
+    adr_serverless.create_template(
+        BasicLayout, name="D", parent=C, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
+    )
 
     file_path = os.path.join(adr_serverless.static_directory, "test.json")
     C.store_json(file_path)
-    
-    with open(file_path, "r", encoding="utf-8") as json_file:
+
+    with open(file_path, encoding="utf-8") as json_file:
         data = json.load(json_file)
-        
+
     assert (
         data["Template_0"]["children"] == ["Template_1", "Template_2"]
         and data["Template_0"]["name"] == "A"
@@ -1052,4 +1046,3 @@ def test_store_json(adr_serverless):
         and data["Template_3"]["children"] == []
         and data["Template_3"]["name"] == "D"
     )
-    
