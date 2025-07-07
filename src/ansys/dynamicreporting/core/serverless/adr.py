@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 import copy
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import platform
@@ -719,9 +720,31 @@ class ADR:
             child_template = self._populate_template(child_id_str, child_attr, parent_template)
             self._build_templates_from_parent(child_id_str, child_template, templates_json)
 
+    def load_templates_from_file(self, file_path: str | Path) -> None:
+        """
+        Load templates from a JSON file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the JSON file containing the templates to load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the given file_path does not exist.
+        """
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+
+        with open(file_path, encoding="utf-8") as f:
+            templates_json = json.load(f)
+
+        self.load_templates(templates_json)
+
     def load_templates(self, templates_json: dict) -> None:
         """
-        Load templates from a JSON object.
+        Load templates from a JSON object represented in Python dict.
 
         Parameters
         ----------
