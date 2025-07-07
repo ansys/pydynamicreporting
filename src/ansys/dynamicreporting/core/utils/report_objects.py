@@ -1091,7 +1091,6 @@ class ItemREST(BaseRESTObject):
         except UnicodeEncodeError:
             raise ValueError(f"Payload {description} must be a valid UTF-8 string.")
 
-
     def set_payload_string(self, s):
         self.validate_string(s, "string")
         self.type = ItemREST.type_str

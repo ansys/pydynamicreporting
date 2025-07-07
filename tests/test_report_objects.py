@@ -229,6 +229,7 @@ def test_category() -> None:
     succ_a = succ and succ_two
     assert one == "test" and two == "" and a.is_file_protocol() is False and succ_a
 
+
 @pytest.mark.ado_test
 def test_string_payload_item() -> None:
     a = ro.ItemREST()
@@ -250,6 +251,7 @@ def test_string_payload_item() -> None:
 
     assert succ1 and succ2 and succ3
 
+
 @pytest.mark.ado_test
 def test_file_payload_item(tmp_path) -> None:
     a = ro.ItemREST()
@@ -258,7 +260,7 @@ def test_file_payload_item(tmp_path) -> None:
         a.set_payload_file(42)
     except TypeError as e:
         succ1 = "string representing the file path." in str(e)
-    
+
     try:
         a.set_payload_file("non_existent_file.txt")
     except FileNotFoundError as e:
@@ -284,8 +286,9 @@ def test_file_payload_item(tmp_path) -> None:
         a.set_payload_scene(str(bad_ext_file))
     except ValueError as e:
         succ5 = "is not supported." in str(e)
-    
+
     assert succ1 and succ2 and succ3 and succ4 and succ5
+
 
 @pytest.mark.ado_test
 def test_factory() -> None:
