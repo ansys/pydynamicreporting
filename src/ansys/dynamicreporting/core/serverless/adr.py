@@ -705,7 +705,9 @@ class ADR:
         return ADR._create_template_with_parent(template_type, **kwargs)
 
     def _populate_template(self, id_str, attr, parent_template) -> Template:
-        return populate_template(id_str, attr, parent_template, ADR._create_template_with_parent, self._logger, Template)
+        return populate_template(
+            id_str, attr, parent_template, ADR._create_template_with_parent, self._logger, Template
+        )
 
     def _build_templates_from_parent(self, parent_id_str, parent_template, templates_json):
         children_id_strs = templates_json[parent_id_str]["children"]
@@ -714,11 +716,9 @@ class ADR:
 
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
-            child_template = self._populate_template(
-                child_id_str, child_attr, parent_template
-            )
+            child_template = self._populate_template(child_id_str, child_attr, parent_template)
             self._build_templates_from_parent(child_id_str, child_template, templates_json)
-    
+
     def load_templates(self, templates_json: dict) -> None:
         """
         Load templates from a JSON object.

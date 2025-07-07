@@ -1048,7 +1048,9 @@ class Server:
     def _populate_template(self, id_str, attr, parent_template, logger=None):
         return populate_template(id_str, attr, parent_template, self.create_template, logger)
 
-    def _build_templates_from_parent(self, parent_id_str, parent_template, templates_json, logger=None):
+    def _build_templates_from_parent(
+        self, parent_id_str, parent_template, templates_json, logger=None
+    ):
         children_id_strs = templates_json[parent_id_str]["children"]
         if not children_id_strs:
             return
