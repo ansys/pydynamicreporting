@@ -104,11 +104,13 @@ def get_json_attr_keys():
     """
     return ["name", "report_type", "tags", "item_filter"]
 
+
 def _get_json_template_keys():
     """
     Return a list of the default allowed keys in the JSON templates
     """
     return _get_json_necessary_keys() + _get_json_unnecessary_keys()
+
 
 def _get_json_necessary_keys():
     """
@@ -116,17 +118,20 @@ def _get_json_necessary_keys():
     """
     return ["name", "report_type", "parent", "children"]
 
+
 def _get_json_unnecessary_keys():
     """
     Return a list of unnecessary keys in the JSON templates
     """
     return ["tags", "params", "sort_selection", "item_filter"]
 
+
 def _check_template_name_convention(template_name):
     if template_name is None:
         return True
     parts = template_name.split("_")
     return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
+
 
 def _check_template(template_id_str, template_attr, logger=None):
     # Check template_id_str
@@ -179,9 +184,7 @@ def _check_template(template_id_str, template_attr, logger=None):
         )
 
     # Check item_filter
-    common_error_str = (
-        "The loaded JSON file does not follow the correct item_filter convention!\n"
-    )
+    common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
     for query_stanza in template_attr["item_filter"].split(";"):
         if len(query_stanza) > 0:
             parts = query_stanza.split("|")
@@ -203,6 +206,7 @@ def _check_template(template_id_str, template_attr, logger=None):
                 )
     # TODO: check 'sort_selection' and 'params'
 
+
 def get_layout_types():
     return [
         "Layout:basic",
@@ -223,6 +227,7 @@ def get_layout_types():
         "Layout:pptxslide",
     ]
 
+
 def get_generator_types():
     return [
         "Generator:tablemerge",
@@ -237,12 +242,16 @@ def get_generator_types():
         # "Generator:iterator",
     ]
 
+
 def get_report_types():
     return get_layout_types() + get_generator_types()
 
+
 def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):
     _check_template(id_str, attr, logger)
-    template = create_template_func(*args, name=attr["name"], parent=parent_template, report_type=attr["report_type"])
+    template = create_template_func(
+        *args, name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+    )
     template.set_params(attr["params"] if "params" in attr else {})
     if "sort_selection" in attr and attr["sort_selection"] != "":
         template.set_sort_selection(value=attr["sort_selection"])

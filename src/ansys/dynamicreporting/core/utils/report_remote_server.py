@@ -35,8 +35,11 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
-from ..common_utils import get_json_attr_keys, populate_template
-from ..common_utils import get_layout_types as common_utils_get_layout_types, get_generator_types as common_utils_get_generator_types, get_report_types as common_utils_get_report_types
+from ..common_utils import get_generator_types as common_utils_get_generator_types
+from ..common_utils import get_json_attr_keys
+from ..common_utils import get_layout_types as common_utils_get_layout_types
+from ..common_utils import get_report_types as common_utils_get_report_types
+from ..common_utils import populate_template
 from .encoders import BaseEncoder
 
 
@@ -1062,7 +1065,7 @@ class Server:
             id_template_map[child_id_str] = child_template
 
         self.put_objects(child_templates)
-                
+
         for child_id_str in children_id_strs:
             self._build_templates_from_parent(child_id_str, id_template_map, templates_json, logger)
 
