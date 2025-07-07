@@ -718,6 +718,7 @@ class ADR:
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
             child_template = self._populate_template(child_id_str, child_attr, parent_template)
+            child_template.save()
             self._build_templates_from_parent(child_id_str, child_template, templates_json)
 
     def load_templates_from_file(self, file_path: str | Path) -> None:
@@ -758,6 +759,7 @@ class ADR:
 
         root_attr = templates_json[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None)
+        root_template.save()
         self._build_templates_from_parent(root_id_str, root_template, templates_json)
 
     @staticmethod
