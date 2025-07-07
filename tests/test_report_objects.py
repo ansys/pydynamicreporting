@@ -231,6 +231,28 @@ def test_category() -> None:
 
 
 @pytest.mark.ado_test
+def test_table_payload_item() -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = succ3 = False
+    try:
+        a.set_payload_table_values([[]])
+    except ValueError as e:
+        succ1 = "Table array must not be empty." in str(e)
+
+    try:
+        a.set_payload_table_values([[1.0]], rowlbls=["Row 1", "Row 2"], collbls=["Column 1"])
+    except ValueError as e:
+        succ2 = "Number of row labels does not match number of rows in the array." in str(e)
+
+    try:
+        a.set_payload_table_values([[1.0]], rowlbls=["Row 1"], collbls=["Column 1", "Column 2"])
+    except ValueError as e:
+        succ3 = "Number of column labels does not match number of columns in the array." in str(e)
+
+    assert succ1 and succ2 and succ3
+
+
+@pytest.mark.ado_test
 def test_string_payload_item() -> None:
     a = ro.ItemREST()
     succ1 = succ2 = succ3 = False
