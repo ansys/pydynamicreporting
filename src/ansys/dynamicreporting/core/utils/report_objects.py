@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import os
+from pathlib import Path
 import pickle
 import shlex
 import sys
@@ -16,7 +17,7 @@ from PIL import Image
 import dateutil
 import dateutil.parser
 import pytz
-from pathlib import Path
+
 from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
@@ -1081,15 +1082,15 @@ class ItemREST(BaseRESTObject):
     def set_payload_string(self, s):
         if not isinstance(s, str):
             raise TypeError("Payload must be a string.")
-    
+
         if not s.strip():
             raise ValueError("Payload string cannot be empty or whitespace.")
-        
+
         try:
             s.encode("utf-8")
         except UnicodeEncodeError:
             raise ValueError("Payload string must be a valid UTF-8 string.")
-        
+
         self.type = ItemREST.type_str
         self._payloaddata = s
 
@@ -1099,12 +1100,12 @@ class ItemREST(BaseRESTObject):
 
         if not s.strip():
             raise ValueError("Payload HTML string cannot be empty or whitespace.")
-        
+
         try:
             s.encode("utf-8")
         except UnicodeEncodeError:
             raise ValueError("HTML content must be a valid UTF-8 string.")
-        
+
         self.type = ItemREST.type_html
         self._payloaddata = s
 
@@ -1265,11 +1266,13 @@ class ItemREST(BaseRESTObject):
             array.shape = shape
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
-        
+
         if rowlbls and len(rowlbls) != array.shape[0]:
             raise ValueError("Number of row labels does not match number of rows in the array.")
         if collbls and len(collbls) != array.shape[1]:
-            raise ValueError("Number of column labels does not match number of columns in the array.")
+            raise ValueError(
+                "Number of column labels does not match number of columns in the array."
+            )
 
         # update after validation
         value.update(
@@ -1368,26 +1371,30 @@ class ItemREST(BaseRESTObject):
     def validate_file(self, input_path, description, allowed_extensions=None):
         if not isinstance(input_path, str):
             raise TypeError("The input must be a string representing the file path.")
-        
+
         if not os.path.exists(input_path):
-            raise FileNotFoundError(f"The specified {description} path does not exist: {input_path}")
-        
+            raise FileNotFoundError(
+                f"The specified {description} path does not exist: {input_path}"
+            )
+
         if not os.path.isfile(input_path):
             raise ValueError(f"The specified {description} is not a file: {input_path}")
-        
+
         if os.path.getsize(input_path) == 0:
             raise ValueError(f"The specified {description} is empty: {input_path}")
-        
+
         ext = Path(input_path).suffix.lower().lstrip(".")
         if allowed_extensions is not None and ext not in allowed_extensions:
-            raise ValueError(f"The file type '.{ext}' is not supported. Allowed types: {allowed_extensions}")
-        
+            raise ValueError(
+                f"The file type '.{ext}' is not supported. Allowed types: {allowed_extensions}"
+            )
+
         try:
             with open(input_path, "rb"):
                 pass
         except OSError:
-            raise IOError(f"Unable to open the {description} for reading")
-    
+            raise OSError(f"Unable to open the {description} for reading")
+
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
         self.validate_file(mp4_filename, "animation file", ["mp4"])
@@ -1404,7 +1411,11 @@ class ItemREST(BaseRESTObject):
 
     def set_payload_scene(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
-        self.validate_file(filename, "scene file", ["stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"])
+        self.validate_file(
+            filename,
+            "scene file",
+            ["stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"],
+        )
         self.type = ItemREST.type_scn
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
