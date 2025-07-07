@@ -8,6 +8,11 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core import Service
+from ansys.dynamicreporting.core.common_utils import (
+    get_generator_types,
+    get_layout_types,
+    get_report_types,
+)
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
@@ -1180,3 +1185,33 @@ def test_put_objects_bad_request_se_application(adr_service_create) -> bool:
         BadRequestError, match=re.escape("Ensure application has no more than 40 characters.")
     ):
         server.put_objects(test_session)
+
+
+@pytest.mark.ado_test
+def test_get_layout_types(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+    layout_types = server.get_layout_types()
+    expected_layout_types = get_layout_types()
+    assert isinstance(layout_types, list)
+    assert layout_types == expected_layout_types
+    assert all(isinstance(layout_type, str) for layout_type in layout_types)
+
+
+@pytest.mark.ado_test
+def test_get_generator_types(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+    generator_types = server.get_generator_types()
+    expected_generator_types = get_generator_types()
+    assert isinstance(generator_types, list)
+    assert generator_types == expected_generator_types
+    assert all(isinstance(generator_type, str) for generator_type in generator_types)
+
+
+@pytest.mark.ado_test
+def test_get_report_types(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+    report_types = server.get_report_types()
+    expected_report_types = get_report_types()
+    assert isinstance(report_types, list)
+    assert report_types == expected_report_types
+    assert all(isinstance(report_type, str) for report_type in report_types)

@@ -1128,3 +1128,9 @@ def test_load_templates_from_file(adr_serverless):
     assert grandchild_d is not None
     assert grandchild_d.report_type == "Layout:basic"
     assert grandchild_d.get_params()["HTML"] == "<h2>Basic D</h2>"
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file_no_such_file(adr_serverless):
+    with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
+        adr_serverless.load_templates_from_file("nonexistent.json")
