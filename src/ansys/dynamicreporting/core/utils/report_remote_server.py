@@ -1043,15 +1043,13 @@ class Server:
         root_attr = templates_json[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
-        id_template_map = {}
-        id_template_map[root_id_str] = root_template
-        self._build_templates_from_parent(root_id_str, id_template_map, templates_json, logger)
+        self._build_templates_from_parent(root_id_str, root_template, templates_json, logger)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
         return populate_template(id_str, attr, parent_template, self.create_template, logger)
 
-    def _build_templates_from_parent(self, id_str, id_template_map, templates_json, logger=None):
-        children_id_strs = templates_json[id_str]["children"]
+    def _build_templates_from_parent(self, parent_id_str, parent_template, templates_json, logger=None):
+        children_id_strs = templates_json[parent_id_str]["children"]
         if not children_id_strs:
             return
 
@@ -1059,15 +1057,14 @@ class Server:
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
             child_template = self._populate_template(
-                child_id_str, child_attr, id_template_map[id_str], logger
+                child_id_str, child_attr, parent_template, logger
             )
             child_templates.append(child_template)
-            id_template_map[child_id_str] = child_template
 
         self.put_objects(child_templates)
 
         for child_id_str in children_id_strs:
-            self._build_templates_from_parent(child_id_str, id_template_map, templates_json, logger)
+            self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None
