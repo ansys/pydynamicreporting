@@ -1079,33 +1079,26 @@ class ItemREST(BaseRESTObject):
         self.type = ItemREST.type_none
         self._payloaddata = ""
 
-    def set_payload_string(self, s):
-        if not isinstance(s, str):
+    def validate_string(self, input_string, description):
+        if not isinstance(input_string, str):
             raise TypeError("Payload must be a string.")
 
-        if not s.strip():
-            raise ValueError("Payload string cannot be empty or whitespace.")
+        if not input_string.strip():
+            raise ValueError(f"Payload {description} cannot be empty or whitespace.")
 
         try:
-            s.encode("utf-8")
+            input_string.encode("utf-8")
         except UnicodeEncodeError:
-            raise ValueError("Payload string must be a valid UTF-8 string.")
+            raise ValueError(f"Payload {description} must be a valid UTF-8 string.")
 
+
+    def set_payload_string(self, s):
+        self.validate_string(s, "string")
         self.type = ItemREST.type_str
         self._payloaddata = s
 
     def set_payload_html(self, s):
-        if not isinstance(s, str):
-            raise TypeError("Payload must be a string containing HTML.")
-
-        if not s.strip():
-            raise ValueError("Payload HTML string cannot be empty or whitespace.")
-
-        try:
-            s.encode("utf-8")
-        except UnicodeEncodeError:
-            raise ValueError("HTML content must be a valid UTF-8 string.")
-
+        self.validate_string(s, "HTML")
         self.type = ItemREST.type_html
         self._payloaddata = s
 
@@ -1388,12 +1381,6 @@ class ItemREST(BaseRESTObject):
             raise ValueError(
                 f"The file type '.{ext}' is not supported. Allowed types: {allowed_extensions}"
             )
-
-        try:
-            with open(input_path, "rb"):
-                pass
-        except OSError:
-            raise OSError(f"Unable to open the {description} for reading")
 
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
