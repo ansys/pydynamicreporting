@@ -745,24 +745,24 @@ class ADR:
 
         self.load_templates(templates_json)
 
-    def load_templates(self, templates_json: dict) -> None:
+    def load_templates(self, templates: dict) -> None:
         """
-        Load templates from a JSON object represented in Python dict.
+        Load templates from a Python dict.
 
         Parameters
         ----------
-        templates_json : dict
-            A dictionary containing the templates to load.
+        templates : dict
+            A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
         """
-        for template_id_str, template_attr in templates_json.items():
+        for template_id_str, template_attr in templates.items():
             if template_attr["parent"] is None:
                 root_id_str = template_id_str
                 break
 
-        root_attr = templates_json[root_id_str]
+        root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None)
         root_template.save()
-        self._build_templates_from_parent(root_id_str, root_template, templates_json)
+        self._build_templates_from_parent(root_id_str, root_template, templates)
 
     @staticmethod
     def get_report(**kwargs) -> Template:

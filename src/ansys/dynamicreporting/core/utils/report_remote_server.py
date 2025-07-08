@@ -1031,19 +1031,24 @@ class Server:
         # Make the file read-only
         os.chmod(filename, 0o444)
 
-    def load_templates(self, templates_json, logger=None):
+    def load_templates(self, templates: dict, logger=None):
         """
-        Load templates given a json-format data as a dictionary.
+        Load templates from a Python dict.
+
+        Parameters
+        ----------
+        templates : dict
+            A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
         """
-        for template_id_str, template_attr in templates_json.items():
+        for template_id_str, template_attr in templates.items():
             if template_attr["parent"] is None:
                 root_id_str = template_id_str
                 break
 
-        root_attr = templates_json[root_id_str]
+        root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
-        self._build_templates_from_parent(root_id_str, root_template, templates_json, logger)
+        self._build_templates_from_parent(root_id_str, root_template, templates, logger)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
         return populate_template(id_str, attr, parent_template, self.create_template, logger)
