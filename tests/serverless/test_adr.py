@@ -1106,7 +1106,7 @@ def test_load_templates_from_file(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Template
 
     # Load templates from the sample JSON file
-    sample_file = Path(__file__).parent / "test_data" / "sample.json"
+    sample_file = Path(__file__).parent.parent / "test_data" / "sample.json"
     adr_serverless.load_templates_from_file(sample_file)
 
     # Verify the root template
