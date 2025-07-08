@@ -2,6 +2,7 @@ from pathlib import Path
 from random import random as r
 import uuid
 
+from django.core.exceptions import ImproperlyConfigured
 import numpy as np
 import pytest
 
@@ -61,6 +62,12 @@ def test_ensure_setup_error_no_setup():
 @pytest.mark.ado_test
 def test_get_database_config_before_setup():
     assert ADR.get_database_config() is None
+
+
+@pytest.mark.ado_test
+def test_get_database_config_before_setup_raise():
+    with pytest.raises(ImproperlyConfiguredError):
+        ADR.get_database_config(raise_exception=True)
 
 
 @pytest.mark.ado_test
