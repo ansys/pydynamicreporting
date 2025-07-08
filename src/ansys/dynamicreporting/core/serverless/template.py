@@ -364,14 +364,13 @@ class Template(BaseModel):
 
     def store_json(self, filename: str) -> None:
         """
-        Store the template as a JSON file. If this template is not a root template,
-        it will trace all the way up to the root template and store that instead.
+        Store the template as a JSON file.
+        Only allow this action if this template is a root template.
         """
-        root_template = self
-        while root_template.parent:
-            root_template = root_template.parent
+        if self.parent is not None:
+            raise ADRException("Only root templates can be dumped to JSON files.")
 
-        templates_data = root_template.get_templates_as_json()
+        templates_data = self.get_templates_as_json()
         with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
 
