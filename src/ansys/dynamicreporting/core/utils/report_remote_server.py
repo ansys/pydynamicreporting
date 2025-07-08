@@ -1031,6 +1031,28 @@ class Server:
         # Make the file read-only
         os.chmod(filename, 0o444)
 
+    def load_templates_from_file(self, file_path: str | Path) -> None:
+        """
+        Load templates from a JSON file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the JSON file containing the templates to load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the given file_path does not exist.
+        """
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+
+        with open(file_path, encoding="utf-8") as f:
+            templates_json = json.load(f)
+
+        self.load_templates(templates_json)
+
     def load_templates(self, templates: dict, logger=None):
         """
         Load templates from a Python dict.

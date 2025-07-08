@@ -1,5 +1,6 @@
 import logging
 from os import environ
+from pathlib import Path
 from random import randint
 import re
 import uuid
@@ -466,6 +467,34 @@ def test_get_templates_as_json(adr_service_create) -> bool:
     assert templates_json["Template_0"]["item_filter"] == ""
     assert templates_json["Template_0"]["parent"] is None
     assert templates_json["Template_0"]["children"] == ["Template_1", "Template_2"]
+    server.del_objects(templates)
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file_no_such_file(adr_service_create) -> None:
+    with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
+        adr_service_create.load_templates_from_file("nonexistent.json")
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+
+    # Path to the sample JSON file
+    sample_file = Path(__file__).parent / "test_data" / "sample.json"
+
+    # Call the method
+    server.load_templates_from_file(sample_file)
+
+    # Verify templates were loaded correctly
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    assert len(templates) == 4
+    assert any(template.name == "A" for template in templates)
+    assert any(template.name == "B" for template in templates)
+    assert any(template.name == "C" for template in templates)
+    assert any(template.name == "D" for template in templates)
+
+    # Clean up
     server.del_objects(templates)
 
 
