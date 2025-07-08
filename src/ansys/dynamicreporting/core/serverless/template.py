@@ -72,7 +72,7 @@ class Template(BaseModel):
                 "Cannot instantiate Template directly. Use the Template.create() method."
             )
         super().__post_init__()
-        
+
     def __build_template_data(self, templates_data, template_guid_id_map):
         attr_fields = get_json_attr_keys()
         curr_template_key = f"Template_{template_guid_id_map[self.guid]}"
