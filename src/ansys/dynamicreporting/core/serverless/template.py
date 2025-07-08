@@ -72,6 +72,37 @@ class Template(BaseModel):
                 "Cannot instantiate Template directly. Use the Template.create() method."
             )
         super().__post_init__()
+        
+    def __build_template_data(self, templates_data, template_guid_id_map):
+        attr_fields = get_json_attr_keys()
+        curr_template_key = f"Template_{template_guid_id_map[self.guid]}"
+        templates_data[curr_template_key] = {}
+        for attr_field in attr_fields:
+            value = getattr(self, attr_field, None)
+            if value is None:
+                continue
+            templates_data[curr_template_key][attr_field] = value
+
+        templates_data[curr_template_key]["params"] = self.get_params()
+        templates_data[curr_template_key]["sort_selection"] = self.get_sort_selection()
+        if self.parent is None:
+            templates_data[curr_template_key]["parent"] = None
+            templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
+        else:
+            templates_data[curr_template_key][
+                "parent"
+            ] = f"Template_{template_guid_id_map[self.parent.guid]}"
+
+        templates_data[curr_template_key]["children"] = []
+        children_templates = self.children
+        for child_template in children_templates:
+            curr_size = len(template_guid_id_map)
+            template_guid_id_map[child_template.guid] = curr_size
+            templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
+
+        # Don't combine these 2 for loops, as we want to have consecutive IDs for children
+        for child_template in children_templates:
+            child_template.__build_template_data(templates_data, template_guid_id_map)
 
     @property
     def type(self):
@@ -321,37 +352,6 @@ class Template(BaseModel):
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
 
-    def _build_template_data(self, templates_data, template_guid_id_map):
-        attr_fields = get_json_attr_keys()
-        curr_template_key = f"Template_{template_guid_id_map[self.guid]}"
-        templates_data[curr_template_key] = {}
-        for attr_field in attr_fields:
-            value = getattr(self, attr_field, None)
-            if value is None:
-                continue
-            templates_data[curr_template_key][attr_field] = value
-
-        templates_data[curr_template_key]["params"] = self.get_params()
-        templates_data[curr_template_key]["sort_selection"] = self.get_sort_selection()
-        if self.parent is None:
-            templates_data[curr_template_key]["parent"] = None
-            templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
-        else:
-            templates_data[curr_template_key][
-                "parent"
-            ] = f"Template_{template_guid_id_map[self.parent.guid]}"
-
-        templates_data[curr_template_key]["children"] = []
-        children_templates = self.children
-        for child_template in children_templates:
-            curr_size = len(template_guid_id_map)
-            template_guid_id_map[child_template.guid] = curr_size
-            templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
-
-        # Don't combine these 2 for loops, as we want to have consecutive IDs for children
-        for child_template in children_templates:
-            child_template._build_template_data(templates_data, template_guid_id_map)
-
     def get_templates_as_json(self):
         """
         Convert report templates rooted with all its children to JSON
@@ -359,7 +359,7 @@ class Template(BaseModel):
         """
         templates_data = {}
         template_guid_id_map = {self.guid: 0}
-        self._build_template_data(templates_data, template_guid_id_map)
+        self.__build_template_data(templates_data, template_guid_id_map)
         return templates_data
 
     def store_json(self, filename: str) -> None:
