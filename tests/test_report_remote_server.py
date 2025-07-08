@@ -472,8 +472,9 @@ def test_get_templates_as_json(adr_service_create) -> bool:
 
 @pytest.mark.ado_test
 def test_load_templates_from_file_no_such_file(adr_service_create) -> None:
+    server = adr_service_create.serverobj
     with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
-        adr_service_create.load_templates_from_file("nonexistent.json")
+        server.load_templates_from_file("nonexistent.json")
 
 
 @pytest.mark.ado_test
