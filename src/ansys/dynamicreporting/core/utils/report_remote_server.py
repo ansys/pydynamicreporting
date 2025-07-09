@@ -35,9 +35,8 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
-from ..common_utils import get_json_attr_keys
-from ..constants import LAYOUT_TYPES, GENERATOR_TYPES, REPORT_TYPES
 from ..common_utils import populate_template
+from ..constants import GENERATOR_TYPES, JSON_ATTR_KEYS, LAYOUT_TYPES, REPORT_TYPES
 from .encoders import BaseEncoder
 
 
@@ -1108,10 +1107,9 @@ class Server:
             if template.guid == guid:
                 curr_template = template
 
-        fields = get_json_attr_keys()
         curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
         templates_data[curr_template_key] = {}
-        for field in fields:
+        for field in JSON_ATTR_KEYS:
             value = getattr(curr_template, field, None)
             if value is None:
                 continue

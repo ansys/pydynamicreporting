@@ -7,7 +7,7 @@ import uuid
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from ..common_utils import get_json_attr_keys
+from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException
 from .base import BaseModel, StrEnum
 
@@ -74,10 +74,9 @@ class Template(BaseModel):
         super().__post_init__()
 
     def __build_template_data(self, templates_data, template_guid_id_map):
-        attr_fields = get_json_attr_keys()
         curr_template_key = f"Template_{template_guid_id_map[self.guid]}"
         templates_data[curr_template_key] = {}
-        for attr_field in attr_fields:
+        for attr_field in JSON_ATTR_KEYS:
             value = getattr(self, attr_field, None)
             if value is None:
                 continue

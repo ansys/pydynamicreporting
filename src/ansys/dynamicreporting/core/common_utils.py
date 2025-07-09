@@ -4,7 +4,7 @@ import platform
 import re
 
 from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
-from .constants import REPORT_TYPES
+from .constants import JSON_NECESSARY_KEYS, JSON_TEMPLATE_KEYS, REPORT_TYPES
 from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
@@ -99,34 +99,6 @@ def get_install_info(
     return str(install_dir) if install_dir is not None else None, version
 
 
-def get_json_attr_keys():
-    """
-    Return a list of JSON keys that can be got directly by attribute rather than by getters
-    """
-    return ["name", "report_type", "tags", "item_filter"]
-
-
-def _get_json_template_keys():
-    """
-    Return a list of the default allowed keys in the JSON templates
-    """
-    return _get_json_necessary_keys() + _get_json_unnecessary_keys()
-
-
-def _get_json_necessary_keys():
-    """
-    Return a list of necessary keys in the JSON templates
-    """
-    return ["name", "report_type", "parent", "children"]
-
-
-def _get_json_unnecessary_keys():
-    """
-    Return a list of unnecessary keys in the JSON templates
-    """
-    return ["tags", "params", "sort_selection", "item_filter"]
-
-
 def _check_template_name_convention(template_name):
     if template_name is None:
         return True
@@ -159,7 +131,7 @@ def _check_template(template_id_str, template_attr, logger=None):
             )
 
     # Check missing necessary keys
-    necessary_keys = _get_json_necessary_keys()
+    necessary_keys = JSON_NECESSARY_KEYS()
     for necessary_key in necessary_keys:
         if necessary_key not in template_attr.keys():
             raise TemplateEditorJSONLoadingError(
@@ -169,7 +141,7 @@ def _check_template(template_id_str, template_attr, logger=None):
 
     # Add warnings to the logger about the extra keys
     if logger:
-        default_allowed_keys = _get_json_template_keys()
+        default_allowed_keys = JSON_TEMPLATE_KEYS()
         extra_keys = []
         for key in template_attr.keys():
             if key not in default_allowed_keys:
