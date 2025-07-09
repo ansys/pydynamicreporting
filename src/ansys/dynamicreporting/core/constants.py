@@ -2,7 +2,7 @@ DOCKER_REPO_URL = "ghcr.io/ansys-internal/nexus"
 DOCKER_DEV_REPO_URL = "ghcr.io/ansys-internal/nexus_dev"
 DOCKER_DEFAULT_PORT = 8000
 
-LAYOUT_TYPES = [
+LAYOUT_TYPES = (
     "Layout:basic",
     "Layout:panel",
     "Layout:box",
@@ -19,9 +19,9 @@ LAYOUT_TYPES = [
     "Layout:datafilter",
     "Layout:pptx",
     "Layout:pptxslide",
-]
+)
 
-GENERATOR_TYPES = [
+GENERATOR_TYPES = (
     "Generator:tablemerge",
     "Generator:tablereduce",
     "Generator:tablerowcolumnfilter",
@@ -32,11 +32,11 @@ GENERATOR_TYPES = [
     "Generator:itemscomparison",
     "Generator:statistical",
     # "Generator:iterator",
-]
+)
 
 REPORT_TYPES = LAYOUT_TYPES + GENERATOR_TYPES
 
-JSON_ATTR_KEYS = ["name", "report_type", "tags", "item_filter"]
-JSON_NECESSARY_KEYS = ["name", "report_type", "parent", "children"]
-JSON_UNNECESSARY_KEYS = ["tags", "params", "sort_selection", "item_filter"]
+JSON_ATTR_KEYS = ("name", "report_type", "tags", "item_filter")
+JSON_NECESSARY_KEYS = ("name", "report_type", "parent", "children")
+JSON_UNNECESSARY_KEYS = ("tags", "params", "sort_selection", "item_filter")
 JSON_TEMPLATE_KEYS = JSON_NECESSARY_KEYS + JSON_UNNECESSARY_KEYS
