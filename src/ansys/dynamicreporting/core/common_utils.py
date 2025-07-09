@@ -118,7 +118,7 @@ def _check_template(template_id_str, template_attr, logger=None):
     if not _check_template_name_convention(template_attr["parent"]):
         raise TemplateEditorJSONLoadingError(
             f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
-            f"that does not have the correct name convection under the key: 'parent' of '{template_id_str}'\n"
+            f"that does not have the correct name convention under the key: 'parent' of '{template_id_str}'\n"
             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
         )
 
@@ -126,7 +126,7 @@ def _check_template(template_id_str, template_attr, logger=None):
         if not _check_template_name_convention(child_name):
             raise TemplateEditorJSONLoadingError(
                 f"The loaded JSON file has an invalid template name: '{child_name}' "
-                f"that does not have the correct name convection under the key: 'children' of '{template_id_str}'\n"
+                f"that does not have the correct name convention under the key: 'children' of '{template_id_str}'\n"
                 "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
             )
 
