@@ -131,8 +131,7 @@ def _check_template(template_id_str, template_attr, logger=None):
             )
 
     # Check missing necessary keys
-    necessary_keys = JSON_NECESSARY_KEYS()
-    for necessary_key in necessary_keys:
+    for necessary_key in JSON_NECESSARY_KEYS:
         if necessary_key not in template_attr.keys():
             raise TemplateEditorJSONLoadingError(
                 f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
