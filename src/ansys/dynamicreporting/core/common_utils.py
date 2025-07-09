@@ -4,6 +4,7 @@ import platform
 import re
 
 from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from .constants import REPORT_TYPES
 from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
@@ -177,8 +178,7 @@ def _check_template(template_id_str, template_attr, logger=None):
             logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
 
     # Check report_type
-    report_types = get_report_types()
-    if not template_attr["report_type"] in report_types:
+    if not template_attr["report_type"] in REPORT_TYPES:
         raise TemplateEditorJSONLoadingError(
             f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
         )
@@ -205,46 +205,6 @@ def _check_template(template_id_str, template_attr, logger=None):
                     f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
                 )
     # TODO: check 'sort_selection' and 'params'
-
-
-def get_layout_types():
-    return [
-        "Layout:basic",
-        "Layout:panel",
-        "Layout:box",
-        "Layout:tabs",
-        "Layout:carousel",
-        "Layout:slider",
-        "Layout:footer",
-        "Layout:header",
-        "Layout:iterator",
-        "Layout:tagprops",
-        "Layout:toc",
-        "Layout:reportlink",
-        "Layout:userdefined",
-        "Layout:datafilter",
-        "Layout:pptx",
-        "Layout:pptxslide",
-    ]
-
-
-def get_generator_types():
-    return [
-        "Generator:tablemerge",
-        "Generator:tablereduce",
-        "Generator:tablerowcolumnfilter",
-        "Generator:tablevaluefilter",
-        "Generator:tablesortfilter",
-        "Generator:sqlquery",
-        "Generator:treemerge",
-        "Generator:itemscomparison",
-        "Generator:statistical",
-        # "Generator:iterator",
-    ]
-
-
-def get_report_types():
-    return get_layout_types() + get_generator_types()
 
 
 def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):

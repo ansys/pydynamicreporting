@@ -35,10 +35,8 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
-from ..common_utils import get_generator_types as common_utils_get_generator_types
 from ..common_utils import get_json_attr_keys
-from ..common_utils import get_layout_types as common_utils_get_layout_types
-from ..common_utils import get_report_types as common_utils_get_report_types
+from ..constants import LAYOUT_TYPES, GENERATOR_TYPES, REPORT_TYPES
 from ..common_utils import populate_template
 from .encoders import BaseEncoder
 
@@ -991,7 +989,7 @@ class Server:
         description in ADO, rptframework/report_editor_main.py::_get_layout_type_item_names.
         In addition, update the minor version to prevent build from failing.
         """
-        return common_utils_get_layout_types()
+        return LAYOUT_TYPES
 
     def get_generator_types(self):
         """
@@ -1001,13 +999,13 @@ class Server:
         description in ADO, rptframework/report_editor_main.py::_get_generator_type_item_names.
         In addition, update the minor version to prevent build from failing.
         """
-        return common_utils_get_generator_types()
+        return GENERATOR_TYPES
 
     def get_report_types(self):
         """
         Return a list of valid report types
         """
-        return common_utils_get_report_types()
+        return REPORT_TYPES
 
     def get_templates_as_dict(self, root_guid):
         """
