@@ -431,7 +431,7 @@ def test_acls_start(tmp_path, get_exec) -> None:
 
 
 @pytest.mark.ado_test
-def test_get_templates_as_json(adr_service_create) -> bool:
+def test_get_templates_as_dict(adr_service_create) -> bool:
     server = adr_service_create.serverobj
 
     # Level 0
@@ -457,7 +457,7 @@ def test_get_templates_as_json(adr_service_create) -> bool:
             root_guid = template.guid
             break
 
-    templates_json = server.get_templates_as_json(root_guid)
+    templates_json = server.get_templates_as_dict(root_guid)
     assert len(templates_json) == 4
     assert templates_json["Template_0"]["name"] == "A"
     assert templates_json["Template_0"]["report_type"] == "Layout:basic"

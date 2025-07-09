@@ -1009,10 +1009,19 @@ class Server:
         """
         return common_utils_get_report_types()
 
-    def get_templates_as_json(self, root_guid):
+    def get_templates_as_dict(self, root_guid):
         """
-        Convert report templates rooted as root_guid to JSON
-        Return a python dictionary.
+        Convert report templates rooted at the specified root_guid into a JSON-compatible dictionary.
+
+        Parameters
+        ----------
+        root_guid : str
+            The GUID of the root template to start the conversion.
+
+        Returns
+        -------
+        dict
+            A Python dictionary representation of the template hierarchy.
         """
         templates_data = {}
         templates = self.get_objects(objtype=report_objects.TemplateREST)
@@ -1024,7 +1033,7 @@ class Server:
         """
         Given a root guid, generate a JSON file rooted this guid, and store the file on disk
         """
-        templates_data = self.get_templates_as_json(root_guid)
+        templates_data = self.get_templates_as_dict(root_guid)
         with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
 
