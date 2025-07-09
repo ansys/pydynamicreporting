@@ -12,6 +12,7 @@ from typing import Any
 import uuid
 import warnings
 
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
@@ -162,62 +163,58 @@ class ADR:
             opts = {}
         os.environ.update(opts)
 
-        # database configuration
         if self._in_memory:
+            # database configuration
             self._databases = {
                 "default": {
                     "ENGINE": "sqlite3",
                     "NAME": ":memory:",
                 }
             }
-        else:
-            self._databases = databases or {}
-
-        # check/create the database directory
-        if not self._databases:
-            if db_directory is not None:
-                try:
-                    self._db_directory = self._check_dir(db_directory)
-                except InvalidPath:
-                    # dir creation
-                    self._db_directory = Path(db_directory)
-                    self._db_directory.mkdir(parents=True, exist_ok=True)
-                    # media dir
-                    (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
-                    # secret key
-                    if "CEI_NEXUS_SECRET_KEY" not in os.environ:
-                        # Make a random string that could be used as a secret key for the database
-                        secret_key = get_random_secret_key()
-                        os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
-                        # And make a target file (.nexdb) for auto launching of the report viewer...
-                        with open(self._db_directory / "view_report.nexdb", "w") as f:
-                            f.write(secret_key)
-                else:
-                    # check if there is a sqlite db in the directory
-                    db_files = list(self._db_directory.glob("*.sqlite3"))
-                    if not db_files:
-                        raise InvalidPath(
-                            extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
-                            " you would like to create a new database."
-                        )
-
-                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
-            elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
-                self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
-            else:
-                raise ImproperlyConfiguredError(
-                    "A database must be specified using either the 'db_directory'"
-                    " or the 'databases' option."
-                )
-
-        # create static and media directories
-        if self._in_memory:
+            # create static and media directories
             tmp_media_dir = tempfile.TemporaryDirectory()
             self._media_directory = self._check_dir(Path(tmp_media_dir.name))
             tmp_static_dir = tempfile.TemporaryDirectory()
             self._static_directory = self._check_dir(Path(tmp_static_dir.name))
             self._tmp_dirs.extend([tmp_media_dir, tmp_static_dir])
         else:
+            self._databases = databases or {}
+            # check/create the database directory
+            if not self._databases:
+                if db_directory is not None:
+                    try:
+                        self._db_directory = self._check_dir(db_directory)
+                    except InvalidPath:
+                        # dir creation
+                        self._db_directory = Path(db_directory)
+                        self._db_directory.mkdir(parents=True, exist_ok=True)
+                        # media dir
+                        (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
+                        # secret key
+                        if "CEI_NEXUS_SECRET_KEY" not in os.environ:
+                            # Make a random string that could be used as a secret key for the database
+                            secret_key = get_random_secret_key()
+                            os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
+                            # And make a target file (.nexdb) for auto launching of the report viewer...
+                            with open(self._db_directory / "view_report.nexdb", "w") as f:
+                                f.write(secret_key)
+                    else:
+                        # check if there is a sqlite db in the directory
+                        db_files = list(self._db_directory.glob("*.sqlite3"))
+                        if not db_files:
+                            raise InvalidPath(
+                                extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
+                                " you would like to create a new database."
+                            )
+
+                    os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
+                elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
+                    self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
+                else:
+                    raise ImproperlyConfiguredError(
+                        "A database must be specified using either the 'db_directory'"
+                        " or the 'databases' option."
+                    )
             # check the media directory
             if media_directory is not None:
                 try:
@@ -321,13 +318,18 @@ class ADR:
                 nexus_group.user_set.add(user)
 
     @classmethod
-    def get_database_config(cls) -> dict | None:
+    def get_database_config(cls: type["ADR"], raise_exception: bool = False) -> dict | None:
         """Get the database configuration."""
-        if not cls._is_setup:
-            return None
-        from django.conf import settings
+        try:
+            from django.conf import settings
 
-        return settings.DATABASES
+            return settings.DATABASES
+        except ImproperlyConfigured as e:
+            if raise_exception:
+                raise ImproperlyConfiguredError(
+                    "The ADR instance has not been set up. Call setup() first."
+                ) from e
+            return None
 
     def _is_sqlite(self, database: str) -> bool:
         return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
@@ -506,7 +508,7 @@ class ADR:
         # Check for Linux TZ issue
         report_utils.apply_timezone_workaround()
 
-        # django configuration
+        # django setup
         try:
             from django.conf import settings
 
@@ -515,7 +517,7 @@ class ADR:
 
                 settings.configure(**overrides)
                 django.setup()
-        except Exception as e:
+        except ImproperlyConfigured as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
@@ -573,7 +575,7 @@ class ADR:
     ) -> None:
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self.get_database_config():
+        if database != "default" and database not in self.get_database_config(raise_exception=True):
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
         if not target_dir.is_dir():
@@ -600,7 +602,7 @@ class ADR:
             raise ADRException(f"Backup failed: {e}")
 
     def restore_database(self, input_file: str | Path, *, database: str = "default") -> None:
-        if database != "default" and database not in self.get_database_config():
+        if database != "default" and database not in self.get_database_config(raise_exception=True):
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         backup_file = Path(input_file).resolve(strict=True)
         if not backup_file.is_file():
@@ -884,7 +886,7 @@ class ADR:
                 f"'{object_type.__name__}' is not a type of Item, Template, Session, or Dataset"
             )
 
-        database_config = self.get_database_config()
+        database_config = self.get_database_config(raise_exception=True)
         if target_database not in database_config or source_database not in database_config:
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."
