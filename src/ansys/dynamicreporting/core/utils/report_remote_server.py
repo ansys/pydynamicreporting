@@ -36,7 +36,6 @@ from urllib3.util.retry import Retry
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
-from ..constants import GENERATOR_TYPES, JSON_ATTR_KEYS, LAYOUT_TYPES, REPORT_TYPES
 from .encoders import BaseEncoder
 
 
@@ -979,32 +978,6 @@ class Server:
                     print(f"Unable to get pptx from report '{report_guid}': {e}")
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
-
-    def get_layout_types(self):
-        """
-        Return a list of valid layout types as in report types (not including BETA).
-
-        Note: When a new type is added, please remember to also add a corresponding name
-        description in ADO, rptframework/report_editor_main.py::_get_layout_type_item_names.
-        In addition, update the minor version to prevent build from failing.
-        """
-        return LAYOUT_TYPES
-
-    def get_generator_types(self):
-        """
-        Return a list of valid generator types as in report types.
-
-        Note: When a new type is added, please remember to also add a corresponding name
-        description in ADO, rptframework/report_editor_main.py::_get_generator_type_item_names.
-        In addition, update the minor version to prevent build from failing.
-        """
-        return GENERATOR_TYPES
-
-    def get_report_types(self):
-        """
-        Return a list of valid report types
-        """
-        return REPORT_TYPES
 
     def get_templates_as_dict(self, root_guid):
         """
