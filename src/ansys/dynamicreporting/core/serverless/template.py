@@ -351,7 +351,7 @@ class Template(BaseModel):
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
 
-    def get_templates_as_dict(self) -> dict:
+    def to_dict(self) -> dict:
         """
         Convert report templates rooted with all their children into a JSON-compatible dictionary.
 
@@ -373,7 +373,7 @@ class Template(BaseModel):
         if self.parent is not None:
             raise ADRException("Only root templates can be dumped to JSON files.")
 
-        templates_data = self.get_templates_as_dict()
+        templates_data = self.to_dict()
         with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
 
