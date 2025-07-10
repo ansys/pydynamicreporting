@@ -1235,9 +1235,6 @@ class ItemREST(BaseRESTObject):
         shape = array.shape
         size = array.size
 
-        if size == 0:
-            raise ValueError("Table array must not be empty.")
-
         nrows = 0
         ncols = 0
         # labels
