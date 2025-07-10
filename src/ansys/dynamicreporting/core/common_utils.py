@@ -140,10 +140,9 @@ def _check_template(template_id_str, template_attr, logger=None):
 
     # Add warnings to the logger about the extra keys
     if logger:
-        default_allowed_keys = JSON_TEMPLATE_KEYS()
         extra_keys = []
         for key in template_attr.keys():
-            if key not in default_allowed_keys:
+            if key not in JSON_TEMPLATE_KEYS:
                 extra_keys.append(key)
         if extra_keys:
             logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
