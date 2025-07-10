@@ -1006,7 +1006,7 @@ def test_template_render(monkeypatch, adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_store_json(adr_serverless):
+def test_to_json(adr_serverless):
     import json
     import os
 
@@ -1031,7 +1031,7 @@ def test_store_json(adr_serverless):
     )
 
     file_path = os.path.join(adr_serverless.static_directory, "test.json")
-    C.store_json(file_path)
+    A.to_json(file_path)
 
     with open(file_path, encoding="utf-8") as json_file:
         data = json.load(json_file)
@@ -1046,3 +1046,29 @@ def test_store_json(adr_serverless):
         and data["Template_3"]["children"] == []
         and data["Template_3"]["name"] == "D"
     )
+
+
+@pytest.mark.ado_test
+def test_to_json_non_root_template(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    # Create a parent template
+    root_template = adr_serverless.create_template(
+        BasicLayout,
+        name="RootTemplate",
+        parent=None,
+        tags="dp=dp1",
+    )
+
+    # Create a child template
+    child_template = adr_serverless.create_template(
+        BasicLayout,
+        name="ChildTemplate",
+        parent=root_template,
+        tags="dp=dp2",
+    )
+
+    # Attempt to call to_json on the child template and expect an ADRException
+    with pytest.raises(ADRException, match="Only root templates can be dumped to JSON files."):
+        child_template.to_json("dummy_path.json")

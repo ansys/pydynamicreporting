@@ -365,7 +365,7 @@ class Template(BaseModel):
         self.__build_template_data(templates_data, template_guid_id_map)
         return templates_data
 
-    def store_json(self, filename: str) -> None:
+    def to_json(self, filename: str) -> None:
         """
         Store the template as a JSON file.
         Only allow this action if this template is a root template.
