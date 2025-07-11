@@ -9,6 +9,7 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core import Service
+from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
