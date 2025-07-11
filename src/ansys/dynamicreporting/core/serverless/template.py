@@ -2,11 +2,11 @@ from dataclasses import field
 from datetime import datetime
 import json
 import os
+from typing import Optional, Tuple
 import uuid
 
 from django.template.loader import render_to_string
 from django.utils import timezone
-from typing import Optional, Tuple
 
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException
@@ -77,8 +77,8 @@ class Template(BaseModel):
     def _to_dict(
         self,
         next_id: int = 0,
-        guid_id_map: Optional[dict[str, int]] = None,
-    ) -> Tuple[dict, dict[str, int], int]:
+        guid_id_map: dict[str, int] | None = None,
+    ) -> tuple[dict, dict[str, int], int]:
         """
         Recursively build the template tree data structure in a pure, non-mutating way.
 
