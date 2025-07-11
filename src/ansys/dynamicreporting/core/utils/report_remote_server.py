@@ -36,6 +36,7 @@ from urllib3.util.retry import Retry
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
+from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
 
 
