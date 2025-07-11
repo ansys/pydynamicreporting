@@ -1099,3 +1099,45 @@ def test_copy_templates_children(adr_serverless):
 
     with pytest.raises(ADRException, match="Only top-level templates can be copied"):
         adr_serverless.copy_objects(Template, "dest", query=f"A|t_tags|cont|{tag};")
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    # Load templates from the sample JSON file
+    sample_file = Path(__file__).parent.parent / "test_data" / "sample.json"
+    adr_serverless.load_templates_from_file(sample_file)
+
+    # Verify the root template
+    root_template = (adr_serverless.query(query_type=Template, query="A|t_name|eq|A;"))[0]
+    # root_template.store_json("haha.json")
+    assert root_template is not None
+    assert root_template.name == "A"
+    assert root_template.report_type == "Layout:basic"
+    assert root_template.get_params()["HTML"] == "<h1>Serverless Simulation Report</h1>"
+
+    # Verify child templates
+    child_templates = root_template.children
+    assert len(child_templates) == 2
+
+    child_b = next((child for child in child_templates if child.name == "B"), None)
+    assert child_b is not None
+    assert child_b.report_type == "Layout:panel"
+
+    child_c = next((child for child in child_templates if child.name == "C"), None)
+    assert child_c is not None
+    assert child_c.report_type == "Layout:basic"
+    assert child_c.get_params()["HTML"] == "<h2>Basic C</h2>"
+
+    # Verify grandchild template
+    grandchild_d = next((child for child in child_c.children if child.name == "D"), None)
+    assert grandchild_d is not None
+    assert grandchild_d.report_type == "Layout:basic"
+    assert grandchild_d.get_params()["HTML"] == "<h2>Basic D</h2>"
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file_no_such_file(adr_serverless):
+    with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
+        adr_serverless.load_templates_from_file("nonexistent.json")
