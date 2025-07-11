@@ -6,6 +6,7 @@ import uuid
 
 from django.template.loader import render_to_string
 from django.utils import timezone
+from typing import Optional, Tuple
 
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException
@@ -73,7 +74,49 @@ class Template(BaseModel):
             )
         super().__post_init__()
 
-    def __build_template_data(self, templates_data, template_guid_id_map):
+    def _to_dict(
+        self,
+        next_id: int = 0,
+        guid_id_map: Optional[dict[str, int]] = None,
+    ) -> Tuple[dict, dict[str, int], int]:
+        """
+        Recursively build the template tree data structure in a pure, non-mutating way.
+
+        Returns:
+            - templates_data: dict with full hierarchy of templates
+            - guid_id_map: map of original GUIDs to template indices
+            - next_id: the next available ID index after this subtree
+        """
+        if guid_id_map is None:
+            guid_id_map = {}
+
+        guid_id_map[self.guid] = next_id
+        curr_key = f"Template_{next_id}"
+        next_id += 1
+
+        curr_data = {
+            k: getattr(self, k) for k in JSON_ATTR_KEYS if getattr(self, k, None) is not None
+        }
+
+        curr_data["params"] = self.get_params()
+        curr_data["sort_selection"] = self.get_sort_selection()
+        curr_data["guid"] = str(uuid.uuid4()) if self.parent is None else None
+        curr_data["parent"] = (
+            None if self.parent is None else f"Template_{guid_id_map[self.parent.guid]}"
+        )
+
+        curr_data["children"] = []
+        templates_data = {curr_key: curr_data}
+
+        for child in self.children:
+            child_dict, guid_id_map, next_id = child._to_dict(next_id, guid_id_map)
+            child_key = f"Template_{guid_id_map[child.guid]}"
+            curr_data["children"].append(child_key)
+            templates_data.update(child_dict)
+
+        return templates_data, guid_id_map, next_id
+
+    def _build_template_data(self, templates_data, template_guid_id_map):
         curr_template_key = f"Template_{template_guid_id_map[self.guid]}"
         templates_data[curr_template_key] = {}
         for attr_field in JSON_ATTR_KEYS:
@@ -353,16 +396,9 @@ class Template(BaseModel):
 
     def to_dict(self) -> dict:
         """
-        Convert report templates rooted with all their children into a JSON-compatible dictionary.
-
-        Returns
-        -------
-        dict
-            A Python dictionary representation of the template hierarchy.
+        Returns a JSON-serializable dictionary of the full template tree.
         """
-        templates_data = {}
-        template_guid_id_map = {self.guid: 0}
-        self.__build_template_data(templates_data, template_guid_id_map)
+        templates_data, _, _ = self._to_dict()
         return templates_data
 
     def to_json(self, filename: str) -> None:
