@@ -1,6 +1,6 @@
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.3.dev0"
+version = "0.10.2.dev0"
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
