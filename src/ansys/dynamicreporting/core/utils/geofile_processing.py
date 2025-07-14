@@ -94,15 +94,15 @@ def file_can_have_proxy(filename: str) -> bool:
     """For a given filename, return True if the file format could include a proxy
     image."""
     _, extension = os.path.splitext(filename)
-    return extension in (".csf", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx")
+    return extension in (".csf", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
 
 
 def file_is_3d_geometry(filename: str, file_item_only: bool = True) -> bool:
     """For a given filename, return True if the file format contains 3D geometry."""
     _, extension = os.path.splitext(filename)
     if file_item_only:
-        return extension in (".evsn", ".ens", ".scdoc", ".scdocx")
-    return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx")
+        return extension in (".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
+    return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
 
 
 def get_avz_directory(csf_file: str) -> str:
@@ -124,6 +124,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     # Three special cases:
     # '.scdoc' -> extract thumbnail image (if any)
     # '.scdocx' -> extract thumbnail image (if any)
+    # ".dsco" -> extract thumbnail image (if any)
     # '.avz' -> just extract the proxy image (if any)
     # '.evsn' -> extract the proxy image (if any)
     # No file conversions needed in these cases, but the proxy image (if any) is extracted as:
@@ -136,9 +137,9 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
         print(f"Warning: unable to create 3D geometry directory: {e}")
         return
     avz_filename = csf_file
-    # Easiest case, handle SCDOC and SCDOCX files
-    if csf_ext.lower() == ".scdoc" or csf_ext.lower() == ".scdocx":
-        # SCDOC / SCDOCX files can have a thumbnail as: docProps/thumbnail.png
+    # Easiest case, handle SCDOC, SCDOCX and DSCO files
+    if csf_ext.lower() in {".scdoc", ".scdocx", ".dsco"}:
+        # SCDOC / SCDOCX / DSCO files can have a thumbnail as: docProps/thumbnail.png
         with zipfile.ZipFile(avz_filename) as archive:
             for name in archive.namelist():
                 if name.endswith("thumbnail.png"):
