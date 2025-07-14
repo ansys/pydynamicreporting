@@ -379,6 +379,9 @@ class Template(BaseModel):
         if self.parent is not None:
             raise ADRException("Only root templates can be dumped to JSON files.")
 
+        if not filename.endswith(".json"):
+            filename += ".json"
+
         templates_data = self.to_dict()
         with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
