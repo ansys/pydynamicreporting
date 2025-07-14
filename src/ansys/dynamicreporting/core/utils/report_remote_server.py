@@ -35,6 +35,8 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
+from ..common_utils import populate_template
+from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
 
 
@@ -978,64 +980,19 @@ class Server:
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
 
-    def get_layout_types(self):
+    def get_templates_as_dict(self, root_guid):
         """
-        Return a list of valid layout types as in report types (not including BETA).
+        Convert report templates rooted at the specified root_guid into a JSON-compatible dictionary.
 
-        Note: When a new type is added, please remember to also add a corresponding name
-        description in ADO, rptframework/report_editor_main.py::_get_layout_type_item_names.
-        In addition, update the minor version to prevent build from failing.
-        """
-        return [
-            "Layout:basic",
-            "Layout:panel",
-            "Layout:box",
-            "Layout:tabs",
-            "Layout:carousel",
-            "Layout:slider",
-            "Layout:footer",
-            "Layout:header",
-            "Layout:iterator",
-            "Layout:tagprops",
-            "Layout:toc",
-            "Layout:reportlink",
-            "Layout:userdefined",
-            "Layout:datafilter",
-            "Layout:pptx",
-            "Layout:pptxslide",
-        ]
+        Parameters
+        ----------
+        root_guid : str
+            The GUID of the root template to start the conversion.
 
-    def get_generator_types(self):
-        """
-        Return a list of valid generator types as in report types.
-
-        Note: When a new type is added, please remember to also add a corresponding name
-        description in ADO, rptframework/report_editor_main.py::_get_generator_type_item_names.
-        In addition, update the minor version to prevent build from failing.
-        """
-        return [
-            "Generator:tablemerge",
-            "Generator:tablereduce",
-            "Generator:tablerowcolumnfilter",
-            "Generator:tablevaluefilter",
-            "Generator:tablesortfilter",
-            "Generator:sqlquery",
-            "Generator:treemerge",
-            "Generator:itemscomparison",
-            "Generator:statistical",
-            # "Generator:iterator",
-        ]
-
-    def get_report_types(self):
-        """
-        Return a list of valid report types
-        """
-        return self.get_layout_types() + self.get_generator_types()
-
-    def get_templates_as_json(self, root_guid):
-        """
-        Convert report templates rooted as root_guid to JSON
-        Return a python dictionary.
+        Returns
+        -------
+        dict
+            A Python dictionary representation of the template hierarchy.
         """
         templates_data = {}
         templates = self.get_objects(objtype=report_objects.TemplateREST)
@@ -1047,44 +1004,61 @@ class Server:
         """
         Given a root guid, generate a JSON file rooted this guid, and store the file on disk
         """
-        templates_data = self.get_templates_as_json(root_guid)
+        templates_data = self.get_templates_as_dict(root_guid)
         with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
 
         # Make the file read-only
         os.chmod(filename, 0o444)
 
-    def load_templates(self, templates_json, logger=None):
+    def load_templates_from_file(self, file_path: str | Path) -> None:
         """
-        Load templates given a json-format data
+        Load templates from a JSON file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the JSON file containing the templates to load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the given file_path does not exist.
         """
-        for template_id_str, template_attr in templates_json.items():
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+
+        with open(file_path, encoding="utf-8") as f:
+            templates_json = json.load(f)
+
+        self.load_templates(templates_json)
+
+    def load_templates(self, templates: dict, logger=None):
+        """
+        Load templates from a Python dict.
+
+        Parameters
+        ----------
+        templates : dict
+            A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
+        """
+        for template_id_str, template_attr in templates.items():
             if template_attr["parent"] is None:
                 root_id_str = template_id_str
                 break
 
-        root_attr = templates_json[root_id_str]
+        root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
-        id_template_map = {}
-        id_template_map[root_id_str] = root_template
-        self._build_templates_from_parent(root_id_str, id_template_map, templates_json, logger)
+        self._build_templates_from_parent(root_id_str, root_template, templates, logger)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
-        self._check_template(id_str, attr, logger)
-        template = self.create_template(
-            name=attr["name"], parent=parent_template, report_type=attr["report_type"]
-        )
-        template.set_params(attr["params"] if "params" in attr else {})
-        if "sort_selection" in attr and attr["sort_selection"] != "":
-            template.set_sort_selection(value=attr["sort_selection"])
-        template.set_tags(attr["tags"] if "tags" in attr else "")
-        template.set_filter(filter_str=attr["item_filter"] if "item_filter" in attr else "")
+        return populate_template(id_str, attr, parent_template, self.create_template, logger)
 
-        return template
-
-    def _build_templates_from_parent(self, id_str, id_template_map, templates_json, logger=None):
-        children_id_strs = templates_json[id_str]["children"]
+    def _build_templates_from_parent(
+        self, parent_id_str, parent_template, templates_json, logger=None
+    ):
+        children_id_strs = templates_json[parent_id_str]["children"]
         if not children_id_strs:
             return
 
@@ -1092,122 +1066,14 @@ class Server:
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
             child_template = self._populate_template(
-                child_id_str, child_attr, id_template_map[id_str], logger
+                child_id_str, child_attr, parent_template, logger
             )
             child_templates.append(child_template)
-            id_template_map[child_id_str] = child_template
 
         self.put_objects(child_templates)
 
-        i = 0
         for child_id_str in children_id_strs:
-            self._build_templates_from_parent(child_id_str, id_template_map, templates_json, logger)
-            i += 1
-
-    def _get_json_template_keys(self):
-        """
-        Return a list of the default allowed keys in the JSON templates
-        """
-        return self._get_json_necessary_keys() + self._get_json_unnecessary_keys()
-
-    def _get_json_necessary_keys(self):
-        """
-        Return a list of necessary keys in the JSON templates
-        """
-        return ["name", "report_type", "parent", "children"]
-
-    def _get_json_unnecessary_keys(self):
-        """
-        Return a list of unnecessary keys in the JSON templates
-        """
-        return ["tags", "params", "sort_selection", "item_filter"]
-
-    def _get_json_attr_keys(self):
-        """
-        Return a list of JSON keys that can be got directly by attribute rather than by getters
-        """
-        return ["name", "report_type", "tags", "item_filter"]
-
-    def _check_template(self, template_id_str, template_attr, logger=None):
-        # Check template_id_str
-        if not self._check_template_name_convention(template_id_str):
-            raise exceptions.TemplateEditorJSONLoadingError(
-                f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
-                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-            )
-
-        # Check parent and children template name convention
-        if not self._check_template_name_convention(template_attr["parent"]):
-            raise exceptions.TemplateEditorJSONLoadingError(
-                f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
-                f"that does not have the correct name convection under the key: 'parent' of '{template_id_str}'\n"
-                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-            )
-
-        for child_name in template_attr["children"]:
-            if not self._check_template_name_convention(child_name):
-                raise exceptions.TemplateEditorJSONLoadingError(
-                    f"The loaded JSON file has an invalid template name: '{child_name}' "
-                    f"that does not have the correct name convection under the key: 'children' of '{template_id_str}'\n"
-                    "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-                )
-
-        # Check missing necessary keys
-        necessary_keys = self._get_json_necessary_keys()
-        for necessary_key in necessary_keys:
-            if necessary_key not in template_attr.keys():
-                raise exceptions.TemplateEditorJSONLoadingError(
-                    f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
-                    f"Please check the entries under '{template_id_str}'."
-                )
-
-        # Add warnings to the logger about the extra keys
-        if logger:
-            default_allowed_keys = self._get_json_template_keys()
-            extra_keys = []
-            for key in template_attr.keys():
-                if key not in default_allowed_keys:
-                    extra_keys.append(key)
-            if extra_keys:
-                logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
-
-        # Check report_type
-        report_types = self.get_report_types()
-        if not template_attr["report_type"] in report_types:
-            raise exceptions.TemplateEditorJSONLoadingError(
-                f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
-            )
-
-        # Check item_filter
-        common_error_str = (
-            "The loaded JSON file does not follow the correct item_filter convention!\n"
-        )
-        for query_stanza in template_attr["item_filter"].split(";"):
-            if len(query_stanza) > 0:
-                parts = query_stanza.split("|")
-                if len(parts) != 4:
-                    raise exceptions.TemplateEditorJSONLoadingError(
-                        f"{common_error_str}Each part should be divided by '|', "
-                        f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 3 '|'s"
-                    )
-                if parts[0] not in ["A", "O"]:
-                    raise exceptions.TemplateEditorJSONLoadingError(
-                        f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
-                        f"while the first part of the input is '{parts[0]}' under '{template_id_str}'"
-                    )
-                prefix = ["i_", "s_", "d_", "t_"]
-                if parts[1][0:2] not in prefix:
-                    raise exceptions.TemplateEditorJSONLoadingError(
-                        f"{common_error_str}The second part of the filter can only be '{prefix}', "
-                        f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
-                    )
-        # TODO: check 'sort_selection' and 'params'
-
-    def _check_template_name_convention(self, template_name):
-        if template_name is None:
-            return True
-        parts = template_name.split("_")
-        return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
+            self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None
@@ -1215,10 +1081,9 @@ class Server:
             if template.guid == guid:
                 curr_template = template
 
-        fields = self._get_json_attr_keys()
         curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
         templates_data[curr_template_key] = {}
-        for field in fields:
+        for field in JSON_ATTR_KEYS:
             value = getattr(curr_template, field, None)
             if value is None:
                 continue
@@ -1241,8 +1106,7 @@ class Server:
             template_guid_id_map[child_guid] = curr_size
             templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
 
-        if not children_guids:
-            return
+        # Don't combine these 2 for loops, as we want to have consecutive IDs for children
         for child_guid in children_guids:
             self._build_template_data(child_guid, templates_data, templates, template_guid_id_map)
 

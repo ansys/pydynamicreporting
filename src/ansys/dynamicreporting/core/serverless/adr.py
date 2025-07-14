@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 import copy
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import platform
@@ -18,7 +19,7 @@ from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
 from ..adr_utils import get_logger
-from ..common_utils import get_install_info
+from ..common_utils import get_install_info, populate_template
 from ..constants import DOCKER_REPO_URL
 from ..docker_support import DockerLauncher
 from ..exceptions import (
@@ -688,6 +689,15 @@ class ADR:
         )
 
     @staticmethod
+    def _create_template_with_parent(template_type: type[Template], **kwargs: Any) -> Template:
+        template = template_type.create(**kwargs)
+        parent = kwargs.get("parent")
+        if parent is not None:
+            parent.children.append(template)
+            parent.save()
+        return template
+
+    @staticmethod
     def create_template(template_type: type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type.__name__} is not a subclass of Template")
@@ -695,12 +705,64 @@ class ADR:
             raise ADRException(
                 "At least one keyword argument must be provided to create the template."
             )
-        template = template_type.create(**kwargs)
-        parent = kwargs.get("parent")
-        if parent is not None:
-            parent.children.append(template)
-            parent.save()
-        return template
+        return ADR._create_template_with_parent(template_type, **kwargs)
+
+    def _populate_template(self, id_str, attr, parent_template) -> Template:
+        return populate_template(
+            id_str, attr, parent_template, ADR._create_template_with_parent, self._logger, Template
+        )
+
+    def _build_templates_from_parent(self, parent_id_str, parent_template, templates_json):
+        children_id_strs = templates_json[parent_id_str]["children"]
+        if not children_id_strs:
+            return
+
+        for child_id_str in children_id_strs:
+            child_attr = templates_json[child_id_str]
+            child_template = self._populate_template(child_id_str, child_attr, parent_template)
+            child_template.save()
+            self._build_templates_from_parent(child_id_str, child_template, templates_json)
+
+    def load_templates_from_file(self, file_path: str | Path) -> None:
+        """
+        Load templates from a JSON file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the JSON file containing the templates to load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the given file_path does not exist.
+        """
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+
+        with open(file_path, encoding="utf-8") as f:
+            templates_json = json.load(f)
+
+        self.load_templates(templates_json)
+
+    def load_templates(self, templates: dict) -> None:
+        """
+        Load templates from a Python dict.
+
+        Parameters
+        ----------
+        templates : dict
+            A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
+        """
+        for template_id_str, template_attr in templates.items():
+            if template_attr["parent"] is None:
+                root_id_str = template_id_str
+                break
+
+        root_attr = templates[root_id_str]
+        root_template = self._populate_template(root_id_str, root_attr, None)
+        root_template.save()
+        self._build_templates_from_parent(root_id_str, root_template, templates)
 
     @staticmethod
     def get_report(**kwargs) -> Template:
