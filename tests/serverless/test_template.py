@@ -974,7 +974,7 @@ def test_template_find_raises_exception(adr_serverless):
         PanelLayout.find(query="A|t_types|cont|panel")
 
 
-# @pytest.mark.ado_test
+@pytest.mark.ado_test
 def test_template_render(monkeypatch, adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless import template as template_module
