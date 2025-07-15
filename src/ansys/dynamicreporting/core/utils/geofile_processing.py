@@ -102,7 +102,17 @@ def file_is_3d_geometry(filename: str, file_item_only: bool = True) -> bool:
     _, extension = os.path.splitext(filename)
     if file_item_only:
         return extension in (".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
-    return extension in (".csf", ".stl", ".ply", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
+    return extension in (
+        ".csf",
+        ".stl",
+        ".ply",
+        ".avz",
+        ".evsn",
+        ".ens",
+        ".scdoc",
+        ".scdocx",
+        ".dsco",
+    )
 
 
 def get_avz_directory(csf_file: str) -> str:
