@@ -133,7 +133,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.3" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.0.0" },
     { name = "python-dateutil", specifier = ">=2.8.0" },
-    { name = "python-pptx", specifier = ">=0.6.19,<1" },
+    { name = "python-pptx", specifier = "==0.6.19" },
     { name = "pytz", specifier = ">=2021.3" },
     { name = "pyvista", marker = "extra == 'test-extra'", specifier = "==0.45.2" },
     { name = "requests", specifier = ">=2.32" },
@@ -2031,17 +2031,14 @@ wheels = [
 
 [[package]]
 name = "python-pptx"
-version = "0.6.23"
+version = "0.6.19"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
     { name = "pillow" },
     { name = "xlsxwriter" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/e7/aeaf794b2d440da609684494075e64cfada248026ecb265807d0668cdd00/python-pptx-0.6.23.tar.gz", hash = "sha256:587497ff28e779ab18dbb074f6d4052893c85dedc95ed75df319364f331fedee", size = 10083771, upload-time = "2023-11-02T21:35:31.525Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/49/6eee83072983473e9905ffddd5c2032b9a0ca4616425560d6d582287b467/python_pptx-0.6.23-py3-none-any.whl", hash = "sha256:dd0527194627a2b7cc05f3ba23ecaa2d9a0d5ac9b6193a28ed1b7a716f4217d4", size = 471575, upload-time = "2023-11-02T21:35:21.747Z" },
-]
+sdist = { url = "https://files.pythonhosted.org/packages/53/ed/547be9730350509253bc7d76631a8ffcd1a62dda4d7482fb25d369696e37/python-pptx-0.6.19.tar.gz", hash = "sha256:cbac6cdf28bde418acab332b62f961225f69993579f4662faf9f7a878150d2b5", size = 9253183, upload-time = "2021-05-17T22:35:44.017Z" }
 
 [[package]]
 name = "pytz"
