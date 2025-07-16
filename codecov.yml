@@ -1,7 +1,7 @@
 coverage:
   precision: 2
   round: down
-  range: 80...90   # <80→red, 80–90→yellow, ≥90→green
+  range: "70...100"   # <80→red, 80–90→yellow, ≥90→green
 
   status:
     patch: off
