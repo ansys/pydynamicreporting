@@ -35,7 +35,7 @@ from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import ObjectSet
 from .item import Dataset, Item, Session
-from .template import Template, PPTXLayout
+from .template import PPTXLayout, Template
 
 
 class ADR:
@@ -842,7 +842,7 @@ class ADR:
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\Program Files\ANSYS Inc\v252", db_directory=r"C:\DBs\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
         ...     f.write(pptx_stream)
@@ -862,7 +862,6 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
-
 
     @staticmethod
     def query(
