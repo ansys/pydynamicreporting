@@ -852,7 +852,7 @@ class ADR:
                 "At least one keyword argument must be provided to fetch the report."
             )
         template = Template.get(**kwargs)
-        if not issubclass(template, PPTXLayout):
+        if not isinstance(template, PPTXLayout):
             raise ADRException(
                 "The template must be of type 'PPTXLayout' to render as a PowerPoint presentation."
             )
