@@ -1012,7 +1012,7 @@ def test_to_json(adr_serverless):
 
     from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
 
-    A = adr_serverless.create_template(
+    root = adr_serverless.create_template(
         BasicLayout,
         name="A",
         parent=None,
@@ -1020,18 +1020,18 @@ def test_to_json(adr_serverless):
         params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     )
 
-    adr_serverless.create_template(PanelLayout, name="B", parent=A, tags="dp=dp2")
+    adr_serverless.create_template(PanelLayout, name="B", parent=root, tags="dp=dp2")
 
-    C = adr_serverless.create_template(
-        BasicLayout, name="C", parent=A, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
+    child_1 = adr_serverless.create_template(
+        BasicLayout, name="C", parent=root, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
     )
 
     adr_serverless.create_template(
-        BasicLayout, name="D", parent=C, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
+        BasicLayout, name="D", parent=child_1, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
     )
 
     file_path = os.path.join(adr_serverless.static_directory, "test.json")
-    A.to_json(file_path)
+    root.to_json(file_path)
 
     with open(file_path, encoding="utf-8") as json_file:
         data = json.load(json_file)
