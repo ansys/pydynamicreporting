@@ -80,7 +80,7 @@ class Template(BaseModel):
         guid_id_map: dict[str, int] | None = None,
     ) -> tuple[dict, dict[str, int], int]:
         """
-        Recursively build the template tree data structure in a pure, non-mutating way.
+        Recursively build the template tree data structure.
 
         Returns:
             - templates_data: dict with full hierarchy of templates
