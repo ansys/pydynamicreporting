@@ -313,6 +313,29 @@ Rendering context supports options like:
 - If you would like more information on the error, set the ``debug`` flag to ``True`` when instantiating
   the ``ADR`` class.
 
+Rendering to PPTX
+----------------
+
+You can render a PPTX file from a ``PPTXLayout`` template using the ``render_pptx()`` method.
+It takes an optional context dictionary and an item filter string to control which items get included.
+
+The method returns the PPTX file content as bytes, which you can write directly to a file.
+
+Example:
+
+.. code-block:: python
+
+    pptx_bytes = pptx_template.render_pptx(
+        context={"user": "analyst"},
+        item_filter="A|i_tags|cont|project=wing_sim;"
+    )
+    with open("report.pptx", "wb") as f:
+        f.write(pptx_bytes)
+
+If rendering fails, an ``ADRException`` will be raised with details.
+
+Note that this method only works on templates of type ``PPTXLayout``.
+
 Lifecycle Notes
 ---------------
 
