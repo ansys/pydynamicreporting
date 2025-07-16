@@ -328,7 +328,7 @@ abstracting the fetching and rendering process:
     html_content = adr.render_report(
         name="Serverless Simulation Report",
         context={"key": "value"},
-        item_filter="A|i_tags|cont|project=wing_sim;"
+        item_filter="A|i_tags|cont|project=wing_sim;",
     )
     with open("report.html", "w", encoding="utf-8") as f:
         f.write(html_content)
@@ -350,8 +350,7 @@ Example using the template method:
 .. code-block:: python
 
     pptx_bytes = pptx_template.render_pptx(
-        context={"key": "value"},
-        item_filter="A|i_tags|cont|project=wing_sim;"
+        context={"key": "value"}, item_filter="A|i_tags|cont|project=wing_sim;"
     )
     with open("report.pptx", "wb") as f:
         f.write(pptx_bytes)
@@ -363,7 +362,7 @@ Example using the ADR entrypoint:
     pptx_bytes = adr.render_report_as_pptx(
         name="Serverless Simulation Report",
         context={"key": "value"},
-        item_filter="A|i_tags|cont|project=wing_sim;"
+        item_filter="A|i_tags|cont|project=wing_sim;",
     )
     with open("report.pptx", "wb") as f:
         f.write(pptx_bytes)
