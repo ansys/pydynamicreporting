@@ -77,6 +77,7 @@ Useful for testing and ephemeral workflows where persistence is not needed.
         in_memory=True,
     )
     adr.setup()
+    adr.close()  # Call close() to clean up resources - optional but recommended
 
 Note:
 

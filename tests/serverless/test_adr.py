@@ -963,6 +963,345 @@ def test_render_invalid_template(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_render_report_as_pptx_success(adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    # Create a valid PPTXLayout template
+    _ = adr_serverless.create_template(PPTXLayout, name="TestPPTXReport", parent=None)
+
+    # Mock the template's render_pptx method to avoid actual PPTX generation
+    def fake_render_pptx(self, context, item_filter, request):
+        return b"dummy pptx content"
+
+    monkeypatch.setattr(template_module.PPTXLayout, "render_pptx", fake_render_pptx)
+
+    # Call the method under test
+    pptx_bytes = adr_serverless.render_report_as_pptx(
+        name="TestPPTXReport", item_filter="A|i_tags|cont|dp=dp227;"
+    )
+
+    # Assert the result is the dummy content from the mock
+    assert pptx_bytes == b"dummy pptx content"
+
+
+@pytest.mark.ado_test
+def test_render_report_as_pptx_no_kwarg(adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.render_report_as_pptx()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_pptx_wrong_template_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    # Create a template that is NOT a PPTXLayout
+    _ = adr_serverless.create_template(BasicLayout, name="NotAPPTXReport", parent=None)
+
+    # Expect an ADRException because the template is not the correct type
+    with pytest.raises(
+        ADRException, match="The template must be of type 'PPTXLayout' to render as a PowerPoint"
+    ):
+        adr_serverless.render_report_as_pptx(name="NotAPPTXReport")
+
+
+@pytest.mark.ado_test
+def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    # Create a valid PPTXLayout template
+    _ = adr_serverless.create_template(PPTXLayout, name="FailingPPTXReport", parent=None)
+
+    # Mock the underlying render_pptx method to simulate a failure
+    def fake_render_pptx_fails(self, context, item_filter, request):
+        raise Exception("Simulated rendering engine failure")
+
+    monkeypatch.setattr(template_module.PPTXLayout, "render_pptx", fake_render_pptx_fails)
+
+    # Expect an ADRException because the underlying render call failed
+    with pytest.raises(ADRException, match="PPTX Report rendering failed"):
+        adr_serverless.render_report_as_pptx(name="FailingPPTXReport")
+
+
+@pytest.mark.ado_test
+def test_full_pptx_report_generation_integration(adr_serverless):
+    import datetime
+    import io
+    from pathlib import Path
+    import random
+
+    import numpy as np
+    from pptx import Presentation
+
+    from ansys.dynamicreporting.core.serverless import (
+        HTML,
+        File,
+        Image,
+        PPTXLayout,
+        PPTXSlideLayout,
+        Scene,
+        String,
+        Table,
+        Tree,
+    )
+
+    source_tag = "pptx-test-serverless"  # A common tag to filter all items for this report
+
+    # --- Source PPTX as a File item ---
+    input_pptx_item_name = "input.pptx"
+    adr_serverless.create_item(
+        File,
+        name=input_pptx_item_name,
+        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+        tags=source_tag,
+    )
+
+    # --- String items for various titles ---
+    adr_serverless.create_item(
+        String, name="title_text", content="My presentation", tags=source_tag
+    )
+    adr_serverless.create_item(
+        String, name="toc_title", content="Table of contents", tags=source_tag
+    )
+    adr_serverless.create_item(String, name="toc_link_text", content="Go back", tags=source_tag)
+    adr_serverless.create_item(String, name="html_title", content="My HTML item", tags=source_tag)
+    adr_serverless.create_item(String, name="table_title", content="My table", tags=source_tag)
+    adr_serverless.create_item(String, name="tree_title", content="My tree", tags=source_tag)
+    adr_serverless.create_item(
+        String, name="line_plot_title", content="My line plot", tags=source_tag
+    )
+
+    # --- HTML item ---
+    html_item = adr_serverless.create_item(
+        HTML,
+        name="html",
+        content=(
+            "<h1>Heading 1</h1><h2>Heading 2</h2><h3>Heading 3</h3>"
+            "<h4>Heading 4</h4><h5>Heading 5</h5>Two breaks below"
+            "<br><br /><h6>Heading 6 (& one break below)</h6><br>The end"
+        ),
+        tags=f'{source_tag} pptx_slide_title="headers and breaks"',
+    )
+
+    # --- Image item ---
+    image_item = adr_serverless.create_item(
+        Image,
+        name="logo",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=source_tag,
+    )
+
+    # --- Table items ---
+    random.seed(12345)
+    array1 = np.array(
+        [
+            [
+                i,
+                i * 200 - 1003,
+                1.2 * i**3.4 + 3.5 * i + 123.0,
+                (10 - i) ** 2.3,
+                random.uniform(-2000, 6000),
+            ]
+            for i in range(10)
+        ],
+        dtype="f",
+    )
+    adr_serverless.create_item(
+        Table,
+        name="table1",
+        content=array1,
+        labels_col=["Linear", "Shift", "Polynomial", "Invert Poly", "Random"],
+        title="Numeric table",
+        tags=f'{source_tag} pptx_slide_title="<h2>Linear</h2>linear description<br /><br /><h4>Iterations: 10</h4>"',
+    )
+
+    random.seed(54321)
+    array2 = np.array(
+        [
+            [
+                i,
+                i * 500 - 900,
+                2.5 * i**3.4 + 5.5 * i + 65.0,
+                (10 - i) ** 9.4,
+                random.uniform(-5000, 3000),
+            ]
+            for i in range(10)
+        ],
+        dtype="f",
+    )
+    adr_serverless.create_item(
+        Table,
+        name="table2",
+        content=array2,
+        labels_col=["ID", "Location[X]", "Location[Y]", "Location[Z]", "turbViscosity[X]"],
+        title="Numeric table2",
+        tags=f'{source_tag} pptx_slide_title="Location-Viscosity"',
+    )
+
+    array3 = np.array(
+        [['A {{"mylink"|nexus_link:"LINK"}}', "B \u4e14".encode(), "C"], [b"1", b"2", b"3"]],
+        dtype="S50",
+    )
+    adr_serverless.create_item(
+        Table,
+        name="table3",
+        content=array3,
+        labels_row=["Row 1", "Row 2"],
+        labels_col=["Column A", "Column B", "Column C"],
+        title="Simple ASCII table",
+        tags=source_tag,
+    )
+
+    # --- Tree item ---
+    tree_content = [
+        {
+            "key": "root",
+            "name": "Top Level",
+            "value": None,
+            "state": "collapsed",
+            "tree_global_toggle": "1",
+            "children": [
+                {"key": "child", "name": "Boolean example", "value": True},
+                {
+                    "key": "child",
+                    "name": "Simple string",
+                    "value": 'Hello world!!! {{"mylink"|nexus_link:"LINK"}}',
+                },
+                {"key": "child", "name": "Integer example", "value": 10},
+                {"key": "child", "name": "Float example", "value": 99.99},
+                {"key": "child", "name": "multi-valued child", "value": ["val1", "val2"]},
+                {"key": "child", "name": "Simple \u4e14 string", "value": "Hello \u4e14 world!!"},
+                {"key": "child", "name": "Integer string 3", "value": "20200102"},
+                {"key": "child", "name": "The current date", "value": datetime.datetime.now()},
+                {"key": "child", "name": "A data item guid", "value": image_item.guid},
+                {
+                    "key": "child_parent",
+                    "name": "A child parent",
+                    "value": "Parents can have values",
+                    "state": "expanded",
+                    "children": [
+                        {"key": "leaves", "name": "Leaf 0", "value": 0},
+                        {"key": "leaves", "name": "Leaf 1", "value": 1},
+                    ],
+                },
+            ],
+        }
+    ]
+    adr_serverless.create_item(Tree, name="tree", content=tree_content, tags=source_tag)
+
+    # --- Line Plot (as a Table item) ---
+    line_plot_array = np.array(
+        [
+            [3.98, 4.41, 4.85, 5.29, 5.72, 6.16, 6.59, 7.03, 7.47, 7.90],
+            [-5.08, -14.84, -24.19, -34.11, -45.64, -49.59, -52.44, -52.22, -50.30, -45.44],
+        ],
+        dtype="f",
+    )
+    adr_serverless.create_item(
+        Table,
+        name="line_plot",
+        content=line_plot_array,
+        labels_row=["X", "Lift"],
+        title="Cumulative_Total_Lift",
+        plot="line",
+        tags=source_tag,
+    )
+
+    # --- ENS Session File Item---
+    adr_serverless.create_item(
+        File,
+        name="session",
+        content=str(Path(__file__).parent / "test_data" / "session.ens"),
+        tags=f'{source_tag} pptx_slide_title="session-tag-title"',
+    )
+
+    # ==============================================================================
+    # 2. Create the full template structure.
+    # ==============================================================================
+    report_name = "pptx-select"
+    pptx_template = adr_serverless.create_template(PPTXLayout, name=report_name, parent=None)
+    pptx_template.input_pptx = input_pptx_item_name
+    pptx_template.output_pptx = "output-select.pptx"
+    pptx_template.item_filter = f"A|i_src|cont|{source_tag};"
+    pptx_template.use_all_slides = "0"
+    pptx_template.save()
+
+    # --- Define the slide children ---
+    slides_to_create = [
+        {"name": "start", "source_slide": "1", "filter": "A|i_name|eq|title_text;"},
+        {"name": "toc", "source_slide": "2", "filter": "A|i_name|any|toc_title,toc_link_text;"},
+        {"name": "html", "source_slide": "3", "filter": f"A|i_guid|eq|{html_item.guid};"},
+        {
+            "name": "table",
+            "source_slide": "4",
+            "properties": {"show_tag_title_only": "1"},
+            "html": "<h1>table</h1>table description",
+            "filter": "A|i_name|any|table1,table2,table3;",
+        },
+        {"name": "tree", "source_slide": "5", "filter": "A|i_name|cont|tree;"},
+        {"name": "line", "source_slide": "6", "filter": "A|i_name|cont|line_plot;"},
+        {
+            "name": "session",
+            "source_slide": "7",
+            "filter": f"A|i_name|any|session;A|i_guid|eq|{image_item.guid};",
+        },
+    ]
+
+    for slide_data in slides_to_create:
+        slide = adr_serverless.create_template(
+            PPTXSlideLayout, name=slide_data["name"], parent=pptx_template
+        )
+        slide.source_slide = slide_data["source_slide"]
+        slide.item_filter = slide_data.get("filter", "")
+        if "properties" in slide_data:
+            slide.add_properties(slide_data["properties"])
+        if "html" in slide_data:
+            slide.set_html(slide_data["html"])
+        slide.save()
+
+    # ==============================================================================
+    # 3.  Render the report.
+    # ==============================================================================
+    pptx_bytes = adr_serverless.render_report_as_pptx(name=report_name)
+
+    # ==============================================================================
+    # 4. Validate the output.
+    # ==============================================================================
+    assert isinstance(pptx_bytes, bytes)
+    assert len(pptx_bytes) > 1000, "Generated PPTX file seems too small."
+
+    try:
+        pptx_file = io.BytesIO(pptx_bytes)
+        prs = Presentation(pptx_file)
+
+        # Expect 7 slides based on the template definition
+        assert len(prs.slides) == 7
+
+        # Spot check a few slides for expected content
+        # Slide 1: Title
+        title_slide_text = "".join(
+            shape.text for shape in prs.slides[0].shapes if shape.has_text_frame
+        )
+        assert "My presentation" in title_slide_text
+
+        # Slide 3: HTML content
+        html_slide_text = "".join(
+            shape.text for shape in prs.slides[2].shapes if shape.has_text_frame
+        )
+        assert "Heading 1" in html_slide_text and "The end" in html_slide_text
+
+        # Slide 4: Table (check for title from HTML property)
+        table_slide_text = "".join(
+            shape.text for shape in prs.slides[3].shapes if shape.has_text_frame
+        )
+        assert "table description" in table_slide_text
+
+    except Exception as e:
+        pytest.fail(f"Failed to parse or validate the final PPTX file. Error: {e}")
+
+
+@pytest.mark.ado_test
 def test_copy_sessions(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 

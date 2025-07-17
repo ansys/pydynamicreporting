@@ -35,7 +35,7 @@ from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import ObjectSet
 from .item import Dataset, Item, Session
-from .template import Template
+from .template import PPTXLayout, Template
 
 
 class ADR:
@@ -754,10 +754,14 @@ class ADR:
         templates : dict
             A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
         """
+        root_id_str = None
         for template_id_str, template_attr in templates.items():
             if template_attr["parent"] is None:
                 root_id_str = template_id_str
                 break
+
+        if root_id_str is None:
+            raise ADRException("No report or root template found in the provided templates.")
 
         root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None)
@@ -807,10 +811,57 @@ class ADR:
             )
         try:
             return Template.get(**kwargs).render(
-                request=self._request, context=context, item_filter=item_filter
+                context=context, item_filter=item_filter, request=self._request
             )
         except Exception as e:
             raise ADRException(f"Report rendering failed: {e}")
+
+    def render_report_as_pptx(
+        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
+    ) -> bytes:
+        """
+        Render the report as a PowerPoint presentation.
+        Only works with PPTXLayout templates.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+
+        Returns
+        -------
+            A byte stream containing the PowerPoint presentation.
+            Media type is "application/vnd.openxmlformats-officedocument.presentationml.presentation".
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        >>> with open("report.pptx", "wb") as f:
+        ...     f.write(pptx_stream)
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        template = Template.get(**kwargs)
+        if not isinstance(template, PPTXLayout):
+            raise ADRException(
+                "The template must be of type 'PPTXLayout' to render as a PowerPoint presentation."
+            )
+        try:
+            return template.render_pptx(
+                context=context, item_filter=item_filter, request=self._request
+            )
+        except Exception as e:
+            raise ADRException(f"PPTX Report rendering failed: {e}")
 
     @staticmethod
     def query(
