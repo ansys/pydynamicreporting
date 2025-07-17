@@ -231,6 +231,84 @@ def test_category() -> None:
 
 
 @pytest.mark.ado_test
+def test_table_payload_item() -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = False
+
+    try:
+        a.set_payload_table_values([[1.0]], rowlbls=["Row 1", "Row 2"], collbls=["Column 1"])
+    except ValueError as e:
+        succ1 = "Number of row labels does not match number of rows in the array." in str(e)
+
+    try:
+        a.set_payload_table_values([[1.0]], rowlbls=["Row 1"], collbls=["Column 1", "Column 2"])
+    except ValueError as e:
+        succ2 = "Number of column labels does not match number of columns in the array." in str(e)
+
+    assert succ1 and succ2
+
+
+@pytest.mark.ado_test
+def test_string_payload_item() -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = succ3 = False
+    try:
+        a.set_payload_string(s=42)
+    except TypeError as e:
+        succ1 = "Payload must be a string." in str(e)
+
+    try:
+        a.set_payload_html(s=" ")
+    except ValueError as e:
+        succ2 = "cannot be empty or whitespace." in str(e)
+
+    try:
+        a.set_payload_string(s="\ud800")
+    except ValueError as e:
+        succ3 = "must be a valid UTF-8 string." in str(e)
+
+    assert succ1 and succ2 and succ3
+
+
+@pytest.mark.ado_test
+def test_file_payload_item(tmp_path) -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = succ3 = succ4 = succ5 = False
+    try:
+        a.set_payload_file(42)
+    except TypeError as e:
+        succ1 = "string representing the file path." in str(e)
+
+    try:
+        a.set_payload_file("non_existent_file.txt")
+    except FileNotFoundError as e:
+        succ2 = "path does not exist:" in str(e)
+
+    d = tmp_path / "subdir"
+    d.mkdir()
+    try:
+        a.set_payload_animation(str(d))
+    except ValueError as e:
+        succ3 = "is not a file:" in str(e)
+
+    empty_file = tmp_path / "empty.txt"
+    empty_file.write_text("")
+    try:
+        a.set_payload_animation(str(empty_file))
+    except ValueError as e:
+        succ4 = "is empty:" in str(e)
+
+    bad_ext_file = tmp_path / "file.bad"
+    bad_ext_file.write_text("data")
+    try:
+        a.set_payload_scene(str(bad_ext_file))
+    except ValueError as e:
+        succ5 = "is not supported." in str(e)
+
+    assert succ1 and succ2 and succ3 and succ4 and succ5
+
+
+@pytest.mark.ado_test
 def test_factory() -> None:
     a = ro.TemplateREST()
     assert isinstance(

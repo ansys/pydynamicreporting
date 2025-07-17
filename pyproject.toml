@@ -47,6 +47,7 @@ dependencies = [
     "scipy<=1.15.3",  # breaks ADR if not included. Remove when statsmodels is updated
     "docutils>=0.21",
     "psycopg[binary]>=3.2.3",
+    "qtpy>=2.4.3"
 ]
 
 [tool.setuptools.packages.find]

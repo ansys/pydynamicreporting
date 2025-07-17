@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import os
+from pathlib import Path
 import pickle
 import shlex
 import sys
@@ -21,7 +22,7 @@ from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
 try:
-    from PyQt5 import QtCore, QtGui
+    from qtpy import QtCore, QtGui
 
     has_qt = True
 except ImportError:
@@ -1078,11 +1079,25 @@ class ItemREST(BaseRESTObject):
         self.type = ItemREST.type_none
         self._payloaddata = ""
 
+    def validate_string(self, input_string, description):
+        if not isinstance(input_string, str):
+            raise TypeError("Payload must be a string.")
+
+        if not input_string.strip():
+            raise ValueError(f"Payload {description} cannot be empty or whitespace.")
+
+        try:
+            input_string.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError(f"Payload {description} must be a valid UTF-8 string.")
+
     def set_payload_string(self, s):
+        self.validate_string(s, "string")
         self.type = ItemREST.type_str
         self._payloaddata = s
 
     def set_payload_html(self, s):
+        self.validate_string(s, "HTML")
         self.type = ItemREST.type_html
         self._payloaddata = s
 
@@ -1241,6 +1256,13 @@ class ItemREST(BaseRESTObject):
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
 
+        if rowlbls and len(rowlbls) != array.shape[0]:
+            raise ValueError("Number of row labels does not match number of rows in the array.")
+        if collbls and len(collbls) != array.shape[1]:
+            raise ValueError(
+                "Number of column labels does not match number of columns in the array."
+            )
+
         # update after validation
         value.update(
             {"array": array, "dtype": str(array.dtype), "shape": array.shape, "size": array.size}
@@ -1335,20 +1357,48 @@ class ItemREST(BaseRESTObject):
         self.fileobj = io.BytesIO(self.image_data)
         self.fileurl = "image.png"
 
+    def validate_file(self, input_path, description, allowed_extensions=None):
+        if not isinstance(input_path, str):
+            raise TypeError("The input must be a string representing the file path.")
+
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(
+                f"The specified {description} path does not exist: {input_path}"
+            )
+
+        if not os.path.isfile(input_path):
+            raise ValueError(f"The specified {description} is not a file: {input_path}")
+
+        if os.path.getsize(input_path) == 0:
+            raise ValueError(f"The specified {description} is empty: {input_path}")
+
+        ext = Path(input_path).suffix.lower().lstrip(".")
+        if allowed_extensions is not None and ext not in allowed_extensions:
+            raise ValueError(
+                f"The file type '.{ext}' is not supported. Allowed types: {allowed_extensions}"
+            )
+
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(mp4_filename, "animation file", ["mp4"])
         self.type = ItemREST.type_anim
         self.fileobj = open(mp4_filename, "rb")
         self.fileurl = mp4_filename
 
     def set_payload_file(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(filename, "file")
         self.type = ItemREST.type_file
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
 
     def set_payload_scene(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(
+            filename,
+            "scene file",
+            ["stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"],
+        )
         self.type = ItemREST.type_scn
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
