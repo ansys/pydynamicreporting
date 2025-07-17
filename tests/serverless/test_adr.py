@@ -1027,6 +1027,92 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 
 
 @pytest.mark.ado_test
+def test_render_report_as_pptx_integration(adr_serverless):
+    # This enhanced integration test verifies that the engine can use a File item
+    # as a source for the input PPTX, process a template hierarchy, and embed media.
+    # It requires the 'python-pptx' library: pip install python-pptx
+    import io
+    from pathlib import Path
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    from ansys.dynamicreporting.core.serverless import PPTXLayout, PPTXSlideLayout, String, Image, File
+
+    # 1. Arrange: Create a complex scenario with a File item as the template source.
+    report_name = "Enhanced_PPTX_Integration_Report"
+    input_pptx_item_name = "input_template_pptx"
+
+    # --- Create a File item to hold the source PowerPoint template ---
+    # This is the recommended approach, treating the template as a managed asset.
+    adr_serverless.create_item(
+        File,
+        name=input_pptx_item_name,
+        content=str(Path(__file__).parent / "test_data" / "input.pptx"),
+        tags="pptx_template_source",
+    )
+
+    # --- Create the root template that refers to the File item by name ---
+    root_template = adr_serverless.create_template(
+        PPTXLayout, name=report_name, parent=None
+    )
+    root_template.input_pptx = input_pptx_item_name  # Refer to the File item
+    root_template.output_pptx = "test_output.pptx"
+    root_template.use_all_slides = "0"  # '0' means false, process children
+    root_template.save()
+
+    # --- Create a child slide template to populate a specific slide ---
+    slide_item_tag = "slide2_content"
+    slide_template = adr_serverless.create_template(
+        PPTXSlideLayout,
+        name="ContentSlide",
+        parent=root_template,
+        item_filter=f"A|i_tags|cont|{slide_item_tag};",
+    )
+    slide_template.source_slide = "2"  # Use slide #2 from the input.pptx
+    slide_template.save()
+
+    # --- Create items that the slide template's filter will find ---
+    adr_serverless.create_item(
+        String,
+        name="Slide 2 Text",
+        content="This text and the image below were added by the integration test.",
+        tags=slide_item_tag,
+    )
+    adr_serverless.create_item(
+        Image,
+        name="Slide 2 Image",
+        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        tags=slide_item_tag,
+    )
+
+    # 2. Act: Call the method without any mocks.
+    pptx_bytes = adr_serverless.render_report_as_pptx(name=report_name)
+
+    # 3. Assert: Check the output's structure and content.
+    assert isinstance(pptx_bytes, bytes)
+    assert len(pptx_bytes) > 100, "The generated PPTX file is unexpectedly small."
+
+    try:
+        pptx_file = io.BytesIO(pptx_bytes)
+        prs = Presentation(pptx_file)
+
+        assert len(prs.slides) >= 2
+
+        # --- Inspect the second slide for our specific content ---
+        content_slide = prs.slides[1]
+
+        slide_text = "".join(shape.text for shape in content_slide.shapes if shape.has_text_frame)
+        assert "This text and the image below" in slide_text
+
+        image_found = any(
+            shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in content_slide.shapes
+        )
+        assert image_found, "Image was not found on the second slide."
+
+    except Exception as e:
+        pytest.fail(f"Failed to parse or validate the enhanced PPTX file. Error: {e}")
+
+
+@pytest.mark.ado_test
 def test_copy_sessions(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 
