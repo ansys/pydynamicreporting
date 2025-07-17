@@ -1257,18 +1257,20 @@ class ItemREST(BaseRESTObject):
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
 
+        rows = columns = []
         if rowlbls and isinstance(rowlbls, str):
-            if len(literal_eval(rowlbls)) != array.shape[0]:
-                raise ValueError("Number of row labels does not match number of rows in the array.")
-        elif rowlbls and len(rowlbls) != array.shape[0]:
-            raise ValueError("Number of row labels does not match number of rows in the array.")
+            rows = literal_eval(rowlbls)
+        else:
+            rows = rowlbls
 
         if collbls and isinstance(collbls, str):
-            if len(literal_eval(collbls)) != array.shape[1]:
-                raise ValueError(
-                    "Number of column labels does not match number of columns in the array."
-                )
-        elif collbls and len(collbls) != array.shape[1]:
+            columns = literal_eval(collbls)
+        else:
+            columns = collbls
+
+        if rows and len(rows) != array.shape[0]:
+            raise ValueError("Number of row labels does not match number of rows in the array.")
+        if columns and len(columns) != array.shape[1]:
             raise ValueError(
                 "Number of column labels does not match number of columns in the array."
             )
