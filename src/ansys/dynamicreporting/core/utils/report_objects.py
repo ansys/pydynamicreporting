@@ -1262,12 +1262,13 @@ class ItemREST(BaseRESTObject):
         if not isinstance(collbls, (str, list)):
             raise TypeError("Column labels must be a string or a list.")
 
-        rows = columns = []
+        rows = []
         if rowlbls and isinstance(rowlbls, str):
             rows = literal_eval(rowlbls)
         else:
             rows = rowlbls
 
+        columns = []
         if collbls and isinstance(collbls, str):
             columns = literal_eval(collbls)
         else:
