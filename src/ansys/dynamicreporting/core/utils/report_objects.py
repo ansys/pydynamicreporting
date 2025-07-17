@@ -1262,17 +1262,8 @@ class ItemREST(BaseRESTObject):
         if not isinstance(collbls, (str, list)):
             raise TypeError("Column labels must be a string or a list.")
 
-        rows = []
-        if rowlbls and isinstance(rowlbls, str):
-            rows = literal_eval(rowlbls)
-        else:
-            rows = rowlbls
-
-        columns = []
-        if collbls and isinstance(collbls, str):
-            columns = literal_eval(collbls)
-        else:
-            columns = collbls
+        rows = literal_eval(rowlbls) if isinstance(rowlbls, str) else rowlbls
+        columns = literal_eval(collbls) if isinstance(collbls, str) else collbls
 
         if rows and len(rows) != array.shape[0]:
             raise ValueError("Number of row labels does not match number of rows in the array.")
