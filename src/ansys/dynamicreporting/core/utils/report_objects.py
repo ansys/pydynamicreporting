@@ -1257,9 +1257,9 @@ class ItemREST(BaseRESTObject):
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
 
-        if not isinstance(rowlbls, (str, list)):
+        if rowlbls and not isinstance(rowlbls, (str, list)):
             raise TypeError("Row labels must be a string or a list.")
-        if not isinstance(collbls, (str, list)):
+        if collbls and not isinstance(collbls, (str, list)):
             raise TypeError("Column labels must be a string or a list.")
 
         rows = literal_eval(rowlbls) if isinstance(rowlbls, str) else rowlbls
