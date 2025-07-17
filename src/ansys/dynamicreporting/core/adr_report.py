@@ -673,6 +673,37 @@ class Report:
             self.service.logger.error(f"Can not export pdf report: {str(e)}")
         return success
 
+    def export_pdf_new(
+        self,
+        file_name: str = "",
+        item_filter: str | None = None,
+        query_params: dict | None = None,
+    ) -> bool:
+        """
+        New export report as PDF.
+        """
+        success = False  
+        if self.service is None: 
+            self.service.logger.error("No connection to any report")
+            return ""
+        if self.service.serverobj is None:
+            self.service.logger.error("No connection to any server")
+            return ""
+        try:
+            if query_params is None:
+                query_params = {}
+            self.service.serverobj.export_report_as_pdf_new(
+                report_guid=self.report.guid,
+                file_name=file_name,
+                query=query_params,
+                item_filter=item_filter,
+                ansys_version=self.service._ansys_version
+            )
+            success = True
+        except Exception as e:
+            self.service.logger.error(f"Cannot export pdf report: {str(e)}")
+        return success
+
     def export_html(
         self,
         directory_name: str = "",

@@ -942,6 +942,31 @@ class Server:
         run_nexus_utility(
             cmd, use_software_gl=True, exec_basis=exec_basis, ansys_version=ansys_version
         )
+        
+    def export_report_as_pdf_new(
+        self,
+        report_guid,
+        file_name,
+        query=None,
+        item_filter=None,
+        ansys_version=None,
+    ):
+        if query is None:
+            query = {}
+        query["print"] = "pdf"
+        from .report_download_pdf_new import ReportDownloadPDF
+
+        url = self.build_url_with_query(report_guid, query, item_filter)
+        _ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
+        if ansys_version:
+            _ansys_version = ansys_version
+
+        worker = ReportDownloadPDF(
+            url=url,
+            filename=file_name,
+            ansys_version=_ansys_version,
+        )
+        worker.download()
 
     def export_report_as_pptx(self, report_guid, file_name, query=None):
         """Method to export a report template with guid of report_guid as a pptx file of
@@ -1745,7 +1770,11 @@ def launch_local_database_server(
     try:
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
+        
+        print(command)    
         monitor_process = subprocess.Popen(command, **params)
+    
+    
     except Exception as e:
         if parent and has_qt:
             QtWidgets.QApplication.restoreOverrideCursor()
