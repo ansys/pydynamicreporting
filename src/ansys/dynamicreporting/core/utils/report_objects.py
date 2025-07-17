@@ -22,7 +22,7 @@ from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
 try:
-    from PyQt5 import QtCore, QtGui
+    from qtpy import QtCore, QtGui
 
     has_qt = True
 except ImportError:

@@ -2,11 +2,11 @@ from functools import partial
 import os
 
 try:
-    from PyQt5 import QtCore, QtGui, QtWebEngineWidgets
+    from qtpy import QtCore, QtGui, QtWebEngineWidgets
 
     # Classes for saving PDF representation
     # pagedef = {width}X{height}X{0=port|1=land}X{left}X{right}X{top}X{bottom} all in mm
-    from PyQt5.QtCore import QTimer
+    from qtpy.QtCore import QTimer
 
     has_qt = True
 except Exception:
