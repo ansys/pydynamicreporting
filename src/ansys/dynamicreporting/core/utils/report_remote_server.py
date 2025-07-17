@@ -3,7 +3,7 @@ import urllib
 from requests import JSONDecodeError
 
 try:
-    from PyQt5 import QtCore, QtGui, QtWidgets
+    from qtpy import QtCore, QtGui, QtWidgets
 
     has_qt = True
 except ImportError:
