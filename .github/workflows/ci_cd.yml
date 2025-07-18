@@ -112,7 +112,7 @@ jobs:
             sudo apt update && sudo apt install -y \
             libx11-dev \
             libgl1-mesa-dev \
-            libxrender1 \
+            libxrender1
 
       - name: Install DPF
         id: set-server-path
