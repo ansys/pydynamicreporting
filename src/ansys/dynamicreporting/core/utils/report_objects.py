@@ -1,3 +1,4 @@
+from ast import literal_eval
 import base64
 import copy
 import datetime
@@ -1256,9 +1257,17 @@ class ItemREST(BaseRESTObject):
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
 
-        if rowlbls and len(rowlbls) != array.shape[0]:
+        if rowlbls and not isinstance(rowlbls, (str, list)):
+            raise TypeError("Row labels must be a string or a list.")
+        if collbls and not isinstance(collbls, (str, list)):
+            raise TypeError("Column labels must be a string or a list.")
+
+        rows = literal_eval(rowlbls) if isinstance(rowlbls, str) else rowlbls
+        columns = literal_eval(collbls) if isinstance(collbls, str) else collbls
+
+        if rows and len(rows) != array.shape[0]:
             raise ValueError("Number of row labels does not match number of rows in the array.")
-        if collbls and len(collbls) != array.shape[1]:
+        if columns and len(columns) != array.shape[1]:
             raise ValueError(
                 "Number of column labels does not match number of columns in the array."
             )
