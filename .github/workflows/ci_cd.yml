@@ -106,6 +106,14 @@ jobs:
           echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
           echo "ANSYSLMD_LICENSE_FILE=1055@${{ secrets.LICENSE_SERVER }}" >> $GITHUB_ENV
 
+      - name: Update packages
+        shell: bash
+        run: |
+            sudo apt update && sudo apt install -y
+            libx11-dev \
+            libgl1-mesa-dev \
+            libxrender1 \
+
       - name: Install DPF
         id: set-server-path
         uses: ansys/pydpf-actions/install-dpf-server@v2.3
