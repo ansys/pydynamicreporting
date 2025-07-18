@@ -20,7 +20,7 @@ env:
   MAIN_PYTHON_VERSION: '3.13'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
-  ANSYS_VERSION: '252'
+  ANSYS_VERSION: '261'
   DPF_STANDALONE_SUFFIX: ''
 
 jobs:
