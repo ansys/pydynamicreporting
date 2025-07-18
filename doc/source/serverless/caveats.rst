@@ -88,7 +88,7 @@ Example: Threading with Serverless ADR
             t.join()
 
 Serverless ADR Usage Within Django Apps
---------------------------------------
+---------------------------------------
 
 - Serverless ADR internally configures Django settings and environment variables at the
   process level during ``ADR.setup()``.

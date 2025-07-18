@@ -179,7 +179,7 @@ You can use the following methods on a template instance to interact with proper
     template.add_property({"column_count": 2})
 
 Direct Attribute Access
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Alternatively, some common properties can also be accessed or set using standard attribute
 syntax on the template instance. For example:
@@ -286,7 +286,7 @@ Example: Creating a Nested Template Structure
     results_panel.save()
 
 Rendering Templates
-------------------
+-------------------
 
 Templates can render themselves into complete HTML content using the ``render()`` method.
 
@@ -340,7 +340,7 @@ The ``render_report()`` method:
 - Raises ``ADRException`` on failure with descriptive error messages.
 
 Rendering to PPTX
-----------------
+-----------------
 
 You can render a PowerPoint (.pptx) file from templates of type ``PPTXLayout`` using either the template’s
 ``render_pptx()`` method or through the ADR singleton’s ``render_report_as_pptx()`` helper.
