@@ -19,30 +19,29 @@ want to:
 
 - Create, manage, and render reports locally using Python
 - Avoid setting up a centralized ADR service or HTTP connection
-- Maintain full fidelity with the ADR schema (items, templates, layout logic)
-- Output HTML content and media assets for web apps, automation, or
-  documentation pipelines
+- Maintain full fidelity with the ADR schema (items, templates, etc.)
+- Output HTML content and media assets for web and desktop apps.
 
 Serverless ADR is ideal for:
 
 - Local, file-based workflows (e.g., building offline reports)
+- Embedding reports in web or desktop applications
 - Use in batch scripts, Python notebooks, or simulations
-- Building and verifying templates before pushing to production ADR services
 
 Key features
 ============
 
-- **Drop-in compatibility with Ansys installations**:
+- **Drop-in compatibility with Ansys installations and the Service API**:
   Uses the same Python environment and static/media assets from your installed
   ADR system.
 - **Flexible instantiation**:
-  Supports SQLite and PostgreSQL databases, Docker-based environments, and
+  Supports SQLite and PostgreSQL databases, Docker-based environments, in-memory and
   legacy environment-variable configurations.
 - **In-memory execution**:
   Runs entirely in your local Python process, with no separate backend or
   daemon needed.
 - **First-class objects**:
-  Items and Templates are actual Python classes, not remote proxies — giving
+  Sessions, Datasets, Items and Templates are actual Python classes, not remote proxies — giving
   you full introspection, subclassing, and lifecycle control.
 - **Comprehensive rendering**:
   Generates full HTML reports — just like the service-based API — with full
@@ -52,7 +51,8 @@ Explore the docs
 ================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+   :caption: Contents:
 
    quickstart
    overview
@@ -60,11 +60,13 @@ Explore the docs
    sessions_and_datasets
    items
    templates
-   rendering
    querying
    media_and_static
    embedding_reports
    copying_objects
    deleting_objects
+   configuration
+   examples
    troubleshooting
+   caveats
    faq

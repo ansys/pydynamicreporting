@@ -1,5 +1,6 @@
 import logging
 from os import environ
+from pathlib import Path
 from random import randint
 import re
 import uuid
@@ -425,7 +426,7 @@ def test_acls_start(tmp_path, get_exec) -> None:
 
 
 @pytest.mark.ado_test
-def test_get_templates_as_json(adr_service_create) -> bool:
+def test_get_templates_as_dict(adr_service_create) -> bool:
     server = adr_service_create.serverobj
 
     # Level 0
@@ -451,7 +452,7 @@ def test_get_templates_as_json(adr_service_create) -> bool:
             root_guid = template.guid
             break
 
-    templates_json = server.get_templates_as_json(root_guid)
+    templates_json = server.get_templates_as_dict(root_guid)
     assert len(templates_json) == 4
     assert templates_json["Template_0"]["name"] == "A"
     assert templates_json["Template_0"]["report_type"] == "Layout:basic"
@@ -461,6 +462,35 @@ def test_get_templates_as_json(adr_service_create) -> bool:
     assert templates_json["Template_0"]["item_filter"] == ""
     assert templates_json["Template_0"]["parent"] is None
     assert templates_json["Template_0"]["children"] == ["Template_1", "Template_2"]
+    server.del_objects(templates)
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file_no_such_file(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+    with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
+        server.load_templates_from_file("nonexistent.json")
+
+
+@pytest.mark.ado_test
+def test_load_templates_from_file(adr_service_create) -> None:
+    server = adr_service_create.serverobj
+
+    # Path to the sample JSON file
+    sample_file = Path(__file__).parent / "test_data" / "sample.json"
+
+    # Call the method
+    server.load_templates_from_file(sample_file)
+
+    # Verify templates were loaded correctly
+    templates = server.get_objects(objtype=ro.TemplateREST)
+    assert len(templates) == 4
+    assert any(template.name == "A" for template in templates)
+    assert any(template.name == "B" for template in templates)
+    assert any(template.name == "C" for template in templates)
+    assert any(template.name == "D" for template in templates)
+
+    # Clean up
     server.del_objects(templates)
 
 
@@ -638,7 +668,7 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
         e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file has an invalid template name: 'WRONG_NAME' "
-            "that does not have the correct name convection under the key: 'parent' of 'Template_1'\n"
+            "that does not have the correct name convention under the key: 'parent' of 'Template_1'\n"
             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
         ),
     ):
@@ -696,7 +726,7 @@ def test_check_templates_children_name(adr_service_create) -> bool:
         e.TemplateEditorJSONLoadingError,
         match=(
             "The loaded JSON file has an invalid template name: 'WRONG_NAME' "
-            "that does not have the correct name convection under the key: 'children' of 'Template_0'\n"
+            "that does not have the correct name convention under the key: 'children' of 'Template_0'\n"
             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
         ),
     ):

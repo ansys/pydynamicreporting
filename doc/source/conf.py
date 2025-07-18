@@ -3,12 +3,12 @@
 from datetime import datetime
 import os
 
-from ansys_sphinx_theme import get_version_match, pyansys_logo_black
+from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
 from sphinx_gallery.sorting import FileNameSortKey
 
 from ansys.dynamicreporting.core import __version__
 
-cname = os.getenv("DOCUMENTATION_CNAME", "<DEFAULT_CNAME>")
+cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com")
 """The canonical name of the webpage hosting the documentation."""
 
 # Project information
@@ -51,6 +51,8 @@ rst_prolog = f"""
 html_logo = pyansys_logo_black
 html_theme = "ansys_sphinx_theme"
 html_short_title = html_title = "PyDynamicReporting documentation |version|"
+switcher_version = get_version_match(version)
+html_favicon = ansys_favicon
 
 # specify the location of your github repo
 html_context = {
@@ -64,10 +66,8 @@ html_context = {
 html_theme_options = {
     "switcher": {
         "json_url": f"https://{cname}/versions.json",
-        "version_match": get_version_match(__version__),
+        "version_match": switcher_version,
     },
-    "check_switcher": False,
-    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     "github_url": "https://github.com/ansys/pydynamicreporting/",
     "show_prev_next": False,
     "show_breadcrumbs": True,
@@ -90,7 +90,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_gallery.gen_gallery",
-    # "ansys_sphinx_theme",  # causes build errors
 ]
 
 autoapi_options = [
