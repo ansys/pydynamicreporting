@@ -13,6 +13,7 @@ enhanced image.
 from collections.abc import Callable
 import io
 import json
+import logging
 from typing import Dict, Tuple, Union
 
 from PIL import Image, TiffImagePlugin
@@ -25,7 +26,7 @@ try:
     HAS_VTK = True
 except ImportError as e:  # pragma: no cover
     HAS_VTK = False
-    print(e)
+    logging.warning(e)
 
 try:
     from ansys.dpf import core as dpf
@@ -34,7 +35,7 @@ try:
     HAS_DPF = True
 except (ImportError, ValueError) as e:  # pragma: no cover
     HAS_DPF = False
-    print(e)
+    logging.warning(e)
 
 
 if HAS_VTK and HAS_DPF:
