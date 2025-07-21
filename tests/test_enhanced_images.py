@@ -1,11 +1,11 @@
 import json
 import os
 
-import pytest
-from ansys.dpf import core as dpf
-from ansys.dpf.core import examples
 from PIL import Image
 from PIL.TiffTags import TAGS
+from ansys.dpf import core as dpf
+from ansys.dpf.core import examples
+import pytest
 
 from ansys.dynamicreporting.core.utils import enhanced_images as ei
 from ansys.dynamicreporting.core.utils import report_utils as ru
@@ -47,7 +47,7 @@ def test_generate_enhanced_image_vector_var_none_component(dpf_model_vector_var)
             "DPF Sample",
             "var",
             "output.tiff",
-            component=None  # Intentionally not specifying a component
+            component=None,  # Intentionally not specifying a component
         )
 
     # Assert the exception message
