@@ -1226,14 +1226,14 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         {"name": "toc", "source_slide": "2"},
         {
             "name": "table",
-            "source_slide": "4",
+            "source_slide": "3",
             "properties": {"show_tag_title_only": "1"},
         },
-        {"name": "tree", "source_slide": "5"},
-        {"name": "line", "source_slide": "6"},
+        {"name": "tree", "source_slide": "4"},
+        {"name": "line", "source_slide": "5"},
         {
             "name": "session",
-            "source_slide": "7",
+            "source_slide": "6",
         },
     ]
 
@@ -1272,7 +1272,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     def get_slide_text(sld):
         return "".join(shape.text for shape in sld.shapes if shape.has_text_frame)
 
-    assert len(prs.slides) == 13, f"Expected 13 slides, but found {len(prs.slides)}"
+    assert len(prs.slides) == 12, f"Expected 12 slides, but found {len(prs.slides)}"
 
     assert "My presentation" in get_slide_text(prs.slides[0])
 
@@ -1283,20 +1283,20 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     assert "My tree" in toc_text
     assert "My line plot" in toc_text
 
-    table_slide_text = get_slide_text(prs.slides[4])
+    table_slide_text = get_slide_text(prs.slides[3])
     assert "Numeric Table 1" in table_slide_text
-    table_found = any(shape.shape_type == MSO_SHAPE_TYPE.TABLE for shape in prs.slides[4].shapes)
+    table_found = any(shape.shape_type == MSO_SHAPE_TYPE.TABLE for shape in prs.slides[3].shapes)
     assert table_found, "No table shape found on the table slide."
 
-    tree_slide_text = get_slide_text(prs.slides[10])
+    tree_slide_text = get_slide_text(prs.slides[9])
     assert "My tree" in tree_slide_text
 
-    chart_found = any(shape.shape_type == MSO_SHAPE_TYPE.CHART for shape in prs.slides[11].shapes)
+    chart_found = any(shape.shape_type == MSO_SHAPE_TYPE.CHART for shape in prs.slides[10].shapes)
     assert chart_found, "No chart shape found on the line plot slide."
 
-    session_slide_text = get_slide_text(prs.slides[12])
+    session_slide_text = get_slide_text(prs.slides[11])
     assert "session" not in session_slide_text
-    image_found = any(hasattr(shape, "image") for shape in prs.slides[12].shapes)
+    image_found = any(hasattr(shape, "image") for shape in prs.slides[11].shapes)
     assert image_found, "No image shape found on the session/logo slide."
 
 
