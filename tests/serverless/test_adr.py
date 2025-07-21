@@ -1030,6 +1030,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     import io
     from pathlib import Path
     import random
+    import sys
 
     import numpy as np
     from pptx import Presentation
@@ -1046,6 +1047,40 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         Table,
         Tree,
     )
+
+    print("\n--- DIAGNOSTIC: Printing settings_serverless.py content ---")
+    try:
+        # Construct the path to the settings file within the ADR installation
+        version = adr_serverless.ansys_version
+
+        # Find the django path that was added to sys.path by ADR.setup()
+        django_path = None
+        for p in sys.path:
+            if p.endswith(f"nexus{version}/django"):
+                django_path = Path(p)
+                break
+
+        if not django_path:
+            raise FileNotFoundError("Could not determine the django path from sys.path.")
+
+        settings_file = django_path / "ceireports" / "settings_serverless.py"
+
+        print(f"Attempting to read from: {settings_file}")
+
+        if settings_file.is_file():
+            content = settings_file.read_text()
+            print("--- FILE CONTENT START ---")
+            print(content)
+            print("--- FILE CONTENT END ---")
+        else:
+            print("ERROR: The file was not found at the expected path.")
+            pytest.fail("settings_serverless.py not found at {settings_file}")
+
+    except Exception as e:
+        print(f"An error occurred while trying to read the settings file: {e}")
+        pytest.fail("Could not read settings_serverless.py due to an error.")
+
+    print("--- END DIAGNOSTIC ---")
 
     source_tag = "pptx-test-sls dp=dp227"  # A common tag to filter all items for this report
 
