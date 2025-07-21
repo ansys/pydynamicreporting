@@ -1038,6 +1038,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         HTML,
         File,
         Image,
+        Item,
         PPTXLayout,
         PPTXSlideLayout,
         Scene,
@@ -1046,7 +1047,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         Tree,
     )
 
-    source_tag = "pptx-test-serverless"  # A common tag to filter all items for this report
+    source_tag = "pptx-test-sls dp=dp227"  # A common tag to filter all items for this report
 
     # --- Source PPTX as a File item ---
     input_pptx_item_name = "input.pptx"
@@ -1073,7 +1074,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     )
 
     # --- HTML item ---
-    html_item = adr_serverless.create_item(
+    adr_serverless.create_item(
         HTML,
         name="html",
         content=(
@@ -1107,14 +1108,16 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         ],
         dtype="f",
     )
-    adr_serverless.create_item(
+    t = adr_serverless.create_item(
         Table,
-        name="table1",
+        name="table",
         content=array1,
-        labels_col=["Linear", "Shift", "Polynomial", "Invert Poly", "Random"],
-        title="Numeric table",
-        tags=f'{source_tag} pptx_slide_title="<h2>Linear</h2>linear description<br /><br /><h4>Iterations: 10</h4>"',
+        tags=source_tag,
     )
+    t.collbls = ["Linear", "Shift", "Polynomial", "Invert Poly", "Random"]
+    t.title = "Numeric table1"
+    t.add_tag("pptx_slide_title", "Numeric Table 1")
+    t.save()
 
     random.seed(54321)
     array2 = np.array(
@@ -1130,28 +1133,30 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         ],
         dtype="f",
     )
-    adr_serverless.create_item(
+    t2 = adr_serverless.create_item(
         Table,
-        name="table2",
+        name="table",
         content=array2,
-        labels_col=["ID", "Location[X]", "Location[Y]", "Location[Z]", "turbViscosity[X]"],
-        title="Numeric table2",
         tags=f'{source_tag} pptx_slide_title="Location-Viscosity"',
     )
+    t2.title = "numeric table2"
+    t2.collbls = ["ID", "Location[X]", "Location[Y]", "Location[Z]", "turbViscosity[X]"]
+    t2.save()
 
     array3 = np.array(
         [['A {{"mylink"|nexus_link:"LINK"}}', "B \u4e14".encode(), "C"], [b"1", b"2", b"3"]],
         dtype="S50",
     )
-    adr_serverless.create_item(
+    t3 = adr_serverless.create_item(
         Table,
-        name="table3",
+        name="table",
         content=array3,
-        labels_row=["Row 1", "Row 2"],
-        labels_col=["Column A", "Column B", "Column C"],
-        title="Simple ASCII table",
         tags=source_tag,
     )
+    t3.title = "Simple ASCII table"
+    t3.rowlbls = ["Row 1", "Row 2"]
+    t3.collbls = ["Column A", "Column B", "Column C"]
+    t3.save()
 
     # --- Tree item ---
     tree_content = [
@@ -1198,15 +1203,16 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         ],
         dtype="f",
     )
-    adr_serverless.create_item(
+    p = adr_serverless.create_item(
         Table,
         name="line_plot",
         content=line_plot_array,
-        labels_row=["X", "Lift"],
-        title="Cumulative_Total_Lift",
-        plot="line",
         tags=source_tag,
     )
+    p.title = "Cumulative Total Lift"
+    p.labels_row = ["X", "Lift"]
+    p.plot = "line"
+    p.save()
 
     # --- ENS Session File Item---
     adr_serverless.create_item(
@@ -1216,35 +1222,34 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         tags=f'{source_tag} pptx_slide_title="session-tag-title"',
     )
 
-    # ==============================================================================
     # 2. Create the full template structure.
-    # ==============================================================================
     report_name = "pptx-select"
     pptx_template = adr_serverless.create_template(PPTXLayout, name=report_name, parent=None)
     pptx_template.input_pptx = input_pptx_item_name
     pptx_template.output_pptx = "output-select.pptx"
-    pptx_template.item_filter = f"A|i_src|cont|{source_tag};"
+    pptx_template.item_filter = "A|i_tags|cont|pptx-test-sls;"
     pptx_template.use_all_slides = "0"
     pptx_template.save()
 
+    objs = adr_serverless.query(query_type=Item, query=pptx_template.item_filter)
+    assert len(objs) == 16, "Expected 16 items to match the filter, but found a different number."
+
     # --- Define the slide children ---
     slides_to_create = [
-        {"name": "start", "source_slide": "1", "filter": "A|i_name|eq|title_text;"},
-        {"name": "toc", "source_slide": "2", "filter": "A|i_name|any|toc_title,toc_link_text;"},
-        {"name": "html", "source_slide": "3", "filter": f"A|i_guid|eq|{html_item.guid};"},
+        {"name": "start", "source_slide": "1"},
+        {"name": "toc", "source_slide": "2"},
+        {"name": "html", "source_slide": "3"},
         {
             "name": "table",
             "source_slide": "4",
             "properties": {"show_tag_title_only": "1"},
             "html": "<h1>table</h1>table description",
-            "filter": "A|i_name|any|table1,table2,table3;",
         },
-        {"name": "tree", "source_slide": "5", "filter": "A|i_name|cont|tree;"},
-        {"name": "line", "source_slide": "6", "filter": "A|i_name|cont|line_plot;"},
+        {"name": "tree", "source_slide": "5"},
+        {"name": "line", "source_slide": "6"},
         {
             "name": "session",
             "source_slide": "7",
-            "filter": f"A|i_name|any|session;A|i_guid|eq|{image_item.guid};",
         },
     ]
 
@@ -1253,52 +1258,68 @@ def test_full_pptx_report_generation_integration(adr_serverless):
             PPTXSlideLayout, name=slide_data["name"], parent=pptx_template
         )
         slide.source_slide = slide_data["source_slide"]
-        slide.item_filter = slide_data.get("filter", "")
+        slide.item_filter = ""
         if "properties" in slide_data:
             slide.add_properties(slide_data["properties"])
         if "html" in slide_data:
             slide.set_html(slide_data["html"])
         slide.save()
 
-    # ==============================================================================
     # 3.  Render the report.
-    # ==============================================================================
     pptx_bytes = adr_serverless.render_report_as_pptx(name=report_name)
 
-    # ==============================================================================
     # 4. Validate the output.
-    # ==============================================================================
     assert isinstance(pptx_bytes, bytes)
     assert len(pptx_bytes) > 1000, "Generated PPTX file seems too small."
 
-    try:
-        pptx_file = io.BytesIO(pptx_bytes)
-        prs = Presentation(pptx_file)
+    # Define the output file path
+    output_filename = "my_generated_report.pptx"
 
-        # Expect 7 slides based on the template definition
-        assert len(prs.slides) == 7
+    # Open the file in binary write mode ('wb') and write the bytes to it
+    with open(output_filename, "wb") as f:
+        f.write(pptx_bytes)
 
-        # Spot check a few slides for expected content
-        # Slide 1: Title
-        title_slide_text = "".join(
-            shape.text for shape in prs.slides[0].shapes if shape.has_text_frame
-        )
-        assert "My presentation" in title_slide_text
+    print(f"Report saved to {output_filename}")
 
-        # Slide 3: HTML content
-        html_slide_text = "".join(
-            shape.text for shape in prs.slides[2].shapes if shape.has_text_frame
-        )
-        assert "Heading 1" in html_slide_text and "The end" in html_slide_text
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
 
-        # Slide 4: Table (check for title from HTML property)
-        table_slide_text = "".join(
-            shape.text for shape in prs.slides[3].shapes if shape.has_text_frame
-        )
-        assert "table description" in table_slide_text
+    pptx_file = io.BytesIO(pptx_bytes)
+    prs = Presentation(pptx_file)
 
-    except Exception as e:
-        pytest.fail(f"Failed to parse or validate the final PPTX file. Error: {e}")
+    # Helper to get all text from a slide
+    def get_slide_text(sld):
+        return "".join(shape.text for shape in sld.shapes if shape.has_text_frame)
+
+    assert len(prs.slides) == 13, f"Expected 13 slides, but found {len(prs.slides)}"
+
+    assert "My presentation" in get_slide_text(prs.slides[0])
+
+    toc_text = get_slide_text(prs.slides[1])
+    assert "Table of contents" in toc_text
+    # Check that titles from other slides appear in the TOC
+    assert "My HTML item" in toc_text
+    assert "table" in toc_text
+    assert "My tree" in toc_text
+    assert "My line plot" in toc_text
+
+    html_slide_text = get_slide_text(prs.slides[2])
+    assert "Heading 1" in html_slide_text
+
+    table_slide_text = get_slide_text(prs.slides[4])
+    assert "Numeric Table 1" in table_slide_text
+    table_found = any(shape.shape_type == MSO_SHAPE_TYPE.TABLE for shape in prs.slides[4].shapes)
+    assert table_found, "No table shape found on the table slide."
+
+    tree_slide_text = get_slide_text(prs.slides[10])
+    assert "My tree" in tree_slide_text
+
+    chart_found = any(shape.shape_type == MSO_SHAPE_TYPE.CHART for shape in prs.slides[11].shapes)
+    assert chart_found, "No chart shape found on the line plot slide."
+
+    session_slide_text = get_slide_text(prs.slides[12])
+    assert "session" not in session_slide_text
+    image_found = any(hasattr(shape, "image") for shape in prs.slides[12].shapes)
+    assert image_found, "No image shape found on the session/logo slide."
 
 
 @pytest.mark.ado_test
