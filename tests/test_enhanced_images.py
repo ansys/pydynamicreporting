@@ -58,6 +58,27 @@ def test_generate_enhanced_image_vector_var_none_component(dpf_model_vector_var)
     ) in str(exc_info.value)
 
 
+@pytest.mark.ado_test
+def test_generate_enhanced_image_vector_var_wrong_component(dpf_model_vector_var):
+    model, field = dpf_model_vector_var
+
+    with pytest.raises(ValueError) as exc_info:
+        ei.generate_enhanced_image_as_tiff(
+            model,
+            field,
+            "DPF Sample",
+            "var",
+            "output.tiff",
+            component="W",  # Intentionally wrong component
+        )
+
+    # Assert the exception message
+    assert (
+        "Error when generating an enhanced image: "
+        "The parameter 'component' only accepts 'X', 'Y', or 'Z'."
+    ) in str(exc_info.value)
+
+
 def setup_dpf_tiff_generation(dpf_model_scalar_var):
     model, field = dpf_model_scalar_var
 
