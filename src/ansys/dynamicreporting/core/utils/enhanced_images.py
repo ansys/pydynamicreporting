@@ -14,7 +14,6 @@ from collections.abc import Callable
 import io
 import json
 import logging
-from typing import Dict, Tuple, Union
 
 from PIL import Image, TiffImagePlugin
 import numpy as np
