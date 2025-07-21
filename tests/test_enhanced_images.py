@@ -1,17 +1,18 @@
 import json
 import os
 
-from PIL import Image
-from PIL.TiffTags import TAGS
+import pytest
 from ansys.dpf import core as dpf
 from ansys.dpf.core import examples
-import pytest
+from PIL import Image
+from PIL.TiffTags import TAGS
 
 from ansys.dynamicreporting.core.utils import enhanced_images as ei
 from ansys.dynamicreporting.core.utils import report_utils as ru
 
 
-def get_dpf_model_field_example():
+@pytest.fixture
+def dpf_model_scalar_var():
     file_path = examples.find_electric_therm()
     model = dpf.Model(file_path)
 
@@ -23,8 +24,42 @@ def get_dpf_model_field_example():
     return model, potential
 
 
-def setup_dpf_tiff_generation():
-    model, field = get_dpf_model_field_example()
+@pytest.fixture
+def dpf_model_vector_var():
+    file_path = examples.find_electric_therm()
+    model = dpf.Model(file_path)
+
+    results = model.results
+    disp = results.displacement()
+    fields = disp.outputs.fields_container()
+
+    return model, fields[0]
+
+
+@pytest.mark.ado_test
+def test_generate_enhanced_image_vector_var_none_component(dpf_model_vector_var):
+    model, field = dpf_model_vector_var
+
+    with pytest.raises(ValueError) as exc_info:
+        ei.generate_enhanced_image_as_tiff(
+            model,
+            field,
+            "DPF Sample",
+            "var",
+            "output.tiff",
+            component=None  # Intentionally not specifying a component
+        )
+
+    # Assert the exception message
+    assert (
+        "Error when generating an enhanced image: The field data is a vector variable. "
+        "Currently, we do not fully support vector variables. "
+        "Please specify which component you want to plot upon: 'X', 'Y', or 'Z'."
+    ) in str(exc_info.value)
+
+
+def setup_dpf_tiff_generation(dpf_model_scalar_var):
+    model, field = dpf_model_scalar_var
 
     tiff_name = "dpf_find_electric_therm.tiff"
     ei.generate_enhanced_image_as_tiff(model, field, "DPF Sample", "var", tiff_name)
@@ -34,8 +69,8 @@ def setup_dpf_tiff_generation():
     image.close()
 
 
-def setup_dpf_inmem_generation():
-    model, field = get_dpf_model_field_example()
+def setup_dpf_inmem_generation(dpf_model_scalar_var):
+    model, field = dpf_model_scalar_var
     buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "var")
 
     image = Image.open(buffer)
@@ -44,11 +79,11 @@ def setup_dpf_inmem_generation():
 
 
 @pytest.fixture(params=["tiff", "inmem"])
-def setup_generation_flow(request):
+def setup_generation_flow(request, dpf_model_scalar_var):
     if request.param == "tiff":
-        yield from setup_dpf_tiff_generation()
+        yield from setup_dpf_tiff_generation(dpf_model_scalar_var)
     else:
-        yield from setup_dpf_inmem_generation()
+        yield from setup_dpf_inmem_generation(dpf_model_scalar_var)
 
 
 @pytest.mark.ado_test
