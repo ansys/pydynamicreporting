@@ -1157,7 +1157,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
                 {
                     "key": "child",
                     "name": "Simple string",
-                    "value": 'Hello world!!!',
+                    "value": "Hello world!!!",
                 },
                 {"key": "child", "name": "Integer example", "value": 10},
                 {"key": "child", "name": "Float example", "value": 99.99},
