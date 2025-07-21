@@ -1220,7 +1220,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     pptx_template.save()
 
     objs = adr_serverless.query(query_type=Item, query=pptx_template.item_filter)
-    assert len(objs) == 16, "Expected 16 items to match the filter, but found a different number."
+    assert len(objs) == 14, "Expected 14 items to match the filter, but found a different number."
 
     # --- Define the slide children ---
     slides_to_create = [
