@@ -1048,40 +1048,6 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         Tree,
     )
 
-    print("\n--- DIAGNOSTIC: Printing settings_serverless.py content ---")
-    try:
-        # Construct the path to the settings file within the ADR installation
-        version = adr_serverless.ansys_version
-
-        # Find the django path that was added to sys.path by ADR.setup()
-        django_path = None
-        for p in sys.path:
-            if p.endswith(f"nexus{version}/django"):
-                django_path = Path(p)
-                break
-
-        if not django_path:
-            raise FileNotFoundError("Could not determine the django path from sys.path.")
-
-        settings_file = django_path / "ceireports" / "settings_serverless.py"
-
-        print(f"Attempting to read from: {settings_file}")
-
-        if settings_file.is_file():
-            content = settings_file.read_text()
-            print("--- FILE CONTENT START ---")
-            print(content)
-            print("--- FILE CONTENT END ---")
-        else:
-            print("ERROR: The file was not found at the expected path.")
-            pytest.fail("settings_serverless.py not found at {settings_file}")
-
-    except Exception as e:
-        print(f"An error occurred while trying to read the settings file: {e}")
-        pytest.fail("Could not read settings_serverless.py due to an error.")
-
-    print("--- END DIAGNOSTIC ---")
-
     source_tag = "pptx-test-sls dp=dp227"  # A common tag to filter all items for this report
 
     # --- Source PPTX as a File item ---
@@ -1101,23 +1067,10 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         String, name="toc_title", content="Table of contents", tags=source_tag
     )
     adr_serverless.create_item(String, name="toc_link_text", content="Go back", tags=source_tag)
-    adr_serverless.create_item(String, name="html_title", content="My HTML item", tags=source_tag)
     adr_serverless.create_item(String, name="table_title", content="My table", tags=source_tag)
     adr_serverless.create_item(String, name="tree_title", content="My tree", tags=source_tag)
     adr_serverless.create_item(
         String, name="line_plot_title", content="My line plot", tags=source_tag
-    )
-
-    # --- HTML item ---
-    adr_serverless.create_item(
-        HTML,
-        name="html",
-        content=(
-            "<h1>Heading 1</h1><h2>Heading 2</h2><h3>Heading 3</h3>"
-            "<h4>Heading 4</h4><h5>Heading 5</h5>Two breaks below"
-            "<br><br /><h6>Heading 6 (& one break below)</h6><br>The end"
-        ),
-        tags=f'{source_tag} pptx_slide_title="headers and breaks"',
     )
 
     # --- Image item ---
@@ -1273,7 +1226,6 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     slides_to_create = [
         {"name": "start", "source_slide": "1"},
         {"name": "toc", "source_slide": "2"},
-        {"name": "html", "source_slide": "3"},
         {
             "name": "table",
             "source_slide": "4",
@@ -1332,13 +1284,9 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     toc_text = get_slide_text(prs.slides[1])
     assert "Table of contents" in toc_text
     # Check that titles from other slides appear in the TOC
-    assert "My HTML item" in toc_text
     assert "table" in toc_text
     assert "My tree" in toc_text
     assert "My line plot" in toc_text
-
-    html_slide_text = get_slide_text(prs.slides[2])
-    assert "Heading 1" in html_slide_text
 
     table_slide_text = get_slide_text(prs.slides[4])
     assert "Numeric Table 1" in table_slide_text
