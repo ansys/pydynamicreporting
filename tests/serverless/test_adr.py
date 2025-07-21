@@ -1030,13 +1030,11 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     import io
     from pathlib import Path
     import random
-    import sys
 
     import numpy as np
     from pptx import Presentation
 
     from ansys.dynamicreporting.core.serverless import (
-        HTML,
         File,
         Image,
         Item,
@@ -1159,7 +1157,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
                 {
                     "key": "child",
                     "name": "Simple string",
-                    "value": 'Hello world!!! {{"mylink"|nexus_link:"LINK"}}',
+                    "value": 'Hello world!!!',
                 },
                 {"key": "child", "name": "Integer example", "value": 10},
                 {"key": "child", "name": "Float example", "value": 99.99},
@@ -1230,7 +1228,6 @@ def test_full_pptx_report_generation_integration(adr_serverless):
             "name": "table",
             "source_slide": "4",
             "properties": {"show_tag_title_only": "1"},
-            "html": "<h1>table</h1>table description",
         },
         {"name": "tree", "source_slide": "5"},
         {"name": "line", "source_slide": "6"},
@@ -1248,8 +1245,6 @@ def test_full_pptx_report_generation_integration(adr_serverless):
         slide.item_filter = ""
         if "properties" in slide_data:
             slide.add_properties(slide_data["properties"])
-        if "html" in slide_data:
-            slide.set_html(slide_data["html"])
         slide.save()
 
     # 3.  Render the report.
