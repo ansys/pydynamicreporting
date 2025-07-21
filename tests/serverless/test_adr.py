@@ -1144,7 +1144,7 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     t2.save()
 
     array3 = np.array(
-        [['A', "B \u4e14".encode(), "C"], [b"1", b"2", b"3"]],
+        [["A", "B \u4e14".encode(), "C"], [b"1", b"2", b"3"]],
         dtype="S50",
     )
     t3 = adr_serverless.create_item(
