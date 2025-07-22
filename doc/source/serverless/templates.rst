@@ -179,7 +179,7 @@ You can use the following methods on a template instance to interact with proper
     template.add_property({"column_count": 2})
 
 Direct Attribute Access
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Alternatively, some common properties can also be accessed or set using standard attribute
 syntax on the template instance. For example:
@@ -286,7 +286,7 @@ Example: Creating a Nested Template Structure
     results_panel.save()
 
 Rendering Templates
-------------------
+-------------------
 
 Templates can render themselves into complete HTML content using the ``render()`` method.
 
@@ -304,7 +304,6 @@ data for rendering, such as user-defined variables or configuration settings.
 
 Rendering context supports options like:
 
-- ``plotly`` flag to enable interactive plots
 - Page dimensions and DPI for layout calculations
 - Date and time formatting
 
@@ -312,6 +311,69 @@ Rendering context supports options like:
 
 - If you would like more information on the error, set the ``debug`` flag to ``True`` when instantiating
   the ``ADR`` class.
+
+Rendering via the ADR Entry Point
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ADR singleton class provides convenient methods to render templates by name or other filters,
+abstracting the fetching and rendering process:
+
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = ADR.get_instance()
+
+    # Render an HTML report by name with optional context and item filtering
+    html_content = adr.render_report(
+        name="Serverless Simulation Report",
+        context={"key": "value"},
+        item_filter="A|i_tags|cont|project=wing_sim;",
+    )
+    with open("report.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+The ``render_report()`` method:
+
+- Requires at least one keyword argument to identify the template (e.g., ``name``, ``guid``).
+- Passes the ``context`` and ``item_filter`` to the template's ``render()`` method.
+- Raises ``ADRException`` on failure with descriptive error messages.
+
+Rendering to PPTX
+-----------------
+
+You can render a PowerPoint (.pptx) file from templates of type ``PPTXLayout`` using either the template’s
+``render_pptx()`` method or through the ADR singleton’s ``render_report_as_pptx()`` helper.
+
+Example using the template method:
+
+.. code-block:: python
+
+    pptx_bytes = pptx_template.render_pptx(
+        context={"key": "value"}, item_filter="A|i_tags|cont|project=wing_sim;"
+    )
+    with open("report.pptx", "wb") as f:
+        f.write(pptx_bytes)
+
+Example using the ADR entrypoint:
+
+.. code-block:: python
+
+    pptx_bytes = adr.render_report_as_pptx(
+        name="Serverless Simulation Report",
+        context={"key": "value"},
+        item_filter="A|i_tags|cont|project=wing_sim;",
+    )
+    with open("report.pptx", "wb") as f:
+        f.write(pptx_bytes)
+
+Notes on ``render_report_as_pptx()`` method:
+
+- The template identified by the filter (e.g., ``name``) must be of type ``PPTXLayout``.
+- Raises an ``ADRException`` if the template is not found or not of the required type.
+- Returns raw bytes of the generated PPTX presentation.
+- Passes ``context`` and ``item_filter`` to the template’s ``render_pptx()`` method.
+- Exceptions during rendering are wrapped and raised as ``ADRException``.
 
 Lifecycle Notes
 ---------------
@@ -339,3 +401,10 @@ Summary
 Templates are the backbone of report structure in Serverless ADR. They let you create
 rich, dynamic, and highly customizable reports by defining layouts and generators,
 setting filters and parameters, and nesting templates to build complex hierarchical reports.
+
+Rendering can be done directly via template instances or conveniently through the ADR singleton instance.
+
+- Use ``template.render()`` for HTML output.
+- Use ``template.render_pptx()`` or ``adr.render_report_as_pptx()`` for PPTX output.
+- Both rendering paths support passing context and filtering items if applicable.
+- Handle exceptions raised as ``ADRException`` to debug issues.

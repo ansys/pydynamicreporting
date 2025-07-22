@@ -80,7 +80,7 @@ class Template(BaseModel):
         guid_id_map: dict[str, int] | None = None,
     ) -> tuple[dict, dict[str, int], int]:
         """
-        Recursively build the template tree data structure in a pure, non-mutating way.
+        Recursively build the template tree data structure.
 
         Returns:
             - templates_data: dict with full hierarchy of templates
@@ -327,6 +327,23 @@ class Template(BaseModel):
         self.set_params(params)
 
     def render(self, *, context=None, item_filter="", request=None) -> str:
+        """
+        Render the template to HTML.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to be used in the template rendering. Defaults to an empty dictionary.
+        item_filter : str, optional
+            Filter string to be applied to the items. Defaults to an empty string.
+        request : HttpRequest, optional
+            The HTTP request object, used to provide additional context for rendering. Defaults to None.
+
+        Returns
+        -------
+        str
+            The rendered HTML string, or an error message if rendering fails.
+        """
         if context is None:
             context = {}
         ctx = {
@@ -354,9 +371,10 @@ class Template(BaseModel):
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
             # Render the report
-            ctx["HTML"] = engine.render(items, ctx)
+            html = engine.render(items, ctx)
             # fill in any TOC entries
-            ctx["HTML"] += TemplateEngine.end_toc_session()
+            html += TemplateEngine.end_toc_session()
+            ctx["HTML"] = html
         except Exception as e:
             from ceireports.utils import get_render_error_html
 
@@ -509,6 +527,52 @@ class ReportLinkLayout(Layout):
 class PPTXLayout(Layout):
     report_type: str = ReportType.PPTX_LAYOUT
     _properties = ("input_pptx", "output_pptx", "use_all_slides")
+
+    def render_pptx(self, *, context=None, item_filter="", request=None) -> bytes:
+        """
+        Render the template to PPTX. Only works for templates of type PPTXLayout.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to be used in the template rendering. Defaults to an empty dictionary.
+        item_filter : str, optional
+            Filter string to be applied to the items. Defaults to an empty string.
+        request : HttpRequest, optional
+            The HTTP request object, used to provide additional context for rendering. Defaults to None.
+
+        Returns
+        -------
+        bytes
+            The rendered PPTX file as bytes
+
+        Raises
+        -------
+        ADRException
+            If rendering fails, an exception is raised with details about the failure.
+
+        Example
+        -------
+        >>> template = PPTXLayout.get(guid="some-guid")
+        >>> pptx_bytes = template.render_pptx(context={"key": "value"}, item_filter="some_filter", request=request)
+        >>> with open("output.pptx", "wb") as f:
+        ...     f.write(pptx_bytes)
+        """
+        if context is None:
+            context = {}
+        ctx = {**context, "request": request}
+        try:
+            from data.models import Item
+            from reports.engine import TemplateEngine
+
+            template_obj = self._orm_instance
+            engine = template_obj.get_engine()
+            items = Item.find(query=item_filter)
+            return engine.dispatch_render("pptx", items, ctx)
+        except Exception as e:
+            raise ADRException(
+                f"Failed to render PPTX for template {self.name} ({self.guid}): {e}"
+            ) from e
 
 
 class PPTXSlideLayout(Layout):

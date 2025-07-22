@@ -974,7 +974,7 @@ def test_template_find_raises_exception(adr_serverless):
         PanelLayout.find(query="A|t_types|cont|panel")
 
 
-# @pytest.mark.ado_test
+@pytest.mark.ado_test
 def test_template_render(monkeypatch, adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless import template as template_module
@@ -1006,13 +1006,56 @@ def test_template_render(monkeypatch, adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_pptx_layout_render_pptx_success(adr_serverless, monkeypatch):
+    # The rendering engine is located in the 'reports' app of the Ansys core installation
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        # This fake method simulates a successful render by the engine
+        assert render_type == "pptx"
+        return b"mock pptx content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+
+    pptx_bytes = pptx_template.render_pptx()
+
+    assert pptx_bytes == b"mock pptx content from engine"
+
+
+@pytest.mark.ado_test
+def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PPTX for template"):
+        pptx_template.render_pptx()
+
+
+@pytest.mark.ado_test
 def test_to_json(adr_serverless):
     import json
     import os
 
     from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
 
-    A = adr_serverless.create_template(
+    root = adr_serverless.create_template(
         BasicLayout,
         name="A",
         parent=None,
@@ -1020,18 +1063,18 @@ def test_to_json(adr_serverless):
         params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     )
 
-    adr_serverless.create_template(PanelLayout, name="B", parent=A, tags="dp=dp2")
+    adr_serverless.create_template(PanelLayout, name="B", parent=root, tags="dp=dp2")
 
-    C = adr_serverless.create_template(
-        BasicLayout, name="C", parent=A, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
+    child_1 = adr_serverless.create_template(
+        BasicLayout, name="C", parent=root, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
     )
 
     adr_serverless.create_template(
-        BasicLayout, name="D", parent=C, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
+        BasicLayout, name="D", parent=child_1, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
     )
 
     file_path = os.path.join(adr_serverless.static_directory, "test.json")
-    A.to_json(file_path)
+    root.to_json(file_path)
 
     with open(file_path, encoding="utf-8") as json_file:
         data = json.load(json_file)
