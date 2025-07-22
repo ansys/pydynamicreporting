@@ -1026,6 +1026,19 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 
 @pytest.mark.ado_test
 def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
+    from django.template import engines
+    from django.template.library import InvalidTemplateLibrary
+    from importlib import import_module
+
+    # Register 'data_tags' manually in the test
+    try:
+        tag_module = import_module("data.templatetags.data_tags")
+        engines["django"].engine.libraries["data_tags"] = tag_module.register
+    except ModuleNotFoundError as e:
+        pytest.fail(f"Could not import 'data_tags': {e}")
+    except InvalidTemplateLibrary as e:
+        pytest.fail(f"Invalid template tag library: {e}")
+
     import datetime
     import io
     from pathlib import Path
@@ -1045,12 +1058,6 @@ def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
         Table,
         Tree,
     )
-
-    from django.template import engines
-    try:
-        engines["django"].engine.libraries["data_tags"] = "data.templatetags.data_tags"
-    except Exception as e:
-        pytest.fail(f"Failed to monkeypatch template tag library 'data_tags': {e}")
 
     source_tag = "pptx-test-sls dp=dp227"  # A common tag to filter all items for this report
 
