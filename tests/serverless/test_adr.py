@@ -1026,16 +1026,20 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 
 @pytest.mark.ado_test
 def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
-    from django.template import engines
-    from django.template.library import Library
-    from types import ModuleType
+    from django.conf import settings
+    from django.template import libraries
 
-    # Create a fake empty tag library
-    fake_module = ModuleType("data_tags")
-    fake_module.register = Library()
+    # The INSTALLED_APPS setting can be a tuple, so we convert to a list
+    installed_apps = list(settings.INSTALLED_APPS)
+    if 'data.apps.DataConfig' not in installed_apps:
+        installed_apps.append('data.apps.DataConfig')
+        # Use monkeypatch to ensure the setting is restored after the test
+        monkeypatch.setattr(settings, 'INSTALLED_APPS', installed_apps)
 
-    # Inject the fake into the Django engine
-    engines["django"].engine.libraries["data_tags"] = fake_module.register
+        # Force Django to re-discover and reload all template tag libraries
+        libraries.libraries = {}
+        libraries.builtins = []
+        libraries.setup()
 
     import datetime
     import io
