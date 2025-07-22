@@ -77,7 +77,31 @@ def test_generate_enhanced_image_vector_var_wrong_component(dpf_model_vector_var
         "Error when generating an enhanced image: "
         "The parameter 'component' only accepts 'X', 'Y', or 'Z'."
     ) in str(exc_info.value)
+    
 
+def check_enhanced(image):
+    assert image is not None
+    image.seek(0)
+    result = ru.is_enhanced(image)
+    assert result is not None
+
+
+@pytest.mark.ado_test
+def test_generate_enhanced_image_vector_var_all_components(dpf_model_vector_var):
+    model, field = dpf_model_vector_var
+    
+    buffer_x = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "displacement X", component='X')
+    with Image.open(buffer_x) as image_x:
+        check_enhanced(image_x)
+        
+    buffer_y = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "displacement Y", component='Y')
+    with Image.open(buffer_y) as image_y:
+        check_enhanced(image_y)
+        
+    buffer_z = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "displacement Z", component='Z')
+    with Image.open(buffer_z) as image_z:
+        check_enhanced(image_z)     
+    
 
 def setup_dpf_tiff_generation(dpf_model_scalar_var):
     model, field = dpf_model_scalar_var
@@ -110,10 +134,7 @@ def setup_generation_flow(request, dpf_model_scalar_var):
 @pytest.mark.ado_test
 def test_basic_format(setup_generation_flow):
     image = setup_generation_flow
-    assert image is not None
-    image.seek(0)
-    result = ru.is_enhanced(image)
-    assert result is not None
+    check_enhanced(image)
 
 
 @pytest.mark.ado_test
