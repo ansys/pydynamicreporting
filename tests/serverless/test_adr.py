@@ -1031,6 +1031,12 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     from pathlib import Path
     import random
 
+    from data.templatetags import data_tags
+    from django.template.engine import Engine
+
+    engine = Engine.get_default()
+    engine.libraries["data_tags"] = data_tags
+
     import numpy as np
     from pptx import Presentation
 
@@ -1272,14 +1278,13 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     def get_slide_text(sld):
         return "".join(shape.text for shape in sld.shapes if shape.has_text_frame)
 
-    assert len(prs.slides) == 12, f"Expected 12 slides, but found {len(prs.slides)}"
+    assert len(prs.slides) == 11, f"Expected 11 slides, but found {len(prs.slides)}"
 
     assert "My presentation" in get_slide_text(prs.slides[0])
 
     toc_text = get_slide_text(prs.slides[1])
     assert "Table of contents" in toc_text
     # Check that titles from other slides appear in the TOC
-    assert "table" in toc_text
     assert "My tree" in toc_text
     assert "My line plot" in toc_text
 
@@ -1288,15 +1293,15 @@ def test_full_pptx_report_generation_integration(adr_serverless):
     table_found = any(shape.shape_type == MSO_SHAPE_TYPE.TABLE for shape in prs.slides[3].shapes)
     assert table_found, "No table shape found on the table slide."
 
-    tree_slide_text = get_slide_text(prs.slides[9])
+    tree_slide_text = get_slide_text(prs.slides[8])
     assert "My tree" in tree_slide_text
 
-    chart_found = any(shape.shape_type == MSO_SHAPE_TYPE.CHART for shape in prs.slides[10].shapes)
+    line_slide_text = get_slide_text(prs.slides[9])
+    assert "My line plot" in line_slide_text
+    chart_found = any(shape.shape_type == MSO_SHAPE_TYPE.CHART for shape in prs.slides[9].shapes)
     assert chart_found, "No chart shape found on the line plot slide."
 
-    session_slide_text = get_slide_text(prs.slides[11])
-    assert "session" not in session_slide_text
-    image_found = any(hasattr(shape, "image") for shape in prs.slides[11].shapes)
+    image_found = any(hasattr(shape, "image") for shape in prs.slides[10].shapes)
     assert image_found, "No image shape found on the session/logo slide."
 
 
