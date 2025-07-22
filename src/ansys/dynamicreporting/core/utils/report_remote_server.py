@@ -1770,9 +1770,7 @@ def launch_local_database_server(
     try:
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        
         monitor_process = subprocess.Popen(command, **params)
-    
     except Exception as e:
         if parent and has_qt:
             QtWidgets.QApplication.restoreOverrideCursor()
