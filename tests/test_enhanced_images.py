@@ -11,6 +11,60 @@ from ansys.dynamicreporting.core.utils import enhanced_images as ei
 from ansys.dynamicreporting.core.utils import report_utils as ru
 
 
+def create_sample_sphere():
+    import vtk
+
+    sphere = vtk.vtkSphereSource()
+    sphere.Update()
+    add_var_as_cell_data(sphere.GetOutput(), "Pick Data", lambda i: 3456)
+    add_var_as_cell_data(sphere.GetOutput(), "Temperature", lambda i: i / 10000)
+    return sphere
+
+
+def add_var_as_cell_data(poly_data, var_name, val_calculator):
+    import vtk
+
+    arr = vtk.vtkFloatArray()
+    arr.SetName(var_name)
+    arr.SetNumberOfComponents(1)
+    num_cells = poly_data.GetNumberOfCells()
+    arr.SetNumberOfTuples(num_cells)
+    for i in range(num_cells):
+        if i % 2 == 0:
+            j = i
+        else:
+            j = -i
+        arr.SetValue(i, val_calculator(j))
+    poly_data.GetCellData().AddArray(arr)
+
+
+def check_enhanced(image):
+    assert image is not None
+    image.seek(0)
+    result = ru.is_enhanced(image)
+    assert result is not None
+
+
+def setup_dpf_tiff_generation(dpf_model_scalar_var):
+    model, field = dpf_model_scalar_var
+
+    tiff_name = "dpf_find_electric_therm.tiff"
+    ei.generate_enhanced_image_as_tiff(model, field, "DPF Sample", "var", tiff_name)
+
+    image = Image.open(tiff_name)
+    yield image
+    image.close()
+
+
+def setup_dpf_inmem_generation(dpf_model_scalar_var):
+    model, field = dpf_model_scalar_var
+    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "var")
+
+    image = Image.open(buffer)
+    yield image
+    image.close()
+
+
 @pytest.fixture
 def dpf_model_scalar_var():
     file_path = examples.find_electric_therm()
@@ -26,12 +80,22 @@ def dpf_model_scalar_var():
 
 @pytest.fixture
 def dpf_model_vector_var():
-    file_path = examples.find_electric_therm()
+    file_path = examples.find_simple_bar()
     model = dpf.Model(file_path)
-
     results = model.results
     disp = results.displacement()
     fields = disp.outputs.fields_container()
+
+    return model, fields[0]
+
+
+@pytest.fixture
+def dpf_model_elem_var():
+    file_path = examples.find_simple_bar()
+    model = dpf.Model(file_path)
+    results = model.results
+    elemental_volume = results.elemental_volume()
+    fields = elemental_volume.outputs.fields_container()
 
     return model, fields[0]
 
@@ -79,13 +143,6 @@ def test_generate_enhanced_image_vector_var_wrong_component(dpf_model_vector_var
     ) in str(exc_info.value)
 
 
-def check_enhanced(image):
-    assert image is not None
-    image.seek(0)
-    result = ru.is_enhanced(image)
-    assert result is not None
-
-
 @pytest.mark.ado_test
 def test_generate_enhanced_image_vector_var_all_components(dpf_model_vector_var):
     model, field = dpf_model_vector_var
@@ -109,24 +166,13 @@ def test_generate_enhanced_image_vector_var_all_components(dpf_model_vector_var)
         check_enhanced(image_z)
 
 
-def setup_dpf_tiff_generation(dpf_model_scalar_var):
-    model, field = dpf_model_scalar_var
+@pytest.mark.ado_test
+def test_generate_enhanced_image_elem_var(dpf_model_elem_var):
+    model, field = dpf_model_elem_var
 
-    tiff_name = "dpf_find_electric_therm.tiff"
-    ei.generate_enhanced_image_as_tiff(model, field, "DPF Sample", "var", tiff_name)
-
-    image = Image.open(tiff_name)
-    yield image
-    image.close()
-
-
-def setup_dpf_inmem_generation(dpf_model_scalar_var):
-    model, field = dpf_model_scalar_var
-    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "var")
-
-    image = Image.open(buffer)
-    yield image
-    image.close()
+    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "element vol")
+    with Image.open(buffer) as image:
+        check_enhanced(image)
 
 
 @pytest.fixture(params=["tiff", "inmem"])
