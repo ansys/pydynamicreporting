@@ -1006,6 +1006,49 @@ def test_template_render(monkeypatch, adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_pptx_layout_render_pptx_success(adr_serverless, monkeypatch):
+    # The rendering engine is located in the 'reports' app of the Ansys core installation
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        # This fake method simulates a successful render by the engine
+        assert render_type == "pptx"
+        return b"mock pptx content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+
+    pptx_bytes = pptx_template.render_pptx()
+
+    assert pptx_bytes == b"mock pptx content from engine"
+
+
+@pytest.mark.ado_test
+def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PPTX for template"):
+        pptx_template.render_pptx()
+
+
+@pytest.mark.ado_test
 def test_to_json(adr_serverless):
     import json
     import os
