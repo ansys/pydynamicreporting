@@ -2622,6 +2622,7 @@ class tablereduceREST(GeneratorREST):
         self.params = json.dumps(d)
         return
 
+
 class tablemapREST(GeneratorREST):
     """Representation of Table Mathematical Function Mapper Generator Template."""
 
@@ -2720,7 +2721,7 @@ class tablemapREST(GeneratorREST):
             raise ValueError("Error: select_names should be a string")
         if type(operation) is not str:
             raise ValueError("Error: operation should be a string")
-        
+
         if "map_params" not in d:
             d["map_params"] = {}
         if "operations" not in d["map_params"]:
@@ -2772,6 +2773,7 @@ class tablemapREST(GeneratorREST):
         d["map_params"]["force_numeric"] = value
         self.params = json.dumps(d)
         return
+
 
 class tablerowcolumnfilterREST(GeneratorREST):
     """Representation of Table Row/Column Filter Generator Template."""
