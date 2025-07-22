@@ -37,6 +37,7 @@ from ansys.dynamicreporting.core.serverless import (
     TableMergeRCFilterGenerator,
     TableMergeValueFilterGenerator,
     TableReduceGenerator,
+    TableMapGenerator,
     TableSortFilterGenerator,
     TagPropertyLayout,
     Template,
