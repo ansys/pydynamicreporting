@@ -1031,9 +1031,16 @@ def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
     from pathlib import Path
     import random
 
-    from django.template import engine
     import numpy as np
     from pptx import Presentation
+
+    from django.template import engines
+
+    # Adjust the dotted path to your actual templatetag module location
+    try:
+        engines["django"].engine.libraries["data_tags"] = "data.templatetags.data_tags"
+    except Exception as e:
+        pytest.fail(f"Failed to monkeypatch template tag library 'data_tags': {e}")
 
     from ansys.dynamicreporting.core.serverless import (
         File,
@@ -1046,16 +1053,6 @@ def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
         Table,
         Tree,
     )
-
-    original_engine_init = engine.Engine.__init__
-
-    def patched_engine_init(self, *args, **kwargs):
-        from data.templatetags import data_tags
-
-        original_engine_init(self, *args, **kwargs)
-        self.libraries["data_tags"] = data_tags
-
-    monkeypatch.setattr(engine.Engine, "__init__", patched_engine_init)
 
     source_tag = "pptx-test-sls dp=dp227"  # A common tag to filter all items for this report
 
