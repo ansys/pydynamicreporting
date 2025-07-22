@@ -35,6 +35,7 @@ class ReportType(StrEnum):
     # Generators
     TABLE_MERGE_GENERATOR = "Generator:tablemerge"
     TABLE_REDUCE_GENERATOR = "Generator:tablereduce"
+    TABLE_MAP_GENERATOR = "Generator:tablemap"
     TABLE_ROW_COLUMN_FILTER_GENERATOR = "Generator:tablerowcolumnfilter"
     TABLE_VALUE_FILTER_GENERATOR = "Generator:tablevaluefilter"
     TABLE_SORT_FILTER_GENERATOR = "Generator:tablesortfilter"
@@ -622,6 +623,8 @@ class TableMergeGenerator(Generator):
 class TableReduceGenerator(Generator):
     report_type: str = ReportType.TABLE_REDUCE_GENERATOR
 
+class TableMapGenerator(Generator):
+    report_type: str = ReportType.TABLE_MAP_GENERATOR
 
 class TableMergeRCFilterGenerator(Generator):
     report_type: str = ReportType.TABLE_ROW_COLUMN_FILTER_GENERATOR
