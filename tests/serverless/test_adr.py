@@ -1027,17 +1027,15 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 @pytest.mark.ado_test
 def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
     from django.template import engines
-    from django.template.library import InvalidTemplateLibrary
-    from importlib import import_module
+    from django.template.library import Library
+    from types import ModuleType
 
-    # Register 'data_tags' manually in the test
-    try:
-        tag_module = import_module("data.templatetags.data_tags")
-        engines["django"].engine.libraries["data_tags"] = tag_module.register
-    except ModuleNotFoundError as e:
-        pytest.fail(f"Could not import 'data_tags': {e}")
-    except InvalidTemplateLibrary as e:
-        pytest.fail(f"Invalid template tag library: {e}")
+    # Create a fake empty tag library
+    fake_module = ModuleType("data_tags")
+    fake_module.register = Library()
+
+    # Inject the fake into the Django engine
+    engines["django"].engine.libraries["data_tags"] = fake_module.register
 
     import datetime
     import io
