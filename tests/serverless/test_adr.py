@@ -1025,20 +1025,20 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_full_pptx_report_generation_integration(adr_serverless):
+def test_full_pptx_report_generation_integration(adr_serverless, monkeypatch):
     import datetime
     import io
     from pathlib import Path
     import random
 
-    from data.templatetags import data_tags
-    from django.template.engine import Engine
-
-    engine = Engine.get_default()
-    engine.libraries["data_tags"] = data_tags
-
+    from django.conf import settings
     import numpy as np
     from pptx import Presentation
+
+    installed_apps = list(settings.INSTALLED_APPS)
+    if "data.apps.DataConfig" not in installed_apps:
+        installed_apps.append("data.apps.DataConfig")
+        monkeypatch.setattr(settings, "INSTALLED_APPS", installed_apps)
 
     from ansys.dynamicreporting.core.serverless import (
         File,
