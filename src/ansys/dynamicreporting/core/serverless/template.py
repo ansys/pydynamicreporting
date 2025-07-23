@@ -623,8 +623,10 @@ class TableMergeGenerator(Generator):
 class TableReduceGenerator(Generator):
     report_type: str = ReportType.TABLE_REDUCE_GENERATOR
 
+
 class TableMapGenerator(Generator):
     report_type: str = ReportType.TABLE_MAP_GENERATOR
+
 
 class TableMergeRCFilterGenerator(Generator):
     report_type: str = ReportType.TABLE_ROW_COLUMN_FILTER_GENERATOR
