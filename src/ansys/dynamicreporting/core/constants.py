@@ -24,6 +24,7 @@ LAYOUT_TYPES = (
 GENERATOR_TYPES = (
     "Generator:tablemerge",
     "Generator:tablereduce",
+    "Generator:tablemap",
     "Generator:tablerowcolumnfilter",
     "Generator:tablevaluefilter",
     "Generator:tablesortfilter",
