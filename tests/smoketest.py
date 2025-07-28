@@ -33,6 +33,7 @@ from ansys.dynamicreporting.core.serverless import (
     String,
     TabLayout,
     Table,
+    TableMapGenerator,
     TableMergeGenerator,
     TableMergeRCFilterGenerator,
     TableMergeValueFilterGenerator,

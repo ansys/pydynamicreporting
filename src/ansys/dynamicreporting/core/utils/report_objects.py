@@ -2505,20 +2505,22 @@ class tablereduceREST(GeneratorREST):
         d = json.loads(self.params)
         if "reduce_params" not in d:
             return
-        if "operations" not in d:
+        if "operations" not in d["reduce_params"]:
             return
         sources = d["reduce_params"]["operations"]
+        index = 0
         valid = 0
-        for _, s in enumerate(sources):
+        for i, s in enumerate(sources):
             compare = []
             for iname in shlex.split(s["source_rows"]):
                 compare.append(iname.replace(",", ""))
             if compare == name:
                 valid = 1
+                index = i
                 break
         if valid == 0:
             raise ValueError("Error: no existing source with the passed input")
-        del sources[i]
+        del sources[index]
         d["reduce_params"]["operations"] = sources
         self.params = json.dumps(d)
         return
@@ -2617,6 +2619,163 @@ class tablereduceREST(GeneratorREST):
         if "reduce_params" not in d:
             d["reduce_params"] = {}
         d["reduce_params"]["force_numeric"] = value
+        self.params = json.dumps(d)
+        return
+
+
+class tablemapREST(GeneratorREST):
+    """Representation of Table Mathematical Function Mapper Generator Template."""
+
+    def __init__(self):
+        super().__init__()
+
+    def get_map_param(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "map_type" in d["map_params"]:
+                return d["map_params"]["map_type"]
+        return "row"
+
+    def set_map_param(self, value="row"):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        if value not in ("row", "column"):
+            raise ValueError("Error: input should be either row or column")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["map_type"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_table_name(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "table_name" in d["map_params"]:
+                return d["map_params"]["table_name"]
+        return ""
+
+    def set_table_name(self, value="output_table"):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["table_name"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_operations(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "operations" in d["map_params"]:
+                return d["map_params"]["operations"]
+        return []
+
+    def delete_operation(self, name=None):
+        if name is None:
+            name = []
+        if not isinstance(name, list):
+            raise ValueError(
+                "Error: need to pass the operation with the source row/column name as a list of strings"
+            )
+        if len([x for x in name if isinstance(x, str)]) != len(name):
+            raise ValueError("Error: the elements of the input list should all be strings")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            return
+        if "operations" not in d["map_params"]:
+            return
+        sources = d["map_params"]["operations"]
+        index = 0
+        valid = False
+        for i, s in enumerate(sources):
+            compare = []
+            for iname in shlex.split(s["source_rows"]):
+                compare.append(iname.replace(",", ""))
+            if compare == name:
+                index = i
+                valid = True
+                break
+        if not valid:
+            raise ValueError("Error: no existing source with the passed input")
+        del sources[index]
+        d["map_params"]["operations"] = sources
+        self.params = json.dumps(d)
+        return
+
+    def add_operation(
+        self,
+        name=None,
+        output_name="output row",
+        select_names="*",
+        operation="x",
+    ):
+        if name is None:
+            name = ["*"]
+        d = json.loads(self.params)
+        if not isinstance(name, list):
+            raise ValueError("Error: row/column name should be a list of strings")
+        if len([x for x in name if isinstance(x, str)]) != len(name):
+            raise ValueError("Error: the elements of the input list should all be strings")
+        if not isinstance(output_name, str):
+            raise ValueError("Error: output_name should be a string")
+        if not isinstance(select_names, str):
+            raise ValueError("Error: select_names should be a string")
+        if not isinstance(operation, str):
+            raise ValueError("Error: operation should be a string")
+
+        if "map_params" not in d:
+            d["map_params"] = {}
+        if "operations" not in d["map_params"]:
+            sources = []
+        else:
+            sources = d["map_params"]["operations"]
+        new_source = {}
+        new_source["source_rows"] = ", ".join(repr(x) for x in name)
+        new_source["output_rows"] = output_name
+        new_source["output_columns_select"] = select_names
+        new_source["operation"] = operation
+        sources.append(new_source)
+        d["map_params"]["operations"] = sources
+        self.params = json.dumps(d)
+        return
+
+    def get_table_transpose(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "transpose_output" in d["map_params"]:
+                return d["map_params"]["transpose_output"]
+        return 0
+
+    def set_table_transpose(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("Error: the transpose input should be integer")
+        if value not in (0, 1):
+            raise ValueError("Error: input value should be 0 or 1")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["transpose_output"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_numeric_output(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "force_numeric" in d["map_params"]:
+                return d["map_params"]["force_numeric"]
+        return 0
+
+    def set_numeric_output(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("Error: the numeric output should be integer")
+        if value not in (0, 1):
+            raise ValueError("Error: input value should be 0 or 1")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["force_numeric"] = value
         self.params = json.dumps(d)
         return
 

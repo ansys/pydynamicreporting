@@ -1132,13 +1132,12 @@ def test_tablemerge_operation() -> None:
     a.add_operation(name=["a"])
     a.add_operation(name=["b"], existing=False)
     succ_ten = len(a.get_operations()) == 3
-    a.delete_operation()
     succ_eleven = False
     try:
         a.delete_operation(name="a")
     except ValueError as e:
         succ_eleven = "need to pass the operation" in str(e)
-    a.delete_operation(name=["a", "b"])
+    a.delete_operation(name=["a"])
     succ_a = succ and succ_two and succ_three and succ_four and succ_five and succ_six
     succ_b = succ_seven and succ_eight and succ_nine and succ_ten and succ_eleven
     assert succ_a and succ_b
@@ -1185,6 +1184,109 @@ def test_tablereduce_numeric() -> None:
     a.set_numeric_output(value=1)
     succ_four = a.get_numeric_output() == 1
     assert succ and succ_two and succ_three and succ_four
+
+
+@pytest.mark.ado_test
+def test_tablemap_nameparam() -> None:
+    a = ro.tablemapREST()
+    assert a.get_map_param() == "row"
+    try:
+        a.set_map_param(value=0)
+    except ValueError as e:
+        assert "input should be a string" in str(e)
+    try:
+        a.set_map_param(value="a")
+    except ValueError as e:
+        assert "input should be either row or column" in str(e)
+    a.set_map_param(value="column")
+    assert a.get_map_param() == "column"
+    assert a.get_table_name() == ""
+    try:
+        a.set_table_name(value=1)
+    except ValueError as e:
+        assert "input should be a string" in str(e)
+    a.set_table_name(value="abc")
+    assert a.get_table_name() == "abc"
+
+
+@pytest.mark.ado_test
+def test_tablemap_operation() -> None:
+    a = ro.tablemapREST()
+    assert a.get_operations() == []
+    a.add_operation()
+    try:
+        a.add_operation(name="a")
+    except ValueError as e:
+        assert "should be a list of strings" in str(e)
+    try:
+        a.add_operation(name=[1])
+    except ValueError as e:
+        assert "should all be strings" in str(e)
+    try:
+        a.delete_operation(name=[1])
+    except ValueError as e:
+        assert "should all be strings" in str(e)
+    try:
+        a.add_operation(output_name=1)
+    except ValueError as e:
+        assert "output_name should be a string" in str(e)
+    try:
+        a.delete_operation(name=["a"])
+    except ValueError as e:
+        assert "source with the passed input" in str(e)
+    try:
+        a.add_operation(select_names=1)
+    except ValueError as e:
+        assert "select_names should be a string" in str(e)
+    try:
+        a.add_operation(operation=1)
+    except ValueError as e:
+        assert "operation should be a string" in str(e)
+    a.add_operation(name=["a"])
+    a.add_operation(name=["b"])
+    assert len(a.get_operations()) == 3
+
+    try:
+        a.delete_operation(name="a")
+    except ValueError as e:
+        assert "need to pass the operation" in str(e)
+    a.delete_operation(name=["a"])
+
+
+@pytest.mark.ado_test
+def test_tablemap_transpose() -> None:
+    a = ro.tablemapREST()
+    assert a.get_table_transpose() == 0
+    try:
+        a.set_table_transpose(value="a")
+    except ValueError as e:
+        assert "the transpose input should be integer" in str(e)
+    try:
+        a.set_table_transpose(value=3)
+    except ValueError as e:
+        assert "input value should be 0 or 1" in str(e)
+    try:
+        a.set_table_transpose(value=1.2)
+    except ValueError as e:
+        assert "transpose input should be integer" in str(e)
+    a.set_table_transpose(value=1)
+    assert a.get_table_transpose() == 1
+
+
+@pytest.mark.ado_test
+def test_tablemap_numeric() -> None:
+    a = ro.tablemapREST()
+    assert a.get_numeric_output() == 0
+    try:
+        a.set_numeric_output(value="a")
+    except ValueError as e:
+        assert "numeric output should be integer" in str(e)
+    try:
+        a.set_numeric_output(value=4)
+    except ValueError as e:
+        assert "input value should be 0 or 1" in str(e)
+    a.set_numeric_output(value=1)
+    assert a.get_numeric_output() == 1
 
 
 @pytest.mark.ado_test
