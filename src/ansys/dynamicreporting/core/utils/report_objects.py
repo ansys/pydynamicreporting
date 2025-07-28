@@ -2630,15 +2630,16 @@ class tablemapREST(GeneratorREST):
         super().__init__()
 
     def get_map_param(self):
-        if "map_params" in json.loads(self.params):
-            if "map_type" in json.loads(self.params)["map_params"]:
-                return json.loads(self.params)["map_params"]["map_type"]
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "map_type" in d["map_params"]:
+                return d["map_params"]["map_type"]
         return "row"
 
     def set_map_param(self, value="row"):
-        if type(value) is not str:
+        if not isinstance(value, str):
             raise ValueError("Error: input should be a string")
-        if value not in ["row", "column"]:
+        if value not in ("row", "column"):
             raise ValueError("Error: input should be either row or column")
         d = json.loads(self.params)
         if "map_params" not in d:
@@ -2648,13 +2649,14 @@ class tablemapREST(GeneratorREST):
         return
 
     def get_table_name(self):
-        if "map_params" in json.loads(self.params):
-            if "table_name" in json.loads(self.params)["map_params"]:
-                return json.loads(self.params)["map_params"]["table_name"]
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "table_name" in d["map_params"]:
+                return d["map_params"]["table_name"]
         return ""
 
     def set_table_name(self, value="output_table"):
-        if type(value) is not str:
+        if not isinstance(value, str):
             raise ValueError("Error: input should be a string")
         d = json.loads(self.params)
         if "map_params" not in d:
@@ -2664,19 +2666,20 @@ class tablemapREST(GeneratorREST):
         return
 
     def get_operations(self):
-        if "map_params" in json.loads(self.params):
-            if "operations" in json.loads(self.params)["map_params"]:
-                return json.loads(self.params)["map_params"]["operations"]
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "operations" in d["map_params"]:
+                return d["map_params"]["operations"]
         return []
 
     def delete_operation(self, name=None):
         if name is None:
             name = []
-        if type(name) != list:
+        if not isinstance(name, list):
             raise ValueError(
                 "Error: need to pass the operation with the source row/column name as a list of strings"
             )
-        if len([x for x in name if type(x) == str]) != len(name):
+        if len([x for x in name if isinstance(x, str)]) != len(name):
             raise ValueError("Error: the elements of the input list should all be strings")
         d = json.loads(self.params)
         if "map_params" not in d:
@@ -2685,16 +2688,16 @@ class tablemapREST(GeneratorREST):
             return
         sources = d["map_params"]["operations"]
         index = 0
-        valid = 0
+        valid = False
         for i, s in enumerate(sources):
             compare = []
             for iname in shlex.split(s["source_rows"]):
                 compare.append(iname.replace(",", ""))
             if compare == name:
                 index = i
-                valid = 1
+                valid = True
                 break
-        if valid == 0:
+        if not valid:
             raise ValueError("Error: no existing source with the passed input")
         del sources[index]
         d["map_params"]["operations"] = sources
@@ -2711,15 +2714,15 @@ class tablemapREST(GeneratorREST):
         if name is None:
             name = ["*"]
         d = json.loads(self.params)
-        if type(name) != list:
+        if not isinstance(name, list):
             raise ValueError("Error: row/column name should be a list of strings")
-        if len([x for x in name if type(x) == str]) != len(name):
+        if len([x for x in name if isinstance(x, str)]) != len(name):
             raise ValueError("Error: the elements of the input list should all be strings")
-        if type(output_name) is not str:
+        if not isinstance(output_name, str):
             raise ValueError("Error: output_name should be a string")
-        if type(select_names) is not str:
+        if not isinstance(select_names, str):
             raise ValueError("Error: select_names should be a string")
-        if type(operation) is not str:
+        if not isinstance(operation, str):
             raise ValueError("Error: operation should be a string")
 
         if "map_params" not in d:
@@ -2739,15 +2742,16 @@ class tablemapREST(GeneratorREST):
         return
 
     def get_table_transpose(self):
-        if "map_params" in json.loads(self.params):
-            if "transpose_output" in json.loads(self.params)["map_params"]:
-                return json.loads(self.params)["map_params"]["transpose_output"]
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "transpose_output" in d["map_params"]:
+                return d["map_params"]["transpose_output"]
         return 0
 
     def set_table_transpose(self, value=0):
-        if type(value) != int:
+        if not isinstance(value, int):
             raise ValueError("Error: the transpose input should be integer")
-        if value not in [0, 1]:
+        if value not in (0, 1):
             raise ValueError("Error: input value should be 0 or 1")
         d = json.loads(self.params)
         if "map_params" not in d:
@@ -2757,15 +2761,16 @@ class tablemapREST(GeneratorREST):
         return
 
     def get_numeric_output(self):
-        if "map_params" in json.loads(self.params):
-            if "force_numeric" in json.loads(self.params)["map_params"]:
-                return json.loads(self.params)["map_params"]["force_numeric"]
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "force_numeric" in d["map_params"]:
+                return d["map_params"]["force_numeric"]
         return 0
 
     def set_numeric_output(self, value=0):
-        if type(value) != int:
+        if not isinstance(value, int):
             raise ValueError("Error: the numeric output should be integer")
-        if value not in [0, 1]:
+        if value not in (0, 1):
             raise ValueError("Error: input value should be 0 or 1")
         d = json.loads(self.params)
         if "map_params" not in d:
