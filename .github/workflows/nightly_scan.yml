@@ -1,0 +1,16 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+  workflow_dispatch:
+
+jobs:
+  security_scan:
+    uses: ansys-internal/ci-templates/.github/workflows/security-scan-mend.yml@v7
+    with:
+      package_type: 'poetry+npm'
+      needs: 'sca,sast,sbom'
+    secrets: inherit
