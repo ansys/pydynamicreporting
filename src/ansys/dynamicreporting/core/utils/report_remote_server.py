@@ -799,6 +799,64 @@ class Server:
         if validate_digest:
             self._default_dataset_digest = self.get_object_digest(self._default_dataset)
 
+    def get_template_order_among_siblings(self, template):
+        """
+        Determine the order of a template among its siblings.
+
+        This function retrieves the parent of the given template and iterates through the parent's children
+        to find the index of the given template. If the template is not found among its siblings, an exception
+        is raised.
+
+        Parameters
+        ----------
+        template : TemplateREST
+            The template whose order among siblings is to be determined.
+
+        Returns
+        -------
+        int
+            The index of the template among its siblings.
+
+        Raises
+        ------
+        TemplateNotExistError
+            If the template is not found in its parent's children.
+        """
+        parent = self.get_object_from_guid(template.parent, objtype=report_objects.TemplateREST)
+        for index, sibling_guid in enumerate(parent.children):
+            if template.guid == sibling_guid:
+                return index
+
+        raise exceptions.TemplateNotExistError(
+            f"Template with guid {template.guid} is not found in its parent's children"
+        )  # pragma: no cover
+
+    def set_template_order_among_siblings(self, template, position):
+        """
+        Reorder the template.guid in parent.children to the specified position.
+
+        Parameters
+        ----------
+        template : TemplateREST
+            The template to reorder among its siblings.
+        position : int
+            The new position for the template in the parent's children list.
+
+        Raises
+        ------
+        TemplateReorderOutOfBoundError
+            If the specified position is out of bounds.
+        """
+        parent = self.get_object_from_guid(template.parent, objtype=report_objects.TemplateREST)
+        sibling_size = len(parent.children)
+        if position < 0 or position >= sibling_size:
+            raise exceptions.TemplateReorderOutOfBoundError(
+                f"The position in your request is: {position}, which is out of bound of [0, {sibling_size})"
+            )
+
+        parent.children.remove(template.guid)
+        parent.children.insert(position, template.guid)
+
     def create_item_category(self, name="New category"):
         """Create a new item category."""
         item_categ = report_objects.ItemCategoryREST()
