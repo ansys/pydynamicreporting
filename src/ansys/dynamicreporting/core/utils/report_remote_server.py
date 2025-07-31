@@ -856,6 +856,7 @@ class Server:
 
         parent.children.remove(template.guid)
         parent.children.insert(position, template.guid)
+        self.put_objects(parent)
 
     def create_item_category(self, name="New category"):
         """Create a new item category."""
