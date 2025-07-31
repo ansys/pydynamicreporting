@@ -1,6 +1,6 @@
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.2.dev0"
+version = "0.10.2.dev1"
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
@@ -67,8 +67,6 @@ ci =  "https://github.com/ansys/pydynamicreporting/actions"
 test = [
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
-]
-test-extra = [
     "pyvista==0.45.3",
     "vtk==9.4.2",
     "ansys-dpf-core==0.13.8",
