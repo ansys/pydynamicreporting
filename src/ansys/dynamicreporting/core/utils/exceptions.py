@@ -62,7 +62,7 @@ class TemplateNotExistError(RuntimeError):
 
 
 class TemplateReorderOutOfBoundError(RuntimeError):
-    """Raised when a template is reordered to be out of the size of the siblings"""
+    """Raised when a template is reordered to a position outside the valid range of sibling indices."""
 
 
 def raise_bad_request_error(response):
