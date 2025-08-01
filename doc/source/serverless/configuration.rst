@@ -193,6 +193,22 @@ Examples
     )
     adr.setup(collect_static=True)
 
+Client-Side Interactions
+--------
+
+Serverless ADR also allows modifying the configuration setup from the client-side interactions using JavaScript. 
+
+- Dark mode modification: Users can change the value of ``<html></html>`` element's attribute ``data-bs-theme`` to toggle between light/dark mode themes.
+
+.. code-block:: javascript
+
+    // toggle light mode (default)
+    document.documentElement.setAttribute('data-bs-theme','light');
+
+    // toggle dark mode
+    document.documentElement.setAttribute('data-bs-theme','dark');
+    
+
 Troubleshooting
 ---------------
 
