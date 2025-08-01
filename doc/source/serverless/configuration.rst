@@ -128,7 +128,7 @@ Advanced / Optional Variables
 Client-Side Interactions
 --------
 
-Serverless ADR also allows modifying the configuration setup from the client-side interactions using JavaScript. 
+Serverless ADR also allows modifying the configuration setup from the client-side interactions using JavaScript.
 
 - Dark mode modification: Users can change the value of ``<html></html>`` element's attribute ``data-bs-theme`` to toggle between light/dark mode themes.
 
@@ -206,7 +206,7 @@ Examples
         static_url="/static/",
         debug=True,
     )
-    adr.setup(collect_static=True)  
+    adr.setup(collect_static=True)
 
 Troubleshooting
 ---------------
