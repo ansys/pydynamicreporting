@@ -39,7 +39,6 @@ class ServerlessReportExporter:
         self._filename = filename
         self._debug = debug
         self._single_file = single_file
-
         self._ansys_version = ansys_version
 
         # State tracking properties, functionally identical to ReportDownloadHTML
@@ -156,6 +155,8 @@ class ServerlessReportExporter:
             "website/images/MenuArrow-15.png",
         ]
         for f in mathjax_files:
+            # The target path is intentionally "mangled" to place MathJax assets in the
+            # media directory, maintaining compatibility with the original implementation.
             target_path = "media/" + f.split("mathjax/")[-1]
             self._copy_static_file(f, target_path)
 
@@ -256,7 +257,8 @@ class ServerlessReportExporter:
         if source_file.is_file():
             target_file.parent.mkdir(parents=True, exist_ok=True)
             content = source_file.read_bytes()
-            # Use the imported utility to patch JS files
+            # Use the imported utility to patch JS files for the viewer. This is
+            # necessary to adjust internal asset paths within the viewer's code.
             content = ReportDownloadHTML.fix_viewer_component_paths(
                 str(target_file), content, self._ansys_version
             )
@@ -307,17 +309,24 @@ class ServerlessReportExporter:
 
         basename = self._make_unique_basename(source_file.name)
 
-        if (inline or ReportDownloadHTML.is_scene_file(simple_path)) and self._should_use_data_uri(
-            len(content) * 4 // 3
+        # Base64 encoding increases file size by a factor of 4/3. This calculation
+        # estimates the new size to check against the inlining limit. Using float
+        # division is crucial for accuracy, unlike the original bug with integer division.
+        estimated_inline_size = int(len(content) * (4 / 3))
+
+        if (inline or ReportDownloadHTML._is_scene_file(simple_path)) and self._should_use_data_uri(
+            estimated_inline_size
         ):
             encoded_content = base64.b64encode(content).decode("utf-8")
             results = f"data:application/octet-stream;base64,{encoded_content}"
-            # This block adds the missing debug feature for saving data URI sources.
+            # This block adds the debug feature for saving data URI sources, which was
+            # present in the original implementation.
             if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
                 filename = self._output_dir / "media" / basename
                 filename.parent.mkdir(parents=True, exist_ok=True)
                 filename.write_bytes(content)
         else:
+            # Babylon.js scene files require special handling to inline their binary assets.
             if basename.endswith("scene.js"):
                 content_str = self._replace_blocks(
                     content.decode("utf-8"), "load_binary_block(", ");", inline=True
@@ -325,7 +334,7 @@ class ServerlessReportExporter:
                 content = content_str.encode("utf-8")
                 basename = f"{source_file.parent.name}_{basename}"
             else:
-                content = ReportDownloadHTML.fix_viewer_component_paths(
+                content = ReportDownloadHTML._fix_viewer_component_paths(
                     basename, content, self._ansys_version
                 )
 
@@ -353,7 +362,7 @@ class ServerlessReportExporter:
         """Iteratively finds and replaces all asset references within matching blocks."""
         current_pos = 0
         while True:
-            start, end, text_block = ReportDownloadHTML.find_block(
+            start, end, text_block = ReportDownloadHTML._find_block(
                 html, current_pos, prefix, suffix
             )
             if start < 0:
@@ -367,7 +376,7 @@ class ServerlessReportExporter:
         """Handles the special case of inlining assets for the <ansys-nexus-viewer> component."""
         current_pos = 0
         while True:
-            start, end, text_block = ReportDownloadHTML.find_block(
+            start, end, text_block = ReportDownloadHTML._find_block(
                 html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
             )
             if start < 0:
