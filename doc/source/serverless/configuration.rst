@@ -126,7 +126,7 @@ Advanced / Optional Variables
   Enables per-category Access Control Lists (ACLs). Experimental and not recommended for general use.
 
 Client-Side Interactions
---------
+------------------------
 
 Serverless ADR also allows modifying the configuration setup from the client-side interactions using JavaScript.
 
