@@ -1,7 +1,6 @@
 import base64
 import os
 from pathlib import Path
-import shutil
 
 from ..utils.report_download_html import ReportDownloadHTML
 
