@@ -314,7 +314,7 @@ class ServerlessReportExporter:
         # division is crucial for accuracy, unlike the original bug with integer division.
         estimated_inline_size = int(len(content) * (4 / 3))
 
-        if (inline or ReportDownloadHTML._is_scene_file(simple_path)) and self._should_use_data_uri(
+        if (inline or ReportDownloadHTML.is_scene_file(simple_path)) and self._should_use_data_uri(
             estimated_inline_size
         ):
             encoded_content = base64.b64encode(content).decode("utf-8")
@@ -334,7 +334,7 @@ class ServerlessReportExporter:
                 content = content_str.encode("utf-8")
                 basename = f"{source_file.parent.name}_{basename}"
             else:
-                content = ReportDownloadHTML._fix_viewer_component_paths(
+                content = ReportDownloadHTML.fix_viewer_component_paths(
                     basename, content, self._ansys_version
                 )
 
@@ -362,7 +362,7 @@ class ServerlessReportExporter:
         """Iteratively finds and replaces all asset references within matching blocks."""
         current_pos = 0
         while True:
-            start, end, text_block = ReportDownloadHTML._find_block(
+            start, end, text_block = ReportDownloadHTML.find_block(
                 html, current_pos, prefix, suffix
             )
             if start < 0:
@@ -376,7 +376,7 @@ class ServerlessReportExporter:
         """Handles the special case of inlining assets for the <ansys-nexus-viewer> component."""
         current_pos = 0
         while True:
-            start, end, text_block = ReportDownloadHTML._find_block(
+            start, end, text_block = ReportDownloadHTML.find_block(
                 html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
             )
             if start < 0:
