@@ -150,6 +150,7 @@ class ADR:
         self._db_directory = None
         self._media_directory = None
         self._static_directory = None
+        self._static_collected = False
         self._media_url = media_url
         self._static_url = static_url
         self._debug = debug
@@ -547,6 +548,7 @@ class ADR:
                 call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
+            self._static_collected = True
 
         # setup is complete
         ADR._is_setup = True
@@ -898,6 +900,7 @@ class ADR:
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
         ...     f.write(pptx_stream)
@@ -930,12 +933,65 @@ class ADR:
     ) -> Path:
         """
         Export a report as a standalone HTML file or directory with all assets.
+
+        Parameters
+        ----------
+        output_directory : str or Path
+            The directory where the report will be exported. If it does not exist, it will be created.
+
+        filename : str, optional
+            The name of the output HTML file. Default is "index.html".
+
+        single_file : bool, optional
+            If True, the report will be exported as a single HTML file with all assets embedded.
+            If False, the report will be exported as a directory with separate files for assets.
+            Default is False.
+
+        context : dict, optional
+            Context to pass to the report template. Default is None.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report. Default is an empty string.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to fetch the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+        Path
+            The path to the generated HTML file or directory.
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the static directory is not configured.
+        ImproperlyConfiguredError
+            If the static directory is not configured or if the output directory cannot be created.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252",
+                    db_directory=r"C:\\DBs\\docex",
+                    media_directory=r"C:\\DBs\\docex\\media",
+                    static_directory=r"C:\\static"
+                )
+        >>> adr.setup(collect_static=True)
+        >>> output_path = adr.export_report_as_html(
+                    Path.cwd() / "htmlex",
+                    single_file=False,
+                    context={},
+                    item_filter="A|i_tags|cont|dp=dp227;",
+                    name="Serverless Simulation Report",
+                )
         """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
-        if self._static_directory is None:
+        if not self._static_collected:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured to export a report."
             )
