@@ -2749,7 +2749,7 @@ class tablemapREST(GeneratorREST):
         name=None,
         output_name="output row",
         select_names="*",
-        operation="x",
+        operation="value",
     ):
         if name is None:
             name = ["*"]
