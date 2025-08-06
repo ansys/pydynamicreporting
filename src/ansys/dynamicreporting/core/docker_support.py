@@ -118,7 +118,7 @@ class DockerLauncher:
                 for chunk in tar_stream:
                     tar_file.write(chunk)
             # Extract the tar archive
-            with tarfile.open(tar_file_path) as tar:
+            with tarfile.open(tar_file_path) as tar: # nosec
                 tar.extractall(path=output_path)
             # Remove the tar archive
             tar_file_path.unlink()

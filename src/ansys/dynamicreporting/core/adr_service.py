@@ -512,6 +512,7 @@ class Service:
         try:
             v = self.serverobj.validate()
         except Exception as e:
+            self.logger.error(f"Error: {str(e)}")
             pass
         if v is False:
             self.logger.error(
