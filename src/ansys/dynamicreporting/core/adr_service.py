@@ -282,8 +282,8 @@ class Service:
         )
         try:
             self.serverobj.validate()
-        except Exception as _ :
-            self.logger.error("Can not validate dynamic reporting server.\n")
+        except Exception as e:
+            self.logger.error(f"Can not validate dynamic reporting server.\nError: {str(e)}")
             raise NotValidServer
         # set url after connection succeeds
         self._url = url
@@ -392,11 +392,11 @@ class Service:
                 if self._docker_launcher:
                     try:
                         create_output = self._docker_launcher.create_nexus_db()
-                    except Exception as _ :  # pragma: no cover
+                    except Exception as e:  # pragma: no cover
                         self._docker_launcher.cleanup()
                         self.logger.error(
-                            f"Error creating the database at the path {self._db_directory} in the "
-                            "Docker container.\n"
+                            "Error creating the database at the path {self._db_directory} in the "
+                            f"Docker container.\nError: {str(e)}"
                         )
                         raise CannotCreateDatabaseError
                     for f in ["db.sqlite3", "view_report.nexdb"]:
@@ -511,10 +511,10 @@ class Service:
         v = False
         try:
             v = self.serverobj.validate()
-        except Exception as _ :
+        except Exception as e:
             pass
         if v is False:
-            self.logger.error("Error validating the connected service. Can't shut it down.\n")
+            self.logger.error(f"Error validating the connected service. Can't shut it down.\nError: {str(e)}")
         else:
             # If coming from a docker image, clean that up
             try:
@@ -814,7 +814,7 @@ class Service:
         try:
             _ = self.serverobj.del_objects(items_to_delete)
         except Exception as e:
-            self.logger.warning(f"Error in deleting items: {e}")
+            self.logger.warning(f"Error in deleting items: {str(e)}")
 
     def get_report(self, report_name: str) -> Report:
         """

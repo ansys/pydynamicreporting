@@ -173,7 +173,7 @@ def map_ensight_plot_to_table_dictionary(p):
         # convert EnSight undefined values into Numpy NaN values
         try:
             a[a == ensight.Undefined] = numpy.nan
-        except Exception as _ :
+        except Exception as e:
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -400,7 +400,7 @@ class Template:
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception as _ :
+        except Exception as e:
             return {}
 
     def set_params(self, d: dict = None):
@@ -1317,7 +1317,7 @@ class ItemREST(BaseRESTObject):
         else:
             try:
                 from . import png
-            except Exception as _ :
+            except Exception as e:
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1337,7 +1337,7 @@ class ItemREST(BaseRESTObject):
                     planes=pngobj[3].get("planes", None),
                     palette=pngobj[3].get("palette", None),
                 )
-            except Exception as _ :
+            except Exception as e:
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
