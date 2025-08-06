@@ -159,7 +159,7 @@ class ReportDownloadHTML:
                 filename = os.path.join(self._directory, f)
                 try:
                     open(filename, "wb").write(resp.content)
-                except Exception:
+                except Exception as _ :
                     print(f"Unable to download MathJax file: {f}")
             else:
                 print(f"Unable to get: {url}")
@@ -314,7 +314,7 @@ class ReportDownloadHTML:
                         str(filename), resp.content, self._ansys_version
                     )
                     open(filename, "wb").write(data)
-                except Exception:
+                except Exception as _ :
                     print(f"Unable to download {comment}: {f}")
 
     def _make_unique_basename(self, name: str) -> str:
@@ -389,7 +389,7 @@ class ReportDownloadHTML:
                         results = f"./media/{basename}"
                     filename = os.path.join(self._directory, "media", basename)
                     open(filename, "wb").write(tmp)
-            except Exception:
+            except Exception as _ :
                 print(f"Unable to write downloaded file: {basename}")
         else:
             print(f"Unable to read file via URL: {url}")
@@ -475,7 +475,7 @@ class ReportDownloadHTML:
             if not os.path.exists(base):
                 try:
                     os.makedirs(base, exist_ok=True)
-                except Exception:
+                except Exception as _ :
                     raise OSError(f"Unable to create target directory: {base}")
 
     def _download(self):

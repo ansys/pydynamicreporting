@@ -54,7 +54,7 @@ def test_ceiversion_nexus_suffix() -> None:
     try:
         int_suffix = int(suffix)
         success = True
-    except Exception:
+    except Exception as _ :
         success = False
     assert success and int_suffix / 100 < 10
 
@@ -65,7 +65,7 @@ def test_ceiversion_apex_suffix() -> None:
     try:
         int_suffix = int(suffix)
         success = True
-    except Exception:
+    except Exception as _ :
         success = False
     assert success and int_suffix / 100 < 10
 
@@ -76,7 +76,7 @@ def test_ceiversion_ensight_suffix() -> None:
     try:
         int_suffix = int(suffix)
         success = True
-    except Exception:
+    except Exception as _ :
         success = False
     assert success and int_suffix / 100 < 10
 
@@ -163,7 +163,7 @@ def test_narray() -> None:
         a.from_numpy(value=np.array(object=None, dtype="S2"))
         a.unit_test()
         success = True
-    except Exception:
+    except Exception as _ :
         success = False
     assert success
 
@@ -192,7 +192,7 @@ def test_settings() -> None:
     try:
         _ = ru.Settings(defaults={"a": 1, "b": 2})
         success = True
-    except Exception:
+    except Exception as _ :
         success = False
     assert success
 

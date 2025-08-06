@@ -41,7 +41,7 @@ def in_ipynb():
             return True
         if "terminal" in ipy_str:
             return False
-    except Exception:  # todo: please specify the possible exceptions here.
+    except Exception as _ :  # todo: please specify the possible exceptions here.
         return False
 
 

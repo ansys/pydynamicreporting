@@ -34,7 +34,7 @@ class BaseEncoder(json.JSONEncoder):
             cls = list if isinstance(obj, (list, tuple)) else dict
             try:
                 return cls(obj)
-            except Exception:
+            except Exception as _ :
                 pass
         elif hasattr(obj, "__iter__"):
             return tuple(item for item in obj)

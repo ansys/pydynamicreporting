@@ -282,7 +282,7 @@ class Service:
         )
         try:
             self.serverobj.validate()
-        except Exception:
+        except Exception as _ :
             self.logger.error("Can not validate dynamic reporting server.\n")
             raise NotValidServer
         # set url after connection succeeds
@@ -392,7 +392,7 @@ class Service:
                 if self._docker_launcher:
                     try:
                         create_output = self._docker_launcher.create_nexus_db()
-                    except Exception:  # pragma: no cover
+                    except Exception as _ :  # pragma: no cover
                         self._docker_launcher.cleanup()
                         self.logger.error(
                             f"Error creating the database at the path {self._db_directory} in the "
@@ -511,7 +511,7 @@ class Service:
         v = False
         try:
             v = self.serverobj.validate()
-        except Exception:
+        except Exception as _ :
             pass
         if v is False:
             self.logger.error("Error validating the connected service. Can't shut it down.\n")

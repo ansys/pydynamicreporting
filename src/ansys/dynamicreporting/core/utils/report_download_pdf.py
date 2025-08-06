@@ -9,7 +9,7 @@ try:
     from qtpy.QtCore import QTimer
 
     has_qt = True
-except Exception:
+except Exception as _ :
     has_qt = False
 
 

@@ -19,7 +19,7 @@ try:
     is_enve = True
     import enve
     from reports.engine import TemplateEngine
-except Exception:
+except Exception as _ :
     is_enve = False
 
 

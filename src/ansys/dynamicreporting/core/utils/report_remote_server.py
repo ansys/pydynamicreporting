@@ -268,7 +268,7 @@ class Server:
         if self.cur_servername is None:
             try:
                 self.validate()
-            except Exception:
+            except Exception as _ :
                 pass
         if self.cur_servername is None:
             return self.get_URL()
@@ -293,7 +293,7 @@ class Server:
             result = self._http_session.get(url, auth=auth)
             if not result.ok:
                 return False
-        except Exception:
+        except Exception as _ :
             return False
         return True
 
@@ -306,7 +306,7 @@ class Server:
         try:
             # note this request will fail as it does not return anything!!!
             self._http_session.get(url, auth=auth)
-        except Exception:
+        except Exception as _ :
             pass
         self.set_URL(None)
         self.set_password(None)
@@ -328,7 +328,7 @@ class Server:
             return []
         try:
             return [str(obj_data.get("name")) for obj_data in r.json()]
-        except Exception:
+        except Exception as _ :
             return []
 
     def get_object_guids(self, objtype=report_objects.Template, query=None):
@@ -355,7 +355,7 @@ class Server:
                 return [str(obj_data.get("guid")) for obj_data in r.json()]
             else:
                 return [str(i) for i in r.json()["guid_list"]]
-        except Exception:
+        except Exception as _ :
             return []
 
     def get_objects(self, objtype=report_objects.Template, query=None):
@@ -390,7 +390,7 @@ class Server:
                 t.from_json(d)
                 ret.append(t)
             return ret
-        except Exception:
+        except Exception as _ :
             return []
 
     def get_object_from_guid(self, guid, objtype=report_objects.TemplateREST):
@@ -415,7 +415,7 @@ class Server:
             obj.server_api_version = self.api_version
             obj.from_json(r.json())
             return obj
-        except Exception:
+        except Exception as _ :
             return None
 
     def _get_push_request_info(self, obj):
@@ -543,7 +543,7 @@ class Server:
                 url = self.cur_url + file_data[0]
                 try:
                     r = self._http_session.put(url, auth=auth, files=files)
-                except Exception:
+                except Exception as _ :
                     r = self._http_session.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
@@ -1227,7 +1227,7 @@ def create_new_local_database(
                 group.user_set.add(user)
                 group.save()
                 os.makedirs(os.path.join(db_dir, "media"))
-            except Exception:
+            except Exception as _ :
                 error = True
             if parent and has_qt:
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -1384,7 +1384,7 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
                 return False
             if number < version_min:
                 return False
-    except Exception:
+    except Exception as _ :
         return False
     return True
 
@@ -1536,7 +1536,7 @@ def launch_local_database_server(
         # create a file lock
         local_lock = filelock.nexus_file_lock(api_lock_filename)
         local_lock.acquire()
-    except Exception:
+    except Exception as _ :
         pass
     # We may need to do port scanning
     if port is None:
@@ -1546,7 +1546,7 @@ def launch_local_database_server(
             # create a file lock
             scanning_lock = filelock.nexus_file_lock(lock_filename)
             scanning_lock.acquire()
-        except Exception:
+        except Exception as _ :
             pass
         # Note: QWebEngineView cannot access http over 65535, so limit ports to 65534
         ports = report_utils.find_unused_ports(1)
@@ -1675,7 +1675,7 @@ def launch_local_database_server(
                 "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port."
             )
         return False
-    except Exception:
+    except Exception as _ :
         pass
 
     # Start the busy cursor
@@ -1806,7 +1806,7 @@ def launch_local_database_server(
             raise exceptions.ServerConnectionError(
                 "Access to server denied.  Potential username/password error."
             )
-        except Exception:
+        except Exception as _ :
             # we will try again
             pass
 

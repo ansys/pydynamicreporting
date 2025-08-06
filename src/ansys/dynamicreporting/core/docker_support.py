@@ -64,7 +64,7 @@ class DockerLauncher:
         # Load up Docker from the user's environment
         try:
             self._client: docker.client.DockerClient = docker.from_env()
-        except Exception:  # pragma: no cover
+        except Exception as _ :  # pragma: no cover
             raise RuntimeError("Can't initialize Docker")
         self._container: docker.models.containers.Container = None
         self._image: docker.models.images.Image = None
@@ -92,7 +92,7 @@ class DockerLauncher:
         """
         try:
             self._image = self._client.images.pull(self._image_url)
-        except Exception:
+        except Exception as _ :
             raise RuntimeError(f"Can't pull Docker image: {self._image_url}")
         return self._image
 

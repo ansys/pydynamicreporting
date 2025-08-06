@@ -44,7 +44,7 @@ def check_url_exists(url: str) -> bool:
     try:
         with request.urlopen(url) as response:
             return response.status == 200
-    except Exception:
+    except Exception as _ :
         return False
 
 

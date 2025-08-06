@@ -173,7 +173,7 @@ def map_ensight_plot_to_table_dictionary(p):
         # convert EnSight undefined values into Numpy NaN values
         try:
             a[a == ensight.Undefined] = numpy.nan
-        except Exception:
+        except Exception as _ :
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -400,7 +400,7 @@ class Template:
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception:
+        except Exception as _ :
             return {}
 
     def set_params(self, d: dict = None):
@@ -1317,7 +1317,7 @@ class ItemREST(BaseRESTObject):
         else:
             try:
                 from . import png
-            except Exception:
+            except Exception as _ :
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1337,7 +1337,7 @@ class ItemREST(BaseRESTObject):
                     planes=pngobj[3].get("planes", None),
                     palette=pngobj[3].get("palette", None),
                 )
-            except Exception:
+            except Exception as _ :
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
@@ -1500,13 +1500,13 @@ class TemplateREST(BaseRESTObject):
                 tmp_params[k] = d[k]
             self.params = json.dumps(tmp_params)
             return
-        except Exception:
+        except Exception as _ :
             return {}
 
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception:
+        except Exception as _ :
             return {}
 
     def set_params(self, d: dict = None):
@@ -1855,7 +1855,7 @@ class boxREST(LayoutREST):
             raise ValueError("Error: child position array should contain only integers")
         try:
             uuid.UUID(guid, version=4)
-        except Exception:
+        except Exception as _ :
             raise ValueError("Error: input guid is not a valid guid")
         d = json.loads(self.params)
         if "boxes" not in d:
@@ -1876,7 +1876,7 @@ class boxREST(LayoutREST):
             import uuid
 
             uuid.UUID(guid, version=4)
-        except Exception:
+        except Exception as _ :
             raise ValueError("Error: input guid is not a valid guid")
         d = json.loads(self.params)
         if "boxes" not in d:
@@ -2158,7 +2158,7 @@ class reportlinkREST(LayoutREST):
                 d["report_guid"] = link
                 self.params = json.dumps(d)
                 return
-            except Exception:
+            except Exception as _ :
                 raise ValueError("Error: input guid is not a valid guid")
 
 
