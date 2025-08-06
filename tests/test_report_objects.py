@@ -399,28 +399,28 @@ def test_templaterest_set_order() -> None:
     template.children = ["guid1", "guid2", "guid3"]
 
     # Test reordering a child template to a valid position
-    template.set_order("guid2", 0)
+    template.reorder_child("guid2", 0)
     assert template.children == ["guid2", "guid1", "guid3"]
 
     # Test reordering a child template to another valid position
-    template.set_order("guid2", 2)
+    template.reorder_child("guid2", 2)
     assert template.children == ["guid1", "guid3", "guid2"]
 
     # Test reordering using a TemplateREST object instead of a string
     child_template = ro.TemplateREST()
     child_template.guid = "guid3"
-    template.set_order(child_template, 0)
+    template.reorder_child(child_template, 0)
     assert template.children == ["guid3", "guid1", "guid2"]
 
     # Test invalid position (out of bounds)
     try:
-        template.set_order("guid1", 5)
+        template.reorder_child("guid1", 5)
     except ro.exceptions.TemplateReorderOutOfBound as e:
         assert "out of bounds" in str(e)
 
     # Test invalid GUID (not in children)
     try:
-        template.set_order("invalid_guid", 1)
+        template.reorder_child("invalid_guid", 1)
     except ro.exceptions.TemplateNotExist as e:
         assert "not found in the parent's children list" in str(e)
 

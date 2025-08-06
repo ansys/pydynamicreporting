@@ -1625,7 +1625,7 @@ class TemplateREST(BaseRESTObject):
         else:
             raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
 
-    def set_order(self, target_child_template: str | TemplateREST, new_position: int) -> None:
+    def reorder_child(self, target_child_template: str | TemplateREST, new_position: int) -> None:
         """
         Reorder the template.guid in parent.children to the specified position.
 
