@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from ast import literal_eval
 import base64
 import copy
@@ -14,12 +16,11 @@ import sys
 import uuid
 import weakref
 
-from PIL import Image
 import dateutil
 import dateutil.parser
 import pytz
 
-from . import extremely_ugly_hacks, report_utils
+from . import exceptions, extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
 try:
@@ -1623,6 +1624,45 @@ class TemplateREST(BaseRESTObject):
                 return ""
         else:
             raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
+
+    def set_order(self, target_child_template: str | TemplateREST, new_position: int) -> None:
+        """
+        Reorder the template.guid in parent.children to the specified position.
+
+        Parameters
+        ----------
+        target_child_template : str | TemplateREST
+            The child template to reorder. This can be either the GUID of the template (as a string)
+            or a TemplateREST object.
+        new_position : int
+            The new position in the parent's children list where the template should be placed.
+
+        Raises
+        ------
+        TemplateReorderOutOfBoundError
+            If the specified position is out of bounds.
+        ValueError
+            If the target_child_template is not found in the parent's children list.
+        """
+        children_size = len(self.children)
+        if new_position < 0 or new_position >= children_size:
+            raise exceptions.TemplateReorderOutOfBound(
+                f"The specified position {new_position} is out of bounds. "
+                f"Valid range: [0, {len(self.children)})"
+            )
+
+        target_guid = (
+            target_child_template
+            if isinstance(target_child_template, str)
+            else target_child_template.guid
+        )
+
+        if target_guid not in self.children:
+            raise exceptions.TemplateNotExist(
+                f"Template with GUID '{target_guid}' is not found in the parent's children list."
+            )
+        self.children.remove(target_guid)
+        self.children.insert(new_position, target_guid)
 
 
 class LayoutREST(TemplateREST):
