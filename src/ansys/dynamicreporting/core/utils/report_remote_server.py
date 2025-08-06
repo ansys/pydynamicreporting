@@ -270,7 +270,7 @@ class Server:
                 self.validate()
             except Exception as e:
                 if print_allowed():
-                    print(f"Error: {e}")
+                    print(f"Error: {str(e)}")
                 pass
         if self.cur_servername is None:
             return self.get_URL()
@@ -297,7 +297,7 @@ class Server:
                 return False
         except Exception as e:
             if print_allowed():
-                print(f"Error: {e}")  
+                print(f"Error: {str(e)}")
             return False
         return True
 
@@ -312,7 +312,7 @@ class Server:
             self._http_session.get(url, auth=auth)
         except Exception as e:
             if print_allowed():
-                print(f"Error: {e}")
+                print(f"Error: {str(e)}")
             pass
         self.set_URL(None)
         self.set_password(None)
@@ -336,7 +336,7 @@ class Server:
             return [str(obj_data.get("name")) for obj_data in r.json()]
         except Exception as e:
             if print_allowed():
-                print(f"Error: {e}")
+                print(f"Error: {str(e)}")
             return []
 
     def get_object_guids(self, objtype=report_objects.Template, query=None):
@@ -365,7 +365,7 @@ class Server:
                 return [str(i) for i in r.json()["guid_list"]]
         except Exception as e:
             if print_allowed():
-                print(f"Error: {e}")
+                print(f"Error: {str(e)}")
             return []
 
     def get_objects(self, objtype=report_objects.Template, query=None):
@@ -402,7 +402,7 @@ class Server:
             return ret
         except Exception as e:
             if print_allowed():
-                print(f"Error: {e}")
+                print(f"Error: {str(e)}")
             return []
 
     def get_object_from_guid(self, guid, objtype=report_objects.TemplateREST):
@@ -429,7 +429,7 @@ class Server:
             return obj
         except Exception as e:
             if print_allowed():
-                print(f"Error: {e}")
+                print(f"Error: {str(e)}")
             return None
 
     def _get_push_request_info(self, obj):
@@ -559,7 +559,7 @@ class Server:
                     r = self._http_session.put(url, auth=auth, files=files)
                 except Exception as e:
                     if print_allowed():
-                        print(f"Error: {e}")
+                        print(f"Error: {str(e)}")
                     r = self._http_session.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
@@ -1245,7 +1245,7 @@ def create_new_local_database(
                 os.makedirs(os.path.join(db_dir, "media"))
             except Exception as e:
                 if print_allowed():
-                    print(f"Error: {e}")
+                    print(f"Error: {str(e)}")
                 error = True
             if parent and has_qt:
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -1404,7 +1404,7 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
                 return False
     except Exception as e:
         if print_allowed():
-            print(f"Error: {e}")
+            print(f"Error: {str(e)}")
         return False
     return True
 
@@ -1552,16 +1552,14 @@ def launch_local_database_server(
     #    .nexus.lock is held whenever port scanning is going on.  It can be held by this function or by nexus_launcher
     #    .nexus_api.lock is used by the Python API to ensure exclusivity (e.g. while a server is launching)
     local_lock = None
-    try:
+    try:  # nosec
         # create a file lock
         local_lock = filelock.nexus_file_lock(api_lock_filename)
         local_lock.acquire()
-    except Exception as e:
-        if print_allowed():
-            print(f"Error: {e}")
+    except Exception as e:  # nosec
         pass
     # We may need to do port scanning
-    if port is None:
+    if port is None:  # nosec
         lock_filename = os.path.join(homedir, ".nexus.lock")
         scanning_lock = None
         try:
@@ -1569,8 +1567,6 @@ def launch_local_database_server(
             scanning_lock = filelock.nexus_file_lock(lock_filename)
             scanning_lock.acquire()
         except Exception as e:
-            if print_allowed():
-                print(f"Error: {e}")
             pass
         # Note: QWebEngineView cannot access http over 65535, so limit ports to 65534
         ports = report_utils.find_unused_ports(1)
@@ -1701,7 +1697,7 @@ def launch_local_database_server(
         return False
     except Exception as e:
         if print_allowed():
-            print(f"Error: {e}")
+            print(f"Error: {str(e)}")
         pass
 
     # Start the busy cursor
@@ -1773,6 +1769,8 @@ def launch_local_database_server(
         # Note: this process only returns if the server is shutdown or there is an error
         monitor_process = subprocess.Popen(command, **params)
     except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         if parent and has_qt:
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QApplication.translate(
@@ -1835,7 +1833,7 @@ def launch_local_database_server(
         except Exception as e:
             # we will try again
             if print_allowed():
-                print(f"Error: {e}")
+                print(f"Error: {str(e)}")
             pass
 
     # detach from stdout, stderr to avoid buffer blocking

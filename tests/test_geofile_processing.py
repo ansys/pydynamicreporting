@@ -22,7 +22,7 @@ def test_get_evsn_proxy_image(request) -> None:
     try:
         _ = gp.get_evsn_proxy_image(filename=return_file_paths(request)[6])
         success = True
-    except Exception as _ :
+    except Exception as _:
         success = False
     assert (_ is None) and success
 

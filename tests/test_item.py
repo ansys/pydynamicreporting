@@ -354,6 +354,6 @@ def test_unit_item_empty_nexus(request) -> None:
     a = Service()
     try:
         _ = Item(service=a)
-    except Exception as _ :
+    except Exception as _:
         valid = True
     assert valid
