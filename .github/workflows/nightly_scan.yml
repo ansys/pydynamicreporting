@@ -1,16 +1,40 @@
 name: Security Scan
 
+env:
+  MAIN_PYTHON_VERSION: '3.13'
+  PACKAGE_NAME: 'ansys-dynamicreporting-core'
+
 on:
   push:
     branches:
       - main
       - release/*
-  workflow_dispatch:
 
 jobs:
-  security_scan:
-    uses: ansys-internal/ci-templates/.github/workflows/security-scan-mend.yml@v7
-    with:
-      package_type: 'poetry+npm'
-      needs: 'sca,sast,sbom'
-    secrets: inherit
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CycloneDX/gh-generate-sbom@v1
+
+
+  vulnerabilities:
+    name: Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: PyAnsys Vulnerability check (on main)
+        if: github.ref == 'refs/heads/main'
+        uses: ansys/actions/check-vulnerabilities@v10
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          python-package-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+
+      - name: PyAnsys Vulnerability check (on dev mode)
+        if: github.ref != 'refs/heads/main'
+        uses: ansys/actions/check-vulnerabilities@v10
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          python-package-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+          dev-mode: true
