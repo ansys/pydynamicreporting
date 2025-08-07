@@ -516,7 +516,7 @@ class Service:
             pass
         if v is False:
             self.logger.error(
-                f"Error validating the connected service. Can't shut it down.\nError: {str(e)}"
+                f"Error validating the connected service. Can't shut it down."
             )
         else:
             # If coming from a docker image, clean that up

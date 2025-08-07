@@ -61,7 +61,8 @@ jobs:
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           hide-log: false
-          bandit-configfile: ../../bandit.yaml
+          bandit-configfile: bandit.yaml
+          auditing-level: "normal"
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
@@ -72,4 +73,5 @@ jobs:
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           dev-mode: true
           hide-log: false
-          bandit-configfile: ../../bandit.yaml
+          bandit-configfile: bandit.yaml
+          auditing-level: "normal"
