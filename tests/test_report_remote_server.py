@@ -43,7 +43,8 @@ def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
             progress=False,
             progress_qt=False,
         )
-    except Exception as _:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         success = False
     finally:
         tmp_adr.stop()
@@ -86,7 +87,8 @@ def test_start_stop(tmp_path, get_exec) -> None:
         )
         _ = r.validate_local_db(db_dir=db_dir, version_check=True)
         r.stop_background_local_server(server_dirname=db_dir)
-    except Exception as _:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         succ = False
     assert succ
 
@@ -95,7 +97,8 @@ def test_validate_existing(adr_service_query) -> None:
     succ = True
     try:
         _ = r.validate_local_db(db_dir=adr_service_query._db_directory, version_check=True)
-    except Exception as _:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         succ = False
     assert succ
 
@@ -243,7 +246,8 @@ def test_delete_db(tmp_path, get_exec) -> None:
     try:
         r.delete_database(db_dir=db_dir)
         succ = True
-    except Exception as _:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         succ = False
     assert succ
 
@@ -338,7 +342,8 @@ def test_export_pptx_error(adr_service_query) -> None:
     try:
         # exports the root report instead of the pptx link.
         s.export_report_as_pptx(report_guid=my_report.report.guid, file_name="mypresentation")
-    except Exception as _:
+    except Exception as e:
+        print(f"Expected exception received: {str(e)}")
         success = True
     assert success is True
 
@@ -350,7 +355,8 @@ def test_get_pptx(adr_service_query, tmp_path) -> None:
     try:
         # scrape all pptx reports from root report
         s.get_pptx_from_report(report_guid=my_report.report.guid, directory_name=db_dir, query=None)
-    except Exception as _:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         success = False
     else:
         success = True

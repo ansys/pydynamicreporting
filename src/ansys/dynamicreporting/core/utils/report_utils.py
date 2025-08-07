@@ -77,7 +77,7 @@ def check_if_PIL(img):
         elif imgbytes:
             Image.open(io.BytesIO(imgbytes))
         return True
-    except Exception as _:
+    except Exception:  # nosec
         return False
     finally:
         if imghandle:
@@ -313,7 +313,7 @@ def ceiversion_nexus_suffix():
 
         tmp = ansys_version.replace("R", "")[-3:]
         return str(tmp)
-    except Exception as _:
+    except Exception:  # nosec
         # get "nexus###" folder name and then strip off the "nexus" bit
         tmp = os.path.basename(os.path.dirname(os.path.dirname(__file__)))
     return tmp[5:]

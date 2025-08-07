@@ -253,6 +253,7 @@ class BaseFileLock:
                     time.sleep(poll_intervall)
         except Exception as e:
             # Something did go wrong, so decrement the counter.
+            logger.error(f"Exception: {str(e)}")
             with self._thread_lock:
                 self._lock_counter = max(0, self._lock_counter - 1)
 

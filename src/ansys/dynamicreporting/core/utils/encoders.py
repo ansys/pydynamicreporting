@@ -35,6 +35,9 @@ class BaseEncoder(json.JSONEncoder):
             try:
                 return cls(obj)
             except Exception as e:  # nosec
+                error_str = f"Object of type {type(obj).__name__} is not JSON serializable: "
+                error_str += str(e)
+                raise TypeError(error_str)
                 pass
         elif hasattr(obj, "__iter__"):
             return tuple(item for item in obj)

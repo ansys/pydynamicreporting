@@ -65,7 +65,7 @@ class DockerLauncher:
         try:
             self._client: docker.client.DockerClient = docker.from_env()
         except Exception as e:  # pragma: no cover
-            raise RuntimeError("Can't initialize Docker")
+            raise RuntimeError(f"Can't initialize Docker: {str(e)}")
         self._container: docker.models.containers.Container = None
         self._image: docker.models.images.Image = None
         # the Ansys / EnSight version we found in the container
@@ -93,7 +93,7 @@ class DockerLauncher:
         try:
             self._image = self._client.images.pull(self._image_url)
         except Exception as e:
-            raise RuntimeError(f"Can't pull Docker image: {self._image_url}")
+            raise RuntimeError(f"Can't pull Docker image: {self._image_url}\n\n{str(e)}")
         return self._image
 
     def create_container(self) -> docker.models.containers.Container:
@@ -118,7 +118,7 @@ class DockerLauncher:
                 for chunk in tar_stream:
                     tar_file.write(chunk)
             # Extract the tar archive
-            with tarfile.open(tar_file_path) as tar: # nosec
+            with tarfile.open(tar_file_path) as tar:  # nosec
                 tar.extractall(path=output_path)
             # Remove the tar archive
             tar_file_path.unlink()

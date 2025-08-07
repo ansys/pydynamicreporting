@@ -1556,7 +1556,9 @@ def launch_local_database_server(
         # create a file lock
         local_lock = filelock.nexus_file_lock(api_lock_filename)
         local_lock.acquire()
-    except Exception as e:  # nosec
+    except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         pass
     # We may need to do port scanning
     if port is None:  # nosec
@@ -1567,6 +1569,8 @@ def launch_local_database_server(
             scanning_lock = filelock.nexus_file_lock(lock_filename)
             scanning_lock.acquire()
         except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             pass
         # Note: QWebEngineView cannot access http over 65535, so limit ports to 65534
         ports = report_utils.find_unused_ports(1)

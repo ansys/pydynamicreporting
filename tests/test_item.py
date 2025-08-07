@@ -354,6 +354,7 @@ def test_unit_item_empty_nexus(request) -> None:
     a = Service()
     try:
         _ = Item(service=a)
-    except Exception as _:
+    except Exception as e:
+        print(f"Expected exception received: {str(e)}")
         valid = True
     assert valid
