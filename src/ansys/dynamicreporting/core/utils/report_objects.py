@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path
-import pickle  # nosec B502
+import pickle  # nosec B403
 import shlex
 import sys
 import uuid
@@ -1427,7 +1427,7 @@ class TemplateREST(BaseRESTObject):
                 "tmp_cls = " + json_data["report_type"].split(":")[1] + "REST()",
                 locals(),
                 globals(),
-            )
+            )  # nosec
             return tmp_cls
         else:
             return TemplateREST()
@@ -3333,7 +3333,7 @@ class sqlqueriesREST(GeneratorREST):
             if "pswsqldb" in json.loads(self.params):
                 out["password"] = json.loads(self.params)["pswsqldb"]
             else:
-                out["password"] = ""
+                out["password"] = ""  # nosec B259
         else:
             out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}
         return out

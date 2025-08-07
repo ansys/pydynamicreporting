@@ -1,4 +1,4 @@
-import pickle  # nosec B502
+import pickle  # nosec B403
 import uuid
 
 import pytest

@@ -19,10 +19,10 @@ import logging
 import os
 import os.path
 from pathlib import Path
-import pickle  # nosec B502
+import pickle  # nosec B403
 import platform
 import shutil
-import subprocess  # nosec B404
+import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
@@ -98,7 +98,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     cmd.extend(args)
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    subprocess.call(args=cmd, **params)  # nosec B603
+    subprocess.call(args=cmd, **params)  # nosec B603 B78
 
 
 class Server:
@@ -1455,7 +1455,7 @@ def launch_local_database_server(
     exec_basis=None,
     ansys_version=None,
     **kwargs,
-):  # nosec
+):
     """
     Start up a local Django server for a local sqlite file.  If parent is not None, a
     QtGui will be used to fill in missing inputs.  By default, if

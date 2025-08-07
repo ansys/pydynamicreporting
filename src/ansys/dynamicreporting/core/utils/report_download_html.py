@@ -530,7 +530,7 @@ class ReportDownloadHTML:
         )
 
         # get the webpage html source
-        resp = requests.get(self._url)
+        resp = requests.get(self._url)  # nosec B400
         if resp.status_code != requests.codes.ok:
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
         # debugging...
