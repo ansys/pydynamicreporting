@@ -57,11 +57,11 @@ class TemplateEditorJSONLoadingError(RuntimeError):
     """Raised for errors when loading a JSON file for the template editor"""
 
 
-class TemplateNotExist(RuntimeError):
+class TemplateDoesNotExist(RuntimeError):
     """Raised when the template is not found"""
 
 
-class TemplateReorderOutOfBound(RuntimeError):
+class TemplateReorderOutOfBounds(RuntimeError):
     """Raised when a template is reordered to be out of the size of the children"""
 
 
