@@ -4,8 +4,8 @@ import uuid
 
 import pytest
 
-from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
+from ansys.dynamicreporting.core.utils import report_objects as ro
 
 
 @pytest.mark.ado_test
