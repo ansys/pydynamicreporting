@@ -3,8 +3,6 @@ name: Security Scan
 env:
   MAIN_PYTHON_VERSION: '3.13'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
-  ACTIVATE_VENV_BANDIT_SAFETY: false
-  BANDIT_CONFIGFILE: "bandit.yaml"
 
 on:
   push:
@@ -15,8 +13,13 @@ on:
 
 jobs:
 
-  safety_scan:
+
+  vulnerabilities:
+    name: Vulnerabilities
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,15 +29,27 @@ jobs:
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
-      - name: Install package
-        run: make install-dev
+      - name: Build wheelhouse
+        uses: ansys/actions/build-wheelhouse@v10
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          operating-system: ubuntu-latest
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+      - name: Install from wheelhouse
+        run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
 
       - name: Install safety
         run: pip install safety
 
       - name: Run safety check
         run: safety check --full-report
+        
+      - name: Install pip-audit
+        run: pip install pip-audit
 
+      - name: Run pip-audit
+        run: pip-audit
 
   sbom:
     name: Generate SBOM
@@ -71,31 +86,3 @@ jobs:
         with:
           name: ${{ env.PACKAGE_NAME }}-sbom
           path: sbom.spdx.json
-
-
-  vulnerabilities:
-    name: Vulnerabilities
-    runs-on: ubuntu-latest
-    steps:
-      - name: PyAnsys Vulnerability check (on main)
-        if: github.ref == 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.0.14
-        with:
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          python-package-name: ${{ env.PACKAGE_NAME }}
-          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          hide-log: false
-          bandit-configfile: bandit.yaml
-          auditing-level: "normal"
-
-      - name: PyAnsys Vulnerability check (on dev)
-        if: github.ref != 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.0.14
-        with:
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          python-package-name: ${{ env.PACKAGE_NAME }}
-          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          dev-mode: true
-          hide-log: false
-          bandit-configfile: bandit.yaml
-          auditing-level: "normal"
