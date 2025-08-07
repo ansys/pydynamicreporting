@@ -200,7 +200,7 @@ class Server:
 
     @classmethod
     def get_object_digest(cls, obj):
-        m = hashlib.md5()
+        m = hashlib.md5()  # nosec B324
         m.update(pickle.dumps(obj))  # nosec B324
         return m.digest()
 
