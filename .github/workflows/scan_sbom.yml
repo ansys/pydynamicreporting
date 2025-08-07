@@ -65,6 +65,7 @@ jobs:
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           run-bandit: false
+          hide-log: false
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
@@ -75,3 +76,4 @@ jobs:
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           run-bandit: false
           dev-mode: true
+          hide-log: false
