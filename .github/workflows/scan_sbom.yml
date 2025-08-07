@@ -40,7 +40,13 @@ jobs:
         with:
           format: spdx-json
           output-file: sbom.spdx.json
-          upload-artifact: true
+          upload-artifact: false
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}-sbom
+          path: sbom.spdx.json
 
 
   vulnerabilities:
@@ -55,6 +61,7 @@ jobs:
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           hide-log: false
+          bandit-configfile: bandit.yaml
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
@@ -65,3 +72,4 @@ jobs:
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           dev-mode: true
           hide-log: false
+          bandit-configfile: bandit.yaml
