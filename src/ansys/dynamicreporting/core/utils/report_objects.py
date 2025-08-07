@@ -20,7 +20,8 @@ import dateutil
 import dateutil.parser
 import pytz
 
-from . import exceptions, extremely_ugly_hacks, report_utils
+from . import extremely_ugly_hacks, report_utils
+from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
 try:
@@ -1639,14 +1640,14 @@ class TemplateREST(BaseRESTObject):
 
         Raises
         ------
-        TemplateReorderOutOfBoundError
+        TemplateReorderOutOfBound
             If the specified position is out of bounds.
-        ValueError
+        TemplateDoesNotExist
             If the target_child_template is not found in the parent's children list.
         """
         children_size = len(self.children)
         if new_position < 0 or new_position >= children_size:
-            raise exceptions.TemplateReorderOutOfBounds(
+            raise TemplateReorderOutOfBounds(
                 f"The specified position {new_position} is out of bounds. "
                 f"Valid range: [0, {len(self.children)})"
             )
@@ -1658,7 +1659,7 @@ class TemplateREST(BaseRESTObject):
         )
 
         if target_guid not in self.children:
-            raise exceptions.TemplateDoesNotExist(
+            raise TemplateDoesNotExist(
                 f"Template with GUID '{target_guid}' is not found in the parent's children list."
             )
         self.children.remove(target_guid)

@@ -57,14 +57,6 @@ class TemplateEditorJSONLoadingError(RuntimeError):
     """Raised for errors when loading a JSON file for the template editor"""
 
 
-class TemplateDoesNotExist(RuntimeError):
-    """Raised when the template is not found"""
-
-
-class TemplateReorderOutOfBounds(RuntimeError):
-    """Raised when a template is reordered to be out of the size of the children"""
-
-
 def raise_bad_request_error(response):
     """
     Generates bad request error message and raises an exception.

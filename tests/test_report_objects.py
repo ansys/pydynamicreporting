@@ -4,6 +4,7 @@ import uuid
 
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from ansys.dynamicreporting.core.utils import report_objects as ro
 
 
@@ -415,13 +416,13 @@ def test_templaterest_set_order() -> None:
     # Test invalid position (out of bounds)
     try:
         template.reorder_child("guid1", 5)
-    except ro.exceptions.TemplateReorderOutOfBounds as e:
+    except TemplateReorderOutOfBounds as e:
         assert "out of bounds" in str(e)
 
     # Test invalid GUID (not in children)
     try:
         template.reorder_child("invalid_guid", 1)
-    except ro.exceptions.TemplateDoesNotExist as e:
+    except TemplateDoesNotExist as e:
         assert "not found in the parent's children list" in str(e)
 
 
