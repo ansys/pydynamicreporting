@@ -1,6 +1,8 @@
 import base64
 import os
+import re
 from pathlib import Path
+from typing import Any
 
 from ..utils.report_download_html import ReportDownloadHTML
 
@@ -88,32 +90,45 @@ class ServerlessReportExporter:
 
         (self._output_dir / self._filename).write_text(html, encoding="utf8")
 
-    def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str:
-        """Finds, processes, and replaces all asset references within a given block of text."""
+    def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str | None:
+        """
+        Finds, processes, and replaces all asset references within a given block of text
+        using a regular expression for cleaner parsing.
+        """
         self._replaced_file_ext = None
         current = 0
-        while True:
-            # This try-except block structure is preserved to match the original implementation.
-            try:
-                idx1 = text.index(f"/static/ansys{self._ansys_version}/", current)
-            except ValueError:
-                try:
-                    idx1 = text.index("/static/", current)
-                except ValueError:
-                    try:
-                        idx1 = text.index("/media/", current)
-                    except ValueError:
-                        try:
-                            idx1 = text.index(f"/ansys{self._ansys_version}/", current)
-                        except ValueError:
-                            return text
 
-            quote = text[idx1 - 1]
-            try:
-                idx2 = text.index(quote, idx1)
-            except ValueError:
+        # This regex pattern finds any of the valid asset path prefixes.
+        path_prefix_pattern = re.compile(
+            f"(/static/ansys{self._ansys_version}/|/static/|/media/|/ansys{self._ansys_version}/)"
+        )
+
+        while True:
+            # Search for the next asset path from the current position.
+            match = path_prefix_pattern.search(text, current)
+
+            # If no more matches are found, the processing is complete for this block.
+            if not match:
                 return text
 
+            idx1 = match.start()
+
+            # A simple heuristic to ensure we're processing a path inside an HTML attribute.
+            # It checks if the character preceding the path is a quote.
+            quote = text[idx1 - 1]
+            if quote not in ('"', "'"):
+                # This was likely not a real path; continue searching from after this match.
+                current = match.end()
+                continue
+
+            try:
+                # Find the corresponding closing quote to delimit the full path.
+                idx2 = text.index(quote, idx1)
+            except ValueError:
+                # If there's no closing quote, the rest of the string is un-parseable.
+                return text
+
+            # Extract the path and process it.
             path_in_html = text[idx1:idx2]
             simple_path = path_in_html.split("?")[0]
             (_, ext) = os.path.splitext(simple_path)
@@ -124,7 +139,9 @@ class ServerlessReportExporter:
             if size_check and self._inline_size_exception:
                 new_path = "__SIZE_EXCEPTION__"
 
+            # Rebuild the text with the new path.
             text = text[:idx1] + new_path + text[idx2:]
+            # Update the search position to prevent re-processing the same block.
             current = idx1 + len(new_path)
 
     def _copy_special_files(self):
@@ -155,7 +172,7 @@ class ServerlessReportExporter:
         ]
         for f in mathjax_files:
             # The target path is intentionally "mangled" to place MathJax assets in the
-            # media directory, maintaining compatibility with the original implementation.
+            # media directory
             target_path = "media/" + f.split("mathjax/")[-1]
             self._copy_static_file(f, target_path)
 
@@ -310,7 +327,7 @@ class ServerlessReportExporter:
 
         # Base64 encoding increases file size by a factor of 4/3. This calculation
         # estimates the new size to check against the inlining limit. Using float
-        # division is crucial for accuracy, unlike the original bug with integer division.
+        # division is crucial for accuracy, to fix the original bug with integer division.
         estimated_inline_size = int(len(content) * (4 / 3))
 
         if (inline or ReportDownloadHTML.is_scene_file(simple_path)) and self._should_use_data_uri(
@@ -318,8 +335,7 @@ class ServerlessReportExporter:
         ):
             encoded_content = base64.b64encode(content).decode("utf-8")
             results = f"data:application/octet-stream;base64,{encoded_content}"
-            # This block adds the debug feature for saving data URI sources, which was
-            # present in the original implementation.
+            # This block adds the debug feature for saving data URI sources
             if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
                 filename = self._output_dir / "media" / basename
                 filename.parent.mkdir(parents=True, exist_ok=True)
