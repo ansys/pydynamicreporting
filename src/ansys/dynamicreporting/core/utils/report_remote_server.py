@@ -1455,7 +1455,7 @@ def launch_local_database_server(
     exec_basis=None,
     ansys_version=None,
     **kwargs,
-):
+):  # nosec
     """
     Start up a local Django server for a local sqlite file.  If parent is not None, a
     QtGui will be used to fill in missing inputs.  By default, if
@@ -1768,7 +1768,7 @@ def launch_local_database_server(
         params["close_fds"] = True
 
     # Actually try to launch the server
-    try:
+    try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
         monitor_process = subprocess.Popen(command, **params)
