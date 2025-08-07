@@ -22,7 +22,7 @@ from pathlib import Path
 import pickle
 import platform
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 import tempfile
 import time
@@ -98,7 +98,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     cmd.extend(args)
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    subprocess.call(args=cmd, **params)
+    subprocess.call(args=cmd, **params)  # nosec B603
 
 
 class Server:
@@ -1771,7 +1771,7 @@ def launch_local_database_server(
     try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        monitor_process = subprocess.Popen(command, **params)
+        monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
     except Exception as e:
         if print_allowed():
             print(f"Error: {str(e)}")
