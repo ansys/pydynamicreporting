@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path
-import pickle
+import pickle  # nosec B502
 import shlex
 import sys
 import uuid

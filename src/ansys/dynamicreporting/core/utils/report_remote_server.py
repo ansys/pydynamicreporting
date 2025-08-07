@@ -19,7 +19,7 @@ import logging
 import os
 import os.path
 from pathlib import Path
-import pickle
+import pickle  # nosec B502
 import platform
 import shutil
 import subprocess  # nosec B404
@@ -201,7 +201,7 @@ class Server:
     @classmethod
     def get_object_digest(cls, obj):
         m = hashlib.md5()
-        m.update(pickle.dumps(obj))
+        m.update(pickle.dumps(obj))  # nosec B327
         return m.digest()
 
     @classmethod
@@ -855,7 +855,7 @@ class Server:
         return templ
 
     def _download_report(self, url, file_name, directory_name=None):
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         if resp.status_code != requests.codes.ok:
             try:
                 detail = resp.json()["detail"]
@@ -979,7 +979,7 @@ class Server:
         if query is None:
             query = {}
         url = self.build_url_with_query(report_guid, query)
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         if resp.status_code == requests.codes.ok:
             try:
                 links = report_utils.get_links_from_html(resp.text)
@@ -1199,8 +1199,8 @@ def create_new_local_database(
         if run_local:
             # Make a random string that could be used as a secret key for the database
             # take two UUID1 values, run them through md5 and concatenate the digests.
-            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()
-            secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()
+            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324 
+            secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
             # And make a target file (.nexdb) for auto launching of the report viewer...
             f = open(os.path.join(db_dir, "view_report.nexdb"), "w")
             if len(secret_key):

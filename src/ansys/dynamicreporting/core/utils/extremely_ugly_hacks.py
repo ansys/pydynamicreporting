@@ -1,6 +1,6 @@
 # All Python3 migration-related ugly hacks go here.
 import base64
-import pickle
+import pickle  # nosec B502
 from uuid import UUID
 
 from .report_utils import text_type

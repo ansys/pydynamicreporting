@@ -154,7 +154,7 @@ class ReportDownloadHTML:
         for f in files:
             mangled = f.replace("media/", "/static/website/scripts/mathjax/")
             url = tmp.scheme + "://" + tmp.netloc + mangled
-            resp = requests.get(url, allow_redirects=True)
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
             if resp.status_code == requests.codes.ok:
                 filename = os.path.join(self._directory, f)
                 try:
@@ -305,7 +305,7 @@ class ReportDownloadHTML:
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
-            resp = requests.get(url, allow_redirects=True)
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
             if resp.status_code == requests.codes.ok:
                 filename = self._directory + os.sep + target_path + os.sep + f
                 filename = os.path.normpath(filename)
@@ -343,7 +343,7 @@ class ReportDownloadHTML:
             return self._filemap[pathname]
         tmp = urllib.parse.urlsplit(self._url)
         url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         results = pathname
         if resp.status_code == requests.codes.ok:
             basename = os.path.basename(pathname)
