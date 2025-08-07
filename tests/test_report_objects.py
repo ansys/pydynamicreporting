@@ -393,6 +393,39 @@ def test_templaterest_fields() -> None:
 
 
 @pytest.mark.ado_test
+def test_templaterest_set_order() -> None:
+    # Create a TemplateREST object
+    template = ro.TemplateREST()
+    template.children = ["guid1", "guid2", "guid3"]
+
+    # Test reordering a child template to a valid position
+    template.reorder_child("guid2", 0)
+    assert template.children == ["guid2", "guid1", "guid3"]
+
+    # Test reordering a child template to another valid position
+    template.reorder_child("guid2", 2)
+    assert template.children == ["guid1", "guid3", "guid2"]
+
+    # Test reordering using a TemplateREST object instead of a string
+    child_template = ro.TemplateREST()
+    child_template.guid = "guid3"
+    template.reorder_child(child_template, 0)
+    assert template.children == ["guid3", "guid1", "guid2"]
+
+    # Test invalid position (out of bounds)
+    try:
+        template.reorder_child("guid1", 5)
+    except ro.exceptions.TemplateReorderOutOfBounds as e:
+        assert "out of bounds" in str(e)
+
+    # Test invalid GUID (not in children)
+    try:
+        template.reorder_child("invalid_guid", 1)
+    except ro.exceptions.TemplateDoesNotExist as e:
+        assert "not found in the parent's children list" in str(e)
+
+
+@pytest.mark.ado_test
 def test_templaterest_filter() -> None:
     a = ro.TemplateREST()
     strone = "firstfilter"
