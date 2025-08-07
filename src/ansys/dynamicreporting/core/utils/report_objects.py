@@ -22,6 +22,7 @@ import pytz
 
 from . import extremely_ugly_hacks, report_utils
 from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
+from . import extremely_ugly_hacks, report_utils
 from .encoders import PayloaddataEncoder
 
 try:

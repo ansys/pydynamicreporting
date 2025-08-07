@@ -4,8 +4,8 @@ import uuid
 
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from ansys.dynamicreporting.core.utils import report_objects as ro
+from ansys.dynamicreporting.core.exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 
 
 @pytest.mark.ado_test
@@ -394,7 +394,7 @@ def test_templaterest_fields() -> None:
 
 
 @pytest.mark.ado_test
-def test_templaterest_set_order() -> None:
+def test_templaterest_reorder_child() -> None:
     # Create a TemplateREST object
     template = ro.TemplateREST()
     template.children = ["guid1", "guid2", "guid3"]
