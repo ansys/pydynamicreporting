@@ -118,8 +118,8 @@ class DockerLauncher:
                 for chunk in tar_stream:
                     tar_file.write(chunk)
             # Extract the tar archive
-            with tarfile.open(tar_file_path) as tar:  # nosec
-                tar.extractall(path=output_path)
+            with tarfile.open(tar_file_path) as tar:
+                tar.extractall(path=output_path)  # nosec B202
             # Remove the tar archive
             tar_file_path.unlink()
         except Exception as e:
@@ -176,7 +176,7 @@ class DockerLauncher:
         existing_names = [x.name for x in self._client.from_env().containers.list()]
         container_name = "nexus"
         while container_name in existing_names:
-            container_name += random.choice(string.ascii_letters)
+            container_name += random.choice(string.ascii_letters)  # nosec B311
             if len(container_name) > 500:
                 raise RuntimeError("Can't determine a unique Docker container name.")
 

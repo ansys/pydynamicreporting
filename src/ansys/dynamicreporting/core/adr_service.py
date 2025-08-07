@@ -241,7 +241,7 @@ class Service:
         username: str = "nexus",
         password: str = "cei",
         session: str | None = "",
-    ) -> None:
+    ) -> None:  # nosec B107
         """
         Connect to a running service.
 
@@ -301,7 +301,7 @@ class Service:
         error_if_create_db_exists: bool = False,
         exit_on_close: bool = False,
         delete_db: bool = False,
-    ) -> str:
+    ) -> str:  # nosec B107
         """
         Start a new service.
 
