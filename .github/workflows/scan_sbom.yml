@@ -40,13 +40,7 @@ jobs:
         with:
           format: spdx-json
           output-file: sbom.spdx.json
-          upload-artifact: false
-
-      - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PACKAGE_NAME }}-sbom
-          path: sbom.spdx.json
+          upload-artifact: true
 
 
   vulnerabilities:
