@@ -3,6 +3,8 @@ name: Security Scan
 env:
   MAIN_PYTHON_VERSION: '3.13'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
+  ACTIVATE_VENV_BANDIT_SAFETY: false
+  BANDIT_CONFIGFILE: "bandit.yaml"
 
 on:
   push:
