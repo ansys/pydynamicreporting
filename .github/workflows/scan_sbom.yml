@@ -13,53 +13,55 @@ on:
 
 jobs:
 
-
-  vulnerabilities:
-    name: Vulnerabilities
+  sbom:
+    name: Generate SBOM
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
 
     steps:
+    
       - name: Checkout code
         uses: actions/checkout@v4
-
+    
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-
+    
       - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v10
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ubuntu-latest
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-
-      - name: Install pip-audit
-        run: pip install pip-audit
-
-      - name: Run pip-audit on wheel
-        run: pip-audit dist/*.whl
-
+    
       - name: Install from wheelhouse
         run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
-
-      - name: Install safety
-        run: pip install safety
-
-      - name: Run safety check
-        run: safety check --full-report
-
+    
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0.15.4
         with:
-          format: spdx-json
-          output-file: sbom.spdx.json
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
           upload-artifact: false
 
       - name: Upload SBOM as artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PACKAGE_NAME }}-sbom
-          path: sbom.spdx.json
+          path: sbom.cyclonedx.json
+
+  
+  vulnerabilities:
+    name: Vulnerabilities
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+      - name: PyAnsys Vulnerability check (on main)
+        if: github.ref == 'refs/heads/main'
+        uses: ansys/actions/check-vulnerabilities@v10.0.14
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          python-package-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+          run-bandit: false
