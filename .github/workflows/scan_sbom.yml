@@ -49,7 +49,7 @@ jobs:
         run: pip install pip-audit
 
       - name: Run pip-audit
-        run: pip-audit
+        run: pip-audit --no-deps
 
   sbom:
     name: Generate SBOM
