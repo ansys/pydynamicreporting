@@ -18,25 +18,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    
+
       - name: Checkout code
         uses: actions/checkout@v4
-    
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-    
+
       - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v10
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ubuntu-latest
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-    
+
       - name: Install from wheelhouse
         run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
-    
+
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0.15.4
         with:
@@ -50,13 +50,13 @@ jobs:
           name: ${{ env.PACKAGE_NAME }}-sbom
           path: sbom.cyclonedx.json
 
-  
+
   vulnerabilities:
     name: Vulnerabilities
     runs-on: ubuntu-latest
-    
+
     steps:
-    
+
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
         uses: ansys/actions/check-vulnerabilities@v10.0.14
@@ -65,3 +65,13 @@ jobs:
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           run-bandit: false
+
+      - name: PyAnsys Vulnerability check (on dev)
+        if: github.ref != 'refs/heads/main'
+        uses: ansys/actions/check-vulnerabilities@v10.0.14
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          python-package-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+          run-bandit: false
+          dev-mode: true
