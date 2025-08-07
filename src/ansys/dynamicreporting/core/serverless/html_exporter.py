@@ -1,7 +1,7 @@
 import base64
 import os
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 from ..utils.report_download_html import ReportDownloadHTML
@@ -90,7 +90,9 @@ class ServerlessReportExporter:
 
         (self._output_dir / self._filename).write_text(html, encoding="utf8")
 
-    def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str | None:
+    def _replace_files(
+        self, text: str, inline: bool = False, size_check: bool = False
+    ) -> str | None:
         """
         Finds, processes, and replaces all asset references within a given block of text
         using a regular expression for cleaner parsing.
