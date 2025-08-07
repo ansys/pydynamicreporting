@@ -415,13 +415,13 @@ def test_templaterest_set_order() -> None:
     # Test invalid position (out of bounds)
     try:
         template.reorder_child("guid1", 5)
-    except ro.exceptions.TemplateReorderOutOfBound as e:
+    except ro.exceptions.TemplateReorderOutOfBounds as e:
         assert "out of bounds" in str(e)
 
     # Test invalid GUID (not in children)
     try:
         template.reorder_child("invalid_guid", 1)
-    except ro.exceptions.TemplateNotExist as e:
+    except ro.exceptions.TemplateDoesNotExist as e:
         assert "not found in the parent's children list" in str(e)
 
 

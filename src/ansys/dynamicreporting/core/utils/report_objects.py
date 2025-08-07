@@ -1646,7 +1646,7 @@ class TemplateREST(BaseRESTObject):
         """
         children_size = len(self.children)
         if new_position < 0 or new_position >= children_size:
-            raise exceptions.TemplateReorderOutOfBound(
+            raise exceptions.TemplateReorderOutOfBounds(
                 f"The specified position {new_position} is out of bounds. "
                 f"Valid range: [0, {len(self.children)})"
             )
@@ -1658,7 +1658,7 @@ class TemplateREST(BaseRESTObject):
         )
 
         if target_guid not in self.children:
-            raise exceptions.TemplateNotExist(
+            raise exceptions.TemplateDoesNotExist(
                 f"Template with GUID '{target_guid}' is not found in the parent's children list."
             )
         self.children.remove(target_guid)
