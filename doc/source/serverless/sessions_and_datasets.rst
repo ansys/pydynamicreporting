@@ -137,6 +137,14 @@ unless you specify different ones explicitly.
         dataset=dataset,
     )
 
+Loading Templates from a JSON file
+----------------------------------
+
+You can load a report with multiple templates from an existing JSON file.
+
+.. code-block:: python
+    adr.load_templates_from_file("my_report.json")
+
 Lifecycle Notes
 ---------------
 

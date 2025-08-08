@@ -198,7 +198,18 @@ Returns the filter mode of the template. The possible outputs are:
 Sets the filter mode of the template. Takes as input a string. See
 get_filter_mode for the accepted values.
 
-Example of usage. Let's assume you want to create a template like the
+**template.reorder_child(target_child_template, new_position)**
+
+Reorder a child template within the children list to a specified position.
+
+This method moves a child template (identified by its GUID or the template object itself)
+to a new position within the `children` list of the current template. It ensures that
+the specified position is valid and that the target child template exists in the `children` list.
+
+Example of Usage
+^^^^^^^^^^^^^^^^
+
+Let's assume you want to create a template like the
 one shown in the picture (from the documentation example in the
 Ansys Dynamic Reporting installer):
 
