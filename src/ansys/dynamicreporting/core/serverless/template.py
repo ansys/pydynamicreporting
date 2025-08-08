@@ -434,7 +434,7 @@ class Template(BaseModel):
             )
 
         target_guid = target_child_template.guid
-        if target_guid not in [child.guid for child in self.children]:
+        if target_child_template not in self.children:
             raise TemplateDoesNotExist(
                 f"Template with GUID '{target_guid}' is not found in the parent's children list."
             )
