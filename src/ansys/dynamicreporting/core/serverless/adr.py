@@ -34,6 +34,7 @@ from ..exceptions import (
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import ObjectSet
+from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 
@@ -149,6 +150,7 @@ class ADR:
         self._db_directory = None
         self._media_directory = None
         self._static_directory = None
+        self._static_collected = False
         self._media_url = media_url
         self._static_url = static_url
         self._debug = debug
@@ -538,6 +540,7 @@ class ADR:
                 call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
+            self._static_collected = True
 
         # setup is complete
         ADR._is_setup = True
@@ -637,6 +640,18 @@ class ADR:
     @property
     def static_directory(self) -> str:
         return str(self._static_directory)
+
+    @property
+    def static_url(self) -> str:
+        from django.conf import settings
+
+        return settings.STATIC_URL
+
+    @property
+    def media_url(self) -> str:
+        from django.conf import settings
+
+        return settings.MEDIA_URL
 
     @property
     def session(self) -> Session:
@@ -797,6 +812,40 @@ class ADR:
     def render_report(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> str:
+        """
+        Render the report as an HTML string.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            str
+                The rendered HTML string of the report.
+                Media type is "text/html".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        >>> with open("report.html", "w", encoding="utf-8") as f:
+        ...     f.write(html_content)
+        """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
@@ -824,17 +873,26 @@ class ADR:
             Filter to apply to the items in the report.
 
         **kwargs : Any
-            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc. At least one
+            keyword argument must be provided to fetch the report.
 
         Returns
         -------
-            A byte stream containing the PowerPoint presentation.
-            Media type is "application/vnd.openxmlformats-officedocument.presentationml.presentation".
+            bytes
+                A byte stream containing the PowerPoint presentation.
+                Media type is "application/vnd.openxmlformats-officedocument.presentationml.presentation".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the template is not of type PPTXLayout or
+            if the report rendering fails.
 
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
         ...     f.write(pptx_stream)
@@ -854,6 +912,105 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
+
+    def export_report_as_html(
+        self,
+        output_directory: str | Path,
+        *,
+        filename: str = "index.html",
+        single_file: bool = False,
+        context: dict | None = None,
+        item_filter: str = "",
+        **kwargs: Any,
+    ) -> Path:
+        """
+        Export a report as a standalone HTML file or directory with all assets.
+
+        Parameters
+        ----------
+        output_directory : str or Path
+            The directory where the report will be exported. If it does not exist, it will be created.
+
+        filename : str, optional
+            The name of the output HTML file. Default is "index.html".
+
+        single_file : bool, optional
+            If True, the report will be exported as a single HTML file with all assets embedded.
+            If False, the report will be exported as a directory with separate files for assets.
+            Default is False.
+
+        context : dict, optional
+            Context to pass to the report template. Default is None.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report. Default is an empty string.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to fetch the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+        Path
+            The path to the generated HTML file or directory.
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the static directory is not configured.
+        ImproperlyConfiguredError
+            If the static directory is not configured or if the output directory cannot be created.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252",
+                    db_directory=r"C:\\DBs\\docex",
+                    media_directory=r"C:\\DBs\\docex\\media",
+                    static_directory=r"C:\\static"
+                )
+        >>> adr.setup(collect_static=True)
+        >>> output_path = adr.export_report_as_html(
+                    Path.cwd() / "htmlex",
+                    single_file=False,
+                    context={},
+                    item_filter="A|i_tags|cont|dp=dp227;",
+                    name="Serverless Simulation Report",
+                )
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        if not self._static_collected:
+            raise ImproperlyConfiguredError(
+                "The 'static_directory' must be configured to export a report."
+            )
+
+        output_dir = Path(output_directory)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Render the raw HTML from the template.
+        html_content = self.render_report(context=context, item_filter=item_filter, **kwargs)
+
+        # Instantiate and run the serverless exporter.
+        exporter = ServerlessReportExporter(
+            html_content=html_content,
+            output_dir=output_dir,
+            static_dir=self._static_directory,
+            media_dir=self._media_directory,
+            filename=filename,
+            single_file=single_file,
+            ansys_version=str(self._ansys_version),
+            debug=self._debug,
+        )
+        exporter.export()
+
+        # Return the path to the generated file.
+        final_path = output_dir / filename
+        self._logger.info(f"Successfully exported report to: {final_path}")
+        return final_path
 
     @staticmethod
     def query(
