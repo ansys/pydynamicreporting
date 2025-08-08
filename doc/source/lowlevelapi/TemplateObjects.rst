@@ -200,7 +200,8 @@ get_filter_mode for the accepted values.
 
 **template.reorder_child(target_child_template, new_position)**
 
-Reorder a child template within the children list to a specified position.
+Reorders a child template within the list of children to a specified position.
+
 
 This method moves a child template (identified by its GUID or the template object itself)
 to a new position within the `children` list of the current template. It ensures that
