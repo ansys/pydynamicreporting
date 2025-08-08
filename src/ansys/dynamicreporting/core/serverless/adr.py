@@ -150,7 +150,6 @@ class ADR:
         self._db_directory = None
         self._media_directory = None
         self._static_directory = None
-        self._static_collected = False
         self._media_url = media_url
         self._static_url = static_url
         self._debug = debug
@@ -548,7 +547,6 @@ class ADR:
                 call_command("collectstatic", "--no-input", "--verbosity", 0)
             except Exception as e:
                 raise StaticFilesCollectionError(extra_detail=str(e))
-            self._static_collected = True
 
         # setup is complete
         ADR._is_setup = True
@@ -991,7 +989,7 @@ class ADR:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
-        if not self._static_collected:
+        if self._static_directory is None:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured to export a report."
             )
