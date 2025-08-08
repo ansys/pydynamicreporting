@@ -101,7 +101,7 @@ Common methods include:
 - ``render(context=None, item_filter="", request=None)``: Render the template to HTML string.
 - ``to_dict()``: Returns a JSON-serializable dictionary of the full template tree.
 - ``to_json(filename_str)``: Store the template as a JSON file. Only allow this action if this template is a root template.
-- ``reorder_child(target_child_template, new_position_index)``: Reorder the target template in the children list to the specified position.
+- ``reorder_child(target_child_template, new_position_index)``: Reorder the target template in the `children` list to the specified position.
 
 Template Parameters
 -------------------
