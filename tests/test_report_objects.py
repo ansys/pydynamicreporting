@@ -2070,6 +2070,7 @@ def test_item_payload(adr_service_query) -> None:
         for i in adr_service_query.query():
             _ = i.item.get_payload_content(as_list=True)
         succ = True
-    except Exception:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         succ = False
     assert succ

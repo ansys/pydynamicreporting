@@ -27,7 +27,8 @@ dir_list.append("tests/test_data/sameport_again/")
 for i_dir in dir_list:
     try:
         shutil.rmtree(i_dir)
-    except Exception:
+    except Exception as e:
+        print(f"Skipping {i_dir} with error {e}")
         pass
 
 
@@ -45,5 +46,6 @@ file_list.append("tests/again_mytest_filter.pdf")
 for i_file in file_list:
     try:
         os.remove(i_file)
-    except Exception:
+    except Exception as e:
+        print(f"Skipping {i_file} with error {e}")
         pass

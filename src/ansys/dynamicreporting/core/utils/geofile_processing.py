@@ -9,7 +9,7 @@ extract proxy data from AVZ and EVSN files to simplify their display.
 import io
 import os
 import platform
-import subprocess
+import subprocess  # nosec B78 B603 B404
 import typing
 import zipfile
 
@@ -213,7 +213,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                 stderr=subprocess.DEVNULL,
                 close_fds=True,
                 creationflags=create_flags,
-            )
+            )  # nosec B78 B603
         except Exception as e:
             print(f"Warning: unable to convert '{csf_file}' into AVZ format: {str(e)}")
     # At this point, if we have an original AVZ file or a converted udrw file, we
