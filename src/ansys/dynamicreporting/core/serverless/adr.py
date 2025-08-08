@@ -438,6 +438,11 @@ class ADR:
         source_static_dir = (
             self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
         )
+        if not source_static_dir.exists():
+            raise ImproperlyConfiguredError(
+                f"The static files directory '{source_static_dir}' does not exist. "
+                "Please check your Ansys installation and version."
+            )
         overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
 
         # relative URLs: By default, ADR serves static files from the URL /static/
