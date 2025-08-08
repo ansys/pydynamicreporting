@@ -434,6 +434,12 @@ class ADR:
         if self._static_directory is not None:
             overrides["STATIC_ROOT"] = str(self._static_directory)
 
+        # Replace STATICFILES_DIRS to point only to the pre-collected directory in the Ansys installation.
+        source_static_dir = (
+            self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
+        )
+        overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
+
         # relative URLs: By default, ADR serves static files from the URL /static/
         # and media files from the URL /media/. These can be changed using the
         # static_url and media_url options. URLs must be relative and start and end with
