@@ -9,6 +9,8 @@ env:
   MAIN_PYTHON_VERSION: '3.13'
   PACKAGE_NAME: 'ansys-dynamicreporting-core'
   PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
+  ANSYS_VERSION: '261'
+  DPF_STANDALONE_SUFFIX: ''
 
 jobs:
 
@@ -40,6 +42,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Set licensing if necessary
+        if: ${{ env.ANSYS_VERSION > '231' }}
+        shell: bash
+        run: |
+          echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
+          echo "ANSYSLMD_LICENSE_FILE=1055@${{ secrets.LICENSE_SERVER }}" >> $GITHUB_ENV
+
+      - name: Update packages
+        shell: bash
+        run: |
+            sudo apt update && sudo apt install -y \
+            libx11-dev \
+            libgl1-mesa-dev \
+            libxrender1
+
+      - name: Install DPF
+        id: set-server-path
+        uses: ansys/pydpf-actions/install-dpf-server@v2.3
+        with:
+          dpf-standalone-TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+          standalone_suffix: ${{ env.DPF_STANDALONE_SUFFIX }}
+          ANSYS_VERSION : ${{ env.ANSYS_VERSION }}
+
       - name: Run pytest
         run: make test
         env:
@@ -51,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v8
+        uses: ansys/actions/build-library@v10
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
@@ -69,7 +94,7 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
           TWINE_REPOSITORY_URL: ${{ secrets.PRIVATE_PYPI_URL }}
 
-  build-failure:
+  ci-failure:
     name: Teams notify on failure
     if: failure()
     needs: [ nightly_and_upload ]

@@ -4,6 +4,7 @@ import uuid
 
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from ansys.dynamicreporting.core.utils import report_objects as ro
 
 
@@ -231,6 +232,84 @@ def test_category() -> None:
 
 
 @pytest.mark.ado_test
+def test_table_payload_item() -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = False
+
+    try:
+        a.set_payload_table_values([[1.0]], rowlbls=["Row 1", "Row 2"], collbls=["Column 1"])
+    except ValueError as e:
+        succ1 = "Number of row labels does not match number of rows in the array." in str(e)
+
+    try:
+        a.set_payload_table_values([[1.0]], rowlbls=["Row 1"], collbls=["Column 1", "Column 2"])
+    except ValueError as e:
+        succ2 = "Number of column labels does not match number of columns in the array." in str(e)
+
+    assert succ1 and succ2
+
+
+@pytest.mark.ado_test
+def test_string_payload_item() -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = succ3 = False
+    try:
+        a.set_payload_string(s=42)
+    except TypeError as e:
+        succ1 = "Payload must be a string." in str(e)
+
+    try:
+        a.set_payload_html(s=" ")
+    except ValueError as e:
+        succ2 = "cannot be empty or whitespace." in str(e)
+
+    try:
+        a.set_payload_string(s="\ud800")
+    except ValueError as e:
+        succ3 = "must be a valid UTF-8 string." in str(e)
+
+    assert succ1 and succ2 and succ3
+
+
+@pytest.mark.ado_test
+def test_file_payload_item(tmp_path) -> None:
+    a = ro.ItemREST()
+    succ1 = succ2 = succ3 = succ4 = succ5 = False
+    try:
+        a.set_payload_file(42)
+    except TypeError as e:
+        succ1 = "string representing the file path." in str(e)
+
+    try:
+        a.set_payload_file("non_existent_file.txt")
+    except FileNotFoundError as e:
+        succ2 = "path does not exist:" in str(e)
+
+    d = tmp_path / "subdir"
+    d.mkdir()
+    try:
+        a.set_payload_animation(str(d))
+    except ValueError as e:
+        succ3 = "is not a file:" in str(e)
+
+    empty_file = tmp_path / "empty.txt"
+    empty_file.write_text("")
+    try:
+        a.set_payload_animation(str(empty_file))
+    except ValueError as e:
+        succ4 = "is empty:" in str(e)
+
+    bad_ext_file = tmp_path / "file.bad"
+    bad_ext_file.write_text("data")
+    try:
+        a.set_payload_scene(str(bad_ext_file))
+    except ValueError as e:
+        succ5 = "is not supported." in str(e)
+
+    assert succ1 and succ2 and succ3 and succ4 and succ5
+
+
+@pytest.mark.ado_test
 def test_factory() -> None:
     a = ro.TemplateREST()
     assert isinstance(
@@ -312,6 +391,39 @@ def test_templaterest_fields() -> None:
     a.set_sort_selection()
     succ_a = a.get_sort_selection() == "all" and succ and succ_two and succ_three
     assert succ_a and succ_four and succ_five
+
+
+@pytest.mark.ado_test
+def test_templaterest_reorder_child() -> None:
+    # Create a TemplateREST object
+    template = ro.TemplateREST()
+    template.children = ["guid1", "guid2", "guid3"]
+
+    # Test reordering a child template to a valid position
+    template.reorder_child("guid2", 0)
+    assert template.children == ["guid2", "guid1", "guid3"]
+
+    # Test reordering a child template to another valid position
+    template.reorder_child("guid2", 2)
+    assert template.children == ["guid1", "guid3", "guid2"]
+
+    # Test reordering using a TemplateREST object instead of a string
+    child_template = ro.TemplateREST()
+    child_template.guid = "guid3"
+    template.reorder_child(child_template, 0)
+    assert template.children == ["guid3", "guid1", "guid2"]
+
+    # Test invalid position (out of bounds)
+    try:
+        template.reorder_child("guid1", 5)
+    except TemplateReorderOutOfBounds as e:
+        assert "out of bounds" in str(e)
+
+    # Test invalid GUID (not in children)
+    try:
+        template.reorder_child("invalid_guid", 1)
+    except TemplateDoesNotExist as e:
+        assert "not found in the parent's children list" in str(e)
 
 
 @pytest.mark.ado_test
@@ -1054,13 +1166,12 @@ def test_tablemerge_operation() -> None:
     a.add_operation(name=["a"])
     a.add_operation(name=["b"], existing=False)
     succ_ten = len(a.get_operations()) == 3
-    a.delete_operation()
     succ_eleven = False
     try:
         a.delete_operation(name="a")
     except ValueError as e:
         succ_eleven = "need to pass the operation" in str(e)
-    a.delete_operation(name=["a", "b"])
+    a.delete_operation(name=["a"])
     succ_a = succ and succ_two and succ_three and succ_four and succ_five and succ_six
     succ_b = succ_seven and succ_eight and succ_nine and succ_ten and succ_eleven
     assert succ_a and succ_b
@@ -1107,6 +1218,109 @@ def test_tablereduce_numeric() -> None:
     a.set_numeric_output(value=1)
     succ_four = a.get_numeric_output() == 1
     assert succ and succ_two and succ_three and succ_four
+
+
+@pytest.mark.ado_test
+def test_tablemap_nameparam() -> None:
+    a = ro.tablemapREST()
+    assert a.get_map_param() == "row"
+    try:
+        a.set_map_param(value=0)
+    except ValueError as e:
+        assert "input should be a string" in str(e)
+    try:
+        a.set_map_param(value="a")
+    except ValueError as e:
+        assert "input should be either row or column" in str(e)
+    a.set_map_param(value="column")
+    assert a.get_map_param() == "column"
+    assert a.get_table_name() == ""
+    try:
+        a.set_table_name(value=1)
+    except ValueError as e:
+        assert "input should be a string" in str(e)
+    a.set_table_name(value="abc")
+    assert a.get_table_name() == "abc"
+
+
+@pytest.mark.ado_test
+def test_tablemap_operation() -> None:
+    a = ro.tablemapREST()
+    assert a.get_operations() == []
+    a.add_operation()
+    try:
+        a.add_operation(name="a")
+    except ValueError as e:
+        assert "should be a list of strings" in str(e)
+    try:
+        a.add_operation(name=[1])
+    except ValueError as e:
+        assert "should all be strings" in str(e)
+    try:
+        a.delete_operation(name=[1])
+    except ValueError as e:
+        assert "should all be strings" in str(e)
+    try:
+        a.add_operation(output_name=1)
+    except ValueError as e:
+        assert "output_name should be a string" in str(e)
+    try:
+        a.delete_operation(name=["a"])
+    except ValueError as e:
+        assert "source with the passed input" in str(e)
+    try:
+        a.add_operation(select_names=1)
+    except ValueError as e:
+        assert "select_names should be a string" in str(e)
+    try:
+        a.add_operation(operation=1)
+    except ValueError as e:
+        assert "operation should be a string" in str(e)
+    a.add_operation(name=["a"])
+    a.add_operation(name=["b"])
+    assert len(a.get_operations()) == 3
+
+    try:
+        a.delete_operation(name="a")
+    except ValueError as e:
+        assert "need to pass the operation" in str(e)
+    a.delete_operation(name=["a"])
+
+
+@pytest.mark.ado_test
+def test_tablemap_transpose() -> None:
+    a = ro.tablemapREST()
+    assert a.get_table_transpose() == 0
+    try:
+        a.set_table_transpose(value="a")
+    except ValueError as e:
+        assert "the transpose input should be integer" in str(e)
+    try:
+        a.set_table_transpose(value=3)
+    except ValueError as e:
+        assert "input value should be 0 or 1" in str(e)
+    try:
+        a.set_table_transpose(value=1.2)
+    except ValueError as e:
+        assert "transpose input should be integer" in str(e)
+    a.set_table_transpose(value=1)
+    assert a.get_table_transpose() == 1
+
+
+@pytest.mark.ado_test
+def test_tablemap_numeric() -> None:
+    a = ro.tablemapREST()
+    assert a.get_numeric_output() == 0
+    try:
+        a.set_numeric_output(value="a")
+    except ValueError as e:
+        assert "numeric output should be integer" in str(e)
+    try:
+        a.set_numeric_output(value=4)
+    except ValueError as e:
+        assert "input value should be 0 or 1" in str(e)
+    a.set_numeric_output(value=1)
+    assert a.get_numeric_output() == 1
 
 
 @pytest.mark.ado_test

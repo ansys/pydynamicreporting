@@ -152,7 +152,14 @@ heatmap.visualize()
 #
 # Visualize a 3D surface plot
 # ---------------------------
-#
+
+###############################################################################
+# .. note::
+#   3D surface plots are supported starting at Ansysy Dynamic Reporting 25R2.
+#   You will therefore need to point to a 25R2 or newer Ansys Dynamic
+#   Reporting installation for this plot type.
+
+###############################################################################
 # A 3D surface plot allows you to visualize the data points in a terrain-like
 # surface in a 3D space powered by the WebGL engine. It is a variation of a
 # heatmap as they share the same data structure. The difference is that the
@@ -261,7 +268,14 @@ sankey_plot.visualize()
 #
 # Visualize a 3D scatter plot
 # ---------------------------
-#
+
+###############################################################################
+# .. note::
+#   3D scatter plots are supported starting at Ansysy Dynamic Reporting 25R2.
+#   You will therefore need to point to a 25R2 or newer Ansys Dynamic
+#   Reporting installation for this plot type.
+
+###############################################################################
 # A 3D scatter plot allows you to visualize the data points in 3D space
 # powered by the WebGL engine. You can zoom in and out, and rotate to view the
 # data from different angles.
@@ -288,13 +302,20 @@ scatter_plot_3d.line_marker_opacity = 0.7
 # vis
 scatter_plot_3d.visualize()
 
-
 ###############################################################################
 #
 # .. image:: /_static/3d_scatter.png
 #
 # Visualize a polar plot
-# --------------------------
+# ----------------------
+
+###############################################################################
+# .. note::
+#   Polar plots are supported starting at Ansysy Dynamic Reporting 25R2.
+#   You will therefore need to point to a 25R2 or newer Ansys Dynamic
+#   Reporting installation for this plot type.
+
+###############################################################################
 #
 # A polar plot is a plot type that visualizes the data point in a polar
 # coordinate system. One common variation of a polar plot is a radar chart. The

@@ -141,6 +141,81 @@ installation and the test file you are trying to run.
 
 Note that any tests that require Docker will obviously fail.
 
+Creating a Release
+------------------
+
+- Before creating a new branch, make sure your local repository is up to date:
+
+  .. code-block:: bash
+
+      git pull
+
+  This ensures you have the latest changes from the default branch (usually ``main`` or ``develop``).
+
+- Create a new branch for the release:
+
+  .. code-block:: bash
+
+      git checkout -b release/0.10
+
+  **Important:**
+  The release branch must only include the **major** and **minor** version numbers.
+  Do not include the patch version.
+  For example, use ``release/0.10``, not ``release/0.10.0``.
+
+- If creating a **patch release**, do not create a new branch.
+  Instead, reuse the existing ``release/0.10`` branch.
+
+- Update the version number in ``pyproject.toml``:
+
+  If the current version is:
+
+  .. code-block:: toml
+
+      version = "0.10.0.dev0"
+
+  bump it to:
+
+  .. code-block:: toml
+
+      version = "0.10.0"
+
+- **Important:**
+  Every time you create a development (``dev``) release, you should first release the corresponding stable version on PyPI before bumping the development version.
+
+  For example:
+
+  - If you are at ``0.10.0.dev0``, first release ``0.10.0`` on PyPI.
+  - Then, after the release, bump the version to ``0.10.1.dev0``.
+
+  Otherwise, it may feel confusing to have a ``dev`` version without a corresponding stable release.
+
+- Create a commit for the version bump:
+
+  .. code-block:: bash
+
+      git commit -am "MAINT: Bump version to v0.10.0"
+
+- Then push the branch:
+
+  .. code-block:: bash
+
+      git push --set-upstream origin release/0.10
+
+- Create a tag for the release:
+
+  .. code-block:: bash
+
+      git tag v0.10.0
+      git push origin v0.10.0
+
+  **Important:**
+  The release tag must always include the full **major.minor.patch** version number.
+  Always include the ``v`` prefix.
+  For example, use ``v0.10.0``, not ``v0.10``.
+  Creating and pushing the tag automatically triggers the release workflow in GitHub Actions.
+
+
 Dependencies
 ------------
 To use PyDynamicReporting, you must have a locally installed and licensed copy

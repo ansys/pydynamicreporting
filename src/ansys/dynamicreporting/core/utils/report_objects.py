@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from ast import literal_eval
 import base64
 import copy
 import datetime
@@ -6,22 +9,23 @@ import io
 import json
 import logging
 import os
+from pathlib import Path
 import pickle
 import shlex
 import sys
 import uuid
 import weakref
 
-from PIL import Image
 import dateutil
 import dateutil.parser
 import pytz
 
 from . import extremely_ugly_hacks, report_utils
+from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
 try:
-    from PyQt5 import QtCore, QtGui
+    from qtpy import QtCore, QtGui
 
     has_qt = True
 except ImportError:
@@ -1078,11 +1082,25 @@ class ItemREST(BaseRESTObject):
         self.type = ItemREST.type_none
         self._payloaddata = ""
 
+    def validate_string(self, input_string, description):
+        if not isinstance(input_string, str):
+            raise TypeError("Payload must be a string.")
+
+        if not input_string.strip():
+            raise ValueError(f"Payload {description} cannot be empty or whitespace.")
+
+        try:
+            input_string.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError(f"Payload {description} must be a valid UTF-8 string.")
+
     def set_payload_string(self, s):
+        self.validate_string(s, "string")
         self.type = ItemREST.type_str
         self._payloaddata = s
 
     def set_payload_html(self, s):
+        self.validate_string(s, "HTML")
         self.type = ItemREST.type_html
         self._payloaddata = s
 
@@ -1214,7 +1232,7 @@ class ItemREST(BaseRESTObject):
             kind = array.dtype[0]
 
         # valid array types are bytes and float for now
-        if kind not in ["S", "f"]:
+        if kind not in ("S", "f"):
             raise ValueError("Table array must be a bytes or float type.")
 
         shape = array.shape
@@ -1240,6 +1258,21 @@ class ItemREST(BaseRESTObject):
             array.shape = shape
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
+
+        if rowlbls and not isinstance(rowlbls, (str, list)):
+            raise TypeError("Row labels must be a string or a list.")
+        if collbls and not isinstance(collbls, (str, list)):
+            raise TypeError("Column labels must be a string or a list.")
+
+        rows = literal_eval(rowlbls) if isinstance(rowlbls, str) else rowlbls
+        columns = literal_eval(collbls) if isinstance(collbls, str) else collbls
+
+        if rows and len(rows) != array.shape[0]:
+            raise ValueError("Number of row labels does not match number of rows in the array.")
+        if columns and len(columns) != array.shape[1]:
+            raise ValueError(
+                "Number of column labels does not match number of columns in the array."
+            )
 
         # update after validation
         value.update(
@@ -1335,20 +1368,48 @@ class ItemREST(BaseRESTObject):
         self.fileobj = io.BytesIO(self.image_data)
         self.fileurl = "image.png"
 
+    def validate_file(self, input_path, description, allowed_extensions=None):
+        if not isinstance(input_path, str):
+            raise TypeError("The input must be a string representing the file path.")
+
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(
+                f"The specified {description} path does not exist: {input_path}"
+            )
+
+        if not os.path.isfile(input_path):
+            raise ValueError(f"The specified {description} is not a file: {input_path}")
+
+        if os.path.getsize(input_path) == 0:
+            raise ValueError(f"The specified {description} is empty: {input_path}")
+
+        ext = Path(input_path).suffix.lower().lstrip(".")
+        if allowed_extensions is not None and ext not in allowed_extensions:
+            raise ValueError(
+                f"The file type '.{ext}' is not supported. Allowed types: {allowed_extensions}"
+            )
+
     def set_payload_animation(self, mp4_filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(mp4_filename, "animation file", ["mp4"])
         self.type = ItemREST.type_anim
         self.fileobj = open(mp4_filename, "rb")
         self.fileurl = mp4_filename
 
     def set_payload_file(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(filename, "file")
         self.type = ItemREST.type_file
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
 
     def set_payload_scene(self, filename):
         # filename is required to be UTF8, but the low-level I/O may not take UTF-8
+        self.validate_file(
+            filename,
+            "scene file",
+            ["stl", "ply", "csf", "avz", "scdoc", "scdocx", "dsco", "glb", "obj"],
+        )
         self.type = ItemREST.type_scn
         self.fileobj = open(filename, "rb")
         self.fileurl = filename
@@ -1564,6 +1625,45 @@ class TemplateREST(BaseRESTObject):
                 return ""
         else:
             raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
+
+    def reorder_child(self, target_child_template: str | TemplateREST, new_position: int) -> None:
+        """
+        Reorder the template.guid in parent.children to the specified position.
+
+        Parameters
+        ----------
+        target_child_template : str | TemplateREST
+            The child template to reorder. This can be either the GUID of the template (as a string)
+            or a TemplateREST object.
+        new_position : int
+            The new position in the parent's children list where the template should be placed.
+
+        Raises
+        ------
+        TemplateReorderOutOfBound
+            If the specified position is out of bounds.
+        TemplateDoesNotExist
+            If the target_child_template is not found in the parent's children list.
+        """
+        children_size = len(self.children)
+        if new_position < 0 or new_position >= children_size:
+            raise TemplateReorderOutOfBounds(
+                f"The specified position {new_position} is out of bounds. "
+                f"Valid range: [0, {len(self.children)})"
+            )
+
+        target_guid = (
+            target_child_template
+            if isinstance(target_child_template, str)
+            else target_child_template.guid
+        )
+
+        if target_guid not in self.children:
+            raise TemplateDoesNotExist(
+                f"Template with GUID '{target_guid}' is not found in the parent's children list."
+            )
+        self.children.remove(target_guid)
+        self.children.insert(new_position, target_guid)
 
 
 class LayoutREST(TemplateREST):
@@ -2446,20 +2546,22 @@ class tablereduceREST(GeneratorREST):
         d = json.loads(self.params)
         if "reduce_params" not in d:
             return
-        if "operations" not in d:
+        if "operations" not in d["reduce_params"]:
             return
         sources = d["reduce_params"]["operations"]
+        index = 0
         valid = 0
-        for _, s in enumerate(sources):
+        for i, s in enumerate(sources):
             compare = []
             for iname in shlex.split(s["source_rows"]):
                 compare.append(iname.replace(",", ""))
             if compare == name:
                 valid = 1
+                index = i
                 break
         if valid == 0:
             raise ValueError("Error: no existing source with the passed input")
-        del sources[i]
+        del sources[index]
         d["reduce_params"]["operations"] = sources
         self.params = json.dumps(d)
         return
@@ -2558,6 +2660,163 @@ class tablereduceREST(GeneratorREST):
         if "reduce_params" not in d:
             d["reduce_params"] = {}
         d["reduce_params"]["force_numeric"] = value
+        self.params = json.dumps(d)
+        return
+
+
+class tablemapREST(GeneratorREST):
+    """Representation of Table Mathematical Function Mapper Generator Template."""
+
+    def __init__(self):
+        super().__init__()
+
+    def get_map_param(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "map_type" in d["map_params"]:
+                return d["map_params"]["map_type"]
+        return "row"
+
+    def set_map_param(self, value="row"):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        if value not in ("row", "column"):
+            raise ValueError("Error: input should be either row or column")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["map_type"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_table_name(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "table_name" in d["map_params"]:
+                return d["map_params"]["table_name"]
+        return ""
+
+    def set_table_name(self, value="output_table"):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["table_name"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_operations(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "operations" in d["map_params"]:
+                return d["map_params"]["operations"]
+        return []
+
+    def delete_operation(self, name=None):
+        if name is None:
+            name = []
+        if not isinstance(name, list):
+            raise ValueError(
+                "Error: need to pass the operation with the source row/column name as a list of strings"
+            )
+        if len([x for x in name if isinstance(x, str)]) != len(name):
+            raise ValueError("Error: the elements of the input list should all be strings")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            return
+        if "operations" not in d["map_params"]:
+            return
+        sources = d["map_params"]["operations"]
+        index = 0
+        valid = False
+        for i, s in enumerate(sources):
+            compare = []
+            for iname in shlex.split(s["source_rows"]):
+                compare.append(iname.replace(",", ""))
+            if compare == name:
+                index = i
+                valid = True
+                break
+        if not valid:
+            raise ValueError("Error: no existing source with the passed input")
+        del sources[index]
+        d["map_params"]["operations"] = sources
+        self.params = json.dumps(d)
+        return
+
+    def add_operation(
+        self,
+        name=None,
+        output_name="output row",
+        select_names="*",
+        operation="value",
+    ):
+        if name is None:
+            name = ["*"]
+        d = json.loads(self.params)
+        if not isinstance(name, list):
+            raise ValueError("Error: row/column name should be a list of strings")
+        if len([x for x in name if isinstance(x, str)]) != len(name):
+            raise ValueError("Error: the elements of the input list should all be strings")
+        if not isinstance(output_name, str):
+            raise ValueError("Error: output_name should be a string")
+        if not isinstance(select_names, str):
+            raise ValueError("Error: select_names should be a string")
+        if not isinstance(operation, str):
+            raise ValueError("Error: operation should be a string")
+
+        if "map_params" not in d:
+            d["map_params"] = {}
+        if "operations" not in d["map_params"]:
+            sources = []
+        else:
+            sources = d["map_params"]["operations"]
+        new_source = {}
+        new_source["source_rows"] = ", ".join(repr(x) for x in name)
+        new_source["output_rows"] = output_name
+        new_source["output_columns_select"] = select_names
+        new_source["operation"] = operation
+        sources.append(new_source)
+        d["map_params"]["operations"] = sources
+        self.params = json.dumps(d)
+        return
+
+    def get_table_transpose(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "transpose_output" in d["map_params"]:
+                return d["map_params"]["transpose_output"]
+        return 0
+
+    def set_table_transpose(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("Error: the transpose input should be integer")
+        if value not in (0, 1):
+            raise ValueError("Error: input value should be 0 or 1")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["transpose_output"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_numeric_output(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "force_numeric" in d["map_params"]:
+                return d["map_params"]["force_numeric"]
+        return 0
+
+    def set_numeric_output(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("Error: the numeric output should be integer")
+        if value not in (0, 1):
+            raise ValueError("Error: input value should be 0 or 1")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["force_numeric"] = value
         self.params = json.dumps(d)
         return
 

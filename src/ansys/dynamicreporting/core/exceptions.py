@@ -86,6 +86,14 @@ class MissingReportError(ADRException):
     detail = "Can not find the corresponding report."
 
 
+class TemplateDoesNotExist(ADRException):
+    """Raised when the template is not found"""
+
+
+class TemplateReorderOutOfBounds(ADRException):
+    """Raised when a template is reordered to be out of the size of the children"""
+
+
 """Serverless exceptions."""
 
 
@@ -135,3 +143,9 @@ class IntegrityError(ADRException):
     """Exception raised if there is a constraint violation while saving an object in the database."""
 
     detail = "A database integrity check failed."
+
+
+class InvalidFieldError(ADRException):
+    """Exception raised if a field is not valid."""
+
+    detail = "Field is invalid."

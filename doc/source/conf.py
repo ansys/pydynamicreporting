@@ -3,12 +3,12 @@
 from datetime import datetime
 import os
 
-from ansys_sphinx_theme import get_version_match, pyansys_logo_black
+from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
 from sphinx_gallery.sorting import FileNameSortKey
 
 from ansys.dynamicreporting.core import __version__
 
-cname = os.getenv("DOCUMENTATION_CNAME", "<DEFAULT_CNAME>")
+cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com")
 """The canonical name of the webpage hosting the documentation."""
 
 # Project information
@@ -43,7 +43,7 @@ rst_prolog = f"""
 .. _Generator templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_generator_templates.html
 .. _Statistical Analysis: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/ad_ug_generator_statistical_analysis.html
 .. _Table: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_data_item_table.html
-.. _Query Expressions: <https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_query_expressions.html>
+.. _Query Expressions: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_query_expressions.html
 
 """
 
@@ -51,6 +51,8 @@ rst_prolog = f"""
 html_logo = pyansys_logo_black
 html_theme = "ansys_sphinx_theme"
 html_short_title = html_title = "PyDynamicReporting documentation |version|"
+switcher_version = get_version_match(version)
+html_favicon = ansys_favicon
 
 # specify the location of your github repo
 html_context = {
@@ -64,10 +66,8 @@ html_context = {
 html_theme_options = {
     "switcher": {
         "json_url": f"https://{cname}/versions.json",
-        "version_match": get_version_match(__version__),
+        "version_match": switcher_version,
     },
-    "check_switcher": False,
-    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     "github_url": "https://github.com/ansys/pydynamicreporting/",
     "show_prev_next": False,
     "show_breadcrumbs": True,
@@ -80,7 +80,7 @@ html_theme_options = {
 
 # Sphinx extensions
 extensions = [
-    # "sphinx.ext.napoleon",
+    # "sphinx.ext.napoleon",  # Use this if you want to use Google style docstrings
     "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -90,7 +90,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_gallery.gen_gallery",
-    # "ansys_sphinx_theme",
 ]
 
 autoapi_options = [
@@ -138,14 +137,19 @@ numpydoc_validation_checks = {
 
 # -- Sphinx Gallery Options
 examples_source = os.path.join(os.path.dirname(__file__), "examples_source")
+sls_examples_source = os.path.join(os.path.dirname(__file__), "serverless", "examples")
 
 sphinx_gallery_conf = {
     # convert rst to md for ipynb
     "pypandoc": False,
     # path to your examples scripts
-    "examples_dirs": [examples_source],
+    "examples_dirs": [
+        examples_source,
+    ],
     # path where to save gallery generated examples
-    "gallery_dirs": ["examples"],
+    "gallery_dirs": [
+        "examples",
+    ],
     # Pattern to search for example files
     "filename_pattern": r"\.py",
     # Remove the "Download all examples" button from the top level gallery

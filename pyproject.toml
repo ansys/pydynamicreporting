@@ -1,22 +1,13 @@
-[build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools>=75.8.0",
-    "setuptools-scm",
-    "wheel>=0.37.0",
-    "pre-commit==4.0.1",
-]
-
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.0.dev0"
+version = "0.10.2.dev1"
 authors = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
 ]
 
 maintainers = [
     {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "nexus@ansys.com"},
+    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
@@ -36,7 +27,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "filelock>=3.7.1",
     "docker>=7.1.0",
     "pypng>=0.20220715.0",
     "requests>=2.32",
@@ -44,8 +34,7 @@ dependencies = [
     "Pillow>=9.3.0",
     "python-dateutil>=2.8.0",
     "pytz>=2021.3",
-    "packaging>=21.0",
-    "build>=0.8.0",
+    "psutil>=6.0.0",
     # core ADR dependencies
     "django~=4.2",
     "djangorestframework~=3.15",
@@ -55,8 +44,10 @@ dependencies = [
     "python-pptx==0.6.19",
     "pandas>=2.0",
     "statsmodels>=0.14",
+    "scipy<=1.15.3",  # breaks ADR if not included. Remove when statsmodels is updated
     "docutils>=0.21",
     "psycopg[binary]>=3.2.3",
+    "qtpy>=2.4.3"
 ]
 
 [tool.setuptools.packages.find]
@@ -75,26 +66,16 @@ ci =  "https://github.com/ansys/pydynamicreporting/actions"
 test = [
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
-    "psutil==6.0.0",
-]
-test-extra = [
-    "docker>=7.1.0",
-    "psutil==6.0.0",
-    "exceptiongroup==1.0.0",
-    "pytest>=8.3.3",
-    "pytest-cov>=6.0.0",
-    "pyvista==0.44.1",
-    "vtk==9.4.0",
-    "ansys-dpf-core==0.13.0",
+    "pyvista==0.45.3",
+    "vtk==9.4.2",
+    "ansys-dpf-core==0.14.1",
 ]
 doc = [
-    "ansys-sphinx-theme==1.1.1",
-    "numpydoc==1.8.0",
-    "pillow==10.4.0",
-    "docker>=7.1.0",
-    "Sphinx==8.0.2",
-    "sphinx-copybutton==0.5.2",
-    "sphinx-gallery==0.18.0",
+    "ansys-sphinx-theme>=1.1.1",
+    "numpydoc>=1.8.0",
+    "Sphinx>=8.0.2",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-gallery>=0.18.0",
 ]
 dev = [
     "build",
@@ -102,21 +83,16 @@ dev = [
     "twine",
     "ipdb",
     "ipython",
-    "whatsonpypi",
-    "ansys-sphinx-theme==1.1.1",
-    "numpy>=1.23.5,<3",
-    "numpydoc==1.8.0",
-    "pillow==10.4.0",
-    "psutil==6.0.0",
-    "docker>=7.1.0",
-    "pytest>=8.3.3",
-    "pytest-cov>=6.0.0",
-    "Sphinx==8.0.2",
-    "sphinx-copybutton==0.5.2",
-    "sphinx-gallery==0.18.0",
     "pre-commit>=4.0.1",
     "black>=25.0.0",
     "isort>=6.0.0",
+]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=75.8.0",
+    "setuptools-scm",
 ]
 
 [tool.pytest.ini_options]
@@ -161,7 +137,7 @@ src_paths = ["doc", "src", "tests"]
 
 [tool.codespell]
 ignore-words = "doc/styles/Vocab/ANSYS/accept.txt"
-skip = '*.pyc,*.xml,*.gif,*.png,*.jpg,*.js,*.html,doc/source/examples/**/*.ipynb'
+skip = '*.pyc,*.xml,*.gif,*.png,*.jpg,*.js,*.html,doc/source/examples/**/*.ipynb,*.json,*.gz'
 quiet-level = 3
 
 [tool.bandit]
