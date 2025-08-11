@@ -54,6 +54,15 @@ Create a basic template to structure the report.
     template.set_filter("A|i_tags|cont|section=intro;")
     template.save()
 
+Loading Templates from a JSON file
+----------------------------------
+
+You can load a report with multiple templates from an existing JSON file.
+
+.. code-block:: python
+
+    adr.load_templates_from_file("my_report.json")
+
 Rendering the Report
 --------------------
 
