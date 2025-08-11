@@ -409,7 +409,7 @@ class Template(BaseModel):
 
     def reorder_child(self, target_child_template: "Template", new_position: int) -> None:
         """
-        Reorder the target template in the children list to the specified position.
+        Reorder the target template in the `children` list to the specified position.
 
         Parameters
         ----------
