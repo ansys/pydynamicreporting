@@ -390,7 +390,7 @@ class Template(BaseModel):
         templates_data, _, _ = self._to_dict()
         return templates_data
 
-    def to_json_file(self, filename: str) -> None:
+    def to_json(self, filename: str) -> None:
         """
         Store the template as a JSON file.
         Only allow this action if this template is a root template.

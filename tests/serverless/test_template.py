@@ -1074,7 +1074,7 @@ def test_to_json(adr_serverless):
     )
 
     file_path = os.path.join(adr_serverless.static_directory, "test.json")
-    root.to_json_file(file_path)
+    root.to_json(file_path)
 
     with open(file_path, encoding="utf-8") as json_file:
         data = json.load(json_file)
@@ -1114,4 +1114,4 @@ def test_to_json_non_root_template(adr_serverless):
 
     # Attempt to call to_json on the child template and expect an ADRException
     with pytest.raises(ADRException, match="Only root templates can be dumped to JSON files."):
-        child_template.to_json_file("dummy_path.json")
+        child_template.to_json("dummy_path.json")
