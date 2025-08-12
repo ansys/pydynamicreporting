@@ -199,14 +199,6 @@ class ADR:
                             # And make a target file (.nexdb) for auto launching of the report viewer...
                             with open(self._db_directory / "view_report.nexdb", "w") as f:
                                 f.write(secret_key)
-                    else:
-                        # check if there is a sqlite db in the directory
-                        db_files = list(self._db_directory.glob("*.sqlite3"))
-                        if not db_files:
-                            raise InvalidPath(
-                                extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
-                                " you would like to create a new database."
-                            )
 
                     os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
                 elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
@@ -440,8 +432,21 @@ class ADR:
             overrides["DEBUG"] = self._debug
 
         overrides["MEDIA_ROOT"] = str(self._media_directory)
+
         if self._static_directory is not None:
+            # collect static files to this directory
             overrides["STATIC_ROOT"] = str(self._static_directory)
+            # collect static files from here
+            # Replace STATICFILES_DIRS to point only to the pre-collected directory in the Ansys installation.
+            source_static_dir = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
+            )
+            if not source_static_dir.exists():
+                raise ImproperlyConfiguredError(
+                    f"The static files directory '{source_static_dir}' does not exist in the installation. "
+                    "Please check your Ansys installation and version."
+                )
+            overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
 
         # relative URLs: By default, ADR serves static files from the URL /static/
         # and media files from the URL /media/. These can be changed using the

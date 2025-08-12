@@ -86,6 +86,14 @@ class MissingReportError(ADRException):
     detail = "Can not find the corresponding report."
 
 
+class TemplateDoesNotExist(ADRException):
+    """Raised when the template is not found"""
+
+
+class TemplateReorderOutOfBounds(ADRException):
+    """Raised when a template is reordered to be out of the size of the children"""
+
+
 """Serverless exceptions."""
 
 

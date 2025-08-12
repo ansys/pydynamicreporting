@@ -2,7 +2,11 @@ from uuid import uuid4
 
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.exceptions import (
+    ADRException,
+    TemplateDoesNotExist,
+    TemplateReorderOutOfBounds,
+)
 
 
 @pytest.mark.ado_test
@@ -1115,3 +1119,40 @@ def test_to_json_non_root_template(adr_serverless):
     # Attempt to call to_json on the child template and expect an ADRException
     with pytest.raises(ADRException, match="Only root templates can be dumped to JSON files."):
         child_template.to_json("dummy_path.json")
+
+
+@pytest.mark.ado_test
+def test_template_reorder_child(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    # Create a parent template
+    parent_template = PanelLayout.create(name="ParentTemplate")
+
+    # Create child templates
+    child1 = PanelLayout.create(name="Child1", parent=parent_template)
+    child2 = PanelLayout.create(name="Child2", parent=parent_template)
+    child3 = PanelLayout.create(name="Child3", parent=parent_template)
+
+    # Add children to the parent template
+    parent_template.children = [child1, child2, child3]
+
+    # Reorder child2 to the first position
+    parent_template.reorder_child(child2, 0)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child1", "Child3"]
+
+    # Reorder child3 to the second position
+    parent_template.reorder_child(child3, 1)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child3", "Child1"]
+
+    # Reorder child1 to the last position
+    parent_template.reorder_child(child1, 2)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child3", "Child1"]
+
+    # Test invalid position (out of bounds)
+    with pytest.raises(TemplateReorderOutOfBounds):
+        parent_template.reorder_child(child1, 5)
+
+    # Test invalid child (not in children)
+    invalid_child = PanelLayout.create(name="InvalidChild")
+    with pytest.raises(TemplateDoesNotExist):
+        parent_template.reorder_child(invalid_child, 1)
