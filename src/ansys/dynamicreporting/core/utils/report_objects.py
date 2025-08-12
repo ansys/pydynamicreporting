@@ -445,13 +445,10 @@ class Template:
         # ok, re-order the children list to match the order in children_order
         sorted_guids = self.children_order.lower().split(",")
         sorted_guids.reverse()
-        for guid in sorted_guids:
-            idx = 0
-            for childguid in self.children:
-                if guid == str(childguid).lower():
-                    self.children.insert(0, self.children.pop(idx))
-                    break
-                idx += 1
+        lower_guid_to_child = {str(child).lower(): child for child in self.children}
+        self.children = [
+            lower_guid_to_child[guid] for guid in sorted_guids if guid in lower_guid_to_child
+        ]
         # Instance specific initialization
         # this may have changed the guid, so
         if tmpguid != self.guid:
@@ -1461,15 +1458,10 @@ class TemplateREST(BaseRESTObject):
     def reorder_children(self):
         sorted_guids = self.children_order.lower().split(",")
         sorted_guids.reverse()
-        # return the children based on the order of guids in children_order
-        for guid in sorted_guids:
-            if len(guid):
-                idx = 0
-                for child in self.children:
-                    if guid == str(child).lower():
-                        self.children.insert(0, self.children.pop(idx))
-                        break
-                    idx += 1
+        lower_guid_to_child = {str(child).lower(): child for child in self.children}
+        self.children = [
+            lower_guid_to_child[guid] for guid in sorted_guids if guid in lower_guid_to_child
+        ]
 
     @classmethod
     def get_url_base_name(cls):
