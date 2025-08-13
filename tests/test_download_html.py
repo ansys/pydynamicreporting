@@ -44,7 +44,8 @@ def test_download_sqlite(request, adr_service_query) -> None:
     try:
         a.download()
         success = False
-    except Exception:
+    except Exception as e:
+        print(f"Download failed as expected with exception: {str(e)}")
         success = True
     assert success
 

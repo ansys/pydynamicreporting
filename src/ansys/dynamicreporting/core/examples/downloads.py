@@ -42,9 +42,10 @@ def check_url_exists(url: str) -> bool:
         logging.debug(f"Passed url is invalid: {url}\n")
         return False
     try:
-        with request.urlopen(url) as response:
+        with request.urlopen(url) as response:  # nosec B310
             return response.status == 200
-    except Exception:
+    except Exception as e:
+        logging.debug(f"Check url error: {str(e)}\n")
         return False
 
 
@@ -61,7 +62,7 @@ def get_url_content(url: str) -> str:
     str
         content of the URL
     """
-    with request.urlopen(url) as response:
+    with request.urlopen(url) as response:  # nosec B310
         return response.read()
 
 

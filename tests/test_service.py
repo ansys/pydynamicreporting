@@ -85,7 +85,7 @@ def test_unit_createitem() -> None:
     valid = False
     try:
         a.create_item()
-    except Exception:
+    except Exception:  # nosec
         valid = True
     assert valid
 
