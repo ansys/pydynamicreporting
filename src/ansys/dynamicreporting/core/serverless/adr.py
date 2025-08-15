@@ -379,39 +379,38 @@ class ADR:
 
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+
         # look for enve, but keep it optional.
         try:
             import enve
         except ImportError:
-            pf = "winx64" if platform.system().startswith("Wind") else "linx64"
-            dirs_to_check = [
-                # Path('C:/Program Files/ANSYS Inc/v252/CEI').parent is "C:/Program Files/ANSYS Inc/v252"
-                self._ansys_installation.parent / "commonfiles" / "ensight_components" / pf,
-                # for older versions < 2025R1
-                self._ansys_installation.parent
-                / "commonfiles"
-                / "fluids"
-                / "ensight_components"
-                / pf,
-            ]
+            if platform.system().startswith("Wind"):
+                enve_path = (
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "win64"
+                    / f"Python-{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+                    / "DLLs"
+                )
+            else:  # TODO
+                enve_path = (
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "linux_2.6_64"
+                    / f"Python-{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+                    / "DLLs"
+                )
             try:
-                for enve_path in dirs_to_check:
-                    try:
-                        enve_path.resolve(strict=True)
-                        sys.path.append(str(enve_path))
-                        break
-                    except OSError:
-                        continue
+                enve_path.resolve(strict=True)
+                sys.path.append(str(enve_path))
 
-                from enve_common import enve
-            except ImportError as e:
-                self._logger.warning(
-                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
-                )
-                warnings.warn(
-                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}",
-                    ImportWarning,
-                )
+                import enve
+            except Exception as e:
+                msg = f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
+                self._logger.warning(msg)
+                warnings.warn(msg, ImportWarning)
 
         # import hack
         try:
