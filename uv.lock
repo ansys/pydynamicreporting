@@ -134,7 +134,7 @@ requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.0" },
     { name = "python-pptx", specifier = "==0.6.19" },
     { name = "pytz", specifier = ">=2021.3" },
-    { name = "pyvista", marker = "extra == 'test'", specifier = "==0.45.3" },
+    { name = "pyvista", marker = "extra == 'test'", specifier = "==0.46.1" },
     { name = "qtpy", specifier = ">=2.4.3" },
     { name = "requests", specifier = ">=2.32" },
     { name = "scipy", specifier = "<=1.15.3" },
@@ -2229,7 +2229,7 @@ wheels = [
 
 [[package]]
 name = "pyvista"
-version = "0.45.3"
+version = "0.46.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
@@ -2241,9 +2241,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "vtk" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/ab/d554f15474ed230a974797ff700eff330beedb9f7f685e827fdc08c8d76e/pyvista-0.45.3.tar.gz", hash = "sha256:bca39f5ea17e45f40070ab45423dfd2c4fc81c33e0fb565bafded81c024fd04f", size = 2362488, upload-time = "2025-07-16T22:24:25.948Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/cd/5a9875870eb814573cf5c3e20b1288a0db9042f0812a8f836095e983b41d/pyvista-0.46.1.tar.gz", hash = "sha256:19c13a6d3442fb30c52025a22ecc604b490166178f7f438a31d12fe4656bc583", size = 2397890, upload-time = "2025-08-11T11:00:32.799Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/1d/05963ab86babcd9e90b8ee6e89c14de0f49731d539f84dff70f4947defa4/pyvista-0.45.3-py3-none-any.whl", hash = "sha256:a38109c67e47b46f8c7f31bdf5786e7265bea2785fbf469dd822f2e814c3bf1c", size = 2412567, upload-time = "2025-07-16T22:24:24.13Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/2f/e1311187669fc09e1728630f29068b20095242ffd9af157019ecdb738874/pyvista-0.46.1-py3-none-any.whl", hash = "sha256:9c0aa4d06c6db1244f845a4968d06d0960ff9a2fffb44816e0192f3fceff0d5e", size = 2448354, upload-time = "2025-08-11T11:00:31.043Z" },
 ]
 
 [[package]]
