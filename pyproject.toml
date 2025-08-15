@@ -48,7 +48,7 @@ dependencies = [
     "docutils>=0.21",
     "psycopg[binary]>=3.2.3",
     "qtpy>=2.4.3",
-    "lark>=1.2.2",
+    "lark>=1.2.2,<2",
 ]
 
 [tool.setuptools.packages.find]

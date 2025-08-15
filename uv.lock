@@ -119,7 +119,7 @@ requires-dist = [
     { name = "ipdb", marker = "extra == 'dev'" },
     { name = "ipython", marker = "extra == 'dev'" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "lark", specifier = ">=1.2.2" },
+    { name = "lark", specifier = ">=1.2.2,<2" },
     { name = "numpy", specifier = ">=1.23.5,<2" },
     { name = "numpydoc", marker = "extra == 'doc'", specifier = ">=1.8.0" },
     { name = "packaging", marker = "extra == 'dev'" },
