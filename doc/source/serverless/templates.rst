@@ -99,6 +99,9 @@ Common methods include:
 - ``set_property(props_dict)``: Replace the “properties” dictionary.
 - ``add_property(props_dict)``: Add/update keys within the “properties” dictionary.
 - ``render(context=None, item_filter="", request=None)``: Render the template to HTML string.
+- ``to_dict()``: Returns a JSON-serializable dictionary of the full template tree.
+- ``to_json(filename)``: Store the template as a JSON file. Only allow this action if this template is a root template.
+- ``reorder_child(target_child_template, new_position_index)``: Reorder the target template in the `children` list to the specified position.
 
 Template Parameters
 -------------------
@@ -284,6 +287,15 @@ Example: Creating a Nested Template Structure
     results_panel.params = '{"HTML": "<h2>Results</h2><p>Simulation data and figures.</p>"}'
     results_panel.set_filter("A|i_tags|cont|section=results;")
     results_panel.save()
+
+Loading Templates from a JSON file
+----------------------------------
+
+You can load a report with multiple templates from an existing JSON file.
+
+.. code-block:: python
+
+    adr.load_templates_from_file("my_report.json")
 
 Rendering Templates
 -------------------
