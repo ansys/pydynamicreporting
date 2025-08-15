@@ -1,0 +1,325 @@
+:orphan:
+
+
+.. _gallery:
+
+This section provides usage examples for PyDynamicReporting.
+
+
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+Examples
+--------
+
+Introductory examples show how to use PyDynamicReporting to create or connect to
+an Ansys Dynamic Reporting service, create a database for a new service, and
+create and visualize items in a database.
+
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="To launch the service, provide an Ansys installation directory as a string. You can provide an existing, empty, directory if you intend to create a database.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_00-launch-reporting-service_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_00-launch-reporting-service.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Launching the Ansys Dynamic Reporting Service</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows how to use PyDynamicReporting to create an Ansys Dynamic Reporting service, create a database for this service, and create items in this database.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_01-create_db_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_01-create_db.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Create a database and populate it</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows how to start an Ansys Dynamic Reporting service via a Docker image, create a second instance of the Service class, and connect it to the already running service. It then shows how to create and modify items in the original database with this new instance.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_02-connect_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_02-connect.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Connect services</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows how to start an Ansys Dynamic Reporting service via a Docker image and create different plot items. The example focuses on showing how to use the API to generate different plot types.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_03-plottype_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_03-plottype.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Plot types</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="When working with a table, you can turn it into a plot by specifying the plot type through the plot property. Once a table is converted you can alter all sorts of plot properties by accessing properties on the item object.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_04-set-plot-properties_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_04-set-plot-properties.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">How to set plot properties</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="When working with a table, you can turn it into a plot by specifying the plot type through the plot property. This example demonstrates a variety of the possible plot properties available.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_05-explore-plot-properties_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_05-explore-plot-properties.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Explore plot properties</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Templates are used to specify how the final report will be organised. They can be nested to describe the layout of subsections in greater detail.">
+
+.. only:: html
+
+  .. image:: /examples/00-basic/images/thumb/sphx_glr_06-create-report-templates_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_00-basic_06-create-report-templates.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Creating report templates</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+Intermediate examples
+=====================
+
+Intermediate examples show how to use PyDynamicReporting
+to query an Ansys Dynamic Reporting database, modify its items,
+and get their corresponding web components.
+
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Tagging is an important feature of Ansys Dynamic Reporting. Adding tags to items allows the database to organize them and the templates to create reports in a precise and effective manner. This example shows how to add, modify, query, and delete tags on items.">
+
+.. only:: html
+
+  .. image:: /examples/25-intermediate/images/thumb/sphx_glr_00-tagging_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_25-intermediate_00-tagging.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Tagging</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="The Ansys Dynamic Reporting database can contain any number of items, from a few to tens of thousands. To handle all this data, the queryansys.dynamicreporting.core.Service.query&gt; method allows you to quickly slice the database to select a subset of items.">
+
+.. only:: html
+
+  .. image:: /examples/25-intermediate/images/thumb/sphx_glr_01-queries_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_25-intermediate_01-queries.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Item queries</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Ansys Dynamic Reporting provides a seamless solution for serializing and deserializing report templates. It allows you to export templates as local JSON files and rebuild them through JSON imports. This section describes the process of converting a report template and loading it back in.">
+
+.. only:: html
+
+  .. image:: /examples/25-intermediate/images/thumb/sphx_glr_02-json_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_25-intermediate_02-json.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Import or export report template using JSON</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+Advanced examples
+=================
+
+Advanced examples show how to use the low-level API in Ansys
+Dynamic Reporting to create, query, visualize, and embed reports based on
+customers case studies.
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="To use PyDynamicReporting to build a report from scratch, you start a new Ansys Dynamic Reporting instance on a new database, populate it, amd generate a report template. As a result, you get a report.">
+
+.. only:: html
+
+  .. image:: /examples/50-advanced/images/thumb/sphx_glr_00-complete_report_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_50-advanced_00-complete_report.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Create a report from scratch</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Use a single database and report template for multiple simluation results.">
+
+.. only:: html
+
+  .. image:: /examples/50-advanced/images/thumb/sphx_glr_01-two_simulation_same_db_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_50-advanced_01-two_simulation_same_db.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Multiple simulations in same database</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Applying the new custom web component &lt;adr-report&gt;&lt;/adr-report&gt; as an alternative of using &lt;iframe&gt;&lt;/iframe&gt; to fetch and embed a report in the external web application.">
+
+.. only:: html
+
+  .. image:: /examples/50-advanced/images/thumb/sphx_glr_02-customized_report_embed_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_50-advanced_02-customized_report_embed.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Embed report and overwrite styles</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+   :includehidden:
+
+
+   /examples/00-basic/index.rst
+   /examples/25-intermediate/index.rst
+   /examples/50-advanced/index.rst
+
+
+
+.. only:: html
+
+ .. rst-class:: sphx-glr-signature
+
+    `Gallery generated by Sphinx-Gallery <https://sphinx-gallery.github.io>`_
