@@ -400,7 +400,9 @@ class ADR:
                     / "machines"
                     / "linux_2.6_64"
                     / f"Python-{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-                    / "DLLs"
+                    / "lib"
+                    / f"python{sys.version_info.major}.{sys.version_info.minor}"
+                    / "site-packages"
                 )
             try:
                 enve_path.resolve(strict=True)
