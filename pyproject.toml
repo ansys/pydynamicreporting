@@ -2,18 +2,18 @@
 name = "ansys-dynamicreporting-core"
 version = "0.10.2.dev1"
 authors = [
-    {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
 ]
 
 maintainers = [
-    {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
+    { name = "Ansys ADR Team", email = "adrteam@ansys.com" },
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
 requires-python = ">=3.10"
 keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -40,7 +40,8 @@ dependencies = [
     "djangorestframework~=3.15",
     "django-guardian~=2.4",
     "tzlocal~=5.0",
-    "numpy>=1.23.5,<2",
+    'numpy>=1.23.5,<2; python_version < "3.13"',
+    'numpy>=2.1; python_version >= "3.13"',
     "python-pptx==0.6.19",
     "pandas>=2.0",
     "statsmodels>=0.14",
@@ -58,10 +59,10 @@ include = ["ansys.dynamicreporting*"]
 [project.urls]
 homepage = "https://github.com/ansys/pydynamicreporting"
 documentation = "https://dynamicreporting.docs.pyansys.com/"
-changelog  = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.rst"
+changelog = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.rst"
 "Bug Tracker" = "https://github.com/ansys/pydynamicreporting/issues"
-repository =  "https://github.com/ansys/pydynamicreporting"
-ci =  "https://github.com/ansys/pydynamicreporting/actions"
+repository = "https://github.com/ansys/pydynamicreporting"
+ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
@@ -100,15 +101,15 @@ requires = [
 tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
 addopts = "--capture=tee-sys --tb=native -p no:warnings -vv"
-markers =[
+markers = [
     "integration:Run integration tests",
     "smoke:Run the smoke tests",
     "unit:Run the unit tests",
     "ado_test: subset of tests to be run in the ADO pipeline for ADR",
 ]
-norecursedirs =[
-  ".git",
-  ".idea",
+norecursedirs = [
+    ".git",
+    ".idea",
 ]
 filterwarnings = [
     "ignore:.+:DeprecationWarning"
@@ -147,4 +148,4 @@ recursive = true
 number = 3
 severity_level = "high"
 require_serial = true
-exclude_dirs = [ "venv/*","setup.py","test_cleanup.py","tests/*","doc/*" ]
+exclude_dirs = ["venv/*", "setup.py", "test_cleanup.py", "tests/*", "doc/*"]
