@@ -2,21 +2,8 @@ import base64
 import os
 from pathlib import Path
 import re
+from typing import Any
 
-# Import the shared constants and file lists
-from ..utils.html_export_constants import (
-    CONTEXT_MENU_JS,
-    DRACO_JS,
-    FONTS,
-    MATHJAX_FILES,
-    NEXUS_IMAGES,
-    THREE_JS,
-    VIEWER_IMAGES_OLD,
-    VIEWER_JS,
-    VIEWER_UTILS,
-)
-
-# Import the original class to reuse its static utility methods.
 from ..utils.report_download_html import ReportDownloadHTML
 
 
@@ -162,48 +149,124 @@ class ServerlessReportExporter:
     def _copy_special_files(self):
         """Copies all hardcoded static files required for the report to function offline."""
         # MathJax files
-        for f in MATHJAX_FILES:
+        mathjax_files = [
+            "website/scripts/mathjax/jax/input/TeX/config.js",
+            "website/scripts/mathjax/jax/input/MathML/config.js",
+            "website/scripts/mathjax/jax/input/AsciiMath/config.js",
+            "website/scripts/mathjax/extensions/tex2jax.js",
+            "website/scripts/mathjax/extensions/mml2jax.js",
+            "website/scripts/mathjax/extensions/asciimath2jax.js",
+            "website/scripts/mathjax/extensions/MathZoom.js",
+            "website/scripts/mathjax/extensions/MathMenu.js",
+            "website/scripts/mathjax/extensions/MathEvents.js",
+            "website/scripts/mathjax/jax/element/mml/jax.js",
+            "website/scripts/mathjax/jax/input/TeX/jax.js",
+            "website/scripts/mathjax/extensions/TeX/AMSmath.js",
+            "website/scripts/mathjax/extensions/TeX/AMSsymbols.js",
+            "website/scripts/mathjax/extensions/TeX/noErrors.js",
+            "website/scripts/mathjax/extensions/TeX/noUndefined.js",
+            "website/scripts/mathjax/config/TeX-AMS-MML_SVG.js",
+            "website/scripts/mathjax/jax/output/SVG/jax.js",
+            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
+            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
+            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
+            "website/images/MenuArrow-15.png",
+        ]
+        for f in mathjax_files:
+            # The target path is intentionally "mangled" to place MathJax assets in the
+            # media directory
             target_path = "media/" + f.split("mathjax/")[-1]
             self._copy_static_file(f, target_path)
 
-        for img in NEXUS_IMAGES + VIEWER_IMAGES_OLD:
+        # Nexus and old viewer images
+        nexus_images = [
+            "menu_20_gray.png",
+            "menu_20_white.png",
+            "nexus_front_page.png",
+            "nexus_logo.png",
+        ]
+        viewer_images_old = [
+            "ANSYS_blk_lrg.png",
+            "ANSYS_icon.png",
+            "ANSYS_wht_lrg.png",
+            "back.png",
+            "close.png",
+            "closed.png",
+            "favicon.png",
+            "Icons.png",
+            "open.png",
+            "Point.cur",
+        ]
+        for img in nexus_images + viewer_images_old:
             self._copy_static_file(f"website/images/{img}", f"media/{img}")
 
-        viewer_images_new = VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]
+        # Modern viewer assets
+        viewer_images_new = viewer_images_old + ["proxy_viewer.png", "play.png"]
         self._copy_static_files(
             viewer_images_new,
             f"ansys{self._ansys_version}/nexus/images/",
             f"ansys{self._ansys_version}/nexus/images/",
         )
+        viewer_utils = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._copy_static_files(
-            VIEWER_UTILS,
+            viewer_utils,
             f"ansys{self._ansys_version}/nexus/utils/",
             f"ansys{self._ansys_version}/nexus/utils/",
         )
+        viewer_js = ["ANSYSViewer_min.js", "viewer-loader.js"]
         self._copy_static_files(
-            VIEWER_JS, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
+            viewer_js, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
         )
+        context_menu_js = [
+            "jquery.contextMenu.min.css",
+            "jquery.contextMenu.min.js",
+            "jquery.ui.position.min.js",
+        ]
         self._copy_static_files(
-            CONTEXT_MENU_JS,
+            context_menu_js,
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
         )
+        three_js = [
+            "ArcballControls.js",
+            "DRACOLoader.js",
+            "GLTFLoader.js",
+            "OrbitControls.js",
+            "OBJLoader.js",
+            "three.js",
+            "VRButton.js",
+        ]
         self._copy_static_files(
-            THREE_JS,
+            three_js,
             f"ansys{self._ansys_version}/nexus/threejs/",
             f"ansys{self._ansys_version}/nexus/threejs/",
         )
+        draco_js = [
+            "draco_decoder.js",
+            "draco_decoder.wasm",
+            "draco_encoder.js",
+            "draco_wasm_wrapper.js",
+        ]
         self._copy_static_files(
-            DRACO_JS,
+            draco_js,
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/",
         )
         self._copy_static_files(
-            DRACO_JS,
+            draco_js,
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
         )
-        self._copy_static_files(FONTS, "website/webfonts/", "webfonts/")
+
+        # Fonts
+        fonts = [
+            "fa-solid-900.eot",
+            "fa-solid-900.svg",
+            "fa-solid-900.ttf",
+            "fa-solid-900.woff",
+            "fa-solid-900.woff2",
+        ]
+        self._copy_static_files(fonts, "website/webfonts/", "webfonts/")
 
     def _copy_static_file(self, source_rel_path: str, target_rel_path: str):
         """Helper to copy a single file from the static source to the output directory."""
