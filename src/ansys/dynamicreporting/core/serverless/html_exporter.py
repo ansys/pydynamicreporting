@@ -329,7 +329,7 @@ class ServerlessReportExporter:
 
         # Base64 encoding increases file size by a factor of 4/3. This calculation
         # estimates the new size to check against the inlining limit. Using float
-        # division is crucial for accuracy, to fix the original bug with integer division.
+        # division is crucial for accuracy, as integer division would underestimate the size.
         estimated_inline_size = int(len(content) * (4 / 3))
 
         if (inline or ReportDownloadHTML.is_scene_file(simple_path)) and self._should_use_data_uri(
