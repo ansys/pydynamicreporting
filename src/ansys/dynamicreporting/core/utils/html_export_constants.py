@@ -2,7 +2,7 @@
 # and serverless HTML export implementations to avoid code duplication.
 
 # Default Ansys version to use as a fallback.
-ANSYS_VERSION_FALLBACK = "242"
+ANSYS_VERSION_FALLBACK = "261"
 
 # Image files for the general Nexus UI.
 NEXUS_IMAGES = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
