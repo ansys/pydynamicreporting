@@ -385,31 +385,53 @@ class ADR:
             import enve
         except ImportError:
             if platform.system().startswith("Wind"):
-                enve_path = (
+                dirs_to_check = [
+                    # Windows path from apex folder
                     self._ansys_installation
                     / f"apex{self._ansys_version}"
                     / "machines"
                     / "win64"
-                    / f"Python-{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-                    / "DLLs"
-                )
-            else:  # TODO
-                enve_path = (
+                    / "CEI",
+                    # Windows path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "ensight_components"
+                    / "winx64",
+                    # Old Windows path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "fluids"
+                    / "ensight_components"
+                    / "winx64",
+                ]
+            else:  # Linux
+                dirs_to_check = [
+                    # New Linux path from apex folder
                     self._ansys_installation
                     / f"apex{self._ansys_version}"
                     / "machines"
                     / "linux_2.6_64"
-                    / f"Python-{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-                    / "lib"
-                    / f"python{sys.version_info.major}.{sys.version_info.minor}"
-                    / "site-packages"
-                )
+                    / "CEI",
+                    # New Linux path from commonfiles
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "ensight_components"
+                    / "linx64",
+                    # Old Linux path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "fluids"
+                    / "ensight_components"
+                    / "linx64",
+                ]
             try:
-                enve_path.resolve(strict=True)
-                sys.path.append(str(enve_path))
+                for path in dirs_to_check:
+                    if path.is_dir():
+                        sys.path.append(str(path))
+                        break
 
-                import enve
-            except Exception as e:
+                from enve_common import enve
+            except ImportError as e:
                 msg = f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
                 self._logger.warning(msg)
                 warnings.warn(msg, ImportWarning)
