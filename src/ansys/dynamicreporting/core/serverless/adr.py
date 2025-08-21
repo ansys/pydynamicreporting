@@ -424,17 +424,26 @@ class ADR:
                     / "ensight_components"
                     / "linx64",
                 ]
-            try:
-                for path in dirs_to_check:
-                    if path.is_dir():
-                        sys.path.append(str(path))
-                        break
 
-                from enve_common import enve
-            except ImportError as e:
-                msg = f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
-                self._logger.warning(msg)
-                warnings.warn(msg, ImportWarning)
+            module_found = False
+            for path in dirs_to_check:
+                if path.is_dir():
+                    sys.path.append(str(path))
+                    module_found = True
+                    break
+
+            if module_found:
+                try:
+                    # First, attempt the `from enve_common import enve` style
+                    from enve_common import enve
+                except ImportError:
+                    try:
+                        # If that fails, attempt a direct `import enve`
+                        import enve
+                    except ImportError as e:
+                        msg = f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
+                        self._logger.warning(msg)
+                        warnings.warn(msg, ImportWarning)
 
         # import hack
         try:
