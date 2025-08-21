@@ -394,7 +394,7 @@ class ReportDownloadHTML:
             if (
                 ("/media/" in block)
                 or ("/static/" in block)
-                or (re.search(r"/ansys\d+/", block))  # Use re.search to find pattern anywhere
+                or (ANSYS_PATH_REGEX.search(block))  # Use compiled regex to find pattern anywhere
             ):
                 return idx1, idx2, block
 
