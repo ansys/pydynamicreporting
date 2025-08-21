@@ -4,6 +4,17 @@ from pathlib import Path
 import re
 from typing import Any
 
+# Import the shared constants and file lists
+from ..utils.html_export_constants import (
+    CONTEXT_MENU_JS,
+    DRACO_JS,
+    FONTS,
+    NEXUS_IMAGES,
+    THREE_JS,
+    VIEWER_IMAGES_OLD,
+    VIEWER_JS,
+    VIEWER_UTILS,
+)
 from ..utils.report_download_html import ReportDownloadHTML
 
 
@@ -179,94 +190,47 @@ class ServerlessReportExporter:
             self._copy_static_file(f, target_path)
 
         # Nexus and old viewer images
-        nexus_images = [
-            "menu_20_gray.png",
-            "menu_20_white.png",
-            "nexus_front_page.png",
-            "nexus_logo.png",
-        ]
-        viewer_images_old = [
-            "ANSYS_blk_lrg.png",
-            "ANSYS_icon.png",
-            "ANSYS_wht_lrg.png",
-            "back.png",
-            "close.png",
-            "closed.png",
-            "favicon.png",
-            "Icons.png",
-            "open.png",
-            "Point.cur",
-        ]
-        for img in nexus_images + viewer_images_old:
+        for img in NEXUS_IMAGES + VIEWER_IMAGES_OLD:
             self._copy_static_file(f"website/images/{img}", f"media/{img}")
 
         # Modern viewer assets
-        viewer_images_new = viewer_images_old + ["proxy_viewer.png", "play.png"]
+        viewer_images_new = VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]
         self._copy_static_files(
             viewer_images_new,
             f"ansys{self._ansys_version}/nexus/images/",
             f"ansys{self._ansys_version}/nexus/images/",
         )
-        viewer_utils = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._copy_static_files(
-            viewer_utils,
+            VIEWER_UTILS,
             f"ansys{self._ansys_version}/nexus/utils/",
             f"ansys{self._ansys_version}/nexus/utils/",
         )
-        viewer_js = ["ANSYSViewer_min.js", "viewer-loader.js"]
         self._copy_static_files(
-            viewer_js, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
+            VIEWER_JS, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
         )
-        context_menu_js = [
-            "jquery.contextMenu.min.css",
-            "jquery.contextMenu.min.js",
-            "jquery.ui.position.min.js",
-        ]
         self._copy_static_files(
-            context_menu_js,
+            CONTEXT_MENU_JS,
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
         )
-        three_js = [
-            "ArcballControls.js",
-            "DRACOLoader.js",
-            "GLTFLoader.js",
-            "OrbitControls.js",
-            "OBJLoader.js",
-            "three.js",
-            "VRButton.js",
-        ]
         self._copy_static_files(
-            three_js,
+            THREE_JS,
             f"ansys{self._ansys_version}/nexus/threejs/",
             f"ansys{self._ansys_version}/nexus/threejs/",
         )
-        draco_js = [
-            "draco_decoder.js",
-            "draco_decoder.wasm",
-            "draco_encoder.js",
-            "draco_wasm_wrapper.js",
-        ]
         self._copy_static_files(
-            draco_js,
+            DRACO_JS,
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/",
         )
         self._copy_static_files(
-            draco_js,
+            DRACO_JS,
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
         )
 
         # Fonts
-        fonts = [
-            "fa-solid-900.eot",
-            "fa-solid-900.svg",
-            "fa-solid-900.ttf",
-            "fa-solid-900.woff",
-            "fa-solid-900.woff2",
-        ]
-        self._copy_static_files(fonts, "website/webfonts/", "webfonts/")
+        self._copy_static_files(FONTS, "website/webfonts/", "webfonts/")
 
     def _copy_static_file(self, source_rel_path: str, target_rel_path: str):
         """Helper to copy a single file from the static source to the output directory."""
