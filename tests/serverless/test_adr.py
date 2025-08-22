@@ -165,6 +165,16 @@ def test_set_default_dataset_no_dataset(adr_serverless):
 
 
 @pytest.mark.ado_test
+def get_static_url(adr_serverless):
+    assert adr_serverless.static_url == "/static/"
+
+
+@pytest.mark.ado_test
+def get_media_url(adr_serverless):
+    assert adr_serverless.media_url == "/media/"
+
+
+@pytest.mark.ado_test
 def test_create_html(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
@@ -1063,7 +1073,7 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_export_report_no_static_dir_fails(adr_serverless, tmp_path, monkeypatch):
+def test_export_report_html_no_static_dir_fails(adr_serverless, tmp_path, monkeypatch):
     """
     Ensures that the export fails with a configuration error if the
     static directory has not been set on the ADR instance.
@@ -1081,7 +1091,7 @@ def test_export_report_no_static_dir_fails(adr_serverless, tmp_path, monkeypatch
 
 
 @pytest.mark.ado_test
-def test_export_report_no_kwarg_fails(adr_serverless, tmp_path):
+def test_export_report_html_no_kwarg_fails(adr_serverless, tmp_path):
     """
     Ensures that the export fails if no keyword argument (like 'name' or 'guid')
     is provided to find the template.
