@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
 from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath

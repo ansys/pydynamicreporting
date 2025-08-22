@@ -412,7 +412,7 @@ Example using the ADR entrypoint:
     # Export the report as a directory with linked assets
     output_path = adr.export_report_as_html(
         output_directory=export_dir,
-        name="Wing Simulation Report", # kwarg to find the template
+        name="Wing Simulation Report",  # kwarg to find the template
         context={"key": "value"},
         item_filter="A|i_tags|cont|project=wing_sim;",
     )
