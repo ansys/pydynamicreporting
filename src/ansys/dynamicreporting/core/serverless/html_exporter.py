@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 from typing import Any
 
+from ..adr_utils import get_logger
+
 # Import the shared constants and file lists
 from ..utils.html_export_constants import (
     CONTEXT_MENU_JS,
@@ -51,7 +53,7 @@ class ServerlessReportExporter:
         self._media_dir = media_dir
         self._filename = filename
         self._debug = debug
-        self._logger = logger
+        self._logger = logger or get_logger()
         self._single_file = single_file
         self._ansys_version = ansys_version
 

@@ -3,10 +3,9 @@ from pathlib import Path
 
 import pytest
 
+from ansys.dynamicreporting.core.adr_utils import get_logger
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
-from ansys.dynamicreporting.core.utils.html_export_constants import (
-    ANSYS_VERSION_FALLBACK,
-)
+from ansys.dynamicreporting.core.utils.html_export_constants import ANSYS_VERSION_FALLBACK
 
 
 # Fixture to create a temporary directory structure for testing the exporter
