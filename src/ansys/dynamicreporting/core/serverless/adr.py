@@ -1047,6 +1047,7 @@ class ADR:
             single_file=single_file,
             ansys_version=str(self._ansys_version),
             debug=self._debug,
+            logger=self._logger,
         )
         exporter.export()
 

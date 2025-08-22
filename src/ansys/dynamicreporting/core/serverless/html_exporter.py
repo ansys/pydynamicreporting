@@ -40,6 +40,7 @@ class ServerlessReportExporter:
         single_file: bool = False,
         ansys_version: str = None,
         debug: bool = False,
+        logger: Any = None,
     ):
         """
         Initializes the serverless exporter.
@@ -50,6 +51,7 @@ class ServerlessReportExporter:
         self._media_dir = media_dir
         self._filename = filename
         self._debug = debug
+        self._logger = logger
         self._single_file = single_file
         self._ansys_version = ansys_version
 
@@ -246,7 +248,7 @@ class ServerlessReportExporter:
             )
             target_file.write_bytes(content)
         else:
-            print(f"Warning: Static source file not found: {source_file}")
+            self._logger.warning(f"Warning: Static source file not found: {source_file}")
 
     def _copy_static_files(self, files: list, source_prefix: str, target_prefix: str):
         """Helper to copy a list of files using prefixes."""
@@ -278,14 +280,14 @@ class ServerlessReportExporter:
             source_file = self._static_dir / relative_path
 
         if source_file is None or not source_file.is_file():
-            print(f"Warning: Unable to find local file for path: {simple_path}")
+            self._logger.warning(f"Warning: Unable to find local file for path: {simple_path}")
             self._filemap[simple_path] = path_in_html
             return path_in_html
 
         try:
             content = source_file.read_bytes()
         except OSError as e:
-            print(f"Warning: Unable to read file {source_file}: {e}")
+            self._logger.warning(f"Warning: Unable to read file {source_file}: {e}")
             self._filemap[simple_path] = path_in_html
             return path_in_html
 
