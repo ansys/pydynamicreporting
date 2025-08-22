@@ -4,8 +4,7 @@ from pathlib import Path
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
-
-from ansys.dynamicreporting.core.serverless.utils.html_export_constants import (
+from ansys.dynamicreporting.core.utils.html_export_constants import (
     ANSYS_VERSION_FALLBACK,
 )
 
