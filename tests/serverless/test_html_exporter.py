@@ -80,15 +80,13 @@ def test_process_media_file_no_inline(exporter_setup):
     assert 'src="./media/user_image.png"' in final_html_path.read_text()
 
 
-def test_process_ansys_versioned_file(exporter_setup):
+def test_process_ansys_versioned_file_no_inline(exporter_setup):
     """
-    Test that a versioned path is handled correctly.
-    NOTE: The original implementation puts non-static versioned assets in ./media/.
-    This test verifies that the new implementation faithfully reproduces this behavior.
+    Test that a static versioned path is handled correctly, reproducing original logic.
+    The link path is preserved, but the file is saved to the media directory.
     """
     output_dir, static_dir, media_dir = exporter_setup
-    # This path is NOT under /static/, so it should be redirected to ./media/
-    html_content = f'<html><body><img src="/ansys{ANSYS_VERSION_FALLBACK}/nexus/images/play.png"></body></html>'
+    html_content = f'<html><body><img src="/static/ansys{ANSYS_VERSION_FALLBACK}/nexus/images/play.png"></body></html>'
     exporter = ServerlessReportExporter(
         html_content=html_content,
         output_dir=output_dir,
@@ -98,15 +96,38 @@ def test_process_ansys_versioned_file(exporter_setup):
         no_inline_files=True,
     )
     exporter.export()
-    # The file should be in media, not in a versioned directory
+
+    # The FILE is saved in the media directory
     copied_file_path = output_dir / "media" / "play.png"
-    assert not (
-        output_dir / f"ansys{ANSYS_VERSION_FALLBACK}"
-    ).exists()  # No versioned dir should be made
     assert copied_file_path.exists()
+    assert copied_file_path.read_text() == "fake_png_data"
+
+    # The LINK in the HTML is rewritten to keep the versioned path
+    final_html_content = (output_dir / "index.html").read_text()
+    expected_path = f"./ansys{ANSYS_VERSION_FALLBACK}/nexus/images/play.png"
+    assert f'src="{expected_path}"' in final_html_content
+
+
+def test_static_file_no_inline_rewrite(exporter_setup):
+    """
+    Test that a generic /static/ file is correctly copied and rewritten to ./media/.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    html_content = '<html><link rel="stylesheet" href="/static/website/content/site.css"></html>'
+    exporter = ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        no_inline_files=True,
+    )
+    exporter.export()
+    copied_file = output_dir / "media" / "site.css"
+    assert copied_file.exists()
+    assert copied_file.read_text() == "body {}"
     final_html_content = (output_dir / "index.html").read_text()
     # The rewritten path must point to ./media/
-    assert 'src="./media/play.png"' in final_html_content
+    assert 'href="./media/site.css"' in final_html_content
 
 
 def test_filename_collision(exporter_setup):
@@ -251,10 +272,7 @@ def test_filemap_cache(exporter_setup, monkeypatch):
 
 
 def test_save_datauri_source_debug_env_var(exporter_setup, monkeypatch):
-    """
-    Test the debug feature to save sources of inlined assets.
-    This requires using a file type that is inlined by default, like a scene file.
-    """
+    """Test the debug feature to save sources of inlined assets."""
     output_dir, static_dir, media_dir = exporter_setup
     (media_dir / "scene.avz").write_text("scene_data")
     html_content = '<html><a href="/media/scene.avz">link</a></html>'
@@ -353,8 +371,8 @@ def test_no_inline_creates_special_files_and_dirs(exporter_setup):
     )
     exporter.export()
     font_file = FONTS[0]
-    assert (output_dir / "webfonts" / font_file).exists()
-    assert (output_dir / "webfonts" / font_file).read_text() == "fake_font_data"
+    assert (output_dir / "media" / font_file).exists()
+    assert (output_dir / "media" / font_file).read_text() == "fake_font_data"
     assert (output_dir / f"ansys{ANSYS_VERSION_FALLBACK}" / "nexus" / "utils").is_dir()
 
 
@@ -405,27 +423,3 @@ def test_path_with_no_closing_quote(exporter_setup):
     exporter.export()
     final_html_content = (output_dir / "index.html").read_text()
     assert final_html_content == html_content
-
-
-def test_static_file_no_inline_rewrite(exporter_setup):
-    """
-    Test that a generic /static/ file is correctly copied and rewritten to ./media/.
-    This confirms faithful reproduction of the original implementation's logic.
-    """
-    output_dir, static_dir, media_dir = exporter_setup
-    html_content = '<html><link rel="stylesheet" href="/static/website/content/site.css"></html>'
-    exporter = ServerlessReportExporter(
-        html_content=html_content,
-        output_dir=output_dir,
-        static_dir=static_dir,
-        media_dir=media_dir,
-        no_inline_files=True,
-    )
-    exporter.export()
-    # Original logic places all non-versioned-static files in the media directory
-    copied_file = output_dir / "media" / "site.css"
-    assert not (output_dir / "static").exists()  # No output static dir should be made
-    assert copied_file.exists()
-    assert copied_file.read_text() == "body {}"
-    final_html_content = (output_dir / "index.html").read_text()
-    assert 'href="./media/site.css"' in final_html_content
