@@ -189,7 +189,6 @@ class ServerlessReportExporter:
             "website/images/MenuArrow-15.png",
         ]
         for f in mathjax_files:
-            # Put MathJax under ./media/* like legacy (strip the '.../mathjax/' prefix if present)
             target_path = "media/" + (
                 f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
             )
@@ -198,17 +197,29 @@ class ServerlessReportExporter:
         # --- Favicon (legacy page expected ./media/favicon.ico) ---
         self._copy_static_file("website/images/favicon.ico", "media/favicon.ico")
 
-        # --- Nexus + old viewer images (kept under ./media) ---
+        # --- Nexus + old viewer images ---
+        # 1) Keep a copy in ./media (some templates refer there)
         for img in NEXUS_IMAGES + VIEWER_IMAGES_OLD:
             self._copy_static_file(f"website/images/{img}", f"media/{img}")
 
+        # 2) Ensure they also exist under ./ansys{ver}/nexus/images (viewer expects this path)
+        # primary -> ansys{ver}/nexus/images/<img>, fallback -> website/images/<img>
+        def _copy_ansys_image_with_fallback(img_name: str):
+            primary_src = f"ansys{self._ansys_version}/nexus/images/{img_name}"
+            primary_src_file = self._static_dir / primary_src
+            target = f"ansys{self._ansys_version}/nexus/images/{img_name}"
+
+            if primary_src_file.is_file():
+                self._copy_static_file(primary_src, target)
+            else:
+                # Fallback: copy from website/images into the ansys images target
+                fallback_src = f"website/images/{img_name}"
+                self._copy_static_file(fallback_src, target)
+
+        for img in set(NEXUS_IMAGES + VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]):
+            _copy_ansys_image_with_fallback(img)
+
         # --- Modern viewer payload kept under ./ansys{ver}/... ---
-        viewer_images_new = VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]
-        self._copy_static_files(
-            viewer_images_new,
-            f"ansys{self._ansys_version}/nexus/images/",
-            f"ansys{self._ansys_version}/nexus/images/",
-        )
         self._copy_static_files(
             VIEWER_UTILS,
             f"ansys{self._ansys_version}/nexus/utils/",
@@ -343,15 +354,15 @@ class ServerlessReportExporter:
                 f"/static/ansys{self._ansys_version}/"
             ) or normalized.startswith(f"/ansys{self._ansys_version}/"):
                 # Keep the ansys{ver} tree as-is in the output (legacy)
-                local_pathname = Path(normalized).parent.as_posix().lstrip("/")
-                # Collapse duplicate slashes in the local pathname
+                # IMPORTANT: strip the '/static/' prefix if present
+                path_no_static = normalized.replace("/static/", "/", 1)
+                local_pathname = Path(path_no_static).parent.as_posix().lstrip("/")
                 local_pathname = re.sub(r"/{2,}", "/", local_pathname)
 
                 result = f"./{local_pathname}/{basename}"
-                # Ensure no accidental double slashes in the final result (beyond leading './')
-                result = "./" + re.sub(r"/{2,}", "/", result[2:])
-
+                result = "./" + re.sub(r"/{2,}", "/", result[2:])  # ensure no '//' in result
                 target_file = self._output_dir / local_pathname / basename
+
             elif normalized.startswith("/static/"):
                 # Legacy behavior: flatten other static assets into ./media/
                 result = f"./media/{basename}"
