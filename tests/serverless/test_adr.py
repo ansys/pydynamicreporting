@@ -1070,7 +1070,7 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     html = output_path.read_text(encoding="utf-8")
     assert html.lstrip().startswith("<!DOCTYPE html>")
     assert "<title>Report - ADR</title>" in html
-    assert './media/favicon.ico' in html
+    assert "./media/favicon.ico" in html
 
 
 @pytest.mark.ado_test
