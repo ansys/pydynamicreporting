@@ -1068,7 +1068,13 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
 
     # Check for the existence of the copied CSS file in the correct output path.
     # The exporter should replicate the source path structure within the output directory.
-    assert (tmp_path / "static" / "website" / "content" / "site.css").exists()
+    assert (tmp_path / "media" / "site.css").exists()
+
+    # Full doc wrapper + favicon link
+    html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert html.lstrip().startswith("<!DOCTYPE html>")
+    assert "<title>Report - ADR</title>" in html
+    assert 'rel="shortcut icon" href="./media/favicon.ico"' in html
 
 
 @pytest.mark.ado_test
