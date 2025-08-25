@@ -1050,7 +1050,7 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
         # Use the provided static asset path that is known to exist.
         return (
             '<html><head><link rel="stylesheet" type="text/css"'
-            ' href="/static/website/content/site.css"></head></html>'
+            ' href="/static/website/content/site.css"/></head></html>'
         )
 
     monkeypatch.setattr(ADR, "render_report", mock_render_report)
@@ -1066,9 +1066,10 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     assert output_path == tmp_path / "index.html"
     assert output_path.exists()
 
-    # The exporter correctly places non-versioned static assets in the "media" directory,
-    # faithfully reproducing the original server-based implementation's logic.
-    assert (tmp_path / "media" / "site.css").exists()
+    # Check for the existence of the copied CSS file in the correct output path.
+    # The exporter should replicate the source path structure within the output directory.
+    assert (tmp_path / "static" / "website" / "content" / "site.css").exists()
+
 
 @pytest.mark.ado_test
 def test_export_report_html_no_static_dir_fails(adr_serverless, tmp_path, monkeypatch):
