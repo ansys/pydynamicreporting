@@ -2,7 +2,6 @@ import base64
 import os
 import os.path
 import re
-from typing import Optional
 import urllib.parse
 
 import requests
