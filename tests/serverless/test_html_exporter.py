@@ -101,32 +101,42 @@ def test_static_is_flattened_media_and_ansys_tree_preserved(adr_serverless, tmp_
 
 
 @pytest.mark.ado_test
-def test_normalizes_double_slashes(adr_serverless, tmp_path: Path):
-    static_dir = Path(adr_serverless.static_directory)
-    media_dir = Path(adr_serverless.media_directory)
-    ver = str(adr_serverless.ansys_version)
+def test_normalizes_double_slashes(adr_serverless, tmp_path):
+    """
+    Ensure paths like '/ansys{ver}//nexus/images/back.png' are normalized
+    to './ansys{ver}/nexus/images/back.png' in the exported HTML.
+    """
+    ver = adr_serverless.ansys_version
 
-    # Ensure the image exists where exporter expects it
-    _write(static_dir / f"ansys{ver}/nexus/images/back.png", b"\x89PNG\x00")
-    _write(static_dir / "website/images/favicon.png", b"P")
+    # Prepare the source file the exporter will look for
+    src = Path(adr_serverless.static_directory) / f"ansys{ver}" / "nexus" / "images" / "back.png"
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_bytes(b"\x89PNG\r\n\x1a\n")  # tiny PNG header
 
-    html = (
-        '<div class="body-content m-1">'
-        f'<img src="./ansys{ver}//nexus/images/back.png"/>'
-        "</div>"
+    # Build a minimal fragment using a path with a *double* slash after the version
+    html_fragment = (
+        f'<div class="body-content m-1"><img src="/ansys{ver}//nexus/images/back.png"/></div>'
     )
 
     exporter = ServerlessReportExporter(
-        html_content=html,
-        output_dir=tmp_path / "export3",
-        static_dir=static_dir,
-        media_dir=media_dir,
-        ansys_version=ver,
+        html_content=html_fragment,
+        output_dir=tmp_path,
+        static_dir=Path(adr_serverless.static_directory),
+        media_dir=Path(adr_serverless.media_directory),
+        filename="index.html",
+        ansys_version=str(ver),
+        dark_mode=True,
+        debug=False,
+        logger=adr_serverless._logger,
     )
     exporter.export()
 
-    out = (tmp_path / "export3" / "index.html").read_text(encoding="utf-8")
-    assert f"./ansys{ver}/nexus/images/back.png" in out  # single slash
+    out = (tmp_path / "index.html").read_text(encoding="utf-8")
+
+    # Should not contain a double slash after the version
+    assert f"./ansys{ver}//nexus" not in out
+    # Should contain the normalized single-slash path
+    assert f"./ansys{ver}/nexus/images/back.png" in out
 
 
 @pytest.mark.ado_test
