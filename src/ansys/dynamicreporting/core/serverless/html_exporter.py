@@ -143,13 +143,9 @@ class ServerlessReportExporter:
         body_open = '    <body style="padding: 0;">\n'
         # If the fragment already uses a wrapper like <div class="body-content ..."> keep it; otherwise
         # we could optionally wrap with <main>. To avoid duplication, we just drop it in verbatim.
-        body_content = text
-        return_to_top = (
-            '\n<a href="#" id="return_to_top"><i class="fas fa-chevron-up fa-2x"></i></a>\n'
-        )
         body_close = "    </body>\n</html>\n"
 
-        return head + body_open + body_content + return_to_top + body_close
+        return head + body_open + text + body_close
 
     def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str:
         """
