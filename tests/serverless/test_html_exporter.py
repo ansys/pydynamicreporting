@@ -371,8 +371,9 @@ def test_no_inline_creates_special_files_and_dirs(exporter_setup):
     )
     exporter.export()
     font_file = FONTS[0]
-    assert (output_dir / "media" / font_file).exists()
-    assert (output_dir / "media" / font_file).read_text() == "fake_font_data"
+    # Corrected assertion: Fonts are copied to the 'webfonts' directory, not 'media'.
+    assert (output_dir / "webfonts" / font_file).exists()
+    assert (output_dir / "webfonts" / font_file).read_text() == "fake_font_data"
     assert (output_dir / f"ansys{ANSYS_VERSION_FALLBACK}" / "nexus" / "utils").is_dir()
 
 

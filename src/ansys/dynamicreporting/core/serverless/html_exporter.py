@@ -91,7 +91,7 @@ class ServerlessReportExporter:
             self._copy_special_files()
 
         html = self._html_content
-        html = self._replace_blocks(html, "<link", "/>")
+        html = self._replace_blocks(html, "<link", ">")
         html = self._replace_blocks(html, "<img id='guiicon", ">")
         html = self._replace_blocks(html, "e.src = '", "';")
         html = self._replace_blocks(html, "<script src=", "</script>")

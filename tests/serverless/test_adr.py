@@ -1058,7 +1058,6 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     # Act: Call the method under test. The full exporter logic will run.
     output_path = adr_serverless.export_report_as_html(
         output_directory=tmp_path,
-        single_file=False,
         name="TestExportReport",
     )
 
