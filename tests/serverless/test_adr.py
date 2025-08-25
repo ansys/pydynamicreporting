@@ -1037,20 +1037,21 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 @pytest.mark.ado_test
 def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     """
-    Tests the successful export of a report to a directory by patching only
-    the initial render call. This allows the full exporter logic to run.
+    Export should produce a full standalone HTML doc.
+    We return a FRAGMENT here (div + one static link) to exercise the wrapper.
     """
     from ansys.dynamicreporting.core.serverless import ADR, BasicLayout
 
     # Arrange: Create a dummy template for the lookup to succeed.
     adr_serverless.create_template(BasicLayout, name="TestExportReport", parent=None)
 
-    # Mock the render_report method to prevent it from hitting the Django template engine.
+    # Return a fragment (not a full <html>) so wrapper kicks in
     def mock_render_report(self, name, **kwargs):
         # Use the provided static asset path that is known to exist.
         return (
-            '<html><head><link rel="stylesheet" type="text/css"'
-            ' href="/static/website/content/site.css"/></head></html>'
+            '<div class="body-content">'
+            '<link rel="stylesheet" type="text/css" href="/static/website/content/site.css"/>'
+            "</div>"
         )
 
     monkeypatch.setattr(ADR, "render_report", mock_render_report)
@@ -1061,19 +1062,17 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
         name="TestExportReport",
     )
 
-    # Assert: Verify the main HTML file was created and the linked asset was copied
-    # to the correct location.
     assert output_path == tmp_path / "index.html"
     assert output_path.exists()
 
-    # Check for the existence of the copied CSS file in the correct output path.
-    # The exporter should replicate the source path structure within the output directory.
+    # Since we flatten unknown /static/* (non-ansys) into ./media/
     assert (tmp_path / "media" / "site.css").exists()
 
-    # Full doc wrapper + favicon link
     html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    # Wrapper present
     assert html.lstrip().startswith("<!DOCTYPE html>")
     assert "<title>Report - ADR</title>" in html
+    # favicon link (legacy-compatible)
     assert 'rel="shortcut icon" href="./media/favicon.ico"' in html
 
 
