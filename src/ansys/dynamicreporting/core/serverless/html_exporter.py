@@ -39,7 +39,7 @@ class ServerlessReportExporter:
         media_dir: Path,
         *,
         filename: str = "index.html",
-        single_file: bool = False,
+        no_inline_files: bool = False,
         ansys_version: str = None,
         debug: bool = False,
         logger: Any = None,
@@ -54,7 +54,7 @@ class ServerlessReportExporter:
         self._filename = filename
         self._debug = debug
         self._logger = logger or get_logger()
-        self._single_file = single_file
+        self._no_inline = no_inline_files
         self._ansys_version = ansys_version
 
         # State tracking properties, functionally identical to ReportDownloadHTML
@@ -68,7 +68,7 @@ class ServerlessReportExporter:
     def _should_use_data_uri(self, size: int) -> bool:
         """Determines if an asset should be inlined based on settings and size limits."""
         self._inline_size_exception = False
-        if not self._single_file:
+        if self._no_inline:
             return False
         if self._total_data_uri_size + size > self._max_inline_size:
             self._inline_size_exception = True
@@ -87,7 +87,7 @@ class ServerlessReportExporter:
         if self._debug:
             (self._output_dir / "index.raw.html").write_text(self._html_content, encoding="utf8")
 
-        if not self._single_file:
+        if self._no_inline:
             self._copy_special_files()
 
         html = self._html_content
@@ -99,9 +99,9 @@ class ServerlessReportExporter:
         html = self._replace_blocks(html, "<img src=", ">")
         html = self._replace_blocks(html, "<source src=", ">")
         html = self._replace_blocks(html, ".key_images = {", ".update();")
-        html = self._replace_blocks(html, "GLTFViewer", ");", inline=self._single_file)
+        html = self._replace_blocks(html, "GLTFViewer", ");", inline=not self._no_inline)
         html = self._inline_ansys_viewer(html)
-        html = self._replace_blocks(html, "await fetch(", ");", inline=self._single_file)
+        html = self._replace_blocks(html, "await fetch(", ");", inline=not self._no_inline)
 
         (self._output_dir / self._filename).write_text(html, encoding="utf8")
 
@@ -259,7 +259,7 @@ class ServerlessReportExporter:
 
     def _make_unique_basename(self, name: str) -> str:
         """Ensures a unique filename in the target media directory to avoid collisions."""
-        if self._single_file:
+        if not self._no_inline:
             return name
         target_path = self._output_dir / "media" / name
         if not target_path.exists():
@@ -367,9 +367,9 @@ class ServerlessReportExporter:
             if start < 0:
                 break
 
-            text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=self._single_file)
+            text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=not self._no_inline)
             text = self._replace_blocks(
-                text, 'src="', '"', inline=self._single_file, size_check=True
+                text, 'src="', '"', inline=not self._no_inline, size_check=True
             )
 
             if "__SIZE_EXCEPTION__" in text:
@@ -387,7 +387,7 @@ class ServerlessReportExporter:
     def _make_output_dirs(self):
         """Creates the necessary directory structure in the output location."""
         self._output_dir.mkdir(parents=True, exist_ok=True)
-        if self._single_file:
+        if not self._no_inline:
             return
 
         dirs_to_create = [

@@ -1,9 +1,12 @@
 from pathlib import Path
-
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
-from ansys.dynamicreporting.core.utils.html_export_constants import ANSYS_VERSION_FALLBACK
+
+# Import the constant to make the test dynamic and avoid hardcoding
+from ansys.dynamicreporting.core.serverless.utils.html_export_constants import (
+    ANSYS_VERSION_FALLBACK,
+)
 
 
 # Fixture to create a temporary directory structure for testing the exporter
@@ -74,15 +77,20 @@ def test_export_debug_mode(exporter_setup):
     assert raw_html_path.read_text() == html_content
 
 
-def test_process_media_file(exporter_setup):
+def test_process_media_file_no_inline(exporter_setup):
     """
-    Tests that a file referenced from the /media/ path is correctly copied.
+    Tests that a file referenced from the /media/ path is correctly copied
+    when no_inline_files is True.
     """
     output_dir, static_dir, media_dir = exporter_setup
     html_content = '<html><body><img src="/media/user_image.png"></body></html>'
 
     exporter = ServerlessReportExporter(
-        html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        no_inline_files=True,
     )
     exporter.export()
 
@@ -99,7 +107,7 @@ def test_process_media_file(exporter_setup):
 
 def test_process_ansys_versioned_file(exporter_setup):
     """
-    Tests that a file with a versioned path is handled correctly.
+    Tests that a file with a versioned path is handled correctly when creating a directory.
     """
     output_dir, static_dir, media_dir = exporter_setup
     html_content = f'<html><body><img src="/ansys{ANSYS_VERSION_FALLBACK}/nexus/images/play.png"></body></html>'
@@ -110,6 +118,7 @@ def test_process_ansys_versioned_file(exporter_setup):
         static_dir=static_dir,
         media_dir=media_dir,
         ansys_version=ANSYS_VERSION_FALLBACK,
+        no_inline_files=True,
     )
     exporter.export()
 
@@ -133,7 +142,11 @@ def test_filename_collision(exporter_setup):
     html_content = '<html><img src="/media/user_image.png"><img src="/static/website/images/user_image.png"></html>'
 
     exporter = ServerlessReportExporter(
-        html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        no_inline_files=True,
     )
     exporter.export()
 
@@ -145,7 +158,7 @@ def test_filename_collision(exporter_setup):
 
 def test_inline_size_limit(exporter_setup):
     """
-    Tests that a file exceeding the inline size limit is not inlined, even in single_file mode.
+    Tests that a file exceeding the inline size limit is not inlined.
     """
     output_dir, static_dir, media_dir = exporter_setup
     large_file_path = media_dir / "large_file.bin"
@@ -158,7 +171,7 @@ def test_inline_size_limit(exporter_setup):
         output_dir=output_dir,
         static_dir=static_dir,
         media_dir=media_dir,
-        single_file=True,
+        no_inline_files=False,  # Allow inlining
     )
     exporter._max_inline_size = 0
     exporter.export()
@@ -170,7 +183,7 @@ def test_inline_size_limit(exporter_setup):
 
 def test_inline_ansys_viewer(exporter_setup):
     """
-    Tests the special handling for the ansys-nexus-viewer component in single-file mode.
+    Tests the special handling for the ansys-nexus-viewer component when inlining.
     """
     output_dir, static_dir, media_dir = exporter_setup
     (media_dir / "proxy.png").write_text("proxy_data")
@@ -183,7 +196,7 @@ def test_inline_ansys_viewer(exporter_setup):
         output_dir=output_dir,
         static_dir=static_dir,
         media_dir=media_dir,
-        single_file=True,
+        no_inline_files=False,
     )
     exporter.export()
 
@@ -208,9 +221,9 @@ def test_missing_file_handling(exporter_setup, capsys):
     assert 'src="/media/non_existent_file.png"' in final_html_content
 
 
-def test_scene_file_forces_inline(exporter_setup):
+def test_scene_file_is_inlined_by_default(exporter_setup):
     """
-    Tests that a scene file (.avz) is inlined even when single_file is False.
+    Tests that a scene file (.avz) is inlined by default when no_inline_files is False.
     """
     output_dir, static_dir, media_dir = exporter_setup
     (media_dir / "scene.avz").write_text("scene_data")
@@ -221,7 +234,7 @@ def test_scene_file_forces_inline(exporter_setup):
         output_dir=output_dir,
         static_dir=static_dir,
         media_dir=media_dir,
-        single_file=False,
+        no_inline_files=False,
     )
     exporter.export()
 
@@ -246,7 +259,7 @@ def test_babylon_scene_js_handling(exporter_setup):
         output_dir=output_dir,
         static_dir=static_dir,
         media_dir=media_dir,
-        single_file=False,
+        no_inline_files=False,
     )
     exporter.export()
 
@@ -298,7 +311,7 @@ def test_save_datauri_source_debug_env_var(exporter_setup, monkeypatch):
         output_dir=output_dir,
         static_dir=static_dir,
         media_dir=media_dir,
-        single_file=True,
+        no_inline_files=False,
     )
     exporter.export()
 
@@ -318,7 +331,7 @@ def test_viewer_size_exception(exporter_setup):
         output_dir=output_dir,
         static_dir=static_dir,
         media_dir=media_dir,
-        single_file=True,
+        no_inline_files=False,
     )
     exporter._max_inline_size = 0
     exporter.export()

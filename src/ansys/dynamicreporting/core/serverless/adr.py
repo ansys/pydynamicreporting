@@ -961,7 +961,6 @@ class ADR:
         output_directory: str | Path,
         *,
         filename: str = "index.html",
-        single_file: bool = False,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -976,11 +975,6 @@ class ADR:
 
         filename : str, optional
             The name of the output HTML file. Default is "index.html".
-
-        single_file : bool, optional
-            If True, the report will be exported as a single HTML file with all assets embedded.
-            If False, the report will be exported as a directory with separate files for assets.
-            Default is False.
 
         context : dict, optional
             Context to pass to the report template. Default is None.
@@ -1016,7 +1010,6 @@ class ADR:
         >>> adr.setup(collect_static=True)
         >>> output_path = adr.export_report_as_html(
                     Path.cwd() / "htmlex",
-                    single_file=False,
                     context={},
                     item_filter="A|i_tags|cont|dp=dp227;",
                     name="Serverless Simulation Report",
@@ -1044,7 +1037,6 @@ class ADR:
             static_dir=self._static_directory,
             media_dir=self._media_directory,
             filename=filename,
-            single_file=single_file,
             ansys_version=str(self._ansys_version),
             debug=self._debug,
             logger=self._logger,
