@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
@@ -42,6 +43,7 @@ def test_export_into_db_directory_fails(exporter_setup):
     appears to be a Nexus database directory.
     """
     output_dir, static_dir, media_dir = exporter_setup
+    # The output directory must exist before a file can be created in it.
     output_dir.mkdir(exist_ok=True)
     (output_dir / "db.sqlite3").touch()
 
@@ -139,7 +141,6 @@ def test_filename_collision(exporter_setup):
     )
     exporter.export()
 
-    # FIX: The original test incorrectly counted subdirectories. This now correctly counts only files.
     files_in_media = [f for f in (output_dir / "media").iterdir() if f.is_file()]
     assert len(files_in_media) == 2
     assert (output_dir / "media" / "user_image.png").exists()
@@ -271,7 +272,6 @@ def test_filemap_cache(exporter_setup, monkeypatch):
         html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
     )
 
-    # FIX: Spy on a lower-level function that is only called on a cache miss.
     original_read_bytes = Path.read_bytes
     call_count = 0
 
@@ -286,3 +286,69 @@ def test_filemap_cache(exporter_setup, monkeypatch):
     exporter.export()
 
     assert call_count == 1
+
+
+def test_save_datauri_source_debug_env_var(exporter_setup, monkeypatch):
+    """
+    Tests the debug feature to save sources of inlined assets.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    html_content = '<html><img src="/media/user_image.png"></html>'
+
+    monkeypatch.setenv("NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE", "1")
+
+    exporter = ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        single_file=True,
+    )
+    exporter.export()
+
+    assert (output_dir / "media" / "user_image.png").exists()
+
+
+def test_viewer_size_exception(exporter_setup):
+    """
+    Tests the specific size exception handling for the ansys-nexus-viewer.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    (media_dir / "scene.avz").write_text("large_scene_data")
+    html_content = '<ansys-nexus-viewer src="/media/scene.avz"></ansys-nexus-viewer>'
+
+    exporter = ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        single_file=True,
+    )
+    exporter._max_inline_size = 0
+    exporter.export()
+
+    final_html_content = (output_dir / "index.html").read_text()
+    assert (
+        'src="" proxy_only="3D geometry too large for stand-alone HTML file"' in final_html_content
+    )
+
+
+def test_unreadable_source_file(exporter_setup, monkeypatch):
+    """
+    Tests that an OSError during file reading is handled gracefully.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    html_content = '<html><img src="/media/user_image.png"></html>'
+
+    def raise_os_error(*args, **kwargs):
+        raise OSError("Permission denied")
+
+    monkeypatch.setattr(Path, "read_bytes", raise_os_error)
+
+    exporter = ServerlessReportExporter(
+        html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
+    )
+    exporter.export()
+
+    final_html_content = (output_dir / "index.html").read_text()
+    assert 'src="/media/user_image.png"' in final_html_content
