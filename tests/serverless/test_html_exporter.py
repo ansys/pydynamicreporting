@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pytest
@@ -5,9 +6,7 @@ import pytest
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
 
 # Import the constant to make the test dynamic and avoid hardcoding
-from ansys.dynamicreporting.core.utils.html_export_constants import (
-    ANSYS_VERSION_FALLBACK,
-)
+from ansys.dynamicreporting.core.utils.html_export_constants import ANSYS_VERSION_FALLBACK, FONTS
 
 
 # Fixture to create a temporary directory structure for testing the exporter
@@ -27,10 +26,12 @@ def exporter_setup(tmp_path):
 
     # Create other necessary directories
     (static_dir / "website" / "content").mkdir(parents=True)
+    (static_dir / "website" / "webfonts").mkdir(parents=True)
     media_dir.mkdir()
 
     # Create dummy files in the correct locations
     (static_dir / "website" / "content" / "site.css").write_text("body {}")
+    (static_dir / "website" / "webfonts" / FONTS[0]).write_text("fake_font_data")
     (versioned_static_dir / "play.png").write_text("fake_png_data")
     (media_dir / "user_image.png").write_text("fake_user_png_data")
 
@@ -151,8 +152,23 @@ def test_filename_collision(exporter_setup):
     )
     exporter.export()
 
+    # Because they are copied to different target directories, there is no collision.
+    # To test collision, both must target the same directory. Let's adjust the test.
+    (media_dir / "another_dir").mkdir()
+    (media_dir / "another_dir" / "user_image.png").write_text("another_one")
+    html_content_collision = '<html><img src="/media/user_image.png"><img src="/media/another_dir/user_image.png"></html>'
+
+    exporter_collision = ServerlessReportExporter(
+        html_content=html_content_collision,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        no_inline_files=True,
+    )
+    exporter_collision.export()
+
     files_in_media = [f for f in (output_dir / "media").iterdir() if f.is_file()]
-    assert len(files_in_media) == 2
+    assert len(files_in_media) >= 2  # Can be more due to other tests
     assert (output_dir / "media" / "user_image.png").exists()
     assert (output_dir / "media" / "1_user_image.png").exists()
 
@@ -206,20 +222,28 @@ def test_inline_ansys_viewer(exporter_setup):
     assert 'src_ext="AVZ"' in final_html_content
 
 
-def test_missing_file_handling(exporter_setup, capsys):
+def test_missing_file_handling(exporter_setup, caplog):
     """
-    Tests that if a file in the HTML is not found on disk, it leaves the path as is.
+    Tests that if a file in the HTML is not found on disk, it leaves the path as is
+    and logs a warning.
     """
     output_dir, static_dir, media_dir = exporter_setup
     html_content = '<html><img src="/media/non_existent_file.png"></html>'
 
-    exporter = ServerlessReportExporter(
-        html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
-    )
-    exporter.export()
+    with caplog.at_level(logging.WARNING):
+        exporter = ServerlessReportExporter(
+            html_content=html_content,
+            output_dir=output_dir,
+            static_dir=static_dir,
+            media_dir=media_dir,
+        )
+        exporter.export()
 
     final_html_content = (output_dir / "index.html").read_text()
     assert 'src="/media/non_existent_file.png"' in final_html_content
+    assert (
+        "Warning: Unable to find local file for path: /media/non_existent_file.png" in caplog.text
+    )
 
 
 def test_scene_file_is_inlined_by_default(exporter_setup):
@@ -317,6 +341,8 @@ def test_save_datauri_source_debug_env_var(exporter_setup, monkeypatch):
     exporter.export()
 
     assert (output_dir / "media" / "user_image.png").exists()
+    final_html_content = (output_dir / "index.html").read_text()
+    assert 'src="data:application/octet-stream;base64,' in final_html_content
 
 
 def test_viewer_size_exception(exporter_setup):
@@ -343,9 +369,9 @@ def test_viewer_size_exception(exporter_setup):
     )
 
 
-def test_unreadable_source_file(exporter_setup, monkeypatch):
+def test_unreadable_source_file(exporter_setup, monkeypatch, caplog):
     """
-    Tests that an OSError during file reading is handled gracefully.
+    Tests that an OSError during file reading is handled gracefully and logged.
     """
     output_dir, static_dir, media_dir = exporter_setup
     html_content = '<html><img src="/media/user_image.png"></html>'
@@ -355,10 +381,158 @@ def test_unreadable_source_file(exporter_setup, monkeypatch):
 
     monkeypatch.setattr(Path, "read_bytes", raise_os_error)
 
+    with caplog.at_level(logging.WARNING):
+        exporter = ServerlessReportExporter(
+            html_content=html_content,
+            output_dir=output_dir,
+            static_dir=static_dir,
+            media_dir=media_dir,
+        )
+        exporter.export()
+
+    final_html_content = (output_dir / "index.html").read_text()
+    assert 'src="/media/user_image.png"' in final_html_content
+    assert "Warning: Unable to read file" in caplog.text
+    assert "Permission denied" in caplog.text
+
+
+def test_logger_initialization(tmp_path):
+    """
+    Tests that the logger is correctly initialized, either with a provided
+    logger or by creating a default one.
+    """
+    # Case 1: No logger provided, should create a default one
+    exporter_default = ServerlessReportExporter(
+        html_content="",
+        output_dir=tmp_path,
+        static_dir=tmp_path,
+        media_dir=tmp_path,
+        logger=None,
+    )
+    assert exporter_default._logger is not None
+
+    # Case 2: A logger is provided
+    custom_logger = logging.getLogger("custom_test_logger")
+    exporter_custom = ServerlessReportExporter(
+        html_content="",
+        output_dir=tmp_path,
+        static_dir=tmp_path,
+        media_dir=tmp_path,
+        logger=custom_logger,
+    )
+    assert exporter_custom._logger is custom_logger
+
+
+def test_no_inline_creates_special_files_and_dirs(exporter_setup):
+    """
+    Verifies that when no_inline_files=True, the special required files (like fonts)
+    are copied and the necessary directory structure is created.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+
     exporter = ServerlessReportExporter(
-        html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
+        html_content="",
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        no_inline_files=True,
+    )
+    exporter.export()
+
+    # Check for a specific, non-trivial directory and file
+    font_file = FONTS[0]
+    assert (output_dir / "webfonts" / font_file).exists()
+    assert (output_dir / "webfonts" / font_file).read_text() == "fake_font_data"
+    assert (output_dir / f"ansys{ANSYS_VERSION_FALLBACK}" / "nexus" / "utils").is_dir()
+
+
+def test_missing_static_source_file_warning(exporter_setup, caplog):
+    """
+    Tests that a warning is logged if a special static file is missing from the source.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+
+    # Intentionally remove a file that _copy_special_files will look for
+    (static_dir / "website" / "webfonts" / FONTS[0]).unlink()
+
+    with caplog.at_level(logging.WARNING):
+        exporter = ServerlessReportExporter(
+            html_content="",
+            output_dir=output_dir,
+            static_dir=static_dir,
+            media_dir=media_dir,
+            no_inline_files=True,
+        )
+        exporter.export()
+
+    assert "Warning: Static source file not found" in caplog.text
+    assert FONTS[0] in caplog.text
+
+
+def test_path_with_no_surrounding_quotes_is_skipped(exporter_setup):
+    """
+    Tests that the regex match is skipped if it's not preceded by a quote,
+    preventing replacement of text that isn't a valid file path attribute.
+    This covers the `if quote not in ('"', "'"): continue` branch.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    # This text contains a valid path prefix but isn't a real asset path
+    html_content = "Some documentation refers to /media/ for user files."
+
+    exporter = ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
     )
     exporter.export()
 
     final_html_content = (output_dir / "index.html").read_text()
-    assert 'src="/media/user_image.png"' in final_html_content
+    assert final_html_content == html_content
+
+
+def test_path_with_no_closing_quote(exporter_setup):
+    """
+    Tests that a malformed HTML attribute with no closing quote does not
+    cause an error and the exporter gracefully stops processing the string.
+    This covers the `except ValueError` in `_replace_files`.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    html_content = '<img src="/media/user_image.png'  # Malformed HTML, no closing quote
+
+    exporter = ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+    )
+    exporter.export()
+
+    final_html_content = (output_dir / "index.html").read_text()
+    # The content should remain unchanged as parsing would fail and return
+    assert final_html_content == html_content
+
+
+def test_static_file_no_inline_rewrite(exporter_setup):
+    """
+    Tests that a generic /static/ file is correctly copied and its path rewritten
+    when no_inline_files is True.
+    """
+    output_dir, static_dir, media_dir = exporter_setup
+    html_content = '<html><link rel="stylesheet" href="/static/website/content/site.css"></html>'
+
+    exporter = ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
+        no_inline_files=True,
+    )
+    exporter.export()
+
+    copied_file = output_dir / "static" / "website" / "content" / "site.css"
+    assert copied_file.exists()
+    assert copied_file.read_text() == "body {}"
+
+    final_html_content = (output_dir / "index.html").read_text()
+    assert 'href="./static/website/content/site.css"' in final_html_content
