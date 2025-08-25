@@ -135,13 +135,18 @@ def test_process_ansys_versioned_file(exporter_setup):
 
 def test_filename_collision(exporter_setup):
     """
-    Tests that if two different files have the same name, the exporter avoids collision.
+    Tests that if two files with the same name would be copied to the same
+    target directory, the exporter avoids a filename collision.
     """
     output_dir, static_dir, media_dir = exporter_setup
-    (static_dir / "website" / "images").mkdir(parents=True)
-    (static_dir / "website" / "images" / "user_image.png").write_text("different_fake_data")
 
-    html_content = '<html><img src="/media/user_image.png"><img src="/static/website/images/user_image.png"></html>'
+    # Create a second file with the same name in a different source directory.
+    # Both `/media/user_image.png` and `/media/another_dir/user_image.png`
+    # will target the same output path: `output/media/user_image.png`.
+    (media_dir / "another_dir").mkdir()
+    (media_dir / "another_dir" / "user_image.png").write_text("another_one")
+
+    html_content = '<html><img src="/media/user_image.png"><img src="/media/another_dir/user_image.png"></html>'
 
     exporter = ServerlessReportExporter(
         html_content=html_content,
@@ -152,25 +157,12 @@ def test_filename_collision(exporter_setup):
     )
     exporter.export()
 
-    # Because they are copied to different target directories, there is no collision.
-    # To test collision, both must target the same directory. Let's adjust the test.
-    (media_dir / "another_dir").mkdir()
-    (media_dir / "another_dir" / "user_image.png").write_text("another_one")
-    html_content_collision = '<html><img src="/media/user_image.png"><img src="/media/another_dir/user_image.png"></html>'
-
-    exporter_collision = ServerlessReportExporter(
-        html_content=html_content_collision,
-        output_dir=output_dir,
-        static_dir=static_dir,
-        media_dir=media_dir,
-        no_inline_files=True,
-    )
-    exporter_collision.export()
-
-    files_in_media = [f for f in (output_dir / "media").iterdir() if f.is_file()]
-    assert len(files_in_media) >= 2  # Can be more due to other tests
+    # Assert that both files exist in the output media directory, with one renamed
     assert (output_dir / "media" / "user_image.png").exists()
     assert (output_dir / "media" / "1_user_image.png").exists()
+
+    # Verify the content of the renamed file to be sure
+    assert (output_dir / "media" / "1_user_image.png").read_text() == "another_one"
 
 
 def test_inline_size_limit(exporter_setup):
@@ -303,7 +295,10 @@ def test_filemap_cache(exporter_setup, monkeypatch):
     html_content = '<html><img src="/media/user_image.png"><img src="/media/user_image.png"></html>'
 
     exporter = ServerlessReportExporter(
-        html_content=html_content, output_dir=output_dir, static_dir=static_dir, media_dir=media_dir
+        html_content=html_content,
+        output_dir=output_dir,
+        static_dir=static_dir,
+        media_dir=media_dir,
     )
 
     original_read_bytes = Path.read_bytes
