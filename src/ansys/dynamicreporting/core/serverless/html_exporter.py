@@ -276,8 +276,6 @@ class ServerlessReportExporter:
         relative_path = simple_path.lstrip("/")
         if simple_path.startswith("/media/"):
             source_file = self._media_dir / relative_path.replace("media/", "", 1)
-        elif simple_path.startswith(f"/static/ansys{self._ansys_version}/"):
-            source_file = self._static_dir / relative_path.replace("static/", "", 1)
         elif simple_path.startswith("/static/"):
             source_file = self._static_dir / relative_path.replace("static/", "", 1)
         elif simple_path.startswith(f"/ansys{self._ansys_version}/"):
@@ -313,28 +311,29 @@ class ServerlessReportExporter:
                 filename.parent.mkdir(parents=True, exist_ok=True)
                 filename.write_bytes(content)
         else:
-            content = ReportDownloadHTML.fix_viewer_component_paths(
-                basename, content, self._ansys_version
-            )
-
-            # This block now correctly mimics the original implementation's quirky logic.
-            target_file = self._output_dir / "media" / basename
+            # Babylon.js scene files require special handling to inline their binary assets.
+            if basename.endswith("scene.js"):
+                content_str = self._replace_blocks(
+                    content.decode("utf-8"), "load_binary_block(", ");", inline=True
+                )
+                content = content_str.encode("utf-8")
+                basename = f"{source_file.parent.name}_{basename}"
+            else:
+                content = ReportDownloadHTML.fix_viewer_component_paths(
+                    basename, content, self._ansys_version
+                )
 
             if simple_path.startswith(f"/static/ansys{self._ansys_version}/"):
-                # Original logic: rewrite link to keep version path, but save file in media.
                 local_pathname = Path(simple_path).parent.as_posix().replace("/static/", "./")
                 results = f"{local_pathname}/{basename}"
-            else:
-                # Original logic: all other paths are rewritten to point to media.
-                if basename.endswith("scene.js"):
-                    # Special case for babylon scenes, which also fall into this block.
-                    content_str = self._replace_blocks(
-                        content.decode("utf-8"), "load_binary_block(", ");", inline=True
-                    )
-                    content = content_str.encode("utf-8")
-                    basename = f"{source_file.parent.name}_{basename}"
-                    target_file = self._output_dir / "media" / basename
+                target_file = self._output_dir / local_pathname.lstrip("./") / basename
+            elif simple_path.startswith("/static/"):
+                local_pathname = Path(simple_path).parent.as_posix()
+                results = f".{local_pathname}/{basename}"
+                target_file = self._output_dir / local_pathname.lstrip("/") / basename
+            else:  # /media/
                 results = f"./media/{basename}"
+                target_file = self._output_dir / "media" / basename
 
             target_file.parent.mkdir(parents=True, exist_ok=True)
             target_file.write_bytes(content)
