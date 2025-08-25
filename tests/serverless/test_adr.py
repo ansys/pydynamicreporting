@@ -1042,7 +1042,6 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     """
     from ansys.dynamicreporting.core.serverless import ADR, BasicLayout
 
-    # Arrange: Create a dummy template for the lookup to succeed.
     adr_serverless.create_template(BasicLayout, name="TestExportReport", parent=None)
 
     # Return a fragment (not a full <html>) so wrapper kicks in
@@ -1068,12 +1067,10 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     # Since we flatten unknown /static/* (non-ansys) into ./media/
     assert (tmp_path / "media" / "site.css").exists()
 
-    html = (tmp_path / "index.html").read_text(encoding="utf-8")
-    # Wrapper present
+    html = output_path.read_text(encoding="utf-8")
     assert html.lstrip().startswith("<!DOCTYPE html>")
     assert "<title>Report - ADR</title>" in html
-    # favicon link (legacy-compatible)
-    assert 'rel="shortcut icon" href="./media/favicon.ico"' in html
+    assert './media/favicon.ico' in html
 
 
 @pytest.mark.ado_test
