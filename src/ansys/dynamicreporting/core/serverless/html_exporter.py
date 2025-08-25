@@ -237,8 +237,11 @@ class ServerlessReportExporter:
             )
             self._copy_static_file(f, target_path)
 
-        # --- Favicon (legacy page expected ./media/favicon.ico) ---
-        self._copy_static_file("website/images/favicon.ico", "media/favicon.ico")
+        # --- Favicon ---
+        # Legacy HTML links to favicon.ico, but only favicon.png exists in static.
+        # Copy favicon.png and duplicate it as favicon.ico.
+        self._copy_static_file("website/images/favicon.png", "media/favicon.png")
+        self._copy_static_file("website/images/favicon.png", "media/favicon.ico")
 
         # --- Nexus + old viewer images ---
         # 1) Keep a copy in ./media (some templates refer there)
