@@ -2,73 +2,15 @@ import base64
 import os
 import os.path
 import re
+from typing import Optional
 import urllib.parse
 
 import requests
-
 
 from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
 
 # Default Ansys version to use as a fallback.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
-
-# Image files for the general Nexus UI.
-NEXUS_IMAGES = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
-
-# Image files for the older WebGL viewer.
-VIEWER_IMAGES_OLD = [
-    "ANSYS_blk_lrg.png",
-    "ANSYS_icon.png",
-    "ANSYS_wht_lrg.png",
-    "back.png",
-    "close.png",
-    "closed.png",
-    "favicon.png",
-    "Icons.png",
-    "open.png",
-    "Point.cur",
-]
-
-# JavaScript utility files for the modern viewer.
-VIEWER_UTILS = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
-
-# Core JavaScript files for the modern viewer.
-VIEWER_JS = ["ANSYSViewer_min.js", "viewer-loader.js"]
-
-# Files for the context menu used in the viewer.
-CONTEXT_MENU_JS = [
-    "jquery.contextMenu.min.css",
-    "jquery.contextMenu.min.js",
-    "jquery.ui.position.min.js",
-]
-
-# Core Three.js library files.
-THREE_JS = [
-    "ArcballControls.js",
-    "DRACOLoader.js",
-    "GLTFLoader.js",
-    "OrbitControls.js",
-    "OBJLoader.js",
-    "three.js",
-    "VRButton.js",
-]
-
-# Draco library files for 3D model compression.
-DRACO_JS = [
-    "draco_decoder.js",
-    "draco_decoder.wasm",
-    "draco_encoder.js",
-    "draco_wasm_wrapper.js",
-]
-
-# Font files for icons.
-FONTS = [
-    "fa-solid-900.eot",
-    "fa-solid-900.svg",
-    "fa-solid-900.ttf",
-    "fa-solid-900.woff",
-    "fa-solid-900.woff2",
-]
 
 
 class ReportDownloadHTML:
@@ -224,64 +166,115 @@ class ReportDownloadHTML:
                 print(f"Unable to get: {url}")
 
         # Additional files to be mapped to the media directory
-        self._download_static_files(
-            NEXUS_IMAGES, "/static/website/images/", "media", "nexus images"
-        )
+        images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
+        self._download_static_files(images, "/static/website/images/", "media", "nexus images")
 
         # The old Ansys Nexus WebGL viewer
-        self._download_static_files(
-            VIEWER_IMAGES_OLD, "/static/website/images/", "media", "viewer images I"
-        )
+        images = [
+            "ANSYS_blk_lrg.png",
+            "ANSYS_icon.png",
+            "ANSYS_wht_lrg.png",
+            "back.png",
+            "close.png",
+            "closed.png",
+            "favicon.png",
+            "Icons.png",
+            "open.png",
+            "Point.cur",
+        ]
+        self._download_static_files(images, "/static/website/images/", "media", "viewer images I")
 
         # The new Ansys Nexus WebGL viewer
-        images = VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]
+        images = [
+            "ANSYS_blk_lrg.png",
+            "ANSYS_icon.png",
+            "ANSYS_wht_lrg.png",
+            "back.png",
+            "close.png",
+            "closed.png",
+            "favicon.png",
+            "Icons.png",
+            "open.png",
+            "Point.cur",
+            "proxy_viewer.png",
+            "play.png",
+        ]
         self._download_static_files(
             images,
             f"/ansys{self._ansys_version}/nexus/images/",
             f"ansys{self._ansys_version}/nexus/images/",
             "viewer images II",
         )
+        images = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._download_static_files(
-            VIEWER_UTILS,
+            images,
             f"/ansys{self._ansys_version}/nexus/utils/",
             f"ansys{self._ansys_version}/nexus/utils/",
             "viewer javascript support",
         )
+        images = ["ANSYSViewer_min.js", "viewer-loader.js"]
         self._download_static_files(
-            VIEWER_JS,
+            images,
             f"/ansys{self._ansys_version}/nexus/",
             f"ansys{self._ansys_version}/nexus/",
             "ansys-nexus-viewer js",
         )
+        images = [
+            "jquery.contextMenu.min.css",
+            "jquery.contextMenu.min.js",
+            "jquery.ui.position.min.js",
+        ]
         self._download_static_files(
-            CONTEXT_MENU_JS,
+            images,
             f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
             "ansys-nexus-viewer vnc js",
         )
 
+        image = [
+            "ArcballControls.js",
+            "DRACOLoader.js",
+            "GLTFLoader.js",
+            "OrbitControls.js",
+            "OBJLoader.js",
+            "three.js",
+            "VRButton.js",
+        ]
         self._download_static_files(
-            THREE_JS,
+            image,
             f"/ansys{self._ansys_version}/nexus/threejs/",
             f"ansys{self._ansys_version}/nexus/threejs",
             "threejs core",
         )
 
+        image = [
+            "draco_decoder.js",
+            "draco_decoder.wasm",
+            "draco_encoder.js",
+            "draco_wasm_wrapper.js",
+        ]
         self._download_static_files(
-            DRACO_JS,
+            image,
             f"/ansys{self._ansys_version}/nexus/threejs/libs/draco/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco",
             "threejs draco",
         )
         self._download_static_files(
-            DRACO_JS,
+            image,
             f"/ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
             "threejs draco gltf",
         )
 
         # Fonts
-        self._download_static_files(FONTS, "/static/website/webfonts/", "webfonts", "fonts")
+        fonts = [
+            "fa-solid-900.eot",
+            "fa-solid-900.svg",
+            "fa-solid-900.ttf",
+            "fa-solid-900.woff",
+            "fa-solid-900.woff2",
+        ]
+        self._download_static_files(fonts, "/static/website/webfonts/", "webfonts", "fonts")
 
     @staticmethod
     def fix_viewer_component_paths(filename, data, ansys_version):
@@ -425,31 +418,21 @@ class ReportDownloadHTML:
         """
         while True:
             try:
-                # Find the start of the block
                 idx1 = text.index(prefix, start)
             except ValueError:
-                # If the prefix is not found, no more blocks exist
                 return -1, -1, ""
             try:
-                # Find the end of the block
                 idx2 = text.index(suffix, idx1 + len(prefix))
             except ValueError:
-                # If the suffix is not found, this block is malformed
                 return -1, -1, ""
-
-            # Adjust the end index to include the suffix
             idx2 += len(suffix)
             block = text[idx1:idx2]
-
-            # Validate that the block contains a recognized asset path
             if (
                 ("/media/" in block)
                 or ("/static/" in block)
-                or (re.search(r"/ansys\d+/", block))  # Use re.search to find pattern anywhere
+                or (re.match(r"/ansys([0-9]+)", block))
             ):
-                return idx1, idx2, block
-
-            # If the block is not valid, continue searching from the end of this one
+                return idx1, idx2, text[idx1:idx2]
             start = idx2
 
     def _replace_blocks(
