@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
