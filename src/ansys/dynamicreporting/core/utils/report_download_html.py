@@ -2,14 +2,22 @@ import base64
 import os
 import os.path
 import re
-from typing import Optional
 import urllib.parse
 
 import requests
 
-# TODO:
-#  Improve MathJax download
-ANSYS_VERSION_FALLBACK = "242"
+# Import the shared constants and file lists
+from .html_export_constants import (
+    ANSYS_VERSION_FALLBACK,
+    CONTEXT_MENU_JS,
+    DRACO_JS,
+    FONTS,
+    NEXUS_IMAGES,
+    THREE_JS,
+    VIEWER_IMAGES_OLD,
+    VIEWER_JS,
+    VIEWER_UTILS,
+)
 
 
 class ReportDownloadHTML:
@@ -165,118 +173,67 @@ class ReportDownloadHTML:
                 print(f"Unable to get: {url}")
 
         # Additional files to be mapped to the media directory
-        images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
-        self._download_static_files(images, "/static/website/images/", "media", "nexus images")
+        self._download_static_files(
+            NEXUS_IMAGES, "/static/website/images/", "media", "nexus images"
+        )
 
         # The old Ansys Nexus WebGL viewer
-        images = [
-            "ANSYS_blk_lrg.png",
-            "ANSYS_icon.png",
-            "ANSYS_wht_lrg.png",
-            "back.png",
-            "close.png",
-            "closed.png",
-            "favicon.png",
-            "Icons.png",
-            "open.png",
-            "Point.cur",
-        ]
-        self._download_static_files(images, "/static/website/images/", "media", "viewer images I")
+        self._download_static_files(
+            VIEWER_IMAGES_OLD, "/static/website/images/", "media", "viewer images I"
+        )
 
         # The new Ansys Nexus WebGL viewer
-        images = [
-            "ANSYS_blk_lrg.png",
-            "ANSYS_icon.png",
-            "ANSYS_wht_lrg.png",
-            "back.png",
-            "close.png",
-            "closed.png",
-            "favicon.png",
-            "Icons.png",
-            "open.png",
-            "Point.cur",
-            "proxy_viewer.png",
-            "play.png",
-        ]
+        images = VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]
         self._download_static_files(
             images,
             f"/ansys{self._ansys_version}/nexus/images/",
             f"ansys{self._ansys_version}/nexus/images/",
             "viewer images II",
         )
-        images = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
         self._download_static_files(
-            images,
+            VIEWER_UTILS,
             f"/ansys{self._ansys_version}/nexus/utils/",
             f"ansys{self._ansys_version}/nexus/utils/",
             "viewer javascript support",
         )
-        images = ["ANSYSViewer_min.js", "viewer-loader.js"]
         self._download_static_files(
-            images,
+            VIEWER_JS,
             f"/ansys{self._ansys_version}/nexus/",
             f"ansys{self._ansys_version}/nexus/",
             "ansys-nexus-viewer js",
         )
-        images = [
-            "jquery.contextMenu.min.css",
-            "jquery.contextMenu.min.js",
-            "jquery.ui.position.min.js",
-        ]
         self._download_static_files(
-            images,
+            CONTEXT_MENU_JS,
             f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
             "ansys-nexus-viewer vnc js",
         )
 
-        image = [
-            "ArcballControls.js",
-            "DRACOLoader.js",
-            "GLTFLoader.js",
-            "OrbitControls.js",
-            "OBJLoader.js",
-            "three.js",
-            "VRButton.js",
-        ]
         self._download_static_files(
-            image,
+            THREE_JS,
             f"/ansys{self._ansys_version}/nexus/threejs/",
             f"ansys{self._ansys_version}/nexus/threejs",
             "threejs core",
         )
 
-        image = [
-            "draco_decoder.js",
-            "draco_decoder.wasm",
-            "draco_encoder.js",
-            "draco_wasm_wrapper.js",
-        ]
         self._download_static_files(
-            image,
+            DRACO_JS,
             f"/ansys{self._ansys_version}/nexus/threejs/libs/draco/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco",
             "threejs draco",
         )
         self._download_static_files(
-            image,
+            DRACO_JS,
             f"/ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
             "threejs draco gltf",
         )
 
         # Fonts
-        fonts = [
-            "fa-solid-900.eot",
-            "fa-solid-900.svg",
-            "fa-solid-900.ttf",
-            "fa-solid-900.woff",
-            "fa-solid-900.woff2",
-        ]
-        self._download_static_files(fonts, "/static/website/webfonts/", "webfonts", "fonts")
+        self._download_static_files(FONTS, "/static/website/webfonts/", "webfonts", "fonts")
 
     @staticmethod
-    def _fix_viewer_component_paths(filename, data, ansys_version):
+    def fix_viewer_component_paths(filename, data, ansys_version):
         # Special case for AVZ viewer: ANSYSViewer_min.js to set the base path for images
         if filename.endswith("ANSYSViewer_min.js"):
             data = data.decode("utf-8")
@@ -310,7 +267,7 @@ class ReportDownloadHTML:
                 filename = self._directory + os.sep + target_path + os.sep + f
                 filename = os.path.normpath(filename)
                 try:
-                    data = self._fix_viewer_component_paths(
+                    data = self.fix_viewer_component_paths(
                         str(filename), resp.content, self._ansys_version
                     )
                     open(filename, "wb").write(data)
@@ -327,7 +284,7 @@ class ReportDownloadHTML:
         return f"{str(self._collision_count)}_{name}"
 
     @staticmethod
-    def _is_scene_file(name: str) -> bool:
+    def is_scene_file(name: str) -> bool:
         if name.upper().endswith(".AVZ"):
             return True
         if name.upper().endswith(".SCDOC"):
@@ -354,7 +311,7 @@ class ReportDownloadHTML:
                 # 4/3 is roughly the expansion factor of base64 encoding (3bytes encode to 4)
                 # Note: we will also inline any "scene" 3D file.  This can happen when processing
                 # a slider view "key_image" array.
-                if (inline or self._is_scene_file(pathname)) and self._should_use_data_uri(
+                if (inline or self.is_scene_file(pathname)) and self._should_use_data_uri(
                     len(tmp) * (4.0 / 3.0)
                 ):
                     # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
@@ -378,7 +335,7 @@ class ReportDownloadHTML:
                         # we need to prefix the .bin file and scene.js file with the GUID
                         basename = f"{os.path.basename(os.path.dirname(pathname))}_{basename}"
                     else:
-                        tmp = self._fix_viewer_component_paths(basename, tmp, self._ansys_version)
+                        tmp = self.fix_viewer_component_paths(basename, tmp, self._ansys_version)
                     # get the output filename
                     if pathname.startswith(f"/static/ansys{self._ansys_version}/"):
                         # if the content is part of the /ansys/ namespace, we keep the namespace,
@@ -397,25 +354,51 @@ class ReportDownloadHTML:
         return self._filemap[pathname]
 
     @staticmethod
-    def _find_block(text: str, start: int, prefix: int, suffix: str) -> (int, int, str):
-        # Note: the block must contain "/media/", "/ansys/" or "/static/" for it to be valid
+    def find_block(text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
+        """
+        Finds a block of text between a prefix and a suffix that contains a valid asset path.
+
+        This method searches for a substring that starts with 'prefix', ends with 'suffix',
+        and contains a reference to '/media/', '/static/', or a versioned ansys path
+        like '/ansys242/'.
+
+        Args:
+            text: The string to search within.
+            start: The starting index for the search.
+            prefix: The string that marks the beginning of the block.
+            suffix: The string that marks the end of the block.
+
+        Returns:
+            A tuple containing the start index, end index, and the found block text.
+            If no block is found, it returns (-1, -1, "").
+        """
         while True:
             try:
+                # Find the start of the block
                 idx1 = text.index(prefix, start)
             except ValueError:
+                # If the prefix is not found, no more blocks exist
                 return -1, -1, ""
             try:
+                # Find the end of the block
                 idx2 = text.index(suffix, idx1 + len(prefix))
             except ValueError:
+                # If the suffix is not found, this block is malformed
                 return -1, -1, ""
+
+            # Adjust the end index to include the suffix
             idx2 += len(suffix)
             block = text[idx1:idx2]
+
+            # Validate that the block contains a recognized asset path
             if (
                 ("/media/" in block)
                 or ("/static/" in block)
-                or (re.match(r"/ansys([0-9]+)", block))
+                or (re.search(r"/ansys\d+/", block))  # Use re.search to find pattern anywhere
             ):
-                return idx1, idx2, text[idx1:idx2]
+                return idx1, idx2, block
+
+            # If the block is not valid, continue searching from the end of this one
             start = idx2
 
     def _replace_blocks(
@@ -426,7 +409,7 @@ class ReportDownloadHTML:
         # walk all the matching blocks
         current_pos = 0
         while True:
-            start, end, text = self._find_block(html, current_pos, prefix, suffix)
+            start, end, text = self.find_block(html, current_pos, prefix, suffix)
             if start < 0:
                 break
             text = self._replace_files(text, inline=inline, size_check=size_check)
@@ -441,7 +424,7 @@ class ReportDownloadHTML:
         # ... id="avz_comp_042395948b40418b81a48f2ffbb7fa2a"></ansys-nexus-viewer>
         current_pos = 0
         while True:
-            start, end, text = self._find_block(
+            start, end, text = self.find_block(
                 html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
             )
             if start < 0:

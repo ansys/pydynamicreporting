@@ -23,8 +23,8 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
             ansys_installation=pytestconfig.getoption("install_path"),
             db_directory=local_db,
             static_directory=static_dir,
-            media_url="/media1/",
-            static_url="/static2/",
+            media_url="/media/",
+            static_url="/static/",
         )
     else:
         # existing db directory
@@ -54,8 +54,8 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
             databases=database_config,
             media_directory=source_db / "media",
             static_directory=static_dir,
-            media_url="/media1/",
-            static_url="/static2/",
+            media_url="/media/",
+            static_url="/static/",
         )
     return adr
 

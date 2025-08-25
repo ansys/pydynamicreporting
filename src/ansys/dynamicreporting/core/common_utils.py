@@ -58,7 +58,7 @@ def get_install_info(
         try:
             import enve
 
-            dirs_to_check.append(enve.home())
+            dirs_to_check.append(Path(enve.home()))
         except ModuleNotFoundError:
             pass
         # Look for Ansys install using target version number

@@ -165,6 +165,16 @@ def test_set_default_dataset_no_dataset(adr_serverless):
 
 
 @pytest.mark.ado_test
+def get_static_url(adr_serverless):
+    assert adr_serverless.static_url == "/static/"
+
+
+@pytest.mark.ado_test
+def get_media_url(adr_serverless):
+    assert adr_serverless.media_url == "/media/"
+
+
+@pytest.mark.ado_test
 def test_create_html(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
@@ -1022,6 +1032,72 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
     # Expect an ADRException because the underlying render call failed
     with pytest.raises(ADRException, match="PPTX Report rendering failed"):
         adr_serverless.render_report_as_pptx(name="FailingPPTXReport")
+
+
+@pytest.mark.ado_test
+def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
+    """
+    Tests the successful export of a report to a directory by patching only
+    the initial render call. This allows the full exporter logic to run.
+    """
+    from ansys.dynamicreporting.core.serverless import ADR, BasicLayout
+
+    # Arrange: Create a dummy template for the lookup to succeed.
+    adr_serverless.create_template(BasicLayout, name="TestExportReport", parent=None)
+
+    # Mock the render_report method to prevent it from hitting the Django template engine.
+    def mock_render_report(self, name, **kwargs):
+        # Use the provided static asset path that is known to exist.
+        return (
+            '<html><head><link rel="stylesheet" type="text/css"'
+            ' href="/static/website/content/site.css"/></head></html>'
+        )
+
+    monkeypatch.setattr(ADR, "render_report", mock_render_report)
+
+    # Act: Call the method under test. The full exporter logic will run.
+    output_path = adr_serverless.export_report_as_html(
+        output_directory=tmp_path,
+        single_file=False,
+        name="TestExportReport",
+    )
+
+    # Assert: Verify the main HTML file was created and the linked asset was copied
+    # to the correct location.
+    assert output_path == tmp_path / "index.html"
+    assert output_path.exists()
+
+    # Check for the existence of the copied CSS file in the correct output path.
+    # The exporter should replicate the source path structure within the output directory.
+    assert (tmp_path / "static" / "website" / "content" / "site.css").exists()
+
+
+@pytest.mark.ado_test
+def test_export_report_html_no_static_dir_fails(adr_serverless, tmp_path, monkeypatch):
+    """
+    Ensures that the export fails with a configuration error if the
+    static directory has not been set on the ADR instance.
+    """
+    # Temporarily remove the static_directory attribute to simulate the error condition.
+    monkeypatch.setattr(adr_serverless, "_static_directory", None)
+
+    with pytest.raises(
+        ImproperlyConfiguredError, match="The 'static_directory' must be configured"
+    ):
+        adr_serverless.export_report_as_html(
+            output_directory=tmp_path,
+            name="AnyReport",
+        )
+
+
+@pytest.mark.ado_test
+def test_export_report_html_no_kwarg_fails(adr_serverless, tmp_path):
+    """
+    Ensures that the export fails if no keyword argument (like 'name' or 'guid')
+    is provided to find the template.
+    """
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.export_report_as_html(output_directory=tmp_path)
 
 
 @pytest.mark.ado_test
