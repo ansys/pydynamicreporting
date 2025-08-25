@@ -41,6 +41,7 @@ class ServerlessReportExporter:
         filename: str = "index.html",
         no_inline_files: bool = False,
         ansys_version: str = None,
+        dark_mode: bool = True,
         debug: bool = False,
         logger: Any = None,
     ):
@@ -56,6 +57,7 @@ class ServerlessReportExporter:
         self._logger = logger or get_logger()
         self._no_inline = no_inline_files
         self._ansys_version = ansys_version
+        self._dark_mode = dark_mode
 
         # State tracking properties, functionally identical to ReportDownloadHTML
         self._filemap: dict[str, str] = {}
@@ -100,13 +102,54 @@ class ServerlessReportExporter:
         html = self._replace_blocks(html, "<img src=", ">")
         html = self._replace_blocks(html, "<source src=", ">")
         html = self._replace_blocks(html, ".key_images = {", ".update();")
-        # Always inline GLTF/Babylon viewer blocks (legacy did so)
+        # Always inline viewer/fetch payloads for portability
         html = self._replace_blocks(html, "GLTFViewer", ");", inline=True)
         html = self._inline_ansys_viewer(html)
-        # Inline fetch() assets (scenes, aux blobs) for portability
         html = self._replace_blocks(html, "await fetch(", ");", inline=True)
 
-        (self._output_dir / self._filename).write_text(html, encoding="utf8")
+        # If the template rendered a fragment (a <div>), wrap it into a full document
+        final_html = self._wrap_full_document(html)
+
+        (self._output_dir / self._filename).write_text(final_html, encoding="utf8")
+
+    def _wrap_full_document(self, html_fragment_or_doc: str) -> str:
+        """
+        If `html_fragment_or_doc` already looks like a full HTML document, return it unchanged.
+        Otherwise, wrap it in a legacy-compatible shell (doctype, html/head/body) including title & favicon.
+        """
+        text = html_fragment_or_doc.lstrip()
+
+        # Already a full document? Return as-is.
+        lowered = text[:2000].lower()
+        if lowered.startswith("<!doctype") or "<html" in lowered:
+            return html_fragment_or_doc
+
+        # Build a minimal, legacy-compatible head. We do NOT move/duplicate the
+        # <link>/<script> tags from the fragment; we keep them where they are.
+        # The fragment already contains CSS/JS and MathJax config. Here we just
+        # add meta, title, and favicon to match legacy expectations.
+        head = f"""
+            <!DOCTYPE html>\n
+            <html data-bs-theme="{'dark' if self._dark_mode else 'light'}" xmlns="http://www.w3.org/1999/html">\n
+            <head>\n
+                <meta charset="UTF-8"/>\n
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">\n
+                <title>Report - ADR</title>\n
+                <link rel="shortcut icon" href="./media/favicon.ico"/>\n
+            </head>\n
+            """
+
+        # Body: include the fragment as-is (it already contains <link>/<script> blocks in correct order)
+        body_open = '    <body style="padding: 0;">\n'
+        # If the fragment already uses a wrapper like <div class="body-content ..."> keep it; otherwise
+        # we could optionally wrap with <main>. To avoid duplication, we just drop it in verbatim.
+        body_content = text
+        return_to_top = (
+            '\n<a href="#" id="return_to_top"><i class="fas fa-chevron-up fa-2x"></i></a>\n'
+        )
+        body_close = "    </body>\n</html>\n"
+
+        return head + body_open + body_content + return_to_top + body_close
 
     def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str:
         """

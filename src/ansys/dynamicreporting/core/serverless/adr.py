@@ -961,6 +961,7 @@ class ADR:
         output_directory: str | Path,
         *,
         filename: str = "index.html",
+        dark_mode: bool = False,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -975,6 +976,9 @@ class ADR:
 
         filename : str, optional
             The name of the output HTML file. Default is "index.html".
+
+        dark_mode : bool, optional
+            If True, the report will be rendered in dark mode. Default is False.
 
         context : dict, optional
             Context to pass to the report template. Default is None.
@@ -1038,6 +1042,7 @@ class ADR:
             media_dir=self._media_directory,
             filename=filename,
             ansys_version=str(self._ansys_version),
+            dark_mode=dark_mode,
             debug=self._debug,
             logger=self._logger,
         )
