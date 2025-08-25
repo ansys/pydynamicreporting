@@ -58,8 +58,8 @@ class ServerlessReportExporter:
         self._ansys_version = ansys_version
 
         # State tracking properties, functionally identical to ReportDownloadHTML
-        self._filemap = {}
-        self._replaced_file_ext = None
+        self._filemap: dict[str, str] = {}
+        self._replaced_file_ext: str | None = None
         self._collision_count = 0
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
@@ -70,6 +70,7 @@ class ServerlessReportExporter:
         self._inline_size_exception = False
         if self._no_inline:
             return False
+        # Base64 adds ~33% overhead; `size` should already include that estimate from caller.
         if self._total_data_uri_size + size > self._max_inline_size:
             self._inline_size_exception = True
             return False
@@ -87,8 +88,8 @@ class ServerlessReportExporter:
         if self._debug:
             (self._output_dir / "index.raw.html").write_text(self._html_content, encoding="utf8")
 
-        if self._no_inline:
-            self._copy_special_files()
+        # Always copy special files (parity with legacy so offline references never break)
+        self._copy_special_files()
 
         html = self._html_content
         html = self._replace_blocks(html, "<link", ">")
@@ -99,15 +100,15 @@ class ServerlessReportExporter:
         html = self._replace_blocks(html, "<img src=", ">")
         html = self._replace_blocks(html, "<source src=", ">")
         html = self._replace_blocks(html, ".key_images = {", ".update();")
-        html = self._replace_blocks(html, "GLTFViewer", ");", inline=not self._no_inline)
+        # Always inline GLTF/Babylon viewer blocks (legacy did so)
+        html = self._replace_blocks(html, "GLTFViewer", ");", inline=True)
         html = self._inline_ansys_viewer(html)
-        html = self._replace_blocks(html, "await fetch(", ");", inline=not self._no_inline)
+        # Inline fetch() assets (scenes, aux blobs) for portability
+        html = self._replace_blocks(html, "await fetch(", ");", inline=True)
 
         (self._output_dir / self._filename).write_text(html, encoding="utf8")
 
-    def _replace_files(
-        self, text: str, inline: bool = False, size_check: bool = False
-    ) -> str | None:
+    def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str:
         """
         Finds, processes, and replaces all asset references within a given block of text
         using a regular expression for cleaner parsing.
@@ -115,55 +116,54 @@ class ServerlessReportExporter:
         self._replaced_file_ext = None
         current = 0
 
-        # This regex pattern finds any of the valid asset path prefixes.
+        # Support absolute and "./" relative paths for the key prefixes.
+        # Examples matched:
+        #   /static/..., ./static/...
+        #   /media/...,  ./media/...
+        #   /ansys261/..., ./ansys261/...
+        #   /static/ansys261/..., ./static/ansys261/...
+        ver = re.escape(str(self._ansys_version)) if self._ansys_version is not None else r"\d+"
         path_prefix_pattern = re.compile(
-            f"(/static/ansys{self._ansys_version}/|/static/|/media/|/ansys{self._ansys_version}/)"
+            rf"(\.?/static/ansys{ver}/|\.?/static/|\.?/media/|\.?/ansys{ver}/)"
         )
 
         while True:
-            # Search for the next asset path from the current position.
             match = path_prefix_pattern.search(text, current)
-
-            # If no more matches are found, the processing is complete for this block.
             if not match:
                 return text
 
             idx1 = match.start()
 
-            # A simple heuristic to ensure we're processing a path inside an HTML attribute.
-            # It checks if the character preceding the path is a quote.
+            # Heuristic: path is inside an attribute if preceded by a quote
             quote = text[idx1 - 1]
             if quote not in ('"', "'"):
-                # This was likely not a real path; continue searching from after this match.
                 current = match.end()
                 continue
 
             try:
-                # Find the corresponding closing quote to delimit the full path.
                 idx2 = text.index(quote, idx1)
             except ValueError:
-                # If there's no closing quote, the rest of the string is un-parseable.
+                # No closing quote -> stop processing this block safely
                 return text
 
-            # Extract the path and process it.
-            path_in_html = text[idx1:idx2]
-            simple_path = path_in_html.split("?")[0]
-            (_, ext) = os.path.splitext(simple_path)
+            path_in_html = text[idx1:idx2]  # As it appears in HTML (could be ./...)
+            simple_path = path_in_html.split("?")[0]  # Strip query/cache-busters
+            _, ext = os.path.splitext(simple_path)
             self._replaced_file_ext = ext
 
             new_path = self._process_file(path_in_html, simple_path, inline=inline)
-
             if size_check and self._inline_size_exception:
                 new_path = "__SIZE_EXCEPTION__"
 
-            # Rebuild the text with the new path.
             text = text[:idx1] + new_path + text[idx2:]
-            # Update the search position to prevent re-processing the same block.
             current = idx1 + len(new_path)
 
     def _copy_special_files(self):
-        """Copies all hardcoded static files required for the report to function offline."""
-        # MathJax files
+        """
+        Copies static assets that are referenced indirectly (inside JS) or expected
+        by the legacy layout into the output directory.
+        """
+        # --- MathJax (core + fonts) ---
         mathjax_files = [
             "website/scripts/mathjax/jax/input/TeX/config.js",
             "website/scripts/mathjax/jax/input/MathML/config.js",
@@ -185,19 +185,24 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
+            "website/scripts/mathjax/MathJax.js",  # important: top-level loader
             "website/images/MenuArrow-15.png",
         ]
         for f in mathjax_files:
-            # The target path is intentionally "mangled" to place MathJax assets in the
-            # media directory
-            target_path = "media/" + f.split("mathjax/")[-1]
+            # Put MathJax under ./media/* like legacy (strip the '.../mathjax/' prefix if present)
+            target_path = "media/" + (
+                f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+            )
             self._copy_static_file(f, target_path)
 
-        # Nexus and old viewer images
+        # --- Favicon (legacy page expected ./media/favicon.ico) ---
+        self._copy_static_file("website/images/favicon.ico", "media/favicon.ico")
+
+        # --- Nexus + old viewer images (kept under ./media) ---
         for img in NEXUS_IMAGES + VIEWER_IMAGES_OLD:
             self._copy_static_file(f"website/images/{img}", f"media/{img}")
 
-        # Modern viewer assets
+        # --- Modern viewer payload kept under ./ansys{ver}/... ---
         viewer_images_new = VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"]
         self._copy_static_files(
             viewer_images_new,
@@ -233,7 +238,7 @@ class ServerlessReportExporter:
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf/",
         )
 
-        # Fonts
+        # --- Webfonts (kept in ./webfonts like legacy) ---
         self._copy_static_files(FONTS, "website/webfonts/", "webfonts/")
 
     def _copy_static_file(self, source_rel_path: str, target_rel_path: str):
@@ -243,8 +248,7 @@ class ServerlessReportExporter:
         if source_file.is_file():
             target_file.parent.mkdir(parents=True, exist_ok=True)
             content = source_file.read_bytes()
-            # Use the imported utility to patch JS files for the viewer. This is
-            # necessary to adjust internal asset paths within the viewer's code.
+            # Patch some viewer JS internals (loader/paths) if needed
             content = ReportDownloadHTML.fix_viewer_component_paths(
                 str(target_file), content, self._ansys_version
             )
@@ -252,7 +256,7 @@ class ServerlessReportExporter:
         else:
             self._logger.warning(f"Warning: Static source file not found: {source_file}")
 
-    def _copy_static_files(self, files: list, source_prefix: str, target_prefix: str):
+    def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
         """Helper to copy a list of files using prefixes."""
         for f in files:
             self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f)
@@ -272,14 +276,27 @@ class ServerlessReportExporter:
         if simple_path in self._filemap:
             return self._filemap[simple_path]
 
-        source_file = None
-        relative_path = simple_path.lstrip("/")
-        if simple_path.startswith("/media/"):
+        # Normalize paths: accept './prefix/...' and absolute '/prefix/...'
+        normalized = simple_path
+        if normalized.startswith("./"):
+            normalized = normalized[1:]  # -> '/static/...' or '/ansys...'
+        if not normalized.startswith("/"):
+            normalized = "/" + normalized
+
+        # Collapse duplicate slashes early (prevents 'ansys261//nexus/...').
+        normalized = re.sub(r"/{2,}", "/", normalized)
+
+        relative_path = normalized.lstrip("/")
+
+        # Resolve the source file based on the normalized prefix
+        if normalized.startswith("/media/"):
             source_file = self._media_dir / relative_path.replace("media/", "", 1)
-        elif simple_path.startswith("/static/"):
+        elif normalized.startswith("/static/"):
             source_file = self._static_dir / relative_path.replace("static/", "", 1)
-        elif simple_path.startswith(f"/ansys{self._ansys_version}/"):
+        elif normalized.startswith(f"/ansys{self._ansys_version}/"):
             source_file = self._static_dir / relative_path
+        else:
+            source_file = None
 
         if source_file is None or not source_file.is_file():
             self._logger.warning(f"Warning: Unable to find local file for path: {simple_path}")
@@ -295,23 +312,21 @@ class ServerlessReportExporter:
 
         basename = self._make_unique_basename(source_file.name)
 
-        # Base64 encoding increases file size by a factor of 4/3. This calculation
-        # estimates the new size to check against the inlining limit. Using float
-        # division is crucial for accuracy, as integer division would underestimate the size.
+        # Base64 encoding increases size by ~4/3 (estimate used for cap check)
         estimated_inline_size = int(len(content) * (4 / 3))
 
-        if (inline or ReportDownloadHTML.is_scene_file(simple_path)) and self._should_use_data_uri(
+        if (inline or ReportDownloadHTML.is_scene_file(normalized)) and self._should_use_data_uri(
             estimated_inline_size
         ):
             encoded_content = base64.b64encode(content).decode("utf-8")
-            results = f"data:application/octet-stream;base64,{encoded_content}"
-            # This block adds the debug feature for saving data URI sources
+            result = f"data:application/octet-stream;base64,{encoded_content}"
+            # Optional debug: persist the original bytes
             if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
                 filename = self._output_dir / "media" / basename
                 filename.parent.mkdir(parents=True, exist_ok=True)
                 filename.write_bytes(content)
         else:
-            # Babylon.js scene files require special handling to inline their binary assets.
+            # Babylon.js scene files: inline internal binary blocks & namespace name by GUID folder
             if basename.endswith("scene.js"):
                 content_str = self._replace_blocks(
                     content.decode("utf-8"), "load_binary_block(", ");", inline=True
@@ -323,23 +338,33 @@ class ServerlessReportExporter:
                     basename, content, self._ansys_version
                 )
 
-            if simple_path.startswith(f"/static/ansys{self._ansys_version}/"):
-                local_pathname = Path(simple_path).parent.as_posix().replace("/static/", "./")
-                results = f"{local_pathname}/{basename}"
-                target_file = self._output_dir / local_pathname.lstrip("./") / basename
-            elif simple_path.startswith("/static/"):
-                local_pathname = Path(simple_path).parent.as_posix()
-                results = f".{local_pathname}/{basename}"
-                target_file = self._output_dir / local_pathname.lstrip("/") / basename
+            # Where to write & how to reference:
+            if normalized.startswith(
+                f"/static/ansys{self._ansys_version}/"
+            ) or normalized.startswith(f"/ansys{self._ansys_version}/"):
+                # Keep the ansys{ver} tree as-is in the output (legacy)
+                local_pathname = Path(normalized).parent.as_posix().lstrip("/")
+                # Collapse duplicate slashes in the local pathname
+                local_pathname = re.sub(r"/{2,}", "/", local_pathname)
+
+                result = f"./{local_pathname}/{basename}"
+                # Ensure no accidental double slashes in the final result (beyond leading './')
+                result = "./" + re.sub(r"/{2,}", "/", result[2:])
+
+                target_file = self._output_dir / local_pathname / basename
+            elif normalized.startswith("/static/"):
+                # Legacy behavior: flatten other static assets into ./media/
+                result = f"./media/{basename}"
+                target_file = self._output_dir / "media" / basename
             else:  # /media/
-                results = f"./media/{basename}"
+                result = f"./media/{basename}"
                 target_file = self._output_dir / "media" / basename
 
             target_file.parent.mkdir(parents=True, exist_ok=True)
             target_file.write_bytes(content)
 
-        self._filemap[simple_path] = results
-        return results
+        self._filemap[simple_path] = result
+        return result
 
     def _replace_blocks(
         self, html: str, prefix: str, suffix: str, inline: bool = False, size_check: bool = False
@@ -367,10 +392,9 @@ class ServerlessReportExporter:
             if start < 0:
                 break
 
-            text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=not self._no_inline)
-            text = self._replace_blocks(
-                text, 'src="', '"', inline=not self._no_inline, size_check=True
-            )
+            # Legacy parity: always inline viewer attributes
+            text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=True)
+            text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
 
             if "__SIZE_EXCEPTION__" in text:
                 msg = "3D geometry too large for stand-alone HTML file"
@@ -387,10 +411,9 @@ class ServerlessReportExporter:
     def _make_output_dirs(self):
         """Creates the necessary directory structure in the output location."""
         self._output_dir.mkdir(parents=True, exist_ok=True)
-        if not self._no_inline:
-            return
 
         dirs_to_create = [
+            # MathJax (partial structure mirrored; files will ensure subfolders exist)
             "media/config",
             "media/extensions/TeX",
             "media/jax/output/SVG/fonts/TeX/Main/Regular",
@@ -401,14 +424,11 @@ class ServerlessReportExporter:
             "media/jax/input/AsciiMath",
             "media/images",
             "webfonts",
+            # Viewer
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
-            "static/website/css",
-            "static/website/images",
-            "static/website/scripts",
-            "static/website/webfonts",
         ]
         for d in dirs_to_create:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)
