@@ -34,6 +34,7 @@ from ..exceptions import (
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import ObjectSet
+from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 
@@ -378,39 +379,71 @@ class ADR:
 
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+
         # look for enve, but keep it optional.
         try:
             import enve
         except ImportError:
-            pf = "winx64" if platform.system().startswith("Wind") else "linx64"
-            dirs_to_check = [
-                # Path('C:/Program Files/ANSYS Inc/v252/CEI').parent is "C:/Program Files/ANSYS Inc/v252"
-                self._ansys_installation.parent / "commonfiles" / "ensight_components" / pf,
-                # for older versions < 2025R1
-                self._ansys_installation.parent
-                / "commonfiles"
-                / "fluids"
-                / "ensight_components"
-                / pf,
-            ]
-            try:
-                for enve_path in dirs_to_check:
-                    try:
-                        enve_path.resolve(strict=True)
-                        sys.path.append(str(enve_path))
-                        break
-                    except OSError:
-                        continue
+            if platform.system().startswith("Wind"):
+                dirs_to_check = [
+                    # Windows path from apex folder
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "win64"
+                    / "CEI",
+                    # Windows path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "ensight_components"
+                    / "winx64",
+                    # Old Windows path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "fluids"
+                    / "ensight_components"
+                    / "winx64",
+                ]
+            else:  # Linux
+                dirs_to_check = [
+                    # New Linux path from apex folder
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "linux_2.6_64"
+                    / "CEI",
+                    # New Linux path from commonfiles
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "ensight_components"
+                    / "linx64",
+                    # Old Linux path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "fluids"
+                    / "ensight_components"
+                    / "linx64",
+                ]
 
-                from enve_common import enve
-            except ImportError as e:
-                self._logger.warning(
-                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
-                )
-                warnings.warn(
-                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}",
-                    ImportWarning,
-                )
+            module_found = False
+            for path in dirs_to_check:
+                if path.is_dir():
+                    sys.path.append(str(path))
+                    module_found = True
+                    break
+
+            if module_found:
+                try:
+                    # First, attempt the `from enve_common import enve` style
+                    from enve_common import enve
+                except ImportError:
+                    try:
+                        # If that fails, attempt a direct `import enve`
+                        import enve
+                    except ImportError as e:
+                        msg = f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
+                        self._logger.warning(msg)
+                        warnings.warn(msg, ImportWarning)
 
         # import hack
         try:
@@ -652,6 +685,18 @@ class ADR:
         return str(self._static_directory)
 
     @property
+    def static_url(self) -> str:
+        from django.conf import settings
+
+        return settings.STATIC_URL
+
+    @property
+    def media_url(self) -> str:
+        from django.conf import settings
+
+        return settings.MEDIA_URL
+
+    @property
     def session(self) -> Session:
         return self._session
 
@@ -810,6 +855,40 @@ class ADR:
     def render_report(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> str:
+        """
+        Render the report as an HTML string.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            str
+                The rendered HTML string of the report.
+                Media type is "text/html".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        >>> with open("report.html", "w", encoding="utf-8") as f:
+        ...     f.write(html_content)
+        """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
@@ -837,17 +916,26 @@ class ADR:
             Filter to apply to the items in the report.
 
         **kwargs : Any
-            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc. At least one
+            keyword argument must be provided to fetch the report.
 
         Returns
         -------
-            A byte stream containing the PowerPoint presentation.
-            Media type is "application/vnd.openxmlformats-officedocument.presentationml.presentation".
+            bytes
+                A byte stream containing the PowerPoint presentation.
+                Media type is "application/vnd.openxmlformats-officedocument.presentationml.presentation".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the template is not of type PPTXLayout or
+            if the report rendering fails.
 
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
         ...     f.write(pptx_stream)
@@ -867,6 +955,103 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
+
+    def export_report_as_html(
+        self,
+        output_directory: str | Path,
+        *,
+        filename: str = "index.html",
+        dark_mode: bool = False,
+        context: dict | None = None,
+        item_filter: str = "",
+        **kwargs: Any,
+    ) -> Path:
+        """
+        Export a report as a standalone HTML file or directory with all assets.
+
+        Parameters
+        ----------
+        output_directory : str or Path
+            The directory where the report will be exported. If it does not exist, it will be created.
+
+        filename : str, optional
+            The name of the output HTML file. Default is "index.html".
+
+        dark_mode : bool, optional
+            If True, the report will be rendered in dark mode. Default is False.
+
+        context : dict, optional
+            Context to pass to the report template. Default is None.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report. Default is an empty string.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to fetch the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+        Path
+            The path to the generated HTML file or directory.
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the static directory is not configured.
+        ImproperlyConfiguredError
+            If the static directory is not configured or if the output directory cannot be created.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252",
+                    db_directory=r"C:\\DBs\\docex",
+                    media_directory=r"C:\\DBs\\docex\\media",
+                    static_directory=r"C:\\static"
+                )
+        >>> adr.setup(collect_static=True)
+        >>> output_path = adr.export_report_as_html(
+                    Path.cwd() / "htmlex",
+                    context={},
+                    item_filter="A|i_tags|cont|dp=dp227;",
+                    name="Serverless Simulation Report",
+                )
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        if self._static_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'static_directory' must be configured to export a report."
+            )
+
+        output_dir = Path(output_directory)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Render the raw HTML from the template.
+        html_content = self.render_report(context=context, item_filter=item_filter, **kwargs)
+
+        # Instantiate and run the serverless exporter.
+        exporter = ServerlessReportExporter(
+            html_content=html_content,
+            output_dir=output_dir,
+            static_dir=self._static_directory,
+            media_dir=self._media_directory,
+            filename=filename,
+            ansys_version=str(self._ansys_version),
+            dark_mode=dark_mode,
+            debug=self._debug,
+            logger=self._logger,
+        )
+        exporter.export()
+
+        # Return the path to the generated file.
+        final_path = output_dir / filename
+        self._logger.info(f"Successfully exported report to: {final_path}")
+        return final_path
 
     @staticmethod
     def query(
