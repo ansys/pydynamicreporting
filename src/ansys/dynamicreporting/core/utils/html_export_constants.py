@@ -1,8 +1,10 @@
 # This file centralizes constants and file lists used by both the server-based
 # and serverless HTML export implementations to avoid code duplication.
 
+from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+
 # Default Ansys version to use as a fallback.
-ANSYS_VERSION_FALLBACK = "261"
+ANSYS_VERSION_FALLBACK = CURRENT_VERSION
 
 # Image files for the general Nexus UI.
 NEXUS_IMAGES = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]

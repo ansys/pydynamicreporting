@@ -3,11 +3,7 @@ from pathlib import Path
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
-
-# Import the constant to make the test dynamic and avoid hardcoding
-from ansys.dynamicreporting.core.serverless.utils.html_export_constants import (
-    ANSYS_VERSION_FALLBACK,
-)
+from ansys.dynamicreporting.core.utils.html_export_constants import ANSYS_VERSION_FALLBACK
 
 
 # Fixture to create a temporary directory structure for testing the exporter
