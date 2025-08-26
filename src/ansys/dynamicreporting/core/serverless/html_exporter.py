@@ -1,7 +1,6 @@
 import base64
 import os
 from pathlib import Path
-import re
 from typing import Any
 
 from ..adr_utils import get_logger
