@@ -2742,7 +2742,7 @@ class tablemapREST(GeneratorREST):
         name=None,
         output_name="output row",
         select_names="*",
-        operation="value",
+        function="value",
     ):
         if name is None:
             name = ["*"]
@@ -2755,8 +2755,8 @@ class tablemapREST(GeneratorREST):
             raise ValueError("Error: output_name should be a string")
         if not isinstance(select_names, str):
             raise ValueError("Error: select_names should be a string")
-        if not isinstance(operation, str):
-            raise ValueError("Error: operation should be a string")
+        if not isinstance(function, str):
+            raise ValueError("Error: function should be a string")
 
         if "map_params" not in d:
             d["map_params"] = {}
@@ -2768,7 +2768,7 @@ class tablemapREST(GeneratorREST):
         new_source["source_rows"] = ", ".join(repr(x) for x in name)
         new_source["output_rows"] = output_name
         new_source["output_columns_select"] = select_names
-        new_source["operation"] = operation
+        new_source["function"] = function
         sources.append(new_source)
         d["map_params"]["operations"] = sources
         self.params = json.dumps(d)

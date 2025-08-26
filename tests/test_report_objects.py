@@ -1273,9 +1273,9 @@ def test_tablemap_operation() -> None:
     except ValueError as e:
         assert "select_names should be a string" in str(e)
     try:
-        a.add_operation(operation=1)
+        a.add_operation(function=1)
     except ValueError as e:
-        assert "operation should be a string" in str(e)
+        assert "function should be a string" in str(e)
     a.add_operation(name=["a"])
     a.add_operation(name=["b"])
     assert len(a.get_operations()) == 3
