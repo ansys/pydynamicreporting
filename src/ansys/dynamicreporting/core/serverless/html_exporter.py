@@ -1,7 +1,6 @@
 import base64
 import os
 from pathlib import Path
-import re
 from typing import Any
 
 from ..adr_utils import get_logger
@@ -94,7 +93,7 @@ class ServerlessReportExporter:
         self._copy_special_files()
 
         html = self._html_content
-        html = self._replace_blocks(html, "<link", ">")
+        html = self._replace_blocks(html, "<link", "/>")
         html = self._replace_blocks(html, "<img id='guiicon", ">")
         html = self._replace_blocks(html, "e.src = '", "';")
         html = self._replace_blocks(html, "<script src=", "</script>")
@@ -149,48 +148,51 @@ class ServerlessReportExporter:
 
     def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str:
         """
-        Finds, processes, and replaces all asset references within a given block of text
-        using a regular expression for cleaner parsing.
+        Finds, processes, and replaces all asset references within a given block of text.
+
+        IMPORTANT: This mirrors the legacy behavior exactly:
+          - Only these prefixes are recognized, in this strict priority order:
+              /static/ansys{ver}/, /static/, /media/, /ansys{ver}/
+          - It picks the FIRST pattern in that list that occurs anywhere at/after `current`
+            (it does NOT choose the earliest occurrence across all patterns).
+          - No './' variants, no generic normalization.
         """
         self._replaced_file_ext = None
         current = 0
+        ver = str(self._ansys_version) if self._ansys_version is not None else ""
 
-        # Support absolute and "./" relative paths for the key prefixes.
-        # Examples matched:
-        #   /static/..., ./static/...
-        #   /media/...,  ./media/...
-        #   /ansys261/..., ./ansys261/...
-        #   /static/ansys261/..., ./static/ansys261/...
-        ver = re.escape(str(self._ansys_version)) if self._ansys_version is not None else r"\d+"
-        path_prefix_pattern = re.compile(
-            rf"(\.?/static/ansys{ver}/|\.?/static/|\.?/media/|\.?/ansys{ver}/)"
+        patterns = (
+            f"/static/ansys{ver}/",
+            "/static/",
+            "/media/",
+            f"/ansys{ver}/",
         )
 
         while True:
-            match = path_prefix_pattern.search(text, current)
-            if not match:
-                return text
+            # Find the next match using the legacy priority order
+            idx1 = -1
+            for pat in patterns:
+                idx1 = text.find(pat, current)
+                if idx1 != -1:
+                    break
+            if idx1 == -1:
+                return text  # nothing more to replace
 
-            idx1 = match.start()
-
-            # Heuristic: path is inside an attribute if preceded by a quote
+            # Legacy heuristic: assume we're inside an attribute quoted by the char before the path
             quote = text[idx1 - 1]
-            if quote not in ('"', "'"):
-                current = match.end()
-                continue
+            idx2 = text.find(quote, idx1)
+            if idx2 == -1:
+                return text  # no closing quote -> stop processing this block safely
 
-            try:
-                idx2 = text.index(quote, idx1)
-            except ValueError:
-                # No closing quote -> stop processing this block safely
-                return text
+            path_in_html = text[idx1:idx2]  # includes any query string
+            # Strip query/cache-buster for filesystem lookups (legacy parity)
+            simple_path = path_in_html.split("?", 1)[0]
 
-            path_in_html = text[idx1:idx2]  # As it appears in HTML (could be ./...)
-            simple_path = path_in_html.split("?")[0]  # Strip query/cache-busters
             _, ext = os.path.splitext(simple_path)
             self._replaced_file_ext = ext
 
             new_path = self._process_file(path_in_html, simple_path, inline=inline)
+
             if size_check and self._inline_size_exception:
                 new_path = "__SIZE_EXCEPTION__"
 
@@ -294,6 +296,11 @@ class ServerlessReportExporter:
         # --- Webfonts (kept in ./webfonts like legacy) ---
         self._copy_static_files(FONTS, "website/webfonts/", "webfonts/")
 
+        # --- Legacy parity: copy jquery.min.js into ansys{ver}/nexus/utils ---
+        self._copy_static_file(
+            "website/scripts/jquery.min.js", f"ansys{self._ansys_version}/nexus/utils/jquery.min.js"
+        )
+
     def _copy_static_file(self, source_rel_path: str, target_rel_path: str):
         """Helper to copy a single file from the static source to the output directory."""
         source_file = self._static_dir / source_rel_path
@@ -324,99 +331,95 @@ class ServerlessReportExporter:
         self._collision_count += 1
         return f"{self._collision_count}_{name}"
 
-    def _process_file(self, path_in_html: str, simple_path: str, inline: bool = False) -> str:
-        """Reads a file from local disk and either inlines it or copies it."""
-        if simple_path in self._filemap:
-            return self._filemap[simple_path]
+    def _process_file(self, path_in_html: str, pathname: str, inline: bool = False) -> str:
+        """
+        Reads a file from local disk and either inlines it or copies it.
+        - Source resolution by prefix:
+            /media/  -> self._media_dir
+            /static/ -> self._static_dir
+            /ansys{ver}/ -> self._static_dir
+        - Output path rule:
+            if pathname startswith /static/ansys{ver}/ :
+                keep ansys tree (remove '/static/' -> './...'), else
+                write to ./media/<basename>
+        - Handles scene.js renaming & inlining of its binary blocks.
+        """
+        if pathname in self._filemap:
+            return self._filemap[pathname]
 
-        # Normalize paths: accept './prefix/...' and absolute '/prefix/...'
-        normalized = simple_path
-        if normalized.startswith("./"):
-            normalized = normalized[1:]  # -> '/static/...' or '/ansys...'
-        if not normalized.startswith("/"):
-            normalized = "/" + normalized
-
-        # Collapse duplicate slashes early (prevents 'ansys261//nexus/...').
-        normalized = re.sub(r"/{2,}", "/", normalized)
-
-        relative_path = normalized.lstrip("/")
-
-        # Resolve the source file based on the normalized prefix
-        if normalized.startswith("/media/"):
-            source_file = self._media_dir / relative_path.replace("media/", "", 1)
-        elif normalized.startswith("/static/"):
-            source_file = self._static_dir / relative_path.replace("static/", "", 1)
-        elif normalized.startswith(f"/ansys{self._ansys_version}/"):
-            source_file = self._static_dir / relative_path
+        # Resolve source file location based on the raw pathname (no normalization)
+        if pathname.startswith("/media/"):
+            source_file = self._media_dir / pathname.replace("/media/", "", 1)
+        elif pathname.startswith("/static/"):
+            source_file = self._static_dir / pathname.replace("/static/", "", 1)
+        elif pathname.startswith(f"/ansys{self._ansys_version}/"):
+            # Legacy downloads these from the server root; serverless reads them from static dir
+            source_file = self._static_dir / pathname.lstrip("/")
         else:
             source_file = None
 
         if source_file is None or not source_file.is_file():
-            self._logger.warning(f"Warning: Unable to find local file for path: {simple_path}")
-            self._filemap[simple_path] = path_in_html
+            self._logger.warning(f"Warning: Unable to find local file for path: {pathname}")
+            self._filemap[pathname] = path_in_html
             return path_in_html
 
         try:
             content = source_file.read_bytes()
         except OSError as e:
             self._logger.warning(f"Warning: Unable to read file {source_file}: {e}")
-            self._filemap[simple_path] = path_in_html
+            self._filemap[pathname] = path_in_html
             return path_in_html
 
         basename = self._make_unique_basename(source_file.name)
 
-        # Base64 encoding increases size by ~4/3 (estimate used for cap check)
-        estimated_inline_size = int(len(content) * (4 / 3))
+        # 4/3 is roughly the expansion factor of base64 encoding (3 bytes -> 4 chars)
+        estimated_inline_size = int(len(content) * (4.0 / 3.0))
 
-        if (inline or ReportDownloadHTML.is_scene_file(normalized)) and self._should_use_data_uri(
+        if (inline or ReportDownloadHTML.is_scene_file(pathname)) and self._should_use_data_uri(
             estimated_inline_size
         ):
-            encoded_content = base64.b64encode(content).decode("utf-8")
-            result = f"data:application/octet-stream;base64,{encoded_content}"
-            # Optional debug: persist the original bytes
+            # Inline as data URI
+            encoded = base64.b64encode(content).decode("utf-8")
+            result = f"data:application/octet-stream;base64,{encoded}"
+
             if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
-                filename = self._output_dir / "media" / basename
-                filename.parent.mkdir(parents=True, exist_ok=True)
-                filename.write_bytes(content)
+                fn = self._output_dir / "media" / basename
+                fn.parent.mkdir(parents=True, exist_ok=True)
+                fn.write_bytes(content)
+
+            self._filemap[pathname] = result
+            return result
+
+        # Not inlined: special case for Babylon scene.js to inline its binary blocks & rename
+        if basename.endswith("scene.js"):
+            text = content.decode("utf-8")
+            text = self._replace_blocks(text, "load_binary_block(", ");", inline=True)
+            content = text.encode("utf-8")
+            # prefix with parent folder (GUID) like legacy
+            basename = f"{source_file.parent.name}_{basename}"
         else:
-            # Babylon.js scene files: inline internal binary blocks & namespace name by GUID folder
-            if basename.endswith("scene.js"):
-                content_str = self._replace_blocks(
-                    content.decode("utf-8"), "load_binary_block(", ");", inline=True
-                )
-                content = content_str.encode("utf-8")
-                basename = f"{source_file.parent.name}_{basename}"
-            else:
-                content = ReportDownloadHTML.fix_viewer_component_paths(
-                    basename, content, self._ansys_version
-                )
+            content = ReportDownloadHTML.fix_viewer_component_paths(
+                basename, content, self._ansys_version
+            )
 
-            # Where to write & how to reference:
-            if normalized.startswith(
-                f"/static/ansys{self._ansys_version}/"
-            ) or normalized.startswith(f"/ansys{self._ansys_version}/"):
-                # Keep the ansys{ver} tree as-is in the output (legacy)
-                # IMPORTANT: strip the '/static/' prefix if present
-                path_no_static = normalized.replace("/static/", "/", 1)
-                local_pathname = Path(path_no_static).parent.as_posix().lstrip("/")
-                local_pathname = re.sub(r"/{2,}", "/", local_pathname)
+        # Output path (exact legacy behavior):
+        # - If /static/ansys{ver}/ -> keep ansys tree, remove '/static/' -> './ansys{ver}/.../<basename>'
+        # - Else -> './media/<basename>'
+        if pathname.startswith(f"/static/ansys{self._ansys_version}/"):
+            local_pathname = os.path.dirname(pathname).replace("/static/", "./", 1)
+            result = f"{local_pathname}/{basename}"
 
-                result = f"./{local_pathname}/{basename}"
-                result = "./" + re.sub(r"/{2,}", "/", result[2:])  # ensure no '//' in result
-                target_file = self._output_dir / local_pathname / basename
+            target_file = self._output_dir / local_pathname.lstrip("./") / basename
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            target_file.write_bytes(content)
+        else:
+            result = f"./media/{basename}"
 
-            elif normalized.startswith("/static/"):
-                # Legacy behavior: flatten other static assets into ./media/
-                result = f"./media/{basename}"
-                target_file = self._output_dir / "media" / basename
-            else:  # /media/
-                result = f"./media/{basename}"
-                target_file = self._output_dir / "media" / basename
-
+            target_file = self._output_dir / "media" / basename
             target_file.parent.mkdir(parents=True, exist_ok=True)
             target_file.write_bytes(content)
 
-        self._filemap[simple_path] = result
+        self._filemap[pathname] = result
         return result
 
     def _replace_blocks(
@@ -453,7 +456,7 @@ class ServerlessReportExporter:
                 msg = "3D geometry too large for stand-alone HTML file"
                 text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
 
-            if self._replaced_file_ext and "data:application/octet-stream;base64," in text:
+            if self._replaced_file_ext:
                 ext = self._replaced_file_ext.replace(".", "").upper()
                 text = text.replace("<ansys-nexus-viewer", f'<ansys-nexus-viewer src_ext="{ext}"')
 
