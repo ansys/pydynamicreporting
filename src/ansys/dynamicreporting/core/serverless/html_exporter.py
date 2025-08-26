@@ -149,45 +149,45 @@ class ServerlessReportExporter:
 
     def _replace_files(self, text: str, inline: bool = False, size_check: bool = False) -> str:
         """
-        Finds, processes, and replaces all asset references within a given block of text
-        using a regular expression for cleaner parsing.
-        - Only recognizes these prefixes in this order:
-            /static/ansys{ver}/, /static/, /media/, /ansys{ver}/
-        - No './' variants, no generic normalization.
-        - Mirrors ReportDownloadHTML._replace_files behavior.
+        Finds, processes, and replaces all asset references within a given block of text.
+
+        IMPORTANT: This mirrors the legacy behavior exactly:
+          - Only these prefixes are recognized, in this strict priority order:
+              /static/ansys{ver}/, /static/, /media/, /ansys{ver}/
+          - It picks the FIRST pattern in that list that occurs anywhere at/after `current`
+            (it does NOT choose the earliest occurrence across all patterns).
+          - No './' variants, no generic normalization.
         """
-        # track the filename extension for the last replacement
         self._replaced_file_ext = None
         current = 0
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
 
+        patterns = (
+            f"/static/ansys{ver}/",
+            "/static/",
+            "/media/",
+            f"/ansys{ver}/",
+        )
+
         while True:
-            try:
-                idx1 = text.index(f"/static/ansys{ver}/", current)
-            except ValueError:
-                try:
-                    idx1 = text.index("/static/", current)
-                except ValueError:
-                    try:
-                        idx1 = text.index("/media/", current)
-                    except ValueError:
-                        try:
-                            idx1 = text.index(f"/ansys{ver}/", current)
-                        except ValueError:
-                            return text
+            # Find the next match using the legacy priority order
+            idx1 = -1
+            for pat in patterns:
+                idx1 = text.find(pat, current)
+                if idx1 != -1:
+                    break
+            if idx1 == -1:
+                return text  # nothing more to replace
 
-            # Heuristic: ensure we’re inside an attribute value delimited by quote
+            # Legacy heuristic: assume we're inside an attribute quoted by the char before the path
             quote = text[idx1 - 1]
-            try:
-                idx2 = text.index(quote, idx1)
-            except ValueError:
-                # No closing quote -> stop processing this block safely
-                return text
+            idx2 = text.find(quote, idx1)
+            if idx2 == -1:
+                return text  # no closing quote -> stop processing this block safely
 
-            path_in_html = text[idx1:idx2]  # includes potential query string
-            simple_path = path_in_html
-            if "?" in path_in_html:
-                simple_path = path_in_html[: path_in_html.index("?")]
+            path_in_html = text[idx1:idx2]  # includes any query string
+            # Strip query/cache-buster for filesystem lookups (legacy parity)
+            simple_path = path_in_html.split("?", 1)[0]
 
             _, ext = os.path.splitext(simple_path)
             self._replaced_file_ext = ext
