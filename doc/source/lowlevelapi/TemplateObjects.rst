@@ -1241,6 +1241,175 @@ These would be the lines of code to create the new template:
    )
    server.put_objects(my_template)
 
+.. _tablemapREST:
+
+tablemapREST object
+^^^^^^^^^^^^^^^^^^^
+
+Inherits from TemplateREST, GeneratorREST
+
+Class that corresponds to the `Table Map`
+Generator template type. Its specific methods
+are:
+
+**template.get_map_param()**
+
+Get the value of Map. Possible outputs are:
+
+-  'row': corresponds to Rows
+-  'column': corresponds to Columns
+
+**template.set_map_param(value='row')**
+
+Set the value of Map. Input needs to be a string: either "row" or
+"column".
+
+**template.get_table_name()**
+
+Get the value of Resulting table name.
+
+**template.set_table_name(value = 'output_table')**
+
+Set the value of Resulting table name. Input should be a string.
+
+**template.get_operations()**
+
+Get the values for the Map operations as a list. Each element
+corresponds to a different operation. Each element is a dictionary,
+where the following keys are presented:
+
+-  'source_rows': corresponds to the name(s) of the rows/columns used in
+   the operation
+-  'output_rows': corresponds to the Output row/column name
+-  'output_columns_select': corresponds to the "Select columns/rows"
+   field
+-  'function': corresponds to the Function field. Allowed functions are:
+
+   -  '+': Addition
+   -  '-': Subtraction
+   -  '*': Multiplication
+   -  '/': Division
+   -  '^': Power
+   -  'abs()': Absolute Value
+   -  'exp()': Exponent
+   -  'log()': Logarithm
+
+**template.delete_operation(name = [])**
+
+Method to remove an entire Map operation. Takes as input a list with
+the name(s) of the source rows/columns used in the operation. So for
+example to delete the third Map operation from the following panel:
+
+.. figure:: lib/NewItem314.png
+   :alt: Image
+   :align: center
+
+
+use:
+
+.. code-block:: python
+
+   template.delete_operation(name=["temperature", "pressure"])
+
+To delete the first operation, use:
+
+.. code-block:: python
+
+   template.delete_operation(name=["temperature"])
+
+**template.add_operation(name=None, output_name="output row", select_names="*", function="value")**
+
+Add a new Map operation.
+
+-  'name': corresponds to the name(s) of the rows/columns used in the
+   operation. Input needs to be a list of strings
+-  'output_name': corresponds to the Output row/column name.
+-  'select_names': corresponds to the name(s) of the selected rows/columns in the output.
+-  'function': corresponds to the operation field. See get_operations()
+   for the allowed functions.
+
+For example to create the operation in the following widget:
+
+.. figure:: lib/NewItem314.png
+   :alt: Image
+   :align: center
+
+
+you would run:
+
+.. code-block:: python
+
+   template.add_operation(
+       name=["temperature", "pressure"],
+       output_name="output row",
+       select_names="*",
+       function="value ^ 2",
+   )
+
+**template.get_table_transpose()**
+
+Get the value for Transpose results. Output is an integer: 0 for OFF, 1
+for ON.
+
+**template.set_table_transpose(value=0)**
+
+Set the value for Transpose results. Input must be an integer: 0 for
+OFF, 1 for ON.
+
+**template.get_numeric_output()**
+
+Get the value for Force numeric table output. Output is an integer: 0
+for OFF, 1 for ON.
+
+**template.set_numeric_output(value=0)**
+
+Set the value for Force numeric table output. Input must be an integer:
+0 for OFF, 1 for ON.
+
+Example of usage. Let's assume you want to create a template like the
+one shown in the picture:
+
+.. figure:: lib/NewItem315.png
+   :alt: Image
+   :align: center
+
+
+Let's also assume you want this template to be a child of the template
+"Merge" in the database running locally on port 8000.
+These would be the lines of code to create the new template:
+
+.. code-block:: python
+
+   from ansys.dynamicreporting.core.utils import report_remote_server, report_objects
+
+   server = report_remote_server.Server("http://localhost:8000", "nexus", "cei")
+   all_reports = server.get_objects(objtype=report_objects.TemplateREST)
+   my_parent = [x for x in all_reports if x.name == "Merge"][0]
+   my_template = server.create_template(
+       name="Mapped Data", parent=my_parent, report_type="Generator:tablemap"
+   )
+   my_template.set_generated_items("replace")
+   my_template.delete_operation(name=["\*"])
+   my_template.add_operation(
+       name=["Phase I"],
+       output_name="Phase I * 2",
+       select_names="*",
+       function="value * 2",
+   )
+   my_template.add_operation(
+       name=["Phase II"],
+       output_name="Phase II + 3",
+       select_names="*",
+       function="value + 3",
+   )
+   my_template.add_operation(
+       name=["Phase III"],
+       output_name="exp(Phase III)",
+       select_names="*",
+       function="exp(value)",
+   )
+   server.put_objects(my_template)
+
 .. _tablerowcolumnfilterREST:
 
 tablerowcolumnfilterREST object
