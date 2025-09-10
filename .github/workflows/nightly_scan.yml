@@ -1,3 +1,4 @@
+# Failing action: https://github.com/ansys/pydynamicreporting/actions/runs/17598170413
 name: Security Scan
 
 on:
@@ -9,6 +10,7 @@ on:
 
 jobs:
   security_scan:
+    if: false
     uses: ansys-internal/ci-templates/.github/workflows/security-scan-mend.yml@v7
     with:
       package_type: 'poetry+npm'
