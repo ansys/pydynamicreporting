@@ -35,7 +35,7 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "pytz>=2021.3",
     "psutil>=6.0.0",
-    # core ADR dependencies
+    # core ADR dependencies - necessary for serverless ADR imports from the installation
     "django~=4.2",
     "djangorestframework~=3.15",
     "django-guardian~=2.4",
