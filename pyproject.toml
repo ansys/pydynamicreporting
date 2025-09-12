@@ -42,7 +42,7 @@ dependencies = [
     "tzlocal~=5.0",
     'numpy>=1.23.5,<2; python_version < "3.13"',
     'numpy>=2.1; python_version >= "3.13"',
-    "python-pptx>=1.0.2",
+    "python-pptx==0.6.19",
     "pandas>=2.0",
     "statsmodels>=0.14",
     "scipy<=1.15.3", # breaks ADR if not included. Remove when statsmodels is updated
