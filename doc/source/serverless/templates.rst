@@ -99,6 +99,9 @@ Common methods include:
 - ``set_property(props_dict)``: Replace the “properties” dictionary.
 - ``add_property(props_dict)``: Add/update keys within the “properties” dictionary.
 - ``render(context=None, item_filter="", request=None)``: Render the template to HTML string.
+- ``to_dict()``: Returns a JSON-serializable dictionary of the full template tree.
+- ``to_json(filename)``: Store the template as a JSON file. Only allow this action if this template is a root template.
+- ``reorder_child(target_child_template, new_position_index)``: Reorder the target template in the `children` list to the specified position.
 
 Template Parameters
 -------------------
@@ -285,6 +288,15 @@ Example: Creating a Nested Template Structure
     results_panel.set_filter("A|i_tags|cont|section=results;")
     results_panel.save()
 
+Loading Templates from a JSON file
+----------------------------------
+
+You can load a report with multiple templates from an existing JSON file.
+
+.. code-block:: python
+
+    adr.load_templates_from_file("my_report.json")
+
 Rendering Templates
 -------------------
 
@@ -374,6 +386,45 @@ Notes on ``render_report_as_pptx()`` method:
 - Returns raw bytes of the generated PPTX presentation.
 - Passes ``context`` and ``item_filter`` to the template’s ``render_pptx()`` method.
 - Exceptions during rendering are wrapped and raised as ``ADRException``.
+
+Exporting to HTML
+-----------------
+
+You can export a report as a fully self-contained, offline HTML deliverable using the
+``export_report_as_html()`` method. This is ideal for sharing reports that can be
+viewed in any web browser without needing access to the original database or a running server.
+
+The method creates a main HTML file and subdirectories (``media``, ``static``) containing
+all necessary assets like images, scripts, and stylesheets.
+
+Example using the ADR entrypoint:
+
+.. code-block:: python
+
+    from pathlib import Path
+
+    # Assumes 'adr' is an initialized ADR instance with static_directory configured
+    # and setup() has been called with collect_static=True.
+
+    # Create a directory for the export
+    export_dir = Path.cwd() / "html_report_export"
+
+    # Export the report as a directory with linked assets
+    output_path = adr.export_report_as_html(
+        output_directory=export_dir,
+        name="Wing Simulation Report",  # kwarg to find the template
+        context={"key": "value"},
+        item_filter="A|i_tags|cont|project=wing_sim;",
+    )
+    print(f"Report exported to: {output_path}")
+
+Notes on ``export_report_as_html()`` method:
+
+- Requires the ``static_directory`` to be configured when initializing the ``ADR`` instance.
+- It is required to run ``adr.setup(collect_static=True)`` to ensure all necessary
+  static files are gathered and available for the export process inside the ``static_directory``.
+- The method requires at least one keyword argument (e.g., ``name``, ``guid``) to identify the root
+  template of the report to be exported.
 
 Lifecycle Notes
 ---------------

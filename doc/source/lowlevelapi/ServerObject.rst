@@ -75,8 +75,8 @@ returns a list of actual instances of the class specified by the
 objtype keyword instead of just returning the GUIDs.
 
 Note that if you want the list of templates, you can either set
-**objtype** to **report_objects.TempalteREST** or to
-**report.objects.TemplateREST.factory**. In the first case, all the
+**objtype** to **report_objects.TemplateREST** or to
+**report_objects.TemplateREST.factory**. In the first case, all the
 templates will be returned as objects of the TemplateREST class. In
 the second case, all templates will be returned as objects of the
 sub-classes of TemplateREST, corresponding to the exact report_type.

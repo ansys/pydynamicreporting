@@ -4,6 +4,7 @@ import uuid
 
 import pytest
 
+from ansys.dynamicreporting.core.exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from ansys.dynamicreporting.core.utils import report_objects as ro
 
 
@@ -390,6 +391,39 @@ def test_templaterest_fields() -> None:
     a.set_sort_selection()
     succ_a = a.get_sort_selection() == "all" and succ and succ_two and succ_three
     assert succ_a and succ_four and succ_five
+
+
+@pytest.mark.ado_test
+def test_templaterest_reorder_child() -> None:
+    # Create a TemplateREST object
+    template = ro.TemplateREST()
+    template.children = ["guid1", "guid2", "guid3"]
+
+    # Test reordering a child template to a valid position
+    template.reorder_child("guid2", 0)
+    assert template.children == ["guid2", "guid1", "guid3"]
+
+    # Test reordering a child template to another valid position
+    template.reorder_child("guid2", 2)
+    assert template.children == ["guid1", "guid3", "guid2"]
+
+    # Test reordering using a TemplateREST object instead of a string
+    child_template = ro.TemplateREST()
+    child_template.guid = "guid3"
+    template.reorder_child(child_template, 0)
+    assert template.children == ["guid3", "guid1", "guid2"]
+
+    # Test invalid position (out of bounds)
+    try:
+        template.reorder_child("guid1", 5)
+    except TemplateReorderOutOfBounds as e:
+        assert "out of bounds" in str(e)
+
+    # Test invalid GUID (not in children)
+    try:
+        template.reorder_child("invalid_guid", 1)
+    except TemplateDoesNotExist as e:
+        assert "not found in the parent's children list" in str(e)
 
 
 @pytest.mark.ado_test
@@ -1239,9 +1273,9 @@ def test_tablemap_operation() -> None:
     except ValueError as e:
         assert "select_names should be a string" in str(e)
     try:
-        a.add_operation(operation=1)
+        a.add_operation(function=1)
     except ValueError as e:
-        assert "operation should be a string" in str(e)
+        assert "function should be a string" in str(e)
     a.add_operation(name=["a"])
     a.add_operation(name=["b"])
     assert len(a.get_operations()) == 3

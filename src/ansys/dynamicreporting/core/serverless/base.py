@@ -157,6 +157,18 @@ class BaseModel(metaclass=BaseMeta):
             )
         return super().__new__(cls)
 
+    def __eq__(self, other: object) -> bool:
+        """Models are equal iff they are the same concrete class and have the same GUID."""
+        if self is other:
+            return True
+        if not isinstance(other, BaseModel):
+            return NotImplemented
+        return (self.__class__ is other.__class__) and (self.guid == other.guid)
+
+    def __hash__(self) -> int:
+        """Hash by concrete class + GUID so instances are usable in sets/dicts."""
+        return hash((self.__class__, self.guid))
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.guid}>"
 
