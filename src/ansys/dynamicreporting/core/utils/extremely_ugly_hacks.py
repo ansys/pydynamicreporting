@@ -54,10 +54,10 @@ def safe_unpickle(input_data, item_type=None):
                 try:
                     # be default, we follow python3's way of loading: default encoding is ascii
                     # this will work if the data was dumped using python3's pickle. Just do the usual.
-                    data = pickle.loads(bytes_data)   # nosec B301 B502
+                    data = pickle.loads(bytes_data)  # nosec B301 B502
                 except Exception:  # nosec
                     try:
-                        data = pickle.loads(bytes_data, encoding="utf-8")   # nosec B301 B502
+                        data = pickle.loads(bytes_data, encoding="utf-8")  # nosec B301 B502
                     except Exception:
                         # if it fails, which it will if the data was dumped using python2's pickle, then:
                         # As per https://docs.python.org/3/library/pickle.html#pickle.loads,

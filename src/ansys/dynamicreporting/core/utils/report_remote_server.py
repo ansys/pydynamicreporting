@@ -1199,7 +1199,7 @@ def create_new_local_database(
         if run_local:
             # Make a random string that could be used as a secret key for the database
             # take two UUID1 values, run them through md5 and concatenate the digests.
-            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324 
+            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
             secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
             # And make a target file (.nexdb) for auto launching of the report viewer...
             f = open(os.path.join(db_dir, "view_report.nexdb"), "w")
