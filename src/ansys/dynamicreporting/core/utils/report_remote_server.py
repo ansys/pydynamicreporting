@@ -19,10 +19,10 @@ import logging
 import os
 import os.path
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import platform
 import shutil
-import subprocess
+import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
@@ -98,7 +98,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     cmd.extend(args)
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    subprocess.call(args=cmd, **params)
+    subprocess.call(args=cmd, **params)  # nosec B603 B78
 
 
 class Server:
@@ -200,8 +200,8 @@ class Server:
 
     @classmethod
     def get_object_digest(cls, obj):
-        m = hashlib.md5()
-        m.update(pickle.dumps(obj))
+        m = hashlib.md5()  # nosec B324
+        m.update(pickle.dumps(obj))  # nosec B324
         return m.digest()
 
     @classmethod
@@ -268,7 +268,9 @@ class Server:
         if self.cur_servername is None:
             try:
                 self.validate()
-            except Exception:
+            except Exception as e:
+                if print_allowed():
+                    print(f"Error: {str(e)}")
                 pass
         if self.cur_servername is None:
             return self.get_URL()
@@ -293,7 +295,9 @@ class Server:
             result = self._http_session.get(url, auth=auth)
             if not result.ok:
                 return False
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return False
         return True
 
@@ -306,7 +310,9 @@ class Server:
         try:
             # note this request will fail as it does not return anything!!!
             self._http_session.get(url, auth=auth)
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             pass
         self.set_URL(None)
         self.set_password(None)
@@ -328,7 +334,9 @@ class Server:
             return []
         try:
             return [str(obj_data.get("name")) for obj_data in r.json()]
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return []
 
     def get_object_guids(self, objtype=report_objects.Template, query=None):
@@ -355,7 +363,9 @@ class Server:
                 return [str(obj_data.get("guid")) for obj_data in r.json()]
             else:
                 return [str(i) for i in r.json()["guid_list"]]
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return []
 
     def get_objects(self, objtype=report_objects.Template, query=None):
@@ -390,7 +400,9 @@ class Server:
                 t.from_json(d)
                 ret.append(t)
             return ret
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return []
 
     def get_object_from_guid(self, guid, objtype=report_objects.TemplateREST):
@@ -415,7 +427,9 @@ class Server:
             obj.server_api_version = self.api_version
             obj.from_json(r.json())
             return obj
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return None
 
     def _get_push_request_info(self, obj):
@@ -543,7 +557,9 @@ class Server:
                 url = self.cur_url + file_data[0]
                 try:
                     r = self._http_session.put(url, auth=auth, files=files)
-                except Exception:
+                except Exception as e:
+                    if print_allowed():
+                        print(f"Error: {str(e)}")
                     r = self._http_session.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
@@ -839,7 +855,7 @@ class Server:
         return templ
 
     def _download_report(self, url, file_name, directory_name=None):
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         if resp.status_code != requests.codes.ok:
             try:
                 detail = resp.json()["detail"]
@@ -963,7 +979,7 @@ class Server:
         if query is None:
             query = {}
         url = self.build_url_with_query(report_guid, query)
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         if resp.status_code == requests.codes.ok:
             try:
                 links = report_utils.get_links_from_html(resp.text)
@@ -1183,8 +1199,8 @@ def create_new_local_database(
         if run_local:
             # Make a random string that could be used as a secret key for the database
             # take two UUID1 values, run them through md5 and concatenate the digests.
-            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()
-            secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()
+            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
+            secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
             # And make a target file (.nexdb) for auto launching of the report viewer...
             f = open(os.path.join(db_dir, "view_report.nexdb"), "w")
             if len(secret_key):
@@ -1227,7 +1243,9 @@ def create_new_local_database(
                 group.user_set.add(user)
                 group.save()
                 os.makedirs(os.path.join(db_dir, "media"))
-            except Exception:
+            except Exception as e:
+                if print_allowed():
+                    print(f"Error: {str(e)}")
                 error = True
             if parent and has_qt:
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -1384,7 +1402,9 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
                 return False
             if number < version_min:
                 return False
-    except Exception:
+    except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         return False
     return True
 
@@ -1532,21 +1552,25 @@ def launch_local_database_server(
     #    .nexus.lock is held whenever port scanning is going on.  It can be held by this function or by nexus_launcher
     #    .nexus_api.lock is used by the Python API to ensure exclusivity (e.g. while a server is launching)
     local_lock = None
-    try:
+    try:  # nosec
         # create a file lock
         local_lock = filelock.nexus_file_lock(api_lock_filename)
         local_lock.acquire()
-    except Exception:
+    except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         pass
     # We may need to do port scanning
-    if port is None:
+    if port is None:  # nosec
         lock_filename = os.path.join(homedir, ".nexus.lock")
         scanning_lock = None
         try:
             # create a file lock
             scanning_lock = filelock.nexus_file_lock(lock_filename)
             scanning_lock.acquire()
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             pass
         # Note: QWebEngineView cannot access http over 65535, so limit ports to 65534
         ports = report_utils.find_unused_ports(1)
@@ -1675,7 +1699,9 @@ def launch_local_database_server(
                 "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port."
             )
         return False
-    except Exception:
+    except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         pass
 
     # Start the busy cursor
@@ -1742,11 +1768,13 @@ def launch_local_database_server(
         params["close_fds"] = True
 
     # Actually try to launch the server
-    try:
+    try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        monitor_process = subprocess.Popen(command, **params)
+        monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
     except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         if parent and has_qt:
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QApplication.translate(
@@ -1806,8 +1834,10 @@ def launch_local_database_server(
             raise exceptions.ServerConnectionError(
                 "Access to server denied.  Potential username/password error."
             )
-        except Exception:
+        except Exception as e:
             # we will try again
+            if print_allowed():
+                print(f"Error: {str(e)}")
             pass
 
     # detach from stdout, stderr to avoid buffer blocking

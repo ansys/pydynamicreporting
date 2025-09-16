@@ -154,13 +154,13 @@ class ReportDownloadHTML:
         for f in files:
             mangled = f.replace("media/", "/static/website/scripts/mathjax/")
             url = tmp.scheme + "://" + tmp.netloc + mangled
-            resp = requests.get(url, allow_redirects=True)
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
             if resp.status_code == requests.codes.ok:
                 filename = os.path.join(self._directory, f)
                 try:
                     open(filename, "wb").write(resp.content)
-                except Exception:
-                    print(f"Unable to download MathJax file: {f}")
+                except Exception as e:
+                    print(f"Unable to download MathJax file: {f}\nError {str(e)}")
             else:
                 print(f"Unable to get: {url}")
 
@@ -305,7 +305,7 @@ class ReportDownloadHTML:
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
-            resp = requests.get(url, allow_redirects=True)
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
             if resp.status_code == requests.codes.ok:
                 filename = self._directory + os.sep + target_path + os.sep + f
                 filename = os.path.normpath(filename)
@@ -314,8 +314,8 @@ class ReportDownloadHTML:
                         str(filename), resp.content, self._ansys_version
                     )
                     open(filename, "wb").write(data)
-                except Exception:
-                    print(f"Unable to download {comment}: {f}")
+                except Exception as e:
+                    print(f"Unable to download {comment}: {f}\nError: {e}")
 
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
@@ -343,7 +343,7 @@ class ReportDownloadHTML:
             return self._filemap[pathname]
         tmp = urllib.parse.urlsplit(self._url)
         url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         results = pathname
         if resp.status_code == requests.codes.ok:
             basename = os.path.basename(pathname)
@@ -389,8 +389,8 @@ class ReportDownloadHTML:
                         results = f"./media/{basename}"
                     filename = os.path.join(self._directory, "media", basename)
                     open(filename, "wb").write(tmp)
-            except Exception:
-                print(f"Unable to write downloaded file: {basename}")
+            except Exception as e:
+                print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
         else:
             print(f"Unable to read file via URL: {url}")
         self._filemap[pathname] = results
@@ -491,8 +491,8 @@ class ReportDownloadHTML:
             if not os.path.exists(base):
                 try:
                     os.makedirs(base, exist_ok=True)
-                except Exception:
-                    raise OSError(f"Unable to create target directory: {base}")
+                except Exception as e:
+                    raise OSError(f"Unable to create target directory: {base}\nError: {str(e)}")
 
     def _download(self):
         self._filemap = dict()
@@ -546,7 +546,7 @@ class ReportDownloadHTML:
         )
 
         # get the webpage html source
-        resp = requests.get(self._url)
+        resp = requests.get(self._url)  # nosec B400
         if resp.status_code != requests.codes.ok:
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
         # debugging...

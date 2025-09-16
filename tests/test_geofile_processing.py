@@ -20,11 +20,10 @@ def return_file_paths(request):
 @pytest.mark.ado_test
 def test_get_evsn_proxy_image(request) -> None:
     try:
-        _ = gp.get_evsn_proxy_image(filename=return_file_paths(request)[6])
-        success = True
-    except Exception:
-        success = False
-    assert (_ is None) and success
+        result = gp.get_evsn_proxy_image(filename=return_file_paths(request)[6])
+        assert result is None
+    except Exception as e:
+        pytest.fail(f"get_evsn_proxy_image raised an unexpected exception: {e}")
 
 
 @pytest.mark.ado_test

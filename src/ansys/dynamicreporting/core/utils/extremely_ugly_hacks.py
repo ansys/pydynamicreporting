@@ -1,6 +1,6 @@
 # All Python3 migration-related ugly hacks go here.
 import base64
-import pickle
+import pickle  # nosec B403
 from uuid import UUID
 
 from .report_utils import text_type
@@ -54,10 +54,10 @@ def safe_unpickle(input_data, item_type=None):
                 try:
                     # be default, we follow python3's way of loading: default encoding is ascii
                     # this will work if the data was dumped using python3's pickle. Just do the usual.
-                    data = pickle.loads(bytes_data)
-                except Exception:
+                    data = pickle.loads(bytes_data)  # nosec B301 B502
+                except Exception:  # nosec
                     try:
-                        data = pickle.loads(bytes_data, encoding="utf-8")
+                        data = pickle.loads(bytes_data, encoding="utf-8")  # nosec B301 B502
                     except Exception:
                         # if it fails, which it will if the data was dumped using python2's pickle, then:
                         # As per https://docs.python.org/3/library/pickle.html#pickle.loads,
@@ -65,7 +65,7 @@ def safe_unpickle(input_data, item_type=None):
                         # date and time pickled by Python 2."
                         # The data does contain a numpy array. So:
                         try:
-                            data = pickle.loads(bytes_data, encoding="latin-1")
+                            data = pickle.loads(bytes_data, encoding="latin-1")  # nosec B301 B502
 
                             # if the stream contains international characters which were 'loaded' with latin-1,
                             # we get garbage text. We have to detect that and then use a workaround.
@@ -80,7 +80,7 @@ def safe_unpickle(input_data, item_type=None):
                             # this is a tree item ONLY case that has a pickled datetime obj,
                             # we use bytes as the encoding to workaround this issue, because
                             # other encodings will not work.
-                            data = pickle.loads(bytes_data, encoding="bytes")
+                            data = pickle.loads(bytes_data, encoding="bytes")  # nosec B301 B502
 
                             # check again, just in case
                             if item_type == "tree":
