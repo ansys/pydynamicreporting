@@ -384,7 +384,7 @@ class ADR:
         try:
             import enve
         except ImportError:
-            if  platform.system().lower().startswith("win"):
+            if platform.system().lower().startswith("win"):
                 dirs_to_check = [
                     # Windows path from commonfiles
                     self._ansys_installation.parent
