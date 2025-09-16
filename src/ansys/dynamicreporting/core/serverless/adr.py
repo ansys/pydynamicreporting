@@ -384,15 +384,9 @@ class ADR:
         try:
             import enve
         except ImportError:
-            if platform.system().startswith("Wind"):
+            if platform.system().lower().startswith("win"):
                 dirs_to_check = [
-                    # Windows path from apex folder
-                    self._ansys_installation
-                    / f"apex{self._ansys_version}"
-                    / "machines"
-                    / "win64"
-                    / "CEI",
-                    # Windows path
+                    # Windows path from commonfiles
                     self._ansys_installation.parent
                     / "commonfiles"
                     / "ensight_components"
@@ -403,16 +397,16 @@ class ADR:
                     / "fluids"
                     / "ensight_components"
                     / "winx64",
-                ]
-            else:  # Linux
-                dirs_to_check = [
-                    # New Linux path from apex folder
+                    # Windows path from apex folder
                     self._ansys_installation
                     / f"apex{self._ansys_version}"
                     / "machines"
-                    / "linux_2.6_64"
+                    / "win64"
                     / "CEI",
-                    # New Linux path from commonfiles
+                ]
+            else:  # Linux
+                dirs_to_check = [
+                    # Linux path from commonfiles
                     self._ansys_installation.parent
                     / "commonfiles"
                     / "ensight_components"
@@ -423,6 +417,12 @@ class ADR:
                     / "fluids"
                     / "ensight_components"
                     / "linx64",
+                    # Linux path from apex folder
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "linux_2.6_64"
+                    / "CEI",
                 ]
 
             module_found = False
