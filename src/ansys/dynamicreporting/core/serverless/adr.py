@@ -138,8 +138,8 @@ class ADR:
         databases: dict | None = None,
         media_directory: str | None = None,
         static_directory: str | None = None,
-        media_url: str | None = None,
-        static_url: str | None = None,
+        media_url: str = "/media/",
+        static_url: str = "/static/",
         debug: bool | None = None,
         opts: dict | None = None,
         request: HttpRequest | None = None,
@@ -686,15 +686,11 @@ class ADR:
 
     @property
     def static_url(self) -> str:
-        from django.conf import settings
-
-        return settings.STATIC_URL
+        return self._static_url
 
     @property
     def media_url(self) -> str:
-        from django.conf import settings
-
-        return settings.MEDIA_URL
+        return self._media_url
 
     @property
     def session(self) -> Session:
@@ -1038,8 +1034,10 @@ class ADR:
         exporter = ServerlessReportExporter(
             html_content=html_content,
             output_dir=output_dir,
-            static_dir=self._static_directory,
             media_dir=self._media_directory,
+            static_dir=self._static_directory,
+            media_url=self._media_url,
+            static_url=self._static_url,
             filename=filename,
             ansys_version=str(self._ansys_version),
             dark_mode=dark_mode,
