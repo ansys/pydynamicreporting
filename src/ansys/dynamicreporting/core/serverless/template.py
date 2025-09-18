@@ -560,7 +560,7 @@ class ReportLinkLayout(Layout):
 
 class PPTXLayout(Layout):
     report_type: str = ReportType.PPTX_LAYOUT
-    _properties = ("input_pptx", "output_pptx", "use_all_slides")
+    _properties = ("input_pptx", "output_pptx", "use_all_slides", "font_size", "html_font_scale")
 
     def render_pptx(self, *, context=None, item_filter="", request=None) -> bytes:
         """
