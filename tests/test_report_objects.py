@@ -1895,12 +1895,15 @@ def test_squile_query() -> None:
 def test_pptx() -> None:
     a = ro.pptxREST()
     a.input_pptx = "a"
-    succ = a.input_pptx == "a"
+    assert a.input_pptx == "a"
     a.use_all_slides = 1
-    succ_two = a.use_all_slides == 1
+    assert a.use_all_slides == 1
     a.output_pptx = "b"
-    succ_three = a.output_pptx == "b"
-    assert succ and succ_two and succ_three
+    assert a.output_pptx == "b"
+    a.font_size = "4"
+    assert a.font_size == "4"
+    a.html_font_scale = "0.5"
+    assert a.html_font_scale == "0.5"
 
 
 @pytest.mark.ado_test

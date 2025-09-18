@@ -3504,6 +3504,26 @@ class pptxREST(LayoutREST):
         props["output_pptx"] = value
         self.set_property(props)
 
+    @property
+    def font_size(self):
+        return self.get_property().get("font_size")
+
+    @font_size.setter
+    def font_size(self, value):
+        props = self.get_property()
+        props["font_size"] = value
+        self.set_property(props)
+
+    @property
+    def html_font_scale(self):
+        return self.get_property().get("html_font_scale")
+
+    @html_font_scale.setter
+    def html_font_scale(self, value):
+        props = self.get_property()
+        props["html_font_scale"] = value
+        self.set_property(props)
+
 
 class pptxslideREST(LayoutREST):
     """Representation of PPTX Slide Layout Template."""
