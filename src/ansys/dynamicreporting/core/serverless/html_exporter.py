@@ -34,8 +34,10 @@ class ServerlessReportExporter:
         self,
         html_content: str,
         output_dir: Path,
-        static_dir: Path,
         media_dir: Path,
+        static_dir: Path,
+        media_url: str,
+        static_url: str,
         *,
         filename: str = "index.html",
         no_inline_files: bool = False,
@@ -49,8 +51,10 @@ class ServerlessReportExporter:
         """
         self._html_content = html_content
         self._output_dir = output_dir
-        self._static_dir = static_dir
         self._media_dir = media_dir
+        self._static_dir = static_dir
+        self._media_url = media_url
+        self._static_url = static_url
         self._filename = filename
         self._debug = debug
         self._logger = logger or get_logger()
@@ -162,9 +166,9 @@ class ServerlessReportExporter:
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
 
         patterns = (
-            f"/static/ansys{ver}/",
-            "/static/",
-            "/media/",
+            f"{self._static_url}ansys{ver}/",
+            self._static_url,
+            self._media_url,
             f"/ansys{ver}/",
         )
 
@@ -348,10 +352,10 @@ class ServerlessReportExporter:
             return self._filemap[pathname]
 
         # Resolve source file location based on the raw pathname (no normalization)
-        if pathname.startswith("/media/"):
-            source_file = self._media_dir / pathname.replace("/media/", "", 1)
-        elif pathname.startswith("/static/"):
-            source_file = self._static_dir / pathname.replace("/static/", "", 1)
+        if pathname.startswith(self._media_url):
+            source_file = self._media_dir / pathname.replace(self._media_url, "", 1)
+        elif pathname.startswith(self._static_url):
+            source_file = self._static_dir / pathname.replace(self._static_url, "", 1)
         elif pathname.startswith(f"/ansys{self._ansys_version}/"):
             # Legacy downloads these from the server root; serverless reads them from static dir
             source_file = self._static_dir / pathname.lstrip("/")
@@ -405,8 +409,8 @@ class ServerlessReportExporter:
         # Output path (exact legacy behavior):
         # - If /static/ansys{ver}/ -> keep ansys tree, remove '/static/' -> './ansys{ver}/.../<basename>'
         # - Else -> './media/<basename>'
-        if pathname.startswith(f"/static/ansys{self._ansys_version}/"):
-            local_pathname = os.path.dirname(pathname).replace("/static/", "./", 1)
+        if pathname.startswith(f"{self._static_url}ansys{self._ansys_version}/"):
+            local_pathname = os.path.dirname(pathname).replace(self._static_url, "./", 1)
             result = f"{local_pathname}/{basename}"
 
             target_file = self._output_dir / local_pathname.lstrip("./") / basename
