@@ -1,4 +1,3 @@
-# tests/test_html_exporter.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -46,6 +45,8 @@ def test_wraps_fragment_and_emits_title_and_favicon(adr_serverless, tmp_path: Pa
         output_dir=tmp_path / "export1",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter.export()
@@ -86,6 +87,8 @@ def test_static_is_flattened_media_and_ansys_tree_preserved(adr_serverless, tmp_
         output_dir=tmp_path / "export2",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter.export()
@@ -114,6 +117,8 @@ def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
         output_dir=tmp_path / "export4",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter.export()
@@ -148,6 +153,8 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
         output_dir=tmp_path / "export5",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter._max_inline_size = 1  # minuscule cap to trigger the exception path
@@ -178,6 +185,8 @@ def test_scene_js_inlines_binary_block_and_namespaces_filename(adr_serverless, t
         output_dir=tmp_path / "export6",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter.export()
@@ -211,6 +220,8 @@ def test_preserves_existing_full_document(adr_serverless, tmp_path: Path):
         output_dir=tmp_path / "export7",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter.export()
@@ -235,6 +246,8 @@ def test_no_inline_flag_forces_copy_not_data_uri(adr_serverless, tmp_path: Path)
         output_dir=tmp_path / "export8",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
         no_inline_files=True,
     )
@@ -262,6 +275,8 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
         output_dir=tmp_path / "export9",
         static_dir=static_dir,
         media_dir=media_dir,
+        static_url=adr_serverless.static_url,
+        media_url=adr_serverless.media_url,
         ansys_version=ver,
     )
     exporter.export()
