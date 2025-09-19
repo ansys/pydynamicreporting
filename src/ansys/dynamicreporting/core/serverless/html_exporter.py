@@ -53,8 +53,8 @@ class ServerlessReportExporter:
         self._output_dir = output_dir
         self._media_dir = media_dir
         self._static_dir = static_dir
-        self._media_url = self._norm_prefix(media_url)
-        self._static_url = self._norm_prefix(static_url)
+        self._media_url = media_url
+        self._static_url = static_url
         self._filename = filename
         self._debug = debug
         self._logger = logger or get_logger()
@@ -69,15 +69,6 @@ class ServerlessReportExporter:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False
-
-    @staticmethod
-    def _norm_prefix(p: str) -> str:
-        p = (p or "/").strip()
-        if not p.startswith("/"):
-            p = "/" + p
-        if not p.endswith("/"):
-            p = p + "/"
-        return p
 
     def _should_use_data_uri(self, size: int) -> bool:
         """Determines if an asset should be inlined based on settings and size limits."""
