@@ -433,10 +433,12 @@ class ServerlessReportExporter:
 
     def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
         """
-        Same semantics as ReportDownloadHTML.find_block, but recognizes self._static_url / self._media_url
-        (and /ansys{ver}/ when version is set).
+        Find the next [start,end) slice delimited by `prefix` and `suffix` that contains
+        either the configured media/static URL or any '/ansys<digits>/' path.
+        Mirrors legacy ReportDownloadHTML.find_block behavior, but uses dynamic URLs.
         """
-        ver = str(self._ansys_version) if self._ansys_version is not None else ""
+        import re
+
         while True:
             try:
                 idx1 = text.index(prefix, start)
@@ -448,12 +450,14 @@ class ServerlessReportExporter:
                 return -1, -1, ""
             idx2 += len(suffix)
             block = text[idx1:idx2]
+
             if (
                 (self._media_url in block)
                 or (self._static_url in block)
-                or (ver and f"/ansys{ver}/" in block)
+                or re.search(r"/ansys\d+/", block) is not None
             ):
                 return idx1, idx2, block
+
             start = idx2
 
     def _replace_blocks(
