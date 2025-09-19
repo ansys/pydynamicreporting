@@ -16,7 +16,6 @@ from ..utils.html_export_constants import (
     VIEWER_JS,
     VIEWER_UTILS,
 )
-from ..utils.report_download_html import ReportDownloadHTML
 
 
 class ServerlessReportExporter:
@@ -53,8 +52,8 @@ class ServerlessReportExporter:
         self._output_dir = output_dir
         self._media_dir = media_dir
         self._static_dir = static_dir
-        self._media_url = media_url
-        self._static_url = static_url
+        self._media_url = self._norm_prefix(media_url)
+        self._static_url = self._norm_prefix(static_url)
         self._filename = filename
         self._debug = debug
         self._logger = logger or get_logger()
@@ -62,13 +61,22 @@ class ServerlessReportExporter:
         self._ansys_version = ansys_version
         self._dark_mode = dark_mode
 
-        # State tracking properties, functionally identical to ReportDownloadHTML
+        # State tracking properties
         self._filemap: dict[str, str] = {}
         self._replaced_file_ext: str | None = None
         self._collision_count = 0
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False
+
+    @staticmethod
+    def _norm_prefix(p: str) -> str:
+        p = (p or "/").strip()
+        if not p.startswith("/"):
+            p = "/" + p
+        if not p.endswith("/"):
+            p = p + "/"
+        return p
 
     def _should_use_data_uri(self, size: int) -> bool:
         """Determines if an asset should be inlined based on settings and size limits."""
@@ -165,19 +173,20 @@ class ServerlessReportExporter:
         current = 0
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
 
-        patterns = (
-            f"{self._static_url}ansys{ver}/",
-            self._static_url,
-            self._media_url,
-            f"/ansys{ver}/",
-        )
+        patterns = []
+        if ver:
+            patterns.append(f"{self._static_url}ansys{ver}/")
+        patterns.extend([self._static_url, self._media_url])
+        if ver:
+            patterns.append(f"/ansys{ver}/")  # keep if your HTML can use this root form
 
         while True:
             # Find the next match using the legacy priority order
             idx1 = -1
             for pat in patterns:
-                idx1 = text.find(pat, current)
-                if idx1 != -1:
+                pos = text.find(pat, current)
+                if pos != -1:
+                    idx1 = pos
                     break
             if idx1 == -1:
                 return text  # nothing more to replace
@@ -196,7 +205,6 @@ class ServerlessReportExporter:
             self._replaced_file_ext = ext
 
             new_path = self._process_file(path_in_html, simple_path, inline=inline)
-
             if size_check and self._inline_size_exception:
                 new_path = "__SIZE_EXCEPTION__"
 
@@ -313,9 +321,7 @@ class ServerlessReportExporter:
             target_file.parent.mkdir(parents=True, exist_ok=True)
             content = source_file.read_bytes()
             # Patch some viewer JS internals (loader/paths) if needed
-            content = ReportDownloadHTML.fix_viewer_component_paths(
-                str(target_file), content, self._ansys_version
-            )
+            content = self._fix_viewer_component_paths(str(target_file), content)
             target_file.write_bytes(content)
         else:
             self._logger.warning(f"Warning: Static source file not found: {source_file}")
@@ -335,6 +341,10 @@ class ServerlessReportExporter:
         self._collision_count += 1
         return f"{self._collision_count}_{name}"
 
+    @staticmethod
+    def is_scene_file(name: str) -> bool:
+        return name.upper().endswith((".AVZ", ".SCDOC", ".SCDOCX", ".GLB"))
+
     def _process_file(self, path_in_html: str, pathname: str, inline: bool = False) -> str:
         """
         Reads a file from local disk and either inlines it or copies it.
@@ -352,12 +362,13 @@ class ServerlessReportExporter:
             return self._filemap[pathname]
 
         # Resolve source file location based on the raw pathname (no normalization)
+        ver = str(self._ansys_version) if self._ansys_version is not None else ""
+
         if pathname.startswith(self._media_url):
             source_file = self._media_dir / pathname.replace(self._media_url, "", 1)
         elif pathname.startswith(self._static_url):
             source_file = self._static_dir / pathname.replace(self._static_url, "", 1)
-        elif pathname.startswith(f"/ansys{self._ansys_version}/"):
-            # Legacy downloads these from the server root; serverless reads them from static dir
+        elif ver and pathname.startswith(f"/ansys{ver}/"):
             source_file = self._static_dir / pathname.lstrip("/")
         else:
             source_file = None
@@ -379,7 +390,7 @@ class ServerlessReportExporter:
         # 4/3 is roughly the expansion factor of base64 encoding (3 bytes -> 4 chars)
         estimated_inline_size = int(len(content) * (4.0 / 3.0))
 
-        if (inline or ReportDownloadHTML.is_scene_file(pathname)) and self._should_use_data_uri(
+        if (inline or self.is_scene_file(pathname)) and self._should_use_data_uri(
             estimated_inline_size
         ):
             # Inline as data URI
@@ -402,23 +413,19 @@ class ServerlessReportExporter:
             # prefix with parent folder (GUID) like legacy
             basename = f"{source_file.parent.name}_{basename}"
         else:
-            content = ReportDownloadHTML.fix_viewer_component_paths(
-                basename, content, self._ansys_version
-            )
+            content = self._fix_viewer_component_paths(basename, content)
 
         # Output path (exact legacy behavior):
         # - If /static/ansys{ver}/ -> keep ansys tree, remove '/static/' -> './ansys{ver}/.../<basename>'
         # - Else -> './media/<basename>'
-        if pathname.startswith(f"{self._static_url}ansys{self._ansys_version}/"):
+        if ver and pathname.startswith(f"{self._static_url}ansys{ver}/"):
             local_pathname = os.path.dirname(pathname).replace(self._static_url, "./", 1)
             result = f"{local_pathname}/{basename}"
-
             target_file = self._output_dir / local_pathname.lstrip("./") / basename
             target_file.parent.mkdir(parents=True, exist_ok=True)
             target_file.write_bytes(content)
         else:
             result = f"./media/{basename}"
-
             target_file = self._output_dir / "media" / basename
             target_file.parent.mkdir(parents=True, exist_ok=True)
             target_file.write_bytes(content)
@@ -426,15 +433,38 @@ class ServerlessReportExporter:
         self._filemap[pathname] = result
         return result
 
+    def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
+        """
+        Same semantics as ReportDownloadHTML.find_block, but recognizes self._static_url / self._media_url
+        (and /ansys{ver}/ when version is set).
+        """
+        ver = str(self._ansys_version) if self._ansys_version is not None else ""
+        while True:
+            try:
+                idx1 = text.index(prefix, start)
+            except ValueError:
+                return -1, -1, ""
+            try:
+                idx2 = text.index(suffix, idx1 + len(prefix))
+            except ValueError:
+                return -1, -1, ""
+            idx2 += len(suffix)
+            block = text[idx1:idx2]
+            if (
+                (self._media_url in block)
+                or (self._static_url in block)
+                or (ver and f"/ansys{ver}/" in block)
+            ):
+                return idx1, idx2, block
+            start = idx2
+
     def _replace_blocks(
         self, html: str, prefix: str, suffix: str, inline: bool = False, size_check: bool = False
     ) -> str:
         """Iteratively finds and replaces all asset references within matching blocks."""
         current_pos = 0
         while True:
-            start, end, text_block = ReportDownloadHTML.find_block(
-                html, current_pos, prefix, suffix
-            )
+            start, end, text_block = self._find_block(html, current_pos, prefix, suffix)
             if start < 0:
                 break
             processed_text = self._replace_files(text_block, inline=inline, size_check=size_check)
@@ -442,28 +472,52 @@ class ServerlessReportExporter:
             current_pos = start + len(processed_text)
         return html
 
+    def _fix_viewer_component_paths(self, filename: str, data: bytes) -> bytes:
+        """
+        Adjust hard-coded viewer paths for offline export, honoring custom self._static_url.
+        Mirrors legacy behavior but replaces the '/static/' prefix with self._static_url.
+        """
+        ver = str(self._ansys_version) if self._ansys_version is not None else ""
+        if filename.endswith("ANSYSViewer_min.js"):
+            s = data.decode("utf-8")
+            # Replace "<static>/website/images/" with dynamic base to ./media/
+            s = s.replace(
+                f'"{self._static_url}website/images/"',
+                r'document.URL.replace(/\\/g, "/").replace("index.html", "media/")',
+            )
+            # Point ansys images to local ./ansys{ver}//nexus/images/
+            if ver:
+                s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
+            # Allow file:// loads in offline mode (legacy behavior)
+            s = s.replace('"FILE",delegate', '"arraybuffer",delegate')
+            return s.encode("utf-8")
+
+        if filename.endswith("viewer-loader.js"):
+            s = data.decode("utf-8")
+            if ver:
+                s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
+            return s.encode("utf-8")
+
+        return data
+
     def _inline_ansys_viewer(self, html: str) -> str:
         """Handles the special case of inlining assets for the <ansys-nexus-viewer> component."""
         current_pos = 0
         while True:
-            start, end, text_block = ReportDownloadHTML.find_block(
+            start, end, text_block = self._find_block(
                 html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
             )
             if start < 0:
                 break
-
             # Legacy parity: always inline viewer attributes
             text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=True)
             text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
-
             if "__SIZE_EXCEPTION__" in text:
                 msg = "3D geometry too large for stand-alone HTML file"
                 text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
-
             if self._replaced_file_ext:
                 ext = self._replaced_file_ext.replace(".", "").upper()
                 text = text.replace("<ansys-nexus-viewer", f'<ansys-nexus-viewer src_ext="{ext}"')
-
             html = html[:start] + text + html[end:]
             current_pos = start + len(text)
         return html
