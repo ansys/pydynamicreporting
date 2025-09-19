@@ -1,5 +1,6 @@
 import base64
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -108,7 +109,8 @@ class ServerlessReportExporter:
         html = self._replace_blocks(html, "<link", "/>")
         html = self._replace_blocks(html, "<img id='guiicon", ">")
         html = self._replace_blocks(html, "e.src = '", "';")
-        html = self._replace_blocks(html, "<script src=", "</script>")
+        html = self._replace_blocks(html, "<script src=", "</script>")  # src-first scripts
+        html = self._replace_blocks(html, "<script", "</script>")  # any-order scripts (MathJax)
         html = self._replace_blocks(html, "<a href=", ">")
         html = self._replace_blocks(html, "<img src=", ">")
         html = self._replace_blocks(html, "<source src=", ">")
@@ -332,7 +334,9 @@ class ServerlessReportExporter:
             self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f)
 
     def _make_unique_basename(self, name: str) -> str:
-        """Ensures a unique filename in the target media directory to avoid collisions."""
+        """Ensures a unique filename in the target media directory to avoid collisions (legacy)."""
+        if not self._no_inline:
+            return name
         target_path = self._output_dir / "media" / name
         if not target_path.exists():
             return name
@@ -433,10 +437,14 @@ class ServerlessReportExporter:
 
     def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
         """
-        Same semantics as ReportDownloadHTML.find_block, but recognizes self._static_url / self._media_url
-        (and /ansys{ver}/ when version is set).
+        Legacy-compatible: return the next [prefix ... suffix] block that contains at least
+        one asset-like reference. Accept both the literal legacy prefixes and the configured
+        custom prefixes. Also accept any '/ansys<ver>/' or generic '/ansys<digits>/'.
         """
-        ver = str(self._ansys_version) if self._ansys_version is not None else ""
+        # Normalize known prefixes (custom URLs may differ from /static/ and /media/)
+        custom_static = (self._static_url or "").strip()
+        custom_media = (self._media_url or "").strip()
+
         while True:
             try:
                 idx1 = text.index(prefix, start)
@@ -448,12 +456,16 @@ class ServerlessReportExporter:
                 return -1, -1, ""
             idx2 += len(suffix)
             block = text[idx1:idx2]
+
             if (
-                (self._media_url in block)
-                or (self._static_url in block)
-                or (ver and f"/ansys{ver}/" in block)
+                ("/static/" in block)
+                or ("/media/" in block)
+                or (custom_static and custom_static in block)
+                or (custom_media and custom_media in block)
+                or re.search(r"/ansys\d+/", block) is not None
             ):
                 return idx1, idx2, block
+
             start = idx2
 
     def _replace_blocks(
