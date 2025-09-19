@@ -333,8 +333,6 @@ class ServerlessReportExporter:
 
     def _make_unique_basename(self, name: str) -> str:
         """Ensures a unique filename in the target media directory to avoid collisions."""
-        if not self._no_inline:
-            return name
         target_path = self._output_dir / "media" / name
         if not target_path.exists():
             return name
