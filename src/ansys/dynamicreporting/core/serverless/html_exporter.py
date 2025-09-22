@@ -168,14 +168,10 @@ class ServerlessReportExporter:
 
         patterns = []
         if ver:
-            patterns.append(f"{self._static_url}ansys{ver}/")  # custom
-            patterns.append(f"/static/ansys{ver}/")  # legacy literal
-
-        # custom first, then legacy literals
-        patterns.extend([self._static_url, self._media_url, "/static/", "/media/"])
-
+            patterns.append(f"{self._static_url}ansys{ver}/")
+        patterns.extend([self._static_url, self._media_url])
         if ver:
-            patterns.append(f"/ansys{ver}/")  # server-root style
+            patterns.append(f"/ansys{ver}/")  # keep if your HTML can use this root form
 
         while True:
             # Find the next match using the legacy priority order
@@ -361,15 +357,10 @@ class ServerlessReportExporter:
         # Resolve source file location based on the raw pathname (no normalization)
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
 
-        # Source resolution: custom first, then legacy literals
         if pathname.startswith(self._media_url):
             source_file = self._media_dir / pathname.replace(self._media_url, "", 1)
         elif pathname.startswith(self._static_url):
             source_file = self._static_dir / pathname.replace(self._static_url, "", 1)
-        elif pathname.startswith("/media/"):  # legacy literal
-            source_file = self._media_dir / pathname.replace("/media/", "", 1)
-        elif pathname.startswith("/static/"):  # legacy literal
-            source_file = self._static_dir / pathname.replace("/static/", "", 1)
         elif ver and pathname.startswith(f"/ansys{ver}/"):
             source_file = self._static_dir / pathname.lstrip("/")
         else:
@@ -417,27 +408,20 @@ class ServerlessReportExporter:
         else:
             content = self._fix_viewer_component_paths(basename, content)
 
-        # Output path:
-        # keep ansys tree if the input path came from /static/ansys{ver}/ (custom OR legacy literal)
-        if ver and (
-            pathname.startswith(f"{self._static_url}ansys{ver}/")
-            or pathname.startswith(f"/static/ansys{ver}/")
-        ):
-            local_pathname = os.path.dirname(pathname)
-            # normalize either custom or legacy /static/ to './'
-            if local_pathname.startswith(self._static_url):
-                local_pathname = local_pathname.replace(self._static_url, "./", 1)
-            elif local_pathname.startswith("/static/"):
-                local_pathname = local_pathname.replace("/static/", "./", 1)
-
+        # Output path (exact legacy behavior):
+        # - If /static/ansys{ver}/ -> keep ansys tree, remove '/static/' -> './ansys{ver}/.../<basename>'
+        # - Else -> './media/<basename>'
+        if ver and pathname.startswith(f"{self._static_url}ansys{ver}/"):
+            local_pathname = os.path.dirname(pathname).replace(self._static_url, "./", 1)
             result = f"{local_pathname}/{basename}"
             target_file = self._output_dir / local_pathname.lstrip("./") / basename
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            target_file.write_bytes(content)
         else:
             result = f"./media/{basename}"
             target_file = self._output_dir / "media" / basename
-
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        target_file.write_bytes(content)
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            target_file.write_bytes(content)
 
         self._filemap[pathname] = result
         return result
