@@ -124,6 +124,7 @@ class ServerlessReportExporter:
         text = html_fragment_or_doc.lstrip()
 
         # Already a full document? Return as-is.
+        # only look at the first ~2KB to avoid scanning huge strings.
         lowered = text[:2000].lower()
         if lowered.startswith("<!doctype") or "<html" in lowered:
             return html_fragment_or_doc
@@ -428,12 +429,12 @@ class ServerlessReportExporter:
     def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
         """
         Legacy-compatible: return the next [prefix ... suffix] block that contains at least
-        one asset-like reference. Accept both the literal legacy prefixes and the configured
-        custom prefixes. Also accept any '/ansys<ver>/' or generic '/ansys<digits>/'.
+        one asset-like reference. Accept the configured custom prefixes and the dynamic
+        /ansys<ver>/ root. No hard-coded legacy literals.
         """
-        # Normalize known prefixes (custom URLs may differ from /static/ and /media/)
         custom_static = (self._static_url or "").strip()
         custom_media = (self._media_url or "").strip()
+        ver = str(self._ansys_version) if self._ansys_version is not None else ""
 
         while True:
             try:
@@ -445,14 +446,13 @@ class ServerlessReportExporter:
             except ValueError:
                 return -1, -1, ""
             idx2 += len(suffix)
+
             block = text[idx1:idx2]
 
             if (
-                ("/static/" in block)
-                or ("/media/" in block)
-                or (custom_static and custom_static in block)
+                (custom_static and custom_static in block)
                 or (custom_media and custom_media in block)
-                or re.search(r"/ansys\d+/", block) is not None
+                or (ver and f"/ansys{ver}/" in block)
             ):
                 return idx1, idx2, block
 
