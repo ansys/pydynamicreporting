@@ -1,11 +1,14 @@
 from dataclasses import field
 from datetime import datetime
 import json
+import os
+import uuid
 
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from ..exceptions import ADRException
+from ..constants import JSON_ATTR_KEYS
+from ..exceptions import ADRException, TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .base import BaseModel, StrEnum
 
 
@@ -31,6 +34,7 @@ class ReportType(StrEnum):
     # Generators
     TABLE_MERGE_GENERATOR = "Generator:tablemerge"
     TABLE_REDUCE_GENERATOR = "Generator:tablereduce"
+    TABLE_MAP_GENERATOR = "Generator:tablemap"
     TABLE_ROW_COLUMN_FILTER_GENERATOR = "Generator:tablerowcolumnfilter"
     TABLE_VALUE_FILTER_GENERATOR = "Generator:tablevaluefilter"
     TABLE_SORT_FILTER_GENERATOR = "Generator:tablesortfilter"
@@ -69,6 +73,48 @@ class Template(BaseModel):
                 "Cannot instantiate Template directly. Use the Template.create() method."
             )
         super().__post_init__()
+
+    def _to_dict(
+        self,
+        next_id: int = 0,
+        guid_id_map: dict[str, int] | None = None,
+    ) -> tuple[dict, dict[str, int], int]:
+        """
+        Recursively build the template tree data structure.
+
+        Returns:
+            - templates_data: dict with full hierarchy of templates
+            - guid_id_map: map of original GUIDs to template indices
+            - next_id: the next available ID index after this subtree
+        """
+        if guid_id_map is None:
+            guid_id_map = {}
+
+        guid_id_map[self.guid] = next_id
+        curr_key = f"Template_{next_id}"
+        next_id += 1
+
+        curr_data = {
+            k: getattr(self, k) for k in JSON_ATTR_KEYS if getattr(self, k, None) is not None
+        }
+
+        curr_data["params"] = self.get_params()
+        curr_data["sort_selection"] = self.get_sort_selection()
+        curr_data["guid"] = str(uuid.uuid4()) if self.parent is None else None
+        curr_data["parent"] = (
+            None if self.parent is None else f"Template_{guid_id_map[self.parent.guid]}"
+        )
+
+        curr_data["children"] = []
+        templates_data = {curr_key: curr_data}
+
+        for child in self.children:
+            child_dict, guid_id_map, next_id = child._to_dict(next_id, guid_id_map)
+            child_key = f"Template_{guid_id_map[child.guid]}"
+            curr_data["children"].append(child_key)
+            templates_data.update(child_dict)
+
+        return templates_data, guid_id_map, next_id
 
     @property
     def type(self):
@@ -281,6 +327,23 @@ class Template(BaseModel):
         self.set_params(params)
 
     def render(self, *, context=None, item_filter="", request=None) -> str:
+        """
+        Render the template to HTML.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to be used in the template rendering. Defaults to an empty dictionary.
+        item_filter : str, optional
+            Filter string to be applied to the items. Defaults to an empty string.
+        request : HttpRequest, optional
+            The HTTP request object, used to provide additional context for rendering. Defaults to None.
+
+        Returns
+        -------
+        str
+            The rendered HTML string, or an error message if rendering fails.
+        """
         if context is None:
             context = {}
         ctx = {
@@ -308,15 +371,75 @@ class Template(BaseModel):
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
             # Render the report
-            ctx["HTML"] = engine.render(items, ctx)
+            html = engine.render(items, ctx)
             # fill in any TOC entries
-            ctx["HTML"] += TemplateEngine.end_toc_session()
+            html += TemplateEngine.end_toc_session()
+            ctx["HTML"] = html
         except Exception as e:
             from ceireports.utils import get_render_error_html
 
             ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
+
+    def to_dict(self) -> dict:
+        """
+        Returns a JSON-serializable dictionary of the full template tree.
+        """
+        templates_data, _, _ = self._to_dict()
+        return templates_data
+
+    def to_json(self, filename: str) -> None:
+        """
+        Store the template as a JSON file.
+        Only allow this action if this template is a root template.
+        """
+        if self.parent is not None:
+            raise ADRException("Only root templates can be dumped to JSON files.")
+
+        if not filename.endswith(".json"):
+            filename += ".json"
+
+        templates_data = self.to_dict()
+        with open(filename, "w", encoding="utf-8") as json_file:
+            json.dump(templates_data, json_file, indent=4)
+
+        # Make the file read-only
+        os.chmod(filename, 0o444)
+
+    def reorder_child(self, target_child_template: "Template", new_position: int) -> None:
+        """
+        Reorder the target template in the `children` list to the specified position.
+
+        Parameters
+        ----------
+        target_child_template : str | TemplateREST
+            The child template to reorder. This can be either the GUID of the template (as a string)
+            or a TemplateREST object.
+        new_position : int
+            The new position in the parent's children list where the template should be placed.
+
+        Raises
+        ------
+        TemplateReorderOutOfBound
+            If the specified position is out of bounds.
+        TemplateDoesNotExist
+            If the target_child_template is not found in the parent's children list.
+        """
+        children_size = len(self.children)
+        if new_position < 0 or new_position >= children_size:
+            raise TemplateReorderOutOfBounds(
+                f"The specified position {new_position} is out of bounds. "
+                f"Valid range: [0, {len(self.children)})"
+            )
+
+        target_guid = target_child_template.guid
+        if target_child_template not in self.children:
+            raise TemplateDoesNotExist(
+                f"Template with GUID '{target_guid}' is not found in the parent's children list."
+            )
+        self.children.remove(target_child_template)
+        self.children.insert(new_position, target_child_template)
 
 
 class Layout(Template):
@@ -437,7 +560,53 @@ class ReportLinkLayout(Layout):
 
 class PPTXLayout(Layout):
     report_type: str = ReportType.PPTX_LAYOUT
-    _properties = ("input_pptx", "output_pptx", "use_all_slides")
+    _properties = ("input_pptx", "output_pptx", "use_all_slides", "font_size", "html_font_scale")
+
+    def render_pptx(self, *, context=None, item_filter="", request=None) -> bytes:
+        """
+        Render the template to PPTX. Only works for templates of type PPTXLayout.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to be used in the template rendering. Defaults to an empty dictionary.
+        item_filter : str, optional
+            Filter string to be applied to the items. Defaults to an empty string.
+        request : HttpRequest, optional
+            The HTTP request object, used to provide additional context for rendering. Defaults to None.
+
+        Returns
+        -------
+        bytes
+            The rendered PPTX file as bytes
+
+        Raises
+        -------
+        ADRException
+            If rendering fails, an exception is raised with details about the failure.
+
+        Example
+        -------
+        >>> template = PPTXLayout.get(guid="some-guid")
+        >>> pptx_bytes = template.render_pptx(context={"key": "value"}, item_filter="some_filter", request=request)
+        >>> with open("output.pptx", "wb") as f:
+        ...     f.write(pptx_bytes)
+        """
+        if context is None:
+            context = {}
+        ctx = {**context, "request": request}
+        try:
+            from data.models import Item
+            from reports.engine import TemplateEngine
+
+            template_obj = self._orm_instance
+            engine = template_obj.get_engine()
+            items = Item.find(query=item_filter)
+            return engine.dispatch_render("pptx", items, ctx)
+        except Exception as e:
+            raise ADRException(
+                f"Failed to render PPTX for template {self.name} ({self.guid}): {e}"
+            ) from e
 
 
 class PPTXSlideLayout(Layout):
@@ -486,6 +655,10 @@ class TableMergeGenerator(Generator):
 
 class TableReduceGenerator(Generator):
     report_type: str = ReportType.TABLE_REDUCE_GENERATOR
+
+
+class TableMapGenerator(Generator):
+    report_type: str = ReportType.TABLE_MAP_GENERATOR
 
 
 class TableMergeRCFilterGenerator(Generator):

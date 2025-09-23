@@ -3,7 +3,7 @@ import urllib
 from requests import JSONDecodeError
 
 try:
-    from PyQt5 import QtCore, QtGui, QtWidgets
+    from qtpy import QtCore, QtGui, QtWidgets
 
     has_qt = True
 except ImportError:
@@ -19,10 +19,10 @@ import logging
 import os
 import os.path
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import platform
 import shutil
-import subprocess
+import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
@@ -35,6 +35,8 @@ from urllib3.util.retry import Retry
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
+from ..common_utils import populate_template
+from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
 
 
@@ -96,7 +98,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     cmd.extend(args)
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    subprocess.call(args=cmd, **params)
+    subprocess.call(args=cmd, **params)  # nosec B603 B78
 
 
 class Server:
@@ -198,8 +200,8 @@ class Server:
 
     @classmethod
     def get_object_digest(cls, obj):
-        m = hashlib.md5()
-        m.update(pickle.dumps(obj))
+        m = hashlib.md5()  # nosec B324
+        m.update(pickle.dumps(obj))  # nosec B324
         return m.digest()
 
     @classmethod
@@ -266,7 +268,9 @@ class Server:
         if self.cur_servername is None:
             try:
                 self.validate()
-            except Exception:
+            except Exception as e:
+                if print_allowed():
+                    print(f"Error: {str(e)}")
                 pass
         if self.cur_servername is None:
             return self.get_URL()
@@ -291,7 +295,9 @@ class Server:
             result = self._http_session.get(url, auth=auth)
             if not result.ok:
                 return False
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return False
         return True
 
@@ -304,7 +310,9 @@ class Server:
         try:
             # note this request will fail as it does not return anything!!!
             self._http_session.get(url, auth=auth)
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             pass
         self.set_URL(None)
         self.set_password(None)
@@ -326,7 +334,9 @@ class Server:
             return []
         try:
             return [str(obj_data.get("name")) for obj_data in r.json()]
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return []
 
     def get_object_guids(self, objtype=report_objects.Template, query=None):
@@ -353,7 +363,9 @@ class Server:
                 return [str(obj_data.get("guid")) for obj_data in r.json()]
             else:
                 return [str(i) for i in r.json()["guid_list"]]
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return []
 
     def get_objects(self, objtype=report_objects.Template, query=None):
@@ -388,7 +400,9 @@ class Server:
                 t.from_json(d)
                 ret.append(t)
             return ret
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return []
 
     def get_object_from_guid(self, guid, objtype=report_objects.TemplateREST):
@@ -413,7 +427,9 @@ class Server:
             obj.server_api_version = self.api_version
             obj.from_json(r.json())
             return obj
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             return None
 
     def _get_push_request_info(self, obj):
@@ -541,7 +557,9 @@ class Server:
                 url = self.cur_url + file_data[0]
                 try:
                     r = self._http_session.put(url, auth=auth, files=files)
-                except Exception:
+                except Exception as e:
+                    if print_allowed():
+                        print(f"Error: {str(e)}")
                     r = self._http_session.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
@@ -837,7 +855,7 @@ class Server:
         return templ
 
     def _download_report(self, url, file_name, directory_name=None):
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         if resp.status_code != requests.codes.ok:
             try:
                 detail = resp.json()["detail"]
@@ -961,7 +979,7 @@ class Server:
         if query is None:
             query = {}
         url = self.build_url_with_query(report_guid, query)
-        resp = requests.get(url, allow_redirects=True)
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         if resp.status_code == requests.codes.ok:
             try:
                 links = report_utils.get_links_from_html(resp.text)
@@ -978,64 +996,19 @@ class Server:
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
 
-    def get_layout_types(self):
+    def get_templates_as_dict(self, root_guid):
         """
-        Return a list of valid layout types as in report types (not including BETA).
+        Convert report templates rooted at the specified root_guid into a JSON-compatible dictionary.
 
-        Note: When a new type is added, please remember to also add a corresponding name
-        description in ADO, rptframework/report_editor_main.py::_get_layout_type_item_names.
-        In addition, update the minor version to prevent build from failing.
-        """
-        return [
-            "Layout:basic",
-            "Layout:panel",
-            "Layout:box",
-            "Layout:tabs",
-            "Layout:carousel",
-            "Layout:slider",
-            "Layout:footer",
-            "Layout:header",
-            "Layout:iterator",
-            "Layout:tagprops",
-            "Layout:toc",
-            "Layout:reportlink",
-            "Layout:userdefined",
-            "Layout:datafilter",
-            "Layout:pptx",
-            "Layout:pptxslide",
-        ]
+        Parameters
+        ----------
+        root_guid : str
+            The GUID of the root template to start the conversion.
 
-    def get_generator_types(self):
-        """
-        Return a list of valid generator types as in report types.
-
-        Note: When a new type is added, please remember to also add a corresponding name
-        description in ADO, rptframework/report_editor_main.py::_get_generator_type_item_names.
-        In addition, update the minor version to prevent build from failing.
-        """
-        return [
-            "Generator:tablemerge",
-            "Generator:tablereduce",
-            "Generator:tablerowcolumnfilter",
-            "Generator:tablevaluefilter",
-            "Generator:tablesortfilter",
-            "Generator:sqlquery",
-            "Generator:treemerge",
-            "Generator:itemscomparison",
-            "Generator:statistical",
-            # "Generator:iterator",
-        ]
-
-    def get_report_types(self):
-        """
-        Return a list of valid report types
-        """
-        return self.get_layout_types() + self.get_generator_types()
-
-    def get_templates_as_json(self, root_guid):
-        """
-        Convert report templates rooted as root_guid to JSON
-        Return a python dictionary.
+        Returns
+        -------
+        dict
+            A Python dictionary representation of the template hierarchy.
         """
         templates_data = {}
         templates = self.get_objects(objtype=report_objects.TemplateREST)
@@ -1047,44 +1020,61 @@ class Server:
         """
         Given a root guid, generate a JSON file rooted this guid, and store the file on disk
         """
-        templates_data = self.get_templates_as_json(root_guid)
+        templates_data = self.get_templates_as_dict(root_guid)
         with open(filename, "w", encoding="utf-8") as json_file:
             json.dump(templates_data, json_file, indent=4)
 
         # Make the file read-only
         os.chmod(filename, 0o444)
 
-    def load_templates(self, templates_json, logger=None):
+    def load_templates_from_file(self, file_path: str | Path) -> None:
         """
-        Load templates given a json-format data
+        Load templates from a JSON file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the JSON file containing the templates to load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the given file_path does not exist.
         """
-        for template_id_str, template_attr in templates_json.items():
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+
+        with open(file_path, encoding="utf-8") as f:
+            templates_json = json.load(f)
+
+        self.load_templates(templates_json)
+
+    def load_templates(self, templates: dict, logger=None):
+        """
+        Load templates from a Python dict.
+
+        Parameters
+        ----------
+        templates : dict
+            A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
+        """
+        for template_id_str, template_attr in templates.items():
             if template_attr["parent"] is None:
                 root_id_str = template_id_str
                 break
 
-        root_attr = templates_json[root_id_str]
+        root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
-        id_template_map = {}
-        id_template_map[root_id_str] = root_template
-        self._build_templates_from_parent(root_id_str, id_template_map, templates_json, logger)
+        self._build_templates_from_parent(root_id_str, root_template, templates, logger)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
-        self._check_template(id_str, attr, logger)
-        template = self.create_template(
-            name=attr["name"], parent=parent_template, report_type=attr["report_type"]
-        )
-        template.set_params(attr["params"] if "params" in attr else {})
-        if "sort_selection" in attr and attr["sort_selection"] != "":
-            template.set_sort_selection(value=attr["sort_selection"])
-        template.set_tags(attr["tags"] if "tags" in attr else "")
-        template.set_filter(filter_str=attr["item_filter"] if "item_filter" in attr else "")
+        return populate_template(id_str, attr, parent_template, self.create_template, logger)
 
-        return template
-
-    def _build_templates_from_parent(self, id_str, id_template_map, templates_json, logger=None):
-        children_id_strs = templates_json[id_str]["children"]
+    def _build_templates_from_parent(
+        self, parent_id_str, parent_template, templates_json, logger=None
+    ):
+        children_id_strs = templates_json[parent_id_str]["children"]
         if not children_id_strs:
             return
 
@@ -1092,122 +1082,14 @@ class Server:
         for child_id_str in children_id_strs:
             child_attr = templates_json[child_id_str]
             child_template = self._populate_template(
-                child_id_str, child_attr, id_template_map[id_str], logger
+                child_id_str, child_attr, parent_template, logger
             )
             child_templates.append(child_template)
-            id_template_map[child_id_str] = child_template
 
         self.put_objects(child_templates)
 
-        i = 0
         for child_id_str in children_id_strs:
-            self._build_templates_from_parent(child_id_str, id_template_map, templates_json, logger)
-            i += 1
-
-    def _get_json_template_keys(self):
-        """
-        Return a list of the default allowed keys in the JSON templates
-        """
-        return self._get_json_necessary_keys() + self._get_json_unnecessary_keys()
-
-    def _get_json_necessary_keys(self):
-        """
-        Return a list of necessary keys in the JSON templates
-        """
-        return ["name", "report_type", "parent", "children"]
-
-    def _get_json_unnecessary_keys(self):
-        """
-        Return a list of unnecessary keys in the JSON templates
-        """
-        return ["tags", "params", "sort_selection", "item_filter"]
-
-    def _get_json_attr_keys(self):
-        """
-        Return a list of JSON keys that can be got directly by attribute rather than by getters
-        """
-        return ["name", "report_type", "tags", "item_filter"]
-
-    def _check_template(self, template_id_str, template_attr, logger=None):
-        # Check template_id_str
-        if not self._check_template_name_convention(template_id_str):
-            raise exceptions.TemplateEditorJSONLoadingError(
-                f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
-                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-            )
-
-        # Check parent and children template name convention
-        if not self._check_template_name_convention(template_attr["parent"]):
-            raise exceptions.TemplateEditorJSONLoadingError(
-                f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
-                f"that does not have the correct name convection under the key: 'parent' of '{template_id_str}'\n"
-                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-            )
-
-        for child_name in template_attr["children"]:
-            if not self._check_template_name_convention(child_name):
-                raise exceptions.TemplateEditorJSONLoadingError(
-                    f"The loaded JSON file has an invalid template name: '{child_name}' "
-                    f"that does not have the correct name convection under the key: 'children' of '{template_id_str}'\n"
-                    "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-                )
-
-        # Check missing necessary keys
-        necessary_keys = self._get_json_necessary_keys()
-        for necessary_key in necessary_keys:
-            if necessary_key not in template_attr.keys():
-                raise exceptions.TemplateEditorJSONLoadingError(
-                    f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
-                    f"Please check the entries under '{template_id_str}'."
-                )
-
-        # Add warnings to the logger about the extra keys
-        if logger:
-            default_allowed_keys = self._get_json_template_keys()
-            extra_keys = []
-            for key in template_attr.keys():
-                if key not in default_allowed_keys:
-                    extra_keys.append(key)
-            if extra_keys:
-                logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
-
-        # Check report_type
-        report_types = self.get_report_types()
-        if not template_attr["report_type"] in report_types:
-            raise exceptions.TemplateEditorJSONLoadingError(
-                f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
-            )
-
-        # Check item_filter
-        common_error_str = (
-            "The loaded JSON file does not follow the correct item_filter convention!\n"
-        )
-        for query_stanza in template_attr["item_filter"].split(";"):
-            if len(query_stanza) > 0:
-                parts = query_stanza.split("|")
-                if len(parts) != 4:
-                    raise exceptions.TemplateEditorJSONLoadingError(
-                        f"{common_error_str}Each part should be divided by '|', "
-                        f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 3 '|'s"
-                    )
-                if parts[0] not in ["A", "O"]:
-                    raise exceptions.TemplateEditorJSONLoadingError(
-                        f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
-                        f"while the first part of the input is '{parts[0]}' under '{template_id_str}'"
-                    )
-                prefix = ["i_", "s_", "d_", "t_"]
-                if parts[1][0:2] not in prefix:
-                    raise exceptions.TemplateEditorJSONLoadingError(
-                        f"{common_error_str}The second part of the filter can only be '{prefix}', "
-                        f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
-                    )
-        # TODO: check 'sort_selection' and 'params'
-
-    def _check_template_name_convention(self, template_name):
-        if template_name is None:
-            return True
-        parts = template_name.split("_")
-        return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
+            self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
         curr_template = None
@@ -1215,10 +1097,9 @@ class Server:
             if template.guid == guid:
                 curr_template = template
 
-        fields = self._get_json_attr_keys()
         curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
         templates_data[curr_template_key] = {}
-        for field in fields:
+        for field in JSON_ATTR_KEYS:
             value = getattr(curr_template, field, None)
             if value is None:
                 continue
@@ -1241,8 +1122,7 @@ class Server:
             template_guid_id_map[child_guid] = curr_size
             templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
 
-        if not children_guids:
-            return
+        # Don't combine these 2 for loops, as we want to have consecutive IDs for children
         for child_guid in children_guids:
             self._build_template_data(child_guid, templates_data, templates, template_guid_id_map)
 
@@ -1319,8 +1199,8 @@ def create_new_local_database(
         if run_local:
             # Make a random string that could be used as a secret key for the database
             # take two UUID1 values, run them through md5 and concatenate the digests.
-            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()
-            secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()
+            secret_key = hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
+            secret_key += hashlib.md5(uuid.uuid1().bytes).hexdigest()  # nosec B327 B324
             # And make a target file (.nexdb) for auto launching of the report viewer...
             f = open(os.path.join(db_dir, "view_report.nexdb"), "w")
             if len(secret_key):
@@ -1363,7 +1243,9 @@ def create_new_local_database(
                 group.user_set.add(user)
                 group.save()
                 os.makedirs(os.path.join(db_dir, "media"))
-            except Exception:
+            except Exception as e:
+                if print_allowed():
+                    print(f"Error: {str(e)}")
                 error = True
             if parent and has_qt:
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -1520,7 +1402,9 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
                 return False
             if number < version_min:
                 return False
-    except Exception:
+    except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         return False
     return True
 
@@ -1668,21 +1552,25 @@ def launch_local_database_server(
     #    .nexus.lock is held whenever port scanning is going on.  It can be held by this function or by nexus_launcher
     #    .nexus_api.lock is used by the Python API to ensure exclusivity (e.g. while a server is launching)
     local_lock = None
-    try:
+    try:  # nosec
         # create a file lock
         local_lock = filelock.nexus_file_lock(api_lock_filename)
         local_lock.acquire()
-    except Exception:
+    except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         pass
     # We may need to do port scanning
-    if port is None:
+    if port is None:  # nosec
         lock_filename = os.path.join(homedir, ".nexus.lock")
         scanning_lock = None
         try:
             # create a file lock
             scanning_lock = filelock.nexus_file_lock(lock_filename)
             scanning_lock.acquire()
-        except Exception:
+        except Exception as e:
+            if print_allowed():
+                print(f"Error: {str(e)}")
             pass
         # Note: QWebEngineView cannot access http over 65535, so limit ports to 65534
         ports = report_utils.find_unused_ports(1)
@@ -1811,7 +1699,8 @@ def launch_local_database_server(
                 "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port."
             )
         return False
-    except Exception:
+    except Exception as e:
+        _ = f"This can throw an error at the validate step but still be able to start a new server: {str(e)}"
         pass
 
     # Start the busy cursor
@@ -1878,11 +1767,13 @@ def launch_local_database_server(
         params["close_fds"] = True
 
     # Actually try to launch the server
-    try:
+    try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        monitor_process = subprocess.Popen(command, **params)
+        monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
     except Exception as e:
+        if print_allowed():
+            print(f"Error: {str(e)}")
         if parent and has_qt:
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QApplication.translate(
@@ -1942,8 +1833,9 @@ def launch_local_database_server(
             raise exceptions.ServerConnectionError(
                 "Access to server denied.  Potential username/password error."
             )
-        except Exception:
+        except Exception as e:
             # we will try again
+            _ = f"This can throw an error at the validate steps if it's just starting, but still work: {str(e)}"
             pass
 
     # detach from stdout, stderr to avoid buffer blocking

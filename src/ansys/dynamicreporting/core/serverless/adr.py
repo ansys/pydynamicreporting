@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 import copy
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import platform
@@ -11,13 +12,14 @@ from typing import Any
 import uuid
 import warnings
 
+from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
 from ..adr_utils import get_logger
-from ..common_utils import get_install_info
+from ..common_utils import get_install_info, populate_template
 from ..constants import DOCKER_REPO_URL
 from ..docker_support import DockerLauncher
 from ..exceptions import (
@@ -32,8 +34,9 @@ from ..exceptions import (
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 from .base import ObjectSet
+from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
-from .template import Template
+from .template import PPTXLayout, Template
 
 
 class ADR:
@@ -135,8 +138,8 @@ class ADR:
         databases: dict | None = None,
         media_directory: str | None = None,
         static_directory: str | None = None,
-        media_url: str | None = None,
-        static_url: str | None = None,
+        media_url: str = "/media/",
+        static_url: str = "/static/",
         debug: bool | None = None,
         opts: dict | None = None,
         request: HttpRequest | None = None,
@@ -161,64 +164,58 @@ class ADR:
             opts = {}
         os.environ.update(opts)
 
-        # database configuration
         if self._in_memory:
+            # database configuration
             self._databases = {
                 "default": {
                     "ENGINE": "sqlite3",
                     "NAME": ":memory:",
                 }
             }
-        else:
-            self._databases = databases or {}
-
-        # check the database directory
-        if not self._databases:
-            if db_directory is not None:
-                try:
-                    self._db_directory = self._check_dir(db_directory)
-                except InvalidPath:
-                    # dir creation
-                    self._db_directory = Path(db_directory)
-                    self._db_directory.mkdir(parents=True, exist_ok=True)
-                    # media dir
-                    (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
-                    # secret key
-                    if "CEI_NEXUS_SECRET_KEY" not in os.environ:
-                        # Make a random string that could be used as a secret key for the database
-                        secret_key = get_random_secret_key()
-                        os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
-                        # And make a target file (.nexdb) for auto launching of the report viewer...
-                        with open(self._db_directory / "view_report.nexdb", "w") as f:
-                            f.write(secret_key)
-                else:
-                    # check if there is a sqlite db in the directory
-                    db_files = list(self._db_directory.glob("*.sqlite3"))
-                    if not db_files:
-                        raise InvalidPath(
-                            extra_detail="No sqlite3 database found in the directory. Remove the existing directory if"
-                            " you would like to create a new database."
-                        )
-
-                os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
-            elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
-                self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
-            else:
-                raise ImproperlyConfiguredError(
-                    "A database must be specified using either the 'db_directory'"
-                    " or the 'databases' option."
-                )
-
-        if self._in_memory:
+            # create static and media directories
             tmp_media_dir = tempfile.TemporaryDirectory()
             self._media_directory = self._check_dir(Path(tmp_media_dir.name))
             tmp_static_dir = tempfile.TemporaryDirectory()
             self._static_directory = self._check_dir(Path(tmp_static_dir.name))
             self._tmp_dirs.extend([tmp_media_dir, tmp_static_dir])
         else:
+            self._databases = databases or {}
+            # check/create the database directory
+            if not self._databases:
+                if db_directory is not None:
+                    try:
+                        self._db_directory = self._check_dir(db_directory)
+                    except InvalidPath:
+                        # dir creation
+                        self._db_directory = Path(db_directory)
+                        self._db_directory.mkdir(parents=True, exist_ok=True)
+                        # media dir
+                        (self._db_directory / "media").mkdir(parents=True, exist_ok=True)
+                        # secret key
+                        if "CEI_NEXUS_SECRET_KEY" not in os.environ:
+                            # Make a random string that could be used as a secret key for the database
+                            secret_key = get_random_secret_key()
+                            os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
+                            # And make a target file (.nexdb) for auto launching of the report viewer...
+                            with open(self._db_directory / "view_report.nexdb", "w") as f:
+                                f.write(secret_key)
+
+                    os.environ["CEI_NEXUS_LOCAL_DB_DIR"] = str(db_directory)
+                elif "CEI_NEXUS_LOCAL_DB_DIR" in os.environ:
+                    self._db_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_DB_DIR"])
+                else:
+                    raise ImproperlyConfiguredError(
+                        "A database must be specified using either the 'db_directory'"
+                        " or the 'databases' option."
+                    )
             # check the media directory
             if media_directory is not None:
-                self._media_directory = self._check_dir(media_directory)
+                try:
+                    self._media_directory = self._check_dir(media_directory)
+                except InvalidPath:
+                    self._media_directory = Path(media_directory)
+                    self._media_directory.mkdir(parents=True, exist_ok=True)
+
                 os.environ["CEI_NEXUS_LOCAL_MEDIA_DIR"] = str(self._media_directory.parent)
             # the env var here is actually the parent directory that contains the media directory
             elif "CEI_NEXUS_LOCAL_MEDIA_DIR" in os.environ:
@@ -234,7 +231,12 @@ class ADR:
                 )
             # check the static directory
             if static_directory is not None:
-                self._static_directory = self._check_dir(static_directory)
+                try:
+                    self._static_directory = self._check_dir(static_directory)
+                except InvalidPath:
+                    self._static_directory = Path(static_directory)
+                    self._static_directory.mkdir(parents=True, exist_ok=True)
+
                 os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"] = str(static_directory)
             elif "CEI_NEXUS_LOCAL_STATIC_DIR" in os.environ:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
@@ -309,13 +311,18 @@ class ADR:
                 nexus_group.user_set.add(user)
 
     @classmethod
-    def get_database_config(cls) -> dict | None:
+    def get_database_config(cls: type["ADR"], raise_exception: bool = False) -> dict | None:
         """Get the database configuration."""
-        if not cls._is_setup:
-            return None
-        from django.conf import settings
+        try:
+            from django.conf import settings
 
-        return settings.DATABASES
+            return settings.DATABASES
+        except ImproperlyConfigured as e:
+            if raise_exception:
+                raise ImproperlyConfiguredError(
+                    "The ADR instance has not been set up. Call setup() first."
+                ) from e
+            return None
 
     def _is_sqlite(self, database: str) -> bool:
         return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
@@ -372,39 +379,71 @@ class ADR:
 
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+
         # look for enve, but keep it optional.
         try:
             import enve
         except ImportError:
-            pf = "winx64" if platform.system().startswith("Wind") else "linx64"
-            dirs_to_check = [
-                # Path('C:/Program Files/ANSYS Inc/v252/CEI').parent is "C:/Program Files/ANSYS Inc/v252"
-                self._ansys_installation.parent / "commonfiles" / "ensight_components" / pf,
-                # for older versions < 2025R1
-                self._ansys_installation.parent
-                / "commonfiles"
-                / "fluids"
-                / "ensight_components"
-                / pf,
-            ]
-            try:
-                for enve_path in dirs_to_check:
-                    try:
-                        enve_path.resolve(strict=True)
-                        sys.path.append(str(enve_path))
-                        break
-                    except OSError:
-                        continue
+            if platform.system().lower().startswith("win"):
+                dirs_to_check = [
+                    # Windows path from commonfiles
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "ensight_components"
+                    / "winx64",
+                    # Old Windows path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "fluids"
+                    / "ensight_components"
+                    / "winx64",
+                    # Windows path from apex folder
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "win64"
+                    / "CEI",
+                ]
+            else:  # Linux
+                dirs_to_check = [
+                    # Linux path from commonfiles
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "ensight_components"
+                    / "linx64",
+                    # Old Linux path
+                    self._ansys_installation.parent
+                    / "commonfiles"
+                    / "fluids"
+                    / "ensight_components"
+                    / "linx64",
+                    # Linux path from apex folder
+                    self._ansys_installation
+                    / f"apex{self._ansys_version}"
+                    / "machines"
+                    / "linux_2.6_64"
+                    / "CEI",
+                ]
 
-                from enve_common import enve
-            except ImportError as e:
-                self._logger.warning(
-                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
-                )
-                warnings.warn(
-                    f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}",
-                    ImportWarning,
-                )
+            module_found = False
+            for path in dirs_to_check:
+                if path.is_dir():
+                    sys.path.append(str(path))
+                    module_found = True
+                    break
+
+            if module_found:
+                try:
+                    # First, attempt the `from enve_common import enve` style
+                    from enve_common import enve
+                except ImportError:
+                    try:
+                        # If that fails, attempt a direct `import enve`
+                        import enve
+                    except ImportError as e:
+                        msg = f"Failed to import 'enve' from the Ansys installation. Animations may not render correctly: {e}"
+                        self._logger.warning(msg)
+                        warnings.warn(msg, ImportWarning)
 
         # import hack
         try:
@@ -425,8 +464,21 @@ class ADR:
             overrides["DEBUG"] = self._debug
 
         overrides["MEDIA_ROOT"] = str(self._media_directory)
+
         if self._static_directory is not None:
+            # collect static files to this directory
             overrides["STATIC_ROOT"] = str(self._static_directory)
+            # collect static files from here
+            # Replace STATICFILES_DIRS to point only to the pre-collected directory in the Ansys installation.
+            source_static_dir = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
+            )
+            if not source_static_dir.exists():
+                raise ImproperlyConfiguredError(
+                    f"The static files directory '{source_static_dir}' does not exist in the installation. "
+                    "Please check your Ansys installation and version."
+                )
+            overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
 
         # relative URLs: By default, ADR serves static files from the URL /static/
         # and media files from the URL /media/. These can be changed using the
@@ -494,7 +546,7 @@ class ADR:
         # Check for Linux TZ issue
         report_utils.apply_timezone_workaround()
 
-        # django configuration
+        # django setup
         try:
             from django.conf import settings
 
@@ -503,7 +555,7 @@ class ADR:
 
                 settings.configure(**overrides)
                 django.setup()
-        except Exception as e:
+        except ImproperlyConfigured as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
 
         # migrations
@@ -561,7 +613,7 @@ class ADR:
     ) -> None:
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self.get_database_config():
+        if database != "default" and database not in self.get_database_config(raise_exception=True):
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         target_dir = Path(output_directory).resolve(strict=True)
         if not target_dir.is_dir():
@@ -588,7 +640,7 @@ class ADR:
             raise ADRException(f"Backup failed: {e}")
 
     def restore_database(self, input_file: str | Path, *, database: str = "default") -> None:
-        if database != "default" and database not in self.get_database_config():
+        if database != "default" and database not in self.get_database_config(raise_exception=True):
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
         backup_file = Path(input_file).resolve(strict=True)
         if not backup_file.is_file():
@@ -633,6 +685,14 @@ class ADR:
         return str(self._static_directory)
 
     @property
+    def static_url(self) -> str:
+        return self._static_url
+
+    @property
+    def media_url(self) -> str:
+        return self._media_url
+
+    @property
     def session(self) -> Session:
         return self._session
 
@@ -675,6 +735,15 @@ class ADR:
         )
 
     @staticmethod
+    def _create_template_with_parent(template_type: type[Template], **kwargs: Any) -> Template:
+        template = template_type.create(**kwargs)
+        parent = kwargs.get("parent")
+        if parent is not None:
+            parent.children.append(template)
+            parent.save()
+        return template
+
+    @staticmethod
     def create_template(template_type: type[Template], **kwargs: Any) -> Template:
         if not issubclass(template_type, Template):
             raise TypeError(f"{template_type.__name__} is not a subclass of Template")
@@ -682,12 +751,68 @@ class ADR:
             raise ADRException(
                 "At least one keyword argument must be provided to create the template."
             )
-        template = template_type.create(**kwargs)
-        parent = kwargs.get("parent")
-        if parent is not None:
-            parent.children.append(template)
-            parent.save()
-        return template
+        return ADR._create_template_with_parent(template_type, **kwargs)
+
+    def _populate_template(self, id_str, attr, parent_template) -> Template:
+        return populate_template(
+            id_str, attr, parent_template, ADR._create_template_with_parent, self._logger, Template
+        )
+
+    def _build_templates_from_parent(self, parent_id_str, parent_template, templates_json):
+        children_id_strs = templates_json[parent_id_str]["children"]
+        if not children_id_strs:
+            return
+
+        for child_id_str in children_id_strs:
+            child_attr = templates_json[child_id_str]
+            child_template = self._populate_template(child_id_str, child_attr, parent_template)
+            child_template.save()
+            self._build_templates_from_parent(child_id_str, child_template, templates_json)
+
+    def load_templates_from_file(self, file_path: str | Path) -> None:
+        """
+        Load templates from a JSON file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the JSON file containing the templates to load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the given file_path does not exist.
+        """
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+
+        with open(file_path, encoding="utf-8") as f:
+            templates_json = json.load(f)
+
+        self.load_templates(templates_json)
+
+    def load_templates(self, templates: dict) -> None:
+        """
+        Load templates from a Python dict.
+
+        Parameters
+        ----------
+        templates : dict
+            A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
+        """
+        root_id_str = None
+        for template_id_str, template_attr in templates.items():
+            if template_attr["parent"] is None:
+                root_id_str = template_id_str
+                break
+
+        if root_id_str is None:
+            raise ADRException("No report or root template found in the provided templates.")
+
+        root_attr = templates[root_id_str]
+        root_template = self._populate_template(root_id_str, root_attr, None)
+        root_template.save()
+        self._build_templates_from_parent(root_id_str, root_template, templates)
 
     @staticmethod
     def get_report(**kwargs) -> Template:
@@ -726,16 +851,205 @@ class ADR:
     def render_report(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> str:
+        """
+        Render the report as an HTML string.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            str
+                The rendered HTML string of the report.
+                Media type is "text/html".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        >>> with open("report.html", "w", encoding="utf-8") as f:
+        ...     f.write(html_content)
+        """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
         try:
             return Template.get(**kwargs).render(
-                request=self._request, context=context, item_filter=item_filter
+                context=context, item_filter=item_filter, request=self._request
             )
         except Exception as e:
             raise ADRException(f"Report rendering failed: {e}")
+
+    def render_report_as_pptx(
+        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
+    ) -> bytes:
+        """
+        Render the report as a PowerPoint presentation.
+        Only works with PPTXLayout templates.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc. At least one
+            keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            bytes
+                A byte stream containing the PowerPoint presentation.
+                Media type is "application/vnd.openxmlformats-officedocument.presentationml.presentation".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the template is not of type PPTXLayout or
+            if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
+        >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        >>> with open("report.pptx", "wb") as f:
+        ...     f.write(pptx_stream)
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        template = Template.get(**kwargs)
+        if not isinstance(template, PPTXLayout):
+            raise ADRException(
+                "The template must be of type 'PPTXLayout' to render as a PowerPoint presentation."
+            )
+        try:
+            return template.render_pptx(
+                context=context, item_filter=item_filter, request=self._request
+            )
+        except Exception as e:
+            raise ADRException(f"PPTX Report rendering failed: {e}")
+
+    def export_report_as_html(
+        self,
+        output_directory: str | Path,
+        *,
+        filename: str = "index.html",
+        dark_mode: bool = False,
+        context: dict | None = None,
+        item_filter: str = "",
+        **kwargs: Any,
+    ) -> Path:
+        """
+        Export a report as a standalone HTML file or directory with all assets.
+
+        Parameters
+        ----------
+        output_directory : str or Path
+            The directory where the report will be exported. If it does not exist, it will be created.
+
+        filename : str, optional
+            The name of the output HTML file. Default is "index.html".
+
+        dark_mode : bool, optional
+            If True, the report will be rendered in dark mode. Default is False.
+
+        context : dict, optional
+            Context to pass to the report template. Default is None.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report. Default is an empty string.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to fetch the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+        Path
+            The path to the generated HTML file or directory.
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the static directory is not configured.
+        ImproperlyConfiguredError
+            If the static directory is not configured or if the output directory cannot be created.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252",
+                    db_directory=r"C:\\DBs\\docex",
+                    media_directory=r"C:\\DBs\\docex\\media",
+                    static_directory=r"C:\\static"
+                )
+        >>> adr.setup(collect_static=True)
+        >>> output_path = adr.export_report_as_html(
+                    Path.cwd() / "htmlex",
+                    context={},
+                    item_filter="A|i_tags|cont|dp=dp227;",
+                    name="Serverless Simulation Report",
+                )
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        if self._static_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'static_directory' must be configured to export a report."
+            )
+
+        output_dir = Path(output_directory)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Render the raw HTML from the template.
+        html_content = self.render_report(context=context, item_filter=item_filter, **kwargs)
+
+        # Instantiate and run the serverless exporter.
+        exporter = ServerlessReportExporter(
+            html_content=html_content,
+            output_dir=output_dir,
+            media_dir=self._media_directory,
+            static_dir=self._static_directory,
+            media_url=self._media_url,
+            static_url=self._static_url,
+            filename=filename,
+            ansys_version=str(self._ansys_version),
+            dark_mode=dark_mode,
+            debug=self._debug,
+            logger=self._logger,
+        )
+        exporter.export()
+
+        # Return the path to the generated file.
+        final_path = output_dir / filename
+        self._logger.info(f"Successfully exported report to: {final_path}")
+        return final_path
 
     @staticmethod
     def query(
@@ -811,7 +1125,7 @@ class ADR:
                 f"'{object_type.__name__}' is not a type of Item, Template, Session, or Dataset"
             )
 
-        database_config = self.get_database_config()
+        database_config = self.get_database_config(raise_exception=True)
         if target_database not in database_config or source_database not in database_config:
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the 'databases' option."

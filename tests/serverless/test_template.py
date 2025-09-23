@@ -2,7 +2,11 @@ from uuid import uuid4
 
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.exceptions import (
+    ADRException,
+    TemplateDoesNotExist,
+    TemplateReorderOutOfBounds,
+)
 
 
 @pytest.mark.ado_test
@@ -974,7 +978,7 @@ def test_template_find_raises_exception(adr_serverless):
         PanelLayout.find(query="A|t_types|cont|panel")
 
 
-# @pytest.mark.ado_test
+@pytest.mark.ado_test
 def test_template_render(monkeypatch, adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless import template as template_module
@@ -1003,3 +1007,152 @@ def test_template_render(monkeypatch, adr_serverless):
 
     # Assert that the final rendered content matches the fixed string.
     assert result == "dummy rendered content"
+
+
+@pytest.mark.ado_test
+def test_pptx_layout_render_pptx_success(adr_serverless, monkeypatch):
+    # The rendering engine is located in the 'reports' app of the Ansys core installation
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        # This fake method simulates a successful render by the engine
+        assert render_type == "pptx"
+        return b"mock pptx content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+
+    pptx_bytes = pptx_template.render_pptx()
+
+    assert pptx_bytes == b"mock pptx content from engine"
+
+
+@pytest.mark.ado_test
+def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PPTX for template"):
+        pptx_template.render_pptx()
+
+
+@pytest.mark.ado_test
+def test_to_json(adr_serverless):
+    import json
+    import os
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    root = adr_serverless.create_template(
+        BasicLayout,
+        name="A",
+        parent=None,
+        tags="dp=dp1",
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
+
+    adr_serverless.create_template(PanelLayout, name="B", parent=root, tags="dp=dp2")
+
+    child_1 = adr_serverless.create_template(
+        BasicLayout, name="C", parent=root, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
+    )
+
+    adr_serverless.create_template(
+        BasicLayout, name="D", parent=child_1, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
+    )
+
+    file_path = os.path.join(adr_serverless.static_directory, "test.json")
+    root.to_json(file_path)
+
+    with open(file_path, encoding="utf-8") as json_file:
+        data = json.load(json_file)
+
+    assert (
+        data["Template_0"]["children"] == ["Template_1", "Template_2"]
+        and data["Template_0"]["name"] == "A"
+        and data["Template_1"]["children"] == []
+        and data["Template_1"]["name"] == "B"
+        and data["Template_2"]["children"] == ["Template_3"]
+        and data["Template_2"]["name"] == "C"
+        and data["Template_3"]["children"] == []
+        and data["Template_3"]["name"] == "D"
+    )
+
+
+@pytest.mark.ado_test
+def test_to_json_non_root_template(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    # Create a parent template
+    root_template = adr_serverless.create_template(
+        BasicLayout,
+        name="RootTemplate",
+        parent=None,
+        tags="dp=dp1",
+    )
+
+    # Create a child template
+    child_template = adr_serverless.create_template(
+        BasicLayout,
+        name="ChildTemplate",
+        parent=root_template,
+        tags="dp=dp2",
+    )
+
+    # Attempt to call to_json on the child template and expect an ADRException
+    with pytest.raises(ADRException, match="Only root templates can be dumped to JSON files."):
+        child_template.to_json("dummy_path.json")
+
+
+@pytest.mark.ado_test
+def test_template_reorder_child(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    # Create a parent template
+    parent_template = PanelLayout.create(name="ParentTemplate")
+
+    # Create child templates
+    child1 = PanelLayout.create(name="Child1", parent=parent_template)
+    child2 = PanelLayout.create(name="Child2", parent=parent_template)
+    child3 = PanelLayout.create(name="Child3", parent=parent_template)
+
+    # Add children to the parent template
+    parent_template.children = [child1, child2, child3]
+
+    # Reorder child2 to the first position
+    parent_template.reorder_child(child2, 0)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child1", "Child3"]
+
+    # Reorder child3 to the second position
+    parent_template.reorder_child(child3, 1)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child3", "Child1"]
+
+    # Reorder child1 to the last position
+    parent_template.reorder_child(child1, 2)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child3", "Child1"]
+
+    # Test invalid position (out of bounds)
+    with pytest.raises(TemplateReorderOutOfBounds):
+        parent_template.reorder_child(child1, 5)
+
+    # Test invalid child (not in children)
+    invalid_child = PanelLayout.create(name="InvalidChild")
+    with pytest.raises(TemplateDoesNotExist):
+        parent_template.reorder_child(invalid_child, 1)

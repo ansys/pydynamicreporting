@@ -64,8 +64,8 @@ class DockerLauncher:
         # Load up Docker from the user's environment
         try:
             self._client: docker.client.DockerClient = docker.from_env()
-        except Exception:  # pragma: no cover
-            raise RuntimeError("Can't initialize Docker")
+        except Exception as e:  # pragma: no cover
+            raise RuntimeError(f"Can't initialize Docker: {str(e)}")
         self._container: docker.models.containers.Container = None
         self._image: docker.models.images.Image = None
         # the Ansys / EnSight version we found in the container
@@ -92,8 +92,8 @@ class DockerLauncher:
         """
         try:
             self._image = self._client.images.pull(self._image_url)
-        except Exception:
-            raise RuntimeError(f"Can't pull Docker image: {self._image_url}")
+        except Exception as e:
+            raise RuntimeError(f"Can't pull Docker image: {self._image_url}\n\n{str(e)}")
         return self._image
 
     def create_container(self) -> docker.models.containers.Container:
@@ -119,7 +119,7 @@ class DockerLauncher:
                     tar_file.write(chunk)
             # Extract the tar archive
             with tarfile.open(tar_file_path) as tar:
-                tar.extractall(path=output_path)
+                tar.extractall(path=output_path)  # nosec B202
             # Remove the tar archive
             tar_file_path.unlink()
         except Exception as e:
@@ -176,7 +176,7 @@ class DockerLauncher:
         existing_names = [x.name for x in self._client.from_env().containers.list()]
         container_name = "nexus"
         while container_name in existing_names:
-            container_name += random.choice(string.ascii_letters)
+            container_name += random.choice(string.ascii_letters)  # nosec B311
             if len(container_name) > 500:
                 raise RuntimeError("Can't determine a unique Docker container name.")
 

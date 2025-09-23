@@ -3,7 +3,7 @@ from datetime import datetime
 from html.parser import HTMLParser as BaseHTMLParser
 import io
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import platform
 import uuid
 
@@ -87,7 +87,7 @@ class TableContent(ItemContent):
         value = super().process(value, obj)
         if not isinstance(value, numpy.ndarray):
             raise TypeError("Expected content to be a numpy array")
-        if value.dtype.kind not in ["S", "f"]:
+        if value.dtype.kind not in ("S", "f"):
             raise TypeError("Expected content to be a numpy array of bytes or float type.")
         if len(value.shape) != 2:
             raise ValueError("Expected content to be a 2 dimensional numpy array.")
@@ -385,7 +385,11 @@ class HTML(String):
 class Table(Item):
     content: TableContent = TableContent()
     type: str = ItemType.TABLE
-    _properties: tuple = table_attr
+    _payload_properties: tuple = (  # for backwards compatibility
+        "rowlbls",
+        "collbls",
+    )
+    _properties: tuple = table_attr + _payload_properties
 
     @classmethod
     def from_db(cls, orm_instance, **kwargs):
