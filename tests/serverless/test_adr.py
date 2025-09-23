@@ -1044,18 +1044,19 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
 
     adr_serverless.create_template(BasicLayout, name="TestExportReport", parent=None)
 
-    # Return a fragment (not a full <html>) so wrapper kicks in
+    # Use whatever ADR is actually configured to serve as STATIC_URL
+    href = f"{adr_serverless.static_url}website/content/site.css"
+
     def mock_render_report(self, name, **kwargs):
         # Use the provided static asset path that is known to exist.
         return (
             '<div class="body-content">'
-            '<link rel="stylesheet" type="text/css" href="/static/website/content/site.css"/>'
+            f'<link rel="stylesheet" type="text/css" href="{href}"/>'
             "</div>"
         )
 
     monkeypatch.setattr(ADR, "render_report", mock_render_report)
 
-    # Act: Call the method under test. The full exporter logic will run.
     output_path = adr_serverless.export_report_as_html(
         output_directory=tmp_path,
         name="TestExportReport",
@@ -1064,7 +1065,7 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
     assert output_path == tmp_path / "index.html"
     assert output_path.exists()
 
-    # Since we flatten unknown /static/* (non-ansys) into ./media/
+    # Unknown /static/* (i.e., non-ansys path) should flatten to ./media/<basename>
     assert (tmp_path / "media" / "site.css").exists()
 
     html = output_path.read_text(encoding="utf-8")
