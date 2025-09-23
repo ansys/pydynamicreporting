@@ -11,7 +11,7 @@ maintainers = [
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13"
 keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
 license = { text = "MIT" }
 classifiers = [
@@ -23,7 +23,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
@@ -40,8 +39,7 @@ dependencies = [
     "djangorestframework~=3.15",
     "django-guardian~=2.4",
     "tzlocal~=5.0",
-    'numpy>=1.23.5,<2; python_version < "3.13"',
-    'numpy>=2.1; python_version >= "3.13"',
+    "numpy>=1.23.5,<2",
     "python-pptx>=1.0.2",
     "pandas>=2.0",
     "statsmodels>=0.14",
