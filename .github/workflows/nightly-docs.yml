@@ -7,7 +7,7 @@ on:
 
 env:
   DOCUMENTATION_CNAME: 'dynamicreporting.docs.pyansys.com'
-  MAIN_PYTHON_VERSION: '3.13'
+  MAIN_PYTHON_VERSION: '3.12'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
