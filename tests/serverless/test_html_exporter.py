@@ -20,7 +20,7 @@ def _write(p: Path, data: bytes | str):
         p.write_text(data, encoding="utf-8")
 
 
-def _fragment_with_static_ref(path: str = "/static/website/content/site.css") -> str:
+def _fragment_with_static_ref(path: str) -> str:
     # pure fragment (no <html>), to force the exporter to wrap into a full document
     return f'<div class="body-content m-1"><link rel="stylesheet" href="{path}"/></div>'
 
@@ -40,8 +40,10 @@ def test_wraps_fragment_and_emits_title_and_favicon(adr_serverless, tmp_path: Pa
     _write(static_dir / "website/images/favicon.png", b"\x89PNG\x00")
     _write(static_dir / "website/content/site.css", "body{overflow:hidden;}")
 
+    href = f"{adr_serverless.static_url}website/content/site.css"
+
     exporter = ServerlessReportExporter(
-        html_content=_fragment_with_static_ref(),
+        html_content=_fragment_with_static_ref(href),
         output_dir=tmp_path / "export1",
         static_dir=static_dir,
         media_dir=media_dir,
@@ -76,9 +78,12 @@ def test_static_is_flattened_media_and_ansys_tree_preserved(adr_serverless, tmp_
     # favicon for wrapper
     _write(static_dir / "website/images/favicon.png", b"\x89PNG\x00")
 
-    html = _fragment_with_static_ref("/static/website/scripts/plotly.min.js") + textwrap.dedent(
+    plotly_href = f"{adr_serverless.static_url}website/scripts/plotly.min.js"
+    ansys_util_src = f"{adr_serverless.static_url}ansys{ver}/nexus/utils/js-test.js"
+
+    html = _fragment_with_static_ref(plotly_href) + textwrap.dedent(
         f"""
-        <script src="/static/ansys{ver}/nexus/utils/js-test.js"></script>
+        <script src="{ansys_util_src}"></script>
         """
     )
 
@@ -112,8 +117,10 @@ def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
     _write(static_dir / "website/images/favicon.png", b"PNGDATA")
     _write(static_dir / "website/content/site.css", "h2{}")
 
+    href = f"{adr_serverless.static_url}website/content/site.css"
+
     exporter = ServerlessReportExporter(
-        html_content=_fragment_with_static_ref(),
+        html_content=_fragment_with_static_ref(href),
         output_dir=tmp_path / "export4",
         static_dir=static_dir,
         media_dir=media_dir,
@@ -140,10 +147,13 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
     _write(media_dir / "preview.png", b"P")
     _write(static_dir / "website/images/favicon.png", b"P")
 
+    media_src = f"{adr_serverless.media_url}bigfile.stl"
+    media_preview = f"{adr_serverless.media_url}preview.png"
+
     html = textwrap.dedent(
-        """
+        f"""
         <div>
-          <ansys-nexus-viewer src="/media/bigfile.stl" proxy_img="/media/preview.png"></ansys-nexus-viewer>
+          <ansys-nexus-viewer src="{media_src}" proxy_img="{media_preview}"></ansys-nexus-viewer>
         </div>
         """
     )
@@ -174,11 +184,13 @@ def test_scene_js_inlines_binary_block_and_namespaces_filename(adr_serverless, t
     ver = str(adr_serverless.ansys_version)
 
     # Babylon scene referencing a binary block; exporter will inline it
-    _write(static_dir / "website/scenes/guid123.scene.js", "load_binary_block('/media/blob.bin');")
+    media_blob = f"{adr_serverless.media_url}blob.bin"
+    _write(static_dir / "website/scenes/guid123.scene.js", f"load_binary_block('{media_blob}');")
     _write(media_dir / "blob.bin", b"\x00\x01\x02\x03")
     _write(static_dir / "website/images/favicon.png", b"P")
 
-    html = '<div><script src="/static/website/scenes/guid123.scene.js"></script></div>'
+    script_src = f"{adr_serverless.static_url}website/scenes/guid123.scene.js"
+    html = f'<div><script src="{script_src}"></script></div>'
 
     exporter = ServerlessReportExporter(
         html_content=html,
@@ -239,7 +251,8 @@ def test_no_inline_flag_forces_copy_not_data_uri(adr_serverless, tmp_path: Path)
     _write(static_dir / "website/images/favicon.png", b"P")
     _write(media_dir / "tiny.bin", b"ABCD")
 
-    html = '<div><a href="/media/tiny.bin">dl</a></div>'
+    href = f"{adr_serverless.media_url}tiny.bin"
+    html = f'<div><a href="{href}">dl</a></div>'
 
     exporter = ServerlessReportExporter(
         html_content=html,
@@ -268,7 +281,8 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
     _write(static_dir / "website/images/favicon.png", b"P")
 
     # Refer to a media file that doesn't exist
-    html = '<div><img src="/media/does_not_exist.xyz"/></div>'
+    missing_href = f"{adr_serverless.media_url}does_not_exist.xyz"
+    html = f'<div><img src="{missing_href}"/></div>'
 
     exporter = ServerlessReportExporter(
         html_content=html,
@@ -283,4 +297,4 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
 
     out = (tmp_path / "export9" / "index.html").read_text(encoding="utf-8")
     # Exporter leaves the original path when it can't find a local file
-    assert "/media/does_not_exist.xyz" in out
+    assert missing_href in out
