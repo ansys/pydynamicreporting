@@ -9,7 +9,7 @@ include pyproject.toml
 include README.rst
 include setup.py
 
-prune .ci
+prune scripts
 prune .github
 prune .venv
 prune default_templates
@@ -22,7 +22,6 @@ exclude .gitignore
 exclude .pre-commit-config.yaml
 exclude codecov.yml
 exclude Makefile
-exclude test_cleanup.py
 exclude uv.lock
 exclude PKG-INFO
 
