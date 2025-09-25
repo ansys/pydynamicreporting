@@ -50,7 +50,7 @@ clean:
 	find . -name \*.pyc -delete
 
 test_clean:
-	python test_cleanup.py
+	python scripts/test_cleanup.py
 
 docs:
 	$(MAKE) -C doc html
