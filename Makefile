@@ -26,7 +26,7 @@ install-dev:
 	pip install -e .[dev]
 
 pull-docker:
-	bash .ci/pull_adr_image.sh
+	bash scripts/pull_adr_image.sh
 
 test:
 	pip install -e .[test]
