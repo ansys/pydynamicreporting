@@ -52,7 +52,7 @@ install: ## 🚀 Set up environment and install project
 	@echo "🚀 Syncing dependencies with uv..."
 	uv sync --frozen --all-extras
 	@echo "🔧 Installing project in editable mode..."
-	uv pip install -e .[dev]
+	uv pip install -e .
 
 .PHONY: check-dist
 check-dist: ## Validate dist/ artifacts (long description, format)
