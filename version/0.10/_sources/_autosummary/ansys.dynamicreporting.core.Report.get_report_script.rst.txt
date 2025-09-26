@@ -1,0 +1,6 @@
+get\_report\_script
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.get_report_script
