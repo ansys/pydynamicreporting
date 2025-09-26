@@ -5,13 +5,6 @@ on:
     - cron: '0 22 * * *'
   workflow_dispatch:
 
-env:
-  MAIN_PYTHON_VERSION: '3.12'
-  PACKAGE_NAME: 'ansys-dynamicreporting-core'
-  PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
-  ANSYS_VERSION: '261'
-  DPF_STANDALONE_SUFFIX: ''
-
 jobs:
 
   nightly_test:
@@ -23,6 +16,9 @@ jobs:
         python-version: [ '3.10', '3.11', '3.12' ]
 
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - uses: actions/checkout@v5
         with:
           ref: 'refs/heads/main'
@@ -75,6 +71,9 @@ jobs:
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Build library source and wheel artifacts
         uses: ansys/actions/build-library@v10
         with:
@@ -100,6 +99,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'

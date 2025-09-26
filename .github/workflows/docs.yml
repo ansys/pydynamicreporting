@@ -7,17 +7,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  DOCUMENTATION_CNAME: 'dynamicreporting.docs.pyansys.com'
-  MAIN_PYTHON_VERSION: '3.12'
-  PACKAGE_NAME: 'ansys-dynamicreporting-core'
-  PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
-
 jobs:
   docs:
     name: Build docs
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Run Ansys documentation building action
         uses: ansys/actions/doc-build@v10
         with:
@@ -30,6 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ docs ]
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Deploy the stable documentation
         uses: ansys/actions/doc-deploy-stable@v10
         if: ${{ !env.ACT }}

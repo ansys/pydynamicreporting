@@ -1,14 +1,9 @@
 name: Security Scan
 
-env:
-  MAIN_PYTHON_VERSION: '3.12'
-  PACKAGE_NAME: 'ansys-dynamicreporting-core'
-
 on:
   push:
     branches:
       - main
-      - maint/*
       - release/*
 
 jobs:
@@ -18,9 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -56,7 +53,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
         uses: ansys/actions/check-vulnerabilities@v10.0.14

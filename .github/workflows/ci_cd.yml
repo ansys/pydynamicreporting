@@ -15,33 +15,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  DOCUMENTATION_CNAME: 'dynamicreporting.docs.pyansys.com'
-  MAIN_PYTHON_VERSION: '3.12'
-  PACKAGE_NAME: 'ansys-dynamicreporting-core'
-  PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
-  ANSYS_VERSION: '261'
-  DPF_STANDALONE_SUFFIX: ''
-
 jobs:
   style:
     name: Code style
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: PyAnsys code style checks
         uses: ansys/actions/code-style@v10
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           show-diff-on-failure: false
-
-  #  docs-style:
-  #    name: Documentation style check
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #      - name: PyAnsys documentation style checks
-  #        uses: ansys/actions/doc-style@v4
-  #        with:
-  #          token: ${{ secrets.GITHUB_TOKEN }}
 
   smoketest:
     name: Smoke test
@@ -51,8 +37,10 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
-
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Checkout code
         uses: actions/checkout@v5
 
@@ -82,6 +70,9 @@ jobs:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - uses: actions/checkout@v5
 
       - name: Login to GitHub Container Registry
@@ -145,6 +136,9 @@ jobs:
     runs-on: ubuntu-latest
     #    needs: [docs-style]
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Run Ansys documentation building action
         uses: ansys/actions/doc-build@v10
         with:
@@ -157,6 +151,9 @@ jobs:
     needs: [ test ]
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Build library source and wheel artifacts
         uses: ansys/actions/build-library@v10
         with:
@@ -172,6 +169,8 @@ jobs:
       contents: write
       id-token: write
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: Download all artifacts
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
@@ -200,6 +199,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ docs, package ]
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Deploy the latest documentation
         uses: ansys/actions/doc-deploy-dev@v10
         if: ${{ !env.ACT }}
@@ -215,6 +217,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ docs, release ]
     steps:
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Deploy the stable documentation
         uses: ansys/actions/doc-deploy-stable@v10
         if: ${{ !env.ACT }}
