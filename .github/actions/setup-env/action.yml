@@ -1,5 +1,6 @@
 name: "Load Shared Environment"
 description: "Sets shared environment variables for all workflows"
+
 runs:
   using: "composite"
   steps:
