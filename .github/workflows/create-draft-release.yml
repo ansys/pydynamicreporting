@@ -22,8 +22,8 @@ jobs:
           fetch-depth: 0  # Required for hatch-vcs to generate full version
           fetch-tags: true
 
-      - name: Set up Python Env
-        uses: ./.github/actions/setup-python-env
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: Run version checks
         run: make check-version

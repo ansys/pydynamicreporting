@@ -1,6 +1,5 @@
 name: CI-CD
 
-# run only on main branch.  This avoids duplicated actions on PRs
 on:
   pull_request:
     branches:
@@ -20,8 +19,8 @@ jobs:
     name: Code style
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
+      - name: Set up Python
+        uses: ./.github/actions/setup-python-env
 
       - name: PyAnsys code style checks
         uses: ansys/actions/code-style@v10
@@ -38,16 +37,11 @@ jobs:
         os: [ ubuntu-latest, windows-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
     steps:
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
-
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+        uses: ./.github/actions/setup-python-env
 
       - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v10
@@ -57,7 +51,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install from wheelhouse
-        run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
+        run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
 
       - name: Run smoketest
         run: make smoketest
@@ -70,9 +64,6 @@ jobs:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
     steps:
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
-
       - uses: actions/checkout@v5
 
       - name: Login to GitHub Container Registry
@@ -86,12 +77,9 @@ jobs:
         run: make pull-docker
 
       - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+        uses: ./.github/actions/setup-python-env
 
       - name: Set licensing if necessary
-        if: ${{ env.ANSYS_VERSION > '231' }}
         shell: bash
         run: |
           echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
@@ -119,7 +107,7 @@ jobs:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
 
       - name: Upload coverage report
-        if: env.MAIN_PYTHON_VERSION == matrix.python-version
+        if: matrix.python-version == env.MAIN_PYTHON_VERSION
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html
@@ -134,7 +122,6 @@ jobs:
   docs:
     name: Build docs
     runs-on: ubuntu-latest
-    #    needs: [docs-style]
     steps:
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -160,39 +147,6 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
-  release:
-    name: Release project
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [ package ]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
-        with:
-          name: ${{ env.PACKAGE_NAME }}-artifacts
-          path: ${{ env.PACKAGE_NAME }}-artifacts
-
-      - name: "Upload artifacts to PyPI using trusted publisher"
-        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
-        with:
-          repository-url: "https://upload.pypi.org/legacy/"
-          print-hash: true
-          packages-dir: ${{ env.PACKAGE_NAME }}-artifacts
-          skip-existing: false
-
-      - name: Release to GitHub
-        uses: ansys/actions/release-github@54d45960ae9d009b2a3f26dfa687f611a85c6da3 # v10.0.11
-        if: ${{ !env.ACT }}
-        with:
-          library-name: ${{ env.PACKAGE_NAME }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   upload_dev_docs:
     name: Upload dev documentation
     if: github.ref == 'refs/heads/main'
@@ -211,27 +165,9 @@ jobs:
           bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
           bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
 
-  upload_docs_release:
-    name: Upload release documentation
-    if: github.event_name == 'push' && contains(github.ref, 'refs/tags')
-    runs-on: ubuntu-latest
-    needs: [ docs, release ]
-    steps:
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
-
-      - name: Deploy the stable documentation
-        uses: ansys/actions/doc-deploy-stable@v10
-        if: ${{ !env.ACT }}
-        with:
-          cname: ${{ env.DOCUMENTATION_CNAME }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
-          bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
-
   ci-failure:
     name: Teams notify on failure
-    if: failure() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    if: failure()
     needs: [ package ]
     runs-on: ubuntu-latest
     steps:

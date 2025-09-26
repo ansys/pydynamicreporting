@@ -16,9 +16,6 @@ jobs:
         python-version: [ '3.10', '3.11', '3.12' ]
 
     steps:
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
-
       - uses: actions/checkout@v5
         with:
           ref: 'refs/heads/main'
@@ -30,16 +27,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Python
+        uses: ./.github/actions/setup-python-env
+
       - name: Pull Docker container
         run: make pull-docker
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Set licensing if necessary
-        if: ${{ env.ANSYS_VERSION > '231' }}
         shell: bash
         run: |
           echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
@@ -71,7 +65,7 @@ jobs:
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Env
+      - name: Set up env
         uses: ./.github/actions/setup-env
 
       - name: Build library source and wheel artifacts
@@ -79,11 +73,6 @@ jobs:
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-
-      - name: Rename wheel
-        run: |
-          python codegen/rename_whl.py
-          rm -rf dist/*.tar.gz
 
       - name: Upload to Azure PyPi
         if: ${{ !env.ACT }}

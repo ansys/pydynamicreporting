@@ -36,8 +36,8 @@ pull-docker:
 	bash scripts/pull_adr_image.sh
 
 test:
-	pip install -e .[test]
-	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+	uv run python -m pip install -e .[test]
+	uv run python -m pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
 
 smoketest:
 	uv run python tests/smoketest.py
@@ -52,7 +52,7 @@ install: ## 🚀 Set up environment and install project
 	@echo "🚀 Syncing dependencies with uv..."
 	uv sync --frozen --all-extras
 	@echo "🔧 Installing project in editable mode..."
-	uv pip install -e .
+	uv run python -m pip install -e .
 
 .PHONY: check-dist
 check-dist: ## Validate dist/ artifacts (long description, format)
