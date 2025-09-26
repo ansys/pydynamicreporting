@@ -28,12 +28,6 @@ jobs:
       - name: Run version checks
         run: make check-version
 
-      - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v10
-        with:
-          library-name: ${{ env.PACKAGE_NAME }}
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-
       - name: Check for existing release
         run: |
           if gh release view "${{ github.ref_name }}" > /dev/null 2>&1; then
@@ -42,6 +36,12 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build library source and wheel artifacts
+        uses: ansys/actions/build-library@v10
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
       - name: Create Draft GitHub Release with Artifacts
         run: |
