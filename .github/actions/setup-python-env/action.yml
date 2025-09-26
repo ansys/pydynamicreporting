@@ -14,7 +14,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Set up Env
+    - name: Setup Env
       uses: ./.github/actions/setup-env
 
     - name: Setup Python
@@ -29,7 +29,7 @@ runs:
         enable-cache: true
         cache-suffix: ${{ inputs.python-version }}
 
-    - name: Get resolved Python version
+    - name: Get exact Python version
       id: resolved-python
       shell: bash
       run: |
