@@ -1,29 +1,36 @@
-CODESPELL_DIRS ?= ./pydynamicreporting
-CODESPELL_SKIP ?= "*.pyc,*.xml,*.txt,*.gif,*.png,*.jpg,*.js,*.html,*.doctree,*.ttf,*.woff,*.woff2,*.eot,*.mp4,*.inv,*.pickle,*.ipynb,flycheck*,./.git/*,./.hypothesis/*,*.yml,./docs/build/*,./docs/images/*,./dist/*,*~,.hypothesis*,./docs/source/examples/*,*cover,*.dat,*.mac,\#*,PKG-INFO,*.mypy_cache/*,*.xml,*.aedt,*.svg"
-CODESPELL_IGNORE ?= "ignore_words.txt"
+SHELL := bash
+.SHELLFLAGS := -e -x -c
+
+# Cross-platform Bash
+ifeq ($(OS),Windows_NT)
+BASH := "C:/Program Files/Git/bin/bash.exe"
+else
+BASH := bash
+endif
+
 TEST_FILE ?= "tests\test_service.py"
-INSTALL_PATH ?= "C:\Program Files\ANSYS Inc\v252"
 
-doctest: codespell
+.PHONY: check-version
+check-version:
+	@echo "🔍 Checking if a Git tag exists..."
+	@if git describe --tags --abbrev=0 >/dev/null 2>&1; then \
+	    VERSION=$$(git describe --tags --abbrev=0); \
+	    echo "✅ Git tag found: $$VERSION"; \
+	else \
+	    echo "❌ No Git tag found. Please create one with: git tag v0.1.0"; \
+	    exit 1; \
+	fi
 
-codespell:
-	echo "Running codespell"
-	codespell $(CODESPELL_DIRS) -S $(CODESPELL_SKIP) # -I $(CODESPELL_IGNORE)
+.PHONY: check
+check: ## Run all code quality checks
+	@echo "🚀 Checking lock file consistency"
+	uv lock --locked
+	@echo "🚀 Running pre-commit hooks"
+	uv run pre-commit run --all-files
 
-build:
-	python -m build --wheel
-	python codegen/rename_whl.py
-	rm -rf build
-
-build-nightly: build
-
-install:
-	pip uninstall ansys-dynamicreporting-core -y
-	pip install dist/*.whl
-
-install-dev:
-	pip uninstall ansys-dynamicreporting-core -y
-	pip install -e .[dev]
+.PHONY: version
+version: ## Print the current project version
+	uv run hatch version
 
 pull-docker:
 	bash scripts/pull_adr_image.sh
@@ -32,30 +39,52 @@ test:
 	pip install -e .[test]
 	pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
 
-test-dev:
-	pip install -e .[test]
-	pytest -rvx --setup-show "$(TEST_FILE)" --use-local-launcher --install-path "$(INSTALL_PATH)"
-
 smoketest:
-	python tests/smoketest.py
+	uv run python tests/smoketest.py
 
-clean:
+.PHONY: build
+build: clean ## Build package using uv
+	@echo "🚀 Building project"
+	uv build
+
+.PHONY: install
+install: ## 🚀 Set up environment and install project
+	@echo "🚀 Syncing dependencies with uv..."
+	uv sync --frozen --all-extras
+	@echo "🔧 Installing project in editable mode..."
+	uv pip install -e .[dev]
+
+.PHONY: check-dist
+check-dist: ## Validate dist/ artifacts (long description, format)
+	@echo "🔍 Validating dist/ artifacts..."
+	uv run twine check dist/*
+
+.PHONY: tag
+tag: ## 🏷 Tag the current release version (fixes changelog and pushes tag)
+	$(BASH) scripts/tag_release.sh
+
+.PHONY: publish
+publish-test: ## Publish to Azure Private PyPI
+	@echo "🚀 Publishing to Azure PyPI"
+	UV_PUBLISH_TOKEN=$(AZURE_PYPI_TOKEN) uv publish --publish-url=$(AZURE_PYPI_URL) --no-cache
+
+.PHONY: clean
+clean: ## Clean build artifacts
+	@echo "🚀 Removing build artifacts"
 	rm -rf dist build
+	rm -rf **/*.egg-info
 	rm -f src/ansys/dynamicreporting/core/adr_item.py
 	rm -f src/ansys/dynamicreporting/core/adr_utils.py
 	rm -f src/ansys/dynamicreporting/core/build_info.py
-	rm -rf **/*.egg-info
-	rm -rf coverage-html
-	rm -rf .pytest_cache
-	find . -name \*.pyc -delete
+	rm -rf .coverage coverage-html coverage.xml .pytest_cache
+	find . -name '*.pyc' -delete
 
-test_clean:
-	python scripts/test_cleanup.py
+.PHONY: test-clean
+test-clean:
+	uv run python scripts/test_cleanup.py
 
 docs:
 	$(MAKE) -C doc html
 
 docs-clean:
 	$(MAKE) -C doc clean
-
-all: clean build install
