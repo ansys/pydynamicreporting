@@ -15,8 +15,11 @@ jobs:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
           ref: 'refs/heads/main'
 
       - name: Set up Python
@@ -64,8 +67,11 @@ jobs:
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
 
       - name: Set up env
         uses: ./.github/actions/setup-env
@@ -90,8 +96,11 @@ jobs:
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
 
       - name: Set up Env
         uses: ./.github/actions/setup-env

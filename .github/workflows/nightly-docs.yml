@@ -14,8 +14,11 @@ jobs:
     name: Build docs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -31,8 +34,11 @@ jobs:
     needs: docs_build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
 
       - name: Set up Env
         uses: ./.github/actions/setup-env

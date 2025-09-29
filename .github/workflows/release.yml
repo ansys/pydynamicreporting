@@ -21,7 +21,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Required for hatch-vcs to generate full version
           fetch-tags: true
@@ -59,7 +59,7 @@ jobs:
     needs: [ release ]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Required for hatch-vcs to generate full version
           fetch-tags: true
@@ -80,7 +80,7 @@ jobs:
     needs: [ build-release-docs ]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Required for hatch-vcs to generate full version
           fetch-tags: true
