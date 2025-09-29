@@ -34,10 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.10.4] - 2024-09-30
 
 ### Added
-- 
+-
 
 ### Changed
-- 
+-
 
 ### Fixed
-- 
+-
