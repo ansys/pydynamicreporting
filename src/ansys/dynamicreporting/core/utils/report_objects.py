@@ -10,7 +10,7 @@ import json
 import logging
 import os
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import shlex
 import sys
 import uuid
@@ -175,7 +175,8 @@ def map_ensight_plot_to_table_dictionary(p):
         # convert EnSight undefined values into Numpy NaN values
         try:
             a[a == ensight.Undefined] = numpy.nan
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error: {str(e)}.\n")
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -402,7 +403,8 @@ class Template:
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -1316,7 +1318,8 @@ class ItemREST(BaseRESTObject):
         else:
             try:
                 from . import png
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error: {str(e)}.\n")
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1336,7 +1339,8 @@ class ItemREST(BaseRESTObject):
                     planes=pngobj[3].get("planes", None),
                     palette=pngobj[3].get("palette", None),
                 )
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error: {str(e)}.\n")
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
@@ -1422,7 +1426,7 @@ class TemplateREST(BaseRESTObject):
                 "tmp_cls = " + json_data["report_type"].split(":")[1] + "REST()",
                 locals(),
                 globals(),
-            )
+            )  # nosec
             return tmp_cls
         else:
             return TemplateREST()
@@ -1494,13 +1498,15 @@ class TemplateREST(BaseRESTObject):
                 tmp_params[k] = d[k]
             self.params = json.dumps(tmp_params)
             return
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error: {str(e)}.\n")
             return {}
 
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -1888,8 +1894,8 @@ class boxREST(LayoutREST):
             raise ValueError("Error: child position array should contain only integers")
         try:
             uuid.UUID(guid, version=4)
-        except Exception:
-            raise ValueError("Error: input guid is not a valid guid")
+        except Exception as e:
+            raise ValueError(f"Error: input guid is not a valid guid: {str(e)}")
         d = json.loads(self.params)
         if "boxes" not in d:
             d["boxes"] = {}
@@ -1909,8 +1915,8 @@ class boxREST(LayoutREST):
             import uuid
 
             uuid.UUID(guid, version=4)
-        except Exception:
-            raise ValueError("Error: input guid is not a valid guid")
+        except Exception as e:
+            raise ValueError(f"Error: input guid is not a valid guid: {str(e)}")
         d = json.loads(self.params)
         if "boxes" not in d:
             d["boxes"] = {}
@@ -2191,8 +2197,8 @@ class reportlinkREST(LayoutREST):
                 d["report_guid"] = link
                 self.params = json.dumps(d)
                 return
-            except Exception:
-                raise ValueError("Error: input guid is not a valid guid")
+            except Exception as e:
+                raise ValueError(f"Error: input guid is not a valid guid {str(e)}")
 
 
 class tablemergeREST(GeneratorREST):
@@ -2742,7 +2748,7 @@ class tablemapREST(GeneratorREST):
         name=None,
         output_name="output row",
         select_names="*",
-        operation="value",
+        function="value",
     ):
         if name is None:
             name = ["*"]
@@ -2755,8 +2761,8 @@ class tablemapREST(GeneratorREST):
             raise ValueError("Error: output_name should be a string")
         if not isinstance(select_names, str):
             raise ValueError("Error: select_names should be a string")
-        if not isinstance(operation, str):
-            raise ValueError("Error: operation should be a string")
+        if not isinstance(function, str):
+            raise ValueError("Error: function should be a string")
 
         if "map_params" not in d:
             d["map_params"] = {}
@@ -2768,7 +2774,7 @@ class tablemapREST(GeneratorREST):
         new_source["source_rows"] = ", ".join(repr(x) for x in name)
         new_source["output_rows"] = output_name
         new_source["output_columns_select"] = select_names
-        new_source["operation"] = operation
+        new_source["function"] = function
         sources.append(new_source)
         d["map_params"]["operations"] = sources
         self.params = json.dumps(d)
@@ -3360,7 +3366,7 @@ class sqlqueriesREST(GeneratorREST):
             if "pswsqldb" in json.loads(self.params):
                 out["password"] = json.loads(self.params)["pswsqldb"]
             else:
-                out["password"] = ""
+                out["password"] = ""  # nosec B259
         else:
             out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}
         return out
@@ -3461,7 +3467,7 @@ class sqlqueriesREST(GeneratorREST):
                 _ = psycopg.connect(conn_string.strip())
             except Exception as e:
                 valid = False
-                out_msg = f"Could not validate connection:\n{e}"
+                out_msg = f"Could not validate connection:\n{str(e)}"
         return valid, out_msg
 
 
@@ -3496,6 +3502,26 @@ class pptxREST(LayoutREST):
     def output_pptx(self, value):
         props = self.get_property()
         props["output_pptx"] = value
+        self.set_property(props)
+
+    @property
+    def font_size(self):
+        return self.get_property().get("font_size")
+
+    @font_size.setter
+    def font_size(self, value):
+        props = self.get_property()
+        props["font_size"] = value
+        self.set_property(props)
+
+    @property
+    def html_font_scale(self):
+        return self.get_property().get("html_font_scale")
+
+    @html_font_scale.setter
+    def html_font_scale(self, value):
+        props = self.get_property()
+        props["html_font_scale"] = value
         self.set_property(props)
 
 

@@ -1273,9 +1273,9 @@ def test_tablemap_operation() -> None:
     except ValueError as e:
         assert "select_names should be a string" in str(e)
     try:
-        a.add_operation(operation=1)
+        a.add_operation(function=1)
     except ValueError as e:
-        assert "operation should be a string" in str(e)
+        assert "function should be a string" in str(e)
     a.add_operation(name=["a"])
     a.add_operation(name=["b"])
     assert len(a.get_operations()) == 3
@@ -1895,12 +1895,15 @@ def test_squile_query() -> None:
 def test_pptx() -> None:
     a = ro.pptxREST()
     a.input_pptx = "a"
-    succ = a.input_pptx == "a"
+    assert a.input_pptx == "a"
     a.use_all_slides = 1
-    succ_two = a.use_all_slides == 1
+    assert a.use_all_slides == 1
     a.output_pptx = "b"
-    succ_three = a.output_pptx == "b"
-    assert succ and succ_two and succ_three
+    assert a.output_pptx == "b"
+    a.font_size = "4"
+    assert a.font_size == "4"
+    a.html_font_scale = "0.5"
+    assert a.html_font_scale == "0.5"
 
 
 @pytest.mark.ado_test
@@ -2070,6 +2073,7 @@ def test_item_payload(adr_service_query) -> None:
         for i in adr_service_query.query():
             _ = i.item.get_payload_content(as_list=True)
         succ = True
-    except Exception:
+    except Exception as e:
+        print(f"Exception received: {str(e)}")
         succ = False
     assert succ

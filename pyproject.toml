@@ -1,19 +1,19 @@
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.2.dev1"
+version = "0.10.4.dev0"
 authors = [
-    {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
 ]
 
 maintainers = [
-    {name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"},
-    {name = "Ansys ADR Team", email = "adrteam@ansys.com"},
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
+    { name = "Ansys ADR Team", email = "adrteam@ansys.com" },
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13"
 keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -23,7 +23,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
@@ -35,20 +34,19 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "pytz>=2021.3",
     "psutil>=6.0.0",
-    # core ADR dependencies
-    "django~=4.2",
-    "djangorestframework~=3.15",
-    "django-guardian~=2.4",
-    "tzlocal~=5.0",
-    "numpy>=1.23.5,<2",
-    "python-pptx==0.6.19",
-    "pandas>=2.0",
-    "statsmodels>=0.14",
-    "scipy<=1.15.3", # breaks ADR if not included. Remove when statsmodels is updated
+    # core ADR dependencies - necessary for serverless ADR imports from the installation
+    "django>=4.2.19,<5.0",
+    "django-guardian>=2.4.0,<3.0.0",
+    "djangorestframework>=3.15.2,<3.16.0",
+    "tzlocal>=5.3.1,<6.0",
+    "numpy>=1.26.4,<2.0.0",
+    "python-pptx>=1.0.2,<2.0.0",
+    "pandas>=2.2.2,<3.0.0",
+    "statsmodels>=0.14.2,<0.15.0",
+    "psycopg[binary]>=3.2.6,<3.3.0",
+    "qtpy>=2.4.3,<2.5.0",
+    "lark>=1.2.2,<1.3.0",
     "docutils>=0.21",
-    "psycopg[binary]>=3.2.3",
-    "qtpy>=2.4.3",
-    "lark>=1.2.2,<2",
 ]
 
 [tool.setuptools.packages.find]
@@ -58,17 +56,17 @@ include = ["ansys.dynamicreporting*"]
 [project.urls]
 homepage = "https://github.com/ansys/pydynamicreporting"
 documentation = "https://dynamicreporting.docs.pyansys.com/"
-changelog  = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.rst"
+changelog = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.rst"
 "Bug Tracker" = "https://github.com/ansys/pydynamicreporting/issues"
-repository =  "https://github.com/ansys/pydynamicreporting"
-ci =  "https://github.com/ansys/pydynamicreporting/actions"
+repository = "https://github.com/ansys/pydynamicreporting"
+ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
     "pytest>=8.3.3",
     "pytest-cov>=6.0.0",
-    "pyvista==0.46.1",
-    "vtk==9.4.2",
+    "pyvista==0.46.3",
+    "vtk==9.5.2",
     "ansys-dpf-core==0.14.1",
 ]
 doc = [
@@ -100,15 +98,15 @@ requires = [
 tmp_path_retention_policy = "failed"
 testpaths = ["tests"]
 addopts = "--capture=tee-sys --tb=native -p no:warnings -vv"
-markers =[
+markers = [
     "integration:Run integration tests",
     "smoke:Run the smoke tests",
     "unit:Run the unit tests",
     "ado_test: subset of tests to be run in the ADO pipeline for ADR",
 ]
-norecursedirs =[
-  ".git",
-  ".idea",
+norecursedirs = [
+    ".git",
+    ".idea",
 ]
 filterwarnings = [
     "ignore:.+:DeprecationWarning"
@@ -147,4 +145,4 @@ recursive = true
 number = 3
 severity_level = "high"
 require_serial = true
-exclude_dirs = [ "venv/*","setup.py","test_cleanup.py","tests/*","doc/*" ]
+exclude_dirs = ["venv/*", "setup.py", "test_cleanup.py", "tests/*", "doc/*"]

@@ -3,7 +3,7 @@ from datetime import datetime
 from html.parser import HTMLParser as BaseHTMLParser
 import io
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import platform
 import uuid
 

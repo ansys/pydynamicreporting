@@ -1,0 +1,79 @@
+name: Security Scan
+
+env:
+  MAIN_PYTHON_VERSION: '3.12'
+  PACKAGE_NAME: 'ansys-dynamicreporting-core'
+
+on:
+  push:
+    branches:
+      - main
+      - maint/*
+      - release/*
+
+jobs:
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+      - name: Build wheelhouse
+        uses: ansys/actions/build-wheelhouse@v10
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          operating-system: ubuntu-latest
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+      - name: Install from wheelhouse
+        run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0.15.4
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+          upload-artifact: false
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}-sbom
+          path: sbom.cyclonedx.json
+
+
+  vulnerabilities:
+    name: Vulnerabilities
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: PyAnsys Vulnerability check (on main)
+        if: github.ref == 'refs/heads/main'
+        uses: ansys/actions/check-vulnerabilities@v10.0.14
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          python-package-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+          run-bandit: false
+          hide-log: false
+
+      - name: PyAnsys Vulnerability check (on dev)
+        if: github.ref != 'refs/heads/main'
+        uses: ansys/actions/check-vulnerabilities@v10.0.14
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          python-package-name: ${{ env.PACKAGE_NAME }}
+          token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
+          run-bandit: false
+          dev-mode: true
+          hide-log: false
