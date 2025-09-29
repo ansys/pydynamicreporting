@@ -446,7 +446,6 @@ class Template:
             setattr(self, key, tmp)
         # ok, re-order the children list to match the order in children_order
         sorted_guids = self.children_order.lower().split(",")
-        sorted_guids.reverse()
         lower_guid_to_child = {str(child).lower(): child for child in self.children}
         self.children = [
             lower_guid_to_child[guid] for guid in sorted_guids if guid in lower_guid_to_child
@@ -1461,7 +1460,6 @@ class TemplateREST(BaseRESTObject):
     # reorders the children list to be correct.
     def reorder_children(self):
         sorted_guids = self.children_order.lower().split(",")
-        sorted_guids.reverse()
         lower_guid_to_child = {str(child).lower(): child for child in self.children}
         self.children = [
             lower_guid_to_child[guid] for guid in sorted_guids if guid in lower_guid_to_child
