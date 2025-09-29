@@ -52,6 +52,7 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
+          use-uv: true
 
       - name: Install from wheelhouse
         run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
@@ -156,6 +157,7 @@ jobs:
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          use-uv: true
 
   upload_dev_docs:
     name: Upload dev documentation

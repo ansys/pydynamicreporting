@@ -42,6 +42,7 @@ jobs:
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          use-uv: true
 
       - name: Create Draft GitHub Release with Artifacts
         run: |
