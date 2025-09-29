@@ -109,22 +109,25 @@ include = [
   "LICENSE",
   "CHANGELOG.md"
 ]
-exclude = [
-  ".github",
-  "tests",
-  "docs/**",
-  "**/__pycache__",
-]
 
 [tool.hatch.build.hooks.custom]
 path = "codegen/build_hook.py"
 
 [tool.hatch.build.targets.wheel]
-# Include everything under src/ansys/ to support multi-package namespace
-packages = ["ansys"]
+packages = ["src/ansys"]
 
-[tool.hatch.build.targets.editable]
-packages = ["ansys"]
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+include = [
+  "src/**",
+  "codegen/**",
+  "AUTHORS",
+  "CHANGELOG.md",
+  "CONTRIBUTING.rst",
+  "CONTRIBUTORS.md",
+  "LICENSE",
+  "README.rst",
+]
 
 [tool.hatch.envs.default]
 path = ".venv"
