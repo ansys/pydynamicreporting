@@ -19,6 +19,9 @@ jobs:
     name: Code style
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
       - name: Set up Python
         uses: ./.github/actions/setup-python-env
 
@@ -64,7 +67,11 @@ jobs:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: ./.github/actions/setup-python-env
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -75,9 +82,6 @@ jobs:
 
       - name: Pull Docker container
         run: make pull-docker
-
-      - name: Set up Python
-        uses: ./.github/actions/setup-python-env
 
       - name: Set licensing if necessary
         shell: bash
