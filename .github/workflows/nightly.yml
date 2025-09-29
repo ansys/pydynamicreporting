@@ -5,13 +5,6 @@ on:
     - cron: '0 22 * * *'
   workflow_dispatch:
 
-env:
-  MAIN_PYTHON_VERSION: '3.12'
-  PACKAGE_NAME: 'ansys-dynamicreporting-core'
-  PACKAGE_NAMESPACE: 'ansys.dynamicreporting.core'
-  ANSYS_VERSION: '261'
-  DPF_STANDALONE_SUFFIX: ''
-
 jobs:
 
   nightly_test:
@@ -21,11 +14,16 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
-
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
           ref: 'refs/heads/main'
+
+      - name: Set up Python
+        uses: ./.github/actions/setup-python-env
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -37,13 +35,7 @@ jobs:
       - name: Pull Docker container
         run: make pull-docker
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Set licensing if necessary
-        if: ${{ env.ANSYS_VERSION > '231' }}
         shell: bash
         run: |
           echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
@@ -75,16 +67,21 @@ jobs:
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up env
+        uses: ./.github/actions/setup-env
+
       - name: Build library source and wheel artifacts
         uses: ansys/actions/build-library@v10
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-
-      - name: Rename wheel
-        run: |
-          python codegen/rename_whl.py
-          rm -rf dist/*.tar.gz
+          use-uv: true
 
       - name: Upload to Azure PyPi
         if: ${{ !env.ACT }}
@@ -98,8 +95,15 @@ jobs:
     name: Vulnerabilities
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-tags: true
+
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
