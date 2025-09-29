@@ -119,8 +119,16 @@ exclude = [
 [tool.hatch.build.hooks.custom]
 path = "codegen/build_hook.py"
 
+[tool.hatch.build.targets.wheel]
+# Include everything under src/ansys/ to support multi-package namespace
+packages = ["ansys"]
+
+[tool.hatch.build.targets.editable]
+packages = ["ansys"]
+
 [tool.hatch.envs.default]
 path = ".venv"
+env-vars = { PYTHONPATH = "." }
 
 [tool.uv]
 default-groups = "all"
