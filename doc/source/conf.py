@@ -1,11 +1,12 @@
 """Sphinx documentation configuration file."""
 
-import os
 from datetime import datetime
-from importlib.metadata import version as metadata_version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as metadata_version
+import os
 
 from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
-from packaging.version import Version, InvalidVersion
+from packaging.version import InvalidVersion, Version
 from sphinx_gallery.sorting import FileNameSortKey
 
 project = "ansys-dynamicreporting-core"
