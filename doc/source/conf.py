@@ -1,22 +1,35 @@
 """Sphinx documentation configuration file."""
 
-from datetime import datetime
 import os
+from datetime import datetime
+from importlib.metadata import version as metadata_version, PackageNotFoundError
 
 from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
+from packaging.version import Version, InvalidVersion
 from sphinx_gallery.sorting import FileNameSortKey
 
-from ansys.dynamicreporting.core import __version__
+project = "ansys-dynamicreporting-core"
+try:
+    release = metadata_version(project)
+except PackageNotFoundError:
+    release = "0.0.0"
+
+# Sphinx convention: short 'version' (series), full 'release'
+try:
+    v = Version(release)
+    version = f"{v.major}.{v.minor}"
+except InvalidVersion:
+    version = release
+
+# Version switcher: keep dev label if present
+switcher_version = "dev" if "dev" in release else get_version_match(version)
 
 cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com")
 """The canonical name of the webpage hosting the documentation."""
 
-# Project information
-project = "ansys-dynamicreporting-core"
 copyright = f"(c) {datetime.now().year} ANSYS, Inc. All rights reserved"
 author = "Ansys Inc."
-release = version = __version__
-__ansys_version__ = 251
+__ansys_version__ = 261
 
 rst_prolog = f"""
 .. _Layout Templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_templates.html
@@ -51,7 +64,6 @@ rst_prolog = f"""
 html_logo = pyansys_logo_black
 html_theme = "ansys_sphinx_theme"
 html_short_title = html_title = "PyDynamicReporting documentation |version|"
-switcher_version = get_version_match(version)
 html_favicon = ansys_favicon
 
 # specify the location of your github repo
