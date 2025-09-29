@@ -14,7 +14,6 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         python-version: [ '3.10', '3.11', '3.12' ]
-
     steps:
       - uses: actions/checkout@v5
         with:
@@ -65,6 +64,9 @@ jobs:
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
       - name: Set up env
         uses: ./.github/actions/setup-env
 
@@ -86,8 +88,10 @@ jobs:
     name: Vulnerabilities
     needs: [ nightly_test ]
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
       - name: Set up Env
         uses: ./.github/actions/setup-env
 
