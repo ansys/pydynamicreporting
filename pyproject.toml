@@ -71,6 +71,7 @@ doc = [
     "sphinx-gallery",
 ]
 dev = [
+    "pip",
     "twine",
     "hatch",
     "ipdb",

@@ -44,10 +44,6 @@ runs:
         restore-keys: |
           uv-venv-${{ runner.os }}-${{ steps.resolved-python.outputs.version }}-
 
-    - name: Disable pip version check (optional)
-      run: echo "PIP_DISABLE_PIP_VERSION_CHECK=1" >> $GITHUB_ENV
-      shell: bash
-
     - name: Install Python dependencies
       run: make install
       shell: bash
