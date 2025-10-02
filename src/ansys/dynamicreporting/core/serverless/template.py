@@ -558,6 +558,58 @@ class PanelLayout(Layout):
 class BoxLayout(Layout):
     report_type: str = ReportType.BOX_LAYOUT
 
+    def get_children_layout(self) -> dict:
+        """Gets the layout dictionary for all children."""
+        return self.get_params().get("boxes", {})
+
+    def set_child_position(self, guid: str, value: list[int] | None = None) -> None:
+        """Sets the position [x, y, width, height] for a specific child GUID."""
+        if value is None:
+            value = [0, 0, 10, 10]
+
+        if (
+            not isinstance(value, list)
+            or len(value) != 4
+            or not all(isinstance(p, int) for p in value)
+        ):
+            raise ValueError("Position must be a list containing four integers.")
+
+        try:
+            uuid.UUID(guid, version=4)
+        except (ValueError, TypeError):
+            raise ValueError(f"Input guid '{guid}' is not a valid guid.")
+
+        params = self.get_params()
+        if "boxes" not in params:
+            params["boxes"] = {}
+        if guid not in params["boxes"]:
+            params["boxes"][guid] = [0, 0, 0, 0, "self"]
+        value.append(params["boxes"][guid][4])  # retain existing clip setting
+        params["boxes"][guid] = value
+
+        self.set_params(params)
+
+    def set_child_clip(self, guid: str, clip: str = "self") -> None:
+        """Sets the clipping behavior ('self', 'scroll', or 'none') for a specific child GUID."""
+        valid_clips = ("self", "scroll", "none")
+        if not isinstance(clip, str) or clip not in valid_clips:
+            raise ValueError(f"Child clip parameter must be a string and one of {valid_clips}.")
+
+        try:
+            uuid.UUID(guid, version=4)
+        except (ValueError, TypeError):
+            raise ValueError(f"Input guid '{guid}' is not a valid guid.")
+
+        params = self.get_params()
+        if "boxes" not in params:
+            params["boxes"] = {}
+        if guid not in params["boxes"]:
+            params["boxes"][guid] = [0, 0, 0, 0, "self"]
+        val = params["boxes"][guid][0:4]  # retain existing position settings
+        val.append(clip)
+        params["boxes"][guid] = val
+        self.set_params(params)
+
 
 class TabLayout(Layout):
     report_type: str = ReportType.TABS_LAYOUT
