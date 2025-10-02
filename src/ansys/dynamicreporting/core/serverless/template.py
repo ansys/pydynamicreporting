@@ -493,8 +493,8 @@ class Layout(Template):
         return self.get_params().get("transpose", 0)
 
     def set_transpose(self, value=0):
-        if not isinstance(value, int):
-            raise ValueError("input needs to be an integer")
+        if not isinstance(value, int) or value not in (0, 1):
+            raise ValueError("input needs to be an integer that is 0 or 1")
         params = self.get_params()
         params["transpose"] = value
         self.set_params(params)
@@ -504,7 +504,7 @@ class Layout(Template):
 
     def set_skip(self, value=0):
         if not isinstance(value, int) or value not in (0, 1):
-            raise ValueError("input needs to be an integer (0 or 1)")
+            raise ValueError("input needs to be an integer that is 0 or 1")
         params = self.get_params()
         params["skip_empty"] = value
         self.set_params(params)
