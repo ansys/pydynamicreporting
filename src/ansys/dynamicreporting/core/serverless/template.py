@@ -517,6 +517,43 @@ class BasicLayout(Layout):
 class PanelLayout(Layout):
     report_type: str = ReportType.PANEL_LAYOUT
 
+    def get_panel_style(self) -> str:
+        """Gets the panel style for the layout."""
+        return self.get_params().get("style", "")
+
+    def set_panel_style(self, value: str = "panel") -> None:
+        """Sets the panel style for the layout."""
+        if not isinstance(value, str):
+            raise ValueError("Panel style mode input should be a string.")
+
+        valid_styles = (
+            "panel",
+            "callout-default",
+            "callout-danger",
+            "callout-warning",
+            "callout-success",
+            "callout-info",
+        )
+        if value not in valid_styles:
+            raise ValueError(f"Panel style mode not among the acceptable inputs: {valid_styles}")
+
+        params = self.get_params()
+        params["style"] = value
+        self.set_params(params)
+
+    def get_items_as_link(self) -> int:
+        """Checks if items are to be displayed as links."""
+        return self.get_params().get("items_as_links", 0)
+
+    def set_items_as_link(self, value: int = 0) -> None:
+        """Sets whether items are to be displayed as links (0 or 1)."""
+        if not isinstance(value, int) or value not in (0, 1):
+            raise ValueError("Input must be an integer, either 0 or 1.")
+
+        params = self.get_params()
+        params["items_as_links"] = value
+        self.set_params(params)
+
 
 class BoxLayout(Layout):
     report_type: str = ReportType.BOX_LAYOUT
