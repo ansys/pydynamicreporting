@@ -57,7 +57,7 @@ class Template(BaseModel):
         compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)
-    _properties: tuple = tuple()  # todo: add properties for each type ref: report_objects
+    _properties: tuple[str] = tuple()
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
     _type_registry = {}
@@ -675,7 +675,13 @@ class ReportLinkLayout(Layout):
 
 class PPTXLayout(Layout):
     report_type: str = ReportType.PPTX_LAYOUT
-    _properties = ("input_pptx", "output_pptx", "use_all_slides", "font_size", "html_font_scale")
+    _properties: tuple[str] = (
+        "input_pptx",
+        "output_pptx",
+        "use_all_slides",
+        "font_size",
+        "html_font_scale",
+    )
 
     def render_pptx(self, *, context=None, item_filter="", request=None) -> bytes:
         """
@@ -726,7 +732,7 @@ class PPTXLayout(Layout):
 
 class PPTXSlideLayout(Layout):
     report_type: str = ReportType.PPTX_SLIDE_LAYOUT
-    _properties = (
+    _properties: tuple[str] = (
         "source_slide",
         "exclude_from_toc",
     )
@@ -734,10 +740,24 @@ class PPTXSlideLayout(Layout):
 
 class DataFilterLayout(Layout):
     report_type: str = ReportType.DATA_FILTER_LAYOUT
+    _properties: tuple[str] = (
+        "filter_types",
+        "filter_checkbox",
+        "filter_slider",
+        "filter_input",
+        "filter_dropdown",
+        "filter_single_dropdown",
+        "filter_numeric_step",
+    )
 
 
 class UserDefinedLayout(Layout):
     report_type: str = ReportType.USER_DEFINED_LAYOUT
+    _properties: tuple[str] = (
+        "interactive_only",
+        "before_children",
+        "userdef_name",
+    )
 
 
 class Generator(Template):
@@ -798,6 +818,10 @@ class SQLQueryGenerator(Generator):
 
 class ItemsComparisonGenerator(Generator):
     report_type: str = ReportType.ITEMS_COMPARISON_GENERATOR
+    _properties: tuple[str] = (
+        "chunk_size",
+        "filters_table",
+    )
 
 
 class StatisticalGenerator(Generator):
