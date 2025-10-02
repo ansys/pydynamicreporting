@@ -566,6 +566,32 @@ class TabLayout(Layout):
 class CarouselLayout(Layout):
     report_type: str = ReportType.CAROUSEL_LAYOUT
 
+    def get_animated(self) -> int:
+        """Checks if the carousel animates automatically."""
+        return self.get_params().get("animate", 0)
+
+    def set_animated(self, value: int = 0) -> None:
+        """Sets whether the carousel animates automatically."""
+        if not isinstance(value, int):
+            raise ValueError("Animated input must be an integer.")
+
+        params = self.get_params()
+        params["animate"] = value
+        self.set_params(params)
+
+    def get_slide_dots(self) -> int:
+        """Gets the maximum number of slide indicator dots to display."""
+        return self.get_params().get("maxdots", 20)
+
+    def set_slide_dots(self, value: int = 20) -> None:
+        """Sets the maximum number of slide indicator dots to display."""
+        if not isinstance(value, int):
+            raise ValueError("Slide dots input must be an integer.")
+
+        params = self.get_params()
+        params["maxdots"] = value
+        self.set_params(params)
+
 
 class SliderLayout(Layout):
     report_type: str = ReportType.SLIDER_LAYOUT
