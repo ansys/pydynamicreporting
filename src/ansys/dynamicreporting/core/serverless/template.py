@@ -585,6 +585,7 @@ class BoxLayout(Layout):
             params["boxes"] = {}
         if guid not in params["boxes"]:
             params["boxes"][guid] = [0, 0, 0, 0, "self"]
+        value = value.copy()  # avoid mutating the input list
         value.append(params["boxes"][guid][4])  # retain existing clip setting
         params["boxes"][guid] = value
 
