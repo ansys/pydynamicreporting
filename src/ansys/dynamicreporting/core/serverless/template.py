@@ -619,6 +619,7 @@ class TabLayout(Layout):
 class CarouselLayout(Layout):
     report_type: str = ReportType.CAROUSEL_LAYOUT
 
+    # todo: convert set_ and get_ methods to properties
     def get_animated(self) -> int:
         """Checks if the carousel animates automatically."""
         return self.get_params().get("animate", 0)

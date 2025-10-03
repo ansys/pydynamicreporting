@@ -813,7 +813,7 @@ def test_layout_set_skip_empty_invalid(adr_serverless):
     with pytest.raises(ValueError, match="input needs to be an integer"):
         layout.set_skip("invalid")
 
-    with pytest.raises(ValueError, match="input needs to be an integer \\(0 or 1\\)"):
+    with pytest.raises(ValueError, match="input needs to be an integer that is 0 or 1"):
         layout.set_skip(5)
 
 
