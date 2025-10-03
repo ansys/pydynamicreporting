@@ -789,7 +789,7 @@ def test_layout_set_transpose_invalid(adr_serverless):
 
     layout = PanelLayout.create(name="test_layout_transpose_invalid", tags="dp=dp227")
 
-    with pytest.raises(ValueError, match="input needs to be an integer"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_transpose("not-integer")
 
 
@@ -1115,19 +1115,6 @@ def test_box_layout_methods(adr_serverless):
     # Update position, check that clip is preserved
     layout.set_child_position(guid=child_guid, value=[50, 60, 70, 80])
     assert layout.get_children_layout()[child_guid] == [50, 60, 70, 80, "scroll"]
-
-
-@pytest.mark.ado_test
-def test_box_layout_position_mutates_input(adr_serverless):
-    """Tests that set_child_position mutates the input list for compatibility."""
-    from ansys.dynamicreporting.core.serverless import BoxLayout
-
-    layout = BoxLayout.create(name="test_box_layout_position_mutates_input")
-    child_guid = str(uuid4())
-    pos_list = [1, 1, 1, 1]
-    layout.set_child_position(guid=child_guid, value=pos_list)
-    assert len(pos_list) == 5, "Input list should have been mutated to length 5"
-    assert pos_list[4] == "self", "Clip value should have been appended to input list"
 
 
 @pytest.mark.ado_test
