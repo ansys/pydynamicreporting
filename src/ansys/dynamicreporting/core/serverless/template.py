@@ -1,3 +1,4 @@
+import shlex
 from dataclasses import field
 from datetime import datetime
 import json
@@ -647,6 +648,82 @@ class CarouselLayout(Layout):
 
 class SliderLayout(Layout):
     report_type: str = ReportType.SLIDER_LAYOUT
+
+    def _split_quoted_string_list(self, s: str) -> list[str]:
+        """Helper to split a string into a list, properly handling quoted strings."""
+        shlexer = shlex.shlex(s)
+        shlexer.whitespace += ","
+        shlexer.whitespace_split = True
+        shlexer.commenters = ""
+
+        tokens = []
+        while True:
+            token = shlexer.get_token()
+            if not token:
+                break
+
+            # Strip whitespace and quotes, then check if the result is empty
+            processed_token = token.strip().strip("'\"")
+            if processed_token:
+                tokens.append(processed_token)
+        return tokens
+
+    def get_map_to_slider(self) -> list[str]:
+        """Gets the list of tags mapped to the slider controls."""
+        slider_tags_str = self.get_params().get("slider_tags", "")
+        if not slider_tags_str:
+            return []
+        return self._split_quoted_string_list(slider_tags_str)
+
+    def _validate_slider_tags(self, tags: list[str]) -> None:
+        """Validates the format and sorting parameter for a list of slider tags."""
+        if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+            raise ValueError("Input must be a list of strings.")
+
+        valid_sorts = (
+            "text_up",
+            "text_down",
+            "numeric_up",
+            "numeric_down",
+            "natural_up",
+            "natural_down",
+            "none",
+        )
+        for tag in tags:
+            parts = tag.split("|")
+            if len(parts) < 2 or parts[1] not in valid_sorts:
+                raise ValueError(
+                    f"The sorting parameter in tag '{tag}' is not supported. "
+                    f"Must be one of {valid_sorts}"
+                )
+
+    def set_map_to_slider(self, value: list[str] | None = None) -> None:
+        """Sets the list of tags that map to the slider controls."""
+        value_to_set = value or []
+        self._validate_slider_tags(value_to_set)
+
+        tags_str = ", ".join(repr(x) for x in value_to_set)
+
+        params = self.get_params()
+        params["slider_tags"] = tags_str
+        self.set_params(params)
+
+    def add_map_to_slider(self, value: list[str] | None = None) -> None:
+        """Adds a list of tags to the existing slider map."""
+        value_to_add = value or []
+        self._validate_slider_tags(value_to_add)
+
+        params = self.get_params()
+        existing_tags = params.get("slider_tags", "")
+
+        new_tags_str = ", ".join(repr(x) for x in value_to_add)
+
+        if existing_tags:
+            params["slider_tags"] = f"{existing_tags}, {new_tags_str}"
+        else:
+            params["slider_tags"] = new_tags_str
+
+        self.set_params(params)
 
 
 class FooterLayout(Layout):
