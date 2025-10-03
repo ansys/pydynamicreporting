@@ -810,10 +810,10 @@ def test_layout_set_skip_empty_invalid(adr_serverless):
 
     layout = PanelLayout.create(name="test_layout_skip_invalid", tags="dp=dp227")
 
-    with pytest.raises(ValueError, match="input needs to be an integer"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_skip("invalid")
 
-    with pytest.raises(ValueError, match="input needs to be an integer that is 0 or 1"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_skip(5)
 
 
@@ -1088,9 +1088,9 @@ def test_panel_layout_items_as_link(adr_serverless):
     layout.set_items_as_link(1)
     assert layout.get_items_as_link() == 1
 
-    with pytest.raises(ValueError, match="must be 0 or 1"):
+    with pytest.raises(ValueError, match="Input must be an integer, either 0 or 1."):
         layout.set_items_as_link(2)
-    with pytest.raises(ValueError, match="must be 0 or 1"):
+    with pytest.raises(ValueError, match="Input must be an integer, either 0 or 1."):
         layout.set_items_as_link("not-an-int")
 
 
@@ -1105,7 +1105,7 @@ def test_box_layout_methods(adr_serverless):
     assert layout.get_children_layout() == {}, "Default children layout should be empty"
 
     # Set position, check that clip defaults to 'self'
-    layout.set_child_position(guid=child_guid, position=[10, 20, 30, 40])
+    layout.set_child_position(guid=child_guid, value=[10, 20, 30, 40])
     assert layout.get_children_layout()[child_guid] == [10, 20, 30, 40, "self"]
 
     # Set clip, check that position is preserved
@@ -1113,7 +1113,7 @@ def test_box_layout_methods(adr_serverless):
     assert layout.get_children_layout()[child_guid] == [10, 20, 30, 40, "scroll"]
 
     # Update position, check that clip is preserved
-    layout.set_child_position(guid=child_guid, position=[50, 60, 70, 80])
+    layout.set_child_position(guid=child_guid, value=[50, 60, 70, 80])
     assert layout.get_children_layout()[child_guid] == [50, 60, 70, 80, "scroll"]
 
 
@@ -1125,7 +1125,7 @@ def test_box_layout_position_mutates_input(adr_serverless):
     layout = BoxLayout.create(name="test_box_layout_position_mutates_input")
     child_guid = str(uuid4())
     pos_list = [1, 1, 1, 1]
-    layout.set_child_position(guid=child_guid, position=pos_list)
+    layout.set_child_position(guid=child_guid, value=pos_list)
     assert len(pos_list) == 5, "Input list should have been mutated to length 5"
     assert pos_list[4] == "self", "Clip value should have been appended to input list"
 
@@ -1139,13 +1139,13 @@ def test_box_layout_set_child_position_invalid(adr_serverless):
     valid_guid = str(uuid4())
 
     with pytest.raises(ValueError, match="not a valid guid"):
-        layout.set_child_position(guid="not-a-guid", position=[0, 0, 0, 0])
+        layout.set_child_position(guid="not-a-guid", value=[0, 0, 0, 0])
 
     with pytest.raises(ValueError, match="must be a list containing four integers"):
-        layout.set_child_position(guid=valid_guid, position=[0, 0, 0])
+        layout.set_child_position(guid=valid_guid, value=[0, 0, 0])
 
     with pytest.raises(ValueError, match="must be a list containing four integers"):
-        layout.set_child_position(guid=valid_guid, position="not-a-list")
+        layout.set_child_position(guid=valid_guid, value="not-a-list")
 
 
 @pytest.mark.ado_test
@@ -1159,7 +1159,7 @@ def test_box_layout_set_child_clip_invalid(adr_serverless):
     with pytest.raises(ValueError, match="not a valid guid"):
         layout.set_child_clip(guid="not-a-guid", clip="scroll")
 
-    with pytest.raises(ValueError, match="parameter must be one of"):
+    with pytest.raises(ValueError, match="parameter must be a string and one of"):
         layout.set_child_clip(guid=valid_guid, clip="invalid-clip")
 
 
