@@ -607,9 +607,9 @@ class BoxLayout(Layout):
             params["boxes"] = {}
         if guid not in params["boxes"]:
             params["boxes"][guid] = [0, 0, 0, 0, "self"]
-        val = params["boxes"][guid][0:4]  # retain existing position settings
-        val.append(clip)
-        params["boxes"][guid] = val
+        position_values = params["boxes"][guid][0:4]  # retain existing position settings
+        position_values.append(clip)
+        params["boxes"][guid] = position_values
         self.set_params(params)
 
 
