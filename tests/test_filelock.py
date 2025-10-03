@@ -111,12 +111,11 @@ def test_soft(request) -> None:
 def test_nexus_filelock(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "n_lock.txt")
-    try:
-        success = type(fl.nexus_file_lock(filename=tmp_file)) is fl.FileLock
-    except OSError:  # Error due to not being able to get os.getlogin() on the machine
-        success = True
-    else:
-        success = False
-    if "win" in platform.system().lower():
-        success = True
-    assert success
+
+    lock = fl.nexus_file_lock(filename=tmp_file)
+
+    # Debug info
+    print("Resolved lock type:", type(lock))
+    print("Expected FileLock type:", fl.FileLock)
+
+    assert isinstance(lock, fl.FileLock)
