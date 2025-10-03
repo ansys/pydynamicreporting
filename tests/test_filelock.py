@@ -111,7 +111,7 @@ def test_soft(request) -> None:
 def test_nexus_filelock(request) -> None:
     test_path = join(request.fspath.dirname, "test_data")
     tmp_file = join(test_path, "n_lock.txt")
-    
+
     lock = fl.nexus_file_lock(filename=tmp_file)
 
     # Debug info
@@ -119,4 +119,3 @@ def test_nexus_filelock(request) -> None:
     print("Expected FileLock type:", fl.FileLock)
 
     assert isinstance(lock, fl.FileLock)
-
