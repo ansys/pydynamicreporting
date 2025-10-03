@@ -93,7 +93,7 @@ Using Subprocesses for Multiple Configurations
 Problem
 ~~~~~~~
 
-``ADR.setup()`` configures Serverless ADR at the **process level** and some components
+As mentioned before, ``ADR.setup()`` configures Serverless ADR at the **process level** and some components
 cache configuration (paths, URLs, etc.) when first loaded. After a process is set up,
 attempting to **reconfigure** that same process to different ``db_directory``,
 ``media_directory``, or ``static_directory`` values can lead to conflicts or
@@ -140,22 +140,26 @@ Parent process (run different configs safely):
 
     # Config A
     env_a = os.environ.copy()
-    env_a.update({
-        "ADR_DB_DIR": "/srv/tenantA/db",
-        "ADR_MEDIA_DIR": "/srv/tenantA/media",
-        "ADR_STATIC_DIR": "/srv/tenantA/static",
-        "ANSYS_INSTALLATION": "/opt/ansys/v252",
-    })
+    env_a.update(
+        {
+            "ADR_DB_DIR": "/srv/tenantA/db",
+            "ADR_MEDIA_DIR": "/srv/tenantA/media",
+            "ADR_STATIC_DIR": "/srv/tenantA/static",
+            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+        }
+    )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_a)
 
     # Config B (same parent process, isolated child)
     env_b = os.environ.copy()
-    env_b.update({
-        "ADR_DB_DIR": "/srv/tenantB/db",
-        "ADR_MEDIA_DIR": "/srv/tenantB/media",
-        "ADR_STATIC_DIR": "/srv/tenantB/static",
-        "ANSYS_INSTALLATION": "/opt/ansys/v252",
-    })
+    env_b.update(
+        {
+            "ADR_DB_DIR": "/srv/tenantB/db",
+            "ADR_MEDIA_DIR": "/srv/tenantB/media",
+            "ADR_STATIC_DIR": "/srv/tenantB/static",
+            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+        }
+    )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_b)
 
 Guidelines
