@@ -789,7 +789,7 @@ def test_layout_set_transpose_invalid(adr_serverless):
 
     layout = PanelLayout.create(name="test_layout_transpose_invalid", tags="dp=dp227")
 
-    with pytest.raises(ValueError, match="input needs to be an integer"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_transpose("not-integer")
 
 
@@ -810,10 +810,10 @@ def test_layout_set_skip_empty_invalid(adr_serverless):
 
     layout = PanelLayout.create(name="test_layout_skip_invalid", tags="dp=dp227")
 
-    with pytest.raises(ValueError, match="input needs to be an integer"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_skip("invalid")
 
-    with pytest.raises(ValueError, match="input needs to be an integer \\(0 or 1\\)"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_skip(5)
 
 
@@ -1050,6 +1050,173 @@ def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeyp
 
     with pytest.raises(ADRException, match="Failed to render PPTX for template"):
         pptx_template.render_pptx()
+
+
+@pytest.mark.ado_test
+def test_layout_set_transpose_invalid_value(adr_serverless):
+    """Tests the added validation for the set_transpose method in Layout."""
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    layout = BasicLayout.create(name="test_layout_set_transpose_invalid_value")
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
+        layout.set_transpose(2)
+
+
+@pytest.mark.ado_test
+def test_panel_layout_style(adr_serverless):
+    """Tests get/set for panel_style in PanelLayout."""
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_panel_layout_style")
+    assert layout.get_panel_style() == "", "Default style should be empty string"
+
+    layout.set_panel_style("callout-success")
+    assert layout.get_panel_style() == "callout-success"
+
+    with pytest.raises(ValueError, match="not among the acceptable inputs"):
+        layout.set_panel_style("invalid-style")
+
+
+@pytest.mark.ado_test
+def test_panel_layout_items_as_link(adr_serverless):
+    """Tests get/set for items_as_link in PanelLayout."""
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_panel_layout_items_as_link")
+    assert layout.get_items_as_link() == 0, "Default items_as_link should be 0"
+
+    layout.set_items_as_link(1)
+    assert layout.get_items_as_link() == 1
+
+    with pytest.raises(ValueError, match="Input must be an integer, either 0 or 1."):
+        layout.set_items_as_link(2)
+    with pytest.raises(ValueError, match="Input must be an integer, either 0 or 1."):
+        layout.set_items_as_link("not-an-int")
+
+
+@pytest.mark.ado_test
+def test_box_layout_methods(adr_serverless):
+    """Tests get/set methods for BoxLayout, including preserving values."""
+    from ansys.dynamicreporting.core.serverless import BoxLayout
+
+    layout = BoxLayout.create(name="test_box_layout_methods")
+    child_guid = str(uuid4())
+
+    assert layout.get_children_layout() == {}, "Default children layout should be empty"
+
+    # Set position, check that clip defaults to 'self'
+    layout.set_child_position(guid=child_guid, value=[10, 20, 30, 40])
+    assert layout.get_children_layout()[child_guid] == [10, 20, 30, 40, "self"]
+
+    # Set clip, check that position is preserved
+    layout.set_child_clip(guid=child_guid, clip="scroll")
+    assert layout.get_children_layout()[child_guid] == [10, 20, 30, 40, "scroll"]
+
+    # Update position, check that clip is preserved
+    layout.set_child_position(guid=child_guid, value=[50, 60, 70, 80])
+    assert layout.get_children_layout()[child_guid] == [50, 60, 70, 80, "scroll"]
+
+
+@pytest.mark.ado_test
+def test_box_layout_set_child_position_invalid(adr_serverless):
+    """Tests validation for set_child_position in BoxLayout."""
+    from ansys.dynamicreporting.core.serverless import BoxLayout
+
+    layout = BoxLayout.create(name="test_box_layout_set_child_position_invalid")
+    valid_guid = str(uuid4())
+
+    with pytest.raises(ValueError, match="not a valid guid"):
+        layout.set_child_position(guid="not-a-guid", value=[0, 0, 0, 0])
+
+    with pytest.raises(ValueError, match="must be a list containing four integers"):
+        layout.set_child_position(guid=valid_guid, value=[0, 0, 0])
+
+    with pytest.raises(ValueError, match="must be a list containing four integers"):
+        layout.set_child_position(guid=valid_guid, value="not-a-list")
+
+
+@pytest.mark.ado_test
+def test_box_layout_set_child_clip_invalid(adr_serverless):
+    """Tests validation for set_child_clip in BoxLayout."""
+    from ansys.dynamicreporting.core.serverless import BoxLayout
+
+    layout = BoxLayout.create(name="test_box_layout_set_child_clip_invalid")
+    valid_guid = str(uuid4())
+
+    with pytest.raises(ValueError, match="not a valid guid"):
+        layout.set_child_clip(guid="not-a-guid", clip="scroll")
+
+    with pytest.raises(ValueError, match="parameter must be a string and one of"):
+        layout.set_child_clip(guid=valid_guid, clip="invalid-clip")
+
+
+@pytest.mark.ado_test
+def test_carousel_layout_methods(adr_serverless):
+    """Tests get/set methods for CarouselLayout."""
+    from ansys.dynamicreporting.core.serverless import CarouselLayout
+
+    layout = CarouselLayout.create(name="test_carousel_layout_methods")
+
+    # Test 'animated'
+    assert layout.get_animated() == 0
+    layout.set_animated(1)
+    assert layout.get_animated() == 1
+    with pytest.raises(ValueError, match="must be an integer"):
+        layout.set_animated("not-an-int")
+
+    # Test 'slide_dots'
+    assert layout.get_slide_dots() == 20
+    layout.set_slide_dots(10)
+    assert layout.get_slide_dots() == 10
+    with pytest.raises(ValueError, match="must be an integer"):
+        layout.set_slide_dots("not-an-int")
+
+
+@pytest.mark.ado_test
+def test_slider_layout_methods(adr_serverless):
+    """Tests get/set/add methods for SliderLayout."""
+    from ansys.dynamicreporting.core.serverless import SliderLayout
+
+    layout = SliderLayout.create(name="test_slider_layout_methods")
+    tags1 = ["tagA|text_up", "tag with space|numeric_down"]
+    tags2 = ["tagC|none"]
+
+    assert layout.get_map_to_slider() == []
+
+    # Test set
+    layout.set_map_to_slider(tags1)
+    assert layout.get_map_to_slider() == tags1
+    assert layout.get_params()["slider_tags"] == "'tagA|text_up', 'tag with space|numeric_down'"
+
+    # Test add
+    layout.add_map_to_slider(tags2)
+    assert layout.get_map_to_slider() == tags1 + tags2
+    # Test for consistent spacing behavior
+    assert (
+        layout.get_params()["slider_tags"]
+        == "'tagA|text_up', 'tag with space|numeric_down', 'tagC|none'"
+    )
+
+    # Test setting None
+    layout.set_map_to_slider(None)
+    assert layout.get_map_to_slider() == []
+
+
+@pytest.mark.ado_test
+def test_slider_layout_invalid_tags(adr_serverless):
+    """Tests validation for SliderLayout methods."""
+    from ansys.dynamicreporting.core.serverless import SliderLayout
+
+    layout = SliderLayout.create(name="test_slider_layout_invalid_tags")
+
+    with pytest.raises(ValueError, match="is not supported"):
+        layout.set_map_to_slider(["tagA|invalid_sort"])
+
+    with pytest.raises(ValueError, match="is not supported"):
+        layout.add_map_to_slider(["tagA|invalid_sort"])
+
+    with pytest.raises(ValueError, match="must be a list of strings"):
+        layout.set_map_to_slider("not-a-list")
 
 
 @pytest.mark.ado_test
