@@ -30,7 +30,7 @@ runs:
     - name: "Set up Python 3.12 with uv"
       uses: ansys/actions/_setup-python@v10.0.11
       with:
-        python-version: '3.12'
+        python-version: ${{ inputs.python-version }}
         use-cache: true
         provision-uv: true
         prune-uv-cache: false
@@ -48,7 +48,7 @@ runs:
       env:
         TAG_REF: ${{ github.ref_name }}
       run: |
-        LIBRARY_NAME="ansys-dynamicreporting-core"
+        LIBRARY_NAME="${{ inputs.library-name }}"
         LIBRARY_VERSION=$(python -c "import importlib.metadata as im; print(im.version('${LIBRARY_NAME}'))")
         if [ -z "$LIBRARY_VERSION" ]; then
           echo "Problem getting the library version. Exiting with error."
@@ -85,7 +85,7 @@ runs:
     - name: "Upload distribution artifacts"
       uses: actions/upload-artifact@v4
       with:
-        name: ansys-dynamicreporting-core-artifacts
+        name: ${{ inputs.library-name }}-artifacts
         path: dist/
         retention-days: 7
 
