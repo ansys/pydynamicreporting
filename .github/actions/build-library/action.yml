@@ -90,7 +90,6 @@ runs:
         retention-days: 7
 
     - name: Generate build provenance attestation
-      if: inputs.attest-provenance == 'true'
       uses: actions/attest-build-provenance@v2
       with:
         subject-path: dist/
