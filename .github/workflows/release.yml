@@ -23,7 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'
           fetch-tags: true
 
       - name: Set up Env
@@ -33,20 +33,19 @@ jobs:
         run: make check-version
 
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v10
+        uses: ./.github/actions/build-library
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          use-uv: true
 
       - name: Download all artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@v5
         with:
           name: ${{ env.PACKAGE_NAME }}-artifacts
           path: ${{ env.PACKAGE_NAME }}-artifacts
 
       - name: "Upload artifacts to PyPI using trusted publisher"
-        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           repository-url: "https://upload.pypi.org/legacy/"
           print-hash: true
@@ -61,7 +60,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'
           fetch-tags: true
 
       - name: Set up Env
@@ -82,7 +81,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'
           fetch-tags: true
 
       - name: Set up Env

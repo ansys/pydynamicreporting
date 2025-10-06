@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'  
           fetch-tags: true
 
       - name: Set up Env
@@ -38,11 +38,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v10
+        uses: ./.github/actions/build-library
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          use-uv: true
 
       - name: Create Draft GitHub Release with Artifacts
         run: |

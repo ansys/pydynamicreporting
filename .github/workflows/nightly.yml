@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'
           fetch-tags: true
           ref: 'refs/heads/main'
 
@@ -44,10 +44,10 @@ jobs:
       - name: Update packages
         shell: bash
         run: |
-            sudo apt update && sudo apt install -y \
-            libx11-dev \
-            libgl1-mesa-dev \
-            libxrender1
+          sudo apt update && sudo apt install -y \
+          libx11-dev \
+          libgl1-mesa-dev \
+          libxrender1
 
       - name: Install DPF
         id: set-server-path
@@ -70,18 +70,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'
           fetch-tags: true
 
       - name: Set up env
         uses: ./.github/actions/setup-env
 
       - name: Build library source and wheel artifacts
-        uses: ansys/actions/build-library@v10
+        uses: ./.github/actions/build-library
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          use-uv: true
 
       - name: Upload to Azure PyPi
         if: ${{ !env.ACT }}
@@ -99,7 +98,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'
           fetch-tags: true
 
       - name: Set up Env
