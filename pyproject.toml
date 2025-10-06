@@ -101,15 +101,6 @@ validate-bump = true
 local_scheme = "no-local-version"
 timestamp_format = "long"
 
-[tool.hatch.build]
-include = [
-  "src/**",
-  "codegen/**",
-  "README.rst",
-  "LICENSE",
-  "CHANGELOG.md"
-]
-
 [tool.hatch.build.hooks.custom]
 path = "codegen/build_hook.py"
 
