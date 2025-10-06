@@ -62,6 +62,9 @@ ci = "https://github.com/ansys/pydynamicreporting/actions"
 test = [
     "pytest",
     "pytest-cov",
+    "pyvista",
+    "vtk",
+    "ansys-dpf-core"
 ]
 doc = [
     "ansys-sphinx-theme",
@@ -79,13 +82,13 @@ dev = [
     "pre-commit",
     "black",
     "isort",
-#    "ruff",
-#    "pip-audit",
-#    "bandit[toml]",
+    #    "ruff",
+    #    "pip-audit",
+    #    "bandit[toml]",
     "codespell",
-#    "mypy",
-#    "vulture",
-#    "deptry",
+    #    "mypy",
+    #    "vulture",
+    #    "deptry",
 ]
 
 [build-system]
@@ -111,14 +114,14 @@ ignore-vcs = true
 [tool.hatch.build.targets.sdist]
 ignore-vcs = true
 include = [
-  "src/**",
-  "codegen/**",
-  "AUTHORS",
-  "CHANGELOG.md",
-  "CONTRIBUTING.rst",
-  "CONTRIBUTORS.md",
-  "LICENSE",
-  "README.rst",
+    "src/**",
+    "codegen/**",
+    "AUTHORS",
+    "CHANGELOG.md",
+    "CONTRIBUTING.rst",
+    "CONTRIBUTORS.md",
+    "LICENSE",
+    "README.rst",
 ]
 
 [tool.hatch.envs.default]
