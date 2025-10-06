@@ -30,6 +30,7 @@
 # Modules
 # ------------------------------------------------
 import functools
+import getpass
 import logging
 import os
 import threading
@@ -473,7 +474,7 @@ def nexus_file_lock(filename: str) -> BaseFileLock:
     # We will consider two pathnames:
     # 1) the original pathname
     # 2) replace the original filename directory with tempfile.gettempdir()
-    base_filename = os.path.basename(filename) + "." + os.getlogin()
+    base_filename = os.path.basename(filename) + "." + getpass.getuser()
     lcl_filename = os.path.join(tempfile.gettempdir(), base_filename)
 
     # if we are on Linux and the target filename is on an NFS drive
