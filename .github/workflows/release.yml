@@ -23,7 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'  # Required for hatch-vcs to generate full version
           fetch-tags: true
 
       - name: Set up Env
@@ -61,7 +61,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'  # Required for hatch-vcs to generate full version
           fetch-tags: true
 
       - name: Set up Env
@@ -82,7 +82,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Required for hatch-vcs to generate full version
+          fetch-depth: '0'  # Required for hatch-vcs to generate full version
           fetch-tags: true
 
       - name: Set up Env
