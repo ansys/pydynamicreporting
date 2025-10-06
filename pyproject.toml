@@ -108,8 +108,8 @@ timestamp_format = "long"
 path = "codegen/build_hook.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ansys"]
 ignore-vcs = true
+packages = ["src/ansys"]
 
 [tool.hatch.build.targets.sdist]
 ignore-vcs = true
