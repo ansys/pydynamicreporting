@@ -106,6 +106,7 @@ path = "codegen/build_hook.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ansys"]
+ignore-vcs = true
 
 [tool.hatch.build.targets.sdist]
 ignore-vcs = true
