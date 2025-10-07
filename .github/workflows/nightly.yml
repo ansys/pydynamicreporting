@@ -65,6 +65,10 @@ jobs:
   nightly_and_upload:
     name: nightly_and_upload
     needs: [ nightly_test ]
+    permissions:
+      contents: write
+      id-token: write         # REQUIRED for OIDC
+      attestations: write     # REQUIRED by attest-build-provenance v2
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -93,7 +97,7 @@ jobs:
         run: make publish-azure
         env:
           AZURE_PYPI_TOKEN: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
-          AZURE_PYPI_URL:   ${{ secrets.PRIVATE_PYPI_URL }}
+          AZURE_PYPI_URL: ${{ secrets.PRIVATE_PYPI_URL }}
 
   vulnerabilities:
     name: Vulnerabilities

@@ -156,6 +156,10 @@ jobs:
     name: Package library
     needs: [ test ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write         # REQUIRED for OIDC
+      attestations: write     # REQUIRED by attest-build-provenance v2
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -179,7 +183,7 @@ jobs:
     environment:
       name: azure-pypi
     permissions:
-      contents: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -209,7 +213,7 @@ jobs:
         run: make publish-azure
         env:
           AZURE_PYPI_TOKEN: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
-          AZURE_PYPI_URL:   ${{ secrets.PRIVATE_PYPI_URL }}
+          AZURE_PYPI_URL: ${{ secrets.PRIVATE_PYPI_URL }}
 
   upload_dev_docs:
     name: Upload dev documentation

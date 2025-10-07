@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
+      id-token: write         # REQUIRED for OIDC
+      attestations: write     # REQUIRED by attest-build-provenance v2
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
