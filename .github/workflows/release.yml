@@ -26,8 +26,8 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
 
-      - name: Set up Env
-        uses: ./.github/actions/setup-env
+      - name: Set up Python Env
+        uses: ./.github/actions/setup-python-env
 
       - name: Run version checks
         run: make check-version

@@ -57,6 +57,9 @@ install: ## 🚀 Set up environment and install project
 .PHONY: check-dist
 check-dist: ## Validate dist/ artifacts (long description, format)
 	@echo "🔍 Validating dist/ artifacts..."
+	ls -la dist
+	test -e dist/*.whl || (echo "No wheel found in dist/"; exit 1)
+	test -e dist/*.tar.gz || (echo "No sdist found in dist/"; exit 1)
 	uv run twine check dist/*
 
 .PHONY: tag
@@ -67,6 +70,13 @@ tag: ## 🏷 Tag the current release version (fixes changelog and pushes tag)
 publish-test: ## Publish to Azure Private PyPI
 	@echo "🚀 Publishing to Azure PyPI"
 	UV_PUBLISH_TOKEN=$(AZURE_PYPI_TOKEN) uv publish --publish-url=$(AZURE_PYPI_URL) --no-cache
+
+.PHONY: publish-azure
+publish-azure: ## Publish to Azure Private PyPI
+	@echo "🚀 Publishing to Azure PyPI"
+	@test -n "$(AZURE_PYPI_TOKEN)" || (echo "AZURE_PYPI_TOKEN is required"; exit 1)
+	@test -n "$(AZURE_PYPI_URL)" || (echo "AZURE_PYPI_URL is required"; exit 1)
+	UV_PUBLISH_TOKEN="$(AZURE_PYPI_TOKEN)" uv publish --publish-url="$(AZURE_PYPI_URL)" --no-cache
 
 .PHONY: clean
 clean: ## Clean build artifacts

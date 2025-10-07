@@ -73,8 +73,11 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
 
-      - name: Set up env
-        uses: ./.github/actions/setup-env
+      - name: Set up Python + Environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run version checks
+        run: make check-version
 
       - name: Build library source and wheel artifacts
         uses: ./.github/actions/build-library
@@ -82,13 +85,15 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
-      - name: Upload to Azure PyPi
+      - name: Verify artifacts
+        run: make check-dist
+
+      - name: Publish to Azure PyPI (uv)
         if: ${{ !env.ACT }}
-        run: twine upload --verbose dist/*
+        run: make publish-azure
         env:
-          TWINE_USERNAME: "__token__"
-          TWINE_PASSWORD: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
-          TWINE_REPOSITORY_URL: ${{ secrets.PRIVATE_PYPI_URL }}
+          AZURE_PYPI_TOKEN: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
+          AZURE_PYPI_URL:   ${{ secrets.PRIVATE_PYPI_URL }}
 
   vulnerabilities:
     name: Vulnerabilities

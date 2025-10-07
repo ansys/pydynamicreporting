@@ -172,6 +172,45 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
+  publish-to-azure:
+    name: Publish to Azure PyPI
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ package ]
+    environment:
+      name: azure-pypi
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
+
+      - name: Set up Python + Environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run version checks
+        run: make check-version
+
+      # Reuse the dist/ produced by the "package" job
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}-artifacts
+          path: dist
+
+      - name: Verify artifacts
+        run: make check-dist
+
+      - name: Publish to Azure PyPI (uv)
+        if: ${{ !env.ACT }}
+        run: make publish-azure
+        env:
+          AZURE_PYPI_TOKEN: ${{ secrets.PYANSYS_PYPI_PRIVATE_PAT }}
+          AZURE_PYPI_URL:   ${{ secrets.PRIVATE_PYPI_URL }}
+
   upload_dev_docs:
     name: Upload dev documentation
     if: github.ref == 'refs/heads/main'
