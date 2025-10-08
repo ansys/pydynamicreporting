@@ -1082,7 +1082,7 @@ class ItemREST(BaseRESTObject):
         self._payloaddata = ""
 
     @staticmethod
-    def validate_string(self, input_string, description, sanitize_html):
+    def validate_string(input_string, description, sanitize_html):
         if not isinstance(input_string, str):
             raise TypeError("Payload must be a string.")
 
