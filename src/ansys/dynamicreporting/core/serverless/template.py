@@ -2,6 +2,7 @@ from dataclasses import field
 from datetime import datetime
 import json
 import os
+import shlex
 import uuid
 
 from django.template.loader import render_to_string
@@ -57,7 +58,7 @@ class Template(BaseModel):
         compare=False, init=False, default=""
     )  # computed from self.children
     _master: bool = field(compare=False, init=False, default=True)
-    _properties: tuple = tuple()  # todo: add properties for each type ref: report_objects
+    _properties: tuple[str] = tuple()
     _orm_model: str = "reports.models.Template"
     # Class-level registry of subclasses keyed by type
     _type_registry = {}
@@ -493,8 +494,8 @@ class Layout(Template):
         return self.get_params().get("transpose", 0)
 
     def set_transpose(self, value=0):
-        if not isinstance(value, int):
-            raise ValueError("input needs to be an integer")
+        if not isinstance(value, int) or value not in (0, 1):
+            raise ValueError("input needs to be either 0 or 1")
         params = self.get_params()
         params["transpose"] = value
         self.set_params(params)
@@ -504,7 +505,7 @@ class Layout(Template):
 
     def set_skip(self, value=0):
         if not isinstance(value, int) or value not in (0, 1):
-            raise ValueError("input needs to be an integer (0 or 1)")
+            raise ValueError("input needs to be either 0 or 1")
         params = self.get_params()
         params["skip_empty"] = value
         self.set_params(params)
@@ -517,9 +518,99 @@ class BasicLayout(Layout):
 class PanelLayout(Layout):
     report_type: str = ReportType.PANEL_LAYOUT
 
+    def get_panel_style(self) -> str:
+        """Gets the panel style for the layout."""
+        return self.get_params().get("style", "")
+
+    def set_panel_style(self, value: str = "panel") -> None:
+        """Sets the panel style for the layout."""
+        if not isinstance(value, str):
+            raise ValueError("Panel style mode input should be a string.")
+
+        valid_styles = (
+            "panel",
+            "callout-default",
+            "callout-danger",
+            "callout-warning",
+            "callout-success",
+            "callout-info",
+        )
+        if value not in valid_styles:
+            raise ValueError(f"Panel style mode not among the acceptable inputs: {valid_styles}")
+
+        params = self.get_params()
+        params["style"] = value
+        self.set_params(params)
+
+    def get_items_as_link(self) -> int:
+        """Checks if items are to be displayed as links."""
+        return self.get_params().get("items_as_links", 0)
+
+    def set_items_as_link(self, value: int = 0) -> None:
+        """Sets whether items are to be displayed as links (0 or 1)."""
+        if not isinstance(value, int) or value not in (0, 1):
+            raise ValueError("Input must be an integer, either 0 or 1.")
+
+        params = self.get_params()
+        params["items_as_links"] = value
+        self.set_params(params)
+
 
 class BoxLayout(Layout):
     report_type: str = ReportType.BOX_LAYOUT
+
+    def get_children_layout(self) -> dict:
+        """Gets the layout dictionary for all children."""
+        return self.get_params().get("boxes", {})
+
+    def set_child_position(self, guid: str, value: list[int] | None = None) -> None:
+        """Sets the position [x, y, width, height] for a specific child GUID."""
+        if value is None:
+            value = [0, 0, 10, 10]
+
+        if (
+            not isinstance(value, list)
+            or len(value) != 4
+            or not all(isinstance(p, int) for p in value)
+        ):
+            raise ValueError("Position must be a list containing four integers.")
+
+        try:
+            uuid.UUID(guid, version=4)
+        except (ValueError, TypeError):
+            raise ValueError(f"Input guid '{guid}' is not a valid guid.")
+
+        params = self.get_params()
+        if "boxes" not in params:
+            params["boxes"] = {}
+        if guid not in params["boxes"]:
+            params["boxes"][guid] = [0, 0, 0, 0, "self"]
+        value = value.copy()  # avoid mutating the input list
+        value.append(params["boxes"][guid][4])  # retain existing clip setting
+        params["boxes"][guid] = value
+
+        self.set_params(params)
+
+    def set_child_clip(self, guid: str, clip: str = "self") -> None:
+        """Sets the clipping behavior ('self', 'scroll', or 'none') for a specific child GUID."""
+        valid_clips = ("self", "scroll", "none")
+        if not isinstance(clip, str) or clip not in valid_clips:
+            raise ValueError(f"Child clip parameter must be a string and one of {valid_clips}.")
+
+        try:
+            uuid.UUID(guid, version=4)
+        except (ValueError, TypeError):
+            raise ValueError(f"Input guid '{guid}' is not a valid guid.")
+
+        params = self.get_params()
+        if "boxes" not in params:
+            params["boxes"] = {}
+        if guid not in params["boxes"]:
+            params["boxes"][guid] = [0, 0, 0, 0, "self"]
+        position_values = params["boxes"][guid][0:4]  # retain existing position settings
+        position_values.append(clip)
+        params["boxes"][guid] = position_values
+        self.set_params(params)
 
 
 class TabLayout(Layout):
@@ -529,9 +620,112 @@ class TabLayout(Layout):
 class CarouselLayout(Layout):
     report_type: str = ReportType.CAROUSEL_LAYOUT
 
+    # todo: convert set_ and get_ methods to properties
+    def get_animated(self) -> int:
+        """Checks if the carousel animates automatically."""
+        return self.get_params().get("animate", 0)
+
+    def set_animated(self, value: int = 0) -> None:
+        """Sets whether the carousel animates automatically."""
+        if not isinstance(value, int):
+            raise ValueError("Animated input must be an integer.")
+
+        params = self.get_params()
+        params["animate"] = value
+        self.set_params(params)
+
+    def get_slide_dots(self) -> int:
+        """Gets the maximum number of slide indicator dots to display."""
+        return self.get_params().get("maxdots", 20)
+
+    def set_slide_dots(self, value: int = 20) -> None:
+        """Sets the maximum number of slide indicator dots to display."""
+        if not isinstance(value, int):
+            raise ValueError("Slide dots input must be an integer.")
+
+        params = self.get_params()
+        params["maxdots"] = value
+        self.set_params(params)
+
 
 class SliderLayout(Layout):
     report_type: str = ReportType.SLIDER_LAYOUT
+
+    def _split_quoted_string_list(self, s: str) -> list[str]:
+        """Helper to split a string into a list, properly handling quoted strings."""
+        shlexer = shlex.shlex(s)
+        shlexer.whitespace += ","
+        shlexer.whitespace_split = True
+        shlexer.commenters = ""
+
+        tokens = []
+        while True:
+            token = shlexer.get_token()
+            if not token:
+                break
+
+            # Strip whitespace and quotes, then check if the result is empty
+            processed_token = token.strip().strip("'\"")
+            if processed_token:
+                tokens.append(processed_token)
+        return tokens
+
+    def get_map_to_slider(self) -> list[str]:
+        """Gets the list of tags mapped to the slider controls."""
+        slider_tags_str = self.get_params().get("slider_tags", "")
+        if not slider_tags_str:
+            return []
+        return self._split_quoted_string_list(slider_tags_str)
+
+    def _validate_slider_tags(self, tags: list[str]) -> None:
+        """Validates the format and sorting parameter for a list of slider tags."""
+        if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+            raise ValueError("Input must be a list of strings.")
+
+        valid_sorts = (
+            "text_up",
+            "text_down",
+            "numeric_up",
+            "numeric_down",
+            "natural_up",
+            "natural_down",
+            "none",
+        )
+        for tag in tags:
+            parts = tag.split("|")
+            if len(parts) < 2 or parts[1] not in valid_sorts:
+                raise ValueError(
+                    f"The sorting parameter in tag '{tag}' is not supported. "
+                    f"Must be one of {valid_sorts}"
+                )
+
+    def set_map_to_slider(self, value: list[str] | None = None) -> None:
+        """Sets the list of tags that map to the slider controls."""
+        value_to_set = value or []
+        self._validate_slider_tags(value_to_set)
+
+        tags_str = ", ".join(repr(x) for x in value_to_set)
+
+        params = self.get_params()
+        params["slider_tags"] = tags_str
+        self.set_params(params)
+
+    def add_map_to_slider(self, value: list[str] | None = None) -> None:
+        """Adds a list of tags to the existing slider map."""
+        value_to_add = value or []
+        self._validate_slider_tags(value_to_add)
+
+        params = self.get_params()
+        existing_tags = params.get("slider_tags", "")
+
+        new_tags_str = ", ".join(repr(x) for x in value_to_add)
+
+        if existing_tags:
+            params["slider_tags"] = f"{existing_tags}, {new_tags_str}"
+        else:
+            params["slider_tags"] = new_tags_str
+
+        self.set_params(params)
 
 
 class FooterLayout(Layout):
@@ -560,7 +754,13 @@ class ReportLinkLayout(Layout):
 
 class PPTXLayout(Layout):
     report_type: str = ReportType.PPTX_LAYOUT
-    _properties = ("input_pptx", "output_pptx", "use_all_slides", "font_size", "html_font_scale")
+    _properties: tuple[str] = (
+        "input_pptx",
+        "output_pptx",
+        "use_all_slides",
+        "font_size",
+        "html_font_scale",
+    )
 
     def render_pptx(self, *, context=None, item_filter="", request=None) -> bytes:
         """
@@ -611,7 +811,7 @@ class PPTXLayout(Layout):
 
 class PPTXSlideLayout(Layout):
     report_type: str = ReportType.PPTX_SLIDE_LAYOUT
-    _properties = (
+    _properties: tuple[str] = (
         "source_slide",
         "exclude_from_toc",
     )
@@ -619,10 +819,24 @@ class PPTXSlideLayout(Layout):
 
 class DataFilterLayout(Layout):
     report_type: str = ReportType.DATA_FILTER_LAYOUT
+    _properties: tuple[str] = (
+        "filter_types",
+        "filter_checkbox",
+        "filter_slider",
+        "filter_input",
+        "filter_dropdown",
+        "filter_single_dropdown",
+        "filter_numeric_step",
+    )
 
 
 class UserDefinedLayout(Layout):
     report_type: str = ReportType.USER_DEFINED_LAYOUT
+    _properties: tuple[str] = (
+        "interactive_only",
+        "before_children",
+        "userdef_name",
+    )
 
 
 class Generator(Template):
@@ -683,6 +897,10 @@ class SQLQueryGenerator(Generator):
 
 class ItemsComparisonGenerator(Generator):
     report_type: str = ReportType.ITEMS_COMPARISON_GENERATOR
+    _properties: tuple[str] = (
+        "chunk_size",
+        "filters_table",
+    )
 
 
 class StatisticalGenerator(Generator):
