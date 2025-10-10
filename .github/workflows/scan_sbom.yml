@@ -33,7 +33,7 @@ jobs:
         run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
 
       - name: Generate SBOM with Syft
-        uses: anchore/sbom-action@v0.15.4
+        uses: anchore/sbom-action@v0.20.6
         with:
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
