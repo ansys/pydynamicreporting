@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import os.path
+from pathlib import Path
 import pickle  # nosec B403
 import platform
 import shutil
@@ -15,9 +16,8 @@ import sys
 import tempfile
 import time
 import urllib
-import uuid
-from pathlib import Path
 from urllib.parse import urlparse
+import uuid
 
 import requests
 from requests import JSONDecodeError
@@ -36,7 +36,6 @@ from ..adr_utils import build_query_url
 from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
-
 
 # Set up logging to use the same configuration as Service class
 try:
