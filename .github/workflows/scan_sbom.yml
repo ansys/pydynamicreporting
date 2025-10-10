@@ -1,10 +1,14 @@
 name: Security Scan
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - release/*
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
 
 jobs:
 
@@ -51,6 +55,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: ./.github/actions/setup-python-env
+
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
         uses: ansys/actions/check-vulnerabilities@v10.0.14
@@ -60,6 +73,7 @@ jobs:
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
           run-bandit: false
           hide-log: false
+          use-uv: true
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
@@ -71,3 +85,4 @@ jobs:
           run-bandit: false
           dev-mode: true
           hide-log: false
+          use-uv: true
