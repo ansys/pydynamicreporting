@@ -1,14 +1,9 @@
 name: Security Scan
 
-env:
-  MAIN_PYTHON_VERSION: '3.12'
-  PACKAGE_NAME: 'ansys-dynamicreporting-core'
-
 on:
   push:
     branches:
       - main
-      - maint/*
       - release/*
 
 jobs:
@@ -18,14 +13,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '0'
+          fetch-tags: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+        uses: ./.github/actions/setup-python-env
 
       - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v10
@@ -35,7 +30,7 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
 
       - name: Install from wheelhouse
-        run: python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
+        run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
 
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0.15.4
@@ -56,7 +51,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
         uses: ansys/actions/check-vulnerabilities@v10.0.14
