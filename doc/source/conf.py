@@ -30,7 +30,7 @@ cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com")
 
 copyright = f"(c) {datetime.now().year} ANSYS, Inc. All rights reserved"
 author = "Ansys Inc."
-__ansys_version__ = 261
+__ansys_version__ = 252
 
 rst_prolog = f"""
 .. _Layout Templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_templates.html
