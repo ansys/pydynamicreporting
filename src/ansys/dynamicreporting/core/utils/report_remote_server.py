@@ -1703,7 +1703,9 @@ def launch_local_database_server(
             )
         return False
     except Exception as e:
-        logger.warning(f"This can throw an error at the validate step but still be able to start a new server: {str(e)}")
+        logger.warning(
+            f"This can throw an error at the validate step but still be able to start a new server: {str(e)}"
+        )
         pass
 
     # Start the busy cursor
@@ -1837,7 +1839,9 @@ def launch_local_database_server(
             )
         except Exception as e:
             # we will try again
-            logger.warning(f"This can throw an error at the validate steps if it's just starting, but still work: {str(e)}")
+            logger.warning(
+                f"This can throw an error at the validate steps if it's just starting, but still work: {str(e)}"
+            )
             pass
 
     # detach from stdout, stderr to avoid buffer blocking
