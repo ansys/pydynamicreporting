@@ -1,14 +1,3 @@
-import urllib
-
-from requests import JSONDecodeError
-
-try:
-    from qtpy import QtCore, QtGui, QtWidgets
-
-    has_qt = True
-except ImportError:
-    has_qt = False
-
 import collections
 import configparser
 import functools
@@ -18,7 +7,6 @@ import json
 import logging
 import os
 import os.path
-from pathlib import Path
 import pickle  # nosec B403
 import platform
 import shutil
@@ -26,12 +14,22 @@ import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
-from urllib.parse import urlparse
+import urllib
 import uuid
+from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
+from requests import JSONDecodeError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+try:
+    from qtpy import QtCore, QtGui, QtWidgets
+
+    has_qt = True
+except ImportError:
+    has_qt = False
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
