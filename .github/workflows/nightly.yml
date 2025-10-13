@@ -65,6 +65,8 @@ jobs:
   nightly_and_upload:
     name: nightly_and_upload
     needs: [ nightly_test ]
+    environment:
+      name: azure-pypi
     permissions:
       contents: write
       id-token: write         # REQUIRED for OIDC
