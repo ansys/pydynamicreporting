@@ -37,19 +37,7 @@ from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
 
-# Set up logging to use the same configuration as Service class
-try:
-    # Try to get the same logger that Service uses
-    logger = logging.get_logger(None)
-    if logger is None:
-        logger = logging.getLogger("ansys.dynamicreporting.core")
-except Exception:
-    # Fall back to package logger if get_logger fails
-    logger = logging.getLogger("ansys.dynamicreporting.core")
-
-# Ensure we have at least a basic logger
-if logger is None:
-    logger = logging.getLogger(__name__)
+logger = logging.getLogger("ansys.dynamicreporting.core")
 
 
 def disable_warn_logging(func):
