@@ -28,4 +28,4 @@ encourage the use of the following branch naming convention:
 - **`doc`**  for any changes only pertaining to documentation
 - **`no-ci`**  for low-impact activity that should not trigger the CI routines
 - **`testing`**  Improvements or changes to testing
-- **`release`**  Releases 
+- **`release`**  Releases
