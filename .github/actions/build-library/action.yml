@@ -1,0 +1,95 @@
+name: |
+  Build library action w/ deep checkout + uv build
+
+description: |
+  Verifies a Python library builds properly with a deep + tagged checkout and
+  produces wheel/sdist using `uv build`. This local action is hardcoded for
+  ansys-dynamicreporting-core and intended for this repository only.
+
+inputs:
+  library-name:
+    description: "PyPI package name used to label artifacts."
+    required: true
+    type: string
+
+  python-version:
+    description: "Python version for the build environment."
+    default: '3.12'
+    required: false
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Checkout (deep + tags)"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: "Set up Python 3.12 with uv"
+      uses: ansys/actions/_setup-python@v10.0.11
+      with:
+        python-version: ${{ inputs.python-version }}
+        use-cache: true
+        provision-uv: true
+        prune-uv-cache: false
+
+    # Install the project into the runner's environment so tag/version checks can import it
+    - name: "Install library (system)"
+      shell: bash
+      run: |
+        uv pip install --no-managed-python --system .
+
+    # Ensure tag version matches metadata version when triggered by tag pushes
+    - name: "Ensure tag version matches metadata version when triggered by push of tags"
+      if: github.event_name == 'push' && contains(github.ref, 'refs/tags')
+      shell: bash
+      env:
+        TAG_REF: ${{ github.ref_name }}
+      run: |
+        LIBRARY_NAME="${{ inputs.library-name }}"
+        LIBRARY_VERSION=$(python -c "import importlib.metadata as im; print(im.version('${LIBRARY_NAME}'))")
+        if [ -z "$LIBRARY_VERSION" ]; then
+          echo "Problem getting the library version. Exiting with error."
+          exit 1
+        else
+          echo "The library version is: $LIBRARY_VERSION"
+        fi
+
+        if [[ v${LIBRARY_VERSION} == $TAG_REF ]]; then
+          echo "Tag version matches metadata version. Proceeding with the build."
+        else
+          echo "Tag version does not match metadata version. Exiting with error."
+          echo "Tag version: $TAG_REF"
+          echo "Metadata version: $LIBRARY_VERSION"
+          exit 1
+        fi
+
+    - name: "Install twine for validation"
+      shell: bash
+      run: |
+        uv pip install --no-managed-python --system twine
+
+    - name: "Build distribution artifacts with uv"
+      shell: bash
+      run: |
+        # Uses PEP 517 backend defined in pyproject (hatchling)
+        uv build --out-dir dist .
+
+    - name: "Check build health"
+      shell: bash
+      run: |
+        python -m twine check dist/*
+
+    - name: "Upload distribution artifacts"
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.library-name }}-artifacts
+        path: dist/
+        retention-days: 7
+
+    - name: Generate build provenance attestation
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: dist/

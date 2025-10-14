@@ -1,30 +1,7 @@
 [project]
 name = "ansys-dynamicreporting-core"
-version = "0.10.4.dev0"
-authors = [
-    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
-]
-
-maintainers = [
-    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
-    { name = "Ansys ADR Team", email = "adrteam@ansys.com" },
-]
-description = "Python interface to Ansys Dynamic Reporting"
-readme = "README.rst"
+dynamic = ["version"]
 requires-python = ">=3.10, <3.13"
-keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
-license = { text = "MIT" }
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Natural Language :: English",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-]
 dependencies = [
     "docker>=7.1.0",
     "pypng>=0.20220715.0",
@@ -49,51 +26,111 @@ dependencies = [
     "docutils>=0.21",
     "bleach>=6.2.0",
 ]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["ansys.dynamicreporting*"]
+description = "Python interface to Ansys Dynamic Reporting"
+readme = "README.rst"
+keywords = ["dynamicreporting", "pydynamicreporting", "pyansys", "ansys"]
+license = { text = "MIT" }
+authors = [
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
+    { name = "Ansys ADR Team", email = "adrteam@ansys.com" },
+]
+maintainers = [
+    { name = "ANSYS, Inc.", email = "pyansys.core@ansys.com" },
+    { name = "Ansys ADR Team", email = "adrteam@ansys.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [project.urls]
 homepage = "https://github.com/ansys/pydynamicreporting"
 documentation = "https://dynamicreporting.docs.pyansys.com/"
-changelog = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.rst"
-"Bug Tracker" = "https://github.com/ansys/pydynamicreporting/issues"
+changelog = "https://github.com/ansys/pydynamicreporting/blob/main/CHANGELOG.md"
 repository = "https://github.com/ansys/pydynamicreporting"
+bug_tracker = "https://github.com/ansys/pydynamicreporting/issues"
 ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
-    "pytest>=8.3.3",
-    "pytest-cov>=6.0.0",
+    "pytest",
+    "pytest-cov",
     "pyvista==0.46.3",
     "vtk==9.5.2",
     "ansys-dpf-core==0.14.1",
 ]
 doc = [
-    "ansys-sphinx-theme>=1.1.1",
-    "numpydoc>=1.8.0",
-    "Sphinx>=8.0.2",
-    "sphinx-copybutton>=0.5.2",
-    "sphinx-gallery>=0.18.0",
+    "ansys-sphinx-theme",
+    "numpydoc",
+    "Sphinx",
+    "sphinx-copybutton",
+    "sphinx-gallery",
 ]
 dev = [
-    "build",
-    "packaging",
+    "pip",
     "twine",
+    "hatch",
     "ipdb",
-    "ipython",
-    "pre-commit>=4.0.1",
-    "black>=25.0.0",
-    "isort>=6.0.0",
+    "uv",
+    "pre-commit",
+    "black",
+    "isort",
+    #    "ruff",
+    #    "pip-audit",
+    #    "bandit[toml]",
+    "codespell",
+    #    "mypy",
+    #    "vulture",
+    #    "deptry",
 ]
 
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools>=75.8.0",
-    "setuptools-scm",
+requires = ["hatchling", "hatch-timestamp-version"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/ansys/dynamicreporting/core/_version.py"
+source = "vcs-dev-timestamp"
+validate-bump = true
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+timestamp_format = "long"
+
+[tool.hatch.build.hooks.custom]
+path = "codegen/build_hook.py"
+
+[tool.hatch.build.targets.wheel]
+ignore-vcs = true
+packages = ["src/ansys"]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+include = [
+    "src/**",
+    "codegen/**",
+    "AUTHORS",
+    "CHANGELOG.md",
+    "CONTRIBUTING.rst",
+    "CONTRIBUTORS.md",
+    "LICENSE",
+    "README.rst",
 ]
+
+[tool.hatch.envs.default]
+path = ".venv"
+env-vars = { PYTHONPATH = "." }
+
+[tool.uv]
+default-groups = "all"
 
 [tool.pytest.ini_options]
 tmp_path_retention_policy = "failed"
@@ -114,12 +151,35 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-omit = ["*/ansys/dynamicreporting/core/adr_utils.py", "*/ansys/dynamicreporting/core/build_info.py"]
 branch = true
+source = [
+    "ansys.dynamicreporting.core",
+]
+omit = [
+    "*/ansys/dynamicreporting/core/adr_utils.py",
+    "*/ansys/dynamicreporting/core/build_info.py",
+    "*/ansys/dynamicreporting/core/_version.py",
+]
 
 [tool.coverage.report]
 show_missing = true
 ignore_errors = true
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+]
 
 [tool.coverage.html]
 show_contexts = true
@@ -146,4 +206,7 @@ recursive = true
 number = 3
 severity_level = "high"
 require_serial = true
-exclude_dirs = ["venv/*", "setup.py", "test_cleanup.py", "tests/*", "doc/*"]
+exclude_dirs = ["venv/*", "scripts/*", "tests/*", "doc/*"]
+
+[tool.pre-commit.default_language_versions]
+python = "3.12"
