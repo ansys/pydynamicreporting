@@ -1082,7 +1082,7 @@ class ItemREST(BaseRESTObject):
         self._payloaddata = ""
 
     @staticmethod
-    def validate_string(input_string, description, sanitize_html):
+    def validate_string(input_string, description, sanitize_html=False):
         if not isinstance(input_string, str):
             raise TypeError("Payload must be a string.")
 
@@ -1101,12 +1101,12 @@ class ItemREST(BaseRESTObject):
                     raise ValueError(f"Payload {description} contains HTML content.")
 
     def set_payload_string(self, s):
-        self.validate_string(s, "string", sanitize_html=False)
+        self.validate_string(s, "string")
         self.type = ItemREST.type_str
         self._payloaddata = s
 
     def set_payload_html(self, s):
-        self.validate_string(s, "HTML", sanitize_html=False)
+        self.validate_string(s, "HTML")
         self.type = ItemREST.type_html
         self._payloaddata = s
 
@@ -1133,7 +1133,7 @@ class ItemREST(BaseRESTObject):
             else:
                 if type_ not in [float, int, datetime.datetime, str, bool, uuid.UUID, type(None)]:
                     raise ValueError(f"{str(type_)} is not a valid Tree payload 'value' type")
-                if type_ == str:
+                if isinstance(value, str):
                     ItemREST.validate_string(value, "Tree node value", sanitize_html=True)
 
     @staticmethod
