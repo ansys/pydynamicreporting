@@ -57,7 +57,6 @@ dependencies = [
     { name = "django-guardian" },
     { name = "djangorestframework" },
     { name = "docker" },
-    { name = "docutils" },
     { name = "lark" },
     { name = "numpy" },
     { name = "pandas" },
@@ -89,6 +88,7 @@ dev = [
 ]
 doc = [
     { name = "ansys-sphinx-theme" },
+    { name = "docutils" },
     { name = "numpydoc" },
     { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "sphinx", version = "8.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -105,7 +105,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ansys-dpf-core", marker = "extra == 'test'" },
+    { name = "ansys-dpf-core", marker = "extra == 'test'", specifier = "==0.14.1" },
     { name = "ansys-sphinx-theme", marker = "extra == 'doc'" },
     { name = "black", marker = "extra == 'dev'" },
     { name = "codespell", marker = "extra == 'dev'" },
@@ -113,7 +113,7 @@ requires-dist = [
     { name = "django-guardian", specifier = ">=2.4.0,<3.0.0" },
     { name = "djangorestframework", specifier = ">=3.15.2,<3.16.0" },
     { name = "docker", specifier = ">=7.1.0" },
-    { name = "docutils", specifier = ">=0.21" },
+    { name = "docutils", marker = "extra == 'doc'", specifier = ">=0.21" },
     { name = "hatch", marker = "extra == 'dev'" },
     { name = "ipdb", marker = "extra == 'dev'" },
     { name = "isort", marker = "extra == 'dev'" },
@@ -132,7 +132,7 @@ requires-dist = [
     { name = "python-dateutil", specifier = ">=2.8.0" },
     { name = "python-pptx", specifier = ">=1.0.2,<2.0.0" },
     { name = "pytz", specifier = ">=2021.3" },
-    { name = "pyvista", marker = "extra == 'test'" },
+    { name = "pyvista", marker = "extra == 'test'", specifier = "==0.46.3" },
     { name = "qtpy", specifier = ">=2.4.3,<2.5.0" },
     { name = "requests", specifier = ">=2.32" },
     { name = "sphinx", marker = "extra == 'doc'" },
@@ -143,7 +143,7 @@ requires-dist = [
     { name = "tzlocal", specifier = ">=5.3.1,<6.0" },
     { name = "urllib3", specifier = "<3.0.0" },
     { name = "uv", marker = "extra == 'dev'" },
-    { name = "vtk", marker = "extra == 'test'" },
+    { name = "vtk", marker = "extra == 'test'", specifier = "==9.5.2" },
 ]
 provides-extras = ["dev", "doc", "test"]
 
