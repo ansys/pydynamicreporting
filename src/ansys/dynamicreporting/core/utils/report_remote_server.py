@@ -38,8 +38,6 @@ from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
-logger.setLevel(logging.ERROR)
-
 
 def print_allowed():
     # Note: calling print() from a pythonw interpreter (e.g. template_editor launched
@@ -256,7 +254,7 @@ class Server:
             try:
                 self.validate()
             except Exception as e:
-                logger.warning(f"Warning: {str(e)}")
+                logger.debug(f"Warning: {str(e)}")
                 pass
         if self.cur_servername is None:
             return self.get_URL()
@@ -282,7 +280,7 @@ class Server:
             if not result.ok:
                 return False
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             return False
         return True
 
@@ -296,7 +294,7 @@ class Server:
             # note this request will fail as it does not return anything!!!
             self._http_session.get(url, auth=auth)
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             pass
         self.set_URL(None)
         self.set_password(None)
@@ -319,7 +317,7 @@ class Server:
         try:
             return [str(obj_data.get("name")) for obj_data in r.json()]
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             return []
 
     def get_object_guids(self, objtype=report_objects.Template, query=None):
@@ -347,7 +345,7 @@ class Server:
             else:
                 return [str(i) for i in r.json()["guid_list"]]
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             return []
 
     def get_objects(self, objtype=report_objects.Template, query=None):
@@ -383,7 +381,7 @@ class Server:
                 ret.append(t)
             return ret
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             return []
 
     def get_object_from_guid(self, guid, objtype=report_objects.TemplateREST):
@@ -409,7 +407,7 @@ class Server:
             obj.from_json(r.json())
             return obj
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             return None
 
     def _get_push_request_info(self, obj):
@@ -538,7 +536,7 @@ class Server:
                 try:
                     r = self._http_session.put(url, auth=auth, files=files)
                 except Exception as e:
-                    logger.warning(f"Warning: {str(e)}")
+                    logger.debug(f"Warning: {str(e)}")
                     r = self._http_session.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
@@ -1223,7 +1221,7 @@ def create_new_local_database(
                 group.save()
                 os.makedirs(os.path.join(db_dir, "media"))
             except Exception as e:
-                logger.warning(f"Warning: {str(e)}")
+                logger.debug(f"Warning: {str(e)}")
                 error = True
             if parent and has_qt:
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -1381,7 +1379,7 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
             if number < version_min:
                 return False
     except Exception as e:
-        logger.warning(f"Warning: {str(e)}")
+        logger.debug(f"Warning: {str(e)}")
         return False
     return True
 
@@ -1534,7 +1532,7 @@ def launch_local_database_server(
         local_lock = filelock.nexus_file_lock(api_lock_filename)
         local_lock.acquire()
     except Exception as e:
-        logger.warning(f"Warning: {str(e)}")
+        logger.debug(f"Warning: {str(e)}")
         pass
     # We may need to do port scanning
     if port is None:  # nosec
@@ -1545,7 +1543,7 @@ def launch_local_database_server(
             scanning_lock = filelock.nexus_file_lock(lock_filename)
             scanning_lock.acquire()
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}")
+            logger.debug(f"Warning: {str(e)}")
             pass
         # Note: QWebEngineView cannot access http over 65535, so limit ports to 65534
         ports = report_utils.find_unused_ports(1)
@@ -1675,7 +1673,7 @@ def launch_local_database_server(
             )
         return False
     except Exception as e:
-        logger.warning(
+        logger.debug(
             f"This can throw an error at the validate step but still be able to start a new server: {str(e)}"
         )
         pass
@@ -1749,7 +1747,7 @@ def launch_local_database_server(
         # Note: this process only returns if the server is shutdown or there is an error
         monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
     except Exception as e:
-        logger.warning(f"Warning: {str(e)}")
+        logger.debug(f"Warning: {str(e)}")
         if parent and has_qt:
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QApplication.translate(
@@ -1811,7 +1809,7 @@ def launch_local_database_server(
             )
         except Exception as e:
             # we will try again
-            logger.warning(
+            logger.debug(
                 f"This can throw an error at the validate steps if it's just starting, but still work: {str(e)}"
             )
             pass

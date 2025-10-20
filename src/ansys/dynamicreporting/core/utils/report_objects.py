@@ -177,7 +177,7 @@ def map_ensight_plot_to_table_dictionary(p):
         try:
             a[a == ensight.Undefined] = numpy.nan
         except Exception as e:
-            logger.warning(f"Warning: {str(e)}.\n")
+            logger.debug(f"Warning: {str(e)}.\n")
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -405,7 +405,7 @@ class Template:
         try:
             return json.loads(self.params)
         except Exception as e:
-            logger.warning(f"Warning on get_params: {str(e)}.\n")
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -1333,7 +1333,7 @@ class ItemREST(BaseRESTObject):
             try:
                 from . import png
             except Exception as e:
-                logger.warning(f"Warning: {str(e)}.\n")
+                logger.debug(f"Warning: {str(e)}.\n")
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1354,7 +1354,7 @@ class ItemREST(BaseRESTObject):
                     palette=pngobj[3].get("palette", None),
                 )
             except Exception as e:
-                logger.warning(f"Warning: {str(e)}.\n")
+                logger.debug(f"Warning: {str(e)}.\n")
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
@@ -1512,14 +1512,14 @@ class TemplateREST(BaseRESTObject):
             self.params = json.dumps(tmp_params)
             return
         except Exception as e:
-            logger.warning(f"Warning on add_params: {str(e)}.\n")
+            logger.debug(f"Warning on add_params: {str(e)}.\n")
             return {}
 
     def get_params(self):
         try:
             return json.loads(self.params)
         except Exception as e:
-            logger.warning(f"Warning on get_params: {str(e)}.\n")
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
