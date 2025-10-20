@@ -39,6 +39,7 @@ from .encoders import BaseEncoder
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
 
+
 def print_allowed():
     # Note: calling print() from a pythonw interpreter (e.g. template_editor launched
     # via the icon) can cause the interpreter to crash.  We will allow print, but only
