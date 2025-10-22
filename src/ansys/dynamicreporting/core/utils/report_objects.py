@@ -1152,7 +1152,7 @@ class ItemREST(BaseRESTObject):
             if "children" in i:
                 ItemREST.validate_tree(i["children"])
             # validate tree value, only at the last level of the tree or if value is not empty
-            if len(i.get("children", [])) == 0 or i.get("value").strip():
+            if len(i.get("children", [])) == 0 or i.get("value", "").strip():
                 ItemREST.validate_tree_value(i["value"])
 
     def set_payload_tree(self, t):
