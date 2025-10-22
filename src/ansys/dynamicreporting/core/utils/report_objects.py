@@ -1151,8 +1151,9 @@ class ItemREST(BaseRESTObject):
                 raise ValueError("Tree payload dictionaries must have a 'value' key")
             if "children" in i:
                 ItemREST.validate_tree(i["children"])
-            # validate tree value
-            ItemREST.validate_tree_value(i["value"])
+            # validate tree value, only at the last level of the tree
+            if len(i.get("children", [])) == 0:
+                ItemREST.validate_tree_value(i["value"])
 
     def set_payload_tree(self, t):
         self.validate_tree(t)
