@@ -16,6 +16,7 @@ import sys
 import uuid
 import weakref
 
+import bleach
 import dateutil
 import dateutil.parser
 import pytz
@@ -176,7 +177,7 @@ def map_ensight_plot_to_table_dictionary(p):
         try:
             a[a == ensight.Undefined] = numpy.nan
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning: {str(e)}.\n")
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -404,7 +405,7 @@ class Template:
         try:
             return json.loads(self.params)
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -1080,7 +1081,8 @@ class ItemREST(BaseRESTObject):
         self.type = ItemREST.type_none
         self._payloaddata = ""
 
-    def validate_string(self, input_string, description):
+    @staticmethod
+    def validate_string(input_string, description, sanitize_html=False):
         if not isinstance(input_string, str):
             raise TypeError("Payload must be a string.")
 
@@ -1091,6 +1093,12 @@ class ItemREST(BaseRESTObject):
             input_string.encode("utf-8")
         except UnicodeEncodeError:
             raise ValueError(f"Payload {description} must be a valid UTF-8 string.")
+
+        if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
+            if sanitize_html:
+                cleaned_string = bleach.clean(input_string, strip=True)
+                if cleaned_string != input_string:
+                    raise ValueError(f"Payload {description} contains HTML content.")
 
     def set_payload_string(self, s):
         self.validate_string(s, "string")
@@ -1125,6 +1133,8 @@ class ItemREST(BaseRESTObject):
             else:
                 if type_ not in [float, int, datetime.datetime, str, bool, uuid.UUID, type(None)]:
                     raise ValueError(f"{str(type_)} is not a valid Tree payload 'value' type")
+                if isinstance(value, str):
+                    ItemREST.validate_string(value, "Tree node value", sanitize_html=True)
 
     @staticmethod
     def validate_tree(t):
@@ -1141,8 +1151,9 @@ class ItemREST(BaseRESTObject):
                 raise ValueError("Tree payload dictionaries must have a 'value' key")
             if "children" in i:
                 ItemREST.validate_tree(i["children"])
-            # validate tree value
-            ItemREST.validate_tree_value(i["value"])
+            # validate tree value, only at the last level of the tree or if value is not empty
+            if len(i.get("children", [])) == 0 or (i.get("value") or "").strip():
+                ItemREST.validate_tree_value(i["value"])
 
     def set_payload_tree(self, t):
         self.validate_tree(t)
@@ -1233,6 +1244,12 @@ class ItemREST(BaseRESTObject):
         if kind not in ("S", "f"):
             raise ValueError("Table array must be a bytes or float type.")
 
+        if kind == "S":  # Check if the array contains strings
+            for i in range(array.shape[0]):
+                for j in range(array.shape[1]):
+                    if isinstance(array[i, j], str):
+                        self.validate_string(array[i, j], "Table array element", sanitize_html=True)
+
         shape = array.shape
         size = array.size
 
@@ -1256,7 +1273,6 @@ class ItemREST(BaseRESTObject):
             array.shape = shape
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
-
         if rowlbls and not isinstance(rowlbls, (str, list)):
             raise TypeError("Row labels must be a string or a list.")
         if collbls and not isinstance(collbls, (str, list)):
@@ -1318,7 +1334,7 @@ class ItemREST(BaseRESTObject):
             try:
                 from . import png
             except Exception as e:
-                logger.error(f"Error: {str(e)}.\n")
+                logger.debug(f"Warning: {str(e)}.\n")
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1339,7 +1355,7 @@ class ItemREST(BaseRESTObject):
                     palette=pngobj[3].get("palette", None),
                 )
             except Exception as e:
-                logger.error(f"Error: {str(e)}.\n")
+                logger.debug(f"Warning: {str(e)}.\n")
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
@@ -1497,14 +1513,14 @@ class TemplateREST(BaseRESTObject):
             self.params = json.dumps(tmp_params)
             return
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning on add_params: {str(e)}.\n")
             return {}
 
     def get_params(self):
         try:
             return json.loads(self.params)
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
