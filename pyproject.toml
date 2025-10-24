@@ -23,7 +23,6 @@ dependencies = [
     "psycopg[binary]>=3.2.6,<3.3.0",
     "qtpy>=2.4.3,<2.5.0",
     "lark>=1.2.2,<1.3.0",
-    "docutils>=0.21",
     "bleach>=6.2.0",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
@@ -73,6 +72,7 @@ doc = [
     "Sphinx",
     "sphinx-copybutton",
     "sphinx-gallery",
+    "docutils>=0.21",
 ]
 dev = [
     "pip",
