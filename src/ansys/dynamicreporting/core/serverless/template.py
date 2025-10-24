@@ -8,6 +8,7 @@ import uuid
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from ..common_utils import validate_html_dictionary
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException, TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .base import BaseModel, StrEnum
@@ -251,6 +252,8 @@ class Template(BaseModel):
             new_params = {}
         if not isinstance(new_params, dict):
             raise TypeError("input must be a dictionary")
+        if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
+            validate_html_dictionary(new_params)
         self.params = json.dumps(new_params)
 
     def add_params(self, new_params: dict):

@@ -3,6 +3,8 @@ from pathlib import Path
 import platform
 import re
 
+import bleach
+
 from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
 from .constants import JSON_NECESSARY_KEYS, JSON_TEMPLATE_KEYS, REPORT_TYPES
 from .exceptions import InvalidAnsysPath
@@ -189,3 +191,71 @@ def populate_template(id_str, attr, parent_template, create_template_func, logge
     template.set_filter(filter_str=attr["item_filter"] if "item_filter" in attr else "")
 
     return template
+
+
+PROPERTIES_EXEMPT = {
+    "link_text",
+    "userdef_name",
+    "filter_x_title",
+    "filter_y_title",
+    "labels_column",
+    "labels_row",
+    "title",
+    "line_marker_text",
+    "plot_title",
+    "xtitle",
+    "ytitle",
+    "ztitle",
+    "nan_display",
+    "table_title",
+    "image_title",
+    "slider_title",
+    "TOCName",
+}
+
+
+def validate_html_dictionary(data):
+    if not isinstance(data, dict):
+        raise TypeError("Input data must be a dictionary.")
+
+    for key, value in data.items():
+        # Do not validate HTML key
+        if key == "HTML":
+            continue
+
+        # Recursive case for nested dictionaries
+        if isinstance(value, dict):
+            # Specific checks for properties key
+            if key == "properties":
+                subdict = {k: v for k, v in value.items() if k not in PROPERTIES_EXEMPT}
+                validate_html_dictionary(subdict)
+            else:
+                validate_html_dictionary(value)
+
+        # Check for lists
+        elif isinstance(value, list):
+            validate_html_list(value, key)
+
+        # Main check for strings
+        elif isinstance(value, str):
+            cleaned_string = bleach.clean(value, strip=True)
+            if cleaned_string != value:
+                raise ValueError(f"{key} contains HTML content.")
+
+        # Ignore other types
+        else:
+            continue
+
+
+def validate_html_list(value_list, key):
+    for item in value_list:
+        if isinstance(item, str):
+            cleaned_string = bleach.clean(item, strip=True)
+            if cleaned_string != item:
+                raise ValueError(f"{key} contains HTML content.")
+        elif isinstance(item, dict):
+            validate_html_dictionary(item)
+        elif isinstance(item, list):
+            validate_html_list(item, key)
+        else:
+            continue
