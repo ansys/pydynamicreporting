@@ -1138,6 +1138,14 @@ class ItemREST(BaseRESTObject):
 
     @staticmethod
     def validate_tree(t):
+
+        def _has_non_empty_value(val):
+            if val is None:
+                return False
+            if isinstance(val, str):
+                return bool(val.strip())
+            return True
+
         if type(t) != list:
             raise ValueError("The tree payload must be a list of dictionaries")
         for i in t:
@@ -1151,9 +1159,14 @@ class ItemREST(BaseRESTObject):
                 raise ValueError("Tree payload dictionaries must have a 'value' key")
             if "children" in i:
                 ItemREST.validate_tree(i["children"])
+
             # validate tree value, only at the last level of the tree or if value is not empty
-            if len(i.get("children", [])) == 0 or (i.get("value") or "").strip():
-                ItemREST.validate_tree_value(i["value"])
+            value = i.get("value")
+            children = i.get("children", [])
+            is_leaf = len(children) == 0
+
+            if is_leaf or _has_non_empty_value(value):
+                ItemREST.validate_tree_value(value)
 
     def set_payload_tree(self, t):
         self.validate_tree(t)
