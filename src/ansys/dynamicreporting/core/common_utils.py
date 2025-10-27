@@ -215,9 +215,6 @@ PROPERTIES_EXEMPT = {
 
 
 def validate_html_dictionary(data):
-    if not isinstance(data, dict):
-        raise TypeError("Input data must be a dictionary.")
-
     for key, value in data.items():
         # Do not validate HTML key
         if key == "HTML":
