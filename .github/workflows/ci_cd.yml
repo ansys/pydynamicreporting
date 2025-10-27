@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.python-version == env.MAIN_PYTHON_VERSION
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-html
           path: coverage-html
