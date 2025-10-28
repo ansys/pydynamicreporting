@@ -178,7 +178,7 @@ def map_ensight_plot_to_table_dictionary(p):
         try:
             a[a == ensight.Undefined] = numpy.nan
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning: {str(e)}.\n")
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -406,7 +406,7 @@ class Template:
         try:
             return json.loads(self.params)
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -1141,6 +1141,14 @@ class ItemREST(BaseRESTObject):
 
     @staticmethod
     def validate_tree(t):
+
+        def _has_non_empty_value(val):
+            if val is None:
+                return False
+            if isinstance(val, str):
+                return bool(val.strip())
+            return True
+
         if type(t) != list:
             raise ValueError("The tree payload must be a list of dictionaries")
         for i in t:
@@ -1154,8 +1162,14 @@ class ItemREST(BaseRESTObject):
                 raise ValueError("Tree payload dictionaries must have a 'value' key")
             if "children" in i:
                 ItemREST.validate_tree(i["children"])
-            # validate tree value
-            ItemREST.validate_tree_value(i["value"])
+
+            # validate tree value, only at the last level of the tree or if value is not empty
+            value = i.get("value")
+            children = i.get("children", [])
+            is_leaf = len(children) == 0
+
+            if is_leaf or _has_non_empty_value(value):
+                ItemREST.validate_tree_value(value)
 
     def set_payload_tree(self, t):
         self.validate_tree(t)
@@ -1336,7 +1350,7 @@ class ItemREST(BaseRESTObject):
             try:
                 from . import png
             except Exception as e:
-                logger.error(f"Error: {str(e)}.\n")
+                logger.debug(f"Warning: {str(e)}.\n")
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1357,7 +1371,7 @@ class ItemREST(BaseRESTObject):
                     palette=pngobj[3].get("palette", None),
                 )
             except Exception as e:
-                logger.error(f"Error: {str(e)}.\n")
+                logger.debug(f"Warning: {str(e)}.\n")
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
@@ -1515,14 +1529,14 @@ class TemplateREST(BaseRESTObject):
             self.params = json.dumps(tmp_params)
             return
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning on add_params: {str(e)}.\n")
             return {}
 
     def get_params(self):
         try:
             return json.loads(self.params)
         except Exception as e:
-            logger.error(f"Error: {str(e)}.\n")
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
