@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 import uuid
 
 import pytest
@@ -1962,6 +1963,62 @@ def test_unit_template() -> None:
     a.from_json(json_dict={"a": "b", "c": b"d"})
     a.get_parent_object()
     assert succ and succ_two and succ_three and succ_four
+
+
+@pytest.mark.ado_test
+def test_template_validation() -> None:
+    os.environ["ADR_VALIDATION_BETAFLAG_ANSYS"] = "1"
+    a = ro.Template()
+    try:
+        a.set_params(
+            {
+                "reduce_params": {
+                    "reduce_type": "row<script>This is bad</script>",
+                    "operations": [
+                        "test 1",
+                        ["test 2", 1],
+                        {"source_rows": "'Phase*'", "output_rows": "Maximum"},
+                    ],
+                },
+                "properties": {"plot": "line", "plot_title": "Reduced Table"},
+                "HTML": "<div>Test</div>",
+            }
+        )
+    except ValueError as e:
+        succ_one = "contains HTML content" in str(e)
+    try:
+        a.set_params(
+            {
+                "reduce_params": {
+                    "reduce_type": "row",
+                    "operations": [
+                        ["test 2", 1],
+                        {"source_rows": "'Phase*'", "output_rows": "Maximum"},
+                        "test 1<script>Bad</script>",
+                    ],
+                },
+                "properties": {"plot": "line", "plot_title": "Reduced Table"},
+                "HTML": "<div>Test</div>",
+            }
+        )
+    except ValueError as e:
+        succ_two = "contains HTML content" in str(e)
+    a.set_params(
+        {
+            "reduce_params": {
+                "reduce_type": "row",
+                "operations": [
+                    "test 1",
+                    ["test 2", 1],
+                    {"source_rows": "'Phase*'", "output_rows": "Maximum"},
+                ],
+            },
+            "HTML": "<div>Test</div>",
+            "properties": {"plot": "line", "plot_title": "Reduced Table<script>Bad</script>"},
+        }
+    )
+    del os.environ["ADR_VALIDATION_BETAFLAG_ANSYS"]
+    assert succ_one and succ_two
 
 
 @pytest.mark.ado_test
