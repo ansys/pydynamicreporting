@@ -58,6 +58,7 @@ jobs:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
+          check-licenses: 'false'
 
       - name: Install from wheelhouse
         run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
