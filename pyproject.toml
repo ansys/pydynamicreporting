@@ -62,7 +62,7 @@ ci = "https://github.com/ansys/pydynamicreporting/actions"
 test = [
     "pytest",
     "pytest-cov",
-    "pyvista==0.46.3",
+    "pyvista==0.46.4",
     "vtk==9.5.2",
     "ansys-dpf-core==0.14.2",
 ]
