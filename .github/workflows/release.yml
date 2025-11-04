@@ -91,6 +91,8 @@ jobs:
     name: Upload release docs
     runs-on: ubuntu-latest
     needs: [ build-release-docs ]
+    permissions:
+      contents: write     # <-- required to push to gh-pages
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
