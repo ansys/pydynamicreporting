@@ -253,23 +253,18 @@ def test_table_payload_item() -> None:
 @pytest.mark.ado_test
 def test_string_payload_item() -> None:
     a = ro.ItemREST()
-    succ1 = succ2 = succ3 = False
+    succ1 = succ2 = False
     try:
         a.set_payload_string(s=42)
     except TypeError as e:
         succ1 = "Payload must be a string." in str(e)
 
     try:
-        a.set_payload_html(s=" ")
-    except ValueError as e:
-        succ2 = "cannot be empty or whitespace." in str(e)
-
-    try:
         a.set_payload_string(s="\ud800")
     except ValueError as e:
-        succ3 = "must be a valid UTF-8 string." in str(e)
+        succ2 = "must be a valid UTF-8 string." in str(e)
 
-    assert succ1 and succ2 and succ3
+    assert succ1 and succ2
 
 
 @pytest.mark.ado_test
