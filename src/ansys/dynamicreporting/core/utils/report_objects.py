@@ -1089,9 +1089,6 @@ class ItemREST(BaseRESTObject):
         if not isinstance(input_string, str):
             raise TypeError("Payload must be a string.")
 
-        if not input_string.strip():
-            raise ValueError(f"Payload {description} cannot be empty or whitespace.")
-
         try:
             input_string.encode("utf-8")
         except UnicodeEncodeError:
