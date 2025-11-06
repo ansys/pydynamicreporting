@@ -678,6 +678,27 @@ def test_template_reorder_children(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_template_update_children_order(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    # Create parent template
+    parent = PanelLayout.create(name="test_template_update_children_order", tags="dp=dp227")
+
+    # Create child templates
+    child1 = BasicLayout.create(name="child1", parent=parent)
+    child2 = BasicLayout.create(name="child2", parent=parent)
+    child3 = BasicLayout.create(name="child3", parent=parent)
+
+    # Manually set the parent's children
+    parent.children = [child1, child2, child3]
+    parent._children_order = ""  # Clear order
+    parent.update_children_order()
+
+    # check order
+    assert parent.children_order == f"{child1.guid},{child2.guid},{child3.guid}"
+
+
+@pytest.mark.ado_test
 def test_layout_set_get_column_count(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 

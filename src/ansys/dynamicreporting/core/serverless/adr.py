@@ -1101,6 +1101,8 @@ class ADR:
             new_child = self._copy_template(child, **kwargs)
             new_children.append(new_child)
         out_template.children = new_children
+        out_template.update_children_order()
+        out_template.save(**kwargs)
         return out_template
 
     def copy_objects(
