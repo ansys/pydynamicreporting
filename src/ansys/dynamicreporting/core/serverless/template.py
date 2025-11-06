@@ -135,7 +135,6 @@ class Template(BaseModel):
             raise self.parent.__class__.NotSaved(
                 extra_detail="Failed to save template because its parent is not saved"
             )
-        children_order = []
         for child in self.children:
             if not isinstance(child, Template):
                 raise TypeError(
@@ -145,8 +144,7 @@ class Template(BaseModel):
                 raise child.__class__.NotSaved(
                     extra_detail="Failed to save template because its children are not saved"
                 )
-            children_order.append(child.guid)
-        self._children_order = ",".join(children_order)
+        self.update_children_order()
         self._master = self.parent is None
         # set properties
         prop_dict = {}
@@ -221,7 +219,17 @@ class Template(BaseModel):
         query_string = f"A|t_types|cont|{cls.report_type};{query}"  # noqa: E702
         return super().find(query=query_string, **kwargs)
 
+    def update_children_order(self) -> None:
+        """
+        Update the children_order string based on the current order of the children list.
+        """
+        children_guids = [str(child.guid) for child in self.children]
+        self._children_order = ",".join(children_guids)
+
     def reorder_children(self) -> None:
+        """
+        Reorder the children list based on the children_order string.
+        """
         guid_to_child = {child.guid: child for child in self.children}
         sorted_guids = self.children_order.lower().split(",")
         # return the children based on the order of guids in children_order
