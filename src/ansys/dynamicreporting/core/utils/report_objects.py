@@ -3823,10 +3823,10 @@ class statisticalREST(GeneratorREST):
     def set_predictor_variables(self, value):
         if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
-        # standard input format is a 2d array with a subarray length of 3
-        if len(value[0]) != 3:
+        # standard input format is a 2d array with a subarray length of 4
+        if len(value[0]) != 4:
             raise ValueError(
-                "Error: input format should be an array of subarrays each of length 3. With Type, Predictor, Output Name."
+                "Error: input format should be an array of subarrays each of length 4. With Type, Predictor, Output Name and Predictor Type."
             )
         d = json.loads(self.params)
         if "stats_params" not in d:
