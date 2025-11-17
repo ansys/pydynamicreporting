@@ -39,7 +39,6 @@ test:
 	uv run python -m pip install -e .[test]
 	uv run python -m pytest \
 		-rvx --setup-show \
-		--ignore=tests/serverless \
 		--cov=ansys.dynamicreporting.core \
 		--cov-report html:coverage-html \
 		--cov-report term \
