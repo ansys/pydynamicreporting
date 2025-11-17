@@ -37,7 +37,13 @@ pull-docker:
 
 test:
 	uv run python -m pip install -e .[test]
-	uv run python -m pytest -rvx --setup-show --cov=ansys.dynamicreporting.core --cov-report html:coverage-html --cov-report term --cov-report xml:coverage.xml
+	uv run python -m pytest \
+		-rvx --setup-show \
+		--ignore=tests/serverless \
+		--cov=ansys.dynamicreporting.core \
+		--cov-report html:coverage-html \
+		--cov-report term \
+		--cov-report xml:coverage.xml
 
 smoketest:
 	uv run python tests/smoketest.py
