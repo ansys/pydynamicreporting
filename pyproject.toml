@@ -159,7 +159,6 @@ omit = [
     "*/ansys/dynamicreporting/core/adr_utils.py",
     "*/ansys/dynamicreporting/core/build_info.py",
     "*/ansys/dynamicreporting/core/_version.py",
-    "*/ansys/dynamicreporting/core/serverless/*",
 ]
 
 [tool.coverage.report]
