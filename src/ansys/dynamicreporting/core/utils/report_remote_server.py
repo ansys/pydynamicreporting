@@ -38,6 +38,7 @@ from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
+logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
 
 
 def print_allowed():
