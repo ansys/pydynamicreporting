@@ -23,6 +23,7 @@ import tarfile
 from typing import Optional
 
 import docker
+from docker.errors import ImageNotFound
 
 from .constants import DOCKER_DEV_REPO_URL, DOCKER_REPO_URL
 
@@ -79,22 +80,36 @@ class DockerLauncher:
 
     def pull_image(self) -> docker.models.images.Image:
         """
-        Pulls the Docker image.
+        Ensure the Docker image is available locally.
+
+        - If the image already exists locally, reuse it.
+        - If not, pull it from the registry.
 
         Returns
         -------
-        None
+        docker.models.images.Image
+            The Docker image object.
 
         Raises
         ------
-        RuntimeError:
-           If Docker couldn't pull the image.
+        RuntimeError
+            If the image cannot be found or pulled.
         """
         try:
-            self._image = self._client.images.pull(self._image_url)
+            # Try local first (no network call)
+            self._image = self._client.images.get(self._image_url)
+            return self._image
+        except ImageNotFound:
+            # Only hit the registry if it's missing locally
+            try:
+                self._image = self._client.images.pull(self._image_url)
+                return self._image
+            except Exception as e:
+                raise RuntimeError(f"Can't pull Docker image: {self._image_url}\n\n{str(e)}") from e
         except Exception as e:
-            raise RuntimeError(f"Can't pull Docker image: {self._image_url}\n\n{str(e)}")
-        return self._image
+            raise RuntimeError(
+                f"Unexpected error while resolving Docker image: {self._image_url}\n\n{str(e)}"
+            ) from e
 
     def create_container(self) -> docker.models.containers.Container:
         """
