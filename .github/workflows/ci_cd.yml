@@ -72,7 +72,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        os: [ public-ubuntu-latest-8-cores ]
+        os: [ public-ubuntu-latest-16-cores ]
         python-version: [ '3.10', '3.11', '3.12' ]
     steps:
       - name: Checkout repository
