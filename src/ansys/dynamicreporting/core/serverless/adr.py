@@ -952,6 +952,74 @@ class ADR:
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
 
+    def export_report_as_pptx(
+        self,
+        *,
+        filename: str | Path,
+        context: dict | None = None,
+        item_filter: str = "",
+        **kwargs: Any,
+    ) -> None:
+        """
+        Export a report as a PowerPoint presentation file to the provided file path OR the current directory
+        using the property "output_pptx" of the template if filename is not provided.
+        Only works with PPTXLayout templates.
+
+        Parameters
+        ----------
+        filename : str, optional
+            The name of the output PowerPoint file. Will use the property "output_pptx" of the template if not provided.
+
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc. At least one
+            keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            None
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the template is not of type PPTXLayout or
+            if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
+        >>> adr.export_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        template = Template.get(**kwargs)
+        if not isinstance(template, PPTXLayout):
+            raise ADRException(
+                "The template must be of type 'PPTXLayout' to export as a PowerPoint presentation."
+            )
+        try:
+            pptx_stream = template.render_pptx(
+                context=context, item_filter=item_filter, request=self._request
+            )
+        except Exception as e:
+            raise ADRException(f"PPTX Report rendering failed: {e}")
+
+        output_path = (
+            Path(filename) if filename else Path(template.output_pptx or f"{template.guid}.pptx")
+        )
+        with open(output_path, "wb") as f:
+            f.write(pptx_stream)
+        self._logger.info(f"Successfully exported report to: {output_path}")
+
     def export_report_as_html(
         self,
         output_directory: str | Path,
