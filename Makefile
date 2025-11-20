@@ -42,8 +42,7 @@ test:
 		--cov=ansys.dynamicreporting.core \
 		--cov-report html:coverage-html \
 		--cov-report term \
-		--cov-report xml:coverage.xml \
-		tests/serverless
+		--cov-report xml:coverage.xml
 
 smoketest:
 	uv run python tests/smoketest.py
