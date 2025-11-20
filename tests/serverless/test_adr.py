@@ -1040,7 +1040,7 @@ def test_export_report_as_pptx_success(tmp_path, adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless import template as template_module
 
     # Create a valid PPTXLayout template
-    _ = adr_serverless.create_template(PPTXLayout, name="TestPPTXReport", parent=None)
+    _ = adr_serverless.create_template(PPTXLayout, name="TestPPTXExport", parent=None)
 
     # Mock render_pptx to return dummy bytes
     def fake_render_pptx(self, context, item_filter, request):
@@ -1050,7 +1050,7 @@ def test_export_report_as_pptx_success(tmp_path, adr_serverless, monkeypatch):
 
     output_file = tmp_path / "output.pptx"
     adr_serverless.export_report_as_pptx(
-        filename=output_file, name="TestPPTXReport", item_filter="A|i_tags|cont|dp=dp227;"
+        filename=output_file, name="TestPPTXExport", item_filter="A|i_tags|cont|dp=dp227;"
     )
     assert output_file.read_bytes() == b"dummy pptx content"
 
@@ -1068,13 +1068,13 @@ def test_export_report_as_pptx_wrong_template_type(tmp_path, adr_serverless):
     from ansys.dynamicreporting.core.exceptions import ADRException
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
-    _ = adr_serverless.create_template(BasicLayout, name="NotAPPTXReport", parent=None)
+    _ = adr_serverless.create_template(BasicLayout, name="NotATestPPTXExport", parent=None)
     with pytest.raises(
         ADRException,
         match="The template must be of type 'PPTXLayout' to export as a PowerPoint presentation",
     ):
         adr_serverless.export_report_as_pptx(
-            filename=tmp_path / "output.pptx", name="NotAPPTXReport"
+            filename=tmp_path / "output.pptx", name="NotATestPPTXExport"
         )
 
 
@@ -1084,7 +1084,7 @@ def test_export_report_as_pptx_render_failure(tmp_path, adr_serverless, monkeypa
     from ansys.dynamicreporting.core.serverless import PPTXLayout
     from ansys.dynamicreporting.core.serverless import template as template_module
 
-    _ = adr_serverless.create_template(PPTXLayout, name="FailingPPTXReport", parent=None)
+    _ = adr_serverless.create_template(PPTXLayout, name="FailingTestPPTXExport", parent=None)
 
     def fake_render_pptx_fails(self, context, item_filter, request):
         raise Exception("Simulated rendering engine failure")
@@ -1093,7 +1093,7 @@ def test_export_report_as_pptx_render_failure(tmp_path, adr_serverless, monkeypa
 
     with pytest.raises(ADRException, match="PPTX Report rendering failed"):
         adr_serverless.export_report_as_pptx(
-            filename=tmp_path / "output.pptx", name="FailingPPTXReport"
+            filename=tmp_path / "output.pptx", name="FailingTestPPTXExport"
         )
 
 
