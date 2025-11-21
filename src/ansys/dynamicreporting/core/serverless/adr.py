@@ -955,7 +955,7 @@ class ADR:
     def export_report_as_pptx(
         self,
         *,
-        filename: str | Path,
+        filename: str | Path = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
