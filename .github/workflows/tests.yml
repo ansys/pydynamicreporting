@@ -1,40 +1,52 @@
 name: Tests
 
 on:
+  # Reusable from other workflows
   workflow_call:
     inputs:
       ref:
         required: false
         type: string
-      python-version:
-        required: true
-        type: string
-      runs-on:
-        required: false
-        type: string
-        default: public-ubuntu-latest-16-cores
     secrets:
       LICENSE_SERVER:
         required: true
       PYANSYS_CI_BOT_TOKEN:
         required: true
+  # Manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (tag/branch/SHA)"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    name: Testing
-    runs-on: ${{ inputs.runs-on }}
+    name: Testing (py ${{ matrix.python-version }})
+    runs-on: public-ubuntu-latest-16-cores
     timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.10', '3.11', '3.12' ]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: '0'
           fetch-tags: true
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python
         uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -49,8 +61,8 @@ jobs:
       - name: Set licensing if necessary
         shell: bash
         run: |
-          echo "ANSYS_DPF_ACCEPT_LA=Y" >> "$GITHUB_ENV"
-          echo "ANSYSLMD_LICENSE_FILE=1055@${{ secrets.LICENSE_SERVER }}" >> "$GITHUB_ENV"
+          echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
+          echo "ANSYSLMD_LICENSE_FILE=1055@${{ secrets.LICENSE_SERVER }}" >> $GITHUB_ENV
 
       - name: Update packages
         shell: bash
@@ -72,3 +84,16 @@ jobs:
         run: make test
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
+
+      - name: Upload coverage report
+        if: matrix.python-version == env.MAIN_PYTHON_VERSION
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-html
+          path: coverage-html
+          retention-days: 60
+          if-no-files-found: error
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == env.MAIN_PYTHON_VERSION
+        uses: codecov/codecov-action@v5
