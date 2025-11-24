@@ -1171,7 +1171,7 @@ class ADR:
     def export_report_as_pdf(
         self,
         *,
-        filename: str | Path,
+        filename: str | Path = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1214,14 +1214,15 @@ class ADR:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
+        template = Template.get(**kwargs)
         try:
-            pdf_stream = Template.get(**kwargs).render_pdf(
+            pdf_stream = template.render_pdf(
                 context=context, item_filter=item_filter, request=self._request
             )
         except Exception as e:
             raise ADRException(f"PDF Report rendering failed: {e}")
 
-        output_path = Path(filename)
+        output_path = Path(filename) if filename else Path(f"{template.guid}.pdf")
         with open(output_path, "wb") as f:
             f.write(pdf_stream)
         self._logger.info(f"Successfully exported report to: {output_path}")
