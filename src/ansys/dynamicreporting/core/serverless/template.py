@@ -397,53 +397,35 @@ class Template(BaseModel):
         self.children.remove(target_child_template)
         self.children.insert(new_position, target_child_template)
 
-    def render(self, *, context=None, item_filter="", request=None) -> str:
-        """
-        Render the template to HTML.
-
-        Parameters
-        ----------
-        context : dict, optional
-            Context to be used in the template rendering. Defaults to an empty dictionary.
-        item_filter : str, optional
-            Filter string to be applied to the items. Defaults to an empty string.
-        request : HttpRequest, optional
-            The HTTP request object, used to provide additional context for rendering. Defaults to None.
-
-        Returns
-        -------
-        str
-            The rendered HTML string, or an error message if rendering fails.
-
-        Example
-        -------
-        >>> template = Template.get(guid="some-guid")
-        >>> html_output = template.render(context={"key": "value"}, item_filter="some_filter", request=request)
-        >>> print(html_output)
-        """
-        if context is None:
-            context = {}
-        ctx = {
+    @staticmethod
+    def _build_render_context(context, request):
+        ctx = context or {}
+        return {
             "request": request,
             "ansys_version": None,
-            "plotly": int(context.get("plotly", 0)),  # default referenced in the header via static
-            "page_width": float(context.get("pwidth", "10.5")),
-            "page_dpi": float(context.get("dpi", "96.")),
-            "page_col_pixel_width": (float(context.get("pwidth", "10.5")) / 12.0)
-            * float(context.get("dpi", "96.")),
+            "plotly": int(ctx.get("plotly", 0)),
+            "page_width": float(ctx.get("pwidth", "10.5")),
+            "page_dpi": float(ctx.get("dpi", "96.")),
+            "page_col_pixel_width": (float(ctx.get("pwidth", "10.5")) / 12.0)
+            * float(ctx.get("dpi", "96.")),
             "date_date": datetime.now(timezone.get_current_timezone()).strftime("%x"),
             "date_datetime": datetime.now(timezone.get_current_timezone()).strftime("%c"),
             "date_iso": datetime.now(timezone.get_current_timezone()).isoformat(),
             "date_year": datetime.now(timezone.get_current_timezone()).year,
         }
 
+    def render(self, *, context=None, item_filter="", request=None) -> str:
+        """
+        Render the template to HTML.
+        """
+        ctx = self._build_render_context(context, request)
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
 
+            items = Item.find(query=item_filter)
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
-            items = Item.find(query=item_filter)
             # properties that can change during iteration need to go on the class as well as globals
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
@@ -458,6 +440,25 @@ class Template(BaseModel):
             ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
+
+    def render_pdf(self, *, context=None, item_filter="", request=None) -> bytes:
+        """
+        Render the template to PDF.
+        """
+        ctx = self._build_render_context(context, request)
+        try:
+            from data.models import Item
+            from reports.engine import TemplateEngine
+
+            items = Item.find(query=item_filter)
+            template_obj = self._orm_instance
+            engine = template_obj.get_engine()
+            static_html = engine.dispatch_render("pdf", items, ctx)
+            # todo: get pdf byte stream from static_html
+        except Exception as e:
+            raise ADRException(
+                f"Failed to render PDF for template {self.name} ({self.guid}): {e}"
+            ) from e
 
 
 class Layout(Template):
