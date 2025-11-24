@@ -952,6 +952,55 @@ class ADR:
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
 
+    def render_report_as_pdf(
+        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
+    ) -> bytes:
+        """
+        Render the report as a PDF document.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            bytes
+                A byte stream containing the PDF document.
+                Media type is "application/pdf".
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
+        >>> pdf_stream = adr.render_report_as_pdf(name="Serverless Simulation Report")
+        >>> with open("report.pdf", "wb") as f:
+        ...     f.write(pdf_stream)
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        try:
+            return Template.get(**kwargs).render_pdf(
+                context=context, item_filter=item_filter, request=self._request
+            )
+        except Exception as e:
+            raise ADRException(f"PDF Report rendering failed: {e}")
+
     def export_report_as_pptx(
         self,
         *,
@@ -1118,6 +1167,64 @@ class ADR:
         final_path = output_dir / filename
         self._logger.info(f"Successfully exported report to: {final_path}")
         return final_path
+
+    def export_report_as_pdf(
+        self,
+        *,
+        filename: str | Path,
+        context: dict | None = None,
+        item_filter: str = "",
+        **kwargs: Any,
+    ) -> None:
+        """
+        Export a report as a PDF file to the provided file path.
+
+        Parameters
+        ----------
+        filename : str or Path
+            The name of the output PDF file.
+
+        context : dict, optional
+            Context to pass to the report template.
+
+        item_filter : str, optional
+            Filter to apply to the items in the report.
+
+        **kwargs : Any
+            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
+            At least one keyword argument must be provided to fetch the report.
+
+        Returns
+        -------
+            None
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or if the report rendering fails.
+
+        Example
+        -------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr.setup()
+        >>> adr.export_report_as_pdf(filename="report.pdf", name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        try:
+            pdf_stream = Template.get(**kwargs).render_pdf(
+                context=context, item_filter=item_filter, request=self._request
+            )
+        except Exception as e:
+            raise ADRException(f"PDF Report rendering failed: {e}")
+
+        output_path = Path(filename)
+        with open(output_path, "wb") as f:
+            f.write(pdf_stream)
+        self._logger.info(f"Successfully exported report to: {output_path}")
 
     @staticmethod
     def query(
