@@ -1,0 +1,108 @@
+﻿Item
+====
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoclass:: Item
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Item.add_tag
+      
+      
+      Item.get_iframe
+      
+      
+      Item.get_tags
+      
+      
+      Item.rem_tag
+      
+      
+      Item.set_tags
+      
+      
+      Item.visualize
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Item.url
+      Item.item_text
+      Item.item_image
+      Item.item_scene
+      Item.item_table
+      Item.format
+      Item.format_column
+      Item.labels_column
+      Item.format_row
+      Item.labels_row
+      Item.plot
+      Item.title
+      Item.line_color
+      Item.line_marker
+      Item.line_marker_text
+      Item.line_marker_size
+      Item.line_marker_opacity
+      Item.line_marker_scale
+      Item.line_error_bars
+      Item.line_style
+      Item.line_width
+      Item.stacked
+      Item.xaxis
+      Item.yaxis
+      Item.palette
+      Item.palette_position
+      Item.palette_range
+      Item.palette_show
+      Item.palette_title
+      Item.width
+      Item.height
+      Item.show_legend
+      Item.legend_position
+      Item.show_legend_border
+      Item.show_border
+      Item.plot_margins
+      Item.plot_title
+      Item.plot_xaxis_type
+      Item.plot_yaxis_type
+      Item.xrange
+      Item.yrange
+      Item.xaxis_format
+      Item.yaxis_format
+      Item.xtitle
+      Item.ytitle
+      Item.item_justification
+      Item.nan_display
+      Item.table_sort
+      Item.table_title
+      Item.align_column
+      Item.table_search
+      Item.table_page
+      Item.table_pagemenu
+      Item.table_scrollx
+      Item.table_scrolly
+      Item.table_bordered
+      Item.table_condensed
+      Item.table_wrap_content
+      Item.table_default_col_labels
+      Item.table_cond_format
+      Item.column_minimum
+      Item.column_maximum
+   
+   
