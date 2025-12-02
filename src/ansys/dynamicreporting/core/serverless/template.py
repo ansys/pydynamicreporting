@@ -449,12 +449,14 @@ class Template(BaseModel):
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
+            from weasyprint import HTML
 
             items = Item.find(query=item_filter)
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
             static_html = engine.dispatch_render("pdf", items, ctx)
-            # todo: get pdf byte stream from static_html
+            # get pdf byte stream from static_html using weasyprint
+            return HTML(string=static_html).write_pdf()
         except Exception as e:
             raise ADRException(
                 f"Failed to render PDF for template {self.name} ({self.guid}): {e}"
