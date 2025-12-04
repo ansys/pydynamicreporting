@@ -1074,6 +1074,48 @@ def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeyp
 
 
 @pytest.mark.ado_test
+def test_render_pdf_success(adr_serverless, monkeypatch):
+    # The rendering engine is located in the 'reports' app of the Ansys core installation
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless.template import BasicLayout
+
+    base_template = adr_serverless.create_template(
+        BasicLayout, name="TestRenderPDFSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        # This fake method simulates a successful render by the engine
+        assert render_type == "pdf"
+        return b"mock pdf content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+
+    pdf_bytes = base_template.render_pdf()
+
+    assert pdf_bytes == b"mock pdf content from engine"
+
+
+@pytest.mark.ado_test
+def test_render_pdf_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless.template import BasicLayout
+
+    base_template = adr_serverless.create_template(
+        BasicLayout, name="TestRenderPDFFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PDF for template"):
+        base_template.render_pdf()
+
+
+@pytest.mark.ado_test
 def test_layout_set_transpose_invalid_value(adr_serverless):
     """Tests the added validation for the set_transpose method in Layout."""
     from ansys.dynamicreporting.core.serverless import BasicLayout
