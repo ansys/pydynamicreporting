@@ -338,62 +338,6 @@ class Template(BaseModel):
         params["filter_type"] = value
         self.set_params(params)
 
-    def render(self, *, context=None, item_filter="", request=None) -> str:
-        """
-        Render the template to HTML.
-
-        Parameters
-        ----------
-        context : dict, optional
-            Context to be used in the template rendering. Defaults to an empty dictionary.
-        item_filter : str, optional
-            Filter string to be applied to the items. Defaults to an empty string.
-        request : HttpRequest, optional
-            The HTTP request object, used to provide additional context for rendering. Defaults to None.
-
-        Returns
-        -------
-        str
-            The rendered HTML string, or an error message if rendering fails.
-        """
-        if context is None:
-            context = {}
-        ctx = {
-            "request": request,
-            "ansys_version": None,
-            "plotly": int(context.get("plotly", 0)),  # default referenced in the header via static
-            "page_width": float(context.get("pwidth", "10.5")),
-            "page_dpi": float(context.get("dpi", "96.")),
-            "page_col_pixel_width": (float(context.get("pwidth", "10.5")) / 12.0)
-            * float(context.get("dpi", "96.")),
-            "date_date": datetime.now(timezone.get_current_timezone()).strftime("%x"),
-            "date_datetime": datetime.now(timezone.get_current_timezone()).strftime("%c"),
-            "date_iso": datetime.now(timezone.get_current_timezone()).isoformat(),
-            "date_year": datetime.now(timezone.get_current_timezone()).year,
-        }
-
-        try:
-            from data.models import Item
-            from reports.engine import TemplateEngine
-
-            template_obj = self._orm_instance
-            engine = template_obj.get_engine()
-            items = Item.find(query=item_filter)
-            # properties that can change during iteration need to go on the class as well as globals
-            TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
-            TemplateEngine.start_toc_session()
-            # Render the report
-            html = engine.render(items, ctx)
-            # fill in any TOC entries
-            html += TemplateEngine.end_toc_session()
-            ctx["HTML"] = html
-        except Exception as e:
-            from ceireports.utils import get_render_error_html
-
-            ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
-
-        return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
-
     def to_dict(self) -> dict:
         """
         Returns a JSON-serializable dictionary of the full template tree.
@@ -452,6 +396,71 @@ class Template(BaseModel):
             )
         self.children.remove(target_child_template)
         self.children.insert(new_position, target_child_template)
+
+    @staticmethod
+    def _build_render_context(context, request):
+        ctx = context or {}
+        return {
+            "request": request,
+            "ansys_version": None,
+            "plotly": int(ctx.get("plotly", 0)),
+            "page_width": float(ctx.get("pwidth", "10.5")),
+            "page_dpi": float(ctx.get("dpi", "96.")),
+            "page_col_pixel_width": (float(ctx.get("pwidth", "10.5")) / 12.0)
+            * float(ctx.get("dpi", "96.")),
+            "date_date": datetime.now(timezone.get_current_timezone()).strftime("%x"),
+            "date_datetime": datetime.now(timezone.get_current_timezone()).strftime("%c"),
+            "date_iso": datetime.now(timezone.get_current_timezone()).isoformat(),
+            "date_year": datetime.now(timezone.get_current_timezone()).year,
+        }
+
+    def render(self, *, context=None, item_filter="", request=None) -> str:
+        """
+        Render the template to HTML.
+        """
+        ctx = self._build_render_context(context, request)
+        try:
+            from data.models import Item
+            from reports.engine import TemplateEngine
+
+            items = Item.find(query=item_filter)
+            template_obj = self._orm_instance
+            engine = template_obj.get_engine()
+            # properties that can change during iteration need to go on the class as well as globals
+            TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
+            TemplateEngine.start_toc_session()
+            # Render the report
+            html = engine.render(items, ctx)
+            # fill in any TOC entries
+            html += TemplateEngine.end_toc_session()
+            ctx["HTML"] = html
+        except Exception as e:
+            from ceireports.utils import get_render_error_html
+
+            ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
+
+        return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
+
+    def render_pdf(self, *, context=None, item_filter="", request=None) -> bytes:
+        """
+        Render the template to PDF.
+        """
+        ctx = self._build_render_context(context, request)
+        try:
+            from data.models import Item
+            from reports.engine import TemplateEngine
+            from weasyprint import HTML
+
+            items = Item.find(query=item_filter)
+            template_obj = self._orm_instance
+            engine = template_obj.get_engine()
+            static_html = engine.dispatch_render("pdf", items, ctx)
+            # get pdf byte stream from static_html using weasyprint
+            return HTML(string=static_html).write_pdf()
+        except Exception as e:
+            raise ADRException(
+                f"Failed to render PDF for template {self.name} ({self.guid}): {e}"
+            ) from e
 
 
 class Layout(Template):
