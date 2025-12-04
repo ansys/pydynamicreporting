@@ -1078,7 +1078,7 @@ def test_render_pdf_success(adr_serverless, monkeypatch):
     # The rendering engine is located in the 'reports' app of the Ansys core installation
     from reports.engine import TemplateEngine
 
-    from ansys.dynamicreporting.core.serverless.template import BasicLayout
+    from ansys.dynamicreporting.core.serverless import BasicLayout
 
     base_template = adr_serverless.create_template(
         BasicLayout, name="TestRenderPDFSuccess", parent=None
@@ -1100,7 +1100,7 @@ def test_render_pdf_success(adr_serverless, monkeypatch):
 def test_render_pdf_failure_wraps_exception(adr_serverless, monkeypatch):
     from reports.engine import TemplateEngine
 
-    from ansys.dynamicreporting.core.serverless.template import BasicLayout
+    from ansys.dynamicreporting.core.serverless import BasicLayout
 
     base_template = adr_serverless.create_template(
         BasicLayout, name="TestRenderPDFFailure", parent=None
