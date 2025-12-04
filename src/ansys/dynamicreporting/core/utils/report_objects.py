@@ -3823,15 +3823,24 @@ class statisticalREST(GeneratorREST):
     def set_predictor_variables(self, value):
         if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
-        # standard input format is a 2d array with a subarray length of 3
-        if len(value[0]) != 3:
-            raise ValueError(
-                "Error: input format should be an array of subarrays each of length 3. With Type, Predictor, Output Name."
-            )
+
+        # standard input format is a 2d array with a subarray length of 3 or 4
+        processed = []
+        for item in value:
+            if len(item) not in (3, 4):
+                raise ValueError(
+                    "Error: each subarray should have length 3 or 4 (Type, Predictor, Output Name, [optional] Predictor Type)."
+                )
+            # If length is 3, append default predictor type "numerical"
+            if len(item) == 3:
+                item = item + ["numerical"]
+            processed.append(item)
+
         d = json.loads(self.params)
         if "stats_params" not in d:
             d["stats_params"] = {}
-        d["stats_params"]["predictor_variables"] = json.dumps(value)
+
+        d["stats_params"]["predictor_variables"] = json.dumps(processed)
         self.params = json.dumps(d)
 
     def get_response_variables(self):
