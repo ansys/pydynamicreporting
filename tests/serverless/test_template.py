@@ -1074,6 +1074,53 @@ def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeyp
 
 
 @pytest.mark.ado_test
+def test_render_pdf_success(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+    import weasyprint
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    base_template = adr_serverless.create_template(
+        BasicLayout, name="TestRenderPDFSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        assert render_type == "pdf"
+        # return HTML string (weasyprint expects a string for HTML(...))
+        return "<html><body>mock</body></html>"
+
+    def fake_write_pdf(self):
+        # ensure the final returned value is the expected bytes
+        return b"mock pdf content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+    monkeypatch.setattr(weasyprint.HTML, "write_pdf", fake_write_pdf)
+
+    pdf_bytes = base_template.render_pdf()
+
+    assert pdf_bytes == b"mock pdf content from engine"
+
+
+@pytest.mark.ado_test
+def test_render_pdf_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    base_template = adr_serverless.create_template(
+        BasicLayout, name="TestRenderPDFFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PDF for template"):
+        base_template.render_pdf()
+
+
+@pytest.mark.ado_test
 def test_layout_set_transpose_invalid_value(adr_serverless):
     """Tests the added validation for the set_transpose method in Layout."""
     from ansys.dynamicreporting.core.serverless import BasicLayout
