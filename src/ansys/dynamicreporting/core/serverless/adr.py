@@ -108,10 +108,10 @@ class ADR:
 
     Examples
     --------
-    >>> install_loc = "C:\\Program Files\\ANSYS Inc\v252"
+    >>> install_loc = "C:\\Program Files\\ANSYS Inc\\v252"
     >>> db_dir = "C:\\DBs\\docex"
-    >>> from ansys.dynamicreporting.core.serverless import ADR, String
-    >>> adr = ADR(ansys_installation=install_loc, db_directory=db_dir, static_directory=f"{doc_ex_dir}\\static")
+    >>> from ansys.dynamicreporting.core.serverless import ADR, String, BasicLayout
+    >>> adr = ADR(ansys_installation=install_loc, db_directory=db_dir, static_directory=f"C:\\DBs\\static")
     >>> adr.setup(collect_static=True)
     >>> item = adr.create_item(String, name="intro_text", content="It's alive!", tags="dp=dp227 section=intro", source="sls-test")
     >>> template = adr.create_template(BasicLayout, name="Serverless Simulation Report", parent=None, tags="dp=dp227")
@@ -880,7 +880,7 @@ class ADR:
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.html", "w", encoding="utf-8") as f:
         ...     f.write(html_content)
@@ -930,7 +930,7 @@ class ADR:
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
@@ -984,7 +984,7 @@ class ADR:
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> pdf_stream = adr.render_report_as_pdf(name="Serverless Simulation Report")
         >>> with open("report.pdf", "wb") as f:
@@ -1042,7 +1042,7 @@ class ADR:
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> adr.export_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         """
@@ -1119,7 +1119,7 @@ class ADR:
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(
-                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252",
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
                     db_directory=r"C:\\DBs\\docex",
                     media_directory=r"C:\\DBs\\docex\\media",
                     static_directory=r"C:\\static"
@@ -1206,7 +1206,7 @@ class ADR:
         Example
         -------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> adr.export_report_as_pdf(filename="report.pdf", name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         """
