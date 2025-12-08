@@ -2056,7 +2056,10 @@ def test_statistical_generator() -> None:
     tree_name = "Linear Regression Results Coefficients Tree"
     a.set_tree_name(tree_name)
     succ_three = a.get_tree_name() == tree_name
-    predictor_variables = [["row", "pressure", "pressure coeff"], ["tag", "displ", "displ coeff"]]
+    predictor_variables = [
+        ["row", "pressure", "pressure coeff", "numerical"],
+        ["tag", "displ", "displ coeff", "categorical"],
+    ]
     a.set_predictor_variables(predictor_variables)
     succ_four = a.get_predictor_variables() == predictor_variables
     response_variables = [["velocity", "fitted velocity"], ["misalignment", "fitted misalignment"]]

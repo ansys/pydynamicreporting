@@ -17,5 +17,6 @@
 * [Randy Frank](https://github.com/randallfrank)
 * [Revathy Venugopal](https://github.com/Revathyvenugopal162)
 * [Roberto Pastor Muela](https://github.com/RobPasMue)
+* [Sébastien Morais](https://github.com/SMoraisAnsys)
 * [Visesh Rajendraprasad](https://github.com/viseshrp)
 * [Yuanrui Zhang](https://github.com/zhang-yuanrui)
