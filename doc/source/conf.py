@@ -116,6 +116,22 @@ autoapi_options = [
     "imported-members",
 ]
 
+# Automatically generate stub pages for autosummary entries
+autosummary_generate = True
+
+# Default autodoc options for all documented objects
+autodoc_default_options = {
+    "members": True,  # include class/module members
+    "undoc-members": False,  # skip members without docstrings
+    "show-inheritance": True,  # show base classes
+}
+
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+    ("py:data", "type"),
+]
+
 # Intersphinx mapping
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -128,8 +144,12 @@ intersphinx_mapping = {
 }
 
 # numpydoc configuration
+# numpydoc configuration
 numpydoc_show_class_members = False
+
+# Still cross-ref real types, but don't try to link plain "type"
 numpydoc_xref_param_type = True
+numpydoc_xref_ignore = {"type"}
 
 # Consider enabling numpydoc validation. See:
 # https://numpydoc.readthedocs.io/en/latest/validation.html#

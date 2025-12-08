@@ -10,6 +10,7 @@ PyDynamicReporting
    class_documentation
    examples/index
    serverless/index
+   api_docs_serverless
    contributing
 
 .. _Nexus: https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/prod_page.html?pn=Ansys%20Dynamic%20Reporting&pid=ansdynrep&lang=en
