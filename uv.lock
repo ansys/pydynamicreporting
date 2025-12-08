@@ -113,7 +113,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "bleach", specifier = ">=6.2.0" },
     { name = "codespell", marker = "extra == 'dev'" },
-    { name = "django", specifier = ">=4.2.19,<5.0" },
+    { name = "django", specifier = ">=4.2.27,<5.0" },
     { name = "django-guardian", specifier = ">=2.4.0,<3.0.0" },
     { name = "django-weasyprint", specifier = ">=2.4.0,<2.5.0" },
     { name = "djangorestframework", specifier = ">=3.15.2,<3.16.0" },
