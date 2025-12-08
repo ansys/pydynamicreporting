@@ -877,8 +877,8 @@ class ADR:
         ADRException
             If no keyword arguments are provided or if the report rendering fails.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
@@ -927,8 +927,8 @@ class ADR:
             If no keyword arguments are provided or if the template is not of type PPTXLayout or
             if the report rendering fails.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
@@ -981,8 +981,8 @@ class ADR:
         ADRException
             If no keyword arguments are provided or if the report rendering fails.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
@@ -1039,8 +1039,8 @@ class ADR:
             If no keyword arguments are provided or if the template is not of type PPTXLayout or
             if the report rendering fails.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
@@ -1115,8 +1115,8 @@ class ADR:
         ImproperlyConfiguredError
             If the static directory is not configured or if the output directory cannot be created.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(
                     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
@@ -1203,8 +1203,8 @@ class ADR:
         ADRException
             If no keyword arguments are provided or if the report rendering fails.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()

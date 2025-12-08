@@ -801,12 +801,12 @@ class PPTXLayout(Layout):
             The rendered PPTX file as bytes
 
         Raises
-        -------
+        ------
         ADRException
             If rendering fails, an exception is raised with details about the failure.
 
-        Example
-        -------
+        Examples
+        --------
         >>> template = PPTXLayout.get(guid="some-guid")
         >>> pptx_bytes = template.render_pptx(context={"key": "value"}, item_filter="some_filter", request=request)
         >>> with open("output.pptx", "wb") as f:
