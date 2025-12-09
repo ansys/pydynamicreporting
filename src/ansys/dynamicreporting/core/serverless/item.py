@@ -671,7 +671,7 @@ class Item(BaseModel):
         return super().find(query=f"A|i_type|cont|{cls.type};{query}")  # noqa: E702
 
     def render(self, *, context=None, request=None) -> str | None:
-        """Render the item as HTML using the legacy template system.
+        """Render the item as HTML.
 
         Parameters
         ----------
