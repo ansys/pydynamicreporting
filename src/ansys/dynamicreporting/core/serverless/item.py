@@ -310,11 +310,11 @@ class SimplePayloadMixin:
     """
 
     @classmethod
-    def from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, **kwargs):
         """Reconstruct content from the ORM ``payloaddata`` field."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().from_db(orm_instance, **kwargs)
+        obj = super()._from_db(orm_instance, **kwargs)
         obj.content = safe_unpickle(obj._orm_instance.payloaddata)
         return obj
 
@@ -382,9 +382,9 @@ class FilePayloadMixin:
             return None
 
     @classmethod
-    def from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, **kwargs):
         """Reconstruct file-backed content from the ORM instance."""
-        obj = super().from_db(orm_instance, **kwargs)
+        obj = super()._from_db(orm_instance, **kwargs)
         obj.content = obj._orm_instance.payloadfile.path
         return obj
 
@@ -457,7 +457,7 @@ class Item(BaseModel):
     Items are typed containers of content linked to a :class:`Session`
     and a :class:`Dataset`. Concrete subclasses define the content
     validator and ``type`` string and are registered automatically so
-    that :meth:`from_db` and :meth:`create` can dispatch to the correct
+    that :meth:`_from_db` and :meth:`create` can dispatch to the correct
     subclass based on the stored type.
 
     Attributes
@@ -539,7 +539,7 @@ class Item(BaseModel):
         super().save(**kwargs)
 
     @classmethod
-    def from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, **kwargs):
         """Reconstruct an item or item subclass from the ORM instance.
 
         If called on :class:`Item` itself, this method dispatches to the
@@ -549,9 +549,9 @@ class Item(BaseModel):
         if cls is Item:
             # Get the class based on the type attribute
             item_cls = cls._type_registry[orm_instance.type]
-            return item_cls.from_db(orm_instance, **kwargs)
+            return item_cls._from_db(orm_instance, **kwargs)
 
-        return super().from_db(orm_instance, **kwargs)
+        return super()._from_db(orm_instance, **kwargs)
 
     @classmethod
     def create(cls, **kwargs):
@@ -735,11 +735,11 @@ class Table(Item):
     _properties: tuple = table_attr + _payload_properties
 
     @classmethod
-    def from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, **kwargs):
         """Rebuild the table array and payload properties from ``payloaddata``."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super().from_db(orm_instance, **kwargs)
+        obj = super()._from_db(orm_instance, **kwargs)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:

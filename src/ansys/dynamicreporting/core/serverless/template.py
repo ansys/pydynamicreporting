@@ -157,7 +157,7 @@ class Template(BaseModel):
         super().save(**kwargs)
 
     @classmethod
-    def from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, **kwargs):
         # Create a new instance of the correct subclass
         if cls is Template:
             # the typename should be:  Class:Classname  where Class can be 'Layout' or 'Generator'
@@ -168,9 +168,9 @@ class Template(BaseModel):
                 type_name = "Layout:" + type_name
             # Get the class based on the type attribute
             templ_cls = cls._type_registry[type_name]
-            obj = templ_cls.from_db(orm_instance, **kwargs)
+            obj = templ_cls._from_db(orm_instance, **kwargs)
         else:
-            obj = super().from_db(orm_instance, **kwargs)
+            obj = super()._from_db(orm_instance, **kwargs)
         # add relevant props from property dict.
         props = obj.get_property()
         for prop in cls._properties:

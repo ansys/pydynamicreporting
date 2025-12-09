@@ -542,7 +542,7 @@ class BaseModel(metaclass=BaseMeta):
         return count
 
     @classmethod
-    def from_db(cls, orm_instance, parent=None):
+    def _from_db(cls, orm_instance, parent=None):
         """Create a :class:`BaseModel` instance from a Django ORM instance.
 
         This method bypasses ``__init__`` to avoid re-validation and
@@ -578,7 +578,7 @@ class BaseModel(metaclass=BaseMeta):
                     # from the previous 'from_db' load to prevent infinite recursion.
                     value = parent
                 else:
-                    value = type_.from_db(value)
+                    value = type_._from_db(value)
             elif isinstance(value, Manager):
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
@@ -684,7 +684,7 @@ class BaseModel(metaclass=BaseMeta):
         except MultipleObjectsReturned:
             raise cls.MultipleObjectsReturned
 
-        return cls.from_db(orm_instance)
+        return cls._from_db(orm_instance)
 
     @classmethod
     @_handle_field_errors
@@ -826,7 +826,7 @@ class ObjectSet:
             return
         self._saved = True
         self._obj_set = [
-            self._model.from_db(instance, parent=self._parent) for instance in self._orm_queryset
+            self._model._from_db(instance, parent=self._parent) for instance in self._orm_queryset
         ]
 
     def __repr__(self):
