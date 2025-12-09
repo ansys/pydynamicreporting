@@ -3,7 +3,7 @@
 This module provides the foundational abstractions used by the serverless ADR
 API:
 
-* :class:`BaseModel` – a lightweight dataclass wrapper around a Django ORM
+* :class:`BaseModel` – a lightweight dataclass wrapper around an ADR ORM
   model, with validation, tagging, and CRUD helpers.
 * :class:`ObjectSet` – a simple collection wrapper around query results that
   materializes :class:`BaseModel` instances.
@@ -495,8 +495,8 @@ class BaseModel(metaclass=BaseMeta):
         Parameters
         ----------
         **kwargs
-            Keyword arguments forwarded to the Django ``save`` method of
-            the underlying ORM instance. The ``using`` argument can be
+            Keyword arguments forwarded to the database ``save`` method of
+            the underlying ORM instance. For eg: The ``using`` argument can be
             used to select the target database alias.
 
         Raises
@@ -520,14 +520,8 @@ class BaseModel(metaclass=BaseMeta):
         else:
             obj._saved = True
 
-    def delete(self, **kwargs):
+    def delete(self):
         """Delete this object from the database.
-
-        Parameters
-        ----------
-        **kwargs
-            Keyword arguments forwarded to the Django ``delete`` method
-            of the underlying ORM instance.
 
         Returns
         -------
@@ -543,7 +537,7 @@ class BaseModel(metaclass=BaseMeta):
             raise self.__class__.NotSaved(
                 extra_detail=f"Delete failed for object with guid '{self.guid}'."
             )
-        count, _ = self._orm_instance.delete(**kwargs)
+        count, _ = self._orm_instance.delete()
         self._saved = False
         return count
 
@@ -555,25 +549,6 @@ class BaseModel(metaclass=BaseMeta):
         instead copies fields directly from the ORM object, converting
         relations into :class:`BaseModel` instances or :class:`ObjectSet`
         collections as needed.
-
-        Parameters
-        ----------
-        orm_instance : django.db.models.Model
-            Concrete Django model instance to wrap.
-        parent : BaseModel, optional
-            Parent object in a hierarchy, used to avoid infinite
-            recursion when reconstructing trees of related objects.
-
-        Returns
-        -------
-        BaseModel
-            Newly constructed and marked-as-saved proxy instance.
-
-        Raises
-        ------
-        TypeError
-            If dataclass type annotations are incompatible with the
-            actual ORM field types.
         """
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(orm_instance)
@@ -679,10 +654,8 @@ class BaseModel(metaclass=BaseMeta):
         Parameters
         ----------
         **kwargs
-            Django ORM-style filter arguments. The special ``using``
-            argument can be supplied to select a database alias. If any
-            value is a :class:`BaseModel` instance, it is converted to
-            its underlying ORM instance automatically.
+            Keyword arguments to configure the database operation.
+            Eg: The special ``using`` argument can be supplied to select a database alias.
 
         Returns
         -------
@@ -721,35 +694,33 @@ class BaseModel(metaclass=BaseMeta):
         Parameters
         ----------
         **kwargs
-            Django ORM-style filter arguments. The special ``using``
-            argument can be supplied to select a database alias. Values
-            that are :class:`BaseModel` instances are converted into
-            their ORM counterparts.
+            Keyword arguments to filter the queryset. Eg: `tags="key=value"`.
+            The special ``using`` argument can be supplied to select a database alias.
 
         Returns
         -------
         ObjectSet
             Collection wrapper around the resulting queryset.
         """
+        filter_kwargs = {}
+        db_alias = kwargs.pop("using", "default")
         for key, value in kwargs.items():
             if isinstance(value, BaseModel):
-                kwargs[key] = value._orm_instance
-        qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
+                filter_kwargs[key] = value._orm_instance
+            else:
+                filter_kwargs[key] = value
+        qs = cls._orm_model_cls.objects.using(db_alias).filter(**filter_kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
     @_handle_field_errors
-    def find(cls, query="", **kwargs) -> "ObjectSet":
-        """Search for objects using the model's custom ``find`` API.
+    def find(cls, query="") -> "ObjectSet":
+        """Search for objects using an ADR query string.
 
         Parameters
         ----------
         query : str, default: ""
-            Free-text or domain-specific query string interpreted by the
-            underlying ORM model's ``find`` implementation.
-        **kwargs
-            Additional keyword arguments forwarded to the model's
-            ``find`` method.
+            ADR Query string.
 
         Returns
         -------
@@ -757,7 +728,7 @@ class BaseModel(metaclass=BaseMeta):
             Collection of results wrapped as :class:`BaseModel`
             instances.
         """
-        qs = cls._orm_model_cls.find(query=query, **kwargs)
+        qs = cls._orm_model_cls.find(query=query)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self) -> str:
