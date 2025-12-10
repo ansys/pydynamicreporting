@@ -232,14 +232,22 @@ class BaseModel(metaclass=BaseMeta):
     """
 
     guid: str = field(compare=False, kw_only=True, default_factory=_get_uuid)
+    """Globally unique identifier for this object."""
+
     tags: str = field(compare=False, kw_only=True, default="")
+    """Tag string used to group and filter objects."""
+
     _saved: bool = field(
-        init=False, compare=False, default=False
+        init=False,
+        compare=False,
+        default=False,
     )  # tracks if the object is saved in the db
     _orm_model: str = field(init=False, compare=False, default=None)
     _orm_model_cls: type[Model] = field(init=False, compare=False, default=None)
     _orm_instance: Model = field(
-        init=False, compare=False, default=None
+        init=False,
+        compare=False,
+        default=None,
     )  # tracks the corresponding ORM instance
 
     # check if ADR is set up before creating instances
@@ -601,7 +609,10 @@ class BaseModel(metaclass=BaseMeta):
                     )
                 if qs:
                     obj_set = ObjectSet(
-                        _model=content_type, _orm_model=qs.model, _orm_queryset=qs, _parent=obj
+                        _model=content_type,
+                        _orm_model=qs.model,
+                        _orm_queryset=qs,
+                        _parent=obj,
                     )
                     value = type_(obj_set)
                 else:

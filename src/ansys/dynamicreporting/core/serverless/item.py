@@ -40,53 +40,54 @@ class Session(BaseModel):
     """Execution context for a reporting run.
 
     A :class:`Session` captures environment information for a single ADR
-    execution, such as host name, platform and application version. It is
+    execution, such as host name, platform, and application version. It is
     referenced by :class:`Item` instances to group related content.
-
-    Attributes
-    ----------
-    date : datetime.datetime
-        Session creation timestamp, defaulting to the current timestamp.
-    hostname : str
-        Hostname where the session was created.
-    platform : str
-        Platform/architecture identifier (for example ``"win64"``).
-    application : str
-        Application name that produced the session.
-    version : str
-        Application version string.
     """
 
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
+    """Session creation timestamp, defaulting to the current time."""
+
     hostname: str = field(compare=False, kw_only=True, default=str(platform.node()))
-    platform: str = field(compare=False, kw_only=True, default=str(report_utils.enve_arch()))
-    application: str = field(compare=False, kw_only=True, default="Serverless ADR Python API")
+    """Hostname where the session was created."""
+
+    platform: str = field(
+        compare=False,
+        kw_only=True,
+        default=str(report_utils.enve_arch()),
+    )
+    """Platform/architecture identifier (for example ``"win64"``)."""
+
+    application: str = field(
+        compare=False,
+        kw_only=True,
+        default="Serverless ADR Python API",
+    )
+    """Application name that produced the session."""
+
     version: str = field(compare=False, kw_only=True, default="1.0")
+    """Application version string."""
+
     _orm_model: str = "data.models.Session"
 
 
 class Dataset(BaseModel):
-    """Metadata describing a source dataset used for reporting.
-
-    Attributes
-    ----------
-    filename : str
-        Dataset file name (without directory).
-    dirname : str
-        Directory containing the dataset.
-    format : str
-        Dataset format identifier (for example ``"hdf5"``).
-    numparts : int
-        Number of parts in the dataset.
-    numelements : int
-        Number of elements (for example rows or mesh elements) in the dataset.
-    """
+    """Metadata describing a source dataset used for reporting."""
 
     filename: str = field(compare=False, kw_only=True, default="none")
+    """Dataset file name (without directory)."""
+
     dirname: str = field(compare=False, kw_only=True, default="")
+    """Directory containing the dataset."""
+
     format: str = field(compare=False, kw_only=True, default="none")
+    """Dataset format identifier (for example ``"hdf5"``)."""
+
     numparts: int = field(compare=False, kw_only=True, default=0)
+    """Number of parts in the dataset."""
+
     numelements: int = field(compare=False, kw_only=True, default=0)
+    """Number of elements (for example rows or mesh elements) in the dataset."""
+
     _orm_model: str = "data.models.Dataset"
 
 
@@ -459,38 +460,32 @@ class Item(BaseModel):
     validator and ``type`` string and are registered automatically so
     that :meth:`_from_db` and :meth:`create` can dispatch to the correct
     subclass based on the stored type.
-
-    Attributes
-    ----------
-    name : str
-        Human-readable name for the item.
-    date : datetime.datetime
-        Timestamp when the item was created.
-    source : str
-        Optional free-form source identifier.
-    sequence : int
-        Sequence index for ordering items within a dataset/session.
-    session : Session
-        Session owning this item.
-    dataset : Dataset
-        Dataset associated with this item.
-    content : ItemContent
-        Descriptor enforcing content validation.
-    type : str
-        Item type identifier, normally set by subclasses.
-    _in_memory : bool
-        Flag that can be used by callers to track ephemeral items that
-        should not be persisted.
     """
 
     name: str = field(compare=False, kw_only=True, default="")
+    """Human-readable name for the item."""
+
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
+    """Timestamp when the item was created."""
+
     source: str = field(compare=False, kw_only=True, default="")
+    """Optional free-form source identifier for this item."""
+
     sequence: int = field(compare=False, kw_only=True, default=0)
+    """Sequence index for ordering items within a dataset/session."""
+
     session: Session = field(compare=False, kw_only=True, default=None)
+    """Session that owns this item."""
+
     dataset: Dataset = field(compare=False, kw_only=True, default=None)
+    """Dataset associated with this item."""
+
     content: ItemContent = ItemContent()
+    """Payload content for the item."""
+
     type: str = ItemType.NONE  # todo: make this read-only
+    """Item type identifier, normally set by subclasses."""
+
     _orm_model: str = "data.models.Item"
     _type_registry = {}  # Class-level registry of subclasses keyed by type
     _in_memory: bool = field(compare=False, kw_only=True, default=False)
@@ -709,14 +704,20 @@ class String(SimplePayloadMixin, Item):
     """Item representing a plain string payload."""
 
     content: StringContent = StringContent()
+    """Validated string content for this item."""
+
     type: str = ItemType.STRING
+    """Item type identifier for string items."""
 
 
 class HTML(String):
     """Item representing an HTML fragment."""
 
     content: HTMLContent = HTMLContent()
+    """Validated HTML fragment content for this item."""
+
     type: str = ItemType.HTML
+    """Item type identifier for HTML items."""
 
 
 class Table(Item):
@@ -727,7 +728,11 @@ class Table(Item):
     """
 
     content: TableContent = TableContent()
+    """Validated 2D NumPy array content for this table item."""
+
     type: str = ItemType.TABLE
+    """Item type identifier for table items."""
+
     _payload_properties: tuple = (  # for backwards compatibility
         "rowlbls",
         "collbls",
@@ -781,17 +786,29 @@ class Tree(SimplePayloadMixin, Item):
     """Item representing a hierarchical tree payload."""
 
     content: TreeContent = TreeContent()
+    """Validated tree structure content for this item."""
+
     type: str = ItemType.TREE
+    """Item type identifier for tree items."""
 
 
 class Image(FilePayloadMixin, Item):
     """Item representing an image payload, optionally enhanced."""
 
     _width: int = field(compare=False, init=False, default=0)
+    """Image width in pixels, populated from the source file."""
+
     _height: int = field(compare=False, init=False, default=0)
+    """Image height in pixels, populated from the source file."""
+
     _enhanced: bool = field(compare=False, init=False, default=False)
+    """Whether this image has enhanced metadata (for example TIFF enhancements)."""
+
     content: ImageContent = ImageContent()
+    """Validated image file content for this item."""
+
     type: str = ItemType.IMAGE
+    """Item type identifier for image items."""
 
     @property
     def width(self):
@@ -857,14 +874,20 @@ class Animation(FilePayloadMixin, Item):
     """Item representing an animation/video payload."""
 
     content: AnimContent = AnimContent()
+    """Validated animation/video file content for this item."""
+
     type: str = ItemType.ANIMATION
+    """Item type identifier for animation items."""
 
 
 class Scene(FilePayloadMixin, Item):
     """Item representing a 3D scene or geometry payload."""
 
     content: SceneContent = SceneContent()
+    """Validated 3D scene or geometry file content for this item."""
+
     type: str = ItemType.SCENE
+    """Item type identifier for scene items."""
 
     def save(self, **kwargs):
         """Save the 3D scene payload and ensure derived geometry is built.
@@ -894,7 +917,10 @@ class File(FilePayloadMixin, Item):
     """Item representing a generic file payload."""
 
     content: FileContent = FileContent()
+    """Validated generic file content for this item."""
+
     type: str = ItemType.FILE
+    """Item type identifier for generic file items."""
 
     def save(self, **kwargs):
         """Save the generic file payload and rebuild geometry if needed.
