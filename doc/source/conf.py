@@ -1,42 +1,49 @@
 """Sphinx documentation configuration file."""
 
-import os
-import sys
-import types
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as metadata_version
+import os
+import sys
+import types
 
 from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
 from packaging.version import InvalidVersion, Version
 from sphinx_gallery.sorting import FileNameSortKey
 
 # ---------------------------------------------------------------------------
-# Mock heavy / Ansys-only runtime dependencies so autodoc + numpydoc
-# can import serverless modules on CI without a full ADR installation.
+# Mock heavy / ADR-only dependencies so autodoc + numpydoc can import modules
+# without a full Nexus/ADR runtime available in CI.
 # ---------------------------------------------------------------------------
-_MOCK_MODULES = [
-    "data",
-    "data.models",
-    "data.geofile_rendering",
-    "reports",
-    "reports.engine",
-    "ceireports",
-    "ceireports.utils",
-]
+_MOCK_PACKAGES: dict[str, list[str]] = {
+    "data": ["models", "utils", "geofile_rendering"],
+    "reports": ["models", "engine"],
+    "ceireports": ["utils"],
+}
 
-for mod_name in _MOCK_MODULES:
-    if mod_name not in sys.modules:
-        sys.modules[mod_name] = types.ModuleType(mod_name)
+for pkg_name, submods in _MOCK_PACKAGES.items():
+    # Create package-like module
+    if pkg_name not in sys.modules:
+        pkg_mod = types.ModuleType(pkg_name)
+        # Mark as a package so `import pkg.sub` works
+        pkg_mod.__path__ = []  # type: ignore[attr-defined]
+        sys.modules[pkg_name] = pkg_mod
+    else:
+        pkg_mod = sys.modules[pkg_name]
+        # Ensure existing module is treated as a package
+        if not hasattr(pkg_mod, "__path__"):
+            pkg_mod.__path__ = []  # type: ignore[attr-defined]
 
-# Ensure dotted modules are also attributes on their parent package
-for mod_name in _MOCK_MODULES:
-    if "." in mod_name:
-        pkg_name, attr_name = mod_name.rsplit(".", 1)
-        pkg = sys.modules.get(pkg_name)
-        sub = sys.modules.get(mod_name)
-        if pkg is not None and sub is not None:
-            setattr(pkg, attr_name, sub)
+    # Create submodules and attach them to the package
+    for sub_name in submods:
+        full_name = f"{pkg_name}.{sub_name}"
+        if full_name not in sys.modules:
+            sub_mod = types.ModuleType(full_name)
+            sys.modules[full_name] = sub_mod
+        else:
+            sub_mod = sys.modules[full_name]
+
+        setattr(pkg_mod, sub_name, sub_mod)
 
 
 project = "ansys-dynamicreporting-core"
@@ -162,6 +169,7 @@ autodoc_mock_imports = [
     "data.utils",
     "data.geofile_rendering",
     "reports",
+    "reports.models",
     "reports.engine",
     "ceireports",
     "ceireports.utils",
