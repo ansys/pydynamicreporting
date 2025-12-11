@@ -1,13 +1,43 @@
 """Sphinx documentation configuration file."""
 
+import os
+import sys
+import types
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as metadata_version
-import os
 
 from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
 from packaging.version import InvalidVersion, Version
 from sphinx_gallery.sorting import FileNameSortKey
+
+# ---------------------------------------------------------------------------
+# Mock heavy / Ansys-only runtime dependencies so autodoc + numpydoc
+# can import serverless modules on CI without a full ADR installation.
+# ---------------------------------------------------------------------------
+_MOCK_MODULES = [
+    "data",
+    "data.models",
+    "data.geofile_rendering",
+    "reports",
+    "reports.engine",
+    "ceireports",
+    "ceireports.utils",
+]
+
+for mod_name in _MOCK_MODULES:
+    if mod_name not in sys.modules:
+        sys.modules[mod_name] = types.ModuleType(mod_name)
+
+# Ensure dotted modules are also attributes on their parent package
+for mod_name in _MOCK_MODULES:
+    if "." in mod_name:
+        pkg_name, attr_name = mod_name.rsplit(".", 1)
+        pkg = sys.modules.get(pkg_name)
+        sub = sys.modules.get(mod_name)
+        if pkg is not None and sub is not None:
+            setattr(pkg, attr_name, sub)
+
 
 project = "ansys-dynamicreporting-core"
 try:
@@ -125,6 +155,18 @@ autodoc_default_options = {
     "undoc-members": False,  # skip members without docstrings
     "show-inheritance": True,  # show base classes
 }
+
+autodoc_mock_imports = [
+    "data",
+    "data.models",
+    "data.utils",
+    "data.geofile_rendering",
+    "reports",
+    "reports.engine",
+    "ceireports",
+    "ceireports.utils",
+]
+
 
 nitpick_ignore = [
     ("py:obj", "type"),
