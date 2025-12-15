@@ -214,7 +214,7 @@ PROPERTIES_EXEMPT = {
 }
 
 
-def _validate_html_string(value, field_name):
+def _validate_html_string(value: str, field_name: str):
     """Helper function to validate that a string does not contain HTML content.
     
     Args:
