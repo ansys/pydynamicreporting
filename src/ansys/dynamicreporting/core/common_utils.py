@@ -214,6 +214,21 @@ PROPERTIES_EXEMPT = {
 }
 
 
+def _validate_html_string(value, field_name):
+    """Helper function to validate that a string does not contain HTML content.
+    
+    Args:
+        value: String value to validate
+        field_name: Name of the field being validated for error messages
+        
+    Raises:
+        ValueError: If the string contains HTML content
+    """
+    cleaned_string = bleach.clean(value, strip=True)
+    if cleaned_string != value:
+        raise ValueError(f"{field_name} contains HTML content.")
+
+
 def validate_html_dictionary(data):
     for key, value in data.items():
         # Do not validate HTML key
@@ -235,9 +250,7 @@ def validate_html_dictionary(data):
 
         # Main check for strings
         elif isinstance(value, str):
-            cleaned_string = bleach.clean(value, strip=True)
-            if cleaned_string != value:
-                raise ValueError(f"{key} contains HTML content.")
+            _validate_html_string(value, key)
 
         # Ignore other types
         else:
@@ -247,9 +260,7 @@ def validate_html_dictionary(data):
 def validate_html_list(value_list, key):
     for item in value_list:
         if isinstance(item, str):
-            cleaned_string = bleach.clean(item, strip=True)
-            if cleaned_string != item:
-                raise ValueError(f"{key} contains HTML content.")
+            _validate_html_string(item, key)
         elif isinstance(item, dict):
             validate_html_dictionary(item)
         elif isinstance(item, list):
