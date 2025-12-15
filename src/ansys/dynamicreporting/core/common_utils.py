@@ -226,7 +226,7 @@ def _validate_html_string(value: str, field_name: str) -> None:
     """
     cleaned_string = bleach.clean(value, strip=True)
     if cleaned_string != value:
-        raise ValueError(f"{field_name} contains HTML content.")
+        raise ValueError(f"{field_name} contains HTML content. Value: {value}")
 
 
 def validate_html_dictionary(data):

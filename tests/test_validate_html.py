@@ -47,14 +47,15 @@ class TestValidateHTMLDictionary:
         validate_html_dictionary(data)  # Should not raise
 
     def test_invalid_html_in_string(self):
-        """Test that HTML content in string raises ValueError with field name."""
+        """Test that HTML content in string raises ValueError with field name and value."""
         data = {"field1": "<div>Bold text</div>"}
         with pytest.raises(ValueError) as exc_info:
             validate_html_dictionary(data)
         assert "field1 contains HTML content." in str(exc_info.value)
+        assert "<div>Bold text</div>" in str(exc_info.value)
 
     def test_invalid_html_in_nested_dict(self):
-        """Test that HTML content in nested dict raises ValueError with field name."""
+        """Test that HTML content in nested dict raises ValueError with field name and value."""
         data = {
             "outer": {
                 "inner_field": "<script>alert('xss')</script>"
@@ -63,27 +64,30 @@ class TestValidateHTMLDictionary:
         with pytest.raises(ValueError) as exc_info:
             validate_html_dictionary(data)
         assert "inner_field contains HTML content." in str(exc_info.value)
+        assert "<script>alert('xss')</script>" in str(exc_info.value)
 
     def test_invalid_html_in_list(self):
-        """Test that HTML content in list raises ValueError with field name."""
+        """Test that HTML content in list raises ValueError with field name and value."""
         data = {
             "list_field": ["plain", "<div>html</div>", "text"]
         }
         with pytest.raises(ValueError) as exc_info:
             validate_html_dictionary(data)
         assert "list_field contains HTML content." in str(exc_info.value)
+        assert "<div>html</div>" in str(exc_info.value)
 
     def test_invalid_html_in_nested_list(self):
-        """Test that HTML content in nested list raises ValueError with field name."""
+        """Test that HTML content in nested list raises ValueError with field name and value."""
         data = {
             "outer_list": [["plain"], ["<p>paragraph</p>"]]
         }
         with pytest.raises(ValueError) as exc_info:
             validate_html_dictionary(data)
         assert "outer_list contains HTML content." in str(exc_info.value)
+        assert "<p>paragraph</p>" in str(exc_info.value)
 
     def test_invalid_html_in_dict_within_list(self):
-        """Test that HTML content in dict within list raises ValueError with field name."""
+        """Test that HTML content in dict within list raises ValueError with field name and value."""
         data = {
             "list_of_dicts": [
                 {"field": "plain"},
@@ -93,9 +97,10 @@ class TestValidateHTMLDictionary:
         with pytest.raises(ValueError) as exc_info:
             validate_html_dictionary(data)
         assert "field contains HTML content." in str(exc_info.value)
+        assert "<span>html</span>" in str(exc_info.value)
 
     def test_non_exempt_properties_validated(self):
-        """Test that non-exempt keys in properties are validated."""
+        """Test that non-exempt keys in properties are validated and include value."""
         data = {
             "properties": {
                 "title": "plain text",  # exempt
@@ -105,6 +110,7 @@ class TestValidateHTMLDictionary:
         with pytest.raises(ValueError) as exc_info:
             validate_html_dictionary(data)
         assert "custom_field contains HTML content." in str(exc_info.value)
+        assert "<div>html</div>" in str(exc_info.value)
 
     def test_mixed_types(self):
         """Test that mixed types are handled correctly."""
