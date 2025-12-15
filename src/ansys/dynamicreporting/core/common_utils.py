@@ -216,11 +216,11 @@ PROPERTIES_EXEMPT = {
 
 def _check_string_for_html(value: str, field_name: str) -> None:
     """Helper function to validate that a string does not contain HTML content.
-    
+
     Args:
         value: String value to validate
         field_name: Name of the field being validated for error messages
-        
+
     Raises:
         ValueError: If the string contains HTML content
     """
