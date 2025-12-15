@@ -214,7 +214,7 @@ PROPERTIES_EXEMPT = {
 }
 
 
-def _validate_html_string(value: str, field_name: str) -> None:
+def _check_string_for_html(value: str, field_name: str) -> None:
     """Helper function to validate that a string does not contain HTML content.
     
     Args:
@@ -250,7 +250,7 @@ def validate_html_dictionary(data):
 
         # Main check for strings
         elif isinstance(value, str):
-            _validate_html_string(value, key)
+            _check_string_for_html(value, key)
 
         # Ignore other types
         else:
@@ -260,7 +260,7 @@ def validate_html_dictionary(data):
 def validate_html_list(value_list, key):
     for item in value_list:
         if isinstance(item, str):
-            _validate_html_string(item, key)
+            _check_string_for_html(item, key)
         elif isinstance(item, dict):
             validate_html_dictionary(item)
         elif isinstance(item, list):
