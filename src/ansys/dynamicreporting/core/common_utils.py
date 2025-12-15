@@ -229,7 +229,7 @@ def _check_string_for_html(value: str, field_name: str) -> None:
         raise ValueError(f"{field_name} contains HTML content. Value: {value}")
 
 
-def validate_html_dictionary(data):
+def check_dictionary_for_html(data):
     for key, value in data.items():
         # Do not validate HTML key
         if key == "HTML":
@@ -240,13 +240,13 @@ def validate_html_dictionary(data):
             # Specific checks for properties key
             if key == "properties":
                 subdict = {k: v for k, v in value.items() if k not in PROPERTIES_EXEMPT}
-                validate_html_dictionary(subdict)
+                check_dictionary_for_html(subdict)
             else:
-                validate_html_dictionary(value)
+                check_dictionary_for_html(value)
 
         # Check for lists
         elif isinstance(value, list):
-            validate_html_list(value, key)
+            check_list_for_html(value, key)
 
         # Main check for strings
         elif isinstance(value, str):
@@ -257,13 +257,13 @@ def validate_html_dictionary(data):
             continue
 
 
-def validate_html_list(value_list, key):
+def check_list_for_html(value_list, key):
     for item in value_list:
         if isinstance(item, str):
             _check_string_for_html(item, key)
         elif isinstance(item, dict):
-            validate_html_dictionary(item)
+            check_dictionary_for_html(item)
         elif isinstance(item, list):
-            validate_html_list(item, key)
+            check_list_for_html(item, key)
         else:
             continue
