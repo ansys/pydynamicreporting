@@ -8,6 +8,7 @@
 
 * [Cadey Chen](https://github.com/cadeyansys)
 * [Dragan Colic](https://github.com/dcansys)
+* [inimaz](https://github.com/inimaz)
 * [James Derrick](https://github.com/jgd10)
 * [JennaPaikowsky](https://github.com/JennaPaikowsky)
 * [Kathy Pippert](https://github.com/PipKat)
