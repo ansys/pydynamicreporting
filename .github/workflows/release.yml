@@ -72,6 +72,8 @@ jobs:
   docs:
     name: Docs (post-release)
     needs: [ upload-release ]
+    permissions:
+      contents: write
     uses: ./.github/workflows/release-docs.yml
     with:
       ref: ${{ github.ref }}                     # build from the same tag/branch
