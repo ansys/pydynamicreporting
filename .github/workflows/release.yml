@@ -2,16 +2,17 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Tag/branch/SHA to build (e.g. refs/tags/v0.10.5)"
+        required: true
+        default: ""
   release:
     types: [ published ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.source_ref || github.ref }}
   cancel-in-progress: true
-
-# Default token is read-only unless overridden per job
-permissions:
-  contents: read
 
 jobs:
   build-release:
@@ -20,12 +21,16 @@ jobs:
     permissions:
       id-token: write         # REQUIRED for OIDC (provenance)
       attestations: write     # REQUIRED by attest-build-provenance v2
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'
+          fetch-depth: "0"
           fetch-tags: true
+          # If manually dispatched, build from inputs.source_ref (e.g. refs/tags/v0.10.5).
+          # Otherwise (release.published), build from the release tag (github.ref).
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Set up Python Env
         uses: ./.github/actions/setup-python-env
@@ -46,12 +51,14 @@ jobs:
     permissions:
       id-token: write         # REQUIRED for OIDC
       attestations: write     # REQUIRED by attest-build-provenance v2
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: '0'
+          fetch-depth: "0"
           fetch-tags: true
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v6
@@ -76,8 +83,9 @@ jobs:
       contents: write
     uses: ./.github/workflows/release-docs.yml
     with:
-      ref: ${{ github.ref }}                     # build from the same tag/branch
-    secrets: inherit                             # pass GITHUB_TOKEN, etc.
+      # Build docs from the same source ref used by the build/upload steps.
+      ref: ${{ inputs.source_ref || github.ref }}
+    secrets: inherit
 
   notify-release-failure:
     name: Teams notify on failure
