@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.10.8] - <Unreleased>
+## [0.10.7] - <Unreleased>
 
 ### Added
 
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
-## [0.10.7] - 2025-12-16
+## [0.10.6] - 2025-12-16
 
 ### Added
 - PPTX export improvements: added export_report_as_pptx and font control properties for PPTX exports.
