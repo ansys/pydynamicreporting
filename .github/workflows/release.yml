@@ -60,6 +60,9 @@ jobs:
           fetch-tags: true
           ref: ${{ inputs.source_ref || github.ref }}
 
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
       - name: Download all artifacts
         uses: actions/download-artifact@v6
         with:
