@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.10.5] - <Unreleased>
+## [0.10.6] - <Unreleased>
 
 ### Added
 
@@ -27,9 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
-### Security
+## Security
 
 -
+
+## [0.10.5] - 2025-12-16
+
+### Added
+- PPTX export improvements: added export_report_as_pptx and font control properties for PPTX exports.
+- [BETA] PDF export utilities: added render_pdf, render_report_as_pdf and export_report_as_pdf to enable programmatic PDF rendering and exporting of reports through serverless ADR.
+
+### Changed
+- HTML exporter: multiple updates and fixes to the HTML exporter and documentation; improved handling of static/media URLs and MathJax.
+
+### Fixed
+- Tree validation: fixed several issues in tree validation logic.
+- Export defaults and filenames: fixed default filename behavior for PPTX/PDF exports.
 
 ## [0.10.4] - 2025-10-31
 
