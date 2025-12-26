@@ -1,0 +1,6 @@
+get\_append\_tags
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: ItemsComparisonGenerator.get_append_tags

@@ -1,0 +1,6 @@
+saved
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoproperty:: File.saved

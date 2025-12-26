@@ -1,0 +1,6 @@
+version
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Session.version
