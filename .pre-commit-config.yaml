@@ -49,16 +49,14 @@ repos:
   - id: check-merge-conflict
   - id: trailing-whitespace
 
-# TO BE ACTIVATED ONCE TYPE ISSUES ARE RESOLVED
-#
-# - repo: local
-#   hooks:
-#   - id: ty
-#     name: ty
-#     entry: ty check
-#     language: system
-#     types: [ python ]
-#     pass_filenames: false
+- repo: local
+  hooks:
+  - id: ty
+    name: ty
+    entry: ty check
+    language: system
+    types: [ python ]
+    pass_filenames: false
 
 # TO BE ACTIVATED EVENTUALLY - EXISTING ERRORS SHOULD BE SOLVED
 #
