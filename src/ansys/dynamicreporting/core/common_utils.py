@@ -214,7 +214,22 @@ PROPERTIES_EXEMPT = {
 }
 
 
-def validate_html_dictionary(data):
+def _check_string_for_html(value: str, field_name: str) -> None:
+    """Helper function to validate that a string does not contain HTML content.
+
+    Args:
+        value: String value to validate
+        field_name: Name of the field being validated for error messages
+
+    Raises:
+        ValueError: If the string contains HTML content
+    """
+    cleaned_string = bleach.clean(value, strip=True)
+    if cleaned_string != value:
+        raise ValueError(f"{field_name} contains HTML content. Value: {value}")
+
+
+def check_dictionary_for_html(data):
     for key, value in data.items():
         # Do not validate HTML key
         if key == "HTML":
@@ -225,34 +240,30 @@ def validate_html_dictionary(data):
             # Specific checks for properties key
             if key == "properties":
                 subdict = {k: v for k, v in value.items() if k not in PROPERTIES_EXEMPT}
-                validate_html_dictionary(subdict)
+                check_dictionary_for_html(subdict)
             else:
-                validate_html_dictionary(value)
+                check_dictionary_for_html(value)
 
         # Check for lists
         elif isinstance(value, list):
-            validate_html_list(value, key)
+            check_list_for_html(value, key)
 
         # Main check for strings
         elif isinstance(value, str):
-            cleaned_string = bleach.clean(value, strip=True)
-            if cleaned_string != value:
-                raise ValueError(f"{key} contains HTML content.")
+            _check_string_for_html(value, key)
 
         # Ignore other types
         else:
             continue
 
 
-def validate_html_list(value_list, key):
+def check_list_for_html(value_list, key):
     for item in value_list:
         if isinstance(item, str):
-            cleaned_string = bleach.clean(item, strip=True)
-            if cleaned_string != item:
-                raise ValueError(f"{key} contains HTML content.")
+            _check_string_for_html(item, key)
         elif isinstance(item, dict):
-            validate_html_dictionary(item)
+            check_dictionary_for_html(item)
         elif isinstance(item, list):
-            validate_html_list(item, key)
+            check_list_for_html(item, key)
         else:
             continue

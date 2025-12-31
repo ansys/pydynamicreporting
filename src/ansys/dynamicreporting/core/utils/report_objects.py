@@ -22,7 +22,7 @@ import dateutil.parser
 import pytz
 
 from . import extremely_ugly_hacks, report_utils
-from ..common_utils import validate_html_dictionary
+from ..common_utils import check_dictionary_for_html
 from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
@@ -415,7 +415,7 @@ class Template:
         if type(d) is not dict:
             raise ValueError("Error: input must be a dictionary")
         if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
-            validate_html_dictionary(d)
+            check_dictionary_for_html(d)
         self.params = json.dumps(d)
         return
 
@@ -1542,7 +1542,7 @@ class TemplateREST(BaseRESTObject):
         if type(d) is not dict:
             raise ValueError("Error: input must be a dictionary")
         if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
-            validate_html_dictionary(d)
+            check_dictionary_for_html(d)
         self.params = json.dumps(d)
         return
 
