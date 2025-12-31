@@ -451,7 +451,7 @@ if HAS_VTK and HAS_DPF:
 
     def _generate_enhanced_image(
         model: dpf.Model,
-        var_fields: list[tuple[dpf.Field, str]],  # a list of dpf.Field and component
+        var_fields: list[tuple[dpf.Field, str | None]],  # a list of dpf.Field and component
         part_name: str,
         var_name: str,
         output: str | io.BytesIO,
