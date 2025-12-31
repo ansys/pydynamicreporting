@@ -57,10 +57,6 @@ repos:
     language: system
     types: [ python ]
     pass_filenames: false
-    args: [
-      # Ignore unresolved import errors for third-party libraries
-      "--ignore", "unresolved-import",
-    ]
 
 # TO BE ACTIVATED EVENTUALLY - EXISTING ERRORS SHOULD BE SOLVED
 #
