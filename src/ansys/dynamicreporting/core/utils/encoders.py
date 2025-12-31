@@ -41,9 +41,9 @@ class BaseEncoder(json.JSONEncoder):
                 raise TypeError(error_str)
                 pass
         elif hasattr(o, "__iter__"):
-            return tuple(item for item in obj)
+            return tuple(item for item in o)
 
-        return super().default(obj)
+        return super().default(o)
 
 
 class PayloaddataEncoder(BaseEncoder):
@@ -70,4 +70,4 @@ class PayloaddataEncoder(BaseEncoder):
             # Nexus arrays.
             return o.to_2dlist()
 
-        return super().default(obj)
+        return super().default(o)
