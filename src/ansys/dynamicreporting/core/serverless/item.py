@@ -247,7 +247,7 @@ class FileValidator(StringContent):
         with file_path.open(mode="rb") as f:
             file = DjangoFile(f)
         # check file type
-        file_ext = Path(file.name).suffix.lower().lstrip(".")
+        file_ext = Path(file.name or "").suffix.lower().lstrip(".")
         if self.ALLOWED_EXT is not None and file_ext not in self.ALLOWED_EXT:
             raise ValueError(f"File type {file_ext} is not supported by {obj.__class__}")
         # check for empty files
@@ -311,11 +311,11 @@ class SimplePayloadMixin:
     """
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None):
         """Reconstruct content from the ORM ``payloaddata`` field."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super()._from_db(orm_instance, **kwargs)
+        obj = super()._from_db(orm_instance, parent=parent)  # type: ignore[misc]
         obj.content = safe_unpickle(obj._orm_instance.payloaddata)
         return obj
 
@@ -338,8 +338,8 @@ class SimplePayloadMixin:
         Exception
             Any other unexpected exception is propagated unchanged.
         """
-        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)
-        super().save(**kwargs)
+        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)  # type: ignore[attr-defined]
+        super().save(**kwargs)  # type: ignore[misc]
 
 
 class FilePayloadMixin:
@@ -350,7 +350,7 @@ class FilePayloadMixin:
     on the object for convenience.
     """
 
-    _file: DjangoFile = field(init=False, compare=False, default=None)
+    _file: DjangoFile | None = field(init=False, compare=False, default=None)
     _file_ext: str = field(init=False, compare=False, default="")
 
     @property
@@ -363,7 +363,7 @@ class FilePayloadMixin:
             File path or ``None`` if no file has been associated yet.
         """
         try:
-            return self._orm_instance.payloadfile.path
+            return self._orm_instance.payloadfile.path  # type: ignore[attr-defined]
         except (AttributeError, ValueError):
             # If the file path is not set, return None
             return None
@@ -377,16 +377,16 @@ class FilePayloadMixin:
     def file_ext(self):
         """File extension of the payload file, without the leading dot."""
         try:
-            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")
+            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")  # type: ignore[attr-defined]
         except (AttributeError, ValueError):
             # If the file path is not set, return None
             return None
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None):
         """Reconstruct file-backed content from the ORM instance."""
-        obj = super()._from_db(orm_instance, **kwargs)
-        obj.content = obj._orm_instance.payloadfile.path
+        obj = super()._from_db(orm_instance, parent=parent)  # type: ignore[misc]
+        obj.content = obj._orm_instance.payloadfile.path  # type: ignore[attr-defined]
         return obj
 
     @staticmethod
@@ -424,18 +424,18 @@ class FilePayloadMixin:
         Exception
             Any other unexpected exception is propagated unchanged.
         """
-        self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
+        self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"  # type: ignore[attr-defined]
         # Save file to the target path
-        self._save_file(self.file_path, self._file)
+        self._save_file(self.file_path, self._file)  # type: ignore[attr-defined]
         # save ORM instance
-        super().save(**kwargs)
+        super().save(**kwargs)  # type: ignore[misc]
 
     def delete(self):
         """Delete the payload file and then the ORM instance."""
         from data.utils import delete_item_media
 
-        delete_item_media(self._orm_instance.guid)
-        return super().delete()
+        delete_item_media(self._orm_instance.guid)  # type: ignore[attr-defined]
+        return super().delete()  # type: ignore[misc]
 
 
 class ItemType(StrEnum):
@@ -474,10 +474,10 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     """Sequence index for ordering items within a dataset/session."""
 
-    session: Session = field(compare=False, kw_only=True, default=None)
+    session: Session | None = field(compare=False, kw_only=True, default=None)
     """Session that owns this item."""
 
-    dataset: Dataset = field(compare=False, kw_only=True, default=None)
+    dataset: Dataset | None = field(compare=False, kw_only=True, default=None)
     """Dataset associated with this item."""
 
     content: ItemContent = ItemContent()
@@ -524,17 +524,17 @@ class Item(BaseModel):
         if self.session is None or self.dataset is None:
             raise ADRException(extra_detail="A session and a dataset are required to save an item")
         if not self.session.saved:
-            raise Session.NotSaved(
+            raise Session.NotSaved(  # type: ignore[attr-defined]
                 extra_detail="Failed to save item because the session is not saved"
             )
         if not self.dataset.saved:
-            raise Dataset.NotSaved(
+            raise Dataset.NotSaved(  # type: ignore[attr-defined]
                 extra_detail="Failed to save item because the dataset is not saved"
             )
         super().save(**kwargs)
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None):
         """Reconstruct an item or item subclass from the ORM instance.
 
         If called on :class:`Item` itself, this method dispatches to the
@@ -544,9 +544,9 @@ class Item(BaseModel):
         if cls is Item:
             # Get the class based on the type attribute
             item_cls = cls._type_registry[orm_instance.type]
-            return item_cls._from_db(orm_instance, **kwargs)
+            return item_cls._from_db(orm_instance, parent=parent)
 
-        return super()._from_db(orm_instance, **kwargs)
+        return super()._from_db(orm_instance, parent=parent)
 
     @classmethod
     def create(cls, **kwargs):
@@ -691,7 +691,8 @@ class Item(BaseModel):
             "format": context.get("format", None),
         }
         try:
-            ctx["HTML"] = self._orm_instance.render(ctx)
+            assert self._orm_instance is not None
+            ctx["HTML"] = self._orm_instance.render(ctx)  # type: ignore[attr-defined]
         except Exception as e:
             from ceireports.utils import get_render_error_html
 
@@ -740,11 +741,11 @@ class Table(Item):
     _properties: tuple = table_attr + _payload_properties
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None):
         """Rebuild the table array and payload properties from ``payloaddata``."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super()._from_db(orm_instance, **kwargs)
+        obj = super()._from_db(orm_instance, parent=parent)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
@@ -778,7 +779,8 @@ class Table(Item):
             value = getattr(self, prop, None)
             if value is not None:
                 payload[prop] = value
-        self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
+        assert self._orm_instance is not None
+        self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)  # type: ignore[assignment]
         super().save(**kwargs)
 
 
@@ -850,12 +852,14 @@ class Image(FilePayloadMixin, Item):
         Exception
             Any other unexpected exception is propagated unchanged.
         """
+        assert self._file is not None
         with self._file.open(mode="rb") as f:
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
         # Determine final file name and format
         target_ext = "png" if not self._enhanced else self._file_ext
-        self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
+        assert self._orm_instance is not None
+        self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"  # type: ignore[assignment]
         # Save the image
         if self._file_ext != target_ext and target_ext == "png":
             # Convert to PNG format
