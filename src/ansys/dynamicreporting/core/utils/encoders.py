@@ -1,6 +1,7 @@
 import datetime
 import json
 import uuid
+from typing import Any
 
 from .report_utils import nexus_array
 
@@ -20,7 +21,7 @@ class BaseEncoder(json.JSONEncoder):
        The ``isinstance()`` checks **always** come first.
     """
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, datetime.datetime):
             representation = obj.isoformat()
             if representation.endswith("+00:00"):
@@ -60,7 +61,7 @@ class PayloaddataEncoder(BaseEncoder):
        below must handle that.
     """
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         # first check if there's numpy before using its imports
         if has_numpy and isinstance(obj, numpy.ndarray):
             # numpy arrays
