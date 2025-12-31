@@ -46,7 +46,7 @@ if HAS_VTK and HAS_DPF:
         var_name: str,
         output_file_name: str,
         rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
+        component: str | None = None,
     ):
         """
         Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
@@ -92,7 +92,7 @@ if HAS_VTK and HAS_DPF:
         part_name: str,
         var_name: str,
         rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
+        component: str | None = None,
     ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
@@ -562,4 +562,6 @@ if HAS_VTK and HAS_DPF:
             "variables": json_data_variables,
         }
 
+        assert rgb_buffer is not None
+        assert pick_buffer is not None
         _form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffers, output)
