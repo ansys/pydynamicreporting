@@ -67,8 +67,8 @@ class DockerLauncher:
             self._client: docker.client.DockerClient = docker.from_env()
         except Exception as e:  # pragma: no cover
             raise RuntimeError(f"Can't initialize Docker: {str(e)}")
-        self._container: docker.models.  # type: ignore[attr-defined]containers.Container = None
-        self._image: docker.models.  # type: ignore[attr-defined]images.Image = None
+        self._container: docker.models.containers.Container = None  # type: ignore[assignment, attr-defined]
+        self._image: docker.models.images.Image = None  # type: ignore[assignment, attr-defined]
         # the Ansys / EnSight version we found in the container
         # to be reassigned later
         self._ansys_version = None
@@ -78,7 +78,7 @@ class DockerLauncher:
         self._nexus_directory = None
         self._nexus_is_running = False
 
-    def pull_image(self) -> docker.models.  # type: ignore[attr-defined]images.Image:
+    def pull_image(self) -> docker.models.images.Image:  # type: ignore[attr-defined]
         """
         Ensure the Docker image is available locally.
 
@@ -87,7 +87,7 @@ class DockerLauncher:
 
         Returns
         -------
-        docker.models.  # type: ignore[attr-defined]images.Image
+        docker.models.images.Image
             The Docker image object.
 
         Raises
@@ -111,7 +111,7 @@ class DockerLauncher:
                 f"Unexpected error while resolving Docker image: {self._image_url}\n\n{str(e)}"
             ) from e
 
-    def create_container(self) -> docker.models.  # type: ignore[attr-defined]containers.Container:
+    def create_container(self) -> docker.models.containers.Container:  # type: ignore[attr-defined]
         """
         Create a Docker container using the specified image.
         """
