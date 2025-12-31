@@ -21,26 +21,26 @@ class BaseEncoder(json.JSONEncoder):
        The ``isinstance()`` checks **always** come first.
     """
 
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, datetime.datetime):
-            representation = obj.isoformat()
+    def default(self, o: Any) -> Any:
+        if isinstance(o, datetime.datetime):
+            representation = o.isoformat()
             if representation.endswith("+00:00"):
                 representation = representation[:-6] + "Z"
             return representation
-        elif isinstance(obj, uuid.UUID):
-            return str(obj)
-        elif isinstance(obj, bytes):
-            return obj.decode()
-        elif hasattr(obj, "__getitem__"):
-            cls = list if isinstance(obj, (list, tuple)) else dict
+        elif isinstance(o, uuid.UUID):
+            return str(o)
+        elif isinstance(o, bytes):
+            return o.decode()
+        elif hasattr(o, "__getitem__"):
+            cls = list if isinstance(o, (list, tuple)) else dict
             try:
-                return cls(obj)
+                return cls(o)
             except Exception as e:  # nosec
-                error_str = f"Object of type {type(obj).__name__} is not JSON serializable: "
+                error_str = f"Object of type {type(o).__name__} is not JSON serializable: "
                 error_str += str(e)
                 raise TypeError(error_str)
                 pass
-        elif hasattr(obj, "__iter__"):
+        elif hasattr(o, "__iter__"):
             return tuple(item for item in obj)
 
         return super().default(obj)
@@ -61,13 +61,13 @@ class PayloaddataEncoder(BaseEncoder):
        below must handle that.
     """
 
-    def default(self, obj: Any) -> Any:
+    def default(self, o: Any) -> Any:
         # first check if there's numpy before using its imports
-        if has_numpy and isinstance(obj, numpy.ndarray):
+        if has_numpy and isinstance(o, numpy.ndarray):
             # numpy arrays
-            return obj.tolist()
-        elif isinstance(obj, nexus_array):
+            return o.tolist()
+        elif isinstance(o, nexus_array):
             # Nexus arrays.
-            return obj.to_2dlist()
+            return o.to_2dlist()
 
         return super().default(obj)
