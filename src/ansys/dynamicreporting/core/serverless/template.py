@@ -92,7 +92,7 @@ class Template(BaseModel):
     item_filter: str = field(compare=False, kw_only=True, default="")
     """Default ADR query string used to select items for this template."""
 
-    parent: "Template" = field(compare=False, kw_only=True, default=None)
+    parent: "Template | None" = field(compare=False, kw_only=True, default=None)
     """Parent template in the hierarchy, or ``None`` for a root template."""
 
     children: list["Template"] = field(compare=False, kw_only=True, default_factory=list)
@@ -111,7 +111,7 @@ class Template(BaseModel):
     _master: bool = field(compare=False, init=False, default=True)
     """Whether this template is a root (master) template."""
 
-    _properties: tuple[str] = tuple()
+    _properties: tuple[str, ...] = tuple()
     """Class specific property names to be persisted under ``params['properties']``."""
 
     _orm_model: str = "reports.models.Template"
@@ -209,7 +209,7 @@ class Template(BaseModel):
           ``params['properties']`` before persisting.
         """
         if self.parent is not None and not self.parent.saved:
-            raise self.parent.__class__.NotSaved(
+            raise self.parent.__class__.NotSaved(  # type: ignore[attr-defined]
                 extra_detail="Failed to save template because its parent is not saved"
             )
         for child in self.children:
@@ -218,7 +218,7 @@ class Template(BaseModel):
                     f"Failed to save template because child '{child}' is not a Template object"
                 )
             if not child.saved:
-                raise child.__class__.NotSaved(
+                raise child.__class__.NotSaved(  # type: ignore[attr-defined]
                     extra_detail="Failed to save template because its children are not saved"
                 )
 
@@ -237,7 +237,7 @@ class Template(BaseModel):
         super().save(**kwargs)
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None):
         """Rebuild a :class:`Template` (or subclass) from an ORM instance.
 
         When called on :class:`Template` itself, this method determines
@@ -254,9 +254,9 @@ class Template(BaseModel):
                 type_name = "Layout:" + type_name
             # Get the class based on the type attribute
             templ_cls = cls._type_registry[type_name]
-            obj = templ_cls._from_db(orm_instance, **kwargs)
+            obj = templ_cls._from_db(orm_instance, parent=parent)
         else:
-            obj = super()._from_db(orm_instance, **kwargs)
+            obj = super()._from_db(orm_instance, parent=parent)
 
         # Hydrate :attr:`_properties` fields from the stored property dict.
         props = obj.get_property()
@@ -590,7 +590,8 @@ class Template(BaseModel):
 
             items = Item.find(query=item_filter)
             template_obj = self._orm_instance
-            engine = template_obj.get_engine()
+            assert template_obj is not None
+            engine = template_obj.get_engine()  # type: ignore[attr-defined]
             # Properties that can change during iteration go into the global context.
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
@@ -636,7 +637,8 @@ class Template(BaseModel):
 
             items = Item.find(query=item_filter)
             template_obj = self._orm_instance
-            engine = template_obj.get_engine()
+            assert template_obj is not None
+            engine = template_obj.get_engine()  # type: ignore[attr-defined]
             static_html = engine.dispatch_render("pdf", items, ctx)
             # Convert rendered HTML to PDF using WeasyPrint.
             return HTML(string=static_html).write_pdf()
@@ -1016,7 +1018,7 @@ class PPTXLayout(Layout):
     """Layout representing a full PPTX report definition."""
 
     report_type: str = ReportType.PPTX_LAYOUT
-    _properties: tuple[str] = (
+    _properties: tuple[str, ...] = (
         "input_pptx",
         "output_pptx",
         "use_all_slides",
@@ -1054,7 +1056,8 @@ class PPTXLayout(Layout):
             from reports.engine import TemplateEngine
 
             template_obj = self._orm_instance
-            engine = template_obj.get_engine()
+            assert template_obj is not None
+            engine = template_obj.get_engine()  # type: ignore[attr-defined]
             items = Item.find(query=item_filter)
             return engine.dispatch_render("pptx", items, ctx)
         except Exception as e:
@@ -1067,7 +1070,7 @@ class PPTXSlideLayout(Layout):
     """Layout defining settings for an individual PPTX slide."""
 
     report_type: str = ReportType.PPTX_SLIDE_LAYOUT
-    _properties: tuple[str] = (
+    _properties: tuple[str, ...] = (
         "source_slide",
         "exclude_from_toc",
     )
@@ -1077,7 +1080,7 @@ class DataFilterLayout(Layout):
     """Layout that exposes interactive data filtering controls."""
 
     report_type: str = ReportType.DATA_FILTER_LAYOUT
-    _properties: tuple[str] = (
+    _properties: tuple[str, ...] = (
         "filter_types",
         "filter_checkbox",
         "filter_slider",
@@ -1092,7 +1095,7 @@ class UserDefinedLayout(Layout):
     """Layout whose behavior is delegated to user-defined logic."""
 
     report_type: str = ReportType.USER_DEFINED_LAYOUT
-    _properties: tuple[str] = (
+    _properties: tuple[str, ...] = (
         "interactive_only",
         "before_children",
         "userdef_name",
@@ -1195,7 +1198,7 @@ class ItemsComparisonGenerator(Generator):
     """Generator that compares items and outputs comparisons."""
 
     report_type: str = ReportType.ITEMS_COMPARISON_GENERATOR
-    _properties: tuple[str] = (
+    _properties: tuple[str, ...] = (
         "chunk_size",
         "filters_table",
     )
