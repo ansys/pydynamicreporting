@@ -15,7 +15,7 @@ except Exception:
 
 if has_qt:  # pragma: no cover
 
-    class NexusPDFPage(QtWebEngineWidgets.QWebEnginePage):
+    class NexusPDFPage(QtWebEngineWidgets.QWebEnginePage):  # type: ignore[attr-defined]
         def __init__(self):
             super().__init__()
 
@@ -58,7 +58,7 @@ if has_qt:  # pragma: no cover
                 screen = self._app.primaryScreen()
                 dpi = screen.logicalDotsPerInch()
                 in_per_mm = 0.0393701
-                self._web_engine_view = QtWebEngineWidgets.QWebEngineView(self._parent)
+                self._web_engine_view = QtWebEngineWidgets.QWebEngineView(self._parent)  # type: ignore[attr-defined]
                 self._web_page = NexusPDFPage()
                 self._web_engine_view.setPage(self._web_page)
                 self._web_page.loadFinished.connect(self.load_finished)
@@ -75,7 +75,7 @@ if has_qt:  # pragma: no cover
         def load_finished(self, ok):
             if ok:
                 pagesize = QtGui.QPageSize(
-                    QtCore.QSizeF(self._page[0], self._page[1]),
+                    QtCore.QSizeF(self._page[0], self._page[1]),  # type: ignore[attr-defined]
                     QtGui.QPageSize.Millimeter,
                     "",
                     QtGui.QPageSize.ExactMatch,
@@ -83,7 +83,7 @@ if has_qt:  # pragma: no cover
                 layout = QtGui.QPageLayout.Portrait
                 if self._page[2]:
                     layout = QtGui.QPageLayout.Landscape
-                margins = QtCore.QMarginsF(
+                margins = QtCore.QMarginsF(  # type: ignore[attr-defined]
                     self._page[3], self._page[4], self._page[5], self._page[6]
                 )
                 page = QtGui.QPageLayout(pagesize, layout, margins, QtGui.QPageLayout.Millimeter)
@@ -96,7 +96,7 @@ if has_qt:  # pragma: no cover
                 self._result = "failure"
 
         def save_page_pdf(self, url, filename, page=None, delay=None):
-            self._pdf_filename = QtCore.QFileInfo(filename)
+            self._pdf_filename = QtCore.QFileInfo(filename)  # type: ignore[attr-defined]
             if len(self._pdf_filename.suffix()) < 1:
                 self._pdf_filename.setFile(filename + ".pdf")
             if page is not None:
@@ -104,7 +104,7 @@ if has_qt:  # pragma: no cover
             if isinstance(delay, int):
                 self._print_delay = delay
             we = self.webengine()
-            we.load(QtCore.QUrl(url))
+            we.load(QtCore.QUrl(url))  # type: ignore[attr-defined]
             self._wait_for_completion()
             return self._result
 
@@ -114,8 +114,8 @@ if has_qt:  # pragma: no cover
             if self._print_timer.isActive():
                 self._print_timer.stop()
             # finish the pdf save
-            f = QtCore.QFile(self._pdf_filename.absoluteFilePath())
-            if f.open(QtCore.QIODevice.WriteOnly):
+            f = QtCore.QFile(self._pdf_filename.absoluteFilePath())  # type: ignore[attr-defined, union-attr]
+            if f.open(QtCore.QIODevice.WriteOnly):  # type: ignore[attr-defined]
                 f.write(data)
                 f.close()
                 self._result = "ok"

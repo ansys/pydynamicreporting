@@ -153,10 +153,10 @@ class ReportDownloadHTML:
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             mangled = f.replace("media/", "/static/website/scripts/mathjax/")
-            url = tmp.scheme + "://" + tmp.netloc + mangled
+            url = tmp.scheme + "://" + tmp.netloc + mangled  # type: ignore[operator]
             resp = requests.get(url, allow_redirects=True)  # nosec B400
-            if resp.status_code == requests.codes.ok:
-                filename = os.path.join(self._directory, f)
+            if resp.status_code == requests.codes.ok  # type: ignore[attr-defined]:
+                filename = os.path.join(self._directory, f)  # type: ignore[arg-type]
                 try:
                     open(filename, "wb").write(resp.content)
                 except Exception as e:
@@ -304,10 +304,10 @@ class ReportDownloadHTML:
     def _download_static_files(self, files, source_path, target_path, comment):
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
-            url = tmp.scheme + "://" + tmp.netloc + source_path + f
+            url = tmp.scheme + "://" + tmp.netloc + source_path + f  # type: ignore[operator]
             resp = requests.get(url, allow_redirects=True)  # nosec B400
-            if resp.status_code == requests.codes.ok:
-                filename = self._directory + os.sep + target_path + os.sep + f
+            if resp.status_code == requests.codes.ok  # type: ignore[attr-defined]:
+                filename = self._directory + os.sep + target_path + os.sep + f  # type: ignore[operator]
                 filename = os.path.normpath(filename)
                 try:
                     data = self.fix_viewer_component_paths(
@@ -342,10 +342,10 @@ class ReportDownloadHTML:
         if pathname in self._filemap:
             return self._filemap[pathname]
         tmp = urllib.parse.urlsplit(self._url)
-        url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
+        url = tmp.scheme + "://" + tmp.netloc + path_plus_queries  # type: ignore[operator]
         resp = requests.get(url, allow_redirects=True)  # nosec B400
         results = pathname
-        if resp.status_code == requests.codes.ok:
+        if resp.status_code == requests.codes.ok  # type: ignore[attr-defined]:
             basename = os.path.basename(pathname)
             # "basename" is used in the media directory, avoid collisions.
             basename = self._make_unique_basename(basename)
@@ -547,7 +547,7 @@ class ReportDownloadHTML:
 
         # get the webpage html source
         resp = requests.get(self._url)  # nosec B400
-        if resp.status_code != requests.codes.ok:
+        if resp.status_code != requests.codes.ok  # type: ignore[attr-defined]:
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
         # debugging...
         if self._debug:
