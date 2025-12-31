@@ -109,12 +109,12 @@ class Service:
 
     def __init__(
         self,
-        ansys_version: int = None,
+        ansys_version: int | None = None,
         docker_image: str = DOCKER_REPO_URL,
-        data_directory: str = None,
-        db_directory: str = None,
+        data_directory: str | None = None,
+        db_directory: str | None = None,
         port: int = DOCKER_DEFAULT_PORT,
-        logfile: str = None,
+        logfile: str | None = None,
         ansys_installation: str | None = None,
     ) -> None:
         """
