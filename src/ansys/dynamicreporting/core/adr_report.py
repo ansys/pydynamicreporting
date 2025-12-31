@@ -128,7 +128,7 @@ class Report:
             if iframe is None:  # pragma: no cover
                 self.service.logger.error("Error: can not obtain IFrame for report")
             else:
-                display(iframe)
+                display(iframe)  # type: ignore[name-defined]
         else:
             url = self.get_url(item_filter=item_filter)
             if url == "":  # pragma: no cover

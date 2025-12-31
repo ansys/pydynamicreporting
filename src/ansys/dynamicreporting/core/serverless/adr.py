@@ -403,7 +403,10 @@ class ADR:
 
     def _is_sqlite(self, database: str) -> bool:
         """Return ``True`` if the given database alias uses a SQLite backend."""
-        return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
+        config = self.get_database_config()
+        if config is None:
+            return False
+        return not self._in_memory and "sqlite" in config.get(database, {}).get(
             "ENGINE", ""
         )
 
@@ -413,7 +416,10 @@ class ADR:
         If the engine is not SQLite, an empty string is returned.
         """
         if self._is_sqlite(database):
-            return self.get_database_config().get(database, {}).get("NAME", "")
+            config = self.get_database_config()
+            if config is None:
+                return ""
+            return config.get(database, {}).get("NAME", "")
         return ""
 
     @classmethod
@@ -745,7 +751,9 @@ class ADR:
         """
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self.get_database_config(raise_exception=True):
+        config = self.get_database_config(raise_exception=True)
+        assert config is not None
+        if database != "default" and database not in config:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
 
         target_dir = Path(output_directory).resolve(strict=True)
@@ -789,7 +797,9 @@ class ADR:
             If the target DB is not configured, the file does not exist,
             or the load command fails.
         """
-        if database != "default" and database not in self.get_database_config(raise_exception=True):
+        config = self.get_database_config(raise_exception=True)
+        assert config is not None
+        if database != "default" and database not in config:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
 
         backup_file = Path(input_file).resolve(strict=True)
@@ -858,11 +868,13 @@ class ADR:
     @property
     def session(self) -> Session:
         """Default :class:`Session` associated with this ADR instance."""
+        assert self._session is not None, "Session not initialized. Call setup() first."
         return self._session
 
     @property
     def dataset(self) -> Dataset:
         """Default :class:`Dataset` associated with this ADR instance."""
+        assert self._dataset is not None, "Dataset not initialized. Call setup() first."
         return self._dataset
 
     @session.setter
@@ -890,7 +902,8 @@ class ADR:
     @property
     def session_guid(self) -> uuid.UUID:
         """GUID of the default :class:`Session`."""
-        return self._session.guid
+        assert self._session is not None, "Session not initialized. Call setup() first."
+        return uuid.UUID(self._session.guid)
 
     def create_item(self, item_type: type[Item], **kwargs: Any) -> Item:
         """Create and persist a new :class:`Item` of the given type.
@@ -1277,7 +1290,7 @@ class ADR:
     def export_report_as_pptx(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1421,6 +1434,9 @@ class ADR:
         )
 
         # Use the serverless exporter to inline assets, rewrite links, etc.
+        assert self._media_directory is not None
+        assert self._static_directory is not None
+        assert self._debug is not None
         exporter = ServerlessReportExporter(
             html_content=html_content,
             output_dir=output_dir,
@@ -1444,7 +1460,7 @@ class ADR:
     def export_report_as_pdf(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1502,7 +1518,7 @@ class ADR:
 
     @staticmethod
     def query(
-        query_type: Session | Dataset | type[Item] | type[Template],
+        query_type: type[Session] | type[Dataset] | type[Item] | type[Template],
         *,
         query: str = "",
         **kwargs: Any,
@@ -1606,7 +1622,7 @@ class ADR:
 
     def copy_objects(
         self,
-        object_type: Session | Dataset | type[Item] | type[Template],
+        object_type: type[Session] | type[Dataset] | type[Item] | type[Template],
         target_database: str,
         *,
         query: str = "",
@@ -1662,6 +1678,7 @@ class ADR:
             )
 
         database_config = self.get_database_config(raise_exception=True)
+        assert database_config is not None
         if target_database not in database_config or source_database not in database_config:
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the "
@@ -1691,11 +1708,11 @@ class ADR:
                 # Ensure session and dataset exist in target DB (reuse if present).
                 try:
                     session = Session.get(guid=item.session.guid, using=target_database)
-                except Session.DoesNotExist:
+                except Session.DoesNotExist:  # type: ignore[attr-defined]
                     session = Session.create(**item.session.as_dict(), using=target_database)
                 try:
                     dataset = Dataset.get(guid=item.dataset.guid, using=target_database)
-                except Dataset.DoesNotExist:
+                except Dataset.DoesNotExist:  # type: ignore[attr-defined]
                     dataset = Dataset.create(**item.dataset.as_dict(), using=target_database)
 
                 item.session = session
