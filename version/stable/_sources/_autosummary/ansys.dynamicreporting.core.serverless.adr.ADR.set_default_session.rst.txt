@@ -1,0 +1,6 @@
+set\_default\_session
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.set_default_session
