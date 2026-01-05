@@ -503,7 +503,9 @@ class Server:
                     print(f"Unable to push object {o}: {e}")
                 raise
 
-            if r.status_code == requests.codes.bad_request:  # pragma: no cover  # type: ignore[attr-defined]
+            if (
+                r.status_code == requests.codes.bad_request
+            ):  # pragma: no cover  # type: ignore[attr-defined]
                 # One special case: perhaps the session/dataset was deleted and the cache not invalidated?
                 # In this case, we would get a 400 back and the response text would include 'Invalid pk'.  So,
                 # we try to push the dataset and session again and then re-push the object.  Only try this once!
@@ -1748,7 +1750,9 @@ def launch_local_database_server(
     try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603  # type: ignore[arg-type]
+        monitor_process = subprocess.Popen(
+            command, **params
+        )  # nosec B78 B603  # type: ignore[arg-type]
     except Exception as e:
         logger.debug(f"Warning: {str(e)}")
         if parent and has_qt:

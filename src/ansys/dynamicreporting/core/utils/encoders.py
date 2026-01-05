@@ -1,7 +1,7 @@
 import datetime
 import json
-import uuid
 from typing import Any
+import uuid
 
 from .report_utils import nexus_array
 

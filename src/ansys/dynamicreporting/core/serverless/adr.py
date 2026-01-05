@@ -406,9 +406,7 @@ class ADR:
         config = self.get_database_config()
         if config is None:
             return False
-        return not self._in_memory and "sqlite" in config.get(database, {}).get(
-            "ENGINE", ""
-        )
+        return not self._in_memory and "sqlite" in config.get(database, {}).get("ENGINE", "")
 
     def _get_db_path(self, database: str) -> str:
         """Return the filesystem path to the DB file for a SQLite database.

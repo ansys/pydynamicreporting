@@ -285,9 +285,10 @@ def split_quoted_string_list(s, deliminator=None):
         token = tmp.get_token()
         if token:
             token = token.strip()
-        if token and ((token.startswith("'") and token.endswith("'")) or (
-            token.startswith('"') and token.endswith('"')
-        )):
+        if token and (
+            (token.startswith("'") and token.endswith("'"))
+            or (token.startswith('"') and token.endswith('"'))
+        ):
             token = token[1:-1]
         if not token or len(token) == 0:
             break
