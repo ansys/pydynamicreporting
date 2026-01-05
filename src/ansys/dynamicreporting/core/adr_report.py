@@ -70,6 +70,8 @@ class Report:
             ``False`` otherwise.
         """
         success = False
+        assert self.service is not None
+        assert self.service.serverobj is not None
         all_reports = self.service.serverobj.get_objects(objtype=report_objects.TemplateREST)
         report_objs = [x for x in all_reports if x.name == self.report_name]
         if len(report_objs) > 0:
@@ -125,12 +127,14 @@ class Report:
             item_filter = filter
         if in_ipynb() and not new_tab:  # pragma: no cover
             iframe = self.get_iframe()
+            assert self.service is not None
             if iframe is None:  # pragma: no cover
                 self.service.logger.error("Error: can not obtain IFrame for report")
             else:
                 display(iframe)  # type: ignore[name-defined]
         else:
             url = self.get_url(item_filter=item_filter)
+            assert self.service is not None
             if url == "":  # pragma: no cover
                 self.service.logger.error("Error: could not obtain url for report")
             else:
@@ -220,8 +224,8 @@ class Report:
         """
         guid = ""
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
             return guid
+        assert self.service.logger is not None
         if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
             return guid
@@ -649,11 +653,11 @@ class Report:
         """
         success = False  # pragma: no cover
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            return False  # type: ignore[return-value]
+        assert self.service.logger is not None
         if self.service.serverobj is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
-            return ""
+            self.service.logger.error("No connection to any service")
+            return False  # type: ignore[return-value]
         try:  # pragma: no cover
             if query_params is None:
                 query_params = {}
@@ -717,11 +721,11 @@ class Report:
         """
         success = False
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            return False  # type: ignore[return-value]
+        assert self.service.logger is not None
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False  # type: ignore[return-value]
         try:
             if query_params is None:
                 query_params = {}
@@ -764,8 +768,12 @@ class Report:
             report.export_json(r'C:\\tmp\\my_json_file.json')
         """
         try:
+            assert self.service is not None
+            assert self.service.serverobj is not None
             self.service.serverobj.store_json(self.report.guid, json_file_path)
         except Exception as e:
+            assert self.service is not None
+            assert self.service.logger is not None
             self.service.logger.error(
                 f"Exporting to JSON terminated for report: {self.report_name}\n"
                 f"Error details: {e}"

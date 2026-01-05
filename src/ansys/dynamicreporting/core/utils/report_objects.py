@@ -283,12 +283,13 @@ def split_quoted_string_list(s, deliminator=None):
     out = list()
     while True:
         token = tmp.get_token()
-        token = token.strip()
-        if (token.startswith("'") and token.endswith("'")) or (
+        if token:
+            token = token.strip()
+        if token and ((token.startswith("'") and token.endswith("'")) or (
             token.startswith('"') and token.endswith('"')
-        ):
+        )):
             token = token[1:-1]
-        if len(token) == 0:
+        if not token or len(token) == 0:
             break
         out.append(token)
     return out
@@ -404,12 +405,12 @@ class Template:
 
     def get_params(self):
         try:
-            return json.loads(self.params)
+            return json.loads(self.params)  # type: ignore[arg-type]
         except Exception as e:
             logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
-    def set_params(self, d: dict = None):
+    def set_params(self, d: dict | None = None):
         if d is None:
             d = {}
         if type(d) is not dict:
@@ -1251,7 +1252,8 @@ class ItemREST(BaseRESTObject):
                 nexus_array = report_utils.nexus_array(dtype=dtype, shape=(1, 1))
                 nexus_array.from_2dlist(array)
                 array = nexus_array
-            kind = array.dtype[0]
+            assert array.dtype is not None and len(array.dtype) > 0
+            kind = array.dtype[0]  # type: ignore[index]
 
         # valid array types are bytes and float for now
         if kind not in ("S", "f"):
@@ -1259,7 +1261,7 @@ class ItemREST(BaseRESTObject):
 
         if kind == "S":  # Check if the array contains strings
             for i in range(array.shape[0]):
-                for j in range(array.shape[1]):
+                for j in range(array.shape[1]):  # type: ignore[index, misc]
                     if isinstance(array[i, j], str):
                         self.validate_string(array[i, j], "Table array element", sanitize_html=True)
 
@@ -1296,7 +1298,7 @@ class ItemREST(BaseRESTObject):
 
         if rows and len(rows) != array.shape[0]:
             raise ValueError("Number of row labels does not match number of rows in the array.")
-        if columns and len(columns) != array.shape[1]:
+        if columns and len(columns) != array.shape[1]:  # type: ignore[index, misc]
             raise ValueError(
                 "Number of column labels does not match number of columns in the array."
             )
@@ -1455,7 +1457,7 @@ class TemplateREST(BaseRESTObject):
                 locals(),
                 globals(),
             )  # nosec
-            return tmp_cls
+            return tmp_cls  # type: ignore[name-defined]
         else:
             return TemplateREST()
 
@@ -1514,7 +1516,7 @@ class TemplateREST(BaseRESTObject):
             "children_order",
         ]
 
-    def add_params(self, d: dict = None):
+    def add_params(self, d: dict | None = None):
         if d is None:
             d = {}
         if type(d) is not dict:
@@ -1536,7 +1538,7 @@ class TemplateREST(BaseRESTObject):
             logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
-    def set_params(self, d: dict = None):
+    def set_params(self, d: dict | None = None):
         if d is None:
             d = {}
         if type(d) is not dict:
@@ -1558,7 +1560,7 @@ class TemplateREST(BaseRESTObject):
         else:
             return {}
 
-    def set_property(self, property: dict = None):
+    def set_property(self, property: dict | None = None):
         if property is None:
             property = {}
         if type(property) is not dict:
@@ -1568,7 +1570,7 @@ class TemplateREST(BaseRESTObject):
         self.params = json.dumps(d)
         return
 
-    def add_property(self, property: dict = None):
+    def add_property(self, property: dict | None = None):
         if property is None:
             property = {}
         if type(property) is not dict:
@@ -3074,7 +3076,7 @@ class tablevaluefilterREST(GeneratorREST):
                 else:
                     return ["bot_count", 10]
 
-    def set_filter(self, value=None, filter_str=""):
+    def set_filter(self, value=None, filter_str=""):  # type: ignore[override]
         if filter_str != "":
             return super().set_filter(filter_str=filter_str)
         elif value is not None:
@@ -3400,7 +3402,7 @@ class sqlqueriesREST(GeneratorREST):
             out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}
         return out
 
-    def set_postgre(self, value: dict = None):
+    def set_postgre(self, value: dict | None = None):
         if value is None:
             value = {
                 "database": "",

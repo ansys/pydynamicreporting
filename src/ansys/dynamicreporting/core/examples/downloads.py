@@ -104,7 +104,7 @@ def _retrieve_file(
     logging.debug(f'Downloading URL: "{url}"')
     content = get_url_content(url)
     with open(local_path, "wb") as f:
-        f.write(content)
+        f.write(content)  # type: ignore[arg-type]
 
     logging.debug("Download successful.")
     return local_path

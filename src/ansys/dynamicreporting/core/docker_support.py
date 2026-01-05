@@ -304,7 +304,7 @@ class DockerLauncher:
             return None
         return self._container.name
 
-    def ansys_version(self) -> str:
+    def ansys_version(self) -> str | None:
         """
         Get the three-digit Ansys version from the Docker container.
 
@@ -316,7 +316,7 @@ class DockerLauncher:
         """
         return self._ansys_version
 
-    def cei_home(self) -> str:
+    def cei_home(self) -> str | None:
         """
         Get the location of the ``CEI_HOME`` directory within the Docker container.
 
@@ -327,7 +327,7 @@ class DockerLauncher:
         """
         return self._cei_home
 
-    def nexus_directory(self) -> str:
+    def nexus_directory(self) -> str | None:
         """
         Get the location of the ``nexusNNN`` directory within the Docker container.
 
@@ -425,6 +425,7 @@ class DockerLauncher:
         cp_cmd = "/bin/cp "
         if do_recursive:
             cp_cmd += "-r "
+        assert self._cei_home is not None
         cp_cmd += self._cei_home + "/" + src
         cp_cmd += " "
         cp_cmd += "/host_directory/"
@@ -445,10 +446,12 @@ class DockerLauncher:
         ------
         RuntimeError
         """
+        assert self._ansys_version is not None
         if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
             launcher = "nexus_launcher"
+        assert self._cei_home is not None
         nexus_cmd = self._cei_home + f"/bin/{launcher} create --db_directory /db_directory/ "
         return self.run_in_container(nexus_cmd)
 
@@ -467,10 +470,12 @@ class DockerLauncher:
         ------
         RuntimeError
         """
+        assert self._ansys_version is not None
         if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
             launcher = "nexus_launcher"
+        assert self._cei_home is not None
         nexus_cmd = self._cei_home + f"/bin/{launcher}"
         nexus_cmd += " --db_directory /db_directory"
         nexus_cmd += " save_config"
@@ -503,7 +508,9 @@ class DockerLauncher:
         ------
         RuntimeError
         """
+        assert self._ansys_version is not None
         launcher = "adr_launcher" if int(self._ansys_version) > 242 else "nexus_launcher"
+        assert self._cei_home is not None
         nexus_cmd = (
             f"{self._cei_home}/bin/{launcher} start "
             f"--db_directory /db_directory "
@@ -520,10 +527,12 @@ class DockerLauncher:
         """Release any additional resources allocated during launching."""
         try:
             if self._nexus_is_running:
+                assert self._ansys_version is not None
                 if int(self._ansys_version) > 242:
                     launcher = "adr_launcher"
                 else:
                     launcher = "nexus_launcher"
+                assert self._cei_home is not None
                 stop_cmd = self._cei_home + f"/bin/{launcher} stop "
                 stop_cmd += " --db_directory /db_directory"
                 self.run_in_container(stop_cmd)
