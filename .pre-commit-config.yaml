@@ -57,6 +57,7 @@ repos:
     language: python
     types: [ python ]
     pass_filenames: false
+    exclude: ^doc/
     additional_dependencies: [ "ty==0.0.8" ]
 
 # TO BE ACTIVATED EVENTUALLY - EXISTING ERRORS SHOULD BE SOLVED
