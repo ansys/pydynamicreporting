@@ -207,7 +207,7 @@ class Service:
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
-                    ansys_version=ansys_version,
+                    ansys_version=ansys_version,  # type: ignore[arg-type]
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
@@ -458,7 +458,7 @@ class Service:
                 "exec_basis": self._ansys_installation,
                 "ansys_version": self._ansys_version,
             }
-            if int(self._ansys_version) >= 231:
+            if self._ansys_version and int(self._ansys_version) >= 231:  # type: ignore[arg-type]
                 launch_kwargs.update({"allow_iframe_embedding": True})
 
             try:
@@ -510,6 +510,7 @@ class Service:
 
         v = False
         try:
+            assert self.serverobj is not None
             v = self.serverobj.validate()
         except Exception as e:
             self.logger.error(f"Error: {str(e)}")
@@ -525,6 +526,7 @@ class Service:
                     self._docker_launcher = None
                 else:
                     self.logger.info("Shutting down service.\n")
+                    assert self.serverobj is not None
                     self.serverobj.stop_local_server()
             except Exception as e:
                 self.logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
@@ -619,6 +621,7 @@ class Service:
         if self.serverobj is None:
             self.logger.error("No connection to any service")
             raise ConnectionToServiceError
+        assert self._url is not None
         url = self._url + "/reports/report_display/?"
         if report_name:
             all_reports = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
@@ -635,7 +638,7 @@ class Service:
             query_str = ""
         url += query_str
         if in_ipynb() and not new_tab:
-            display(IFrame(src=url, width=1000, height=800))
+            display(IFrame(src=url, width=1000, height=800))  # type: ignore[name-defined]
         else:
             webbrowser.open_new(url)
 
@@ -717,6 +720,7 @@ class Service:
         if valid is False:
             self.logger.warning("Warning: item_filter string is not valid. Will be ignored.")
             item_filter = ""
+        assert self.serverobj is not None
         if query_type == "Item":
             org_queried_items = self.serverobj.get_objects(
                 objtype=report_objects.ItemREST, query=item_filter
@@ -813,6 +817,7 @@ class Service:
                 )
         # Finally removing from database
         try:
+            assert self.serverobj is not None
             _ = self.serverobj.del_objects(items_to_delete)
         except Exception as e:
             self.logger.warning(f"Error in deleting items: {str(e)}")
@@ -955,6 +960,7 @@ class Service:
                 break
 
         # 2. Compare with the existing root template(s)
+        assert self.serverobj is not None
         templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
         existing_root_names = set()
         for template in templates:
@@ -1007,4 +1013,6 @@ class Service:
             self.logger.warning(
                 f"Warning: port {self._port} is already in use. Replace with a new port\n"
             )
-            self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
+            ports = report_utils.find_unused_ports(count=1, start=self._port)
+            assert ports is not None
+            self._port = ports[0]
