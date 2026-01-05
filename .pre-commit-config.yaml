@@ -53,10 +53,11 @@ repos:
   hooks:
   - id: ty
     name: ty
-    entry: bash -c 'uv run --frozen ty check'
-    language: system
+    entry: ty check
+    language: python
     types: [ python ]
     pass_filenames: false
+    additional_dependencies: [ "ty==0.0.8" ]
     exclude: ^doc/
 
 # TO BE ACTIVATED EVENTUALLY - EXISTING ERRORS SHOULD BE SOLVED
