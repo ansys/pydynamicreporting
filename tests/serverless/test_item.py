@@ -366,7 +366,7 @@ def test_integrity_error(adr_serverless):
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
     )
-    with pytest.raises(HTML.IntegrityError):
+    with pytest.raises(HTML.IntegrityError):  # type: ignore[attr-defined]
         HTML.create(
             guid=intro_html.guid,
             name="test_integrity_error",
@@ -386,7 +386,7 @@ def test_delete_not_saved(adr_serverless):
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
     )
-    with pytest.raises(HTML.NotSaved):
+    with pytest.raises(HTML.NotSaved):  # type: ignore[attr-defined]
         intro_html.delete()
 
 
@@ -441,7 +441,7 @@ def test_save_item_session_unsaved(adr_serverless):
         session=session,
         dataset=adr_serverless.dataset,
     )
-    with pytest.raises(Session.NotSaved):
+    with pytest.raises(Session.NotSaved):  # type: ignore[attr-defined]
         intro_html.save()
 
 
@@ -456,7 +456,7 @@ def test_save_item_dataset_unsaved(adr_serverless):
         session=adr_serverless.session,
         dataset=dataset,
     )
-    with pytest.raises(Dataset.NotSaved):
+    with pytest.raises(Dataset.NotSaved):  # type: ignore[attr-defined]
         intro_html.save()
 
 
@@ -508,7 +508,7 @@ def test_item_delete(adr_serverless):
         dataset=adr_serverless.dataset,
     )
     intro_html.delete()
-    with pytest.raises(HTML.DoesNotExist):
+    with pytest.raises(HTML.DoesNotExist):  # type: ignore[attr-defined]
         HTML.get(guid=intro_html.guid)
 
 
@@ -516,7 +516,7 @@ def test_item_delete(adr_serverless):
 def test_get_item_does_not_exist(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
-    with pytest.raises(HTML.DoesNotExist):
+    with pytest.raises(HTML.DoesNotExist):  # type: ignore[attr-defined]
         HTML.get(guid=str(uuid4()))
 
 
@@ -536,7 +536,7 @@ def test_get_item_multiple(adr_serverless):
         session=adr_serverless.session,
         dataset=adr_serverless.dataset,
     ).save()
-    with pytest.raises(HTML.MultipleObjectsReturned):
+    with pytest.raises(HTML.MultipleObjectsReturned):  # type: ignore[attr-defined]
         HTML.get(name="test_get_item_multiple")
 
 
@@ -586,7 +586,7 @@ def test_item_objectset_delete(adr_serverless):
     )
     objs = adr_serverless.query(query_type=HTML, query="A|i_name|cont|test_item_objectset_delete;")
     objs.delete()
-    with pytest.raises(HTML.DoesNotExist):
+    with pytest.raises(HTML.DoesNotExist):  # type: ignore[attr-defined]
         HTML.get(guid=intro_html.guid)
 
 
@@ -783,15 +783,15 @@ def test_table_item_properties(adr_serverless):
     )
 
     # Set real properties
-    table_item.labels_row = ["X", "Sin", "Cos"]
+    table_item.labels_row = ["X", "Sin", "Cos"]  # type: ignore[attr-defined]
     table_item.set_tags("dp=dp227 section=data")
-    table_item.plot = "line"
-    table_item.xaxis = "X"
-    table_item.yaxis = ["Sin", "Cos"]
-    table_item.xaxis_format = "floatdot0"
-    table_item.yaxis_format = "floatdot1"
-    table_item.ytitle = "Values"
-    table_item.xtitle = "X"
+    table_item.plot = "line"  # type: ignore[attr-defined]
+    table_item.xaxis = "X"  # type: ignore[attr-defined]
+    table_item.yaxis = ["Sin", "Cos"]  # type: ignore[attr-defined]
+    table_item.xaxis_format = "floatdot0"  # type: ignore[attr-defined]
+    table_item.yaxis_format = "floatdot1"  # type: ignore[attr-defined]
+    table_item.ytitle = "Values"  # type: ignore[attr-defined]
+    table_item.xtitle = "X"  # type: ignore[attr-defined]
 
     table_item.save()
 
