@@ -21,8 +21,8 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
         media_dir.mkdir(exist_ok=True)
         adr = ADR(
             ansys_installation=pytestconfig.getoption("install_path"),
-            db_directory=local_db,
-            static_directory=static_dir,
+            db_directory=str(local_db),
+            static_directory=str(static_dir),
             media_url="/media/",
             static_url="/static/",
         )
@@ -52,8 +52,8 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
             databases=database_config,
-            media_directory=source_db / "media",
-            static_directory=static_dir,
+            media_directory=str(source_db / "media"),
+            static_directory=str(static_dir),
             media_url="/media/",
             static_url="/static/",
         )
