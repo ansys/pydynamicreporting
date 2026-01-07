@@ -33,9 +33,9 @@ def test_template_props(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PPTXLayout
 
     pptx_template = PPTXLayout(name="pptx")
-    pptx_template.input_pptx = "input.pptx"
-    pptx_template.output_pptx = "output-get.pptx"
-    pptx_template.use_all_slides = "1"
+    pptx_template.input_pptx = "input.pptx"  # type: ignore[attr-defined]
+    pptx_template.output_pptx = "output-get.pptx"  # type: ignore[attr-defined]
+    pptx_template.use_all_slides = "1"  # type: ignore[attr-defined]
     pptx_template.save()
     out = PPTXLayout.get(guid=pptx_template.guid)
     assert (
@@ -121,7 +121,7 @@ def test_raise_child_type_save(adr_serverless):
 
     with pytest.raises(TypeError):
         top_parent = BasicLayout(name="test_raise_child_type_save", parent=None, tags="dp=dp227")
-        top_parent.children.append("T1")
+        top_parent.children.append("T1")  # type: ignore[arg-type]
         top_parent.save()
 
 
@@ -165,7 +165,7 @@ def test_parent_not_saved(adr_serverless):
         params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
     )
     toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
-    with pytest.raises(BasicLayout.NotSaved):
+    with pytest.raises(BasicLayout.NotSaved):  # type: ignore[attr-defined]
         toc_layout.save()
 
 
@@ -205,7 +205,7 @@ def test_child_not_saved(adr_serverless):
     )
     toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
     top_parent.children.append(toc_layout)
-    with pytest.raises(TOCLayout.NotSaved):
+    with pytest.raises(TOCLayout.NotSaved):  # type: ignore[attr-defined]
         top_parent.save()
 
 
@@ -223,7 +223,7 @@ def test_child_not_exist(adr_serverless):
     toc_layout = TOCLayout(name="TOC", parent=top_parent, tags="dp=dp227")
     toc_layout._saved = True  # Simulate that the child is saved, but does not exist in the database
     top_parent.children.append(toc_layout)
-    with pytest.raises(TOCLayout.NotSaved):
+    with pytest.raises(TOCLayout.NotSaved):  # type: ignore[attr-defined]
         top_parent.save()
 
 
@@ -923,7 +923,7 @@ def test_template_delete(adr_serverless):
     template_guid = template.guid
     template.delete()
 
-    with pytest.raises(PanelLayout.DoesNotExist):
+    with pytest.raises(PanelLayout.DoesNotExist):  # type: ignore[attr-defined]
         PanelLayout.get(guid=template_guid)
 
 
@@ -955,7 +955,7 @@ def test_template_get_invalid_kwargs(adr_serverless):
 def test_template_get_not_exist(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
-    with pytest.raises(PanelLayout.DoesNotExist):
+    with pytest.raises(PanelLayout.DoesNotExist):  # type: ignore[attr-defined]
         PanelLayout.get(guid=str(uuid4()))
 
 
@@ -966,7 +966,7 @@ def test_template_get_multiple(adr_serverless):
     PanelLayout.create(name="test_template_get_multiple", tags="dp=dp227").save()
     PanelLayout(name="test_template_get_multiple", tags="dp=dp227").save()
 
-    with pytest.raises(PanelLayout.MultipleObjectsReturned):
+    with pytest.raises(PanelLayout.MultipleObjectsReturned):  # type: ignore[attr-defined]
         PanelLayout.get(name="test_template_get_multiple")
 
 

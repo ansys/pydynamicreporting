@@ -280,7 +280,7 @@ def test_create_3d_surface(adr_service_create) -> None:
 
 
 @pytest.mark.ado_test
-def test_create_polar_plot(adr_service_create) -> bool:
+def test_create_polar_plot(adr_service_create) -> None:
     filter_str = "A|i_type|cont|table"
     table_items = adr_service_create.query(query_type="Item", item_filter=filter_str)
     my_table = adr_service_create.create_item()

@@ -327,12 +327,12 @@ def test_templaterest_params() -> None:
     a.add_params()
     succ = False
     try:
-        a.add_params(d=0)
+        a.add_params(d=0)  # type: ignore[arg-type]
     except ValueError as e:
         succ = "input must be a dictionary" in str(e)
     succ_two = False
     try:
-        a.set_params(d=0)
+        a.set_params(d=0)  # type: ignore[arg-type]
     except ValueError as e:
         succ_two = "input must be a dictionary" in str(e)
     a.set_params(d={"b": 2})
@@ -348,7 +348,7 @@ def test_templaterest_sort() -> None:
     a.set_property()
     succ_three = False
     try:
-        a.set_params(d=0)
+        a.set_params(d=0)  # type: ignore[arg-type]
     except ValueError as e:
         succ_three = "input must be a dictionary" in str(e)
     a.set_property(property={"a": 1})
@@ -890,7 +890,7 @@ def test_tablemerge_tag() -> None:
     succ = a.get_rename_tag() == ""
     succ_two = True
     try:
-        a.set_rename_tag(value=0)
+        a.set_rename_tag(value=0)  # type: ignore[arg-type]
     except ValueError as e:
         succ_two = "input should be a string" in str(e)
     a.set_rename_tag(value="")
@@ -905,7 +905,7 @@ def test_tablemerge_labels() -> None:
     succ = a.get_use_labels() == 1
     succ_two = False
     try:
-        a.set_use_labels(value="a")
+        a.set_use_labels(value="a")  # type: ignore[arg-type]
     except ValueError as e:
         succ_two = "input should be an integer" in str(e)
     succ_three = False
@@ -1862,7 +1862,7 @@ def test_sqlite_postgre() -> None:
     a.set_postgre(value={})
     succ_two = False
     try:
-        a.set_postgre(value=1)
+        a.set_postgre(value=1)  # type: ignore[arg-type]
     except ValueError as e:
         succ_two = "input should be a dictionary" in str(e)
     my_dict = {"database": "a", "hostname": "b", "port": "123", "username": "c", "password": "d"}
@@ -1951,7 +1951,7 @@ def test_unit_template() -> None:
     a.set_params()
     succ_four = False
     try:
-        a.set_params(d="a")
+        a.set_params(d="a")  # type: ignore[arg-type]
     except ValueError as e:
         succ_four = "input must be a dictionary" in str(e)
     a.change_type(t=a.report_type)

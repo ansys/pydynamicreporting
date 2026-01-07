@@ -237,6 +237,8 @@ def PIL_image_to_data(img, guid=None):
         image = Image.open(imghandle)
     elif imgbytes:
         image = Image.open(io.BytesIO(imgbytes))
+    assert image is not None
+    assert image.format is not None
     data["format"] = image.format.lower()
     if data["format"] == "tiff":
         data["format"] = "tif"
@@ -557,7 +559,7 @@ class nexus_array:
         count = 1
         for v in self.shape:
             count *= v
-        if string_size and (self.dtype[0] == "S"):
+        if string_size and self.dtype and (self.dtype[0] == "S"):  # type: ignore[index]
             count *= self.element_size()
         return count
 
@@ -565,6 +567,7 @@ class nexus_array:
         """Get the size of each element in bytes
         :returns: the size of each element in bytes
         """
+        assert self.array is not None
         return self.array.itemsize * self._strlen
 
     def set_shape(self, value):
@@ -598,21 +601,25 @@ class nexus_array:
             for v, d in zip(reversed(key), reversed(self.shape)):
                 index += mult * v
                 mult = mult * d
-        if self.dtype[0] == "S":
+        if self.dtype and self.dtype[0] == "S":  # type: ignore[index]
             index *= self._strlen
         return index
 
     def __getitem__(self, key):
         idx = self._index(key)
-        if self.dtype[0] != "S":
+        assert self.dtype is not None
+        assert self.array is not None
+        if self.dtype[0] != "S":  # type: ignore[index]
             return self.array[idx]
         return bytes(self.array[idx : idx + self._strlen])
 
     def __setitem__(self, key, value):
         idx = self._index(key)
-        if self.dtype[0] != "S":
+        assert self.dtype is not None
+        assert self.array is not None
+        if self.dtype[0] != "S":  # type: ignore[index]
             # further encoding needed only for byte-string dtype
-            self.array[idx] = value
+            self.array[idx] = value  # type: ignore[index]
             return
         # since we only handle byte-strings from here on.
         # convert any input that is not bytes to bytes
@@ -696,19 +703,21 @@ class nexus_array:
 
     def to_bytes(self):
         self.update_array()
+        assert self.array is not None
         return self.array.tobytes()
 
     def to_2dlist(self):
         to_list = list()
         for i in range(self.shape[0]):
             to_list.append(list())
-            for j in range(self.shape[1]):
+            for j in range(self.shape[1]):  # type: ignore[index, misc]
                 to_list[i].append(self.__getitem__((i, j)))
         return to_list
 
     def to_numpy(self, writeable=False):
         if not has_numpy:
             raise ImportError
+        assert self.array is not None
         a = numpy.frombuffer(self.array.tobytes(), dtype=self.dtype)
         a.shape = self.shape
         if writeable:
@@ -746,7 +755,7 @@ class nexus_array:
         # note: it is not possible/recommended to
         # guess the dtype from the elements here
         for i in range(self.shape[0]):
-            for j in range(self.shape[1]):
+            for j in range(self.shape[1]):  # type: ignore[index, misc]
                 self.__setitem__((i, j), value[i][j])
 
     def from_numpy(self, value):
@@ -876,14 +885,14 @@ def is_user_admin() -> bool:
     """
     try:
         # on Windows this will throw AttributeError
-        return os.geteuid()
+        return os.geteuid()  # type: ignore[return-value]
     except AttributeError:
         try:
             import ctypes
 
             # on non-Windows systems, this can be ModuleNotFoundError
             # on some Windows machines this can be AttributeError
-            return ctypes.windll.shell32.IsUserAnAdmin() == 1
+            return ctypes.windll.shell32.IsUserAnAdmin() == 1  # type: ignore[attr-defined]
         except (ModuleNotFoundError, AttributeError):
             return False
 

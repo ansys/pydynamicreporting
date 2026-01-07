@@ -39,17 +39,17 @@ import time
 try:
     import warnings
 except ImportError:
-    warnings = None
+    warnings = None  # type: ignore[assignment]
 
 try:
     import msvcrt
 except ImportError:
-    msvcrt = None
+    msvcrt = None  # type: ignore[assignment]
 
 try:
     import fcntl
 except ImportError:
-    fcntl = None
+    fcntl = None  # type: ignore[assignment]
 
 
 # Backward compatibility
@@ -84,7 +84,7 @@ def disable_warn_logging(func):
 
 # Exceptions
 # ------------------------------------------------
-class Timeout(TimeoutError):
+class Timeout(TimeoutError):  # type: ignore[misc]
     """Raised when the lock could not be acquired in *timeout* seconds."""
 
     def __init__(self, lock_file):
@@ -336,7 +336,7 @@ class WindowsFileLock(BaseFileLock):
             pass
         else:
             try:
-                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
             except OSError:
                 os.close(fd)
             else:
@@ -345,8 +345,9 @@ class WindowsFileLock(BaseFileLock):
 
     def _release(self):
         fd = self._lock_file_fd
+        assert fd is not None
         self._lock_file_fd = None
-        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)  # type: ignore[attr-defined]
         os.close(fd)
 
         try:
@@ -379,6 +380,7 @@ class UnixFileLock(BaseFileLock):
 
     def _release(self):
         fd = self._lock_file_fd
+        assert fd is not None
         self._lock_file_fd = None
         fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
@@ -403,6 +405,7 @@ class SoftFileLock(BaseFileLock):
         return None
 
     def _release(self):
+        assert self._lock_file_fd is not None
         os.close(self._lock_file_fd)
         self._lock_file_fd = None
 

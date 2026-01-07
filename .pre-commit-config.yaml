@@ -49,6 +49,17 @@ repos:
   - id: check-merge-conflict
   - id: trailing-whitespace
 
+- repo: local
+  hooks:
+  - id: ty
+    name: ty
+    entry: ty check src/ tests/
+    language: python
+    types: [ python ]
+    pass_filenames: false
+    additional_dependencies: [ "ty==0.0.8" ]
+    exclude: ^doc/
+
 # TO BE ACTIVATED EVENTUALLY - EXISTING ERRORS SHOULD BE SOLVED
 #
 # - repo: https://github.com/PyCQA/bandit

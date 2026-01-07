@@ -242,9 +242,9 @@ class BaseModel(metaclass=BaseMeta):
         compare=False,
         default=False,
     )  # tracks if the object is saved in the db
-    _orm_model: str = field(init=False, compare=False, default=None)
-    _orm_model_cls: type[Model] = field(init=False, compare=False, default=None)
-    _orm_instance: Model = field(
+    _orm_model: str | None = field(init=False, compare=False, default=None)
+    _orm_model_cls: type[Model] | None = field(init=False, compare=False, default=None)
+    _orm_instance: Model | None = field(
         init=False,
         compare=False,
         default=None,
@@ -284,6 +284,7 @@ class BaseModel(metaclass=BaseMeta):
     def __post_init__(self):
         """Run post-init validation and instantiate the ORM instance."""
         self._validate_field_types()
+        assert self.__class__._orm_model_cls is not None
         self._orm_instance = self.__class__._orm_model_cls()
 
     def _validate_field_types(self):
@@ -395,11 +396,13 @@ class BaseModel(metaclass=BaseMeta):
     @property
     def _orm_saved(self) -> bool:
         """Whether the underlying ORM instance has been saved."""
+        assert self._orm_instance is not None
         return not self._orm_instance._state.adding
 
     @property
-    def _orm_db(self) -> str:
+    def _orm_db(self) -> str | None:
         """Database alias used by the underlying ORM instance."""
+        assert self._orm_instance is not None
         return self._orm_instance._state.db
 
     @property
@@ -494,6 +497,7 @@ class BaseModel(metaclass=BaseMeta):
         fields remain unchanged.
         """
         self._saved = False
+        assert self.__class__._orm_model_cls is not None
         self._orm_instance = self.__class__._orm_model_cls()
 
     @_handle_field_errors
@@ -520,7 +524,7 @@ class BaseModel(metaclass=BaseMeta):
             obj = self._prepare_for_save(**kwargs)
             obj._orm_instance.save(**kwargs)
         except DBIntegrityError as e:
-            raise self.__class__.IntegrityError(
+            raise self.__class__.IntegrityError(  # type: ignore[attr-defined]
                 extra_detail=f"Save failed for object with guid '{self.guid}': {e}"
             )
         except Exception as e:
@@ -542,9 +546,10 @@ class BaseModel(metaclass=BaseMeta):
             If the object has not been previously saved.
         """
         if not self._saved:
-            raise self.__class__.NotSaved(
+            raise self.__class__.NotSaved(  # type: ignore[attr-defined]
                 extra_detail=f"Delete failed for object with guid '{self.guid}'."
             )
+        assert self._orm_instance is not None
         count, _ = self._orm_instance.delete()
         self._saved = False
         return count
@@ -687,13 +692,13 @@ class BaseModel(metaclass=BaseMeta):
             if isinstance(value, BaseModel):
                 kwargs[key] = value._orm_instance
         try:
-            orm_instance = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).get(
+            orm_instance = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).get(  # type: ignore[attr-defined]
                 **kwargs
             )
         except ObjectDoesNotExist:
-            raise cls.DoesNotExist
+            raise cls.DoesNotExist  # type: ignore[attr-defined]
         except MultipleObjectsReturned:
-            raise cls.MultipleObjectsReturned
+            raise cls.MultipleObjectsReturned  # type: ignore[attr-defined]
 
         return cls._from_db(orm_instance)
 
@@ -720,7 +725,7 @@ class BaseModel(metaclass=BaseMeta):
                 filter_kwargs[key] = value._orm_instance
             else:
                 filter_kwargs[key] = value
-        qs = cls._orm_model_cls.objects.using(db_alias).filter(**filter_kwargs)
+        qs = cls._orm_model_cls.objects.using(db_alias).filter(**filter_kwargs)  # type: ignore[attr-defined]
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
@@ -739,7 +744,7 @@ class BaseModel(metaclass=BaseMeta):
             Collection of results wrapped as :class:`BaseModel`
             instances.
         """
-        qs = cls._orm_model_cls.find(query=query)
+        qs = cls._orm_model_cls.find(query=query)  # type: ignore[attr-defined]
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self) -> str:
@@ -824,18 +829,19 @@ class ObjectSet:
     value extraction.
     """
 
-    _model: type[BaseModel] = field(compare=False, default=None)
+    _model: type[BaseModel] | None = field(compare=False, default=None)
     _obj_set: list[BaseModel] = field(init=True, compare=False, default_factory=list)
     _saved: bool = field(init=False, compare=False, default=False)
-    _orm_model: type[Model] = field(compare=False, default=None)
-    _orm_queryset: QuerySet = field(compare=False, default=None)
-    _parent: BaseModel = field(compare=False, default=None)
+    _orm_model: type[Model] | None = field(compare=False, default=None)
+    _orm_queryset: QuerySet | None = field(compare=False, default=None)
+    _parent: BaseModel | None = field(compare=False, default=None)
 
     def __post_init__(self):
         """Materialize ORM instances into :class:`BaseModel` objects."""
         if self._orm_queryset is None:
             return
         self._saved = True
+        assert self._model is not None
         self._obj_set = [
             self._model._from_db(instance, parent=self._parent) for instance in self._orm_queryset
         ]
@@ -879,6 +885,7 @@ class ObjectSet:
         for obj in self._obj_set:
             obj.delete()
             count += 1
+        assert self._orm_queryset is not None
         self._orm_queryset.delete()
         self._obj_set = []
         self._saved = False
