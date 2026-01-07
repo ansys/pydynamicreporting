@@ -1,17 +1,18 @@
 import os
 from os.path import join
 import platform
+from types import ModuleType
 
 import pytest
 
 try:
     import msvcrt
 except ImportError:
-    msvcrt = None
+    msvcrt = None  # type: ignore[assignment]
 try:
     import fcntl
 except ImportError:
-    fcntl = None
+    fcntl = None  # type: ignore[assignment]
 
 from ansys.dynamicreporting.core.utils import filelock as fl
 

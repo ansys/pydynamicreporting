@@ -200,10 +200,18 @@ def test_settings() -> None:
 @pytest.mark.ado_test
 def test_find_unused_ports() -> None:
     ports = ru.find_unused_ports(count=3)
-    single_port = ru.find_unused_ports(start=0, end=9000, count=1, avoid=range(10, 1000))
-    succ = len(ru.find_unused_ports(count=0)) <= 1
-    succ_two = ru.find_unused_ports(count=0, avoid=range(100000)) == []
-    assert len(ports) == 3 and len(single_port) == 1 and succ and succ_two
+    single_port = ru.find_unused_ports(start=0, end=9000, count=1, avoid=list(range(10, 1000)))
+    result = ru.find_unused_ports(count=0)
+    succ = len(result) <= 1 if result is not None else True
+    succ_two = ru.find_unused_ports(count=0, avoid=list(range(100000))) == []
+    assert (
+        ports is not None
+        and len(ports) == 3
+        and single_port is not None
+        and len(single_port) == 1
+        and succ
+        and succ_two
+    )
 
 
 @pytest.mark.ado_test
