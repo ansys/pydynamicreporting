@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from pathlib import Path
 from uuid import uuid4
 
@@ -62,7 +63,7 @@ def adr_init(pytestconfig: pytest.Config) -> ADR:
 
 # Setup ADR after initialization
 @pytest.fixture(scope="session", autouse=False)
-def adr_serverless(adr_init: ADR) -> ADR:
+def adr_serverless(adr_init: ADR) -> Generator[ADR, None, None]:
     adr_init.setup(collect_static=True)
     yield adr_init
     adr_init.close()
