@@ -85,11 +85,16 @@ and virtual environment handling. To set up a development environment:
 
 Install `uv` by following the `official installation guide <https://docs.astral.sh/uv/getting-started/installation/>`_.
 
-On Windows, you'll also need `make`. Install it using `chocolatey <https://chocolatey.org/install>`_:
+You'll also need `make`:
 
 .. code::
 
+   # On Windows, install using chocolatey:
    choco install make
+
+   # On Linux, make is usually pre-installed. If not, install via:
+   sudo apt-get install build-essential  # Ubuntu/Debian
+   sudo yum groupinstall "Development Tools"  # RHEL/CentOS/Fedora
 
 **Clone and Install**
 
@@ -143,7 +148,7 @@ To run GitHub Actions on your local desktop, install the
 .. code::
 
    choco install act-cli  # Windows
-   # or: brew install act  # macOS
+   # or: brew install act  # macOS/Linux with Homebrew
 
 To run a specific job from the CI/CD workflow, use:
 
