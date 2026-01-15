@@ -120,7 +120,7 @@ include = [
     "codegen/**",
     "AUTHORS",
     "CHANGELOG.md",
-    "CONTRIBUTING.rst",
+    "CONTRIBUTING.md",
     "CONTRIBUTORS.md",
     "LICENSE",
     "README.rst",
