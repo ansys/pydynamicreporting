@@ -10,12 +10,12 @@ software a useful tool for all users. As such, we welcome and encourage
 any questions or submissions to this repository.
 
 Overall guidance on contributing to a PyAnsys library appears in the
-[Contributing](https://dev.docs.pyansys.com/how-to/contributing.html) topic 
-in the *PyAnsys Developer's Guide*. Please reference the 
-[PyAnsys Developer's Guide](https://dev.docs.pyansys.com/) for the full 
+[Contributing](https://dev.docs.pyansys.com/how-to/contributing.html) topic
+in the *PyAnsys Developer's Guide*. Please reference the
+[PyAnsys Developer's Guide](https://dev.docs.pyansys.com/) for the full
 documentation regarding contributing to the `pydynamicreporting` project.
 
-Ensure that you are thoroughly familiar with this guide before attempting to 
+Ensure that you are thoroughly familiar with this guide before attempting to
 contribute to PyDynamicReporting.
 
 ## Branch Conventions
