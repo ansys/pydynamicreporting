@@ -78,55 +78,82 @@ To install the package, simply run
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
-To clone and install the ``pydynamicreporting`` package in development mode,
-run this code:
+This project uses `uv <https://github.com/astral-sh/uv>`_ for fast dependency management
+and virtual environment handling. To set up a development environment:
+
+**Prerequisites**
+
+Install `uv` by following the `official installation guide <https://docs.astral.sh/uv/getting-started/installation/>`_.
+
+On Windows, you'll also need `make`. Install it using `chocolatey <https://chocolatey.org/install>`_:
+
+.. code::
+
+   choco install make
+
+**Clone and Install**
 
 .. code::
 
    git clone https://github.com/ansys/pydynamicreporting
    cd pydynamicreporting
-   pip install virtualenv
-   virtualenv venv  # create virtual environment
-   source venv/bin/activate  # (.\venv\Scripts\activate for Windows shell)
-   make install-dev  # install pydynamicreporting in editable mode
+   make install
 
-The preceding code creates an "editable" installation that lets you develop and test
-PyDynamicReporting at the same time.
+The ``make install`` command does the following:
+- Synchronizes dependencies from ``uv.lock`` (includes all optional extras)
+- Creates a ``.venv`` virtual environment automatically
+- Installs the package in editable mode
 
-To build and create a production-like installation on Windows (not required on other OSes),
-first install `chocolatey <https://chocolatey.org/install>`_. Then:
+This creates an "editable" installation that lets you develop and test PyDynamicReporting simultaneously.
+
+**Available Make Commands**
+
+The Makefile provides several useful commands:
 
 .. code::
 
-   choco install make  # install make on Windows
-   make clean  # clean
-   make build   # build
-   # this replaces the editable installation done previously. If you don't want to replace,
-   # switch your virtual environments to test the new install separately.
-   make install
-   # you can skip the steps above and just do 'make all'
-   make smoketest  # test import
+   make check        # Run code quality checks (pre-commit hooks)
+   make version      # Display the current project version
+   make build        # Build source distribution and wheel
+   make check-dist   # Validate built artifacts
+   make test         # Run the full test suite with coverage
+   make smoketest    # Quick import test
+   make docs         # Build documentation
+   make clean        # Remove build artifacts and caches
+
+**Running Tests**
+
+To run tests with coverage reporting:
+
+.. code::
+
+   make test
+
+For a quick sanity check:
+
+.. code::
+
+   make smoketest
 
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
-To run GitHub Actions on your local desktop (recommended), install the
-`act <https://github.com/nektos/act#readme>`_ package.
+To run GitHub Actions on your local desktop, install the
+`act <https://github.com/nektos/act#readme>`_ package:
 
 .. code::
 
-   choco install act-cli
+   choco install act-cli  # Windows
+   # or: brew install act  # macOS
 
-To run a job, such as the ``style`` job from the ``ci_cd.yml`` file, use
-this command, where ``style`` is the job name:
+To run a specific job from the CI/CD workflow, use:
 
 .. code::
 
-   act -W '.github/workflows/ci_cd.yml' -j style --bind
+   act -W '.github/workflows/ci_cd.yml' -j style --bind      # Run code style checks
+   act -W '.github/workflows/ci_cd.yml' -j smoketest --bind  # Run smoke tests
 
-
-Deploy and upload steps **must always** be ignored. If they are not ignored,
-before running GitHub Actions locally, add ``if: ${{ !env.ACT }}`` to the
-workflow step and commit this change if required.
+**Note**: Deploy and upload steps are guarded with ``if: ${{ !env.ACT }}`` to prevent
+them from running locally. Only build and validation steps will execute with ``act``.
 
 Creating a Release
 ------------------
