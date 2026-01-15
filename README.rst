@@ -140,6 +140,18 @@ For a quick sanity check:
 
    make smoketest
 
+**Updating Dependencies**
+
+If you see an error like ``The lockfile at `uv.lock` needs to be updated``, run the following commands to update the lock file:
+
+.. code::
+
+   uv sync --upgrade --all-extras
+   uv lock --upgrade
+
+Then make sure to commit the updated ``uv.lock`` file.
+This ensures your local environment is synchronized with the latest dependency constraints.
+
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
 To run GitHub Actions on your local desktop, install the
