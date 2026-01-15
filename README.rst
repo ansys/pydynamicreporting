@@ -107,6 +107,39 @@ first install `chocolatey <https://chocolatey.org/install>`_. Then:
    # you can skip the steps above and just do 'make all'
    make smoketest  # test import
 
+Docker Template (optional)
+--------------------------
+PyDynamicReporting can now be run via Docker using the provided Docker image template.
+
+The template provides a reproducible, containerized environment and mirrors the standard developer installation (make install). 
+It includes a Dockerfile, build and run scripts, and a .dockerignore. The resulting image is built and used locally only.
+
+**Prerequisite**: Docker must be installed and available on the system before using this template.
+
+Build image
+^^^^^^^^^^^
+.. code::
+
+   cd docker
+   ./docker-build.sh
+
+This builds a local image (dynamicreporting-local) from your source code using make install-dev.
+
+Run image
+^^^^^^^^^
+.. code::
+
+   ./docker-run.sh
+
+Publishing an image (future use)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This template can be adapted to publish images by:
+
+- Tagging versions.
+- Pushing to a (private) registry.
+- Switching from a dev install to a production install target.
+- No application code changes are required.
+
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
 To run GitHub Actions on your local desktop (recommended), install the
