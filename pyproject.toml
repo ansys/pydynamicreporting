@@ -203,6 +203,18 @@ quiet-level = 3
 
 [tool.ty]
 # Configuration for ty type checker
+#
+# Note: ty vs mypy
+# ---------------
+# In general, if you run mypy in strict mode, then running ty without changing
+# any of its settings is very similar. However, ty currently does not highlight
+# missing type hints. If you need to enforce adding type hints, you can use
+# Ruff's flake8-annotations.
+#
+# Using Flake8 annotations in Ruff:
+# To enable flake8-annotations in your Ruff configuration, add "ANN" to your
+# selected rules list. If you have other rules already selected, you can add
+# "ANN" to the end of the list to enable it.
 
 [tool.ty.environment]
 # Python version to use for type checking
