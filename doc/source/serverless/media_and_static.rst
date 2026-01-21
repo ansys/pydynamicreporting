@@ -1,5 +1,5 @@
 Media and Static Files
-=====================
+======================
 
 Serverless ADR manages two key asset categories essential for rich report presentation:
 
@@ -24,7 +24,7 @@ Media files complement your report Items and can include:
 They are stored separately on disk in a **media directory** configured during ADR setup. Items reference media files by unique GUID-based filenames to avoid collisions and enable retrieval.
 
 Static Files
-~~~~~~~~~~~
+~~~~~~~~~~~~
 
 Static files provide the frontend styling and interactivity needed for report visualization. They include:
 
@@ -101,7 +101,7 @@ Example: Creating and saving an Image Item with a file
     )
 
 Working with Media Files Directly
---------------------------------
+---------------------------------
 
 You can access media file paths from Items:
 

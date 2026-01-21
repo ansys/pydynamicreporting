@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Tag/branch/SHA to build (e.g. refs/tags/v0.10.5)"
+        required: true
+        default: ""
+  release:
+    types: [ published ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.source_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write         # REQUIRED for OIDC (provenance)
+      attestations: write     # REQUIRED by attest-build-provenance v2
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: "0"
+          fetch-tags: true
+          # If manually dispatched, build from inputs.source_ref (e.g. refs/tags/v0.10.5).
+          # Otherwise (release.published), build from the release tag (github.ref).
+          ref: ${{ inputs.source_ref || github.ref }}
+
+      - name: Set up Python Env
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run version checks
+        run: make check-version
+
+      - name: Build library source and wheel artifacts
+        uses: ./.github/actions/build-library
+        with:
+          library-name: ${{ env.PACKAGE_NAME }}
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+
+  upload-release:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    needs: [ build-release ]
+    permissions:
+      id-token: write         # REQUIRED for OIDC
+      attestations: write     # REQUIRED by attest-build-provenance v2
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: "0"
+          fetch-tags: true
+          ref: ${{ inputs.source_ref || github.ref }}
+
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.PACKAGE_NAME }}-artifacts
+          path: ${{ env.PACKAGE_NAME }}-artifacts
+
+      - name: "Upload artifacts to PyPI using trusted publisher"
+        uses: pypa/gh-action-pypi-publish@v1.13.0
+        if: ${{ !env.ACT }}
+        with:
+          repository-url: "https://upload.pypi.org/legacy/"
+          print-hash: true
+          packages-dir: ${{ env.PACKAGE_NAME }}-artifacts
+          skip-existing: false
+
+  # Call the reusable Docs workflow after PyPI succeeds
+  docs:
+    name: Docs (post-release)
+    needs: [ upload-release ]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-docs.yml
+    with:
+      # Build docs from the same source ref used by the build/upload steps.
+      ref: ${{ inputs.source_ref || github.ref }}
+    secrets: inherit
+
+  notify-release-failure:
+    name: Teams notify on failure
+    if: failure()
+    needs: [ build-release, upload-release ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Microsoft Teams Notification
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
+          notification-summary: "❌ Release workflow failed in `${{ github.workflow }}` on `${{ github.ref_name }}`"
+          notification-color: dc3545
+          timezone: America/New_York

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from ast import literal_eval
 import base64
 import copy
 import datetime
@@ -7,22 +10,24 @@ import json
 import logging
 import os
 from pathlib import Path
-import pickle
+import pickle  # nosec B403
 import shlex
 import sys
 import uuid
 import weakref
 
-from PIL import Image
+import bleach
 import dateutil
 import dateutil.parser
 import pytz
 
 from . import extremely_ugly_hacks, report_utils
+from ..common_utils import check_dictionary_for_html
+from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
 try:
-    from PyQt5 import QtCore, QtGui
+    from qtpy import QtCore, QtGui
 
     has_qt = True
 except ImportError:
@@ -172,7 +177,8 @@ def map_ensight_plot_to_table_dictionary(p):
         # convert EnSight undefined values into Numpy NaN values
         try:
             a[a == ensight.Undefined] = numpy.nan
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Warning: {str(e)}.\n")
             pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
@@ -399,7 +405,8 @@ class Template:
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -407,6 +414,8 @@ class Template:
             d = {}
         if type(d) is not dict:
             raise ValueError("Error: input must be a dictionary")
+        if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
+            check_dictionary_for_html(d)
         self.params = json.dumps(d)
         return
 
@@ -441,14 +450,10 @@ class Template:
             setattr(self, key, tmp)
         # ok, re-order the children list to match the order in children_order
         sorted_guids = self.children_order.lower().split(",")
-        sorted_guids.reverse()
-        for guid in sorted_guids:
-            idx = 0
-            for childguid in self.children:
-                if guid == str(childguid).lower():
-                    self.children.insert(0, self.children.pop(idx))
-                    break
-                idx += 1
+        lower_guid_to_child = {str(child).lower(): child for child in self.children}
+        self.children = [
+            lower_guid_to_child[guid] for guid in sorted_guids if guid in lower_guid_to_child
+        ]
         # Instance specific initialization
         # this may have changed the guid, so
         if tmpguid != self.guid:
@@ -1079,17 +1084,21 @@ class ItemREST(BaseRESTObject):
         self.type = ItemREST.type_none
         self._payloaddata = ""
 
-    def validate_string(self, input_string, description):
+    @staticmethod
+    def validate_string(input_string, description, sanitize_html=False):
         if not isinstance(input_string, str):
             raise TypeError("Payload must be a string.")
-
-        if not input_string.strip():
-            raise ValueError(f"Payload {description} cannot be empty or whitespace.")
 
         try:
             input_string.encode("utf-8")
         except UnicodeEncodeError:
             raise ValueError(f"Payload {description} must be a valid UTF-8 string.")
+
+        if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
+            if sanitize_html:
+                cleaned_string = bleach.clean(input_string, strip=True)
+                if cleaned_string != input_string:
+                    raise ValueError(f"Payload {description} contains HTML content.")
 
     def set_payload_string(self, s):
         self.validate_string(s, "string")
@@ -1124,9 +1133,19 @@ class ItemREST(BaseRESTObject):
             else:
                 if type_ not in [float, int, datetime.datetime, str, bool, uuid.UUID, type(None)]:
                     raise ValueError(f"{str(type_)} is not a valid Tree payload 'value' type")
+                if isinstance(value, str):
+                    ItemREST.validate_string(value, "Tree node value", sanitize_html=True)
 
     @staticmethod
     def validate_tree(t):
+
+        def _has_non_empty_value(val):
+            if val is None:
+                return False
+            if isinstance(val, str):
+                return bool(val.strip())
+            return True
+
         if type(t) != list:
             raise ValueError("The tree payload must be a list of dictionaries")
         for i in t:
@@ -1140,8 +1159,14 @@ class ItemREST(BaseRESTObject):
                 raise ValueError("Tree payload dictionaries must have a 'value' key")
             if "children" in i:
                 ItemREST.validate_tree(i["children"])
-            # validate tree value
-            ItemREST.validate_tree_value(i["value"])
+
+            # validate tree value, only at the last level of the tree or if value is not empty
+            value = i.get("value")
+            children = i.get("children", [])
+            is_leaf = len(children) == 0
+
+            if is_leaf or _has_non_empty_value(value):
+                ItemREST.validate_tree_value(value)
 
     def set_payload_tree(self, t):
         self.validate_tree(t)
@@ -1232,11 +1257,14 @@ class ItemREST(BaseRESTObject):
         if kind not in ("S", "f"):
             raise ValueError("Table array must be a bytes or float type.")
 
+        if kind == "S":  # Check if the array contains strings
+            for i in range(array.shape[0]):
+                for j in range(array.shape[1]):
+                    if isinstance(array[i, j], str):
+                        self.validate_string(array[i, j], "Table array element", sanitize_html=True)
+
         shape = array.shape
         size = array.size
-
-        if size == 0:
-            raise ValueError("Table array must not be empty.")
 
         nrows = 0
         ncols = 0
@@ -1258,10 +1286,17 @@ class ItemREST(BaseRESTObject):
             array.shape = shape
         elif len(shape) != 2:
             raise ValueError("Table array must be 2D.")
+        if rowlbls and not isinstance(rowlbls, (str, list)):
+            raise TypeError("Row labels must be a string or a list.")
+        if collbls and not isinstance(collbls, (str, list)):
+            raise TypeError("Column labels must be a string or a list.")
 
-        if rowlbls and len(rowlbls) != array.shape[0]:
+        rows = literal_eval(rowlbls) if isinstance(rowlbls, str) else rowlbls
+        columns = literal_eval(collbls) if isinstance(collbls, str) else collbls
+
+        if rows and len(rows) != array.shape[0]:
             raise ValueError("Number of row labels does not match number of rows in the array.")
-        if collbls and len(collbls) != array.shape[1]:
+        if columns and len(columns) != array.shape[1]:
             raise ValueError(
                 "Number of column labels does not match number of columns in the array."
             )
@@ -1311,7 +1346,8 @@ class ItemREST(BaseRESTObject):
         else:
             try:
                 from . import png
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Warning: {str(e)}.\n")
                 import png
             try:
                 # we can only read png images as string content (not filename)
@@ -1331,7 +1367,8 @@ class ItemREST(BaseRESTObject):
                     planes=pngobj[3].get("planes", None),
                     palette=pngobj[3].get("palette", None),
                 )
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Warning: {str(e)}.\n")
                 # enhanced images will fall into this case
                 data = report_utils.PIL_image_to_data(img)
                 self.width = data["width"]
@@ -1417,7 +1454,7 @@ class TemplateREST(BaseRESTObject):
                 "tmp_cls = " + json_data["report_type"].split(":")[1] + "REST()",
                 locals(),
                 globals(),
-            )
+            )  # nosec
             return tmp_cls
         else:
             return TemplateREST()
@@ -1452,16 +1489,10 @@ class TemplateREST(BaseRESTObject):
     # reorders the children list to be correct.
     def reorder_children(self):
         sorted_guids = self.children_order.lower().split(",")
-        sorted_guids.reverse()
-        # return the children based on the order of guids in children_order
-        for guid in sorted_guids:
-            if len(guid):
-                idx = 0
-                for child in self.children:
-                    if guid == str(child).lower():
-                        self.children.insert(0, self.children.pop(idx))
-                        break
-                    idx += 1
+        lower_guid_to_child = {str(child).lower(): child for child in self.children}
+        self.children = [
+            lower_guid_to_child[guid] for guid in sorted_guids if guid in lower_guid_to_child
+        ]
 
     @classmethod
     def get_url_base_name(cls):
@@ -1494,13 +1525,15 @@ class TemplateREST(BaseRESTObject):
                 tmp_params[k] = d[k]
             self.params = json.dumps(tmp_params)
             return
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Warning on add_params: {str(e)}.\n")
             return {}
 
     def get_params(self):
         try:
             return json.loads(self.params)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
     def set_params(self, d: dict = None):
@@ -1508,6 +1541,8 @@ class TemplateREST(BaseRESTObject):
             d = {}
         if type(d) is not dict:
             raise ValueError("Error: input must be a dictionary")
+        if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
+            check_dictionary_for_html(d)
         self.params = json.dumps(d)
         return
 
@@ -1617,6 +1652,45 @@ class TemplateREST(BaseRESTObject):
                 return ""
         else:
             raise ValueError(f"Error: HTML not supported on the report type {self.report_type}")
+
+    def reorder_child(self, target_child_template: str | TemplateREST, new_position: int) -> None:
+        """
+        Reorder the template.guid in parent.children to the specified position.
+
+        Parameters
+        ----------
+        target_child_template : str | TemplateREST
+            The child template to reorder. This can be either the GUID of the template (as a string)
+            or a TemplateREST object.
+        new_position : int
+            The new position in the parent's children list where the template should be placed.
+
+        Raises
+        ------
+        TemplateReorderOutOfBound
+            If the specified position is out of bounds.
+        TemplateDoesNotExist
+            If the target_child_template is not found in the parent's children list.
+        """
+        children_size = len(self.children)
+        if new_position < 0 or new_position >= children_size:
+            raise TemplateReorderOutOfBounds(
+                f"The specified position {new_position} is out of bounds. "
+                f"Valid range: [0, {len(self.children)})"
+            )
+
+        target_guid = (
+            target_child_template
+            if isinstance(target_child_template, str)
+            else target_child_template.guid
+        )
+
+        if target_guid not in self.children:
+            raise TemplateDoesNotExist(
+                f"Template with GUID '{target_guid}' is not found in the parent's children list."
+            )
+        self.children.remove(target_guid)
+        self.children.insert(new_position, target_guid)
 
 
 class LayoutREST(TemplateREST):
@@ -1849,8 +1923,8 @@ class boxREST(LayoutREST):
             raise ValueError("Error: child position array should contain only integers")
         try:
             uuid.UUID(guid, version=4)
-        except Exception:
-            raise ValueError("Error: input guid is not a valid guid")
+        except Exception as e:
+            raise ValueError(f"Error: input guid is not a valid guid: {str(e)}")
         d = json.loads(self.params)
         if "boxes" not in d:
             d["boxes"] = {}
@@ -1870,8 +1944,8 @@ class boxREST(LayoutREST):
             import uuid
 
             uuid.UUID(guid, version=4)
-        except Exception:
-            raise ValueError("Error: input guid is not a valid guid")
+        except Exception as e:
+            raise ValueError(f"Error: input guid is not a valid guid: {str(e)}")
         d = json.loads(self.params)
         if "boxes" not in d:
             d["boxes"] = {}
@@ -2152,8 +2226,8 @@ class reportlinkREST(LayoutREST):
                 d["report_guid"] = link
                 self.params = json.dumps(d)
                 return
-            except Exception:
-                raise ValueError("Error: input guid is not a valid guid")
+            except Exception as e:
+                raise ValueError(f"Error: input guid is not a valid guid {str(e)}")
 
 
 class tablemergeREST(GeneratorREST):
@@ -2499,20 +2573,22 @@ class tablereduceREST(GeneratorREST):
         d = json.loads(self.params)
         if "reduce_params" not in d:
             return
-        if "operations" not in d:
+        if "operations" not in d["reduce_params"]:
             return
         sources = d["reduce_params"]["operations"]
+        index = 0
         valid = 0
-        for _, s in enumerate(sources):
+        for i, s in enumerate(sources):
             compare = []
             for iname in shlex.split(s["source_rows"]):
                 compare.append(iname.replace(",", ""))
             if compare == name:
                 valid = 1
+                index = i
                 break
         if valid == 0:
             raise ValueError("Error: no existing source with the passed input")
-        del sources[i]
+        del sources[index]
         d["reduce_params"]["operations"] = sources
         self.params = json.dumps(d)
         return
@@ -2611,6 +2687,163 @@ class tablereduceREST(GeneratorREST):
         if "reduce_params" not in d:
             d["reduce_params"] = {}
         d["reduce_params"]["force_numeric"] = value
+        self.params = json.dumps(d)
+        return
+
+
+class tablemapREST(GeneratorREST):
+    """Representation of Table Mathematical Function Mapper Generator Template."""
+
+    def __init__(self):
+        super().__init__()
+
+    def get_map_param(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "map_type" in d["map_params"]:
+                return d["map_params"]["map_type"]
+        return "row"
+
+    def set_map_param(self, value="row"):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        if value not in ("row", "column"):
+            raise ValueError("Error: input should be either row or column")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["map_type"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_table_name(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "table_name" in d["map_params"]:
+                return d["map_params"]["table_name"]
+        return ""
+
+    def set_table_name(self, value="output_table"):
+        if not isinstance(value, str):
+            raise ValueError("Error: input should be a string")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["table_name"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_operations(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "operations" in d["map_params"]:
+                return d["map_params"]["operations"]
+        return []
+
+    def delete_operation(self, name=None):
+        if name is None:
+            name = []
+        if not isinstance(name, list):
+            raise ValueError(
+                "Error: need to pass the operation with the source row/column name as a list of strings"
+            )
+        if len([x for x in name if isinstance(x, str)]) != len(name):
+            raise ValueError("Error: the elements of the input list should all be strings")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            return
+        if "operations" not in d["map_params"]:
+            return
+        sources = d["map_params"]["operations"]
+        index = 0
+        valid = False
+        for i, s in enumerate(sources):
+            compare = []
+            for iname in shlex.split(s["source_rows"]):
+                compare.append(iname.replace(",", ""))
+            if compare == name:
+                index = i
+                valid = True
+                break
+        if not valid:
+            raise ValueError("Error: no existing source with the passed input")
+        del sources[index]
+        d["map_params"]["operations"] = sources
+        self.params = json.dumps(d)
+        return
+
+    def add_operation(
+        self,
+        name=None,
+        output_name="output row",
+        select_names="*",
+        function="value",
+    ):
+        if name is None:
+            name = ["*"]
+        d = json.loads(self.params)
+        if not isinstance(name, list):
+            raise ValueError("Error: row/column name should be a list of strings")
+        if len([x for x in name if isinstance(x, str)]) != len(name):
+            raise ValueError("Error: the elements of the input list should all be strings")
+        if not isinstance(output_name, str):
+            raise ValueError("Error: output_name should be a string")
+        if not isinstance(select_names, str):
+            raise ValueError("Error: select_names should be a string")
+        if not isinstance(function, str):
+            raise ValueError("Error: function should be a string")
+
+        if "map_params" not in d:
+            d["map_params"] = {}
+        if "operations" not in d["map_params"]:
+            sources = []
+        else:
+            sources = d["map_params"]["operations"]
+        new_source = {}
+        new_source["source_rows"] = ", ".join(repr(x) for x in name)
+        new_source["output_rows"] = output_name
+        new_source["output_columns_select"] = select_names
+        new_source["function"] = function
+        sources.append(new_source)
+        d["map_params"]["operations"] = sources
+        self.params = json.dumps(d)
+        return
+
+    def get_table_transpose(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "transpose_output" in d["map_params"]:
+                return d["map_params"]["transpose_output"]
+        return 0
+
+    def set_table_transpose(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("Error: the transpose input should be integer")
+        if value not in (0, 1):
+            raise ValueError("Error: input value should be 0 or 1")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["transpose_output"] = value
+        self.params = json.dumps(d)
+        return
+
+    def get_numeric_output(self):
+        d = json.loads(self.params)
+        if "map_params" in d:
+            if "force_numeric" in d["map_params"]:
+                return d["map_params"]["force_numeric"]
+        return 0
+
+    def set_numeric_output(self, value=0):
+        if not isinstance(value, int):
+            raise ValueError("Error: the numeric output should be integer")
+        if value not in (0, 1):
+            raise ValueError("Error: input value should be 0 or 1")
+        d = json.loads(self.params)
+        if "map_params" not in d:
+            d["map_params"] = {}
+        d["map_params"]["force_numeric"] = value
         self.params = json.dumps(d)
         return
 
@@ -3162,7 +3395,7 @@ class sqlqueriesREST(GeneratorREST):
             if "pswsqldb" in json.loads(self.params):
                 out["password"] = json.loads(self.params)["pswsqldb"]
             else:
-                out["password"] = ""
+                out["password"] = ""  # nosec B259
         else:
             out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}
         return out
@@ -3263,7 +3496,7 @@ class sqlqueriesREST(GeneratorREST):
                 _ = psycopg.connect(conn_string.strip())
             except Exception as e:
                 valid = False
-                out_msg = f"Could not validate connection:\n{e}"
+                out_msg = f"Could not validate connection:\n{str(e)}"
         return valid, out_msg
 
 
@@ -3298,6 +3531,26 @@ class pptxREST(LayoutREST):
     def output_pptx(self, value):
         props = self.get_property()
         props["output_pptx"] = value
+        self.set_property(props)
+
+    @property
+    def font_size(self):
+        return self.get_property().get("font_size")
+
+    @font_size.setter
+    def font_size(self, value):
+        props = self.get_property()
+        props["font_size"] = value
+        self.set_property(props)
+
+    @property
+    def html_font_scale(self):
+        return self.get_property().get("html_font_scale")
+
+    @html_font_scale.setter
+    def html_font_scale(self, value):
+        props = self.get_property()
+        props["html_font_scale"] = value
         self.set_property(props)
 
 
@@ -3570,15 +3823,24 @@ class statisticalREST(GeneratorREST):
     def set_predictor_variables(self, value):
         if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
-        # standard input format is a 2d array with a subarray length of 3
-        if len(value[0]) != 3:
-            raise ValueError(
-                "Error: input format should be an array of subarrays each of length 3. With Type, Predictor, Output Name."
-            )
+
+        # standard input format is a 2d array with a subarray length of 3 or 4
+        processed = []
+        for item in value:
+            if len(item) not in (3, 4):
+                raise ValueError(
+                    "Error: each subarray should have length 3 or 4 (Type, Predictor, Output Name, [optional] Predictor Type)."
+                )
+            # If length is 3, append default predictor type "numerical"
+            if len(item) == 3:
+                item = item + ["numerical"]
+            processed.append(item)
+
         d = json.loads(self.params)
         if "stats_params" not in d:
             d["stats_params"] = {}
-        d["stats_params"]["predictor_variables"] = json.dumps(value)
+
+        d["stats_params"]["predictor_variables"] = json.dumps(processed)
         self.params = json.dumps(d)
 
     def get_response_variables(self):

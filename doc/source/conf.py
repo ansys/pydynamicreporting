@@ -1,22 +1,73 @@
 """Sphinx documentation configuration file."""
 
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as metadata_version
 import os
+import sys
+import types
 
 from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
+from packaging.version import InvalidVersion, Version
 from sphinx_gallery.sorting import FileNameSortKey
 
-from ansys.dynamicreporting.core import __version__
+# ---------------------------------------------------------------------------
+# Mock heavy / ADR-only dependencies so autodoc + numpydoc can import modules
+# without a full Nexus/ADR runtime available in CI.
+# ---------------------------------------------------------------------------
+_MOCK_PACKAGES: dict[str, list[str]] = {
+    "data": ["models", "utils", "geofile_rendering"],
+    "reports": ["models", "engine"],
+    "ceireports": ["utils"],
+}
+
+for pkg_name, submods in _MOCK_PACKAGES.items():
+    # Create package-like module
+    if pkg_name not in sys.modules:
+        pkg_mod = types.ModuleType(pkg_name)
+        # Mark as a package so `import pkg.sub` works
+        pkg_mod.__path__ = []  # type: ignore[attr-defined]
+        sys.modules[pkg_name] = pkg_mod
+    else:
+        pkg_mod = sys.modules[pkg_name]
+        # Ensure existing module is treated as a package
+        if not hasattr(pkg_mod, "__path__"):
+            pkg_mod.__path__ = []  # type: ignore[attr-defined]
+
+    # Create submodules and attach them to the package
+    for sub_name in submods:
+        full_name = f"{pkg_name}.{sub_name}"
+        if full_name not in sys.modules:
+            sub_mod = types.ModuleType(full_name)
+            sys.modules[full_name] = sub_mod
+        else:
+            sub_mod = sys.modules[full_name]
+
+        setattr(pkg_mod, sub_name, sub_mod)
+
+
+project = "ansys-dynamicreporting-core"
+try:
+    release = metadata_version(project)
+except PackageNotFoundError:
+    release = "0.0.0"
+
+# Sphinx convention: short 'version' (series), full 'release'
+try:
+    v = Version(release)
+    version = f"{v.major}.{v.minor}"
+except InvalidVersion:
+    version = release
+
+# Version switcher: keep dev label if present
+switcher_version = "dev" if "dev" in release else get_version_match(version)
 
 cname = os.getenv("DOCUMENTATION_CNAME", "dynamicreporting.docs.pyansys.com")
 """The canonical name of the webpage hosting the documentation."""
 
-# Project information
-project = "ansys-dynamicreporting-core"
 copyright = f"(c) {datetime.now().year} ANSYS, Inc. All rights reserved"
 author = "Ansys Inc."
-release = version = __version__
-__ansys_version__ = 251
+__ansys_version__ = 252
 
 rst_prolog = f"""
 .. _Layout Templates: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v{__ansys_version__}/en/adr_ug/adr_ug_layout_templates.html
@@ -51,7 +102,6 @@ rst_prolog = f"""
 html_logo = pyansys_logo_black
 html_theme = "ansys_sphinx_theme"
 html_short_title = html_title = "PyDynamicReporting documentation |version|"
-switcher_version = get_version_match(version)
 html_favicon = ansys_favicon
 
 # specify the location of your github repo
@@ -60,6 +110,7 @@ html_context = {
     "github_repo": "pydynamicreporting",
     "github_version": "main",
     "doc_path": "doc/source",
+    "pyansys_tags": ["dynamicreporting", "reporting", "report", "adr", "nexus"],
 }
 
 # specify the location of your github repo
@@ -102,6 +153,35 @@ autoapi_options = [
     "imported-members",
 ]
 
+# Automatically generate stub pages for autosummary entries
+autosummary_generate = True
+
+# Default autodoc options for all documented objects
+autodoc_default_options = {
+    "members": True,  # include class/module members
+    "undoc-members": False,  # skip members without docstrings
+    "show-inheritance": True,  # show base classes
+}
+
+autodoc_mock_imports = [
+    "data",
+    "data.models",
+    "data.utils",
+    "data.geofile_rendering",
+    "reports",
+    "reports.models",
+    "reports.engine",
+    "ceireports",
+    "ceireports.utils",
+]
+
+
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+    ("py:data", "type"),
+]
+
 # Intersphinx mapping
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -114,8 +194,12 @@ intersphinx_mapping = {
 }
 
 # numpydoc configuration
+# numpydoc configuration
 numpydoc_show_class_members = False
+
+# Still cross-ref real types, but don't try to link plain "type"
 numpydoc_xref_param_type = True
+numpydoc_xref_ignore = {"type"}
 
 # Consider enabling numpydoc validation. See:
 # https://numpydoc.readthedocs.io/en/latest/validation.html#

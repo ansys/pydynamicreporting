@@ -2,7 +2,11 @@ from uuid import uuid4
 
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.exceptions import (
+    ADRException,
+    TemplateDoesNotExist,
+    TemplateReorderOutOfBounds,
+)
 
 
 @pytest.mark.ado_test
@@ -674,6 +678,27 @@ def test_template_reorder_children(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_template_update_children_order(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    # Create parent template
+    parent = PanelLayout.create(name="test_template_update_children_order", tags="dp=dp227")
+
+    # Create child templates
+    child1 = BasicLayout.create(name="child1", parent=parent)
+    child2 = BasicLayout.create(name="child2", parent=parent)
+    child3 = BasicLayout.create(name="child3", parent=parent)
+
+    # Manually set the parent's children
+    parent.children = [child1, child2, child3]
+    parent._children_order = ""  # Clear order
+    parent.update_children_order()
+
+    # check order
+    assert parent.children_order == f"{child1.guid},{child2.guid},{child3.guid}"
+
+
+@pytest.mark.ado_test
 def test_layout_set_get_column_count(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
 
@@ -785,7 +810,7 @@ def test_layout_set_transpose_invalid(adr_serverless):
 
     layout = PanelLayout.create(name="test_layout_transpose_invalid", tags="dp=dp227")
 
-    with pytest.raises(ValueError, match="input needs to be an integer"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_transpose("not-integer")
 
 
@@ -806,10 +831,10 @@ def test_layout_set_skip_empty_invalid(adr_serverless):
 
     layout = PanelLayout.create(name="test_layout_skip_invalid", tags="dp=dp227")
 
-    with pytest.raises(ValueError, match="input needs to be an integer"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_skip("invalid")
 
-    with pytest.raises(ValueError, match="input needs to be an integer \\(0 or 1\\)"):
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
         layout.set_skip(5)
 
 
@@ -974,7 +999,7 @@ def test_template_find_raises_exception(adr_serverless):
         PanelLayout.find(query="A|t_types|cont|panel")
 
 
-# @pytest.mark.ado_test
+@pytest.mark.ado_test
 def test_template_render(monkeypatch, adr_serverless):
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless import template as template_module
@@ -1003,3 +1028,366 @@ def test_template_render(monkeypatch, adr_serverless):
 
     # Assert that the final rendered content matches the fixed string.
     assert result == "dummy rendered content"
+
+
+@pytest.mark.ado_test
+def test_pptx_layout_render_pptx_success(adr_serverless, monkeypatch):
+    # The rendering engine is located in the 'reports' app of the Ansys core installation
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        # This fake method simulates a successful render by the engine
+        assert render_type == "pptx"
+        return b"mock pptx content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+
+    pptx_bytes = pptx_template.render_pptx()
+
+    assert pptx_bytes == b"mock pptx content from engine"
+
+
+@pytest.mark.ado_test
+def test_pptx_layout_render_pptx_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import PPTXLayout
+
+    pptx_template = adr_serverless.create_template(
+        PPTXLayout, name="TestRenderPPTXFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PPTX for template"):
+        pptx_template.render_pptx()
+
+
+@pytest.mark.ado_test
+def test_render_pdf_success(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+    import weasyprint
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    base_template = adr_serverless.create_template(
+        BasicLayout, name="TestRenderPDFSuccess", parent=None
+    )
+
+    def fake_dispatch_render(self, render_type, items, context):
+        assert render_type == "pdf"
+        # return HTML string (weasyprint expects a string for HTML(...))
+        return "<html><body>mock</body></html>"
+
+    def fake_write_pdf(self):
+        # ensure the final returned value is the expected bytes
+        return b"mock pdf content from engine"
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render)
+    monkeypatch.setattr(weasyprint.HTML, "write_pdf", fake_write_pdf)
+
+    pdf_bytes = base_template.render_pdf()
+
+    assert pdf_bytes == b"mock pdf content from engine"
+
+
+@pytest.mark.ado_test
+def test_render_pdf_failure_wraps_exception(adr_serverless, monkeypatch):
+    from reports.engine import TemplateEngine
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    base_template = adr_serverless.create_template(
+        BasicLayout, name="TestRenderPDFFailure", parent=None
+    )
+
+    def fake_dispatch_render_fails(self, render_type, items, context):
+        raise ValueError("Simulated engine failure")
+
+    monkeypatch.setattr(TemplateEngine, "dispatch_render", fake_dispatch_render_fails)
+
+    with pytest.raises(ADRException, match="Failed to render PDF for template"):
+        base_template.render_pdf()
+
+
+@pytest.mark.ado_test
+def test_layout_set_transpose_invalid_value(adr_serverless):
+    """Tests the added validation for the set_transpose method in Layout."""
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    layout = BasicLayout.create(name="test_layout_set_transpose_invalid_value")
+    with pytest.raises(ValueError, match="input needs to be either 0 or 1"):
+        layout.set_transpose(2)
+
+
+@pytest.mark.ado_test
+def test_panel_layout_style(adr_serverless):
+    """Tests get/set for panel_style in PanelLayout."""
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_panel_layout_style")
+    assert layout.get_panel_style() == "", "Default style should be empty string"
+
+    layout.set_panel_style("callout-success")
+    assert layout.get_panel_style() == "callout-success"
+
+    with pytest.raises(ValueError, match="not among the acceptable inputs"):
+        layout.set_panel_style("invalid-style")
+
+
+@pytest.mark.ado_test
+def test_panel_layout_items_as_link(adr_serverless):
+    """Tests get/set for items_as_link in PanelLayout."""
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    layout = PanelLayout.create(name="test_panel_layout_items_as_link")
+    assert layout.get_items_as_link() == 0, "Default items_as_link should be 0"
+
+    layout.set_items_as_link(1)
+    assert layout.get_items_as_link() == 1
+
+    with pytest.raises(ValueError, match="Input must be an integer, either 0 or 1."):
+        layout.set_items_as_link(2)
+    with pytest.raises(ValueError, match="Input must be an integer, either 0 or 1."):
+        layout.set_items_as_link("not-an-int")
+
+
+@pytest.mark.ado_test
+def test_box_layout_methods(adr_serverless):
+    """Tests get/set methods for BoxLayout, including preserving values."""
+    from ansys.dynamicreporting.core.serverless import BoxLayout
+
+    layout = BoxLayout.create(name="test_box_layout_methods")
+    child_guid = str(uuid4())
+
+    assert layout.get_children_layout() == {}, "Default children layout should be empty"
+
+    # Set position, check that clip defaults to 'self'
+    layout.set_child_position(guid=child_guid, value=[10, 20, 30, 40])
+    assert layout.get_children_layout()[child_guid] == [10, 20, 30, 40, "self"]
+
+    # Set clip, check that position is preserved
+    layout.set_child_clip(guid=child_guid, clip="scroll")
+    assert layout.get_children_layout()[child_guid] == [10, 20, 30, 40, "scroll"]
+
+    # Update position, check that clip is preserved
+    layout.set_child_position(guid=child_guid, value=[50, 60, 70, 80])
+    assert layout.get_children_layout()[child_guid] == [50, 60, 70, 80, "scroll"]
+
+
+@pytest.mark.ado_test
+def test_box_layout_set_child_position_invalid(adr_serverless):
+    """Tests validation for set_child_position in BoxLayout."""
+    from ansys.dynamicreporting.core.serverless import BoxLayout
+
+    layout = BoxLayout.create(name="test_box_layout_set_child_position_invalid")
+    valid_guid = str(uuid4())
+
+    with pytest.raises(ValueError, match="not a valid guid"):
+        layout.set_child_position(guid="not-a-guid", value=[0, 0, 0, 0])
+
+    with pytest.raises(ValueError, match="must be a list containing four integers"):
+        layout.set_child_position(guid=valid_guid, value=[0, 0, 0])
+
+    with pytest.raises(ValueError, match="must be a list containing four integers"):
+        layout.set_child_position(guid=valid_guid, value="not-a-list")
+
+
+@pytest.mark.ado_test
+def test_box_layout_set_child_clip_invalid(adr_serverless):
+    """Tests validation for set_child_clip in BoxLayout."""
+    from ansys.dynamicreporting.core.serverless import BoxLayout
+
+    layout = BoxLayout.create(name="test_box_layout_set_child_clip_invalid")
+    valid_guid = str(uuid4())
+
+    with pytest.raises(ValueError, match="not a valid guid"):
+        layout.set_child_clip(guid="not-a-guid", clip="scroll")
+
+    with pytest.raises(ValueError, match="parameter must be a string and one of"):
+        layout.set_child_clip(guid=valid_guid, clip="invalid-clip")
+
+
+@pytest.mark.ado_test
+def test_carousel_layout_methods(adr_serverless):
+    """Tests get/set methods for CarouselLayout."""
+    from ansys.dynamicreporting.core.serverless import CarouselLayout
+
+    layout = CarouselLayout.create(name="test_carousel_layout_methods")
+
+    # Test 'animated'
+    assert layout.get_animated() == 0
+    layout.set_animated(1)
+    assert layout.get_animated() == 1
+    with pytest.raises(ValueError, match="must be an integer"):
+        layout.set_animated("not-an-int")
+
+    # Test 'slide_dots'
+    assert layout.get_slide_dots() == 20
+    layout.set_slide_dots(10)
+    assert layout.get_slide_dots() == 10
+    with pytest.raises(ValueError, match="must be an integer"):
+        layout.set_slide_dots("not-an-int")
+
+
+@pytest.mark.ado_test
+def test_slider_layout_methods(adr_serverless):
+    """Tests get/set/add methods for SliderLayout."""
+    from ansys.dynamicreporting.core.serverless import SliderLayout
+
+    layout = SliderLayout.create(name="test_slider_layout_methods")
+    tags1 = ["tagA|text_up", "tag with space|numeric_down"]
+    tags2 = ["tagC|none"]
+
+    assert layout.get_map_to_slider() == []
+
+    # Test set
+    layout.set_map_to_slider(tags1)
+    assert layout.get_map_to_slider() == tags1
+    assert layout.get_params()["slider_tags"] == "'tagA|text_up', 'tag with space|numeric_down'"
+
+    # Test add
+    layout.add_map_to_slider(tags2)
+    assert layout.get_map_to_slider() == tags1 + tags2
+    # Test for consistent spacing behavior
+    assert (
+        layout.get_params()["slider_tags"]
+        == "'tagA|text_up', 'tag with space|numeric_down', 'tagC|none'"
+    )
+
+    # Test setting None
+    layout.set_map_to_slider(None)
+    assert layout.get_map_to_slider() == []
+
+
+@pytest.mark.ado_test
+def test_slider_layout_invalid_tags(adr_serverless):
+    """Tests validation for SliderLayout methods."""
+    from ansys.dynamicreporting.core.serverless import SliderLayout
+
+    layout = SliderLayout.create(name="test_slider_layout_invalid_tags")
+
+    with pytest.raises(ValueError, match="is not supported"):
+        layout.set_map_to_slider(["tagA|invalid_sort"])
+
+    with pytest.raises(ValueError, match="is not supported"):
+        layout.add_map_to_slider(["tagA|invalid_sort"])
+
+    with pytest.raises(ValueError, match="must be a list of strings"):
+        layout.set_map_to_slider("not-a-list")
+
+
+@pytest.mark.ado_test
+def test_to_json(adr_serverless):
+    import json
+    import os
+
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    root = adr_serverless.create_template(
+        BasicLayout,
+        name="A",
+        parent=None,
+        tags="dp=dp1",
+        params='{"HTML": "<h1>Serverless Simulation Report</h1>"}',
+    )
+
+    adr_serverless.create_template(PanelLayout, name="B", parent=root, tags="dp=dp2")
+
+    child_1 = adr_serverless.create_template(
+        BasicLayout, name="C", parent=root, tags="dp=dp3", params='{"HTML": "<h2>Basic C</h2>"}'
+    )
+
+    adr_serverless.create_template(
+        BasicLayout, name="D", parent=child_1, tags="dp=dp4", params='{"HTML": "<h2>Basic D</h2>"}'
+    )
+
+    file_path = os.path.join(adr_serverless.static_directory, "test.json")
+    root.to_json(file_path)
+
+    with open(file_path, encoding="utf-8") as json_file:
+        data = json.load(json_file)
+
+    assert (
+        data["Template_0"]["children"] == ["Template_1", "Template_2"]
+        and data["Template_0"]["name"] == "A"
+        and data["Template_1"]["children"] == []
+        and data["Template_1"]["name"] == "B"
+        and data["Template_2"]["children"] == ["Template_3"]
+        and data["Template_2"]["name"] == "C"
+        and data["Template_3"]["children"] == []
+        and data["Template_3"]["name"] == "D"
+    )
+
+
+@pytest.mark.ado_test
+def test_to_json_non_root_template(adr_serverless):
+    from ansys.dynamicreporting.core.exceptions import ADRException
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    # Create a parent template
+    root_template = adr_serverless.create_template(
+        BasicLayout,
+        name="RootTemplate",
+        parent=None,
+        tags="dp=dp1",
+    )
+
+    # Create a child template
+    child_template = adr_serverless.create_template(
+        BasicLayout,
+        name="ChildTemplate",
+        parent=root_template,
+        tags="dp=dp2",
+    )
+
+    # Attempt to call to_json on the child template and expect an ADRException
+    with pytest.raises(ADRException, match="Only root templates can be dumped to JSON files."):
+        child_template.to_json("dummy_path.json")
+
+
+@pytest.mark.ado_test
+def test_template_reorder_child(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import PanelLayout
+
+    # Create a parent template
+    parent_template = PanelLayout.create(name="ParentTemplate")
+
+    # Create child templates
+    child1 = PanelLayout.create(name="Child1", parent=parent_template)
+    child2 = PanelLayout.create(name="Child2", parent=parent_template)
+    child3 = PanelLayout.create(name="Child3", parent=parent_template)
+
+    # Add children to the parent template
+    parent_template.children = [child1, child2, child3]
+
+    # Reorder child2 to the first position
+    parent_template.reorder_child(child2, 0)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child1", "Child3"]
+
+    # Reorder child3 to the second position
+    parent_template.reorder_child(child3, 1)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child3", "Child1"]
+
+    # Reorder child1 to the last position
+    parent_template.reorder_child(child1, 2)
+    assert [child.name for child in parent_template.children] == ["Child2", "Child3", "Child1"]
+
+    # Test invalid position (out of bounds)
+    with pytest.raises(TemplateReorderOutOfBounds):
+        parent_template.reorder_child(child1, 5)
+
+    # Test invalid child (not in children)
+    invalid_child = PanelLayout.create(name="InvalidChild")
+    with pytest.raises(TemplateDoesNotExist):
+        parent_template.reorder_child(invalid_child, 1)

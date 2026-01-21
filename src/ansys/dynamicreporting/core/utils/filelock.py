@@ -30,6 +30,7 @@
 # Modules
 # ------------------------------------------------
 import functools
+import getpass
 import logging
 import os
 import threading
@@ -251,8 +252,9 @@ class BaseFileLock:
                         poll_intervall,
                     )
                     time.sleep(poll_intervall)
-        except Exception:
+        except Exception as e:
             # Something did go wrong, so decrement the counter.
+            logger.error(f"Exception: {str(e)}")
             with self._thread_lock:
                 self._lock_counter = max(0, self._lock_counter - 1)
 
@@ -472,7 +474,7 @@ def nexus_file_lock(filename: str) -> BaseFileLock:
     # We will consider two pathnames:
     # 1) the original pathname
     # 2) replace the original filename directory with tempfile.gettempdir()
-    base_filename = os.path.basename(filename) + "." + os.getlogin()
+    base_filename = os.path.basename(filename) + "." + getpass.getuser()
     lcl_filename = os.path.join(tempfile.gettempdir(), base_filename)
 
     # if we are on Linux and the target filename is on an NFS drive

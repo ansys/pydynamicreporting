@@ -1,0 +1,79 @@
+name: Docs
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (tag/branch/SHA)"
+        required: false
+        default: ""
+
+# Needed to push to gh-pages via doc-deploy-stable/gh-pages action
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
+      - name: Run Ansys documentation building action
+        uses: ansys/actions/doc-build@v10
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          check-links: false
+          sphinxopts: "-j auto"
+
+  deploy:
+    name: Upload release docs
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
+      - name: Deploy the stable documentation
+        uses: ansys/actions/doc-deploy-stable@v10
+        if: ${{ !env.ACT }}
+        with:
+          cname: ${{ env.DOCUMENTATION_CNAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          bot-user: ${{ secrets.PYANSYS_CI_BOT_USERNAME }}
+          bot-email: ${{ secrets.PYANSYS_CI_BOT_EMAIL }}
+
+  notify-docs-failure:
+    name: Teams notify on failure
+    if: failure()
+    needs: [ build, deploy ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Microsoft Teams Notification
+        uses: jdcargile/ms-teams-notification@v1.4
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.MS_TEAMS_WEBHOOK_URI_CI }}
+          notification-summary: "❌ Release Docs workflow failed in `${{ github.workflow }}` on `${{ github.ref_name }}`"
+          notification-color: dc3545
+          timezone: America/New_York

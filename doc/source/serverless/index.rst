@@ -67,6 +67,4 @@ Explore the docs
    deleting_objects
    configuration
    examples
-   troubleshooting
    caveats
-   faq

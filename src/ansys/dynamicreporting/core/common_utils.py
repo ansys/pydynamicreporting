@@ -3,8 +3,12 @@ from pathlib import Path
 import platform
 import re
 
+import bleach
+
 from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from .constants import JSON_NECESSARY_KEYS, JSON_TEMPLATE_KEYS, REPORT_TYPES
 from .exceptions import InvalidAnsysPath
+from .utils.exceptions import TemplateEditorJSONLoadingError
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -56,7 +60,7 @@ def get_install_info(
         try:
             import enve
 
-            dirs_to_check.append(enve.home())
+            dirs_to_check.append(Path(enve.home()))
         except ModuleNotFoundError:
             pass
         # Look for Ansys install using target version number
@@ -95,3 +99,171 @@ def get_install_info(
     # if it is not found and the user did not provide a path, return None
     # This is for backwards compatibility with the old behavior in the Service class
     return str(install_dir) if install_dir is not None else None, version
+
+
+def _check_template_name_convention(template_name):
+    if template_name is None:
+        return True
+    parts = template_name.split("_")
+    return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
+
+
+def _check_template(template_id_str, template_attr, logger=None):
+    # Check template_id_str
+    if not _check_template_name_convention(template_id_str):
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
+            "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        )
+
+    # Check parent and children template name convention
+    if not _check_template_name_convention(template_attr["parent"]):
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file has an invalid template name: '{template_attr['parent']}' "
+            f"that does not have the correct name convention under the key: 'parent' of '{template_id_str}'\n"
+            "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        )
+
+    for child_name in template_attr["children"]:
+        if not _check_template_name_convention(child_name):
+            raise TemplateEditorJSONLoadingError(
+                f"The loaded JSON file has an invalid template name: '{child_name}' "
+                f"that does not have the correct name convention under the key: 'children' of '{template_id_str}'\n"
+                "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+            )
+
+    # Check missing necessary keys
+    for necessary_key in JSON_NECESSARY_KEYS:
+        if necessary_key not in template_attr.keys():
+            raise TemplateEditorJSONLoadingError(
+                f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
+                f"Please check the entries under '{template_id_str}'."
+            )
+
+    # Add warnings to the logger about the extra keys
+    if logger:
+        extra_keys = []
+        for key in template_attr.keys():
+            if key not in JSON_TEMPLATE_KEYS:
+                extra_keys.append(key)
+        if extra_keys:
+            logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
+
+    # Check report_type
+    if not template_attr["report_type"] in REPORT_TYPES:
+        raise TemplateEditorJSONLoadingError(
+            f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
+        )
+
+    # Check item_filter
+    common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
+    for query_stanza in template_attr["item_filter"].split(";"):
+        if len(query_stanza) > 0:
+            parts = query_stanza.split("|")
+            if len(parts) != 4:
+                raise TemplateEditorJSONLoadingError(
+                    f"{common_error_str}Each part should be divided by '|', "
+                    f"while the input is '{query_stanza}' under '{template_id_str}', which does not have 3 '|'s"
+                )
+            if parts[0] not in ["A", "O"]:
+                raise TemplateEditorJSONLoadingError(
+                    f"{common_error_str}The first part of the filter can only be 'A' or 'O', "
+                    f"while the first part of the input is '{parts[0]}' under '{template_id_str}'"
+                )
+            prefix = ["i_", "s_", "d_", "t_"]
+            if parts[1][0:2] not in prefix:
+                raise TemplateEditorJSONLoadingError(
+                    f"{common_error_str}The second part of the filter can only be '{prefix}', "
+                    f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
+                )
+    # TODO: check 'sort_selection' and 'params'
+
+
+def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):
+    _check_template(id_str, attr, logger)
+    template = create_template_func(
+        *args, name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+    )
+    template.set_params(attr["params"] if "params" in attr else {})
+    if "sort_selection" in attr and attr["sort_selection"] != "":
+        template.set_sort_selection(value=attr["sort_selection"])
+    template.set_tags(attr["tags"] if "tags" in attr else "")
+    template.set_filter(filter_str=attr["item_filter"] if "item_filter" in attr else "")
+
+    return template
+
+
+PROPERTIES_EXEMPT = {
+    "link_text",
+    "userdef_name",
+    "filter_x_title",
+    "filter_y_title",
+    "labels_column",
+    "labels_row",
+    "title",
+    "line_marker_text",
+    "plot_title",
+    "xtitle",
+    "ytitle",
+    "ztitle",
+    "nan_display",
+    "table_title",
+    "image_title",
+    "slider_title",
+    "TOCName",
+}
+
+
+def _check_string_for_html(value: str, field_name: str) -> None:
+    """Helper function to validate that a string does not contain HTML content.
+
+    Args:
+        value: String value to validate
+        field_name: Name of the field being validated for error messages
+
+    Raises:
+        ValueError: If the string contains HTML content
+    """
+    cleaned_string = bleach.clean(value, strip=True)
+    if cleaned_string != value:
+        raise ValueError(f"{field_name} contains HTML content. Value: {value}")
+
+
+def check_dictionary_for_html(data):
+    for key, value in data.items():
+        # Do not validate HTML key
+        if key == "HTML":
+            continue
+
+        # Recursive case for nested dictionaries
+        if isinstance(value, dict):
+            # Specific checks for properties key
+            if key == "properties":
+                subdict = {k: v for k, v in value.items() if k not in PROPERTIES_EXEMPT}
+                check_dictionary_for_html(subdict)
+            else:
+                check_dictionary_for_html(value)
+
+        # Check for lists
+        elif isinstance(value, list):
+            check_list_for_html(value, key)
+
+        # Main check for strings
+        elif isinstance(value, str):
+            _check_string_for_html(value, key)
+
+        # Ignore other types
+        else:
+            continue
+
+
+def check_list_for_html(value_list, key):
+    for item in value_list:
+        if isinstance(item, str):
+            _check_string_for_html(item, key)
+        elif isinstance(item, dict):
+            check_dictionary_for_html(item)
+        elif isinstance(item, list):
+            check_list_for_html(item, key)
+        else:
+            continue

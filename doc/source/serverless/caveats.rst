@@ -87,8 +87,91 @@ Example: Threading with Serverless ADR
         for t in threads:
             t.join()
 
+Using Subprocesses for Multiple Configurations
+----------------------------------------------
+
+Problem
+~~~~~~~
+
+As mentioned before, ``ADR.setup()`` configures Serverless ADR at the **process level** and some components
+cache configuration (paths, URLs, etc.) when first loaded. After a process is set up,
+attempting to **reconfigure** that same process to different ``db_directory``,
+``media_directory``, or ``static_directory`` values can lead to conflicts or
+unpredictable behavior.
+
+Why a subprocess fixes it
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each subprocess has its **own** interpreter and process-wide state. Running ADR in a
+subprocess lets you start with a **fresh configuration**, do the work, and exit—no
+state leaks between runs. This is the simplest, most reliable way to use different
+directories within one overall application.
+
+Minimal example
+~~~~~~~~~~~~~~~
+
+Child script (fresh ADR per run):
+
+.. code-block:: python
+
+    # run_task.py
+    import os
+    from ansys.dynamicreporting.core.serverless import ADR, String
+
+    if __name__ == "__main__":
+        adr = ADR(
+            ansys_installation=os.environ.get("ANSYS_INSTALLATION", "/path/to/ansys"),
+            db_directory=os.environ.get("ADR_DB_DIR", "/tmp/adr_db"),
+            media_directory=os.environ.get("ADR_MEDIA_DIR", "/tmp/adr_media"),
+            static_directory=os.environ.get("ADR_STATIC_DIR", "/tmp/adr_static"),
+        )
+        adr.setup()
+        # Example work: create an item or render/export a report
+        adr.create_item(String, name="intro", content="It's alive!", tags="example=1")
+        print("OK")
+
+Parent process (run different configs safely):
+
+.. code-block:: python
+
+    import os
+    import subprocess
+    import sys
+
+    # Config A
+    env_a = os.environ.copy()
+    env_a.update(
+        {
+            "ADR_DB_DIR": "/srv/tenantA/db",
+            "ADR_MEDIA_DIR": "/srv/tenantA/media",
+            "ADR_STATIC_DIR": "/srv/tenantA/static",
+            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+        }
+    )
+    subprocess.run([sys.executable, "run_task.py"], check=True, env=env_a)
+
+    # Config B (same parent process, isolated child)
+    env_b = os.environ.copy()
+    env_b.update(
+        {
+            "ADR_DB_DIR": "/srv/tenantB/db",
+            "ADR_MEDIA_DIR": "/srv/tenantB/media",
+            "ADR_STATIC_DIR": "/srv/tenantB/static",
+            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+        }
+    )
+    subprocess.run([sys.executable, "run_task.py"], check=True, env=env_b)
+
+Guidelines
+~~~~~~~~~~
+
+- Treat ``ADR.setup()`` as **one-time per process**.
+- To use different database/media/static directories in the same application, **spawn a subprocess** per configuration.
+- Keep child scripts small: set directories, call ``setup()``, do the work, exit.
+- On Windows, ensure subprocess entry points are guarded with ``if __name__ == "__main__":``.
+
 Serverless ADR Usage Within Django Apps
---------------------------------------
+---------------------------------------
 
 - Serverless ADR internally configures Django settings and environment variables at the
   process level during ``ADR.setup()``.

@@ -66,7 +66,7 @@ To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@a
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.10 through 3.13 on
+The ``pydynamicreporting`` package supports Python 3.10 through 3.12 on
 Windows and Linux. It is currently available on the PyPi
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -78,142 +78,204 @@ To install the package, simply run
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
-To clone and install the ``pydynamicreporting`` package in development mode,
-run this code:
+This project uses `uv <https://github.com/astral-sh/uv>`_ for fast dependency management
+and virtual environment handling. To set up a development environment:
+
+**Prerequisites**
+
+Install `uv` by following the `official installation guide <https://docs.astral.sh/uv/getting-started/installation/>`_.
+
+You'll also need `make`:
+
+.. code::
+
+   # On Windows, install using chocolatey:
+   choco install make
+
+   # On Linux, make is usually pre-installed. If not, install via:
+   sudo apt-get install build-essential  # Ubuntu/Debian
+   sudo yum groupinstall "Development Tools"  # RHEL/CentOS/Fedora
+
+**Clone and Install**
 
 .. code::
 
    git clone https://github.com/ansys/pydynamicreporting
    cd pydynamicreporting
-   pip install virtualenv
-   virtualenv venv  # create virtual environment
-   source venv/bin/activate  # (.\venv\Scripts\activate for Windows shell)
-   make install-dev  # install pydynamicreporting in editable mode
+   make install
 
-The preceding code creates an "editable" installation that lets you develop and test
-PyDynamicReporting at the same time.
+The ``make install`` command does the following:
+- Synchronizes dependencies from ``uv.lock`` (includes all optional extras)
+- Creates a ``.venv`` virtual environment automatically
+- Installs the package in editable mode
 
-To build and create a production-like installation on Windows (not required on other OSes),
-first install `chocolatey <https://chocolatey.org/install>`_. Then:
+This creates an "editable" installation that lets you develop and test PyDynamicReporting simultaneously.
+
+**Available Make Commands**
+
+The Makefile provides several useful commands:
 
 .. code::
 
-   choco install make  # install make on Windows
-   make clean  # clean
-   make build   # build
-   # this replaces the editable installation done previously. If you don't want to replace,
-   # switch your virtual environments to test the new install separately.
-   make install
-   # you can skip the steps above and just do 'make all'
-   make smoketest  # test import
+   make check        # Run code quality checks (pre-commit hooks)
+   make version      # Display the current project version
+   make build        # Build source distribution and wheel
+   make check-dist   # Validate built artifacts
+   make test         # Run the full test suite with coverage
+   make smoketest    # Quick import test
+   make docs         # Build documentation
+   make clean        # Remove build artifacts and caches
+
+**Running Tests**
+
+To run tests with coverage reporting:
+
+.. code::
+
+   make test
+
+For a quick sanity check:
+
+.. code::
+
+   make smoketest
+
+**Updating Dependencies**
+
+If you see an error like ``The lockfile at `uv.lock` needs to be updated``, run the following commands to update the lock file:
+
+.. code::
+
+   uv sync --upgrade --all-extras
+   uv lock --upgrade
+
+Then make sure to commit the updated ``uv.lock`` file.
+This ensures your local environment is synchronized with the latest dependency constraints.
 
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
-To run GitHub Actions on your local desktop (recommended), install the
-`act <https://github.com/nektos/act#readme>`_ package.
+To run GitHub Actions on your local desktop, install the
+`act <https://github.com/nektos/act#readme>`_ package:
 
 .. code::
 
-   choco install act-cli
+   choco install act-cli  # Windows
+   # or: brew install act  # macOS/Linux with Homebrew
 
-To run a job, such as the ``style`` job from the ``ci_cd.yml`` file, use
-this command, where ``style`` is the job name:
-
-.. code::
-
-   act -W '.github/workflows/ci_cd.yml' -j style --bind
-
-
-Deploy and upload steps **must always** be ignored. If they are not ignored,
-before running GitHub Actions locally, add ``if: ${{ !env.ACT }}`` to the
-workflow step and commit this change if required.
-
-Local tests
-^^^^^^^^^^^
-To run tests on your local desktop (recommended), use the `make` target
-`test-dev`. This target runs the tests in the same way as GitHub Actions but using
-a local Ansys installation instead of Docker. You must specify the path to your Ansys
-installation and the test file you are trying to run.
+To run a specific job from the CI/CD workflow, use:
 
 .. code::
 
-   make test-dev TEST_FILE="tests/test_service.py" INSTALL_PATH="C:\Program Files\ANSYS Inc\v252"
+   act -W '.github/workflows/ci_cd.yml' -j style --bind      # Run code style checks
+   act -W '.github/workflows/ci_cd.yml' -j smoketest --bind  # Run smoke tests
 
-Note that any tests that require Docker will obviously fail.
+**Note**: Deploy and upload steps are guarded with ``if: ${{ !env.ACT }}`` to prevent
+them from running locally. Only build and validation steps will execute with ``act``.
 
 Creating a Release
 ------------------
 
-- Before creating a new branch, make sure your local repository is up to date:
+This project now uses **tag-driven releases** and **dynamic versions** powered by ``hatch-timestamp-version`` (based on ``hatch-vcs``). Stable releases are cut from **Git tags** (``vX.Y.Z``). Development builds use **UTC timestamped** versions derived from the most recent tag.
+**Release branches are no longer needed**; the version is always derived from tags.
+
+Versioning model
+^^^^^^^^^^^^^^^^
+- **Stable releases**: The version is the exact **Git tag** (for example, ``v0.10.0`` → package version ``0.10.0``).
+- **Development builds**: Version is computed from the latest tag **plus a timestamp**, e.g. ``0.10.1.devYYYYMMDDHHMMSS``.
+- No manual editing of ``pyproject.toml`` for versions — ``[tool.hatch.version]`` drives everything.
+
+What the automation does
+^^^^^^^^^^^^^^^^^^^^^^^^
+- **Create Draft Release** (on tag push): builds wheels/sdist and opens a **draft GitHub Release** attaching artifacts.
+- **Publish Release** (when the GitHub Release is **published**): uploads artifacts to **PyPI** via Trusted Publisher, then builds & deploys **stable docs**.
+- **Failure notifications**: posts to Microsoft Teams on workflow failure.
+
+Prerequisites
+^^^^^^^^^^^^^
+- Ensure ``CHANGELOG.md`` has a section for the release **dated today** (the helper script validates this).
+- Working tree must be **clean** (no uncommitted changes).
+- CI secrets for publishing and docs deploy are configured in GitHub.
+
+Cutting a Stable Release
+^^^^^^^^^^^^^^^^^^^^^^^^
+1) Make sure your ``CHANGELOG.md`` entry for the version is dated **today**
+   (this check runs automatically from ``make tag``).
+
+2) Create and push the release tag:
+
+   .. code-block:: bash
+
+      make tag
+
+   This runs all safety checks, validates the changelog date, and pushes the Git tag (for example, ``v0.10.0``).
+
+3) Once the tag is pushed:
+   - The **Create Draft Release** workflow builds the package and opens a **draft GitHub Release** with artifacts.
+   - After reviewing and finalizing notes, **publish** the GitHub Release.
+
+4) Publishing the release automatically triggers the **Release** workflow, which:
+   - Uploads artifacts to **PyPI** using Trusted Publisher.
+   - Builds and deploys the **stable documentation**.
+
+Patch releases
+^^^^^^^^^^^^^^
+- For a patch, update the changelog, ensure the working tree is clean, then run ``make tag`` again (which tags the next patch version determined by ``hatch version`` from your last tag).
+- No separate “release branch” is required; the version is derived from tags.
+
+Local dry-runs (optional)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+You can use ``act`` to exercise non-publishing parts locally. Steps that publish or deploy are already guarded in workflows (e.g., with ``if: ${{ !env.ACT }}``). Build and validation steps still run:
+
+.. code-block:: bash
+
+   act -W '.github/workflows/release.yml' -j release --bind
+
+CI workflows (reference)
+^^^^^^^^^^^^^^^^^^^^^^^^
+- **.github/workflows/create_draft_release.yml**
+  - Triggers on: tag push ``v*``, or manual dispatch.
+  - Builds artifacts and opens a **draft** GitHub Release attaching ``dist/*``.
+
+- **.github/workflows/release.yml**
+  - Triggers on: **published** GitHub Release, or manual dispatch.
+  - Rebuilds/validates, downloads artifacts, **publishes to PyPI**, builds docs, and **deploys stable docs**.
+
+CLI helpers
+^^^^^^^^^^^
+- Print the resolved version (dev or stable):
 
   .. code-block:: bash
 
-      git pull
+     make version
 
-  This ensures you have the latest changes from the default branch (usually ``main`` or ``develop``).
-
-- Create a new branch for the release:
+- Build locally (sdist + wheel):
 
   .. code-block:: bash
 
-      git checkout -b release/0.10
+     make build
+     make check-dist
 
-  **Important:**
-  The release branch must only include the **major** and **minor** version numbers.
-  Do not include the patch version.
-  For example, use ``release/0.10``, not ``release/0.10.0``.
-
-- If creating a **patch release**, do not create a new branch.
-  Instead, reuse the existing ``release/0.10`` branch.
-
-- Update the version number in ``pyproject.toml``:
-
-  If the current version is:
-
-  .. code-block:: toml
-
-      version = "0.10.0.dev0"
-
-  bump it to:
-
-  .. code-block:: toml
-
-      version = "0.10.0"
-
-- **Important:**
-  Every time you create a development (``dev``) release, you should first release the corresponding stable version on PyPI before bumping the development version.
-
-  For example:
-
-  - If you are at ``0.10.0.dev0``, first release ``0.10.0`` on PyPI.
-  - Then, after the release, bump the version to ``0.10.1.dev0``.
-
-  Otherwise, it may feel confusing to have a ``dev`` version without a corresponding stable release.
-
-- Create a commit for the version bump:
+- Clean:
 
   .. code-block:: bash
 
-      git commit -am "MAINT: Bump version to v0.10.0"
+     make clean
 
-- Then push the branch:
+Changelog guards
+^^^^^^^^^^^^^^^^
+Releases are blocked if today’s dated entry is missing:
 
-  .. code-block:: bash
+.. code-block:: text
 
-      git push --set-upstream origin release/0.10
+   ❌ ERROR: CHANGELOG.md is not ready for release.
+      Expected line: ## [0.10.0] - YYYY-MM-DD
+      Tip: Check if it's still marked as '[Unreleased]' and update it to today's date.
 
-- Create a tag for the release:
-
-  .. code-block:: bash
-
-      git tag v0.10.0
-      git push origin v0.10.0
-
-  **Important:**
-  The release tag must always include the full **major.minor.patch** version number.
-  Always include the ``v`` prefix.
-  For example, use ``v0.10.0``, not ``v0.10``.
-  Creating and pushing the tag automatically triggers the release workflow in GitHub Actions.
+Troubleshooting
+^^^^^^^^^^^^^^^
+- **“No Git tag found” during checks**: Create a tag via ``make tag`` (or ``git tag vX.Y.Z && git push origin vX.Y.Z``).
+- **Draft already exists**: The draft release is unique per tag. Delete or publish the existing one, or bump the tag properly.
+- **Version mismatch**: ``hatch version`` determines the version from the last tag; ensure you pushed the intended tag and your clone has all tags (``git fetch --tags``).
 
 
 Dependencies
