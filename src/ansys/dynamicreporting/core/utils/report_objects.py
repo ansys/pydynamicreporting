@@ -3397,7 +3397,13 @@ class sqlqueriesREST(GeneratorREST):
             else:
                 out["password"] = ""  # nosec B259
         else:
-            out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}
+            out = {
+                "database": "",
+                "hostname": "",
+                "port": "",
+                "username": "",
+                "password": "",
+            }  # nosec B105
         return out
 
     def set_postgre(self, value: dict = None):
@@ -3407,7 +3413,7 @@ class sqlqueriesREST(GeneratorREST):
                 "hostname": "localhost",
                 "port": "5432",
                 "username": "nexus",
-                "password": "cei",
+                "password": "cei",  # nosec B105
             }
         if type(value) is not dict:
             raise ValueError("Error: input should be a dictionary")
