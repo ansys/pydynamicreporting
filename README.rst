@@ -118,7 +118,7 @@ Otherwise, the code-style CI check will fail.
 
 .. code::
 
-   uv run pre-commit run -a
+   make check
 
 **Available Make Commands**
 
@@ -302,7 +302,7 @@ This code shows how to start the simplest PyDynamicReporting session:
 .. code:: pycon
 
     >>> import ansys.dynamicreporting.core as adr
-    >>> adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+    >>> adr_service = adr.Service(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v232\\")
     >>> ret = adr_service.connect()
     >>> my_img = adr_service.create_item()
     >>> my_img.item_image = "image.png"
