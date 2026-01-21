@@ -3397,7 +3397,13 @@ class sqlqueriesREST(GeneratorREST):
             else:
                 out["password"] = ""  # nosec B259
         else:
-            out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}  # nosec B105
+            out = {
+                "database": "",
+                "hostname": "",
+                "port": "",
+                "username": "",
+                "password": "",
+            }  # nosec B105
         return out
 
     def set_postgre(self, value: dict = None):
