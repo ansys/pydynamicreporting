@@ -19,8 +19,6 @@ This command requires a working CEI installation and must be run from the same d
     RUN mkdir /Nexus
     WORKDIR /Nexus
     COPY CEI /Nexus/CEI
-    # Install otel
-    RUN /Nexus/CEI/bin/cpython -m pip install opentelemetry-proto>=1.16.0
 
     # stage 2
     FROM buildpack-deps
