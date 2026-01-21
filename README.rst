@@ -111,6 +111,15 @@ The ``make install`` command does the following:
 
 This creates an "editable" installation that lets you develop and test PyDynamicReporting simultaneously.
 
+**Developer workflow note**
+
+After making changes, run the pre-commit hooks (via ``uv``) before committing.
+Otherwise, the code-style CI check will fail.
+
+.. code::
+
+   uv run pre-commit run -a
+
 **Available Make Commands**
 
 The Makefile provides several useful commands:
