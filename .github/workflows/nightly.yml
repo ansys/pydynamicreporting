@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -76,7 +76,7 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          run-bandit: false
+          checkout: false
           hide-log: false
 
       - name: PyAnsys Vulnerability check (on dev)
@@ -86,7 +86,7 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          run-bandit: false
+          checkout: false
           dev-mode: true
           hide-log: false
 
@@ -96,7 +96,7 @@ jobs:
     needs: [ nightly_and_upload, vulnerabilities ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Microsoft Teams Notification
         uses: jdcargile/ms-teams-notification@v1.4
         with:
