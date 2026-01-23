@@ -1,7 +1,8 @@
 # AI Agents Guide for PyDynamicReporting
 
-This guide helps AI coding agents make high-quality, repo-aligned changes to **PyDynamicReporting**.
+This guide helps AI coding agents make high-quality, repo-aligned changes to **PyDynamicReporting**, which is the Python client library for Ansys Dynamic Reporting.
 It focuses on *how this repository is wired* (tooling, structure, conventions) so agents can work quickly without breaking CI.
+Read through it carefully before making changes. Read the README, especially the development setup section, for additional context.
 
 ## Quick agent contract (what “done” means)
 
@@ -112,7 +113,10 @@ make test
 Tips for good tests in this repo:
 - Favor **unit tests** by default; gate truly external dependencies behind markers.
 - Use existing fixtures in `tests/conftest.py` and `tests/serverless/conftest.py`.
-- Keep test data in `tests/test_data/` (or the existing patterns in `local_tests/` when appropriate).
+- Keep test data in `tests/test_data/` (or `tests/serverless/test_data/` when appropriate).
+- The tests require an installation of the flagship package through a Docker image followed by
+  both running the image as a container(service setup) and extracting the required files from the image (serverless setup).
+  Check CI configuration under .github/workflows/ci_cd.yml and existing tests for examples.
 
 ## Branch conventions
 
@@ -147,17 +151,25 @@ Highlights:
 ### 2) Implement minimally
 - Keep changes local.
 - Don’t refactor adjacent code unless needed for correctness.
+- Do not touch or refactor or reformat unrelated code, unless explicitly part of the change or explicitly asked.
 
 ### 3) Add tests
+- Look at .github/workflows/ci_cd.yml and Makefile for the test flow. 
+- The flow requires several steps to reproduce and run locally and is not a direct pytest run.
 - Add a regression test for bugs.
-- For features, cover the main path plus a failure/edge case.
+- For features, cover the main path plus a failure/edge case. Code coverage must be 90%.
+- Look at existing tests for patterns, mainly in `tests/serverless/`.
+- Tests should not be forced to increase coverage artificially; focus on meaningful coverage.
+- Use existing fixtures where possible.
 
 ### 4) Run quality gates (expected before finishing)
 
+- Run all checks locally and fix failures before pushing:
+
 ```bash
 make check
-make test
 make smoketest
+make test
 ```
 
 ## Common code patterns
@@ -210,9 +222,17 @@ GitHub Actions jobs typically enforce:
 
 If you change:
 - `pyproject.toml` or dependency groups → expect lockfile checks (`uv lock --locked`) to matter.
-- templates/docs → expect doc build warnings to be treated seriously.
+- Check out README for instructions on setting up the development environment.
 
 ## Repo-specific notes
+
+### Service mode
+- Source: `src/ansys/dynamicreporting/core/adr_service.py` and related modules.
+- Backed by REST API calls to Ansys Dynamic Reporting service.
+
+### Utilities
+- Source: `src/ansys/dynamicreporting/core/utils/`
+- Common helpers for file handling, data conversion, REST interactions, etc.
 
 ### Serverless mode
 - Source: `src/ansys/dynamicreporting/core/serverless/`
@@ -229,6 +249,9 @@ If you change:
 ### Release tooling (FYI)
 - The repo uses tag-driven versioning through Hatch (`uv run hatch version`).
 - See `scripts/tag_release.sh` and `make tag`.
+- Releases are automated via GitHub Actions workflows.
+- Never make releases by hand.
+- Never do anything release-related, unless explicitly told to.
 
 ## Getting help
 
@@ -238,5 +261,5 @@ If you change:
 
 ---
 
-**Last updated**: January 21, 2026
+**Last updated**: January 23, 2026
 **Maintained by**: ANSYS, Inc. and Ansys ADR Team
