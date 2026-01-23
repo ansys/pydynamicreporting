@@ -154,7 +154,7 @@ Highlights:
 - Do not touch or refactor or reformat unrelated code, unless explicitly part of the change or explicitly asked.
 
 ### 3) Add tests
-- Look at .github/workflows/ci_cd.yml and Makefile for the test flow. 
+- Look at .github/workflows/ci_cd.yml and Makefile for the test flow.
 - The flow requires several steps to reproduce and run locally and is not a direct pytest run.
 - Add a regression test for bugs.
 - For features, cover the main path plus a failure/edge case. Code coverage must be 90%.
