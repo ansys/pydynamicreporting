@@ -111,6 +111,15 @@ The ``make install`` command does the following:
 
 This creates an "editable" installation that lets you develop and test PyDynamicReporting simultaneously.
 
+**Developer workflow note**
+
+After making changes, run the pre-commit hooks (via ``uv``) before committing.
+Otherwise, the code-style CI check will fail.
+
+.. code::
+
+   make check
+
 **Available Make Commands**
 
 The Makefile provides several useful commands:
@@ -293,7 +302,7 @@ This code shows how to start the simplest PyDynamicReporting session:
 .. code:: pycon
 
     >>> import ansys.dynamicreporting.core as adr
-    >>> adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+    >>> adr_service = adr.Service(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v232\\")
     >>> ret = adr_service.connect()
     >>> my_img = adr_service.create_item()
     >>> my_img.item_image = "image.png"
