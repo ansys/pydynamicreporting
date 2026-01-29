@@ -23,9 +23,9 @@
 from ._version import __version__
 
 VERSION = __version__
-DEFAULT_ANSYS_VERSION = "261"
+DEFAULT_ANSYS_VERSION = "271"
 
-ansys_version = "2026R1"
+ansys_version = "2027R1"
 
 # Ansys version number that this release is associated with
 __ansys_version__ = DEFAULT_ANSYS_VERSION
