@@ -81,7 +81,10 @@ def _add_exception_to_cls(name, base, cls, parents, module):
     """
     base_exceptions = tuple(getattr(p, name) for p in parents if hasattr(p, name))
     exception_cls = subclass_exception(
-        name, base_exceptions or (base,), module, attached_to=cls  # bases
+        name,
+        base_exceptions or (base,),
+        module,
+        attached_to=cls,  # bases
     )
     setattr(cls, name, exception_cls)
 
@@ -501,7 +504,7 @@ class BaseModel(metaclass=BaseMeta):
                         )
                     except ObjectDoesNotExist as e:
                         raise value.__class__.DoesNotExist(
-                            extra_detail=f"Object with guid '{value.guid}'" f" does not exist: {e}"
+                            extra_detail=f"Object with guid '{value.guid}' does not exist: {e}"
                         )
                 # for all others
                 setattr(self._orm_instance, field_, value)
