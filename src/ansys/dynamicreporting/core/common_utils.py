@@ -172,7 +172,7 @@ def _check_template(template_id_str, template_attr, logger=None):
             logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
 
     # Check report_type
-    if not template_attr["report_type"] in REPORT_TYPES:
+    if template_attr["report_type"] not in REPORT_TYPES:
         raise TemplateEditorJSONLoadingError(
             f"The loaded JSON file has an invalid 'report_type' value: '{template_attr['report_type']}'"
         )

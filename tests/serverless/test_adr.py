@@ -259,7 +259,7 @@ def test_edit_html(adr_serverless):
         content="<h1>Heading 1</h1>",
     )
     intro_html = HTML.get(name="test_edit_html")
-    intro_html.content = "<h2>Heading 2</h2>" "<br>"
+    intro_html.content = "<h2>Heading 2</h2><br>"
     intro_html.save()
 
     assert "h1" not in HTML.get(guid=intro_html.guid).content
@@ -1075,7 +1075,6 @@ def test_export_report_as_pptx_success(tmp_path, adr_serverless, monkeypatch):
 
 @pytest.mark.ado_test
 def test_export_report_as_pptx_no_kwarg(tmp_path, adr_serverless):
-
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.export_report_as_pptx(filename=tmp_path / "output.pptx")
 

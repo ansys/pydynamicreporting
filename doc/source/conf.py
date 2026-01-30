@@ -243,7 +243,7 @@ sphinx_gallery_conf = {
     # directory where function granular galleries are stored
     "backreferences_dir": None,
     # the initial notebook cell
-    "first_notebook_cell": ("# ``pydynamicreporting`` example Notebook\n" "#\n"),
+    "first_notebook_cell": ("# ``pydynamicreporting`` example Notebook\n#\n"),
     "plot_gallery": False,
 }
 
