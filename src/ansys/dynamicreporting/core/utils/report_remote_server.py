@@ -1112,9 +1112,9 @@ class Server:
             templates_data[curr_template_key]["parent"] = None
             templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
         else:
-            templates_data[curr_template_key][
-                "parent"
-            ] = f"Template_{template_guid_id_map[curr_template.parent]}"
+            templates_data[curr_template_key]["parent"] = (
+                f"Template_{template_guid_id_map[curr_template.parent]}"
+            )
 
         templates_data[curr_template_key]["children"] = []
         children_guids = curr_template.children
@@ -1168,8 +1168,7 @@ def create_new_local_database(
 
             if raise_exception:
                 raise exceptions.DBDirNotCreatedError(
-                    f"The selected directory did not exist and an attempt to create"
-                    f" it failed: {e}"
+                    f"The selected directory did not exist and an attempt to create it failed: {e}"
                 )
 
             return False

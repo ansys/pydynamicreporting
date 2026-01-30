@@ -157,7 +157,7 @@ class ServerlessReportExporter:
         # add meta, title, and favicon to match legacy expectations.
         head = f"""
             <!DOCTYPE html>\n
-            <html data-bs-theme="{'dark' if self._dark_mode else 'light'}" xmlns="http://www.w3.org/1999/html">\n
+            <html data-bs-theme="{"dark" if self._dark_mode else "light"}" xmlns="http://www.w3.org/1999/html">\n
             <head>\n
                 <meta charset="UTF-8"/>\n
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">\n
