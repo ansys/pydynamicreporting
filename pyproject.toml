@@ -83,9 +83,7 @@ dev = [
     "ipdb",
     "uv",
     "pre-commit",
-    "black",
-    "isort",
-    #    "ruff",
+    "ruff",
     #    "pip-audit",
     #    "bandit[toml]",
     "codespell",
@@ -186,16 +184,20 @@ exclude_lines = [
 [tool.coverage.html]
 show_contexts = true
 
-[tool.black]
+# Ruff configuration
+[tool.ruff]
+target-version = "py310"
 line-length = 100
+exclude = [".venv", "__init__.py"]
 
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-force_sort_within_sections = true
-line_length = 100
-default_section = "THIRDPARTY"
-src_paths = ["doc", "src", "tests"]
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle (whitespace, line length, formatting)
+]
+ignore = [
+    "E501",  # line too long
+    "E721",  # do not compare types directly; use isinstance()
+]
 
 [tool.codespell]
 ignore-words = "doc/styles/Vocab/ANSYS/accept.txt"
