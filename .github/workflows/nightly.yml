@@ -9,58 +9,12 @@ jobs:
 
   nightly_test:
     name: Testing
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ public-ubuntu-latest-16-cores ]
-        python-version: [ '3.10', '3.11', '3.12' ]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: '0'
-          fetch-tags: true
-          ref: 'refs/heads/main'
-
-      - name: Set up Python
-        uses: ./.github/actions/setup-python-env
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull Docker container
-        run: make pull-docker
-
-      - name: Set licensing if necessary
-        shell: bash
-        run: |
-          echo "ANSYS_DPF_ACCEPT_LA=Y" >> $GITHUB_ENV
-          echo "ANSYSLMD_LICENSE_FILE=1055@${{ secrets.LICENSE_SERVER }}" >> $GITHUB_ENV
-
-      - name: Update packages
-        shell: bash
-        run: |
-          sudo apt update && sudo apt install -y \
-          libx11-dev \
-          libgl1-mesa-dev \
-          libxrender1
-
-      - name: Install DPF
-        id: set-server-path
-        uses: ansys/pydpf-actions/install-dpf-server@v2.3
-        with:
-          dpf-standalone-TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          standalone_suffix: ${{ env.DPF_STANDALONE_SUFFIX }}
-          ANSYS_VERSION: ${{ env.ANSYS_VERSION }}
-
-      - name: Run pytest
-        run: make test
-        env:
-          ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
+    uses: ./.github/workflows/tests.yml
+    with:
+      ref: 'refs/heads/main'
+    secrets:
+      LICENSE_SERVER: ${{ secrets.LICENSE_SERVER }}
+      PYANSYS_CI_BOT_TOKEN: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
 
   nightly_and_upload:
     name: nightly_and_upload
@@ -74,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -107,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -122,7 +76,7 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          run-bandit: false
+          checkout: false
           hide-log: false
 
       - name: PyAnsys Vulnerability check (on dev)
@@ -132,7 +86,7 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
           token: ${{ secrets.PYANSYS_CI_BOT_TOKEN }}
-          run-bandit: false
+          checkout: false
           dev-mode: true
           hide-log: false
 
@@ -142,7 +96,7 @@ jobs:
     needs: [ nightly_and_upload, vulnerabilities ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Microsoft Teams Notification
         uses: jdcargile/ms-teams-notification@v1.4
         with:

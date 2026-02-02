@@ -1,3 +1,25 @@
+# Copyright (C) 2023 - 2026 ANSYS, Inc. and/or its affiliates.
+# SPDX-License-Identifier: MIT
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 
 from ast import literal_eval
@@ -22,7 +44,7 @@ import dateutil.parser
 import pytz
 
 from . import extremely_ugly_hacks, report_utils
-from ..common_utils import validate_html_dictionary
+from ..common_utils import check_dictionary_for_html
 from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
@@ -415,7 +437,7 @@ class Template:
         if type(d) is not dict:
             raise ValueError("Error: input must be a dictionary")
         if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
-            validate_html_dictionary(d)
+            check_dictionary_for_html(d)
         self.params = json.dumps(d)
         return
 
@@ -1542,7 +1564,7 @@ class TemplateREST(BaseRESTObject):
         if type(d) is not dict:
             raise ValueError("Error: input must be a dictionary")
         if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
-            validate_html_dictionary(d)
+            check_dictionary_for_html(d)
         self.params = json.dumps(d)
         return
 
@@ -3397,7 +3419,13 @@ class sqlqueriesREST(GeneratorREST):
             else:
                 out["password"] = ""  # nosec B259
         else:
-            out = {"database": "", "hostname": "", "port": "", "username": "", "password": ""}
+            out = {
+                "database": "",
+                "hostname": "",
+                "port": "",
+                "username": "",
+                "password": "",
+            }  # nosec B105
         return out
 
     def set_postgre(self, value: dict = None):
@@ -3407,7 +3435,7 @@ class sqlqueriesREST(GeneratorREST):
                 "hostname": "localhost",
                 "port": "5432",
                 "username": "nexus",
-                "password": "cei",
+                "password": "cei",  # nosec B105
             }
         if type(value) is not dict:
             raise ValueError("Error: input should be a dictionary")
@@ -3823,15 +3851,24 @@ class statisticalREST(GeneratorREST):
     def set_predictor_variables(self, value):
         if not isinstance(value, list):
             raise ValueError("Error: input should be an array")
-        # standard input format is a 2d array with a subarray length of 3
-        if len(value[0]) != 3:
-            raise ValueError(
-                "Error: input format should be an array of subarrays each of length 3. With Type, Predictor, Output Name."
-            )
+
+        # standard input format is a 2d array with a subarray length of 3 or 4
+        processed = []
+        for item in value:
+            if len(item) not in (3, 4):
+                raise ValueError(
+                    "Error: each subarray should have length 3 or 4 (Type, Predictor, Output Name, [optional] Predictor Type)."
+                )
+            # If length is 3, append default predictor type "numerical"
+            if len(item) == 3:
+                item = item + ["numerical"]
+            processed.append(item)
+
         d = json.loads(self.params)
         if "stats_params" not in d:
             d["stats_params"] = {}
-        d["stats_params"]["predictor_variables"] = json.dumps(value)
+
+        d["stats_params"]["predictor_variables"] = json.dumps(processed)
         self.params = json.dumps(d)
 
     def get_response_variables(self):

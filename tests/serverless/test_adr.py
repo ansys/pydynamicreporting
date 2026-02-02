@@ -1,15 +1,35 @@
+# Copyright (C) 2023 - 2026 ANSYS, Inc. and/or its affiliates.
+# SPDX-License-Identifier: MIT
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from pathlib import Path
 from random import random as r
 import uuid
 
-from django.core.exceptions import ImproperlyConfigured
 import numpy as np
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import (
     ADRException,
     ImproperlyConfiguredError,
-    InvalidAnsysPath,
     InvalidPath,
 )
 from ansys.dynamicreporting.core.serverless import ADR
@@ -919,7 +939,7 @@ def test_delete_datasets(adr_serverless):
 
 @pytest.mark.ado_test
 def test_delete_templates(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import Template, TOCLayout
+    from ansys.dynamicreporting.core.serverless import TOCLayout
 
     _ = adr_serverless.create_template(TOCLayout, name="test_delete_templates")
     temps = adr_serverless.query(query_type=TOCLayout, query="A|t_name|eq|test_delete_templates;")
@@ -1018,7 +1038,6 @@ def test_render_report_as_pptx_wrong_template_type(adr_serverless):
 @pytest.mark.ado_test
 def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless import PPTXLayout
-    from ansys.dynamicreporting.core.serverless import template as template_module
 
     # Create a valid PPTXLayout template
     _ = adr_serverless.create_template(PPTXLayout, name="FailingPPTXReport", parent=None)
@@ -1027,7 +1046,7 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
     def fake_render_pptx_fails(self, context, item_filter, request):
         raise Exception("Simulated rendering engine failure")
 
-    monkeypatch.setattr(template_module.PPTXLayout, "render_pptx", fake_render_pptx_fails)
+    monkeypatch.setattr(PPTXLayout, "render_pptx", fake_render_pptx_fails)
 
     # Expect an ADRException because the underlying render call failed
     with pytest.raises(ADRException, match="PPTX Report rendering failed"):
@@ -1037,7 +1056,6 @@ def test_render_report_as_pptx_render_failure(adr_serverless, monkeypatch):
 @pytest.mark.ado_test
 def test_export_report_as_pptx_success(tmp_path, adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless import PPTXLayout
-    from ansys.dynamicreporting.core.serverless import template as template_module
 
     # Create a valid PPTXLayout template
     _ = adr_serverless.create_template(PPTXLayout, name="TestPPTXExport", parent=None)
@@ -1046,7 +1064,7 @@ def test_export_report_as_pptx_success(tmp_path, adr_serverless, monkeypatch):
     def fake_render_pptx(self, context, item_filter, request):
         return b"dummy pptx content"
 
-    monkeypatch.setattr(template_module.PPTXLayout, "render_pptx", fake_render_pptx)
+    monkeypatch.setattr(PPTXLayout, "render_pptx", fake_render_pptx)
 
     output_file = tmp_path / "output.pptx"
     adr_serverless.export_report_as_pptx(
@@ -1057,7 +1075,6 @@ def test_export_report_as_pptx_success(tmp_path, adr_serverless, monkeypatch):
 
 @pytest.mark.ado_test
 def test_export_report_as_pptx_no_kwarg(tmp_path, adr_serverless):
-    from ansys.dynamicreporting.core.exceptions import ADRException
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.export_report_as_pptx(filename=tmp_path / "output.pptx")
@@ -1065,7 +1082,6 @@ def test_export_report_as_pptx_no_kwarg(tmp_path, adr_serverless):
 
 @pytest.mark.ado_test
 def test_export_report_as_pptx_wrong_template_type(tmp_path, adr_serverless):
-    from ansys.dynamicreporting.core.exceptions import ADRException
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
     _ = adr_serverless.create_template(BasicLayout, name="NotATestPPTXExport", parent=None)
@@ -1080,16 +1096,14 @@ def test_export_report_as_pptx_wrong_template_type(tmp_path, adr_serverless):
 
 @pytest.mark.ado_test
 def test_export_report_as_pptx_render_failure(tmp_path, adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.exceptions import ADRException
     from ansys.dynamicreporting.core.serverless import PPTXLayout
-    from ansys.dynamicreporting.core.serverless import template as template_module
 
     _ = adr_serverless.create_template(PPTXLayout, name="FailingTestPPTXExport", parent=None)
 
     def fake_render_pptx_fails(self, context, item_filter, request):
         raise Exception("Simulated rendering engine failure")
 
-    monkeypatch.setattr(template_module.PPTXLayout, "render_pptx", fake_render_pptx_fails)
+    monkeypatch.setattr(PPTXLayout, "render_pptx", fake_render_pptx_fails)
 
     with pytest.raises(ADRException, match="PPTX Report rendering failed"):
         adr_serverless.export_report_as_pptx(
@@ -1163,6 +1177,87 @@ def test_export_report_html_no_kwarg_fails(adr_serverless, tmp_path):
     """
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.export_report_as_html(output_directory=tmp_path)
+
+
+@pytest.mark.ado_test
+def test_render_report_as_pdf_success(adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    # Create a template and monkeypatch its render_pdf to return bytes
+    adr_serverless.create_template(BasicLayout, name="TestPDFReport", parent=None)
+
+    def fake_render_pdf(self, context, item_filter, request):
+        return b"dummy pdf content"
+
+    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf)
+
+    pdf_bytes = adr_serverless.render_report_as_pdf(
+        name="TestPDFReport", item_filter="A|i_tags|cont|dp=dp227;"
+    )
+    assert pdf_bytes == b"dummy pdf content"
+
+
+@pytest.mark.ado_test
+def test_render_report_as_pdf_no_kwarg(adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.render_report_as_pdf()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_pdf_render_failure(adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    adr_serverless.create_template(BasicLayout, name="FailingPDFReport", parent=None)
+
+    def fake_render_pdf_fail(self, context, item_filter, request):
+        raise Exception("Simulated rendering engine failure")
+
+    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf_fail)
+
+    with pytest.raises(ADRException, match="PDF Report rendering failed"):
+        adr_serverless.render_report_as_pdf(name="FailingPDFReport")
+
+
+@pytest.mark.ado_test
+def test_export_report_as_pdf_success(tmp_path, adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    adr_serverless.create_template(BasicLayout, name="TestPDFExport", parent=None)
+
+    def fake_render_pdf(self, context, item_filter, request):
+        return b"dummy pdf content"
+
+    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf)
+
+    output_file = tmp_path / "output.pdf"
+    adr_serverless.export_report_as_pdf(
+        filename=output_file, name="TestPDFExport", item_filter="A|i_tags|cont|dp=dp227;"
+    )
+    assert output_file.exists()
+    assert output_file.read_bytes() == b"dummy pdf content"
+
+
+@pytest.mark.ado_test
+def test_export_report_as_pdf_no_kwarg(tmp_path, adr_serverless):
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr_serverless.export_report_as_pdf(filename=tmp_path / "output.pdf")
+
+
+@pytest.mark.ado_test
+def test_export_report_as_pdf_render_failure(tmp_path, adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    adr_serverless.create_template(BasicLayout, name="FailingTestPDFExport", parent=None)
+
+    def fake_render_pdf_fail(self, context, item_filter, request):
+        raise Exception("Simulated rendering engine failure")
+
+    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf_fail)
+
+    with pytest.raises(ADRException, match="PDF Report rendering failed"):
+        adr_serverless.export_report_as_pdf(
+            filename=tmp_path / "output.pdf", name="FailingTestPDFExport"
+        )
 
 
 @pytest.mark.ado_test

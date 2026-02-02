@@ -4,10 +4,47 @@ from datetime import datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as metadata_version
 import os
+import sys
+import types
 
 from ansys_sphinx_theme import ansys_favicon, get_version_match, pyansys_logo_black
 from packaging.version import InvalidVersion, Version
 from sphinx_gallery.sorting import FileNameSortKey
+
+# ---------------------------------------------------------------------------
+# Mock heavy / ADR-only dependencies so autodoc + numpydoc can import modules
+# without a full Nexus/ADR runtime available in CI.
+# ---------------------------------------------------------------------------
+_MOCK_PACKAGES: dict[str, list[str]] = {
+    "data": ["models", "utils", "geofile_rendering"],
+    "reports": ["models", "engine"],
+    "ceireports": ["utils"],
+}
+
+for pkg_name, submods in _MOCK_PACKAGES.items():
+    # Create package-like module
+    if pkg_name not in sys.modules:
+        pkg_mod = types.ModuleType(pkg_name)
+        # Mark as a package so `import pkg.sub` works
+        pkg_mod.__path__ = []  # type: ignore[attr-defined]
+        sys.modules[pkg_name] = pkg_mod
+    else:
+        pkg_mod = sys.modules[pkg_name]
+        # Ensure existing module is treated as a package
+        if not hasattr(pkg_mod, "__path__"):
+            pkg_mod.__path__ = []  # type: ignore[attr-defined]
+
+    # Create submodules and attach them to the package
+    for sub_name in submods:
+        full_name = f"{pkg_name}.{sub_name}"
+        if full_name not in sys.modules:
+            sub_mod = types.ModuleType(full_name)
+            sys.modules[full_name] = sub_mod
+        else:
+            sub_mod = sys.modules[full_name]
+
+        setattr(pkg_mod, sub_name, sub_mod)
+
 
 project = "ansys-dynamicreporting-core"
 try:
@@ -116,6 +153,35 @@ autoapi_options = [
     "imported-members",
 ]
 
+# Automatically generate stub pages for autosummary entries
+autosummary_generate = True
+
+# Default autodoc options for all documented objects
+autodoc_default_options = {
+    "members": True,  # include class/module members
+    "undoc-members": False,  # skip members without docstrings
+    "show-inheritance": True,  # show base classes
+}
+
+autodoc_mock_imports = [
+    "data",
+    "data.models",
+    "data.utils",
+    "data.geofile_rendering",
+    "reports",
+    "reports.models",
+    "reports.engine",
+    "ceireports",
+    "ceireports.utils",
+]
+
+
+nitpick_ignore = [
+    ("py:obj", "type"),
+    ("py:attr", "type"),
+    ("py:data", "type"),
+]
+
 # Intersphinx mapping
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -128,8 +194,12 @@ intersphinx_mapping = {
 }
 
 # numpydoc configuration
+# numpydoc configuration
 numpydoc_show_class_members = False
+
+# Still cross-ref real types, but don't try to link plain "type"
 numpydoc_xref_param_type = True
+numpydoc_xref_ignore = {"type"}
 
 # Consider enabling numpydoc validation. See:
 # https://numpydoc.readthedocs.io/en/latest/validation.html#

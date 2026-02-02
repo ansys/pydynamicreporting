@@ -1,3 +1,25 @@
+# Copyright (C) 2023 - 2026 ANSYS, Inc. and/or its affiliates.
+# SPDX-License-Identifier: MIT
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import os
 from pathlib import Path
 import platform
@@ -214,7 +236,22 @@ PROPERTIES_EXEMPT = {
 }
 
 
-def validate_html_dictionary(data):
+def _check_string_for_html(value: str, field_name: str) -> None:
+    """Helper function to validate that a string does not contain HTML content.
+
+    Args:
+        value: String value to validate
+        field_name: Name of the field being validated for error messages
+
+    Raises:
+        ValueError: If the string contains HTML content
+    """
+    cleaned_string = bleach.clean(value, strip=True)
+    if cleaned_string != value:
+        raise ValueError(f"{field_name} contains HTML content. Value: {value}")
+
+
+def check_dictionary_for_html(data):
     for key, value in data.items():
         # Do not validate HTML key
         if key == "HTML":
@@ -225,34 +262,30 @@ def validate_html_dictionary(data):
             # Specific checks for properties key
             if key == "properties":
                 subdict = {k: v for k, v in value.items() if k not in PROPERTIES_EXEMPT}
-                validate_html_dictionary(subdict)
+                check_dictionary_for_html(subdict)
             else:
-                validate_html_dictionary(value)
+                check_dictionary_for_html(value)
 
         # Check for lists
         elif isinstance(value, list):
-            validate_html_list(value, key)
+            check_list_for_html(value, key)
 
         # Main check for strings
         elif isinstance(value, str):
-            cleaned_string = bleach.clean(value, strip=True)
-            if cleaned_string != value:
-                raise ValueError(f"{key} contains HTML content.")
+            _check_string_for_html(value, key)
 
         # Ignore other types
         else:
             continue
 
 
-def validate_html_list(value_list, key):
+def check_list_for_html(value_list, key):
     for item in value_list:
         if isinstance(item, str):
-            cleaned_string = bleach.clean(item, strip=True)
-            if cleaned_string != item:
-                raise ValueError(f"{key} contains HTML content.")
+            _check_string_for_html(item, key)
         elif isinstance(item, dict):
-            validate_html_dictionary(item)
+            check_dictionary_for_html(item)
         elif isinstance(item, list):
-            validate_html_list(item, key)
+            check_list_for_html(item, key)
         else:
             continue

@@ -1,3 +1,43 @@
+# Copyright (C) 2023 - 2026 ANSYS, Inc. and/or its affiliates.
+# SPDX-License-Identifier: MIT
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""Core serverless base models and utilities.
+
+This module provides the foundational abstractions used by the serverless ADR
+API:
+
+* :class:`BaseModel` – a lightweight dataclass wrapper around an ADR ORM
+  model, with validation, tagging, and CRUD helpers.
+* :class:`ObjectSet` – a simple collection wrapper around query results that
+  materializes :class:`BaseModel` instances.
+* :class:`Validator` – a descriptor base class for value validation and
+  normalization on assignment.
+* :class:`StrEnum` – a convenience enum that behaves like :class:`str` for
+  serialization.
+
+The :class:`BaseMeta` metaclass wires dataclasses to their corresponding ORM
+models, lazily loads ORM classes, and injects model-specific exception types.
+"""
+
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -32,7 +72,13 @@ from ..exceptions import (
 )
 
 
-def add_exception_to_cls(name, base, cls, parents, module):
+def _add_exception_to_cls(name, base, cls, parents, module):
+    """Attach a Django-style exception subclass to a model class.
+
+    This mirrors Django's pattern of adding exceptions such as
+    ``DoesNotExist`` and ``MultipleObjectsReturned`` on the model itself,
+    but uses the serverless ADR exception hierarchy as a base.
+    """
     base_exceptions = tuple(getattr(p, name) for p in parents if hasattr(p, name))
     exception_cls = subclass_exception(
         name, base_exceptions or (base,), module, attached_to=cls  # bases
@@ -40,8 +86,16 @@ def add_exception_to_cls(name, base, cls, parents, module):
     setattr(cls, name, exception_cls)
 
 
-def handle_field_errors(func):
-    def wrapper(*args, **kwargs):
+def _handle_field_errors(func):
+    """Decorator that normalizes common Django field-related errors.
+
+    Any :class:`FieldError`, :class:`FieldDoesNotExist`,
+    :class:`ValidationError`, or :class:`DataError` raised by the wrapped
+    function is converted into :class:`InvalidFieldError` with additional
+    context. This keeps higher-level APIs free from ORM-specific exceptions.
+    """
+
+    def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except (FieldError, FieldDoesNotExist, ValidationError, DataError) as e:
@@ -49,18 +103,42 @@ def handle_field_errors(func):
                 extra_detail=f"One or more fields set or accessed are invalid: {e}"
             )
 
-    return wrapper
+    return _wrapper
 
 
-def is_generic_class(cls):
+def _is_generic_class(cls):
+    """Return ``True`` if ``cls`` is a typing generic or not a real class.
+
+    This is used to distinguish types like ``list['Template']`` from
+    concrete classes when validating dataclass field values.
+
+    """
     return not isinstance(cls, type) or get_origin(cls) is not None
 
 
-def get_uuid():
+def _get_uuid():
+    """Return a new UUIDv1 value as a string.
+
+    This is used as the default GUID for :class:`BaseModel` instances.
+
+    """
     return str(uuid.uuid1())
 
 
 class BaseMeta(ABCMeta):
+    """Metaclass that wires dataclass models to their Django ORM counterparts.
+
+    Responsibilities
+    ----------------
+    * Registers all subclasses of :class:`BaseModel` in a class registry.
+    * Optionally materializes extra dataclass fields defined via
+      ``_properties`` on the class body.
+    * Lazily imports and caches the underlying Django ORM model declared
+      via the ``_orm_model`` string.
+    * Attaches model-specific exception classes such as ``DoesNotExist``
+      and ``IntegrityError`` using the serverless ADR exception hierarchy.
+    """
+
     _cls_registry: dict[str, type["BaseModel"]] = {}
     _model_cls_registry: dict[str, type[Model]] = {}
 
@@ -71,6 +149,26 @@ class BaseMeta(ABCMeta):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
+        """Create a new :class:`BaseModel` subclass and register it.
+
+        Parameters
+        ----------
+        cls_name : str
+            Name of the class being created.
+        bases : tuple of type
+            Base classes for the new class.
+        namespace : dict
+            Namespace (attributes and methods) of the new class.
+        **kwargs : Any
+            Additional keyword arguments passed by the metaclass
+            machinery.
+
+        Returns
+        -------
+        type
+            Newly created class, wrapped as a dataclass and registered
+            in the class registry if it extends :class:`BaseModel`.
+        """
         super_new = super().__new__
         # ensure initialization is only performed for subclasses of BaseModel
         new_cls = super_new(mcs, cls_name, bases, namespace)
@@ -86,24 +184,24 @@ class BaseMeta(ABCMeta):
             # save every class extending BaseModel
             mcs._cls_registry[cls_name] = new_cls
             # add exceptions
-            add_exception_to_cls(
+            _add_exception_to_cls(
                 "DoesNotExist",
                 ObjectDoesNotExistError,
                 new_cls,
                 parents,
                 namespace.get("__module__"),
             )
-            add_exception_to_cls(
+            _add_exception_to_cls(
                 "NotSaved", ObjectNotSavedError, new_cls, parents, namespace.get("__module__")
             )
-            add_exception_to_cls(
+            _add_exception_to_cls(
                 "MultipleObjectsReturned",
                 MultipleObjectsReturnedError,
                 new_cls,
                 parents,
                 namespace.get("__module__"),
             )
-            add_exception_to_cls(
+            _add_exception_to_cls(
                 "IntegrityError",
                 IntegrityError,
                 new_cls,
@@ -115,6 +213,12 @@ class BaseMeta(ABCMeta):
         return new_cls
 
     def __getattribute__(cls, name):
+        """Resolve attributes, lazily loading the ORM model when needed.
+
+        The ``_orm_model_cls`` attribute is populated on first access by
+        importing the dotted ``_orm_model`` path. The resolved Django model
+        class is cached in :attr:`_model_cls_registry`.
+        """
         # applies only for class attrs
         # lazy load ORM model upon access
         attr = super().__getattribute__(name)
@@ -134,19 +238,43 @@ class BaseMeta(ABCMeta):
 
 
 class BaseModel(metaclass=BaseMeta):
-    guid: str = field(compare=False, kw_only=True, default_factory=get_uuid)
+    """Base dataclass model that proxies a Django ORM model.
+
+    Each subclass should define:
+
+    * ``_orm_model`` – dotted path to the underlying Django model class.
+    * Matching dataclass fields for the Django model fields.
+
+    Instances of :class:`BaseModel` are validated on construction, can be
+    saved and deleted via the underlying ORM instance, and expose helper
+    methods for querying and tag management.
+
+    The ADR setup is enforced at construction time via
+    :meth:`ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup`.
+    """
+
+    guid: str = field(compare=False, kw_only=True, default_factory=_get_uuid)
+    """Globally unique identifier for this object."""
+
     tags: str = field(compare=False, kw_only=True, default="")
+    """Tag string used to group and filter objects."""
+
     _saved: bool = field(
-        init=False, compare=False, default=False
+        init=False,
+        compare=False,
+        default=False,
     )  # tracks if the object is saved in the db
     _orm_model: str = field(init=False, compare=False, default=None)
     _orm_model_cls: type[Model] = field(init=False, compare=False, default=None)
     _orm_instance: Model = field(
-        init=False, compare=False, default=None
+        init=False,
+        compare=False,
+        default=None,
     )  # tracks the corresponding ORM instance
 
     # check if ADR is set up before creating instances
     def __new__(cls, *args, **kwargs):
+        """Enforce ADR setup before creating a :class:`BaseModel` instance."""
         try:
             from .adr import ADR
 
@@ -158,7 +286,7 @@ class BaseModel(metaclass=BaseMeta):
         return super().__new__(cls)
 
     def __eq__(self, other: object) -> bool:
-        """Models are equal iff they are the same concrete class and have the same GUID."""
+        """Compare models by concrete class and GUID."""
         if self is other:
             return True
         if not isinstance(other, BaseModel):
@@ -166,7 +294,7 @@ class BaseModel(metaclass=BaseMeta):
         return (self.__class__ is other.__class__) and (self.guid == other.guid)
 
     def __hash__(self) -> int:
-        """Hash by concrete class + GUID so instances are usable in sets/dicts."""
+        """Hash by concrete class and GUID for use in sets and dicts."""
         return hash((self.__class__, self.guid))
 
     def __repr__(self) -> str:
@@ -176,10 +304,23 @@ class BaseModel(metaclass=BaseMeta):
         return f"<{self.__class__.__name__}: {self.guid}>"
 
     def __post_init__(self):
+        """Run post-init validation and instantiate the ORM instance."""
         self._validate_field_types()
         self._orm_instance = self.__class__._orm_model_cls()
 
     def _validate_field_types(self):
+        """Validate dataclass field values against their declared types.
+
+        This performs:
+
+        * Resolution of string-based type annotations via the class
+          registry (for example ``'Template'``).
+        * Special handling for :class:`Validator` subclasses, which are
+          responsible for their own validation.
+        * Validation of generic collection types, ensuring that all
+          elements match the declared content type.
+
+        """
         for field_name, field_type in self._get_field_names(with_types=True):
             value = getattr(self, field_name, None)
             if value is None:
@@ -192,7 +333,7 @@ class BaseModel(metaclass=BaseMeta):
                 type_cls = field_type
             # Validators will validate by themselves, so this can be ignored.
             # Will only work when the type is a proper class
-            if not is_generic_class(type_cls) and issubclass(type_cls, Validator):
+            if not _is_generic_class(type_cls) and issubclass(type_cls, Validator):
                 continue
             # 'Generic' class types
             if get_origin(type_cls) is not None:
@@ -217,11 +358,13 @@ class BaseModel(metaclass=BaseMeta):
 
     @staticmethod
     def _add_quotes(input_str):
+        """Return a tag token with quotes if it contains whitespace."""
         if " " in input_str and input_str[0] != "'":
             return "'" + input_str + "'"
         return input_str
 
     def _rebuild_tags(self, tags):
+        """Rebuild the internal tag string from a list of tokens."""
         tags_list = []
         for tag in tags:
             tag_and_value = tag.split("=")
@@ -235,10 +378,12 @@ class BaseModel(metaclass=BaseMeta):
 
     @staticmethod
     def _get_orm_field_names(orm_instance):
+        """Return the list of ORM field names for the given instance."""
         return tuple(f.name for f in orm_instance._meta.get_fields())
 
     @classmethod
     def _get_field_names(cls, with_types=False, include_private=False):
+        """Return the dataclass field names (and optionally types)."""
         fields_ = []
         for f in dataclass_fields(cls):
             if not include_private and f.name.startswith("_"):
@@ -247,6 +392,7 @@ class BaseModel(metaclass=BaseMeta):
         return tuple(fields_)
 
     def _get_var_field_names(self, include_private=False):
+        """Return attribute names from ``vars(self)`` (optionally including private)."""
         fields_ = []
         for f in vars(self).keys():
             if not include_private and f.startswith("_"):
@@ -256,7 +402,7 @@ class BaseModel(metaclass=BaseMeta):
 
     @classmethod
     def _get_prop_field_names(cls):
-        """Returns a list of all field names from a dataclass, including properties."""
+        """Return all property names defined on the class."""
         property_fields = []
         for name, value in inspect.getmembers(cls):
             if isinstance(value, property):
@@ -265,21 +411,45 @@ class BaseModel(metaclass=BaseMeta):
 
     @property
     def saved(self) -> bool:
+        """Whether this object has been successfully saved to the database."""
         return self._saved
 
     @property
     def _orm_saved(self) -> bool:
+        """Whether the underlying ORM instance has been saved."""
         return not self._orm_instance._state.adding
 
     @property
     def _orm_db(self) -> str:
+        """Database alias used by the underlying ORM instance."""
         return self._orm_instance._state.db
 
     @property
     def db(self):
+        """Database alias in which this object is stored."""
         return self._orm_db
 
     def as_dict(self, recursive=False) -> dict[str, Any]:
+        """Serialize the model into a plain dictionary.
+
+        The resulting mapping contains dataclass fields plus any
+        additional instance attributes (excluding private attributes and
+        attributes with value ``None``).
+
+        If ``recursive`` is ``True``, list-valued attributes are
+        converted into lists of GUIDs instead of lists of objects.
+
+        Parameters
+        ----------
+        recursive : bool, default: False
+            If ``True``, recursively serialize lists of related objects
+            as lists of GUIDs.
+
+        Returns
+        -------
+        dict of str to Any
+            Mapping of attribute name to value.
+        """
         out_dict = {}
         # use a combination of vars and fields
         cls_fields = set(self._get_field_names() + self._get_var_field_names())
@@ -296,6 +466,12 @@ class BaseModel(metaclass=BaseMeta):
         return out_dict
 
     def _prepare_for_save(self, **kwargs):
+        """Populate the ORM instance from the dataclass fields.
+
+        This method copies all matching dataclass fields and properties
+        onto the underlying ORM instance, resolving relations and many-
+        to-many fields where appropriate.
+        """
         self._saved = False
 
         target_db = kwargs.pop("using", "default")
@@ -333,11 +509,35 @@ class BaseModel(metaclass=BaseMeta):
         return self
 
     def reinit(self):
+        """Reset the in-memory ORM state for this object.
+
+        This marks the object as unsaved and replaces the underlying ORM
+        instance with a fresh one of the same model class. Dataclass
+        fields remain unchanged.
+        """
         self._saved = False
         self._orm_instance = self.__class__._orm_model_cls()
 
-    @handle_field_errors
+    @_handle_field_errors
     def save(self, **kwargs):
+        """Save this object to the database.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to the database ``save`` method of
+            the underlying ORM instance. For eg: The ``using`` argument can be
+            used to select the target database alias.
+
+        Raises
+        ------
+        IntegrityError
+            If the database reports an integrity violation while saving.
+        InvalidFieldError
+            If invalid field names or values are supplied (via decorator).
+        Exception
+            Any other unexpected exception is propagated unchanged.
+        """
         try:
             obj = self._prepare_for_save(**kwargs)
             obj._orm_instance.save(**kwargs)
@@ -350,17 +550,36 @@ class BaseModel(metaclass=BaseMeta):
         else:
             obj._saved = True
 
-    def delete(self, **kwargs):
+    def delete(self):
+        """Delete this object from the database.
+
+        Returns
+        -------
+        int
+            Number of ORM rows deleted.
+
+        Raises
+        ------
+        NotSaved
+            If the object has not been previously saved.
+        """
         if not self._saved:
             raise self.__class__.NotSaved(
                 extra_detail=f"Delete failed for object with guid '{self.guid}'."
             )
-        count, _ = self._orm_instance.delete(**kwargs)
+        count, _ = self._orm_instance.delete()
         self._saved = False
         return count
 
     @classmethod
-    def from_db(cls, orm_instance, parent=None):
+    def _from_db(cls, orm_instance, parent=None):
+        """Create a :class:`BaseModel` instance from a Django ORM instance.
+
+        This method bypasses ``__init__`` to avoid re-validation and
+        instead copies fields directly from the ORM object, converting
+        relations into :class:`BaseModel` instances or :class:`ObjectSet`
+        collections as needed.
+        """
         cls_fields = dict(cls._get_field_names(with_types=True, include_private=True))
         model_fields = cls._get_orm_field_names(orm_instance)
         obj = cls.__new__(cls)  # Bypass __init__ to skip validation
@@ -389,7 +608,7 @@ class BaseModel(metaclass=BaseMeta):
                     # from the previous 'from_db' load to prevent infinite recursion.
                     value = parent
                 else:
-                    value = type_.from_db(value)
+                    value = type_._from_db(value)
             elif isinstance(value, Manager):
                 type_ = get_origin(field_type)
                 args = get_args(field_type)
@@ -412,7 +631,10 @@ class BaseModel(metaclass=BaseMeta):
                     )
                 if qs:
                     obj_set = ObjectSet(
-                        _model=content_type, _orm_model=qs.model, _orm_queryset=qs, _parent=obj
+                        _model=content_type,
+                        _orm_model=qs.model,
+                        _orm_queryset=qs,
+                        _parent=obj,
                     )
                     value = type_(obj_set)
                 else:
@@ -429,17 +651,59 @@ class BaseModel(metaclass=BaseMeta):
         return obj
 
     @classmethod
-    @handle_field_errors
+    @_handle_field_errors
     def create(cls, **kwargs):
+        """Create and save a new object in a single step.
+
+        Parameters
+        ----------
+        **kwargs
+            Field values for the new instance. The ``using`` argument,
+            if present, is consumed to determine the target database and
+            is not passed to the constructor.
+
+        Returns
+        -------
+        BaseModel
+            Newly created and saved instance.
+
+        Raises
+        ------
+        InvalidFieldError
+            If invalid field names or values are supplied.
+        IntegrityError
+            If a database integrity error occurs during save.
+        """
         target_db = kwargs.pop("using", "default")
         obj = cls(**kwargs)
         obj.save(force_insert=True, using=target_db)
         return obj
 
     @classmethod
-    @handle_field_errors
+    @_handle_field_errors
     def get(cls, **kwargs):
-        """Get an object from the database using the ORM model."""
+        """Retrieve a single object from the database.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments to configure the database operation.
+            Eg: The special ``using`` argument can be supplied to select a database alias.
+
+        Returns
+        -------
+        BaseModel
+            Single matching instance.
+
+        Raises
+        ------
+        DoesNotExist
+            If no matching row is found.
+        MultipleObjectsReturned
+            If more than one row matches the query.
+        InvalidFieldError
+            If the filter arguments reference invalid fields.
+        """
         # convert basemodel instances to orm instances
         for key, value in kwargs.items():
             if isinstance(value, BaseModel):
@@ -453,30 +717,89 @@ class BaseModel(metaclass=BaseMeta):
         except MultipleObjectsReturned:
             raise cls.MultipleObjectsReturned
 
-        return cls.from_db(orm_instance)
+        return cls._from_db(orm_instance)
 
     @classmethod
-    @handle_field_errors
+    @_handle_field_errors
     def filter(cls, **kwargs) -> "ObjectSet":
+        """Return a collection of objects matching the given filters.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments to filter the queryset. Eg: `tags="key=value"`.
+            The special ``using`` argument can be supplied to select a database alias.
+
+        Returns
+        -------
+        ObjectSet
+            Collection wrapper around the resulting queryset.
+        """
+        filter_kwargs = {}
+        db_alias = kwargs.pop("using", "default")
         for key, value in kwargs.items():
             if isinstance(value, BaseModel):
-                kwargs[key] = value._orm_instance
-        qs = cls._orm_model_cls.objects.using(kwargs.pop("using", "default")).filter(**kwargs)
+                filter_kwargs[key] = value._orm_instance
+            else:
+                filter_kwargs[key] = value
+        qs = cls._orm_model_cls.objects.using(db_alias).filter(**filter_kwargs)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     @classmethod
-    @handle_field_errors
-    def find(cls, query="", **kwargs) -> "ObjectSet":
-        qs = cls._orm_model_cls.find(query=query, **kwargs)
+    @_handle_field_errors
+    def find(cls, query="") -> "ObjectSet":
+        """Search for objects using an ADR query string.
+
+        Parameters
+        ----------
+        query : str, default: ""
+            ADR Query string.
+
+        Returns
+        -------
+        ObjectSet
+            Collection of results wrapped as :class:`BaseModel`
+            instances.
+        """
+        qs = cls._orm_model_cls.find(query=query)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self) -> str:
+        """Return the raw tag string stored on this object.
+
+        Returns
+        -------
+        str
+            Space-separated tag string, where individual tokens are
+            ``key`` or ``key=value`` (with quoting for values that
+            contain whitespace).
+        """
         return self.tags
 
     def set_tags(self, tag_str: str) -> None:
+        """Replace all tags with the given tag string.
+
+        Parameters
+        ----------
+        tag_str : str
+            New space-separated tag string to store.
+        """
         self.tags = tag_str
 
     def add_tag(self, tag: str, value: str | None = None) -> None:
+        """Add or update a single tag.
+
+        If a tag with the same key already exists, it is removed before
+        adding the new one.
+
+        Parameters
+        ----------
+        tag : str
+            Tag key.
+        value : str or None, optional
+            Tag value. If omitted, the tag is stored as a bare key
+            without ``=value``.
+        """
         self.rem_tag(tag)
         tags = shlex.split(self.get_tags())
         if value:
@@ -486,6 +809,15 @@ class BaseModel(metaclass=BaseMeta):
         self._rebuild_tags(tags)
 
     def rem_tag(self, tag: str) -> None:
+        """Remove a tag by key, if it exists.
+
+        Both ``tag`` and ``tag=value`` forms are removed if present.
+
+        Parameters
+        ----------
+        tag : str
+            Tag key to remove.
+        """
         tags = shlex.split(self.get_tags())
         for t in tags:
             if t == tag or t.split("=")[0] == tag:
@@ -493,11 +825,27 @@ class BaseModel(metaclass=BaseMeta):
         self._rebuild_tags(tags)
 
     def remove_tag(self, tag: str) -> None:
+        """Alias for :meth:`rem_tag` for backwards compatibility.
+
+        Parameters
+        ----------
+        tag : str
+            Tag key to remove.
+        """
         self.rem_tag(tag)
 
 
 @dataclass(eq=False, order=False, repr=False)
 class ObjectSet:
+    """Collection wrapper around a queryset of :class:`BaseModel` objects.
+
+    An :class:`ObjectSet` encapsulates a Django queryset and eagerly
+    materializes it into a list of :class:`BaseModel` instances. It
+    behaves like a simple list for iteration, indexing, and truth
+    testing, while providing extra helpers such as bulk deletion and
+    value extraction.
+    """
+
     _model: type[BaseModel] = field(compare=False, default=None)
     _obj_set: list[BaseModel] = field(init=True, compare=False, default_factory=list)
     _saved: bool = field(init=False, compare=False, default=False)
@@ -506,11 +854,12 @@ class ObjectSet:
     _parent: BaseModel = field(compare=False, default=None)
 
     def __post_init__(self):
+        """Materialize ORM instances into :class:`BaseModel` objects."""
         if self._orm_queryset is None:
             return
         self._saved = True
         self._obj_set = [
-            self._model.from_db(instance, parent=self._parent) for instance in self._orm_queryset
+            self._model._from_db(instance, parent=self._parent) for instance in self._orm_queryset
         ]
 
     def __repr__(self):
@@ -533,9 +882,21 @@ class ObjectSet:
 
     @property
     def saved(self):
+        """Whether this object set currently reflects saved ORM rows."""
         return self._saved
 
     def delete(self):
+        """Delete all objects in this set from the database.
+
+        The individual objects' :meth:`BaseModel.delete` methods are
+        called, followed by deletion of any remaining rows via the
+        underlying queryset.
+
+        Returns
+        -------
+        int
+            Number of objects deleted.
+        """
         count = 0
         for obj in self._obj_set:
             obj.delete()
@@ -546,6 +907,28 @@ class ObjectSet:
         return count
 
     def values_list(self, *fields, flat=False):
+        """Return a list of tuples of field values for objects in the set.
+
+        Parameters
+        ----------
+        *fields : str
+            Attribute names to extract from each object.
+        flat : bool, default: False
+            If ``True``, and exactly one field is requested, return a
+            simple list of values instead of a list of 1-tuples.
+
+        Returns
+        -------
+        list
+            List of tuples of field values, or a flat list of values if
+            ``flat=True`` and a single field is requested.
+
+        Raises
+        ------
+        ValueError
+            If ``flat`` is ``True`` but more than one field name is
+            provided.
+        """
         if flat and len(fields) > 1:
             raise ValueError(
                 "'flat' is not valid when values_list is called with more than one field."
@@ -557,29 +940,51 @@ class ObjectSet:
 
 
 class Validator(ABC):
+    """Descriptor base class for value validation and normalization.
+
+    Subclasses implement :meth:`process` to validate and transform values
+    before they are stored on the owning object. A ``default`` value can
+    be provided for cases where no explicit value has been set.
+    """
+
     def __init__(self, *, default=None):
+        """Initialize the validator."""
         self._default = default
 
     def __set_name__(self, owner, name):
+        """Record the private attribute name used for storage."""
         self._name = "_" + name
 
     def __get__(self, obj, obj_type=None):
+        """Return the validated value from the owning object."""
         if obj is None:
             return self._default
 
         return getattr(obj, self._name, self._default)
 
     def __set__(self, obj, value):
+        """Validate and store a new value on the owning object."""
         cleaned_value = self.process(value, obj)
         setattr(obj, self._name, cleaned_value)
 
     @abstractmethod
     def process(self, value, obj):
+        """Validate and normalize a raw value.
+
+        Subclasses must implement this method to perform type coercion,
+        range checks, or any other validation required before storing
+        the value.
+        """
         pass  # pragma: no cover
 
 
 class StrEnum(str, Enum):
-    """Enum with a str mixin."""
+    """Enum with a :class:`str` mixin for easy serialization.
+
+    The value of each enum member is its string representation, which
+    makes it convenient for use in JSON, HTML attributes, and other
+    text-based contexts.
+    """
 
     def __str__(self):
         return self.value
