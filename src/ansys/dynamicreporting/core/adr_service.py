@@ -527,7 +527,7 @@ class Service:
 
         if self.serverobj is None:
             self.logger.warning(
-                "There is no service connected to the current session. " "Can't shut it down.\n"
+                "There is no service connected to the current session. Can't shut it down.\n"
             )
 
         v = False
@@ -802,7 +802,7 @@ class Service:
         reports_to_delete = [x for x in items if type(x) is Report]
         if reports_to_delete:
             self.logger.warning(
-                "Warning: Report deletion will result in deletion of " "all its children templates"
+                "Warning: Report deletion will result in deletion of all its children templates"
             )
             items_to_delete.extend([x.report for x in reports_to_delete])
         # Check the input

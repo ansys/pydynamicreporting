@@ -28,7 +28,6 @@ using ``<iframe></iframe>`` to fetch and embed a report in the external web appl
 #   a **Flask** server should all be put together in the ``app.py`` file. The
 #   file structure of this example is demonstrated at the end of the tutorial.
 
-
 from random import random as r
 
 import numpy as np

@@ -214,7 +214,7 @@ class Report:
                 url += "view=" + self.report.guid + "&"
             else:
                 self.service.logger.error(
-                    "Can not identify TemplateREST obj corresponding to " "the report"
+                    "Can not identify TemplateREST obj corresponding to the report"
                 )
                 return ""
         url += "usemenus=off"
@@ -789,6 +789,5 @@ class Report:
             self.service.serverobj.store_json(self.report.guid, json_file_path)
         except Exception as e:
             self.service.logger.error(
-                f"Exporting to JSON terminated for report: {self.report_name}\n"
-                f"Error details: {e}"
+                f"Exporting to JSON terminated for report: {self.report_name}\nError details: {e}"
             )

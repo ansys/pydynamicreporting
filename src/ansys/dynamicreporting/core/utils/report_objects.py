@@ -1160,7 +1160,6 @@ class ItemREST(BaseRESTObject):
 
     @staticmethod
     def validate_tree(t):
-
         def _has_non_empty_value(val):
             if val is None:
                 return False
