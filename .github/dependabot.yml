@@ -2,6 +2,8 @@ version: 2
 updates:
   # 1. Python dependencies from pyproject.toml
   - package-ecosystem: "pip"
+    cooldown:
+      default-days: 10 # Fallback cooldown if no specific rule applies
     directory: "/"
     schedule:
       interval: "weekly"
@@ -13,6 +15,8 @@ updates:
   #    - GitHub Actions in .github/workflows/
   #    - pre-commit hook revs in .pre-commit-config.yaml
   - package-ecosystem: "github-actions"
+    cooldown:
+      default-days: 10 # Fallback cooldown if no specific rule applies
     directory: "/"
     schedule:
       interval: "weekly"
