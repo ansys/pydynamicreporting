@@ -567,7 +567,7 @@ class Template(BaseModel):
         self.children.insert(new_position, target_child_template)
 
     @staticmethod
-    def _build_render_context(context, request):
+    def _get_base_context(context, request):
         """Build the rendering context shared by HTML/PDF renderers.
 
         Adds page dimensions, DPI, and several date/time convenience
@@ -588,7 +588,9 @@ class Template(BaseModel):
             "date_year": datetime.now(timezone.get_current_timezone()).year,
         }
 
-    def render(self, *, context=None, item_filter: str = "", request=None) -> str:
+    def render(
+        self, *, context=None, item_filter: str = "", embed_scene_data: bool = False, request=None
+    ) -> str:
         """Render the template to HTML.
 
         Parameters
@@ -597,6 +599,9 @@ class Template(BaseModel):
             Additional context passed to the rendering engine.
         item_filter : str, optional
             ADR query string used to select :class:`Item` instances.
+        embed_scene_data: bool, optional
+            Whether to include full scene data for 3D visualizations in the output HTML.
+             This can increase the size of the output significantly, so it is disabled by default.
         request : HttpRequest, optional
             Django request object, if available.
 
@@ -605,7 +610,9 @@ class Template(BaseModel):
         str
             Rendered HTML string for the report.
         """
-        ctx = self._build_render_context(context, request)
+        ctx = self._get_base_context(context, request)
+        if embed_scene_data:
+            ctx["embed_scene_data"] = True
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
@@ -650,7 +657,7 @@ class Template(BaseModel):
         ADRException
             If rendering or PDF generation fails.
         """
-        ctx = self._build_render_context(context, request)
+        ctx = self._get_base_context(context, request)
         try:
             from data.models import Item
             from reports.engine import TemplateEngine
