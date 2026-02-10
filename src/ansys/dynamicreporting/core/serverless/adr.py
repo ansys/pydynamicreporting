@@ -1147,7 +1147,12 @@ class ADR:
         )
 
     def render_report(
-        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
+        self,
+        *,
+        context: dict | None = None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        **kwargs: Any,
     ) -> str:
         """Render a report as an HTML string.
 
@@ -1157,6 +1162,9 @@ class ADR:
             Context to pass to the report template.
         item_filter : str, optional
             ADR filter applied to items in the report.
+        embed_scene_data: bool, optional
+            Whether to include full scene data for 3D visualizations in the output HTML.
+             This can increase the size of the output significantly, so it is disabled by default.
         **kwargs : Any
             Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
             At least one keyword argument must be provided to fetch the report.
@@ -1187,6 +1195,7 @@ class ADR:
             return Template.get(**kwargs).render(
                 context=context,
                 item_filter=item_filter,
+                embed_scene_data=embed_scene_data,
                 request=self._request,
             )
         except Exception as e:
