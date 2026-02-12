@@ -6,7 +6,7 @@ runs:
   steps:
     - run: |
         echo "DOCUMENTATION_CNAME=dynamicreporting.docs.pyansys.com" >> $GITHUB_ENV
-        echo "MAIN_PYTHON_VERSION=3.12" >> $GITHUB_ENV
+        echo "MAIN_PYTHON_VERSION=3.13" >> $GITHUB_ENV
         echo "PACKAGE_NAME=ansys-dynamicreporting-core" >> $GITHUB_ENV
         echo "PACKAGE_NAMESPACE=ansys.dynamicreporting.core" >> $GITHUB_ENV
         echo "ANSYS_VERSION=271" >> $GITHUB_ENV
