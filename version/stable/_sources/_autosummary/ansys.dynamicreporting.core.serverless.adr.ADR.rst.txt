@@ -1,0 +1,114 @@
+﻿ADR
+===
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoclass:: ADR
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      ADR.backup_database
+      
+      
+      ADR.close
+      
+      
+      ADR.copy_objects
+      
+      
+      ADR.create_item
+      
+      
+      ADR.create_objects
+      
+      
+      ADR.create_template
+      
+      
+      ADR.ensure_setup
+      
+      
+      ADR.export_report_as_html
+      
+      
+      ADR.export_report_as_pdf
+      
+      
+      ADR.export_report_as_pptx
+      
+      
+      ADR.get_database_config
+      
+      
+      ADR.get_instance
+      
+      
+      ADR.get_list_reports
+      
+      
+      ADR.get_report
+      
+      
+      ADR.get_reports
+      
+      
+      ADR.load_templates
+      
+      
+      ADR.load_templates_from_file
+      
+      
+      ADR.query
+      
+      
+      ADR.render_report
+      
+      
+      ADR.render_report_as_pdf
+      
+      
+      ADR.render_report_as_pptx
+      
+      
+      ADR.restore_database
+      
+      
+      ADR.set_default_dataset
+      
+      
+      ADR.set_default_session
+      
+      
+      ADR.setup
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      ADR.ansys_installation
+      ADR.ansys_version
+      ADR.dataset
+      ADR.db_directory
+      ADR.is_setup
+      ADR.media_directory
+      ADR.media_url
+      ADR.session
+      ADR.session_guid
+      ADR.static_directory
+      ADR.static_url
+   
+   

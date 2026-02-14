@@ -1,0 +1,6 @@
+numparts
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Dataset.numparts
