@@ -255,7 +255,9 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
             "website/scripts/mathjax/MathJax.js?config=TeX-AMS-MML_SVG",  # important: top-level loader
-            "website/images/MenuArrow-15.png",
+            "website/scripts/mathjax/extensions/HelpDialog.js",
+            "website/scripts/mathjax/images/MenuArrow-15.png",
+            "website/scripts/mathjax/images/CloseX-31.png",
         ]
         for f in mathjax_files:
             target_path = "media/" + (
