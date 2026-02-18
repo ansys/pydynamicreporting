@@ -57,7 +57,7 @@ from .adr_item import Item
 from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
 from .common_utils import get_install_info
-from .constants import DOCKER_DEFAULT_PORT, DOCKER_REPO_URL
+from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
     AlreadyConnectedError,
@@ -132,7 +132,7 @@ class Service:
     def __init__(
         self,
         ansys_version: int = None,
-        docker_image: str = DOCKER_REPO_URL,
+        docker_image: str = None,
         data_directory: str = None,
         db_directory: str = None,
         port: int = DOCKER_DEFAULT_PORT,
@@ -182,7 +182,7 @@ class Service:
         self._docker_launcher = None
         self._docker_image = docker_image
 
-        if ansys_installation == "docker":
+        if ansys_installation == "docker" and docker_image is not None:
             if not self._db_directory:
                 self.logger.error("db_directory cannot be None when using Docker.\n")
                 raise DatabaseDirNotProvidedError

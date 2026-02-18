@@ -42,19 +42,19 @@ Typical usage involves creating a single :class:`ADR` instance, calling
 templates, and report exports.
 """
 
-from collections.abc import Iterable
 import copy
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import platform
 import shutil
 import sys
 import tempfile
-from typing import Any
 import uuid
 import warnings
+from collections.abc import Iterable
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
@@ -62,9 +62,12 @@ from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
+from .base import ObjectSet
+from .html_exporter import ServerlessReportExporter
+from .item import Dataset, Item, Session
+from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..common_utils import get_install_info, populate_template
-from ..constants import DOCKER_REPO_URL
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -77,10 +80,6 @@ from ..exceptions import (
 )
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
-from .base import ObjectSet
-from .html_exporter import ServerlessReportExporter
-from .item import Dataset, Item, Session
-from .template import PPTXLayout, Template
 
 
 class ADR:
@@ -211,7 +210,7 @@ class ADR:
         opts: dict | None = None,
         request: HttpRequest | None = None,
         logfile: str | None = None,
-        docker_image: str = DOCKER_REPO_URL,
+        docker_image: str | None = None,
         in_memory: bool = False,
     ) -> None:
         # Basic attributes / configuration.
@@ -314,7 +313,7 @@ class ADR:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
         # Resolve Ansys installation (local or Docker).
-        if ansys_installation == "docker":
+        if ansys_installation == "docker" and docker_image is not None:
             # Bootstrap from Docker.
             try:
                 docker_launcher = DockerLauncher(image_url=docker_image)
