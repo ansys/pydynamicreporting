@@ -37,12 +37,11 @@ Examples:
 """
 
 import os
-from pathlib import Path
 import random
 import re
 import string
 import tarfile
-from typing import Optional
+from pathlib import Path
 
 import docker
 from docker.errors import ImageNotFound
