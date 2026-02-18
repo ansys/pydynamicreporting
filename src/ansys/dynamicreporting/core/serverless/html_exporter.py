@@ -376,8 +376,17 @@ class ServerlessReportExporter:
                 write to ./media/<basename>
         - Handles scene.js renaming & inlining of its binary blocks.
         """
+        # Extract query string to preserve it in the result (e.g., MathJax config)
+        query_string = ""
+        if "?" in path_in_html:
+            query_string = path_in_html[path_in_html.index("?") :]
+
         if pathname in self._filemap:
-            return self._filemap[pathname]
+            cached_result = self._filemap[pathname]
+            # Don't append query string to data URIs
+            if cached_result.startswith("data:"):
+                return cached_result
+            return cached_result + query_string
 
         # Resolve source file location based on the raw pathname (no normalization)
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
