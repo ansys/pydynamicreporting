@@ -254,7 +254,7 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "website/scripts/mathjax/MathJax.js?config=TeX-AMS-MML_SVG",  # important: top-level loader
+            "website/scripts/mathjax/MathJax.js",  # important: top-level loader
             "website/scripts/mathjax/extensions/HelpDialog.js",
             "website/scripts/mathjax/images/MenuArrow-15.png",
             "website/scripts/mathjax/images/CloseX-31.png",
