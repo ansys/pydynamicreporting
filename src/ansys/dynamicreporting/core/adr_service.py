@@ -182,7 +182,14 @@ class Service:
         self._docker_launcher = None
         self._docker_image = docker_image
 
-        if ansys_installation == "docker" and docker_image is not None:
+        if ansys_installation == "docker":
+            if not docker_image:
+                self.logger.error(
+                    "docker_image must be provided when ansys_installation is set to 'docker'.\n"
+                )
+                raise ValueError(
+                    "docker_image must be provided when ansys_installation is set to 'docker'."
+                )
             if not self._db_directory:
                 self.logger.error("db_directory cannot be None when using Docker.\n")
                 raise DatabaseDirNotProvidedError

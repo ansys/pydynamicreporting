@@ -313,7 +313,14 @@ class ADR:
                 self._static_directory = self._check_dir(os.environ["CEI_NEXUS_LOCAL_STATIC_DIR"])
 
         # Resolve Ansys installation (local or Docker).
-        if ansys_installation == "docker" and docker_image is not None:
+        if ansys_installation == "docker":
+            if not docker_image:
+                self._logger.error(
+                    "docker_image must be provided when ansys_installation is set to 'docker'.\n"
+                )
+                raise ImproperlyConfiguredError(
+                    "docker_image must be provided when ansys_installation is set to 'docker'."
+                )
             # Bootstrap from Docker.
             try:
                 docker_launcher = DockerLauncher(image_url=docker_image)
