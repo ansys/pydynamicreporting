@@ -2,7 +2,7 @@
 set -ex
 
 # Image name
-_IMAGE_NAME="ghcr.io/ansys-internal/nexus_dev"
+_IMAGE_NAME="ghcr.io/ansys-internal/adr_dev"
 
 # Pull Ansys Dynamic Reporting image based on tag
 docker pull $_IMAGE_NAME
