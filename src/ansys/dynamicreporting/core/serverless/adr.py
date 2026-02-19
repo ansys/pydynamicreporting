@@ -42,19 +42,19 @@ Typical usage involves creating a single :class:`ADR` instance, calling
 templates, and report exports.
 """
 
-from collections.abc import Iterable
 import copy
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import platform
 import shutil
 import sys
 import tempfile
-from typing import Any
 import uuid
 import warnings
+from collections.abc import Iterable
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
@@ -62,9 +62,12 @@ from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
+from .base import ObjectSet
+from .html_exporter import ServerlessReportExporter
+from .item import Dataset, Item, Session
+from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..common_utils import get_install_info, populate_template
-from ..constants import DOCKER_REPO_URL
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -77,10 +80,6 @@ from ..exceptions import (
 )
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
-from .base import ObjectSet
-from .html_exporter import ServerlessReportExporter
-from .item import Dataset, Item, Session
-from .template import PPTXLayout, Template
 
 
 class ADR:
@@ -211,7 +210,7 @@ class ADR:
         opts: dict | None = None,
         request: HttpRequest | None = None,
         logfile: str | None = None,
-        docker_image: str = DOCKER_REPO_URL,
+        docker_image: str | None = None,
         in_memory: bool = False,
     ) -> None:
         # Basic attributes / configuration.
@@ -315,6 +314,13 @@ class ADR:
 
         # Resolve Ansys installation (local or Docker).
         if ansys_installation == "docker":
+            if not docker_image:
+                self._logger.error(
+                    "docker_image must be provided when ansys_installation is set to 'docker'.\n"
+                )
+                raise ImproperlyConfiguredError(
+                    "docker_image must be provided when ansys_installation is set to 'docker'."
+                )
             # Bootstrap from Docker.
             try:
                 docker_launcher = DockerLauncher(image_url=docker_image)
@@ -326,14 +332,20 @@ class ADR:
                 raise ADRException(error_message)
 
             # Copy installation from container to a local temp directory.
+            # New Docker images use /Nexus/ADR, legacy images use /Nexus/CEI.
+            # Try the new path first, then fall back to the legacy path.
             tmp_install_dir = tempfile.TemporaryDirectory()
             self._tmp_dirs.append(tmp_install_dir)
             try:
-                docker_launcher.copy_to_host("/Nexus/CEI", dest=tmp_install_dir.name)
-            except Exception as e:  # pragma: no cover
-                error_message = f"Error copying the installation from the container: {str(e)}"
-                self._logger.error(error_message)
-                raise ADRException(error_message)
+                docker_launcher.copy_to_host("/Nexus/ADR", dest=tmp_install_dir.name)
+            except Exception:
+                # Fall back to legacy path layout.
+                try:
+                    docker_launcher.copy_to_host("/Nexus/CEI", dest=tmp_install_dir.name)
+                except Exception as e:  # pragma: no cover
+                    error_message = f"Error copying the installation from the container: {str(e)}"
+                    self._logger.error(error_message)
+                    raise ADRException(error_message)
 
             # Tear down container regardless of copy outcome.
             try:
@@ -521,12 +533,15 @@ class ADR:
                     / "fluids"
                     / "ensight_components"
                     / "winx64",
-                    # Windows path from apex folder
+                    # Windows path from apex folder (new ADR layout)
                     self._ansys_installation
                     / f"apex{self._ansys_version}"
                     / "machines"
                     / "win64"
                     / "CEI",
+                    # Windows path from apex folder (legacy CEI layout, same subdir name)
+                    # Note: the inner "CEI" directory under machines/ is unchanged
+                    # in both old and new layouts.
                 ]
             else:  # Linux
                 dirs_to_check = [
@@ -541,7 +556,8 @@ class ADR:
                     / "fluids"
                     / "ensight_components"
                     / "linx64",
-                    # Linux path from apex folder
+                    # Linux path from apex folder (the inner 'CEI' directory
+                    # under machines/ is unchanged in both ADR and CEI layouts)
                     self._ansys_installation
                     / f"apex{self._ansys_version}"
                     / "machines"
