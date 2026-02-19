@@ -274,8 +274,7 @@ class DockerLauncher:
                 self.stop()
                 raise RuntimeError(
                     f"Can't find nexus*/bin/{launcher} in the Docker container "
-                    f"under /Nexus/ADR/ or /Nexus/CEI/.\n"
-                    + str(ret[1].decode("utf-8"))
+                    f"under /Nexus/ADR/ or /Nexus/CEI/.\n" + str(ret[1].decode("utf-8"))
                 )
         p = ret[1].decode("utf-8").strip()
 
@@ -288,8 +287,7 @@ class DockerLauncher:
         if i < 0:  # pragma: no cover
             self.stop()
             raise RuntimeError(
-                "Can't find ADR/ or CEI/ in the Docker container.\n"
-                + str(ret[1].decode("utf-8"))
+                "Can't find ADR/ or CEI/ in the Docker container.\n" + str(ret[1].decode("utf-8"))
             )
         self._cei_home = p[0 : i + 3]
         m = re.search(r"/nexus(\d\d\d)/", p)

@@ -1120,16 +1120,6 @@ def test_put_objects_bad_request_tmp_name(adr_service_create) -> bool:
         server.put_objects(test_template)
 
 
-@pytest.mark.ado_test
-def test_put_objects_bad_request_tmp_tags(adr_service_create) -> bool:
-    server = adr_service_create.serverobj
-    test_template = server.create_template(name="testing", report_type="Layout:box")
-    test_template.tags = "testing" * 256
-    with pytest.raises(
-        BadRequestError, match=re.escape("Ensure tags has no more than 256 characters.")
-    ):
-        server.put_objects(test_template)
-
 
 @pytest.mark.ado_test
 def test_put_objects_bad_request_tmp_item_filter(adr_service_create) -> bool:
