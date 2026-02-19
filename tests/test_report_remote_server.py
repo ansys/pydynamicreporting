@@ -1120,7 +1120,6 @@ def test_put_objects_bad_request_tmp_name(adr_service_create) -> bool:
         server.put_objects(test_template)
 
 
-
 @pytest.mark.ado_test
 def test_put_objects_bad_request_tmp_item_filter(adr_service_create) -> bool:
     server = adr_service_create.serverobj
