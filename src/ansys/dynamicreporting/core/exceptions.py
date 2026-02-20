@@ -32,7 +32,7 @@ class ADRException(Exception):
 
     detail: str = "An error occurred"
 
-    def __init__(self, extra_detail: str = None) -> None:
+    def __init__(self, extra_detail: str | None = None) -> None:
         super().__init__()
         self.extra_detail = extra_detail
 

@@ -57,28 +57,28 @@ import os
 import threading
 import time
 
-try:
+from types import ModuleType
+import typing
+
+if typing.TYPE_CHECKING:
     import warnings
-except ImportError:
-    warnings = None
-
-try:
     import msvcrt
-except ImportError:
-    msvcrt = None
-
-try:
     import fcntl
-except ImportError:
-    fcntl = None
+else:
+    try:
+        import warnings
+    except ImportError:
+        warnings = None
 
+    try:
+        import msvcrt
+    except ImportError:
+        msvcrt = None
 
-# Backward compatibility
-# ------------------------------------------------
-try:
-    TimeoutError
-except NameError:
-    TimeoutError = OSError
+    try:
+        import fcntl
+    except ImportError:
+        fcntl = None
 
 
 # Data
@@ -133,7 +133,7 @@ class BaseFileLock:
         # os.open() function.
         # This file lock is only NOT None, if the object currently holds the
         # lock.
-        self._lock_file_fd = None
+        self._lock_file_fd: int | None = None
 
         # The default timeout value.
         self.timeout = timeout
@@ -357,7 +357,8 @@ class WindowsFileLock(BaseFileLock):
             pass
         else:
             try:
-                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                if msvcrt is not None:
+                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
             except OSError:
                 os.close(fd)
             else:
@@ -367,8 +368,10 @@ class WindowsFileLock(BaseFileLock):
     def _release(self):
         fd = self._lock_file_fd
         self._lock_file_fd = None
-        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-        os.close(fd)
+        if msvcrt is not None and fd is not None:
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+        if fd is not None:
+            os.close(fd)
 
         try:
             os.remove(self._lock_file)
@@ -391,7 +394,7 @@ class UnixFileLock(BaseFileLock):
         fd = os.open(self._lock_file, open_mode)
 
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)  # ty: ignore
         except OSError:
             os.close(fd)
         else:
@@ -401,8 +404,8 @@ class UnixFileLock(BaseFileLock):
     def _release(self):
         fd = self._lock_file_fd
         self._lock_file_fd = None
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+        fcntl.flock(fd, fcntl.LOCK_UN)  # ty: ignore
+        os.close(fd)  # ty: ignore
         return None
 
 
@@ -424,7 +427,7 @@ class SoftFileLock(BaseFileLock):
         return None
 
     def _release(self):
-        os.close(self._lock_file_fd)
+        os.close(self._lock_file_fd)  # ty: ignore
         self._lock_file_fd = None
 
         try:
@@ -504,9 +507,9 @@ def nexus_file_lock(filename: str) -> BaseFileLock:
     for p in psutil.disk_partitions(all=True):
         # reject filenames that are on nfs
         if (len(p.mountpoint) > 1) and (p.fstype == "nfs"):
-            if node_filename.startswith(p.mountpoint):
+            if node_filename is not None and node_filename.startswith(p.mountpoint):
                 node_filename = None
-            if lcl_filename.startswith(p.mountpoint):
+            if lcl_filename is not None and lcl_filename.startswith(p.mountpoint):
                 lcl_filename = None
 
     if node_filename:

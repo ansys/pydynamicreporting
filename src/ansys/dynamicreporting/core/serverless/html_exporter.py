@@ -63,7 +63,7 @@ class ServerlessReportExporter:
         *,
         filename: str = "index.html",
         no_inline_files: bool = False,
-        ansys_version: str = None,
+        ansys_version: str | None = None,
         dark_mode: bool = True,
         debug: bool = False,
         logger: Any = None,

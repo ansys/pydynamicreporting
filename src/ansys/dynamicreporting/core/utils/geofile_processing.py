@@ -94,8 +94,7 @@ def get_evsn_proxy_image(filename: str) -> bytearray | None:
         if png_length != png_length2:
             return None
         # ok, we should have the png data now
-        data = fp.read(png_length)
-        return data
+        return bytearray(data) if data is not None else None
     return None
 
 
@@ -142,7 +141,11 @@ def get_avz_directory(csf_file: str) -> str:
     return os.path.splitext(csf_file)[0]
 
 
-def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = None):
+def rebuild_3d_geometry(
+    csf_file: str,
+    unique_id: str = "",
+    exec_basis: str | None = None,
+) -> None:
     """Rebuild the media directory representation of the file (udrw format, avz, scdoc
     or evsn)"""
     # We are looking to convert the .csf or other udrw file to .avz with this command:

@@ -269,7 +269,8 @@ class FileValidator(StringContent):
         with file_path.open(mode="rb") as f:
             file = DjangoFile(f)
         # check file type
-        file_ext = Path(file.name).suffix.lower().lstrip(".")
+        file_name_str = file.name if file.name is not None else ""
+        file_ext = Path(file_name_str).suffix.lower().lstrip(".")
         if self.ALLOWED_EXT is not None and file_ext not in self.ALLOWED_EXT:
             raise ValueError(f"File type {file_ext} is not supported by {obj.__class__}")
         # check for empty files
@@ -337,8 +338,11 @@ class SimplePayloadMixin:
         """Reconstruct content from the ORM ``payloaddata`` field."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super()._from_db(orm_instance, **kwargs)
-        obj.content = safe_unpickle(obj._orm_instance.payloaddata)
+        obj = getattr(super(), "_from_db")(orm_instance, **kwargs)
+        _orm_instance = getattr(obj, "_orm_instance", None)
+        if _orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized")
+        obj.content = safe_unpickle(getattr(_orm_instance, "payloaddata"))
         return obj
 
     def save(self, **kwargs):
@@ -360,8 +364,13 @@ class SimplePayloadMixin:
         Exception
             Any other unexpected exception is propagated unchanged.
         """
-        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)
-        super().save(**kwargs)
+        _orm_instance = getattr(self, "_orm_instance", None)
+        if _orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized")
+        setattr(
+            _orm_instance, "payloaddata", pickle.dumps(getattr(self, "content", None), protocol=0)
+        )
+        getattr(super(), "save")(**kwargs)
 
 
 class FilePayloadMixin:
@@ -372,7 +381,7 @@ class FilePayloadMixin:
     on the object for convenience.
     """
 
-    _file: DjangoFile = field(init=False, compare=False, default=None)
+    _file: DjangoFile | None = field(init=False, compare=False, default=None)
     _file_ext: str = field(init=False, compare=False, default="")
 
     @property
@@ -385,7 +394,10 @@ class FilePayloadMixin:
             File path or ``None`` if no file has been associated yet.
         """
         try:
-            return self._orm_instance.payloadfile.path
+            _orm_instance = getattr(self, "_orm_instance", None)
+            if _orm_instance is None:
+                return None
+            return getattr(_orm_instance, "payloadfile").path
         except (AttributeError, ValueError):
             # If the file path is not set, return None
             return None
@@ -399,7 +411,10 @@ class FilePayloadMixin:
     def file_ext(self):
         """File extension of the payload file, without the leading dot."""
         try:
-            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")
+            _orm_instance = getattr(self, "_orm_instance", None)
+            if _orm_instance is None:
+                return None
+            return Path(getattr(_orm_instance, "payloadfile").path).suffix.lower().lstrip(".")
         except (AttributeError, ValueError):
             # If the file path is not set, return None
             return None
@@ -407,8 +422,10 @@ class FilePayloadMixin:
     @classmethod
     def _from_db(cls, orm_instance, **kwargs):
         """Reconstruct file-backed content from the ORM instance."""
-        obj = super()._from_db(orm_instance, **kwargs)
-        obj.content = obj._orm_instance.payloadfile.path
+        obj = getattr(super(), "_from_db")(orm_instance, **kwargs)
+        if obj._orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized.")
+        obj.content = getattr(obj._orm_instance, "payloadfile").path
         return obj
 
     @staticmethod
@@ -446,18 +463,31 @@ class FilePayloadMixin:
         Exception
             Any other unexpected exception is propagated unchanged.
         """
-        self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
+        _orm_instance = getattr(self, "_orm_instance", None)
+        if _orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized.")
+        _guid = getattr(self, "guid", "unknown")
+        _type = getattr(self, "type", "unknown")
+        _ext = getattr(self, "_file_ext", "")
+        setattr(_orm_instance, "payloadfile", f"{_guid}_{_type}.{_ext}")
         # Save file to the target path
-        self._save_file(self.file_path, self._file)
+        _save_file = getattr(self, "_save_file", None)
+        _file_path = getattr(self, "file_path", None)
+        _file = getattr(self, "_file", None)
+        if _save_file:
+            _save_file(_file_path, _file)
         # save ORM instance
-        super().save(**kwargs)
+        getattr(super(), "save")(**kwargs)
 
     def delete(self):
         """Delete the payload file and then the ORM instance."""
         from data.utils import delete_item_media
 
-        delete_item_media(self._orm_instance.guid)
-        return super().delete()
+        _orm_instance = getattr(self, "_orm_instance", None)
+        if _orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized.")
+        delete_item_media(getattr(_orm_instance, "guid"))
+        return getattr(super(), "delete")()
 
 
 class ItemType(StrEnum):
@@ -496,10 +526,10 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     """Sequence index for ordering items within a dataset/session."""
 
-    session: Session = field(compare=False, kw_only=True, default=None)
+    session: Session | None = field(compare=False, kw_only=True, default=None)
     """Session that owns this item."""
 
-    dataset: Dataset = field(compare=False, kw_only=True, default=None)
+    dataset: Dataset | None = field(compare=False, kw_only=True, default=None)
     """Dataset associated with this item."""
 
     content: ItemContent = ItemContent()
@@ -556,7 +586,7 @@ class Item(BaseModel):
         super().save(**kwargs)
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None, **kwargs):
         """Reconstruct an item or item subclass from the ORM instance.
 
         If called on :class:`Item` itself, this method dispatches to the
@@ -566,9 +596,9 @@ class Item(BaseModel):
         if cls is Item:
             # Get the class based on the type attribute
             item_cls = cls._type_registry[orm_instance.type]
-            return item_cls._from_db(orm_instance, **kwargs)
+            return item_cls._from_db(orm_instance, parent=parent, **kwargs)
 
-        return super()._from_db(orm_instance, **kwargs)
+        return super()._from_db(orm_instance, parent=parent, **kwargs)
 
     @classmethod
     def create(cls, **kwargs):
@@ -713,7 +743,9 @@ class Item(BaseModel):
             "format": context.get("format", None),
         }
         try:
-            ctx["HTML"] = self._orm_instance.render(ctx)
+            if self._orm_instance is None:
+                raise RuntimeError("ORM instance is not initialized.")
+            ctx["HTML"] = getattr(self._orm_instance, "render")(ctx)
         except Exception as e:
             from ceireports.utils import get_render_error_html
 
@@ -762,11 +794,11 @@ class Table(Item):
     _properties: tuple = table_attr + _payload_properties
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None, **kwargs):
         """Rebuild the table array and payload properties from ``payloaddata``."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super()._from_db(orm_instance, **kwargs)
+        obj = super()._from_db(orm_instance, parent=parent, **kwargs)
         payload = safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
@@ -800,8 +832,10 @@ class Table(Item):
             value = getattr(self, prop, None)
             if value is not None:
                 payload[prop] = value
-        self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
-        super().save(**kwargs)
+        if self._orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized.")
+        setattr(self._orm_instance, "payloaddata", pickle.dumps(payload, protocol=0))
+        getattr(super(), "save")(**kwargs)
 
 
 class Tree(SimplePayloadMixin, Item):
@@ -872,12 +906,16 @@ class Image(FilePayloadMixin, Item):
         Exception
             Any other unexpected exception is propagated unchanged.
         """
+        if self._file is None:
+            raise ValueError("No file attached to this item.")
         with self._file.open(mode="rb") as f:
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
         # Determine final file name and format
         target_ext = "png" if not self._enhanced else self._file_ext
-        self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
+        if self._orm_instance is None:
+            raise RuntimeError("ORM instance is not initialized.")
+        setattr(self._orm_instance, "payloadfile", f"{self.guid}_image.{target_ext}")
         # Save the image
         if self._file_ext != target_ext and target_ext == "png":
             # Convert to PNG format

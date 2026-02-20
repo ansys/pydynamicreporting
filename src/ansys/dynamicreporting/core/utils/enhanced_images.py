@@ -34,6 +34,7 @@ enhanced image.
 
 from collections.abc import Callable
 import io
+import typing
 import json
 import logging
 
@@ -68,7 +69,7 @@ if HAS_VTK and HAS_DPF:
         var_name: str,
         output_file_name: str,
         rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
+        component: str | None = None,
     ):
         """
         Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
@@ -93,7 +94,7 @@ if HAS_VTK and HAS_DPF:
             Leave it unfilled if it is a scalar variable.
         """
         _generate_enhanced_image(
-            model, [(var_field, component)], part_name, var_name, output_file_name, rotation
+            model, ((var_field, component),), part_name, var_name, output_file_name, rotation
         )
 
     # def generate_enhanced_image_as_tiff_multi_var_pages(
@@ -114,7 +115,7 @@ if HAS_VTK and HAS_DPF:
         part_name: str,
         var_name: str,
         rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
+        component: str | None = None,
     ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
@@ -145,7 +146,7 @@ if HAS_VTK and HAS_DPF:
         # Create an in-memory bytes buffer
         buffer = io.BytesIO()
         _generate_enhanced_image(
-            model, [(var_field, component)], part_name, var_name, buffer, rotation
+            model, ((var_field, component),), part_name, var_name, buffer, rotation
         )
         buffer.seek(0)
         return buffer
@@ -473,7 +474,9 @@ if HAS_VTK and HAS_DPF:
 
     def _generate_enhanced_image(
         model: dpf.Model,
-        var_fields: list[tuple[dpf.Field, str]],  # a list of dpf.Field and component
+        var_fields: typing.Sequence[
+            tuple[dpf.Field, str | None]
+        ],  # a list of dpf.Field and component
         part_name: str,
         var_name: str,
         output: str | io.BytesIO,
@@ -584,4 +587,10 @@ if HAS_VTK and HAS_DPF:
             "variables": json_data_variables,
         }
 
-        _form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffers, output)
+        _form_enhanced_image(
+            json_data,
+            rgb_buffer if rgb_buffer is not None else np.array([]),
+            pick_buffer if pick_buffer is not None else np.array([]),
+            var_buffers,
+            output,
+        )
