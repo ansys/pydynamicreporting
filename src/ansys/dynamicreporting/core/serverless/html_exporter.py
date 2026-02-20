@@ -457,7 +457,7 @@ class ServerlessReportExporter:
         target_file.write_bytes(content)
 
         self._filemap[pathname] = result
-        return result
+        return result + query_string
 
     def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
         """
