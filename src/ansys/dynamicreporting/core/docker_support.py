@@ -37,12 +37,11 @@ Examples:
 """
 
 import os
-from pathlib import Path
 import random
 import re
 import string
 import tarfile
-from typing import Optional
+from pathlib import Path
 
 import docker
 from docker.errors import ImageNotFound
@@ -252,9 +251,9 @@ class DockerLauncher:
         # enshell instead of bash and then we can connect to it and do whatever we
         # want.
 
-        # Get the path to /ansys_inc/vNNN/CEI/bin/nexus_launcher so we compute
-        # CEI Home for our use here.  And, from this, get the Ansys version
-        # number.
+        # Locate the launcher binary inside the container.
+        # New Docker images use /Nexus/ADR/... while legacy images use /Nexus/CEI/...
+        # Try the new layout first, then fall back to the legacy layout.
 
         if ansys_version is None:
             launcher = "nexus_launcher"
@@ -263,20 +262,32 @@ class DockerLauncher:
                 launcher = "adr_launcher"
             else:
                 launcher = "nexus_launcher"
-        cmd = ["bash", "--login", "-c", f"ls /Nexus/CEI/nexus*/bin/{launcher}"]
+
+        # Try new path layout (/Nexus/ADR/) first.
+        cmd = ["bash", "--login", "-c", f"ls /Nexus/ADR/nexus*/bin/{launcher}"]
         ret = self._container.exec_run(cmd)
-        if ret[0] != 0:  # pragma: no cover
-            self.stop()
-            raise RuntimeError(
-                f"Can't find /Nexus/CEI/nexus*/bin/{launcher} in the Docker container.\n"
-                + str(ret[1].decode("utf-8"))
-            )
+        if ret[0] != 0:
+            # Fall back to legacy path layout (/Nexus/CEI/).
+            cmd = ["bash", "--login", "-c", f"ls /Nexus/CEI/nexus*/bin/{launcher}"]
+            ret = self._container.exec_run(cmd)
+            if ret[0] != 0:  # pragma: no cover
+                self.stop()
+                raise RuntimeError(
+                    f"Can't find nexus*/bin/{launcher} in the Docker container "
+                    f"under /Nexus/ADR/ or /Nexus/CEI/.\n" + str(ret[1].decode("utf-8"))
+                )
         p = ret[1].decode("utf-8").strip()
-        i = p.find("CEI/")
+
+        # Parse the install root (ADR/ or CEI/) from the resolved launcher path.
+        # e.g. "/Nexus/ADR/nexus271/bin/adr_launcher" -> "/Nexus/ADR"
+        i = p.find("ADR/")
+        if i < 0:
+            # Fall back to legacy path segment.
+            i = p.find("CEI/")
         if i < 0:  # pragma: no cover
             self.stop()
             raise RuntimeError(
-                "Can't find CEI/ in the Docker container.\n" + str(ret[1].decode("utf-8"))
+                "Can't find ADR/ or CEI/ in the Docker container.\n" + str(ret[1].decode("utf-8"))
             )
         self._cei_home = p[0 : i + 3]
         m = re.search(r"/nexus(\d\d\d)/", p)
@@ -287,8 +298,6 @@ class DockerLauncher:
                 + str(ret[1].decode("utf-8"))
             )
         self._ansys_version = m.group(1)
-        # print("CEI_HOME =", self._cei_home)
-        # print("Ansys Version =", self._ansys_version)
         self._nexus_directory = self._cei_home + "/nexus" + self._ansys_version
 
     def image(self):
@@ -340,12 +349,13 @@ class DockerLauncher:
 
     def cei_home(self) -> str:
         """
-        Get the location of the ``CEI_HOME`` directory within the Docker container.
+        Get the location of the ADR/CEI home directory within the Docker container.
+        (``/Nexus/ADR`` for new images, ``/Nexus/CEI`` for legacy images).
 
         Returns
         -------
         str
-            Location of the ``CEI_HOME`` directory.
+            Location of the ADR/CEI home directory.
         """
         return self._cei_home
 
@@ -429,8 +439,8 @@ class DockerLauncher:
         Parameters
         ----------
         src: str
-            Item (file or directory) within the container under the ``/Nexus/CEI/``
-            directory.
+            Item (file or directory) within the container under the ADR/CEI
+            home directory (e.g. ``/Nexus/ADR/`` or ``/Nexus/CEI/``).
         do_recursive: bool, optional
            Whether to use the `'/bin/cp -r'` command. The default is ``False``.
 
