@@ -82,11 +82,9 @@ dev = [
     "ipdb",
     "uv",
     "pre-commit",
-    "ruff",
     #    "pip-audit",
     #    "bandit[toml]",
     "codespell",
-    "ty",
     #    "vulture",
     #    "deptry",
 ]
