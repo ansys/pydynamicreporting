@@ -254,7 +254,7 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
             "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "website/scripts/mathjax/MathJax.js?config=TeX-AMS-MML_SVG",  # important: top-level loader
+            "website/scripts/mathjax/MathJax.js",  # important: top-level loader
             "website/scripts/mathjax/extensions/HelpDialog.js",
             "website/scripts/mathjax/images/MenuArrow-15.png",
             "website/scripts/mathjax/images/CloseX-31.png",
@@ -376,8 +376,17 @@ class ServerlessReportExporter:
                 write to ./media/<basename>
         - Handles scene.js renaming & inlining of its binary blocks.
         """
+        # Extract query string to preserve it in the result (e.g., MathJax config)
+        query_string = ""
+        if "?" in path_in_html:
+            query_string = path_in_html[path_in_html.index("?") :]
+
         if pathname in self._filemap:
-            return self._filemap[pathname]
+            cached_result = self._filemap[pathname]
+            # Don't append query string to data URIs
+            if cached_result.startswith("data:"):
+                return cached_result
+            return cached_result + query_string
 
         # Resolve source file location based on the raw pathname (no normalization)
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
@@ -448,7 +457,7 @@ class ServerlessReportExporter:
         target_file.write_bytes(content)
 
         self._filemap[pathname] = result
-        return result
+        return result + query_string
 
     def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
         """
