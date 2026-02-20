@@ -437,17 +437,19 @@ class ADR:
 
     def _is_sqlite(self, database: str) -> bool:
         """Return ``True`` if the given database alias uses a SQLite backend."""
-        return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
-            "ENGINE", ""
-        )
+        db_config = self.get_database_config()
+        if not db_config:
+            return False
+        return not self._in_memory and "sqlite" in db_config.get(database, {}).get("ENGINE", "")
 
     def _get_db_path(self, database: str) -> str:
         """Return the filesystem path to the DB file for a SQLite database.
 
         If the engine is not SQLite, an empty string is returned.
         """
-        if self._is_sqlite(database):
-            return self.get_database_config().get(database, {}).get("NAME", "")
+        db_config = self.get_database_config()
+        if self._is_sqlite(database) and db_config:
+            return db_config.get(database, {}).get("NAME", "")
         return ""
 
     @classmethod
@@ -517,7 +519,7 @@ class ADR:
 
         # Try to import 'enve', optionally adding paths based on installation layout.
         try:
-            import enve  # type: ignore[unused-ignore]
+            import enve
         except ImportError:
             # On Windows/Linux, attempt known Ansys paths.
             if platform.system().lower().startswith("win"):
@@ -575,11 +577,11 @@ class ADR:
             if module_found:
                 try:
                     # Newer packaging style.
-                    from enve_common import enve  # type: ignore[unused-ignore]
+                    from enve_common import enve
                 except ImportError:
                     try:
                         # Fallback to direct import.
-                        import enve  # type: ignore[unused-ignore]
+                        import enve
                     except ImportError as e:
                         msg = (
                             "Failed to import 'enve' from the Ansys installation. "
@@ -783,7 +785,8 @@ class ADR:
         """
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self.get_database_config(raise_exception=True):
+        db_config = self.get_database_config(raise_exception=True)
+        if db_config is not None and database != "default" and database not in db_config:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
 
         target_dir = Path(output_directory).resolve(strict=True)
@@ -827,7 +830,8 @@ class ADR:
             If the target DB is not configured, the file does not exist,
             or the load command fails.
         """
-        if database != "default" and database not in self.get_database_config(raise_exception=True):
+        db_config = self.get_database_config(raise_exception=True)
+        if db_config is not None and database != "default" and database not in db_config:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
 
         backup_file = Path(input_file).resolve(strict=True)
@@ -896,11 +900,13 @@ class ADR:
     @property
     def session(self) -> Session:
         """Default :class:`Session` associated with this ADR instance."""
+        assert self._session is not None, "ADR instance has not been correctly set up."
         return self._session
 
     @property
     def dataset(self) -> Dataset:
         """Default :class:`Dataset` associated with this ADR instance."""
+        assert self._dataset is not None, "ADR instance has not been correctly set up."
         return self._dataset
 
     @session.setter
@@ -928,7 +934,8 @@ class ADR:
     @property
     def session_guid(self) -> uuid.UUID:
         """GUID of the default :class:`Session`."""
-        return self._session.guid
+        assert self._session is not None, "ADR instance has not been correctly set up."
+        return uuid.UUID(self._session.guid)
 
     def create_item(self, item_type: type[Item], **kwargs: Any) -> Item:
         """Create and persist a new :class:`Item` of the given type.
@@ -1324,7 +1331,7 @@ class ADR:
     def export_report_as_pptx(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1456,6 +1463,10 @@ class ADR:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured to export a report."
             )
+        if self._media_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'media_directory' must be configured to export a report."
+            )
 
         output_dir = Path(output_directory)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -1478,7 +1489,7 @@ class ADR:
             filename=filename,
             ansys_version=str(self._ansys_version),
             dark_mode=dark_mode,
-            debug=self._debug,
+            debug=bool(self._debug),
             logger=self._logger,
         )
         exporter.export()
@@ -1491,7 +1502,7 @@ class ADR:
     def export_report_as_pdf(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1547,19 +1558,19 @@ class ADR:
             f.write(pdf_stream)
         self._logger.info(f"Successfully exported report to: {output_path}")
 
-    @staticmethod
     def query(
-        query_type: Session | Dataset | type[Item] | type[Template],
-        *,
+        self,
+        query_type: Any,
         query: str = "",
         **kwargs: Any,
     ) -> ObjectSet:
-        """Run an ADR query against sessions, datasets, items, or templates.
+        """Query ADR database models dynamically.
 
         Parameters
         ----------
         query_type : type
-            One of :class:`Session`, :class:`Dataset`, :class:`Item`
+            Class type to query. Must be :class:`Item`, :class:`Session`,
+            :class:`Dataset`, a :class:`Template`
             subclass, or :class:`Template`.
         query : str, default: ""
             ADR query string (e.g. ``"A|i_tags|cont|dp=dp227;"``).
@@ -1703,13 +1714,17 @@ class ADR:
         """
         source_database = "default"  # TODO: allow caller to specify source DB.
 
-        if not issubclass(object_type, (Item, Template, Session, Dataset)):
+        if type(object_type) is type and not issubclass(
+            object_type, (Item, Template, Session, Dataset)
+        ):
             raise TypeError(
                 f"'{object_type.__name__}' is not a type of Item, Template, Session, or Dataset"
             )
 
         database_config = self.get_database_config(raise_exception=True)
-        if target_database not in database_config or source_database not in database_config:
+        if database_config is not None and (
+            target_database not in database_config or source_database not in database_config
+        ):
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the "
                 "'databases' option."
@@ -1719,7 +1734,7 @@ class ADR:
         copy_list: list[Any] = []
         media_dir: Path | None = None
 
-        if issubclass(object_type, Item):
+        if isinstance(object_type, type) and issubclass(object_type, Item):
             for item in objects:
                 # Determine media directory if any item references a physical file.
                 if getattr(item, "has_file", False) and media_dir is None:
@@ -1748,7 +1763,7 @@ class ADR:
                 item.session = session
                 item.dataset = dataset
                 copy_list.append(item)
-        elif issubclass(object_type, Template):
+        elif isinstance(object_type, type) and issubclass(object_type, Template):
             # Only copy top-level templates (children are handled recursively).
             for template in objects:
                 if template.parent is not None:
@@ -1768,7 +1783,11 @@ class ADR:
             raise ADRException(f"Some objects could not be copied: {e}")
 
         # Copy associated media files, rebuilding 3D geometry when needed.
-        if issubclass(object_type, Item) and media_dir is not None:
+        if (
+            isinstance(object_type, type)
+            and issubclass(object_type, Item)
+            and media_dir is not None
+        ):
             for item in objects:
                 if not getattr(item, "has_file", False):
                     continue

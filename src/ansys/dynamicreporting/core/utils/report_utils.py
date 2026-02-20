@@ -259,9 +259,9 @@ def PIL_image_to_data(img, guid=None):
         image = Image.open(imghandle)
     elif imgbytes:
         image = Image.open(io.BytesIO(imgbytes))
-    data["format"] = image.format.lower()
-    if data["format"] == "tiff":
-        data["format"] = "tif"
+    if image is None:
+        return data
+    data["format"] = image.format.lower() if image.format else ""
     data["width"] = image.width
     data["height"] = image.height
     metadata = is_enhanced(image)
@@ -489,7 +489,7 @@ def run_web_request(method, server, relative_url, data=None, headers=None, strea
                 "next": "/",
             },
         )
-        if login_response.status_code == requests.codes.ok:
+        if login_response.status_code == requests.codes.ok:  # ty: ignore
             # once logged in, non-REST requests can be done using SessionAuth
             resource_url = server.build_request_url(relative_url)
             req = requests.Request(method, resource_url, data=data, headers=headers)
@@ -579,7 +579,7 @@ class nexus_array:
         count = 1
         for v in self.shape:
             count *= v
-        if string_size and (self.dtype[0] == "S"):
+        if string_size and self.dtype and self.dtype.startswith("S"):
             count *= self.element_size()
         return count
 
@@ -587,7 +587,7 @@ class nexus_array:
         """Get the size of each element in bytes
         :returns: the size of each element in bytes
         """
-        return self.array.itemsize * self._strlen
+        return self.array.itemsize * self._strlen if self.array is not None else 0
 
     def set_shape(self, value):
         self.shape = value
@@ -603,7 +603,7 @@ class nexus_array:
         if value != self.dtype:
             self.array = None
         self.dtype = value
-        if self.dtype[0] == "S":
+        if self.dtype and self.dtype.startswith("S"):
             self._strlen = int(self.dtype[1:])
         else:
             self._strlen = 1
@@ -620,19 +620,23 @@ class nexus_array:
             for v, d in zip(reversed(key), reversed(self.shape)):
                 index += mult * v
                 mult = mult * d
-        if self.dtype[0] == "S":
+        if self.dtype and self.dtype.startswith("S"):
             index *= self._strlen
         return index
 
     def __getitem__(self, key):
         idx = self._index(key)
-        if self.dtype[0] != "S":
+        if self.array is None:
+            return None
+        if not self.dtype.startswith("S"):
             return self.array[idx]
         return bytes(self.array[idx : idx + self._strlen])
 
     def __setitem__(self, key, value):
         idx = self._index(key)
-        if self.dtype[0] != "S":
+        if self.array is None:
+            return
+        if self.dtype and not self.dtype.startswith("S"):
             # further encoding needed only for byte-string dtype
             self.array[idx] = value
             return
@@ -718,20 +722,20 @@ class nexus_array:
 
     def to_bytes(self):
         self.update_array()
-        return self.array.tobytes()
+        return self.array.tobytes()  # ty: ignore
 
     def to_2dlist(self):
         to_list = list()
         for i in range(self.shape[0]):
             to_list.append(list())
-            for j in range(self.shape[1]):
+            for j in range(self.shape[1] if len(self.shape) > 1 else 1):  # ty: ignore
                 to_list[i].append(self.__getitem__((i, j)))
         return to_list
 
     def to_numpy(self, writeable=False):
         if not has_numpy:
             raise ImportError
-        a = numpy.frombuffer(self.array.tobytes(), dtype=self.dtype)
+        a = numpy.frombuffer(self.array.tobytes(), dtype=self.dtype)  # ty: ignore
         a.shape = self.shape
         if writeable:
             import copy
@@ -767,8 +771,8 @@ class nexus_array:
         self.set_size(self.shape)
         # note: it is not possible/recommended to
         # guess the dtype from the elements here
-        for i in range(self.shape[0]):
-            for j in range(self.shape[1]):
+        for i in range(dx):
+            for j in range(dy):
                 self.__setitem__((i, j), value[i][j])
 
     def from_numpy(self, value):
@@ -898,7 +902,7 @@ def is_user_admin() -> bool:
     """
     try:
         # on Windows this will throw AttributeError
-        return os.geteuid()
+        return os.geteuid() == 0  # ty: ignore
     except AttributeError:
         try:
             import ctypes

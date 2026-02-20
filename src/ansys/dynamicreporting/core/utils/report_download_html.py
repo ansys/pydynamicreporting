@@ -175,10 +175,10 @@ class ReportDownloadHTML:
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             mangled = f.replace("media/", "/static/website/scripts/mathjax/")
-            url = tmp.scheme + "://" + tmp.netloc + mangled
+            url = tmp.scheme + "://" + tmp.netloc + mangled  # ty: ignore
             resp = requests.get(url, allow_redirects=True)  # nosec B400
-            if resp.status_code == requests.codes.ok:
-                filename = os.path.join(self._directory, f)
+            if resp.status_code == requests.codes.ok:  # ty: ignore
+                filename = os.path.join(self._directory, f)  # ty: ignore
                 try:
                     open(filename, "wb").write(resp.content)
                 except Exception as e:
@@ -326,10 +326,10 @@ class ReportDownloadHTML:
     def _download_static_files(self, files, source_path, target_path, comment):
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
-            url = tmp.scheme + "://" + tmp.netloc + source_path + f
+            url = tmp.scheme + "://" + tmp.netloc + source_path + f  # ty: ignore
             resp = requests.get(url, allow_redirects=True)  # nosec B400
-            if resp.status_code == requests.codes.ok:
-                filename = self._directory + os.sep + target_path + os.sep + f
+            if resp.status_code == requests.codes.ok:  # ty: ignore
+                filename = self._directory + os.sep + target_path + os.sep + f  # ty: ignore
                 filename = os.path.normpath(filename)
                 try:
                     data = self.fix_viewer_component_paths(
@@ -342,7 +342,7 @@ class ReportDownloadHTML:
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
         # a naming collision).  If so, use a unique prefix for such files.
-        pathname = os.path.join(self._directory, "media", name)
+        pathname = os.path.join(self._directory, "media", name)  # ty: ignore
         if not os.path.exists(pathname):
             return name
         self._collision_count += 1
@@ -364,10 +364,10 @@ class ReportDownloadHTML:
         if pathname in self._filemap:
             return self._filemap[pathname]
         tmp = urllib.parse.urlsplit(self._url)
-        url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
+        url = tmp.scheme + "://" + tmp.netloc + path_plus_queries  # ty: ignore
         resp = requests.get(url, allow_redirects=True)  # nosec B400
         results = pathname
-        if resp.status_code == requests.codes.ok:
+        if resp.status_code == requests.codes.ok:  # ty: ignore
             basename = os.path.basename(pathname)
             # "basename" is used in the media directory, avoid collisions.
             basename = self._make_unique_basename(basename)
@@ -377,7 +377,7 @@ class ReportDownloadHTML:
                 # Note: we will also inline any "scene" 3D file.  This can happen when processing
                 # a slider view "key_image" array.
                 if (inline or self.is_scene_file(pathname)) and self._should_use_data_uri(
-                    len(tmp) * (4.0 / 3.0)
+                    int(len(tmp) * (4.0 / 3.0))
                 ):
                     # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
                     results = "data:application/octet-stream;base64," + base64.b64encode(
@@ -385,7 +385,7 @@ class ReportDownloadHTML:
                     ).decode("utf-8")
                     # for in the field debugging, allow for the data uri sources to be saved
                     if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
-                        filename = os.path.join(self._directory, "media", basename)
+                        filename = os.path.join(self._directory, "media", basename)  # ty: ignore
                         open(filename, "wb").write(tmp)
                 else:
                     # Special case for Babylon js viewer.  We get here via this link...
@@ -409,7 +409,7 @@ class ReportDownloadHTML:
                         results = f"{local_pathname}/{basename}"
                     else:
                         results = f"./media/{basename}"
-                    filename = os.path.join(self._directory, "media", basename)
+                    filename = os.path.join(self._directory, "media", basename)  # ty: ignore
                     open(filename, "wb").write(tmp)
             except Exception as e:
                 print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
@@ -569,7 +569,7 @@ class ReportDownloadHTML:
 
         # get the webpage html source
         resp = requests.get(self._url)  # nosec B400
-        if resp.status_code != requests.codes.ok:
+        if resp.status_code != requests.codes.ok:  # ty: ignore
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
         # debugging...
         if self._debug:

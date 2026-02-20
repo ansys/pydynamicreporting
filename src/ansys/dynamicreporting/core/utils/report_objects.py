@@ -55,6 +55,9 @@ try:
 except ImportError:
     has_qt = False
 
+if has_qt:
+    import typing
+
 try:
     import numpy
 
@@ -305,7 +308,7 @@ def split_quoted_string_list(s, deliminator=None):
     out = list()
     while True:
         token = tmp.get_token()
-        token = token.strip()
+        token = token.strip() if token is not None else ""
         if (token.startswith("'") and token.endswith("'")) or (
             token.startswith('"') and token.endswith('"')
         ):
@@ -426,12 +429,12 @@ class Template:
 
     def get_params(self):
         try:
-            return json.loads(self.params)
+            return json.loads(self.params if self.params is not None else "{}")
         except Exception as e:
             logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
-    def set_params(self, d: dict = None):
+    def set_params(self, d: dict | None = None):
         if d is None:
             d = {}
         if type(d) is not dict:
@@ -536,7 +539,8 @@ class BaseRESTObject:
     # the api version of the REST client
     API_VERSION = 1.0
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        arg_dict = kwargs.get("d", {})
         self.guid = str(uuid.uuid1())
         self.tags = ""
         # the REST obj needs to know the current server's api version
@@ -546,6 +550,11 @@ class BaseRESTObject:
         # we use this to decide if put_objects() is going to do an update
         # or a create.
         self._saved = False
+        for key, value in arg_dict.items():
+            setattr(self, key, value)
+        for key, value in kwargs.items():
+            if key != "d":  # 'd' is already handled as arg_dict
+                setattr(self, key, value)
 
     @property
     def saved(self):
@@ -646,8 +655,8 @@ class BaseRESTObject:
 class DatasetREST(BaseRESTObject):
     """Simple representation of a database."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.filename = ""
         self.dirname = ""
         self.format = ""
@@ -674,8 +683,8 @@ class DatasetREST(BaseRESTObject):
 class SessionREST(BaseRESTObject):
     """Simple representation of a session."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.date = datetime.datetime.now(pytz.utc)
         self.hostname = ""
         self.version = ""
@@ -702,8 +711,8 @@ class SessionREST(BaseRESTObject):
 class ItemCategoryREST(BaseRESTObject):
     """Representation of an ItemCategory."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         # we dont support tags here.
         del self.tags
         self.name = ""
@@ -874,8 +883,8 @@ class ItemREST(BaseRESTObject):
     type_none = "none"  # no additional payload
     type_tree = "tree"  # payload is a dict representing a tree
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.sequence = 0
         self.date = datetime.datetime.now(pytz.utc)
         self.name = ""
@@ -1272,7 +1281,7 @@ class ItemREST(BaseRESTObject):
                 nexus_array = report_utils.nexus_array(dtype=dtype, shape=(1, 1))
                 nexus_array.from_2dlist(array)
                 array = nexus_array
-            kind = array.dtype[0]
+            kind = getattr(array.dtype, "char", "") if hasattr(array, "dtype") else ""
 
         # valid array types are bytes and float for now
         if kind not in ("S", "f"):
@@ -1299,9 +1308,9 @@ class ItemREST(BaseRESTObject):
         # proper shape???
         if len(shape) == 1:
             if nrows:
-                shape = (nrows, size / nrows)
+                shape = (nrows, size // nrows)
             elif ncols:
-                shape = (size / ncols, ncols)
+                shape = (size // ncols, ncols)
             else:
                 shape = (1, size)
             array.shape = shape
@@ -1354,9 +1363,12 @@ class ItemREST(BaseRESTObject):
             # note: the Qt PNG format supports text keys
             tmpimg.setText("CEI_NEXUS_GUID", str(self.guid))
             # save it in PNG format in memory
-            be = QtCore.QByteArray()
-            buf = QtCore.QBuffer(be)
-            buf.open(QtCore.QIODevice.WriteOnly)
+            QByteArray = getattr(QtCore, "QByteArray")
+            be = QByteArray()
+            QBuffer = getattr(QtCore, "QBuffer")
+            buf = QBuffer(be)
+            QIODevice = getattr(QtCore, "QIODevice")
+            buf.open(QIODevice.WriteOnly)
             tmpimg.save(buf, "png")
             buf.close()
             # s is an in-memory representation of a .png file
@@ -1471,17 +1483,16 @@ class TemplateREST(BaseRESTObject):
     @classmethod
     def factory(cls, json_data):
         if "report_type" in json_data:
-            exec(
-                "tmp_cls = " + json_data["report_type"].split(":")[1] + "REST()",
-                locals(),
-                globals(),
-            )  # nosec
-            return tmp_cls
+            report_type_classname = json_data["report_type"].split(":")[1] + "REST"
+            cls_type = globals().get(report_type_classname)
+            if cls_type is not None:
+                return cls_type()
+            return TemplateREST()
         else:
             return TemplateREST()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.date = datetime.datetime.now(pytz.utc)
         self.name = ""
         self.params = json.dumps({})
@@ -1535,7 +1546,7 @@ class TemplateREST(BaseRESTObject):
             "children_order",
         ]
 
-    def add_params(self, d: dict = None):
+    def add_params(self, d: dict | None = None):
         if d is None:
             d = {}
         if type(d) is not dict:
@@ -1557,7 +1568,7 @@ class TemplateREST(BaseRESTObject):
             logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
-    def set_params(self, d: dict = None):
+    def set_params(self, d: dict | None = None):
         if d is None:
             d = {}
         if type(d) is not dict:
@@ -1579,7 +1590,7 @@ class TemplateREST(BaseRESTObject):
         else:
             return {}
 
-    def set_property(self, property: dict = None):
+    def set_property(self, property: dict | None = None):
         if property is None:
             property = {}
         if type(property) is not dict:
@@ -1589,7 +1600,7 @@ class TemplateREST(BaseRESTObject):
         self.params = json.dumps(d)
         return
 
-    def add_property(self, property: dict = None):
+    def add_property(self, property: dict | None = None):
         if property is None:
             property = {}
         if type(property) is not dict:
@@ -1637,7 +1648,9 @@ class TemplateREST(BaseRESTObject):
     def get_filter(self):
         return self.item_filter
 
-    def set_filter(self, filter_str=""):
+    def set_filter(self, filter_str: str | None = None) -> None:
+        if filter_str is None:
+            filter_str = ""
         if type(filter_str) is str:
             self.item_filter = filter_str
         else:
@@ -3095,7 +3108,9 @@ class tablevaluefilterREST(GeneratorREST):
                 else:
                     return ["bot_count", 10]
 
-    def set_filter(self, value=None, filter_str=""):
+    def set_filter(self, filter_str: str | None = None, value: typing.Any = None):
+        if filter_str is None:
+            filter_str = ""
         if filter_str != "":
             return super().set_filter(filter_str=filter_str)
         elif value is not None:
@@ -3427,7 +3442,7 @@ class sqlqueriesREST(GeneratorREST):
             }  # nosec B105
         return out
 
-    def set_postgre(self, value: dict = None):
+    def set_postgre(self, value: dict | None = None):
         if value is None:
             value = {
                 "database": "",

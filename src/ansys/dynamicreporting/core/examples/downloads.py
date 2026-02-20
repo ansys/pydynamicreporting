@@ -71,7 +71,7 @@ def check_url_exists(url: str) -> bool:
         return False
 
 
-def get_url_content(url: str) -> str:
+def get_url_content(url: str) -> bytes:
     """Get the content of a URL.
 
     Parameters
@@ -81,7 +81,7 @@ def get_url_content(url: str) -> str:
 
     Returns
     -------
-    str
+    bytes
         content of the URL
     """
     with request.urlopen(url) as response:  # nosec B310

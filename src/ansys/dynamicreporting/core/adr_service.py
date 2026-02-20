@@ -43,7 +43,7 @@ import tempfile
 import time
 
 try:
-    from IPython.display import IFrame
+    from IPython.display import IFrame, display
 except ImportError:  # pragma: no cover
     pass
 
@@ -131,12 +131,12 @@ class Service:
 
     def __init__(
         self,
-        ansys_version: int = None,
-        docker_image: str = None,
-        data_directory: str = None,
-        db_directory: str = None,
+        ansys_version: int | None = None,
+        docker_image: str | None = None,
+        data_directory: str | None = None,
+        db_directory: str | None = None,
         port: int = DOCKER_DEFAULT_PORT,
-        logfile: str = None,
+        logfile: str | None = None,
         ansys_installation: str | None = None,
     ) -> None:
         """
@@ -487,7 +487,7 @@ class Service:
                 "exec_basis": self._ansys_installation,
                 "ansys_version": self._ansys_version,
             }
-            if int(self._ansys_version) >= 231:
+            if self._ansys_version is not None and int(self._ansys_version) >= 231:
                 launch_kwargs.update({"allow_iframe_embedding": True})
 
             try:
@@ -539,7 +539,8 @@ class Service:
 
         v = False
         try:
-            v = self.serverobj.validate()
+            if self.serverobj is not None:
+                v = self.serverobj.validate()
         except Exception as e:
             self.logger.error(f"Error: {str(e)}")
             pass
@@ -554,7 +555,8 @@ class Service:
                     self._docker_launcher = None
                 else:
                     self.logger.info("Shutting down service.\n")
-                    self.serverobj.stop_local_server()
+                    if self.serverobj is not None:
+                        self.serverobj.stop_local_server()
             except Exception as e:
                 self.logger.error(f"Problem shutting down container/service.\n{str(e)}\n")
                 pass
@@ -645,7 +647,7 @@ class Service:
                 stacklevel=2,
             )
             item_filter = filter
-        if self.serverobj is None:
+        if self.serverobj is None or self._url is None:
             self.logger.error("No connection to any service")
             raise ConnectionToServiceError
         url = self._url + "/reports/report_display/?"
@@ -742,11 +744,13 @@ class Service:
             )
             item_filter = filter
         queried_items = []
-        valid = check_filter(item_filter=item_filter)
+        valid = check_filter(item_filter=item_filter or "")
         if valid is False:
             self.logger.warning("Warning: item_filter string is not valid. Will be ignored.")
             item_filter = ""
         if query_type == "Item":
+            if self.serverobj is None:
+                raise ConnectionToServiceError("No connection to any service")
             org_queried_items = self.serverobj.get_objects(
                 objtype=report_objects.ItemREST, query=item_filter
             )
@@ -767,10 +771,14 @@ class Service:
                     tmp_item.__copyattrs__(dataitem=i)
                     queried_items.append(tmp_item)
         elif query_type == "Session":
+            if self.serverobj is None:
+                raise ConnectionToServiceError("No connection to any service")
             queried_items = self.serverobj.get_objects(
                 objtype=report_objects.SessionREST, query=item_filter
             )
         elif query_type == "Dataset":
+            if self.serverobj is None:
+                raise ConnectionToServiceError("No connection to any service")
             queried_items = self.serverobj.get_objects(
                 objtype=report_objects.DatasetREST, query=item_filter
             )
@@ -842,6 +850,8 @@ class Service:
                 )
         # Finally removing from database
         try:
+            if self.serverobj is None:
+                raise ConnectionToServiceError("No connection to any service")
             _ = self.serverobj.del_objects(items_to_delete)
         except Exception as e:
             self.logger.warning(f"Error in deleting items: {str(e)}")
@@ -984,6 +994,8 @@ class Service:
                 break
 
         # 2. Compare with the existing root template(s)
+        if self.serverobj is None:
+            raise ConnectionToServiceError("No connection to any service")
         templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
         existing_root_names = set()
         for template in templates:
@@ -1007,6 +1019,8 @@ class Service:
             root_attr["name"] = renamed_root_name
 
         try:
+            if self.serverobj is None:
+                raise ConnectionToServiceError("No connection to any service")
             self.serverobj.load_templates(templates_json, self.logger)
         except adr_utils_exceptions.TemplateEditorJSONLoadingError as e:
             self.logger.error(
@@ -1036,4 +1050,6 @@ class Service:
             self.logger.warning(
                 f"Warning: port {self._port} is already in use. Replace with a new port\n"
             )
-            self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
+            ports = report_utils.find_unused_ports(count=1, start=self._port)
+            if ports:
+                self._port = ports[0]

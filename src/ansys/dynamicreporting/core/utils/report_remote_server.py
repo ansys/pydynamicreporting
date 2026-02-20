@@ -53,6 +53,11 @@ try:
 except ImportError:
     has_qt = False
 
+if has_qt:
+    import typing
+
+    _QtCore = typing.cast(typing.Any, QtCore)
+
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
@@ -108,7 +113,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     cmd.extend(args)
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    subprocess.call(args=cmd, **params)  # nosec B603 B78
+    subprocess.call(args=cmd, **params)  # ty: ignore  # nosec B603 B78
 
 
 class Server:
@@ -121,7 +126,7 @@ class Server:
     def __init__(self, url=None, username=None, password=None, ansys_version=None):
         # Check on the validity of url formatting
         if url is not None:
-            o = urlparse(url)
+            o = urllib.parse.urlsplit(url)
             is_valid = True if o.scheme and o.netloc else False
             if is_valid is False:
                 if print_allowed():
@@ -175,9 +180,9 @@ class Server:
             data["max_age"] = max_age
         headers = {"Content-type": "application/json", "Accept": "application/json"}
         r = self._http_session.post(url, data=json.dumps(data), headers=headers)
-        if r.status_code == requests.codes.ok:
+        if r.status_code == requests.codes.ok:  # ty: ignore
             return r.json().get("token")
-        elif r.status_code == requests.codes.bad_request:
+        elif r.status_code == requests.codes.bad_request:  # ty: ignore
             raise Exception("Invalid credentials to request a magic token")
         else:
             raise Exception("Unable to access the remote report server")
@@ -189,9 +194,9 @@ class Server:
         url += "/api/auth/magic-token/verify/"
         headers = {"Content-type": "application/json", "Accept": "application/json"}
         r = self._http_session.post(url, data=json.dumps({"token": token}), headers=headers)
-        if r.status_code == requests.codes.ok:
+        if r.status_code == requests.codes.ok:  # ty: ignore
             return True
-        elif r.status_code == requests.codes.bad_request:
+        elif r.status_code == requests.codes.bad_request:  # ty: ignore
             return False
         else:
             raise Exception("Unable to access the remote report server")
@@ -266,9 +271,9 @@ class Server:
         url += "/item/api_version/"
         auth = self.get_auth()
         r = self._http_session.get(url, auth=auth)
-        if r.status_code == requests.codes.ok:
+        if r.status_code == requests.codes.ok:  # ty: ignore
             return r.json()
-        elif r.status_code == requests.codes.forbidden:
+        elif r.status_code == requests.codes.forbidden:  # ty: ignore
             raise exceptions.PermissionDenied("Invalid credentials to access the report server")
         else:
             raise Exception("Unable to access the remote report server")
@@ -336,7 +341,7 @@ class Server:
         uri = self.build_request_url(obj_uri)
         auth = self.get_auth()
         r = self._http_session.get(uri, auth=auth)
-        if r.status_code != requests.codes.ok:
+        if r.status_code != requests.codes.ok:  # ty: ignore
             return []
         try:
             return [str(obj_data.get("name")) for obj_data in r.json()]
@@ -361,7 +366,7 @@ class Server:
             uri = self.add_query_to_url(uri, f"query={tmp}")
         auth = self.get_auth()
         r = self._http_session.get(uri, auth=auth)
-        if r.status_code != requests.codes.ok:
+        if r.status_code != requests.codes.ok:  # ty: ignore
             return []
         try:
             if new_api:
@@ -391,7 +396,7 @@ class Server:
 
         auth = self.get_auth()
         r = self._http_session.get(uri, auth=auth)
-        if r.status_code != requests.codes.ok:
+        if r.status_code != requests.codes.ok:  # ty: ignore
             return []
         try:
             ret = []
@@ -400,7 +405,7 @@ class Server:
                     t = objtype(d)
                 else:
                     t = objtype()
-                t.server_api_version = self.api_version
+                t.server_api_version = self.api_version  # ty: ignore
                 t.from_json(d)
                 ret.append(t)
             return ret
@@ -417,8 +422,8 @@ class Server:
         uri = self.build_request_url(obj_uri)
         auth = self.get_auth()
         r = self._http_session.get(uri, auth=auth)
-        if r.status_code != requests.codes.ok:
-            if r.status_code == requests.codes.forbidden:
+        if r.status_code != requests.codes.ok:  # ty: ignore
+            if r.status_code == requests.codes.forbidden:  # ty: ignore
                 raise exceptions.PermissionDenied(
                     r.json().get("detail", "You do not have permission to perform this action.")
                 )
@@ -471,7 +476,7 @@ class Server:
 
     def put_objects(self, in_objects):
         if not self.valid_database():
-            return requests.codes.service_unavailable
+            return requests.codes.service_unavailable  # ty: ignore
         objects = in_objects
         if not isinstance(in_objects, collections.abc.Iterable):
             objects = [in_objects]
@@ -492,20 +497,20 @@ class Server:
                         session_digest != self._default_session_digest
                     ):
                         error = self.put_objects([session])
-                        if error != requests.codes.ok:
+                        if error != requests.codes.ok:  # ty: ignore
                             return error
                         self._default_session_digest = session_digest
                     if (o.dataset == dataset.guid) and (
                         dataset_digest != self._default_dataset_digest
                     ):
                         error = self.put_objects([dataset])
-                        if error != requests.codes.ok:
+                        if error != requests.codes.ok:  # ty: ignore
                             return error
                         self._default_dataset_digest = dataset_digest
         # ok, push the real objects...
 
         auth = self.get_auth()
-        success = requests.codes.ok
+        success = requests.codes.ok  # ty: ignore
         for o in objects:
             request_method, uri, obj_data = self._get_push_request_info(o)
             # the new way of json dumping before push might break older APIs so we
@@ -525,7 +530,7 @@ class Server:
                     print(f"Unable to push object {o}: {e}")
                 raise
 
-            if r.status_code == requests.codes.bad_request:  # pragma: no cover
+            if r.status_code == 400:
                 # One special case: perhaps the session/dataset was deleted and the cache not invalidated?
                 # In this case, we would get a 400 back and the response text would include 'Invalid pk'.  So,
                 # we try to push the dataset and session again and then re-push the object.  Only try this once!
@@ -533,12 +538,12 @@ class Server:
                     repushed = False
                     if o.session == session.guid:
                         error = self.put_objects([session])
-                        if error != requests.codes.ok:
+                        if error != 200:
                             return error
                         repushed = True
                     if o.dataset == dataset.guid:
                         error = self.put_objects([dataset])
-                        if error != requests.codes.ok:
+                        if error != 200:
                             return error
                         repushed = True
                     # try one more time..
@@ -547,7 +552,7 @@ class Server:
                 else:
                     self._last_error = r.text
                     exceptions.raise_bad_request_error(r)
-            elif r.status_code == requests.codes.forbidden:
+            elif r.status_code == 403:
                 raise exceptions.PermissionDenied(
                     r.json().get("detail", "You do not have permission to perform this action.")
                 )
@@ -561,18 +566,18 @@ class Server:
                     r = self._http_session.put(url, auth=auth, files=files)
                 except Exception as e:
                     logger.debug(f"Warning: {str(e)}")
-                    r = self._http_session.Response()
-                    r.status_code = requests.codes.client_closed_request
+                    r = requests.Response()
+                    r.status_code = 499
             ret = r.status_code
             # we map 201 (created) to 200 (ok) to simplify error handling...
-            if ret == requests.codes.created:
-                ret = requests.codes.ok
+            if ret == 201:
+                ret = 200
             # we map 202 (accepted) to 200 (ok) to simplify error handling...
-            if ret == requests.codes.accepted:
-                ret = requests.codes.ok
+            if ret == 202:
+                ret = 200
             # record and errors
-            if ret != requests.codes.ok:
-                if ret == requests.codes.forbidden:
+            if ret != 200:
+                if ret == 403:
                     raise exceptions.PermissionDenied(
                         r.json().get("detail", "You do not have permission to perform this action.")
                     )
@@ -583,12 +588,12 @@ class Server:
 
     def del_objects(self, in_objects):
         if not self.valid_database():
-            return requests.codes.service_unavailable
+            return 503
         objects = in_objects
         if not isinstance(in_objects, collections.abc.Iterable):
             objects = [in_objects]
         auth = self.get_auth()
-        success = requests.codes.ok
+        success = 200
         for o in objects:
             obj_uri, obj_data = o.get_url_data()
             uri = self.build_request_url(obj_uri)
@@ -596,10 +601,10 @@ class Server:
             r = self._http_session.delete(uri, auth=auth)
             ret = r.status_code
             # the output should be 204 no_content
-            if ret != requests.codes.no_content:
-                if ret == requests.codes.bad_request:
+            if ret != 204:
+                if ret == 400:
                     exceptions.raise_bad_request_error(r)
-                if ret == requests.codes.forbidden:
+                if ret == 403:
                     raise exceptions.PermissionDenied(
                         r.json().get("detail", "You do not have permission to perform this action.")
                     )
@@ -613,12 +618,12 @@ class Server:
                 # get the file
                 r = report_utils.run_web_request("GET", self, file_url, stream=True)
                 if r is not None:
-                    if r.status_code == requests.codes.ok:
+                    if r.status_code == 200:
                         for chunk in r.iter_content(1024):
                             fileobj.write(chunk)
                     return r.status_code
 
-        return requests.codes.service_unavailable
+        return 503
 
     # this method will copy all of the object (obj_type=class) that
     # match the passed query into this (self) database...
@@ -710,7 +715,7 @@ class Server:
             # The common case will handle the latter, so we handle the former here
             nobjs = len(copy_list)
             n = 0
-            success = requests.codes.ok
+            success = 200
             for obj in copy_list:
                 if progress:
                     progress.setValue(n)
@@ -722,14 +727,14 @@ class Server:
                 tmp_children = obj.children
                 obj.children = []
                 ret = self.put_objects([obj])
-                if ret != requests.codes.ok:
+                if ret != 200:
                     success = ret
                 obj.parent = tmp_parent
                 obj.children = tmp_children
                 n += 1
             if progress:
                 progress.setValue(nobjs)
-            if success != requests.codes.ok:
+            if success != 200:
                 return False
         # Ok, put the object in the new database...
         # The progress bar should not include the secondary types: sessions, datasets
@@ -760,7 +765,7 @@ class Server:
                 if file_url:
                     # need to pull the file from this url...
                     obj.fileobj = tempfile.NamedTemporaryFile()
-                    if source.get_file(obj, obj.fileobj) != requests.codes.ok:
+                    if source.get_file(obj, obj.fileobj) != 200:
                         obj.fileobj = None
                 self.put_objects([obj])
                 # clean up temp file
@@ -857,7 +862,7 @@ class Server:
 
     def _download_report(self, url, file_name, directory_name=None):
         resp = requests.get(url, allow_redirects=True)  # nosec B400
-        if resp.status_code != requests.codes.ok:
+        if resp.status_code != 200:
             try:
                 detail = resp.json()["detail"]
             except (JSONDecodeError, KeyError):
@@ -981,11 +986,13 @@ class Server:
             query = {}
         url = self.build_url_with_query(report_guid, query)
         resp = requests.get(url, allow_redirects=True)  # nosec B400
-        if resp.status_code == requests.codes.ok:
+        if resp.status_code == 200:
+            import urllib.parse
+
             try:
                 links = report_utils.get_links_from_html(resp.text)
                 for link in links:
-                    url = urlparse(link)
+                    url = urllib.parse.urlparse(link)
                     q_params = dict(urllib.parse.parse_qsl(url.query))
                     file_format = q_params.get("format")
                     if file_format != "pptx":
@@ -1098,6 +1105,9 @@ class Server:
             if template.guid == guid:
                 curr_template = template
 
+        if curr_template is None:
+            return
+
         curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
         templates_data[curr_template_key] = {}
         for field in JSON_ATTR_KEYS:
@@ -1146,7 +1156,7 @@ def create_new_local_database(
         fn = QtWidgets.QFileDialog.getExistingDirectory(parent, title, directory)
         if len(fn) == 0:
             return False
-        db_dir = QtCore.QFileInfo(fn).absoluteFilePath()
+        db_dir = _QtCore.QFileInfo(fn).absoluteFilePath()
     else:
         db_dir = os.path.abspath(directory)
 
@@ -1222,7 +1232,7 @@ def create_new_local_database(
                 sys.path.append(srcdir)
             error = False
             if parent and has_qt:
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(_QtCore.Qt.WaitCursor))
             try:
                 import django
 
@@ -1297,7 +1307,7 @@ def create_new_local_database(
 
         return False
 
-    if type(return_info) == dict:
+    if isinstance(return_info, dict):
         return_info["directory"] = db_dir
         return True
 
@@ -1602,7 +1612,7 @@ def launch_local_database_server(
                 if local_lock:
                     local_lock.release()
                 return False
-            db_dir = QtCore.QFileInfo(fn).absoluteDir().absolutePath()
+            db_dir = _QtCore.QFileInfo(fn).absoluteDir().absolutePath()
 
         # we expect to see: 'manage.py' and 'media' in this folder
         if not validate_local_db(db_dir):
@@ -1703,7 +1713,7 @@ def launch_local_database_server(
 
     # Start the busy cursor
     if parent and has_qt:
-        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(_QtCore.Qt.WaitCursor))
 
     # Here we run nexus_launcher with the following command line:
     # nexus_launcher.bat start --db_directory {dirname} --server_port {port} --internal_base_port {port} --instance_count 1
@@ -1768,7 +1778,7 @@ def launch_local_database_server(
     try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
+        monitor_process = subprocess.Popen(command, **params)  # ty: ignore  # nosec B78 B603
     except Exception as e:
         logger.debug(f"Warning: {str(e)}")
         if parent and has_qt:
@@ -1812,7 +1822,7 @@ def launch_local_database_server(
                 if monitor_alive:
                     msg = f"Connection timeout. Unable to connect to local Nexus server in {server_timeout} seconds."
                 else:
-                    output_text = monitor_process.stderr.read().decode("utf-8")
+                    output_text = monitor_process.stderr.read().decode("utf-8")  # ty: ignore
                     idx = output_text.find("error: ")
                     if idx > 0:
                         # just the "error: ..." text.
@@ -1837,9 +1847,10 @@ def launch_local_database_server(
             )
             pass
 
-    # detach from stdout, stderr to avoid buffer blocking
-    monitor_process.stderr.close()
-    monitor_process.stdout.close()
+    # detach from stdout, stderr
+    if monitor_process is not None:
+        monitor_process.stdout.close()  # ty: ignore
+        monitor_process.stderr.close()  # ty: ignore
 
     # Allow another API launch to continue
     if local_lock:

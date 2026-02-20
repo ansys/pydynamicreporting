@@ -114,7 +114,10 @@ def get_install_info(
             install_dir = dir_
             break
 
-    version = get_install_version(install_dir)
+    if install_dir is not None:
+        version = get_install_version(Path(install_dir))
+    else:
+        version = None
     # use user provided version only if install dir has no version
     if version is None:
         version = ansys_version or int(CURRENT_VERSION)
