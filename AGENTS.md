@@ -118,6 +118,148 @@ Tips for good tests in this repo:
   both running the image as a container(service setup) and extracting the required files from the image (serverless setup).
   Check CI configuration under .github/workflows/ci_cd.yml and existing tests for examples.
 
+### Running the pytest suite locally (reproducing CI)
+
+The CI pipeline in `.github/workflows/tests.yml` runs the full pytest suite using Docker.
+You can reproduce this locally without waiting for GitHub Actions. The steps below mirror
+exactly what CI does.
+
+#### Prerequisites
+
+| Requirement | Why | Check |
+|---|---|---|
+| **Docker Desktop** (running) | The test fixtures spin up containers from the ADR Docker image | `docker info` |
+| **GHCR authentication** | The image `ghcr.io/ansys-internal/adr_dev` is in a private registry | `docker login ghcr.io` |
+| **`uv`** | Dependency management & virtualenv | `uv --version` |
+| **`make`** | Wraps canonical workflows | `make --version` |
+| **Python 3.10–3.12** | Required by the project | `python --version` |
+
+#### 1. Install the project
+
+```bash
+make install
+```
+
+This runs `uv sync --frozen --all-extras` and installs the package in editable mode.
+
+#### 2. Authenticate with GHCR and pull the Docker image
+
+```bash
+# One-time login (use a GitHub PAT with read:packages scope)
+docker login ghcr.io -u <YOUR_GITHUB_USERNAME>
+
+# Pull the ADR Docker image
+make pull-docker
+```
+
+This pulls `ghcr.io/ansys-internal/adr_dev:latest` (~3 GB compressed, ~11 GB on disk).
+If the image is already local, it will be reused automatically by the test fixtures.
+
+#### 3. Set environment variables
+
+The test suite has **two categories** of tests, each with different env var requirements:
+
+| Test category | Directory | Env vars needed | What happens |
+|---|---|---|---|
+| **Serverless tests** | `tests/serverless/` | *None required* | Fixture creates a temporary Docker container, copies the ADR installation to a local temp dir, then tears the container down. Tests run against local SQLite DBs. |
+| **Service-mode tests** | `tests/test_service.py`, `tests/test_report.py`, etc. | `ANSYSLMD_LICENSE_FILE` | Fixture starts a Docker container running the full ADR server (requires an Ansys license). |
+
+**Serverless tests (no license needed):**
+
+```bash
+# No env vars required — just run:
+uv run python -m pytest tests/serverless/ -v
+```
+
+**Full test suite (license required):**
+
+```bash
+# Set the license server (same value CI uses from the LICENSE_SERVER secret)
+# On Windows (PowerShell):
+$env:ANSYSLMD_LICENSE_FILE = "1055@your-license-server"
+$env:ANSYS_DPF_ACCEPT_LA = "Y"
+
+# On Linux/macOS:
+export ANSYSLMD_LICENSE_FILE="1055@your-license-server"
+export ANSYS_DPF_ACCEPT_LA="Y"
+```
+
+#### 4. Run the tests
+
+**Full suite with coverage (mirrors `make test`):**
+
+```bash
+make test
+```
+
+Under the hood this runs:
+
+```bash
+uv run python -m pip install -e .[test]
+uv run python -m pytest \
+    -rvx --setup-show \
+    --cov=ansys.dynamicreporting.core \
+    --cov-report html:coverage-html \
+    --cov-report term \
+    --cov-report xml:coverage.xml
+```
+
+**Serverless tests only (fastest, no license):**
+
+```bash
+uv run python -m pytest tests/serverless/ -v
+```
+
+**Specific test file or test:**
+
+```bash
+uv run python -m pytest tests/serverless/test_adr.py -v
+uv run python -m pytest tests/serverless/test_adr.py::test_create_string -v
+```
+
+**Skip tests that need DPF (no DPF server locally):**
+
+```bash
+uv run python -m pytest --ignore=tests/test_enhanced_images.py -v
+```
+
+#### 5. What the fixtures do (understanding the flow)
+
+The test fixtures in `conftest.py` orchestrate the Docker ↔ test interaction:
+
+- **`tests/serverless/conftest.py`** (`adr_init` / `adr_serverless` fixtures):
+  1. Creates a `DockerLauncher`, pulls the image, creates a container.
+  2. Copies `/Nexus/ADR` (or legacy `/Nexus/CEI`) from the container to a local temp directory.
+  3. Tears down the container.
+  4. Configures Django with SQLite databases from `tests/serverless/test_data/`.
+  5. Runs `ADR.setup()` (migrations, static file collection).
+  6. After all tests: calls `ADR.close()`.
+
+- **`tests/conftest.py`** (`adr_service_create` / `adr_service_query` fixtures):
+  1. Creates a `Service` with `ansys_installation="docker"`.
+  2. Starts the Docker container running the full ADR web server on a random port.
+  3. Requires `ANSYSLMD_LICENSE_FILE` in the environment (the container reads it).
+  4. After tests: stops the service and container.
+
+#### 6. Performance notes
+
+- **First run** takes 3–5 minutes for the serverless tests because the Docker container
+  must be created and the installation files (~3 GB) are copied out. Subsequent runs
+  reuse the cached image.
+- **Service-mode tests** are slower because they start/stop full ADR server containers.
+- To speed up iteration, run only the specific test file or test you're working on.
+
+#### 7. Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| `Can't initialize Docker` | Ensure Docker Desktop is running |
+| `Can't pull Docker image` | Run `docker login ghcr.io` with a PAT that has `read:packages` scope |
+| `ANSYSLMD_LICENSE_FILE` KeyError | Set the env var (only needed for service-mode tests) |
+| `ADR has already been configured` | The ADR singleton persists across tests in the same process. This is expected — the session-scoped fixture handles init/teardown |
+| Slow first run | The Docker image is ~11 GB on disk; the initial copy-from-container step is I/O heavy |
+| Port conflicts | Fixtures use random ports (8000–11999). If you have other services on those ports, you may see conflicts |
+
 ## Branch conventions
 
 Direct commits to `main` aren’t allowed.
@@ -261,5 +403,5 @@ If you change:
 
 ---
 
-**Last updated**: January 23, 2026
+**Last updated**: February 19, 2026
 **Maintained by**: ANSYS, Inc. and Ansys ADR Team
