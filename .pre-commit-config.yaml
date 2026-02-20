@@ -40,3 +40,12 @@ repos:
   - id: add-license-headers
     args:
     - --start_year=2023
+
+- repo: local
+  hooks:
+    - id: ty
+      name: ty
+      entry: ty check
+      language: system
+      types: [ python ]
+      pass_filenames: false

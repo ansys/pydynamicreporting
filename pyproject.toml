@@ -86,7 +86,7 @@ dev = [
     #    "pip-audit",
     #    "bandit[toml]",
     "codespell",
-    #    "mypy",
+    "ty",
     #    "vulture",
     #    "deptry",
 ]
@@ -239,6 +239,20 @@ number = 3
 severity_level = "high"
 require_serial = true
 exclude_dirs = ["venv/*", "scripts/*", "tests/*", "doc/*"]
+
+[tool.ty.src]
+include = [
+    "src/ansys"
+]
+
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["**"]
+
+[tool.ty.rules]
+unused-type-ignore-comment = "error"
 
 [tool.pre-commit.default_language_versions]
 python = "3.12"
