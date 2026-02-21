@@ -1,0 +1,6 @@
+set\_animated
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: CarouselLayout.set_animated

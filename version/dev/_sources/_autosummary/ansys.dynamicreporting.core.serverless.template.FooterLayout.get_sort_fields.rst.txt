@@ -1,0 +1,6 @@
+get\_sort\_fields
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: FooterLayout.get_sort_fields

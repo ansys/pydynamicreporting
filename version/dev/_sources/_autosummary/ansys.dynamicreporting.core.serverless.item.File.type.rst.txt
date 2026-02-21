@@ -1,0 +1,6 @@
+type
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: File.type

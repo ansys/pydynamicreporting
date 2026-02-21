@@ -1,0 +1,6 @@
+children
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: ItemsComparisonGenerator.children
