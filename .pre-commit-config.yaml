@@ -34,6 +34,16 @@ repos:
   - id: check-merge-conflict
   - id: trailing-whitespace
 
+- repo: local
+  hooks:
+    - id: ty-check
+      name: ty-check
+      language: python
+      entry: ty check
+      pass_filenames: false
+      args: [--python=.venv/]
+      additional_dependencies: [ty]
+
 - repo: https://github.com/ansys/pre-commit-hooks
   rev: v0.5.2
   hooks:
