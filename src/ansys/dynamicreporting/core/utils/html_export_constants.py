@@ -98,7 +98,7 @@ MATHJAX_FILES = [
     "website/scripts/mathjax/sre/mathmaps/nb.json",
     "website/scripts/mathjax/sre/mathmaps/nemeth.json",
     "website/scripts/mathjax/sre/mathmaps/nn.json",
-    "website/scripts/mathjax/sre/mathmaps/sv.json"
+    "website/scripts/mathjax/sre/mathmaps/sv.json",
     "website/scripts/mathjax/sre/speech-worker.js",
     "website/scripts/mathjax/ui/lazy.js",
     "website/scripts/mathjax/ui/menu.js",
