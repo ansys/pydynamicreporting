@@ -58,7 +58,7 @@ def test_unit_nexus() -> None:
 @pytest.mark.ado_test
 def test_unit_nexus_nosession() -> None:
     logfile = Path(__file__).parent / "outfile7.txt"
-    a = Service(logfile=logfile)
+    a = Service(logfile=str(logfile))
     success = False
     try:
         _ = a.session_guid
@@ -70,7 +70,7 @@ def test_unit_nexus_nosession() -> None:
 @pytest.mark.ado_test
 def test_unit_nodbpath() -> None:
     logfile = Path(__file__).parent / "outfile8.txt"
-    a = Service(logfile=logfile, db_directory="aaa")
+    a = Service(logfile=str(logfile), db_directory="aaa")
     success = False
     try:
         _ = a.start(create_db=True)
@@ -82,7 +82,7 @@ def test_unit_nodbpath() -> None:
 @pytest.mark.ado_test
 def test_unit_nexus_stop() -> None:
     logfile = Path(__file__).parent / "outfile.txt"
-    a = Service(logfile=logfile)
+    a = Service(logfile=str(logfile))
     a.stop()
     f = open(logfile)
     assert "Error validating the connected service" in f.read()
@@ -91,7 +91,7 @@ def test_unit_nexus_stop() -> None:
 @pytest.mark.ado_test
 def test_unit_nexus_connect() -> None:
     logfile = Path(__file__).parent / "outfile_2.txt"
-    a = Service(logfile=logfile)
+    a = Service(logfile=str(logfile))
     success = False
     try:
         a.connect(url=f"http://localhost:{8000 + randint(0, 3999)}")
@@ -123,11 +123,12 @@ def test_unit_query() -> None:
 @pytest.mark.ado_test
 def test_unit_delete_invalid() -> None:
     logfile = Path(__file__).parent / "outfile_4.txt"
-    a = Service(logfile=logfile)
+    a = Service(logfile=str(logfile))
     a.serverobj = report_remote_server.Server()
     success = False
     try:
-        a.delete("aa")
+        delete_method = getattr(a, "delete")
+        delete_method("aa")
     except TypeError:
         success = True
     assert success
@@ -144,7 +145,7 @@ def test_unit_delete() -> None:
 @pytest.mark.ado_test
 def test_unit_get_report() -> None:
     logfile = Path(__file__).parent / "outfile_5.txt"
-    a = Service(logfile=logfile)
+    a = Service(logfile=str(logfile))
     success = False
     try:
         _ = a.get_report(report_name="Abc")
@@ -156,7 +157,7 @@ def test_unit_get_report() -> None:
 @pytest.mark.ado_test
 def test_unit_get_listreport() -> None:
     logfile = Path(__file__).parent / "outfile_9.txt"
-    a = Service(logfile=logfile)
+    a = Service(logfile=str(logfile))
     success = False
     try:
         _ = a.get_list_reports()
@@ -209,10 +210,12 @@ def test_connect_to_connected(adr_service_create) -> None:
 def test_create_on_existing(get_exec) -> None:
     db_dir = Path(__file__).parent / "test_data" / "query_db"
     if get_exec != "":
-        tmp_adr = Service(ansys_installation=get_exec, db_directory=db_dir)
+        tmp_adr = Service(ansys_installation=get_exec, db_directory=str(db_dir))
     else:
         tmp_adr = Service(
-            ansys_installation="docker", docker_image=DOCKER_DEV_REPO_URL, db_directory=db_dir
+            ansys_installation="docker",
+            docker_image=DOCKER_DEV_REPO_URL,
+            db_directory=str(db_dir),
         )
     success = False
     try:
@@ -228,13 +231,13 @@ def test_stop_before_starting(get_exec) -> None:
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
         )
     success = tmp_adr.stop()
     assert success is None
@@ -320,15 +323,18 @@ def test_vis_report_filtered(adr_service_query) -> None:
 
 def test_vis_report_filtered_depr(adr_service_query) -> None:
     success = False
+    warning_message = ""
     try:
         filter = "A|s_guid|cont|15401c2b-089e-11ed-b75d-747827182a82"
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             adr_service_query.visualize_report(report_name="My Top Report", filter=filter)
+            if w:
+                warning_message = str(w[-1].message)
         success = True
     except SyntaxError:
         success = False
-    assert success is True and "The 'filter' parameter is deprecated" in str(w[-1].message)
+    assert success is True and "The 'filter' parameter is deprecated" in warning_message
 
 
 def test_vis_not_running(get_exec) -> None:
@@ -338,13 +344,13 @@ def test_vis_not_running(get_exec) -> None:
         if get_exec != "":
             tmp_adr = Service(
                 ansys_installation=get_exec,
-                db_directory=db_dir,
+                db_directory=str(db_dir),
             )
         else:
             tmp_adr = Service(
                 ansys_installation="docker",
                 docker_image=DOCKER_DEV_REPO_URL,
-                db_directory=db_dir,
+                db_directory=str(db_dir),
             )
         tmp_adr.visualize_report()
     except ConnectionToServiceError:
@@ -369,13 +375,13 @@ def test_connect_to_running(adr_service_query, get_exec) -> None:
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
         )
     tmp_adr.connect(url=adr_service_query.url, session=adr_service_query.session_guid)
     all_items_second = tmp_adr.query(query_type="Item")

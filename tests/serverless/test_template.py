@@ -55,15 +55,15 @@ def test_template_props(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PPTXLayout
 
     pptx_template = PPTXLayout(name="pptx")
-    pptx_template.input_pptx = "input.pptx"
-    pptx_template.output_pptx = "output-get.pptx"
-    pptx_template.use_all_slides = "1"
+    setattr(pptx_template, "input_pptx", "input.pptx")
+    setattr(pptx_template, "output_pptx", "output-get.pptx")
+    setattr(pptx_template, "use_all_slides", "1")
     pptx_template.save()
     out = PPTXLayout.get(guid=pptx_template.guid)
     assert (
-        out.input_pptx == "input.pptx"
-        and out.output_pptx == "output-get.pptx"
-        and out.use_all_slides == "1"
+        getattr(out, "input_pptx", None) == "input.pptx"
+        and getattr(out, "output_pptx", None) == "output-get.pptx"
+        and getattr(out, "use_all_slides", None) == "1"
     )
 
 
@@ -143,7 +143,8 @@ def test_raise_child_type_save(adr_serverless):
 
     with pytest.raises(TypeError):
         top_parent = BasicLayout(name="test_raise_child_type_save", parent=None, tags="dp=dp227")
-        top_parent.children.append("T1")
+        append_child = getattr(top_parent.children, "append")
+        append_child("T1")
         top_parent.save()
 
 

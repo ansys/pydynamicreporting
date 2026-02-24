@@ -805,15 +805,15 @@ def test_table_item_properties(adr_serverless):
     )
 
     # Set real properties
-    table_item.labels_row = ["X", "Sin", "Cos"]
+    setattr(table_item, "labels_row", ["X", "Sin", "Cos"])
     table_item.set_tags("dp=dp227 section=data")
-    table_item.plot = "line"
-    table_item.xaxis = "X"
-    table_item.yaxis = ["Sin", "Cos"]
-    table_item.xaxis_format = "floatdot0"
-    table_item.yaxis_format = "floatdot1"
-    table_item.ytitle = "Values"
-    table_item.xtitle = "X"
+    setattr(table_item, "plot", "line")
+    setattr(table_item, "xaxis", "X")
+    setattr(table_item, "yaxis", ["Sin", "Cos"])
+    setattr(table_item, "xaxis_format", "floatdot0")
+    setattr(table_item, "yaxis_format", "floatdot1")
+    setattr(table_item, "ytitle", "Values")
+    setattr(table_item, "xtitle", "X")
 
     table_item.save()
 
@@ -821,14 +821,14 @@ def test_table_item_properties(adr_serverless):
     out = Table.get(guid=table_item.guid)
 
     assert (
-        out.labels_row == ["X", "Sin", "Cos"]
-        and out.plot == "line"
-        and out.xaxis == "X"
-        and out.yaxis == ["Sin", "Cos"]
-        and out.xaxis_format == "floatdot0"
-        and out.yaxis_format == "floatdot1"
-        and out.ytitle == "Values"
-        and out.xtitle == "X"
+        getattr(out, "labels_row", None) == ["X", "Sin", "Cos"]
+        and getattr(out, "plot", None) == "line"
+        and getattr(out, "xaxis", None) == "X"
+        and getattr(out, "yaxis", None) == ["Sin", "Cos"]
+        and getattr(out, "xaxis_format", None) == "floatdot0"
+        and getattr(out, "yaxis_format", None) == "floatdot1"
+        and getattr(out, "ytitle", None) == "Values"
+        and getattr(out, "xtitle", None) == "X"
     )
 
 

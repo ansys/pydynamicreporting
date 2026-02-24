@@ -400,10 +400,12 @@ class ADR:
                 nexus_group, created = Group.objects.get_or_create(name="nexus")
                 if created:
                     nexus_group.permissions.set(Permission.objects.all())
-                nexus_group.user_set.add(user)
+                user.groups.add(nexus_group)
 
     @classmethod
-    def get_database_config(cls: type["ADR"], raise_exception: bool = False) -> dict | None:
+    def get_database_config(
+        cls: type["ADR"], raise_exception: bool = False
+    ) -> dict[str, dict[str, str]] | None:
         """Return the Django ``DATABASES`` configuration, if available.
 
         Parameters
@@ -437,7 +439,10 @@ class ADR:
 
     def _is_sqlite(self, database: str) -> bool:
         """Return ``True`` if the given database alias uses a SQLite backend."""
-        return not self._in_memory and "sqlite" in self.get_database_config().get(database, {}).get(
+        database_config = self.get_database_config()
+        if database_config is None:
+            return False
+        return not self._in_memory and "sqlite" in database_config.get(database, {}).get(
             "ENGINE", ""
         )
 
@@ -446,8 +451,11 @@ class ADR:
 
         If the engine is not SQLite, an empty string is returned.
         """
+        database_config = self.get_database_config()
+        if database_config is None:
+            return ""
         if self._is_sqlite(database):
-            return self.get_database_config().get(database, {}).get("NAME", "")
+            return database_config.get(database, {}).get("NAME", "")
         return ""
 
     @classmethod
@@ -517,7 +525,7 @@ class ADR:
 
         # Try to import 'enve', optionally adding paths based on installation layout.
         try:
-            import enve  # type: ignore[unused-ignore]
+            import enve
         except ImportError:
             # On Windows/Linux, attempt known Ansys paths.
             if platform.system().lower().startswith("win"):
@@ -575,11 +583,11 @@ class ADR:
             if module_found:
                 try:
                     # Newer packaging style.
-                    from enve_common import enve  # type: ignore[unused-ignore]
+                    from enve_common import enve
                 except ImportError:
                     try:
                         # Fallback to direct import.
-                        import enve  # type: ignore[unused-ignore]
+                        import enve
                     except ImportError as e:
                         msg = (
                             "Failed to import 'enve' from the Ansys installation. "
@@ -783,7 +791,10 @@ class ADR:
         """
         if self._in_memory:
             raise ADRException("Backup is not available in in-memory mode.")
-        if database != "default" and database not in self.get_database_config(raise_exception=True):
+        database_config = self.get_database_config(raise_exception=True)
+        if database_config is None:
+            raise ADRException("The ADR instance has not been set up. Call setup() first.")
+        if database != "default" and database not in database_config:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
 
         target_dir = Path(output_directory).resolve(strict=True)
@@ -793,7 +804,7 @@ class ADR:
         # Call Django management command to dump the database.
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         file_path = target_dir / f"backup_{timestamp}.json{'.gz' if compress else ''}"
-        args = [
+        args: list[str] = [
             "dumpdata",
             "--all",
             "--database",
@@ -801,7 +812,7 @@ class ADR:
             "--output",
             str(file_path),
             "--verbosity",
-            0,
+            "0",
             "--natural-foreign",
         ]
         if ignore_primary_keys:
@@ -827,7 +838,10 @@ class ADR:
             If the target DB is not configured, the file does not exist,
             or the load command fails.
         """
-        if database != "default" and database not in self.get_database_config(raise_exception=True):
+        database_config = self.get_database_config(raise_exception=True)
+        if database_config is None:
+            raise ADRException("The ADR instance has not been set up. Call setup() first.")
+        if database != "default" and database not in database_config:
             raise ADRException(f"{database} must be configured first using the 'databases' option.")
 
         backup_file = Path(input_file).resolve(strict=True)
@@ -896,11 +910,15 @@ class ADR:
     @property
     def session(self) -> Session:
         """Default :class:`Session` associated with this ADR instance."""
+        if self._session is None:
+            raise ADRException("No default session is available. Call setup() first.")
         return self._session
 
     @property
     def dataset(self) -> Dataset:
         """Default :class:`Dataset` associated with this ADR instance."""
+        if self._dataset is None:
+            raise ADRException("No default dataset is available. Call setup() first.")
         return self._dataset
 
     @session.setter
@@ -926,9 +944,9 @@ class ADR:
         self.dataset = dataset
 
     @property
-    def session_guid(self) -> uuid.UUID:
+    def session_guid(self) -> str:
         """GUID of the default :class:`Session`."""
-        return self._session.guid
+        return self.session.guid
 
     def create_item(self, item_type: type[Item], **kwargs: Any) -> Item:
         """Create and persist a new :class:`Item` of the given type.
@@ -1324,7 +1342,7 @@ class ADR:
     def export_report_as_pptx(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1456,6 +1474,22 @@ class ADR:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured to export a report."
             )
+        if self._media_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'media_directory' must be configured to export a report."
+            )
+        if self._media_url is None:
+            raise ImproperlyConfiguredError(
+                "The 'media_url' must be configured to export a report."
+            )
+        if self._static_url is None:
+            raise ImproperlyConfiguredError(
+                "The 'static_url' must be configured to export a report."
+            )
+        media_directory = self._media_directory
+        static_directory = self._static_directory
+        media_url = self._media_url
+        static_url = self._static_url
 
         output_dir = Path(output_directory)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -1471,14 +1505,14 @@ class ADR:
         exporter = ServerlessReportExporter(
             html_content=html_content,
             output_dir=output_dir,
-            media_dir=self._media_directory,
-            static_dir=self._static_directory,
-            media_url=self._media_url,
-            static_url=self._static_url,
+            media_dir=media_directory,
+            static_dir=static_directory,
+            media_url=media_url,
+            static_url=static_url,
             filename=filename,
             ansys_version=str(self._ansys_version),
             dark_mode=dark_mode,
-            debug=self._debug,
+            debug=bool(self._debug),
             logger=self._logger,
         )
         exporter.export()
@@ -1491,7 +1525,7 @@ class ADR:
     def export_report_as_pdf(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         **kwargs: Any,
@@ -1549,7 +1583,7 @@ class ADR:
 
     @staticmethod
     def query(
-        query_type: Session | Dataset | type[Item] | type[Template],
+        query_type: type[Session] | type[Dataset] | type[Item] | type[Template],
         *,
         query: str = "",
         **kwargs: Any,
@@ -1653,7 +1687,7 @@ class ADR:
 
     def copy_objects(
         self,
-        object_type: Session | Dataset | type[Item] | type[Template],
+        object_type: type[Session] | type[Dataset] | type[Item] | type[Template],
         target_database: str,
         *,
         query: str = "",
@@ -1709,6 +1743,8 @@ class ADR:
             )
 
         database_config = self.get_database_config(raise_exception=True)
+        if database_config is None:
+            raise ADRException("The ADR instance has not been set up. Call setup() first.")
         if target_database not in database_config or source_database not in database_config:
             raise ADRException(
                 f"'{source_database}' and '{target_database}' must be configured first using the "

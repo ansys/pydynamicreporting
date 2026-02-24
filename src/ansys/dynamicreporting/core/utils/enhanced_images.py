@@ -36,6 +36,7 @@ from collections.abc import Callable
 import io
 import json
 import logging
+from typing import Protocol
 
 from PIL import Image, TiffImagePlugin
 import numpy as np
@@ -61,14 +62,21 @@ except (ImportError, ValueError) as e:  # pragma: no cover
 
 if HAS_VTK and HAS_DPF:
 
+    class _VTKDataAttributes(Protocol):
+        def GetArray(self, name: str): ...
+
+        def RemoveArray(self, name: str) -> None: ...
+
+        def AddArray(self, value) -> None: ...
+
     def generate_enhanced_image_as_tiff(
-        model: dpf.Model,
-        var_field: dpf.Field,
+        model,
+        var_field,
         part_name: str,
         var_name: str,
         output_file_name: str,
         rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
+        component: str | None = None,
     ):
         """
         Generate an enhanced image in the format of TIFF file on disk given DPF inputs.
@@ -109,12 +117,12 @@ if HAS_VTK and HAS_DPF:
     #     )
 
     def generate_enhanced_image_in_memory(
-        model: dpf.Model,
-        var_field: dpf.Field,
+        model,
+        var_field,
         part_name: str,
         var_name: str,
         rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-        component: str = None,
+        component: str | None = None,
     ) -> io.BytesIO:
         """
         Generate an enhanced image as a PIL Image object given DPF inputs.
@@ -150,9 +158,7 @@ if HAS_VTK and HAS_DPF:
         buffer.seek(0)
         return buffer
 
-    def _setup_render_routine(
-        poly_data: vtk.vtkPolyData, rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    ) -> tuple[vtk.vtkRenderer, vtk.vtkRenderWindow]:
+    def _setup_render_routine(poly_data, rotation: tuple[float, float, float] = (0.0, 0.0, 0.0)):
         """
         Set up VTK render routine, including mapper, actor, renderer and render window.
 
@@ -200,7 +206,7 @@ if HAS_VTK and HAS_DPF:
 
         return renderer, render_window  # , render_windodow_interactor
 
-    def _get_vtk_scalar_mode(poly_data: vtk.vtkPolyData, var_name: str) -> int:
+    def _get_vtk_scalar_mode(poly_data, var_name: str) -> int:
         """
         Given the var_name, get the scalar mode this var_name belongs to.
 
@@ -233,9 +239,7 @@ if HAS_VTK and HAS_DPF:
             return vtk.VTK_SCALAR_MODE_USE_CELL_FIELD_DATA
         raise ValueError(f"{var_name} does not belong to point data, nor cell data")
 
-    def _setup_value_pass(
-        poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, var_name: str
-    ) -> vtk.vtkValuePass:
+    def _setup_value_pass(poly_data, renderer, var_name: str):
         """
         -------------------------------------------------------------------------------------
         IMPORTANT
@@ -280,7 +284,7 @@ if HAS_VTK and HAS_DPF:
 
         return value_pass
 
-    def _get_rgb_value(render_window: vtk.vtkRenderWindow) -> np.ndarray:
+    def _get_rgb_value(render_window) -> np.ndarray:
         """
         Get the RGB value from the render window. It starts from explicitly calling render
         window's Render function.
@@ -320,7 +324,7 @@ if HAS_VTK and HAS_DPF:
 
         return np_array
 
-    def _add_pick_data(poly_data: vtk.vtkPolyData, part_id: int):
+    def _add_pick_data(poly_data, part_id: int):
         arr = vtk.vtkIntArray()
         arr.SetName("Pick Data")
         arr.SetNumberOfComponents(1)
@@ -331,9 +335,7 @@ if HAS_VTK and HAS_DPF:
         poly_data.GetPointData().AddArray(arr)
         poly_data.Modified()
 
-    def _render_pick_data(
-        poly_data: vtk.vtkPolyData, renderer: vtk.vtkRenderer, render_window: vtk.vtkRenderWindow
-    ) -> np.ndarray:
+    def _render_pick_data(poly_data, renderer, render_window) -> np.ndarray:
         """
         Generate a buffer containing pick data from around of rendering by the value pass.
 
@@ -375,12 +377,7 @@ if HAS_VTK and HAS_DPF:
 
         return pick_buffer
 
-    def _render_var_data(
-        poly_data: vtk.vtkPolyData,
-        renderer: vtk.vtkRenderer,
-        render_window: vtk.vtkRenderWindow,
-        var_name: str,
-    ) -> np.ndarray:
+    def _render_var_data(poly_data, renderer, render_window, var_name: str) -> np.ndarray:
         """
         Generate a buffer containing variable data from a round of rendering by the value
         pass.
@@ -459,7 +456,7 @@ if HAS_VTK and HAS_DPF:
         )
 
     def _trim_vector_data(
-        var_name: str, col: int, get_data: Callable[[], vtk.vtkDataSetAttributes]
+        var_name: str, col: int, get_data: Callable[[], _VTKDataAttributes]
     ) -> None:
         data = get_data()
         vtk_array = data.GetArray(var_name)
@@ -472,8 +469,8 @@ if HAS_VTK and HAS_DPF:
         data.AddArray(trimmed_vtk_array)
 
     def _generate_enhanced_image(
-        model: dpf.Model,
-        var_fields: list[tuple[dpf.Field, str]],  # a list of dpf.Field and component
+        model,
+        var_fields,
         part_name: str,
         var_name: str,
         output: str | io.BytesIO,
@@ -584,4 +581,6 @@ if HAS_VTK and HAS_DPF:
             "variables": json_data_variables,
         }
 
+        if rgb_buffer is None or pick_buffer is None:
+            raise ValueError("Failed to generate enhanced image buffers.")
         _form_enhanced_image(json_data, rgb_buffer, pick_buffer, var_buffers, output)

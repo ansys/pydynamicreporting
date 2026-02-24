@@ -21,10 +21,10 @@
 # SOFTWARE.
 
 import base64
+import logging
 import os
 from pathlib import Path
 import re
-from typing import Any
 
 from ..adr_utils import get_logger
 
@@ -63,10 +63,10 @@ class ServerlessReportExporter:
         *,
         filename: str = "index.html",
         no_inline_files: bool = False,
-        ansys_version: str = None,
+        ansys_version: str | None = None,
         dark_mode: bool = True,
         debug: bool = False,
-        logger: Any = None,
+        logger: logging.Logger | None = None,
     ):
         """
         Initializes the serverless exporter.

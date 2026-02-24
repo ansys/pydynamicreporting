@@ -912,7 +912,8 @@ def test_tablemerge_tag() -> None:
     succ = a.get_rename_tag() == ""
     succ_two = True
     try:
-        a.set_rename_tag(value=0)
+        set_rename_tag = getattr(a, "set_rename_tag")
+        set_rename_tag(value=0)
     except ValueError as e:
         succ_two = "input should be a string" in str(e)
     a.set_rename_tag(value="")
@@ -927,7 +928,8 @@ def test_tablemerge_labels() -> None:
     succ = a.get_use_labels() == 1
     succ_two = False
     try:
-        a.set_use_labels(value="a")
+        set_use_labels = getattr(a, "set_use_labels")
+        set_use_labels(value="a")
     except ValueError as e:
         succ_two = "input should be an integer" in str(e)
     succ_three = False
@@ -1986,6 +1988,8 @@ def test_unit_template() -> None:
 def test_template_validation() -> None:
     os.environ["ADR_VALIDATION_BETAFLAG_ANSYS"] = "1"
     a = ro.Template()
+    succ_one = False
+    succ_two = False
     try:
         a.set_params(
             {

@@ -25,17 +25,18 @@ from os.path import join
 import platform
 
 import pytest
-
-try:
-    import msvcrt
-except ImportError:
-    msvcrt = None
-try:
-    import fcntl
-except ImportError:
-    fcntl = None
-
 from ansys.dynamicreporting.core.utils import filelock as fl
+
+msvcrt = None
+try:
+    import msvcrt as msvcrt
+except ImportError:
+    pass
+fcntl = None
+try:
+    import fcntl as fcntl
+except ImportError:
+    pass
 
 open_mode = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_TRUNC
 
@@ -103,10 +104,13 @@ def test_platform_lock(request) -> None:
     tmp_file = join(test_path, "platform.txt")
     tmp_file2 = join(test_path, "platform2.txt")
     open(tmp_file, "a").close()
+    a = None
     if msvcrt:
         a = fl.WindowsFileLock(lock_file=tmp_file)
     elif fcntl:
         a = fl.UnixFileLock(lock_file=tmp_file)
+    else:
+        pytest.skip("No platform-specific file locking module is available.")
     try:
         one = a._acquire()
     except AttributeError:

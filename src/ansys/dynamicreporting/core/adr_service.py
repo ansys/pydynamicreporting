@@ -131,12 +131,12 @@ class Service:
 
     def __init__(
         self,
-        ansys_version: int = None,
-        docker_image: str = None,
-        data_directory: str = None,
-        db_directory: str = None,
+        ansys_version: int | None = None,
+        docker_image: str | None = None,
+        data_directory: str | None = None,
+        db_directory: str | None = None,
         port: int = DOCKER_DEFAULT_PORT,
-        logfile: str = None,
+        logfile: str | None = None,
         ansys_installation: str | None = None,
     ) -> None:
         """
@@ -232,11 +232,12 @@ class Service:
                 # start the container and map specified host directory into the
                 # container.  The location in the container is always /host_directory/."
                 self.__checkport__()
+                docker_ansys_version = ansys_version if ansys_version is not None else 0
                 self._docker_launcher.start(
                     host_directory=self._data_directory,
                     db_directory=self._db_directory,
                     port=self._port,
-                    ansys_version=ansys_version,
+                    ansys_version=docker_ansys_version,
                 )
             except Exception as e:  # pragma: no cover
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
@@ -487,7 +488,7 @@ class Service:
                 "exec_basis": self._ansys_installation,
                 "ansys_version": self._ansys_version,
             }
-            if int(self._ansys_version) >= 231:
+            if self._ansys_version is not None and int(self._ansys_version) >= 231:
                 launch_kwargs.update({"allow_iframe_embedding": True})
 
             try:
@@ -536,6 +537,7 @@ class Service:
             self.logger.warning(
                 "There is no service connected to the current session. Can't shut it down.\n"
             )
+            return
 
         v = False
         try:
@@ -648,9 +650,13 @@ class Service:
         if self.serverobj is None:
             self.logger.error("No connection to any service")
             raise ConnectionToServiceError
+        server = self.serverobj
+        if self._url is None:
+            self.logger.error("No connection to any service")
+            raise ConnectionToServiceError
         url = self._url + "/reports/report_display/?"
         if report_name:
-            all_reports = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
+            all_reports = server.get_objects(objtype=report_objects.TemplateREST)
             if report_name not in [x.name for x in all_reports]:
                 self.logger.error("report_name must exist")
                 raise MissingReportError
@@ -664,6 +670,11 @@ class Service:
             query_str = ""
         url += query_str
         if in_ipynb() and not new_tab:
+            try:
+                from IPython.display import IFrame, display
+            except ImportError:
+                webbrowser.open_new(url)
+                return
             display(IFrame(src=url, width=1000, height=800))
         else:
             webbrowser.open_new(url)
@@ -742,12 +753,16 @@ class Service:
             )
             item_filter = filter
         queried_items = []
-        valid = check_filter(item_filter=item_filter)
+        if self.serverobj is None:
+            self.logger.error("No connection to any service")
+            raise ConnectionToServiceError
+        server = self.serverobj
+        valid = check_filter(item_filter=item_filter or "")
         if valid is False:
             self.logger.warning("Warning: item_filter string is not valid. Will be ignored.")
             item_filter = ""
         if query_type == "Item":
-            org_queried_items = self.serverobj.get_objects(
+            org_queried_items = server.get_objects(
                 objtype=report_objects.ItemREST, query=item_filter
             )
             for i in org_queried_items:
@@ -767,11 +782,11 @@ class Service:
                     tmp_item.__copyattrs__(dataitem=i)
                     queried_items.append(tmp_item)
         elif query_type == "Session":
-            queried_items = self.serverobj.get_objects(
+            queried_items = server.get_objects(
                 objtype=report_objects.SessionREST, query=item_filter
             )
         elif query_type == "Dataset":
-            queried_items = self.serverobj.get_objects(
+            queried_items = server.get_objects(
                 objtype=report_objects.DatasetREST, query=item_filter
             )
         return queried_items
@@ -842,6 +857,9 @@ class Service:
                 )
         # Finally removing from database
         try:
+            if self.serverobj is None:
+                self.logger.error("No connection to any service")
+                raise ConnectionToServiceError
             _ = self.serverobj.del_objects(items_to_delete)
         except Exception as e:
             self.logger.warning(f"Error in deleting items: {str(e)}")
@@ -977,13 +995,21 @@ class Service:
 
         # Address root name conflict
         # 1. Find the root
+        loaded_root_name = ""
+        root_attr = None
         for template_attr in templates_json.values():
             if template_attr["parent"] is None:
                 loaded_root_name = template_attr["name"]
                 root_attr = template_attr
                 break
+        if root_attr is None:
+            self.logger.error("No root template found in the JSON file.")
+            return
 
         # 2. Compare with the existing root template(s)
+        if self.serverobj is None:
+            self.logger.error("No connection to any service")
+            raise ConnectionToServiceError
         templates = self.serverobj.get_objects(objtype=report_objects.TemplateREST)
         existing_root_names = set()
         for template in templates:
@@ -1036,4 +1062,7 @@ class Service:
             self.logger.warning(
                 f"Warning: port {self._port} is already in use. Replace with a new port\n"
             )
-            self._port = report_utils.find_unused_ports(count=1, start=self._port)[0]
+            ports = report_utils.find_unused_ports(count=1, start=self._port)
+            if not ports:
+                raise RuntimeError("Unable to find an available port.")
+            self._port = ports[0]

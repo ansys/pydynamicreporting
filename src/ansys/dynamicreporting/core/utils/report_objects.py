@@ -166,10 +166,11 @@ def extract_data_from_ensight_query(q):
 
 def map_ensight_plot_to_table_dictionary(p):
     # TODO: re-consider use of utf8 encoding here for Python 3...  report_utils.local_to_utf8(s, True)
+    ensight_module = None
     try:
-        import ensight
+        import ensight as ensight_module
 
-        if type(p) is not ensight.objs.ENS_PLOTTER:
+        if type(p) is not ensight_module.objs.ENS_PLOTTER:
             return None
     except ImportError:
         # You can still process, assuming the passed object fits the ENS_PLOTTER schema
@@ -197,11 +198,12 @@ def map_ensight_plot_to_table_dictionary(p):
     for q in p.QUERIES:
         a = extract_data_from_ensight_query(q)
         # convert EnSight undefined values into Numpy NaN values
-        try:
-            a[a == ensight.Undefined] = numpy.nan
-        except Exception as e:
-            logger.debug(f"Warning: {str(e)}.\n")
-            pass
+        if ensight_module is not None:
+            try:
+                a[a == ensight_module.Undefined] = numpy.nan
+            except Exception as e:
+                logger.debug(f"Warning: {str(e)}.\n")
+                pass
         max_columns = max(a.shape[1], max_columns)
         d = dict(array=a, yname=q.LEGENDTITLE, xname=x_axis_title)
         plot_data.append(d)
@@ -305,6 +307,8 @@ def split_quoted_string_list(s, deliminator=None):
     out = list()
     while True:
         token = tmp.get_token()
+        if token is None:
+            break
         token = token.strip()
         if (token.startswith("'") and token.endswith("'")) or (
             token.startswith('"') and token.endswith('"')
@@ -426,15 +430,16 @@ class Template:
 
     def get_params(self):
         try:
-            return json.loads(self.params)
+            params = self.params if self.params is not None else "{}"
+            return json.loads(params)
         except Exception as e:
             logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
-    def set_params(self, d: dict = None):
+    def set_params(self, d: object | None = None):
         if d is None:
             d = {}
-        if type(d) is not dict:
+        if not isinstance(d, dict):
             raise ValueError("Error: input must be a dictionary")
         if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
             check_dictionary_for_html(d)
@@ -1272,7 +1277,8 @@ class ItemREST(BaseRESTObject):
                 nexus_array = report_utils.nexus_array(dtype=dtype, shape=(1, 1))
                 nexus_array.from_2dlist(array)
                 array = nexus_array
-            kind = array.dtype[0]
+            dtype_value = array.dtype
+            kind = dtype_value[0] if dtype_value else "f"
 
         # valid array types are bytes and float for now
         if kind not in ("S", "f"):
@@ -1299,9 +1305,9 @@ class ItemREST(BaseRESTObject):
         # proper shape???
         if len(shape) == 1:
             if nrows:
-                shape = (nrows, size / nrows)
+                shape = (nrows, size // nrows)
             elif ncols:
-                shape = (size / ncols, ncols)
+                shape = (size // ncols, ncols)
             else:
                 shape = (1, size)
             array.shape = shape
@@ -1354,9 +1360,12 @@ class ItemREST(BaseRESTObject):
             # note: the Qt PNG format supports text keys
             tmpimg.setText("CEI_NEXUS_GUID", str(self.guid))
             # save it in PNG format in memory
-            be = QtCore.QByteArray()
-            buf = QtCore.QBuffer(be)
-            buf.open(QtCore.QIODevice.WriteOnly)
+            byte_array_cls = getattr(QtCore, "QByteArray")
+            buffer_cls = getattr(QtCore, "QBuffer")
+            qio_device = getattr(QtCore, "QIODevice")
+            be = byte_array_cls()
+            buf = buffer_cls(be)
+            buf.open(qio_device.WriteOnly)
             tmpimg.save(buf, "png")
             buf.close()
             # s is an in-memory representation of a .png file
@@ -1366,7 +1375,7 @@ class ItemREST(BaseRESTObject):
             height = tmpimg.height()
         else:
             try:
-                from . import png
+                import png
             except Exception as e:
                 logger.debug(f"Warning: {str(e)}.\n")
                 import png
@@ -1471,12 +1480,11 @@ class TemplateREST(BaseRESTObject):
     @classmethod
     def factory(cls, json_data):
         if "report_type" in json_data:
-            exec(
-                "tmp_cls = " + json_data["report_type"].split(":")[1] + "REST()",
-                locals(),
-                globals(),
-            )  # nosec
-            return tmp_cls
+            class_name = f"{json_data['report_type'].split(':')[1]}REST"
+            rest_class = globals().get(class_name)
+            if isinstance(rest_class, type):
+                return rest_class()
+            return TemplateREST()
         else:
             return TemplateREST()
 
@@ -1535,15 +1543,14 @@ class TemplateREST(BaseRESTObject):
             "children_order",
         ]
 
-    def add_params(self, d: dict = None):
+    def add_params(self, d: object | None = None):
         if d is None:
             d = {}
-        if type(d) is not dict:
+        if not isinstance(d, dict):
             raise ValueError("Error: input must be a dictionary")
         try:
             tmp_params = json.loads(self.params)
-            for k in d:
-                tmp_params[k] = d[k]
+            tmp_params.update(d)
             self.params = json.dumps(tmp_params)
             return
         except Exception as e:
@@ -1557,10 +1564,10 @@ class TemplateREST(BaseRESTObject):
             logger.debug(f"Warning on get_params: {str(e)}.\n")
             return {}
 
-    def set_params(self, d: dict = None):
+    def set_params(self, d: object | None = None):
         if d is None:
             d = {}
-        if type(d) is not dict:
+        if not isinstance(d, dict):
             raise ValueError("Error: input must be a dictionary")
         if os.getenv("ADR_VALIDATION_BETAFLAG_ANSYS") == "1":
             check_dictionary_for_html(d)
@@ -1579,26 +1586,27 @@ class TemplateREST(BaseRESTObject):
         else:
             return {}
 
-    def set_property(self, property: dict = None):
+    def set_property(self, property: object | None = None):
         if property is None:
             property = {}
-        if type(property) is not dict:
+        if not isinstance(property, dict):
             raise ValueError("Error: input must be a dictionary")
         d = json.loads(self.params)
         d["properties"] = property
         self.params = json.dumps(d)
         return
 
-    def add_property(self, property: dict = None):
+    def add_property(self, property: object | None = None):
         if property is None:
             property = {}
-        if type(property) is not dict:
+        if not isinstance(property, dict):
             raise ValueError("Error: input must be a dictionary")
         d = json.loads(self.params)
-        if "properties" not in d:
-            d["properties"] = {}
-        for k in property.keys():
-            d["properties"][k] = property[k]
+        properties = d.get("properties", {})
+        if not isinstance(properties, dict):
+            properties = {}
+        properties.update(property)
+        d["properties"] = properties
         self.params = json.dumps(d)
         return
 
@@ -3095,7 +3103,7 @@ class tablevaluefilterREST(GeneratorREST):
                 else:
                     return ["bot_count", 10]
 
-    def set_filter(self, value=None, filter_str=""):
+    def set_filter(self, filter_str="", value=None):
         if filter_str != "":
             return super().set_filter(filter_str=filter_str)
         elif value is not None:
@@ -3427,7 +3435,7 @@ class sqlqueriesREST(GeneratorREST):
             }  # nosec B105
         return out
 
-    def set_postgre(self, value: dict = None):
+    def set_postgre(self, value: object | None = None):
         if value is None:
             value = {
                 "database": "",
@@ -3436,33 +3444,19 @@ class sqlqueriesREST(GeneratorREST):
                 "username": "nexus",
                 "password": "cei",  # nosec B105
             }
-        if type(value) is not dict:
+        if not isinstance(value, dict):
             raise ValueError("Error: input should be a dictionary")
+        value_dict = {str(key): item for key, item in value.items()}
         d = json.loads(self.params)
         if d["typedb"] == "SQLite":
             raise ValueError(
                 "Error: can not set PostgreSQL database while the database type is SQLite"
             )
-        if "database" in value:
-            d["sqldb"] = value["database"]
-        else:
-            d["sqldb"] = ""
-        if "hostname" in value:
-            d["hostsqldb"] = value["hostname"]
-        else:
-            d["hostsqldb"] = "localhost"
-        if "port" in value:
-            d["portsqldb"] = str(value["port"])
-        else:
-            d["portsqldb"] = "5342"
-        if "username" in value:
-            d["usrsqldb"] = value["username"]
-        else:
-            d["usrsqldb"] = "nexus"
-        if "password" in value:
-            d["pswsqldb"] = value["password"]
-        else:
-            d["pswsqldb"] = "cei"
+        d["sqldb"] = value_dict.get("database", "")
+        d["hostsqldb"] = value_dict.get("hostname", "localhost")
+        d["portsqldb"] = str(value_dict.get("port", "5342"))
+        d["usrsqldb"] = value_dict.get("username", "nexus")
+        d["pswsqldb"] = value_dict.get("password", "cei")
         self.params = json.dumps(d)
         return
 

@@ -24,6 +24,7 @@
 
 from pathlib import Path
 from random import randint
+from collections.abc import Generator
 from uuid import uuid4
 
 import pytest
@@ -45,7 +46,7 @@ def get_exec(pytestconfig: pytest.Config) -> str:
 
 
 @pytest.fixture(scope="module")
-def adr_service_create(pytestconfig: pytest.Config) -> Service:
+def adr_service_create(pytestconfig: pytest.Config) -> Generator[Service, None, None]:
     use_local = pytestconfig.getoption("use_local_launcher")
 
     # Paths setup
@@ -77,7 +78,7 @@ def adr_service_create(pytestconfig: pytest.Config) -> Service:
 
 
 @pytest.fixture(scope="module")
-def adr_service_query(pytestconfig: pytest.Config) -> Service:
+def adr_service_query(pytestconfig: pytest.Config) -> Generator[Service, None, None]:
     use_local = pytestconfig.getoption("use_local_launcher")
 
     # Paths setup
@@ -99,7 +100,8 @@ def adr_service_query(pytestconfig: pytest.Config) -> Service:
             data_directory=str(tmp_docker_dir),
             port=8000 + randint(0, 3999),
         )
-        adr_service._docker_launcher.save_config()
+        if adr_service._docker_launcher is not None:
+            adr_service._docker_launcher.save_config()
 
     adr_service.start(create_db=False, exit_on_close=True, delete_db=False)
 

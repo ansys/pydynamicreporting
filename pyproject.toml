@@ -278,17 +278,18 @@ allowed-unresolved-imports = [
     "ceireports.**",
     "ceiversion.**",
     "data.**",
-    "ensight.**",
+    "ensight",
     "qtpy.**",
-    "vtk.**",
+    "vtk",
+    "vtk.util.numpy_support",
 ]
 replace-imports-with-any = []
 
 [[tool.ty.overrides]]
 include = [
-    "**/adr_item.py",
-    "**/adr_utils.py",
-    "**/build_info.py",
+    "src/ansys/dynamicreporting/core/adr_item.py",
+    "src/ansys/dynamicreporting/core/adr_utils.py",
+    "src/ansys/dynamicreporting/core/build_info.py",
 ]
 rules = { unresolved-attribute = "ignore", unresolved-reference = "ignore", possibly-unresolved-reference = "ignore" }
 
