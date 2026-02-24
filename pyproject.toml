@@ -83,10 +83,15 @@ dev = [
     "uv",
     "pre-commit",
     "ruff",
+    "ty",
+    "django-stubs",
+    "pandas-stubs",
+    "types-docker",
+    "types-python-dateutil",
+    "types-pytz",
     #    "pip-audit",
     #    "bandit[toml]",
     "codespell",
-    #    "mypy",
     #    "vulture",
     #    "deptry",
 ]
@@ -242,3 +247,52 @@ exclude_dirs = ["venv/*", "scripts/*", "tests/*", "doc/*"]
 
 [tool.pre-commit.default_language_versions]
 python = "3.12"
+
+# ── ty type checking ──────────────────────────────────────────
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.src]
+include = ["src", "tests"]
+exclude = [
+    "src/**/_generated/**",
+    "src/**/generated/**",
+    "build/**",
+    "dist/**",
+    ".venv/**",
+]
+
+[tool.ty.rules]
+all = "error"
+unused-ignore-comment = "error"
+
+[tool.ty.terminal]
+error-on-warning = true
+
+[tool.ty.analysis]
+respect-type-ignore-comments = false
+allowed-unresolved-imports = [
+    "enve.**",
+    "enve_common.**",
+    "reports.**",
+    "ceireports.**",
+    "ceiversion.**",
+    "data.**",
+    "ensight",
+    "qtpy.**",
+    "vtk",
+    "vtk.util.numpy_support",
+]
+replace-imports-with-any = []
+
+[[tool.ty.overrides]]
+include = [
+    "src/ansys/dynamicreporting/core/adr_item.py",
+    "src/ansys/dynamicreporting/core/adr_utils.py",
+    "src/ansys/dynamicreporting/core/build_info.py",
+]
+rules = { unresolved-attribute = "ignore", unresolved-reference = "ignore", possibly-unresolved-reference = "ignore" }
+
+[[tool.ty.overrides]]
+include = ["tests/**/*.py"]
+rules = { unresolved-attribute = "ignore", invalid-argument-type = "ignore", possibly-missing-attribute = "ignore", possibly-unresolved-reference = "ignore", invalid-assignment = "ignore" }

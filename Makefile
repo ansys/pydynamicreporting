@@ -28,6 +28,10 @@ check: ## Run all code quality checks
 	@echo "🚀 Running pre-commit hooks"
 	uv run pre-commit run --all-files
 
+.PHONY: typecheck
+typecheck: ## Run ty type checker
+	uv run ty check src
+
 .PHONY: version
 version: ## Print the current project version
 	uv run hatch version

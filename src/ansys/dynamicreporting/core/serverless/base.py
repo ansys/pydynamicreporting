@@ -59,7 +59,6 @@ from django.core.exceptions import (
 )
 from django.db import DataError
 from django.db.models import Model, QuerySet
-from django.db.models.base import subclass_exception
 from django.db.models.manager import Manager
 from django.db.utils import IntegrityError as DBIntegrityError
 
@@ -80,12 +79,7 @@ def _add_exception_to_cls(name, base, cls, parents, module):
     but uses the serverless ADR exception hierarchy as a base.
     """
     base_exceptions = tuple(getattr(p, name) for p in parents if hasattr(p, name))
-    exception_cls = subclass_exception(
-        name,
-        base_exceptions or (base,),
-        module,
-        attached_to=cls,  # bases
-    )
+    exception_cls = type(name, base_exceptions or (base,), {"__module__": module})
     setattr(cls, name, exception_cls)
 
 
@@ -267,9 +261,9 @@ class BaseModel(metaclass=BaseMeta):
         compare=False,
         default=False,
     )  # tracks if the object is saved in the db
-    _orm_model: str = field(init=False, compare=False, default=None)
-    _orm_model_cls: type[Model] = field(init=False, compare=False, default=None)
-    _orm_instance: Model = field(
+    _orm_model: str | None = field(init=False, compare=False, default=None)
+    _orm_model_cls: type[Model] | None = field(init=False, compare=False, default=None)
+    _orm_instance: Model | None = field(
         init=False,
         compare=False,
         default=None,
@@ -309,7 +303,10 @@ class BaseModel(metaclass=BaseMeta):
     def __post_init__(self):
         """Run post-init validation and instantiate the ORM instance."""
         self._validate_field_types()
-        self._orm_instance = self.__class__._orm_model_cls()
+        orm_model_cls = self.__class__._orm_model_cls
+        if orm_model_cls is None:
+            raise RuntimeError(f"ORM model is not configured for '{self.__class__.__name__}'.")
+        self._orm_instance = orm_model_cls()
 
     def _validate_field_types(self):
         """Validate dataclass field values against their declared types.
@@ -420,11 +417,15 @@ class BaseModel(metaclass=BaseMeta):
     @property
     def _orm_saved(self) -> bool:
         """Whether the underlying ORM instance has been saved."""
+        if self._orm_instance is None:
+            return False
         return not self._orm_instance._state.adding
 
     @property
-    def _orm_db(self) -> str:
+    def _orm_db(self) -> str | None:
         """Database alias used by the underlying ORM instance."""
+        if self._orm_instance is None:
+            return None
         return self._orm_instance._state.db
 
     @property
@@ -519,7 +520,10 @@ class BaseModel(metaclass=BaseMeta):
         fields remain unchanged.
         """
         self._saved = False
-        self._orm_instance = self.__class__._orm_model_cls()
+        orm_model_cls = self.__class__._orm_model_cls
+        if orm_model_cls is None:
+            raise RuntimeError(f"ORM model is not configured for '{self.__class__.__name__}'.")
+        self._orm_instance = orm_model_cls()
 
     @_handle_field_errors
     def save(self, **kwargs):
@@ -570,12 +574,16 @@ class BaseModel(metaclass=BaseMeta):
             raise self.__class__.NotSaved(
                 extra_detail=f"Delete failed for object with guid '{self.guid}'."
             )
+        if self._orm_instance is None:
+            raise self.__class__.NotSaved(
+                extra_detail=f"Delete failed for object with guid '{self.guid}'."
+            )
         count, _ = self._orm_instance.delete()
         self._saved = False
         return count
 
     @classmethod
-    def _from_db(cls, orm_instance, parent=None):
+    def _from_db(cls, orm_instance, parent=None, **kwargs):
         """Create a :class:`BaseModel` instance from a Django ORM instance.
 
         This method bypasses ``__init__`` to avoid re-validation and
@@ -707,6 +715,8 @@ class BaseModel(metaclass=BaseMeta):
         InvalidFieldError
             If the filter arguments reference invalid fields.
         """
+        if cls._orm_model_cls is None:
+            raise RuntimeError(f"ORM model is not configured for '{cls.__name__}'.")
         # convert basemodel instances to orm instances
         for key, value in kwargs.items():
             if isinstance(value, BaseModel):
@@ -738,6 +748,8 @@ class BaseModel(metaclass=BaseMeta):
         ObjectSet
             Collection wrapper around the resulting queryset.
         """
+        if cls._orm_model_cls is None:
+            raise RuntimeError(f"ORM model is not configured for '{cls.__name__}'.")
         filter_kwargs = {}
         db_alias = kwargs.pop("using", "default")
         for key, value in kwargs.items():
@@ -764,7 +776,12 @@ class BaseModel(metaclass=BaseMeta):
             Collection of results wrapped as :class:`BaseModel`
             instances.
         """
-        qs = cls._orm_model_cls.find(query=query)
+        if cls._orm_model_cls is None:
+            raise RuntimeError(f"ORM model is not configured for '{cls.__name__}'.")
+        find_method = getattr(cls._orm_model_cls, "find", None)
+        if find_method is None:
+            raise AttributeError(f"ORM model '{cls._orm_model_cls}' does not implement 'find'.")
+        qs = find_method(query=query)
         return ObjectSet(_model=cls, _orm_model=cls._orm_model_cls, _orm_queryset=qs)
 
     def get_tags(self) -> str:
@@ -849,16 +866,16 @@ class ObjectSet:
     value extraction.
     """
 
-    _model: type[BaseModel] = field(compare=False, default=None)
+    _model: type[BaseModel] | None = field(compare=False, default=None)
     _obj_set: list[BaseModel] = field(init=True, compare=False, default_factory=list)
     _saved: bool = field(init=False, compare=False, default=False)
-    _orm_model: type[Model] = field(compare=False, default=None)
-    _orm_queryset: QuerySet = field(compare=False, default=None)
-    _parent: BaseModel = field(compare=False, default=None)
+    _orm_model: type[Model] | None = field(compare=False, default=None)
+    _orm_queryset: QuerySet | None = field(compare=False, default=None)
+    _parent: BaseModel | None = field(compare=False, default=None)
 
     def __post_init__(self):
         """Materialize ORM instances into :class:`BaseModel` objects."""
-        if self._orm_queryset is None:
+        if self._orm_queryset is None or self._model is None:
             return
         self._saved = True
         self._obj_set = [
@@ -904,7 +921,8 @@ class ObjectSet:
         for obj in self._obj_set:
             obj.delete()
             count += 1
-        self._orm_queryset.delete()
+        if self._orm_queryset is not None:
+            self._orm_queryset.delete()
         self._obj_set = []
         self._saved = False
         return count

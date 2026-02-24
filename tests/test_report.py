@@ -55,15 +55,18 @@ def test_geturl_report_with_filter(adr_service_query) -> None:
 
 def test_visualize_report(adr_service_query) -> None:
     success = False
+    warning_message = ""
     try:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             my_report = adr_service_query.get_report(report_name="My Top Report")
             my_report.visualize(filter="A|i_type|cont|image;")
+            if w:
+                warning_message = str(w[-1].message)
         success = True
     except SyntaxError:
         success = False
-    assert success is True and "The 'filter' parameter is deprecated" in str(w[-1].message)
+    assert success is True and "The 'filter' parameter is deprecated" in warning_message
 
 
 def test_visualize_deprecated(adr_service_query) -> None:
@@ -91,15 +94,18 @@ def test_iframe_report(adr_service_query) -> None:
 
 def test_iframe_report_deprecated(adr_service_query) -> None:
     success = False
+    warning_message = ""
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             _ = my_report.get_iframe(filter='"A|b_type|cont|image;"')
+            if w:
+                warning_message = str(w[-1].message)
         success = True
     except SyntaxError:
         success = False
-    assert success is True and "The 'filter' parameter is deprecated" in str(w[-1].message)
+    assert success is True and "The 'filter' parameter is deprecated" in warning_message
 
 
 @pytest.mark.ado_test

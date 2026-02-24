@@ -33,7 +33,7 @@ from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
 
-def get_install_version(install_dir: Path) -> int | None:
+def get_install_version(install_dir: Path | None) -> int | None:
     """
     Extracts the version number from an installation directory path.
 

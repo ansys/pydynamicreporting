@@ -37,13 +37,13 @@ ANSYS_VERSION_FALLBACK = CURRENT_VERSION
 class ReportDownloadHTML:
     def __init__(
         self,
-        url=None,
-        directory=None,
-        debug=False,
-        filename="index.html",
-        no_inline_files=False,
-        ansys_version=None,
-    ):
+        url: str | None = None,
+        directory: str | None = None,
+        debug: bool = False,
+        filename: str = "index.html",
+        no_inline_files: bool = False,
+        ansys_version: str | int | None = None,
+    ) -> None:
         # Make sure that the print query has been specified.  Set it to html if not set
         if url:
             parsed = urllib.parse.urlparse(url)
@@ -81,6 +81,16 @@ class ReportDownloadHTML:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False  # record this so we can get it externally
+
+    def _require_url(self) -> str:
+        if self._url is None:
+            raise ValueError("No URL specified")
+        return self._url
+
+    def _require_directory(self) -> str:
+        if self._directory is None:
+            raise ValueError("No directory specified")
+        return self._directory
 
     def _should_use_data_uri(self, size: int) -> bool:
         self._inline_size_exception = False
@@ -172,19 +182,21 @@ class ReportDownloadHTML:
             "media/images/MenuArrow-15.png",
         ]
 
-        tmp = urllib.parse.urlsplit(self._url)
+        url = self._require_url()
+        directory = self._require_directory()
+        tmp = urllib.parse.urlsplit(url)
         for f in files:
             mangled = f.replace("media/", "/static/website/scripts/mathjax/")
-            url = tmp.scheme + "://" + tmp.netloc + mangled
-            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            source_url = f"{tmp.scheme}://{tmp.netloc}{mangled}"
+            resp = requests.get(source_url, allow_redirects=True)  # nosec B400
             if resp.status_code == requests.codes.ok:
-                filename = os.path.join(self._directory, f)
+                filename = os.path.join(directory, f)
                 try:
                     open(filename, "wb").write(resp.content)
                 except Exception as e:
                     print(f"Unable to download MathJax file: {f}\nError {str(e)}")
             else:
-                print(f"Unable to get: {url}")
+                print(f"Unable to get: {source_url}")
 
         # Additional files to be mapped to the media directory
         images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
@@ -324,12 +336,14 @@ class ReportDownloadHTML:
         return data
 
     def _download_static_files(self, files, source_path, target_path, comment):
-        tmp = urllib.parse.urlsplit(self._url)
+        url = self._require_url()
+        directory = self._require_directory()
+        tmp = urllib.parse.urlsplit(url)
         for f in files:
-            url = tmp.scheme + "://" + tmp.netloc + source_path + f
-            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            source_url = f"{tmp.scheme}://{tmp.netloc}{source_path}{f}"
+            resp = requests.get(source_url, allow_redirects=True)  # nosec B400
             if resp.status_code == requests.codes.ok:
-                filename = self._directory + os.sep + target_path + os.sep + f
+                filename = directory + os.sep + target_path + os.sep + f
                 filename = os.path.normpath(filename)
                 try:
                     data = self.fix_viewer_component_paths(
@@ -342,7 +356,8 @@ class ReportDownloadHTML:
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
         # a naming collision).  If so, use a unique prefix for such files.
-        pathname = os.path.join(self._directory, "media", name)
+        directory = self._require_directory()
+        pathname = os.path.join(directory, "media", name)
         if not os.path.exists(pathname):
             return name
         self._collision_count += 1
@@ -363,9 +378,11 @@ class ReportDownloadHTML:
     def _get_file(self, path_plus_queries: str, pathname: str, inline: bool = False) -> str:
         if pathname in self._filemap:
             return self._filemap[pathname]
-        tmp = urllib.parse.urlsplit(self._url)
-        url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
-        resp = requests.get(url, allow_redirects=True)  # nosec B400
+        url = self._require_url()
+        directory = self._require_directory()
+        tmp = urllib.parse.urlsplit(url)
+        source_url = f"{tmp.scheme}://{tmp.netloc}{path_plus_queries}"
+        resp = requests.get(source_url, allow_redirects=True)  # nosec B400
         results = pathname
         if resp.status_code == requests.codes.ok:
             basename = os.path.basename(pathname)
@@ -377,7 +394,7 @@ class ReportDownloadHTML:
                 # Note: we will also inline any "scene" 3D file.  This can happen when processing
                 # a slider view "key_image" array.
                 if (inline or self.is_scene_file(pathname)) and self._should_use_data_uri(
-                    len(tmp) * (4.0 / 3.0)
+                    (len(tmp) * 4) // 3
                 ):
                     # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
                     results = "data:application/octet-stream;base64," + base64.b64encode(
@@ -385,7 +402,7 @@ class ReportDownloadHTML:
                     ).decode("utf-8")
                     # for in the field debugging, allow for the data uri sources to be saved
                     if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
-                        filename = os.path.join(self._directory, "media", basename)
+                        filename = os.path.join(directory, "media", basename)
                         open(filename, "wb").write(tmp)
                 else:
                     # Special case for Babylon js viewer.  We get here via this link...
@@ -409,12 +426,12 @@ class ReportDownloadHTML:
                         results = f"{local_pathname}/{basename}"
                     else:
                         results = f"./media/{basename}"
-                    filename = os.path.join(self._directory, "media", basename)
+                    filename = os.path.join(directory, "media", basename)
                     open(filename, "wb").write(tmp)
             except Exception as e:
                 print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
         else:
-            print(f"Unable to read file via URL: {url}")
+            print(f"Unable to read file via URL: {source_url}")
         self._filemap[pathname] = results
         return self._filemap[pathname]
 
@@ -518,36 +535,34 @@ class ReportDownloadHTML:
 
     def _download(self):
         self._filemap = dict()
-        if self._url is None:
-            raise ValueError("No URL specified")
-        if self._directory is None:
-            raise ValueError("No directory specified")
+        url = self._require_url()
+        directory = self._require_directory()
 
         # Make sure we are not writing into a Nexus database directory (which has a media
         # directory).  We do not check for a "media" directory as that breaks the use case of
         # exporting repeatedly into the same root directory.
-        if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
+        if os.path.isfile(os.path.join(directory, "db.sqlite3")):
             raise ValueError("Cannot export into a Nexus database directory")
 
-        self._make_dir([self._directory, "media", "config"])
-        self._make_dir([self._directory, "media", "extensions", "TeX"])
+        self._make_dir([directory, "media", "config"])
+        self._make_dir([directory, "media", "extensions", "TeX"])
         self._make_dir(
-            [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Main", "Regular"]
+            [directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Main", "Regular"]
         )
         self._make_dir(
-            [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Size1", "Regular"]
+            [directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Size1", "Regular"]
         )
-        self._make_dir([self._directory, "media", "jax", "element", "mml"])
-        self._make_dir([self._directory, "media", "jax", "input", "TeX"])
-        self._make_dir([self._directory, "media", "jax", "input", "MathML"])
-        self._make_dir([self._directory, "media", "jax", "input", "AsciiMath"])
-        self._make_dir([self._directory, "media", "images"])
-        self._make_dir([self._directory, "webfonts"])
-        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
-        self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
+        self._make_dir([directory, "media", "jax", "element", "mml"])
+        self._make_dir([directory, "media", "jax", "input", "TeX"])
+        self._make_dir([directory, "media", "jax", "input", "MathML"])
+        self._make_dir([directory, "media", "jax", "input", "AsciiMath"])
+        self._make_dir([directory, "media", "images"])
+        self._make_dir([directory, "webfonts"])
+        self._make_dir([directory, f"ansys{self._ansys_version}", "nexus", "images"])
+        self._make_dir([directory, f"ansys{self._ansys_version}", "nexus", "utils"])
         self._make_dir(
             [
-                self._directory,
+                directory,
                 f"ansys{self._ansys_version}",
                 "nexus",
                 "threejs",
@@ -558,7 +573,7 @@ class ReportDownloadHTML:
         )
         self._make_dir(
             [
-                self._directory,
+                directory,
                 f"ansys{self._ansys_version}",
                 "nexus",
                 "novnc",
@@ -568,12 +583,12 @@ class ReportDownloadHTML:
         )
 
         # get the webpage html source
-        resp = requests.get(self._url)  # nosec B400
+        resp = requests.get(url)  # nosec B400
         if resp.status_code != requests.codes.ok:
-            raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
+            raise RuntimeError(f"Unable to access {url} ({resp.status_code})")
         # debugging...
         if self._debug:
-            with open(os.path.join(self._directory, "index.raw"), "wb") as f:
+            with open(os.path.join(directory, "index.raw"), "wb") as f:
                 f.write(resp.text.encode("utf8"))
 
         # some files that hide out under some .js
@@ -623,5 +638,5 @@ class ReportDownloadHTML:
         html = self._replace_blocks(html, "await fetch(", ");", inline=True)
 
         # save the results
-        with open(os.path.join(self._directory, self._filename), "wb") as f:
+        with open(os.path.join(directory, self._filename), "wb") as f:
             f.write(html.encode("utf8"))

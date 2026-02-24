@@ -269,7 +269,8 @@ class FileValidator(StringContent):
         with file_path.open(mode="rb") as f:
             file = DjangoFile(f)
         # check file type
-        file_ext = Path(file.name).suffix.lower().lstrip(".")
+        file_name = file.name if file.name is not None else file_path.name
+        file_ext = Path(file_name).suffix.lower().lstrip(".")
         if self.ALLOWED_EXT is not None and file_ext not in self.ALLOWED_EXT:
             raise ValueError(f"File type {file_ext} is not supported by {obj.__class__}")
         # check for empty files
@@ -333,15 +334,18 @@ class SimplePayloadMixin:
     """
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls: type["Item"], orm_instance, parent=None, **kwargs):
         """Reconstruct content from the ORM ``payloaddata`` field."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super()._from_db(orm_instance, **kwargs)
-        obj.content = safe_unpickle(obj._orm_instance.payloaddata)
+        obj = super(SimplePayloadMixin, cls)._from_db(orm_instance, parent=parent, **kwargs)
+        orm_instance_obj = obj._orm_instance
+        if orm_instance_obj is None:
+            raise ADRException("Failed to load payload data because ORM instance is missing.")
+        obj.content = safe_unpickle(getattr(obj._orm_instance, "payloaddata"))
         return obj
 
-    def save(self, **kwargs):
+    def save(self: "Item", **kwargs):
         """Serialize the current content into the ORM ``payloaddata`` field.
 
         Parameters
@@ -360,8 +364,11 @@ class SimplePayloadMixin:
         Exception
             Any other unexpected exception is propagated unchanged.
         """
-        self._orm_instance.payloaddata = pickle.dumps(self.content, protocol=0)
-        super().save(**kwargs)
+        orm_instance = self._orm_instance
+        if orm_instance is None:
+            raise ADRException("Failed to save payload data because ORM instance is missing.")
+        setattr(orm_instance, "payloaddata", pickle.dumps(self.content, protocol=0))
+        Item.save(self, **kwargs)
 
 
 class FilePayloadMixin:
@@ -372,8 +379,11 @@ class FilePayloadMixin:
     on the object for convenience.
     """
 
-    _file: DjangoFile = field(init=False, compare=False, default=None)
-    _file_ext: str = field(init=False, compare=False, default="")
+    _file: DjangoFile | None = None
+    _file_ext: str = ""
+    _orm_instance: object | None = None
+    guid: str = ""
+    type: str = ""
 
     @property
     def file_path(self):
@@ -385,7 +395,10 @@ class FilePayloadMixin:
             File path or ``None`` if no file has been associated yet.
         """
         try:
-            return self._orm_instance.payloadfile.path
+            orm_instance = self._orm_instance
+            if orm_instance is None:
+                return None
+            return getattr(getattr(orm_instance, "payloadfile"), "path")
         except (AttributeError, ValueError):
             # If the file path is not set, return None
             return None
@@ -399,16 +412,23 @@ class FilePayloadMixin:
     def file_ext(self):
         """File extension of the payload file, without the leading dot."""
         try:
-            return Path(self._orm_instance.payloadfile.path).suffix.lower().lstrip(".")
+            orm_instance = self._orm_instance
+            if orm_instance is None:
+                return None
+            payload_file = getattr(orm_instance, "payloadfile")
+            return Path(getattr(payload_file, "path")).suffix.lower().lstrip(".")
         except (AttributeError, ValueError):
             # If the file path is not set, return None
             return None
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls: type["Item"], orm_instance, parent=None, **kwargs):
         """Reconstruct file-backed content from the ORM instance."""
-        obj = super()._from_db(orm_instance, **kwargs)
-        obj.content = obj._orm_instance.payloadfile.path
+        obj = super(FilePayloadMixin, cls)._from_db(orm_instance, parent=parent, **kwargs)
+        orm_instance_obj = obj._orm_instance
+        if orm_instance_obj is None:
+            raise ADRException("Failed to load payload file because ORM instance is missing.")
+        obj.content = getattr(orm_instance_obj, "payloadfile").path
         return obj
 
     @staticmethod
@@ -446,18 +466,36 @@ class FilePayloadMixin:
         Exception
             Any other unexpected exception is propagated unchanged.
         """
-        self._orm_instance.payloadfile = f"{self.guid}_{self.type}.{self._file_ext}"
+        orm_instance = self._orm_instance
+        if orm_instance is None:
+            raise ADRException("Failed to save payload file because ORM instance is missing.")
+        setattr(orm_instance, "payloadfile", f"{self.guid}_{self.type}.{self._file_ext}")
+        if self._file is None:
+            raise ADRException("Failed to save payload file because file content is missing.")
+        file_path = self.file_path
+        if file_path is None:
+            raise ADRException("Failed to save payload file because target path is missing.")
         # Save file to the target path
-        self._save_file(self.file_path, self._file)
+        self._save_file(file_path, self._file)
         # save ORM instance
-        super().save(**kwargs)
+        parent_save = getattr(super(FilePayloadMixin, self), "save", None)
+        if parent_save is None:
+            raise ADRException("Failed to save payload file because parent save is unavailable.")
+        parent_save(**kwargs)
 
     def delete(self):
         """Delete the payload file and then the ORM instance."""
         from data.utils import delete_item_media
 
-        delete_item_media(self._orm_instance.guid)
-        return super().delete()
+        orm_instance = self._orm_instance
+        if orm_instance is not None:
+            delete_item_media(getattr(orm_instance, "guid"))
+        parent_delete = getattr(super(FilePayloadMixin, self), "delete", None)
+        if parent_delete is None:
+            raise ADRException(
+                "Failed to delete payload file because parent delete is unavailable."
+            )
+        return parent_delete()
 
 
 class ItemType(StrEnum):
@@ -496,10 +534,10 @@ class Item(BaseModel):
     sequence: int = field(compare=False, kw_only=True, default=0)
     """Sequence index for ordering items within a dataset/session."""
 
-    session: Session = field(compare=False, kw_only=True, default=None)
+    session: Session | None = field(compare=False, kw_only=True, default=None)
     """Session that owns this item."""
 
-    dataset: Dataset = field(compare=False, kw_only=True, default=None)
+    dataset: Dataset | None = field(compare=False, kw_only=True, default=None)
     """Dataset associated with this item."""
 
     content: ItemContent = ItemContent()
@@ -556,7 +594,7 @@ class Item(BaseModel):
         super().save(**kwargs)
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None, **kwargs):
         """Reconstruct an item or item subclass from the ORM instance.
 
         If called on :class:`Item` itself, this method dispatches to the
@@ -566,9 +604,9 @@ class Item(BaseModel):
         if cls is Item:
             # Get the class based on the type attribute
             item_cls = cls._type_registry[orm_instance.type]
-            return item_cls._from_db(orm_instance, **kwargs)
+            return item_cls._from_db(orm_instance, parent=parent, **kwargs)
 
-        return super()._from_db(orm_instance, **kwargs)
+        return super()._from_db(orm_instance, parent=parent, **kwargs)
 
     @classmethod
     def create(cls, **kwargs):
@@ -713,7 +751,13 @@ class Item(BaseModel):
             "format": context.get("format", None),
         }
         try:
-            ctx["HTML"] = self._orm_instance.render(ctx)
+            orm_instance = self._orm_instance
+            if orm_instance is None:
+                raise ADRException("Item ORM instance is not initialized.")
+            render_method = getattr(orm_instance, "render", None)
+            if render_method is None:
+                raise ADRException("Item render function is not available on ORM instance.")
+            ctx["HTML"] = render_method(ctx)
         except Exception as e:
             from ceireports.utils import get_render_error_html
 
@@ -762,12 +806,15 @@ class Table(Item):
     _properties: tuple = table_attr + _payload_properties
 
     @classmethod
-    def _from_db(cls, orm_instance, **kwargs):
+    def _from_db(cls, orm_instance, parent=None, **kwargs):
         """Rebuild the table array and payload properties from ``payloaddata``."""
         from data.extremely_ugly_hacks import safe_unpickle
 
-        obj = super()._from_db(orm_instance, **kwargs)
-        payload = safe_unpickle(obj._orm_instance.payloaddata)
+        obj = super()._from_db(orm_instance, parent=parent, **kwargs)
+        orm_instance_obj = obj._orm_instance
+        if orm_instance_obj is None:
+            raise ADRException("Failed to load table payload because ORM instance is missing.")
+        payload = safe_unpickle(orm_instance_obj.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
             if prop in payload:
@@ -800,7 +847,10 @@ class Table(Item):
             value = getattr(self, prop, None)
             if value is not None:
                 payload[prop] = value
-        self._orm_instance.payloaddata = pickle.dumps(payload, protocol=0)
+        orm_instance = self._orm_instance
+        if orm_instance is None:
+            raise ADRException("Failed to save table payload because ORM instance is missing.")
+        setattr(orm_instance, "payloaddata", pickle.dumps(payload, protocol=0))
         super().save(**kwargs)
 
 
@@ -872,12 +922,17 @@ class Image(FilePayloadMixin, Item):
         Exception
             Any other unexpected exception is propagated unchanged.
         """
+        if self._file is None:
+            raise ADRException("Failed to save image because file content is missing.")
         with self._file.open(mode="rb") as f:
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
         # Determine final file name and format
         target_ext = "png" if not self._enhanced else self._file_ext
-        self._orm_instance.payloadfile = f"{self.guid}_image.{target_ext}"
+        orm_instance = self._orm_instance
+        if orm_instance is None:
+            raise ADRException("Failed to save image because ORM instance is missing.")
+        setattr(orm_instance, "payloadfile", f"{self.guid}_image.{target_ext}")
         # Save the image
         if self._file_ext != target_ext and target_ext == "png":
             # Convert to PNG format

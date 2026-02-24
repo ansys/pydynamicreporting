@@ -28,7 +28,7 @@ import pytest
 from ansys.dynamicreporting.core.utils import report_utils as ru
 
 
-def return_file_paths(request) -> list:
+def return_file_paths(request) -> list[str]:
     test_path = join(request.fspath.dirname, "test_data")
     image_file = join(test_path, "aa_00_0_alpha1.png")
     scene_file = join(join(test_path, "scenes"), "scene.avz")
@@ -73,6 +73,7 @@ def test_enve_home() -> None:
 @pytest.mark.ado_test
 def test_ceiversion_nexus_suffix() -> None:
     suffix = ru.ceiversion_nexus_suffix()
+    int_suffix = 0
     try:
         int_suffix = int(suffix)
         success = True
@@ -84,6 +85,7 @@ def test_ceiversion_nexus_suffix() -> None:
 @pytest.mark.ado_test
 def test_ceiversion_apex_suffix() -> None:
     suffix = ru.ceiversion_apex_suffix()
+    int_suffix = 0
     try:
         int_suffix = int(suffix)
         success = True
@@ -95,6 +97,7 @@ def test_ceiversion_apex_suffix() -> None:
 @pytest.mark.ado_test
 def test_ceiversion_ensight_suffix() -> None:
     suffix = ru.ceiversion_ensight_suffix()
+    int_suffix = 0
     try:
         int_suffix = int(suffix)
         success = True
@@ -221,10 +224,13 @@ def test_settings() -> None:
 
 @pytest.mark.ado_test
 def test_find_unused_ports() -> None:
-    ports = ru.find_unused_ports(count=3)
-    single_port = ru.find_unused_ports(start=0, end=9000, count=1, avoid=range(10, 1000))
-    succ = len(ru.find_unused_ports(count=0)) <= 1
-    succ_two = ru.find_unused_ports(count=0, avoid=range(100000)) == []
+    ports = ru.find_unused_ports(count=3) or []
+    single_port = (
+        ru.find_unused_ports(start=0, end=9000, count=1, avoid=list(range(10, 1000))) or []
+    )
+    empty_ports = ru.find_unused_ports(count=0) or []
+    succ = len(empty_ports) <= 1
+    succ_two = ru.find_unused_ports(count=0, avoid=list(range(100000))) == []
     assert len(ports) == 3 and len(single_port) == 1 and succ and succ_two
 
 

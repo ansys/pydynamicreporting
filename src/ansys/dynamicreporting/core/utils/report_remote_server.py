@@ -37,8 +37,7 @@ import subprocess  # nosec B78 B603 B404
 import sys
 import tempfile
 import time
-import urllib
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 import uuid
 
 import requests
@@ -96,9 +95,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     if not os.path.exists(app):
         app = app_file
     # run nexus_utility.py
-    params = dict(
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, cwd=rptdir
-    )
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     # Build the command line
     cmd = [app]
     cmd.append(nexus_utility)
@@ -107,8 +104,22 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
         cmd.append("-X")
     cmd.extend(args)
     if is_windows:
-        params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    subprocess.call(args=cmd, **params)  # nosec B603 B78
+        subprocess.call(  # nosec B603 B78
+            args=cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            cwd=rptdir,
+            creationflags=creationflags,
+        )
+    else:
+        subprocess.call(  # nosec B603 B78
+            args=cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            cwd=rptdir,
+        )
 
 
 class Server:
@@ -400,7 +411,8 @@ class Server:
                     t = objtype(d)
                 else:
                     t = objtype()
-                t.server_api_version = self.api_version
+                if hasattr(t, "server_api_version"):
+                    setattr(t, "server_api_version", self.api_version)
                 t.from_json(d)
                 ret.append(t)
             return ret
@@ -427,7 +439,7 @@ class Server:
         try:
             if inspect.ismethod(objtype):
                 obj = objtype(r.json())
-            obj.server_api_version = self.api_version
+            setattr(obj, "server_api_version", self.api_version)
             obj.from_json(r.json())
             return obj
         except Exception as e:
@@ -561,7 +573,7 @@ class Server:
                     r = self._http_session.put(url, auth=auth, files=files)
                 except Exception as e:
                     logger.debug(f"Warning: {str(e)}")
-                    r = self._http_session.Response()
+                    r = requests.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
             # we map 201 (created) to 200 (ok) to simplify error handling...
@@ -938,12 +950,22 @@ class Server:
         url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
         if has_qt and (parent is not None):
-            from .report_download_pdf import NexusPDFSave
+            report_download_pdf_module = None
+            try:
+                from . import report_download_pdf as report_download_pdf_module
+            except ImportError:
+                pass
 
-            app = QtGui.QGuiApplication.instance()
-            worker = NexusPDFSave(app)
-            _ = worker.save_page_pdf(url, filename=file_path, page=page, delay=delay)
-            return
+            nexus_pdf_save_class = (
+                getattr(report_download_pdf_module, "NexusPDFSave", None)
+                if report_download_pdf_module is not None
+                else None
+            )
+            if nexus_pdf_save_class is not None:
+                app = QtGui.QGuiApplication.instance()
+                worker = nexus_pdf_save_class(app)
+                _ = worker.save_page_pdf(url, filename=file_path, page=page, delay=delay)
+                return
 
         # ok, there is a bug in the 3.7 implementation of subprocess where
         # args are not properly encoded under Windows.  To pass a URL, you
@@ -986,7 +1008,7 @@ class Server:
                 links = report_utils.get_links_from_html(resp.text)
                 for link in links:
                     url = urlparse(link)
-                    q_params = dict(urllib.parse.parse_qsl(url.query))
+                    q_params = dict(parse_qsl(url.query))
                     file_format = q_params.get("format")
                     if file_format != "pptx":
                         continue
@@ -1059,11 +1081,14 @@ class Server:
         templates : dict
             A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
         """
+        root_id_str = None
         for template_id_str, template_attr in templates.items():
             if template_attr["parent"] is None:
                 root_id_str = template_id_str
                 break
 
+        if root_id_str is None:
+            raise ValueError("Unable to find a root template in the input payload.")
         root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
@@ -1089,7 +1114,7 @@ class Server:
 
         self.put_objects(child_templates)
 
-        for child_id_str in children_id_strs:
+        for child_id_str, child_template in zip(children_id_strs, child_templates):
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
@@ -1098,6 +1123,8 @@ class Server:
             if template.guid == guid:
                 curr_template = template
 
+        if curr_template is None:
+            return
         curr_template_key = f"Template_{template_guid_id_map[curr_template.guid]}"
         templates_data[curr_template_key] = {}
         for field in JSON_ATTR_KEYS:
@@ -1112,9 +1139,13 @@ class Server:
             templates_data[curr_template_key]["parent"] = None
             templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
         else:
-            templates_data[curr_template_key]["parent"] = (
-                f"Template_{template_guid_id_map[curr_template.parent]}"
-            )
+            parent_guid = curr_template.parent
+            if parent_guid in template_guid_id_map:
+                templates_data[curr_template_key]["parent"] = (
+                    f"Template_{template_guid_id_map[parent_guid]}"
+                )
+            else:
+                templates_data[curr_template_key]["parent"] = None
 
         templates_data[curr_template_key]["children"] = []
         children_guids = curr_template.children
@@ -1146,7 +1177,8 @@ def create_new_local_database(
         fn = QtWidgets.QFileDialog.getExistingDirectory(parent, title, directory)
         if len(fn) == 0:
             return False
-        db_dir = QtCore.QFileInfo(fn).absoluteFilePath()
+        qfile_info = getattr(QtCore, "QFileInfo")
+        db_dir = qfile_info(fn).absoluteFilePath()
     else:
         db_dir = os.path.abspath(directory)
 
@@ -1222,7 +1254,10 @@ def create_new_local_database(
                 sys.path.append(srcdir)
             error = False
             if parent and has_qt:
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                qt_namespace = getattr(QtCore, "Qt")
+                QtWidgets.QApplication.setOverrideCursor(
+                    QtGui.QCursor(getattr(qt_namespace, "WaitCursor"))
+                )
             try:
                 import django
 
@@ -1240,7 +1275,7 @@ def create_new_local_database(
                 for p in Permission.objects.all():
                     group.permissions.add(p)
                 # and the nexus user
-                group.user_set.add(user)
+                user.groups.add(group)
                 group.save()
                 os.makedirs(os.path.join(db_dir, "media"))
             except Exception as e:
@@ -1297,7 +1332,7 @@ def create_new_local_database(
 
         return False
 
-    if type(return_info) == dict:
+    if isinstance(return_info, dict):
         return_info["directory"] = db_dir
         return True
 
@@ -1602,7 +1637,8 @@ def launch_local_database_server(
                 if local_lock:
                     local_lock.release()
                 return False
-            db_dir = QtCore.QFileInfo(fn).absoluteDir().absolutePath()
+            qfile_info = getattr(QtCore, "QFileInfo")
+            db_dir = qfile_info(fn).absoluteDir().absolutePath()
 
         # we expect to see: 'manage.py' and 'media' in this folder
         if not validate_local_db(db_dir):
@@ -1703,7 +1739,8 @@ def launch_local_database_server(
 
     # Start the busy cursor
     if parent and has_qt:
-        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        qt_namespace = getattr(QtCore, "Qt")
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(getattr(qt_namespace, "WaitCursor")))
 
     # Here we run nexus_launcher with the following command line:
     # nexus_launcher.bat start --db_directory {dirname} --server_port {port} --internal_base_port {port} --instance_count 1
@@ -1756,19 +1793,30 @@ def launch_local_database_server(
 
     # Capture stderr to leverage nexus_launcher CLI error checking.  Grabbing stdout as well, but not
     # used at the moment
-    params = dict(
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, cwd=db_dir
-    )
-    if is_windows:
-        params["creationflags"] = subprocess.CREATE_NO_WINDOW
-    else:
-        params["close_fds"] = True
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
     # Actually try to launch the server
     try:  # nosec
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
-        monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
+        if is_windows:
+            monitor_process = subprocess.Popen(  # nosec B78 B603
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,
+                cwd=db_dir,
+                creationflags=creationflags,
+            )
+        else:
+            monitor_process = subprocess.Popen(  # nosec B78 B603
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,
+                cwd=db_dir,
+                close_fds=True,
+            )
     except Exception as e:
         logger.debug(f"Warning: {str(e)}")
         if parent and has_qt:
@@ -1812,7 +1860,10 @@ def launch_local_database_server(
                 if monitor_alive:
                     msg = f"Connection timeout. Unable to connect to local Nexus server in {server_timeout} seconds."
                 else:
-                    output_text = monitor_process.stderr.read().decode("utf-8")
+                    if monitor_process.stderr is None:
+                        output_text = ""
+                    else:
+                        output_text = monitor_process.stderr.read().decode("utf-8")
                     idx = output_text.find("error: ")
                     if idx > 0:
                         # just the "error: ..." text.
@@ -1838,8 +1889,10 @@ def launch_local_database_server(
             pass
 
     # detach from stdout, stderr to avoid buffer blocking
-    monitor_process.stderr.close()
-    monitor_process.stdout.close()
+    if monitor_process.stderr is not None:
+        monitor_process.stderr.close()
+    if monitor_process.stdout is not None:
+        monitor_process.stdout.close()
 
     # Allow another API launch to continue
     if local_lock:

@@ -259,7 +259,12 @@ def PIL_image_to_data(img, guid=None):
         image = Image.open(imghandle)
     elif imgbytes:
         image = Image.open(io.BytesIO(imgbytes))
-    data["format"] = image.format.lower()
+    if image is None:
+        raise ValueError("Input image must be a file path or image bytes.")
+    image_format = image.format
+    if image_format is None:
+        raise ValueError("Unable to determine image format.")
+    data["format"] = image_format.lower()
     if data["format"] == "tiff":
         data["format"] = "tif"
     data["width"] = image.width
@@ -552,11 +557,11 @@ class nexus_array:
         :type shape: tuple.
         :returns:  nexus_array
         """
-        self._strlen = 1
-        self.array = None
-        self.dtype = ""
-        self.shape = (0,)
-        self.size = 1
+        self._strlen: int = 1
+        self.array: array.array | None = None
+        self.dtype: str = ""
+        self.shape: tuple[int, ...] = (0,)
+        self.size: int = 1
         self.set_dtype(dtype)
         self.set_shape(shape)
         self.set_size(shape)
@@ -587,6 +592,8 @@ class nexus_array:
         """Get the size of each element in bytes
         :returns: the size of each element in bytes
         """
+        if self.array is None:
+            return 0
         return self.array.itemsize * self._strlen
 
     def set_shape(self, value):
@@ -626,12 +633,16 @@ class nexus_array:
 
     def __getitem__(self, key):
         idx = self._index(key)
+        if self.array is None:
+            raise IndexError("Array is not initialized.")
         if self.dtype[0] != "S":
             return self.array[idx]
         return bytes(self.array[idx : idx + self._strlen])
 
     def __setitem__(self, key, value):
         idx = self._index(key)
+        if self.array is None:
+            raise IndexError("Array is not initialized.")
         if self.dtype[0] != "S":
             # further encoding needed only for byte-string dtype
             self.array[idx] = value
@@ -718,10 +729,14 @@ class nexus_array:
 
     def to_bytes(self):
         self.update_array()
+        if self.array is None:
+            return b""
         return self.array.tobytes()
 
     def to_2dlist(self):
         to_list = list()
+        if len(self.shape) < 2:
+            return to_list
         for i in range(self.shape[0]):
             to_list.append(list())
             for j in range(self.shape[1]):
@@ -731,6 +746,8 @@ class nexus_array:
     def to_numpy(self, writeable=False):
         if not has_numpy:
             raise ImportError
+        if self.array is None:
+            raise ValueError("Array is not initialized.")
         a = numpy.frombuffer(self.array.tobytes(), dtype=self.dtype)
         a.shape = self.shape
         if writeable:
@@ -767,6 +784,8 @@ class nexus_array:
         self.set_size(self.shape)
         # note: it is not possible/recommended to
         # guess the dtype from the elements here
+        if len(self.shape) < 2:
+            return
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 self.__setitem__((i, j), value[i][j])
@@ -898,14 +917,17 @@ def is_user_admin() -> bool:
     """
     try:
         # on Windows this will throw AttributeError
-        return os.geteuid()
+        return os.geteuid() == 0
     except AttributeError:
         try:
             import ctypes
 
             # on non-Windows systems, this can be ModuleNotFoundError
             # on some Windows machines this can be AttributeError
-            return ctypes.windll.shell32.IsUserAnAdmin() == 1
+            windll = getattr(ctypes, "windll", None)
+            if windll is None:
+                return False
+            return windll.shell32.IsUserAnAdmin() == 1
         except (ModuleNotFoundError, AttributeError):
             return False
 

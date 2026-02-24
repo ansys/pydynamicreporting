@@ -59,8 +59,11 @@ def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     try:
         s = tmp_adr.serverobj
+        source_server = adr_service_query.serverobj
+        assert s is not None
+        assert source_server is not None
         success = s.copy_items(
-            source=adr_service_query.serverobj,
+            source=source_server,
             obj_type="item",
             progress=False,
             progress_qt=False,
@@ -80,14 +83,14 @@ def test_start_stop(tmp_path, get_exec) -> None:
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=port_r,
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=port_r,
         )
     succ = True
@@ -132,14 +135,14 @@ def test_fail_newdb(tmp_path, get_exec) -> None:
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=port_r,
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=port_r,
         )
     succ = False
@@ -275,6 +278,7 @@ def test_delete_db(tmp_path, get_exec) -> None:
 
 
 def test_export_html(adr_service_query) -> None:
+    my_report = None
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -282,6 +286,8 @@ def test_export_html(adr_service_query) -> None:
     except SyntaxError:
         success = False
     s = adr_service_query.serverobj
+    assert success is True and my_report is not None
+    assert s is not None
     s.export_report_as_html(report_guid=my_report.report.guid, directory_name="htmltest")
     assert success is True
 
@@ -289,6 +295,7 @@ def test_export_html(adr_service_query) -> None:
 @pytest.mark.ado_test
 def test_export_pdf(adr_service_query, get_exec) -> None:
     exec_basis = get_exec
+    my_report = None
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -296,13 +303,17 @@ def test_export_pdf(adr_service_query, get_exec) -> None:
     except SyntaxError:
         success = False
     s = adr_service_query.serverobj
+    assert success is True and my_report is not None
+    assert s is not None
     if exec_basis:
-        if environ.get("ANSYS_REL_INT_I"):
-            ansys_version = int(environ.get("ANSYS_REL_INT_I"))
+        ansys_rel_int = environ.get("ANSYS_REL_INT_I")
+        if ansys_rel_int:
+            ansys_version = int(ansys_rel_int)
         else:
             import re
 
             matches = re.search(r".*v([0-9]{3}).*", exec_basis)
+            assert matches is not None
             ansys_version = int(matches.group(1))
         s.export_report_as_pdf(
             report_guid=my_report.report.guid,
@@ -323,6 +334,7 @@ def test_export_pdf(adr_service_query, get_exec) -> None:
 def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
     exec_basis = get_exec
     item_filter = "A|i_type|cont|image;"
+    my_report = None
     success = False
     try:
         my_report = adr_service_query.get_report(report_name="My Top Report")
@@ -330,13 +342,17 @@ def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
     except SyntaxError:
         success = False
     s = adr_service_query.serverobj
+    assert success is True and my_report is not None
+    assert s is not None
     if exec_basis:
-        if environ.get("ANSYS_REL_INT_I"):
-            ansys_version = int(environ.get("ANSYS_REL_INT_I"))
+        ansys_rel_int = environ.get("ANSYS_REL_INT_I")
+        if ansys_rel_int:
+            ansys_version = int(ansys_rel_int)
         else:
             import re
 
             matches = re.search(r".*v([0-9]{3}).*", exec_basis)
+            assert matches is not None
             ansys_version = int(matches.group(1))
         s.export_report_as_pdf(
             report_guid=my_report.report.guid,
@@ -390,20 +406,23 @@ def test_copy_template(adr_service_query, tmp_path, get_exec) -> None:
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=8000 + randint(0, 3999),
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=8000 + randint(0, 3999),
         )
     tmp_adr.start(create_db=True, exit_on_close=True, delete_db=True)
     s = tmp_adr.serverobj
+    source_server = adr_service_query.serverobj
+    assert s is not None
+    assert source_server is not None
     succ = s.copy_items(
-        source=adr_service_query.serverobj, obj_type="template", progress=False, progress_qt=False
+        source=source_server, obj_type="template", progress=False, progress_qt=False
     )
     tmp_adr.stop()
     assert succ
@@ -425,14 +444,14 @@ def test_acls_start(tmp_path, get_exec) -> None:
     if get_exec != "":
         tmp_adr = Service(
             ansys_installation=get_exec,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=port_r,
         )
     else:
         tmp_adr = Service(
             ansys_installation="docker",
             docker_image=DOCKER_DEV_REPO_URL,
-            db_directory=db_dir,
+            db_directory=str(db_dir),
             port=port_r,
         )
     r.create_new_local_database(
@@ -454,8 +473,9 @@ def test_acls_start(tmp_path, get_exec) -> None:
 
 
 @pytest.mark.ado_test
-def test_get_templates_as_dict(adr_service_create) -> bool:
+def test_get_templates_as_dict(adr_service_create) -> None:
     server = adr_service_create.serverobj
+    assert server is not None
 
     # Level 0
     template_01 = server.create_template(name="A", parent=None, report_type="Layout:basic")
@@ -475,11 +495,13 @@ def test_get_templates_as_dict(adr_service_create) -> bool:
     server.put_objects(template_01)
 
     templates = server.get_objects(objtype=ro.TemplateREST)
+    root_guid = ""
     for template in templates:
         if template.master:
             root_guid = template.guid
             break
 
+    assert root_guid != ""
     templates_json = server.get_templates_as_dict(root_guid)
     assert len(templates_json) == 4
     assert templates_json["Template_0"]["name"] == "A"
@@ -523,7 +545,7 @@ def test_load_templates_from_file(adr_service_create) -> None:
 
 
 @pytest.mark.ado_test
-def test_load_templates(adr_service_create) -> bool:
+def test_load_templates(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -595,7 +617,7 @@ def test_load_templates(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_id_name(adr_service_create) -> bool:
+def test_check_templates_id_name(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "WRONG_NAME": {  # Error
@@ -648,7 +670,7 @@ def test_check_templates_id_name(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_parent_name(adr_service_create) -> bool:
+def test_check_templates_parent_name(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -706,7 +728,7 @@ def test_check_templates_parent_name(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_children_name(adr_service_create) -> bool:
+def test_check_templates_children_name(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -762,7 +784,7 @@ def test_check_templates_children_name(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_missing_necessary_key(adr_service_create) -> bool:
+def test_check_templates_missing_necessary_key(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -832,7 +854,7 @@ class CapturingHandler(logging.Handler):
 
 
 @pytest.mark.ado_test
-def test_check_templates_extra_keys_with_logger(adr_service_create) -> bool:
+def test_check_templates_extra_keys_with_logger(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -894,7 +916,7 @@ def test_check_templates_extra_keys_with_logger(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_report_type(adr_service_create) -> bool:
+def test_check_templates_report_type(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -946,7 +968,7 @@ def test_check_templates_report_type(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_item_filter_parts(adr_service_create) -> bool:
+def test_check_templates_item_filter_parts(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -1001,7 +1023,7 @@ def test_check_templates_item_filter_parts(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_item_filter_part0(adr_service_create) -> bool:
+def test_check_templates_item_filter_part0(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -1056,7 +1078,7 @@ def test_check_templates_item_filter_part0(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_check_templates_item_filter_part1(adr_service_create) -> bool:
+def test_check_templates_item_filter_part1(adr_service_create) -> None:
     server = adr_service_create.serverobj
     templates_json = {
         "Template_0": {
@@ -1111,7 +1133,7 @@ def test_check_templates_item_filter_part1(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_tmp_name(adr_service_create) -> bool:
+def test_put_objects_bad_request_tmp_name(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_template = server.create_template(name="testing" * 255, report_type="Layout:box")
     with pytest.raises(
@@ -1121,7 +1143,7 @@ def test_put_objects_bad_request_tmp_name(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_tmp_item_filter(adr_service_create) -> bool:
+def test_put_objects_bad_request_tmp_item_filter(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_template = server.create_template(name="testing", report_type="Layout:box")
     test_template.item_filter = "testing" * 1024
@@ -1132,7 +1154,7 @@ def test_put_objects_bad_request_tmp_item_filter(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_itm_name(adr_service_create) -> bool:
+def test_put_objects_bad_request_itm_name(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_item = server.create_item(name="testing" * 255)
     with pytest.raises(
@@ -1142,7 +1164,7 @@ def test_put_objects_bad_request_itm_name(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_itm_source(adr_service_create) -> bool:
+def test_put_objects_bad_request_itm_source(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_item = server.create_item(name="testing")
     test_item.source = "testing" * 80
@@ -1153,7 +1175,7 @@ def test_put_objects_bad_request_itm_source(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_itm_type(adr_service_create) -> bool:
+def test_put_objects_bad_request_itm_type(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_item = server.create_item(name="testing")
     test_item.type = "testing" * 16
@@ -1164,7 +1186,7 @@ def test_put_objects_bad_request_itm_type(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_ds_filename(adr_service_create) -> bool:
+def test_put_objects_bad_request_ds_filename(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_dataset = server.get_default_dataset()
     test_dataset.filename = "testing" * 256
@@ -1175,7 +1197,7 @@ def test_put_objects_bad_request_ds_filename(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_ds_dirname(adr_service_create) -> bool:
+def test_put_objects_bad_request_ds_dirname(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_dataset = server.get_default_dataset()
     test_dataset.dirname = "testing" * 256
@@ -1186,7 +1208,7 @@ def test_put_objects_bad_request_ds_dirname(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_ds_format(adr_service_create) -> bool:
+def test_put_objects_bad_request_ds_format(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_dataset = server.get_default_dataset()
     test_dataset.format = "testing" * 50
@@ -1197,7 +1219,7 @@ def test_put_objects_bad_request_ds_format(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_se_hostname(adr_service_create) -> bool:
+def test_put_objects_bad_request_se_hostname(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_session = server.get_default_session()
     test_session.hostname = "testing" * 50
@@ -1208,7 +1230,7 @@ def test_put_objects_bad_request_se_hostname(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_se_platform(adr_service_create) -> bool:
+def test_put_objects_bad_request_se_platform(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_session = server.get_default_session()
     test_session.platform = "testing" * 50
@@ -1219,7 +1241,7 @@ def test_put_objects_bad_request_se_platform(adr_service_create) -> bool:
 
 
 @pytest.mark.ado_test
-def test_put_objects_bad_request_se_application(adr_service_create) -> bool:
+def test_put_objects_bad_request_se_application(adr_service_create) -> None:
     server = adr_service_create.serverobj
     test_session = server.get_default_session()
     test_session.application = "testing" * 40

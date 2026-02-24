@@ -33,37 +33,37 @@ from ansys.dynamicreporting.core.utils import report_utils as ru
 @pytest.mark.ado_test
 def test_payload() -> None:
     b = en.PayloaddataEncoder()
-    res = b.default(obj=ru.nexus_array())
+    res = b.default(ru.nexus_array())
     assert res == [[0.0]]
 
 
 @pytest.mark.ado_test
 def test_base_datetime() -> None:
     a = en.BaseEncoder()
-    assert a.default(obj=datetime.datetime(year=2023, month=4, day=10)) == "2023-04-10T00:00:00"
+    assert a.default(datetime.datetime(year=2023, month=4, day=10)) == "2023-04-10T00:00:00"
 
 
 @pytest.mark.ado_test
 def test_uuid() -> None:
     a = en.PayloaddataEncoder()
-    assert type(a.default(obj=uuid.uuid1())) is str
+    assert type(a.default(uuid.uuid1())) is str
 
 
 @pytest.mark.ado_test
 def test_bytes() -> None:
     a = en.BaseEncoder()
     mystr = "aa"
-    assert a.default(obj=mystr.encode()) == mystr
+    assert a.default(mystr.encode()) == mystr
 
 
 @pytest.mark.ado_test
 def test_dict() -> None:
     a = en.BaseEncoder()
     mydict = {"a": 1}
-    assert a.default(obj=mydict) == mydict
+    assert a.default(mydict) == mydict
 
 
 @pytest.mark.ado_test
 def test_nparray() -> None:
     a = en.PayloaddataEncoder()
-    assert isinstance(a.default(obj=np.ndarray(shape=(1, 1))), list)
+    assert isinstance(a.default(np.ndarray(shape=(1, 1))), list)

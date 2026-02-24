@@ -50,11 +50,6 @@ import webbrowser
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
 from ansys.dynamicreporting.core.utils import report_objects
 
-try:
-    from IPython.display import IFrame
-except ImportError:
-    pass
-
 
 # Generate the report object for the database
 class Report:
@@ -91,6 +86,8 @@ class Report:
             ``True`` if a ``TemplateREST`` object was found and assigned to ``self.report``,
             ``False`` otherwise.
         """
+        if self.service is None or self.service.serverobj is None:
+            return False
         success = False
         all_reports = self.service.serverobj.get_objects(objtype=report_objects.TemplateREST)
         report_objs = [x for x in all_reports if x.name == self.report_name]
@@ -148,13 +145,19 @@ class Report:
         if in_ipynb() and not new_tab:  # pragma: no cover
             iframe = self.get_iframe()
             if iframe is None:  # pragma: no cover
-                self.service.logger.error("Error: can not obtain IFrame for report")
+                if self.service is not None:
+                    self.service.logger.error("Error: can not obtain IFrame for report")
             else:
-                display(iframe)
+                try:
+                    from IPython.display import display as ipython_display
+                except ImportError:
+                    return
+                ipython_display(iframe)
         else:
             url = self.get_url(item_filter=item_filter)
             if url == "":  # pragma: no cover
-                self.service.logger.error("Error: could not obtain url for report")
+                if self.service is not None:
+                    self.service.logger.error("Error: could not obtain url for report")
             else:
                 webbrowser.open_new(url)
 
@@ -242,7 +245,7 @@ class Report:
         """
         guid = ""
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
+            print("No connection to any report")
             return guid
         if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
@@ -618,11 +621,14 @@ class Report:
                 stacklevel=2,
             )
             item_filter = filter
+        iframe = None
         if "IPython.display" in sys.modules:
+            try:
+                from IPython.display import IFrame as ipython_iframe
+            except ImportError:
+                return None
             url = self.get_url(item_filter=item_filter)
-            iframe = IFrame(src=url, width=width, height=height)
-        else:
-            iframe = None
+            iframe = ipython_iframe(src=url, width=width, height=height)
         return iframe
 
     def export_pdf(
@@ -671,11 +677,11 @@ class Report:
         """
         success = False  # pragma: no cover
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            print("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:  # pragma: no cover
             if query_params is None:
                 query_params = {}
@@ -739,11 +745,11 @@ class Report:
         """
         success = False
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            print("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:
             if query_params is None:
                 query_params = {}
@@ -786,8 +792,11 @@ class Report:
             report.export_json(r'C:\\tmp\\my_json_file.json')
         """
         try:
+            if self.service is None or self.service.serverobj is None:
+                return
             self.service.serverobj.store_json(self.report.guid, json_file_path)
         except Exception as e:
-            self.service.logger.error(
-                f"Exporting to JSON terminated for report: {self.report_name}\nError details: {e}"
-            )
+            if self.service is not None:
+                self.service.logger.error(
+                    f"Exporting to JSON terminated for report: {self.report_name}\nError details: {e}"
+                )

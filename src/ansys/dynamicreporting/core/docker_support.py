@@ -45,6 +45,8 @@ from pathlib import Path
 
 import docker
 from docker.errors import ImageNotFound
+from docker.models.containers import Container
+from docker.models.images import Image
 
 from .constants import DOCKER_DEV_REPO_URL, DOCKER_REPO_URL
 
@@ -88,18 +90,18 @@ class DockerLauncher:
             self._client: docker.client.DockerClient = docker.from_env()
         except Exception as e:  # pragma: no cover
             raise RuntimeError(f"Can't initialize Docker: {str(e)}")
-        self._container: docker.models.containers.Container = None
-        self._image: docker.models.images.Image = None
+        self._container: Container | None = None
+        self._image: Image | None = None
         # the Ansys / EnSight version we found in the container
         # to be reassigned later
-        self._ansys_version = None
+        self._ansys_version: str | None = None
         # CEI_HOME; to be reassigned later
-        self._cei_home = None
+        self._cei_home: str | None = None
         # nexus directory under CEI_HOME; to be reassigned later
-        self._nexus_directory = None
+        self._nexus_directory: str | None = None
         self._nexus_is_running = False
 
-    def pull_image(self) -> docker.models.images.Image:
+    def pull_image(self) -> Image:
         """
         Ensure the Docker image is available locally.
 
@@ -132,11 +134,13 @@ class DockerLauncher:
                 f"Unexpected error while resolving Docker image: {self._image_url}\n\n{str(e)}"
             ) from e
 
-    def create_container(self) -> docker.models.containers.Container:
+    def create_container(self) -> Container:
         """
         Create a Docker container using the specified image.
         """
         try:
+            if self._image is None:
+                raise RuntimeError("Docker image has not been pulled.")
             self._container = self._client.containers.create(self._image)
         except Exception as e:
             raise RuntimeError(f"Can't create Docker container: \n\n{str(e)}")
@@ -144,6 +148,8 @@ class DockerLauncher:
 
     def copy_to_host(self, src: str, *, dest: str = ".") -> None:
         try:
+            if self._container is None:
+                raise RuntimeError("Docker container has not been created.")
             tar_stream, _ = self._container.get_archive(src)
             # Ensure the output directory exists
             output_path = Path(dest)
@@ -209,7 +215,7 @@ class DockerLauncher:
         }
 
         # get a unique name for the container to run
-        existing_names = [x.name for x in self._client.from_env().containers.list()]
+        existing_names = [x.name for x in self._client.containers.list()]
         container_name = "nexus"
         while container_name in existing_names:
             container_name += random.choice(string.ascii_letters)  # nosec B311
@@ -300,7 +306,7 @@ class DockerLauncher:
         self._ansys_version = m.group(1)
         self._nexus_directory = self._cei_home + "/nexus" + self._ansys_version
 
-    def image(self):
+    def image(self) -> Image | None:
         """
         Get the Docker image.
 
@@ -311,7 +317,7 @@ class DockerLauncher:
         """
         return self._image
 
-    def container(self):
+    def container(self) -> Container | None:
         """
         Get the Docker container.
 
@@ -335,7 +341,7 @@ class DockerLauncher:
             return None
         return self._container.name
 
-    def ansys_version(self) -> str:
+    def ansys_version(self) -> str | None:
         """
         Get the three-digit Ansys version from the Docker container.
 
@@ -347,7 +353,7 @@ class DockerLauncher:
         """
         return self._ansys_version
 
-    def cei_home(self) -> str:
+    def cei_home(self) -> str | None:
         """
         Get the location of the ADR/CEI home directory within the Docker container.
         (``/Nexus/ADR`` for new images, ``/Nexus/CEI`` for legacy images).
@@ -359,7 +365,7 @@ class DockerLauncher:
         """
         return self._cei_home
 
-    def nexus_directory(self) -> str:
+    def nexus_directory(self) -> str | None:
         """
         Get the location of the ``nexusNNN`` directory within the Docker container.
 
@@ -391,6 +397,8 @@ class DockerLauncher:
 
         cmd = ["bash", "--login", "-c", cmd_line]
         # print("Running in the container: " + cmd_line)
+        if self._container is None:
+            raise RuntimeError("Docker container has not been created.")
         ret = self._container.exec_run(cmd)
         if ret[0] != 0:
             raise RuntimeError(
@@ -455,6 +463,8 @@ class DockerLauncher:
         """
 
         cp_cmd = "/bin/cp "
+        if self._cei_home is None:
+            raise RuntimeError("ADR/CEI home is not initialized.")
         if do_recursive:
             cp_cmd += "-r "
         cp_cmd += self._cei_home + "/" + src
@@ -477,6 +487,8 @@ class DockerLauncher:
         ------
         RuntimeError
         """
+        if self._ansys_version is None or self._cei_home is None:
+            raise RuntimeError("Docker launcher is not fully initialized.")
         if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
@@ -499,6 +511,8 @@ class DockerLauncher:
         ------
         RuntimeError
         """
+        if self._ansys_version is None or self._cei_home is None:
+            raise RuntimeError("Docker launcher is not fully initialized.")
         if int(self._ansys_version) > 242:
             launcher = "adr_launcher"
         else:
@@ -535,6 +549,8 @@ class DockerLauncher:
         ------
         RuntimeError
         """
+        if self._ansys_version is None or self._cei_home is None:
+            raise RuntimeError("Docker launcher is not fully initialized.")
         launcher = "adr_launcher" if int(self._ansys_version) > 242 else "nexus_launcher"
         nexus_cmd = (
             f"{self._cei_home}/bin/{launcher} start "
@@ -552,6 +568,8 @@ class DockerLauncher:
         """Release any additional resources allocated during launching."""
         try:
             if self._nexus_is_running:
+                if self._ansys_version is None or self._cei_home is None:
+                    raise RuntimeError("Docker launcher is not fully initialized.")
                 if int(self._ansys_version) > 242:
                     launcher = "adr_launcher"
                 else:
@@ -571,6 +589,8 @@ class DockerLauncher:
             )
         # Stop the container
         try:
+            if self._container is None:
+                return
             self._container.stop()
         except Exception as e:
             raise RuntimeWarning(f"Problem stopping the Docker container.\n{str(e)}")
@@ -578,8 +598,9 @@ class DockerLauncher:
     def remove(self, *, exclude_image=True, force=False) -> None:
         """Remove the Docker container."""
         try:
-            self._container.remove(force=force)
-            if not exclude_image:
+            if self._container is not None:
+                self._container.remove(force=force)
+            if not exclude_image and self._image is not None:
                 self._image.remove(force=force)
         except Exception as e:
             raise RuntimeWarning(f"Problem removing the Docker container.\n{str(e)}")

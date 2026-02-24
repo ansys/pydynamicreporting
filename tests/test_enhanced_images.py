@@ -32,6 +32,20 @@ from ansys.dynamicreporting.core.utils import enhanced_images as ei
 from ansys.dynamicreporting.core.utils import report_utils as ru
 
 
+def _generate_enhanced_image_as_tiff(*args, **kwargs):
+    generate_tiff = getattr(ei, "generate_enhanced_image_as_tiff", None)
+    if generate_tiff is None:
+        raise RuntimeError("Enhanced TIFF generator is unavailable.")
+    return generate_tiff(*args, **kwargs)
+
+
+def _generate_enhanced_image_in_memory(*args, **kwargs):
+    generate_in_memory = getattr(ei, "generate_enhanced_image_in_memory", None)
+    if generate_in_memory is None:
+        raise RuntimeError("Enhanced in-memory image generator is unavailable.")
+    return generate_in_memory(*args, **kwargs)
+
+
 def create_sample_sphere():
     import vtk
 
@@ -70,7 +84,7 @@ def setup_dpf_tiff_generation(dpf_model_scalar_var):
     model, field = dpf_model_scalar_var
 
     tiff_name = "dpf_find_electric_therm.tiff"
-    ei.generate_enhanced_image_as_tiff(model, field, "DPF Sample", "var", tiff_name)
+    _generate_enhanced_image_as_tiff(model, field, "DPF Sample", "var", tiff_name)
 
     image = Image.open(tiff_name)
     yield image
@@ -79,7 +93,7 @@ def setup_dpf_tiff_generation(dpf_model_scalar_var):
 
 def setup_dpf_inmem_generation(dpf_model_scalar_var):
     model, field = dpf_model_scalar_var
-    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "var")
+    buffer = _generate_enhanced_image_in_memory(model, field, "DPF Sample", "var")
 
     image = Image.open(buffer)
     yield image
@@ -126,7 +140,7 @@ def test_generate_enhanced_image_vector_var_none_component(dpf_model_vector_var)
     model, field = dpf_model_vector_var
 
     with pytest.raises(ValueError) as exc_info:
-        ei.generate_enhanced_image_as_tiff(
+        _generate_enhanced_image_as_tiff(
             model,
             field,
             "DPF Sample",
@@ -148,7 +162,7 @@ def test_generate_enhanced_image_vector_var_wrong_component(dpf_model_vector_var
     model, field = dpf_model_vector_var
 
     with pytest.raises(ValueError) as exc_info:
-        ei.generate_enhanced_image_as_tiff(
+        _generate_enhanced_image_as_tiff(
             model,
             field,
             "DPF Sample",
@@ -168,19 +182,19 @@ def test_generate_enhanced_image_vector_var_wrong_component(dpf_model_vector_var
 def test_generate_enhanced_image_vector_var_all_components(dpf_model_vector_var):
     model, field = dpf_model_vector_var
 
-    buffer_x = ei.generate_enhanced_image_in_memory(
+    buffer_x = _generate_enhanced_image_in_memory(
         model, field, "DPF Sample", "displacement X", component="X"
     )
     with Image.open(buffer_x) as image_x:
         check_enhanced(image_x)
 
-    buffer_y = ei.generate_enhanced_image_in_memory(
+    buffer_y = _generate_enhanced_image_in_memory(
         model, field, "DPF Sample", "displacement Y", component="Y"
     )
     with Image.open(buffer_y) as image_y:
         check_enhanced(image_y)
 
-    buffer_z = ei.generate_enhanced_image_in_memory(
+    buffer_z = _generate_enhanced_image_in_memory(
         model, field, "DPF Sample", "displacement Z", component="Z"
     )
     with Image.open(buffer_z) as image_z:
@@ -191,7 +205,7 @@ def test_generate_enhanced_image_vector_var_all_components(dpf_model_vector_var)
 def test_generate_enhanced_image_elem_var(dpf_model_elem_var):
     model, field = dpf_model_elem_var
 
-    buffer = ei.generate_enhanced_image_in_memory(model, field, "DPF Sample", "element vol")
+    buffer = _generate_enhanced_image_in_memory(model, field, "DPF Sample", "element vol")
     with Image.open(buffer) as image:
         check_enhanced(image)
 

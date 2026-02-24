@@ -45,7 +45,7 @@ except Exception:
     is_enve = False
 
 
-def get_evsn_proxy_image(filename: str) -> bytearray | None:
+def get_evsn_proxy_image(filename: str) -> bytes | None:
     """Extract and return any PNG proxy image that could be found in the input EVSN
     file."""
     # From liben/proxy_image.cpp
@@ -142,7 +142,7 @@ def get_avz_directory(csf_file: str) -> str:
     return os.path.splitext(csf_file)[0]
 
 
-def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = None):
+def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str | None = None) -> None:
     """Rebuild the media directory representation of the file (udrw format, avz, scdoc
     or evsn)"""
     # We are looking to convert the .csf or other udrw file to .avz with this command:
@@ -224,7 +224,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
         create_flags = 0
         if platform.system().startswith("Win"):
             app += ".bat"
-            create_flags = subprocess.CREATE_NO_WINDOW
+            create_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         avz_filename = os.path.join(avz_dir, "scene.avz")
         cmd = [app, "-allframes", csf_file, avz_filename]
         try:

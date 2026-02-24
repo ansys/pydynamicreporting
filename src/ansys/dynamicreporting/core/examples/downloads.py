@@ -71,7 +71,7 @@ def check_url_exists(url: str) -> bool:
         return False
 
 
-def get_url_content(url: str) -> str:
+def get_url_content(url: str) -> bytes:
     """Get the content of a URL.
 
     Parameters
