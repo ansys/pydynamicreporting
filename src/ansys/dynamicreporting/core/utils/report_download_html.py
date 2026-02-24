@@ -151,7 +151,7 @@ class ReportDownloadHTML:
             "media/core.js",
             "media/loader.js",
             "media/startup.js",
-            "media/tex-mml-chtml.js", # important: top-level loader
+            "media/tex-mml-chtml.js",  # important: top-level loader
             "media/LICENSE",
             "media/a11y/assistive-mml.js",
             "media/a11y/complexity.js",
@@ -187,7 +187,7 @@ class ReportDownloadHTML:
             "media/ui/lazy.js",
             "media/ui/menu.js",
             "media/ui/no-dark-mode.js",
-            "media/ui/safe.js"
+            "media/ui/safe.js",
         ]
 
         tmp = urllib.parse.urlsplit(self._url)

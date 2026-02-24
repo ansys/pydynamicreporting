@@ -67,7 +67,7 @@ MATHJAX_FILES = [
     "website/scripts/mathjax/core.js",
     "website/scripts/mathjax/loader.js",
     "website/scripts/mathjax/startup.js",
-    "website/scripts/mathjax/tex-mml-chtml.js", # important: top-level loader
+    "website/scripts/mathjax/tex-mml-chtml.js",  # important: top-level loader
     "website/scripts/mathjax/LICENSE",
     "website/scripts/mathjax/a11y/assistive-mml.js",
     "website/scripts/mathjax/a11y/complexity.js",
@@ -103,7 +103,7 @@ MATHJAX_FILES = [
     "website/scripts/mathjax/ui/lazy.js",
     "website/scripts/mathjax/ui/menu.js",
     "website/scripts/mathjax/ui/no-dark-mode.js",
-    "website/scripts/mathjax/ui/safe.js"
+    "website/scripts/mathjax/ui/safe.js",
 ]
 
 # -----------------------
