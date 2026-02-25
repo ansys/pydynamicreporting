@@ -512,7 +512,10 @@ class ServerlessReportExporter:
         """
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
         if filename.endswith("ANSYSViewer_min.js"):
-            s = data.decode("utf-8")
+            try:
+                s = data.decode("utf-8")
+            except UnicodeDecodeError:
+                s = data.decode("latin-1")
             # Replace "<static>/website/images/" with dynamic base to ./media/
             s = s.replace(
                 f'"{self._static_url}website/images/"',
@@ -526,7 +529,10 @@ class ServerlessReportExporter:
             return s.encode("utf-8")
 
         if filename.endswith("viewer-loader.js"):
-            s = data.decode("utf-8")
+            try:
+                s = data.decode("utf-8")
+            except UnicodeDecodeError:
+                s = data.decode("latin-1")
             if ver:
                 s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
             return s.encode("utf-8")
