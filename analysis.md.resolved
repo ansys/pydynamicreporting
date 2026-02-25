@@ -1,0 +1,647 @@
+# Compatibility Analysis: Django / django-guardian Version Mismatch
+
+## A. Repo Map
+
+| File | Key Symbols | Role |
+|------|-------------|------|
+| [pyproject.toml](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/pyproject.toml) | `dependencies`, `[project.optional-dependencies]` | Declares `django>=5.2.11,<6.0.0` and `django-guardian>=3.2.0,<4.0.0` |
+| [__init__.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/__init__.py#L26) | `DEFAULT_ANSYS_VERSION = "271"` | Sets current target product version |
+| [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py) | `ADR.__init__`, `ADR.setup` | Singleton class; bootstraps Django by importing product settings and calling `django.setup()` |
+| [serverless/__init__.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/__init__.py) | Public re-exports of [ADR](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py#85-1781), items, templates | Public API surface for serverless module |
+| [common_utils.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/common_utils.py) | [get_install_info](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/common_utils.py#57-133), [get_install_version](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/common_utils.py#36-55) | Detects Ansys install path (ADR/ or CEI/ layout) and version |
+| [report_remote_server.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/utils/report_remote_server.py#L1219-L1229) | [create_new_local_database](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/utils/report_remote_server.py#1131-1314) | Secondary Django setup path via `DJANGO_SETTINGS_MODULE = "ceireports.settings"` |
+| [serverless/template.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/template.py#L632) | `from ceireports.utils import get_render_error_html` | Imports product utility at render time |
+| [serverless/item.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/item.py#L718) | `from ceireports.utils import get_render_error_html` | Same product utility import |
+| [docker_support.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/docker_support.py) | `DockerLauncher` | Pulls and extracts product install from Docker images |
+| [constants.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/constants.py) | `DOCKER_REPO_URL`, layout/generator type tuples | Constants used throughout |
+| [tests/serverless/conftest.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/conftest.py) | [adr_init](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/conftest.py#33-83), [adr_serverless](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/conftest.py#86-91) fixtures | Test fixtures; bootstraps ADR from Docker or local install |
+
+---
+
+## B. Current Bootstrap Flow (step-by-step)
+
+The primary serverless bootstrap is in [ADR.setup()](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py#L483-L738):
+
+```
+1. ADR.__init__() resolves the Ansys installation directory
+   - Calls get_install_info() from common_utils.py
+   - Stores self._ansys_installation and self._ansys_version
+
+2. ADR.setup() is called by user:
+   a. Try to import 'enve' module for geometry (lines 519-589)
+   b. Add product's Django dir to sys.path (lines 592-596):
+      adr_path = self._ansys_installation / f"nexus{ver}" / "django"
+      sys.path.append(str(adr_path))
+   c. Import product settings (line 597):
+      from ceireports import settings_serverless
+   d. Copy ALL uppercase attributes into overrides dict (lines 601-604):
+      for setting in dir(settings_serverless):
+          if setting.isupper():
+              overrides[setting] = getattr(settings_serverless, setting)
+   e. Apply local overrides: DEBUG, MEDIA_ROOT, STATIC_ROOT,
+      STATICFILES_DIRS, MEDIA_URL, STATIC_URL, DATABASES,
+      in-memory storage (lines 607-689)
+   f. Call django.conf.settings.configure(**overrides) (line 701)
+   g. Call django.setup() (line 702)   ← THIS IS WHERE FAILURE OCCURS
+   h. Run migrations (lines 706-712)
+   i. Geometry checks (lines 714-720)
+   j. Optionally collect statics (lines 722-731)
+   k. Create default Session and Dataset (lines 737-738)
+```
+
+### Secondary bootstrap path
+
+[create_new_local_database()](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/utils/report_remote_server.py#L1131-L1298) (line 1219):
+- Sets `os.environ["DJANGO_SETTINGS_MODULE"] = "ceireports.settings"`
+- Adds product django dir to sys.path
+- Calls `django.setup()` directly (line 1229)
+
+This path uses `ceireports.settings` (full settings, not `settings_serverless`) and is subject to the **same class of problems**.
+
+---
+
+## C. Root Cause Analysis
+
+### Immediate issue: GUARDIAN_MONKEY_PATCH
+
+**What happens:**
+1. `pydynamicreporting` declares `django-guardian>=3.2.0` in [pyproject.toml](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/pyproject.toml)
+2. User installs `pydynamicreporting` → pip resolves `django-guardian 3.2.x`
+3. User points at an **older product installation** (e.g., v261 / 2026R1)
+4. The product's `ceireports/settings_serverless.py` contains `GUARDIAN_MONKEY_PATCH = True` (the deprecated setting name)
+5. `ADR.setup()` at line 601-604 copies **all** uppercase settings from the product module into `overrides`, including this deprecated setting
+6. `settings.configure(**overrides)` injects `GUARDIAN_MONKEY_PATCH` into Django settings
+7. `django.setup()` triggers `django-guardian 3.2.x`'s `AppConfig.ready()`, which **raises an error** when it finds the deprecated `GUARDIAN_MONKEY_PATCH` instead of `GUARDIAN_MONKEY_PATCH_USER`
+
+**Key fact:** There is **no reference** to `GUARDIAN_MONKEY_PATCH` or `GUARDIAN_MONKEY_PATCH_USER` anywhere in the `pydynamicreporting` OSS repo. The setting originates **entirely** from the proprietary product's settings module, which is imported at runtime.
+
+### Broader class of issues
+
+The current architecture has a **tight coupling boundary violation**: the OSS library directly imports and trusts arbitrary settings and code from the product installation, forwarding them into Django's global configuration. Any change in the OSS library's dependencies that is incompatible with the product's settings or code will cause breakage. This includes:
+
+- Settings renamed/removed in newer dependency versions
+- Python API changes in product ORM models (product code on sys.path uses product-era Django APIs)
+- Third-party libraries bundled inside the product that clash with pip-installed versions
+- Product utilities imported directly (`ceireports.utils.get_render_error_html` in `template.py:632` and `item.py:718`)
+
+---
+
+## D. Options
+
+### Option 1: Settings Sanitization / Translation Layer
+
+**What**: Add a settings sanitization step in `ADR.setup()` between copying the product settings (line 604) and calling `settings.configure()` (line 701). This step would detect and translate deprecated settings to their modern equivalents.
+
+**How (specific files/functions)**:
+- Edit [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py), `ADR.setup()`, between lines 604 and 606
+- Create a new function (e.g., `_sanitize_settings(overrides: dict) -> dict`) that applies known translations:
+  ```python
+  def _sanitize_settings(overrides):
+      # django-guardian 3.x: GUARDIAN_MONKEY_PATCH → GUARDIAN_MONKEY_PATCH_USER
+      if "GUARDIAN_MONKEY_PATCH" in overrides and "GUARDIAN_MONKEY_PATCH_USER" not in overrides:
+          overrides["GUARDIAN_MONKEY_PATCH_USER"] = overrides.pop("GUARDIAN_MONKEY_PATCH")
+      return overrides
+  ```
+- Optionally also apply to [report_remote_server.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/utils/report_remote_server.py)'s [create_new_local_database](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/utils/report_remote_server.py#1131-1314) path (though that one uses `DJANGO_SETTINGS_MODULE` env var, so sanitization would need to be done differently — possibly by monkey-patching the settings module after import but before `django.setup()`)
+
+**Pros**:
+- Minimal change (~10 lines)
+- Fixes the immediate problem today
+- No packaging/dependency changes needed
+- No user workflow changes
+- Easy to test: unit test with mock settings containing the deprecated key
+
+**Cons**:
+- Reactive — requires manually adding each new incompatibility as discovery
+- Does not address deeper product API mismatches (only settings-level)
+- Translation rules could grow into a large maintenance burden over many product versions
+- Risk of subtle side-effects if translations are incomplete or wrong
+
+**Tests**:
+- Unit test: mock `settings_serverless` module with `GUARDIAN_MONKEY_PATCH = True`, verify the overrides dict after sanitization contains `GUARDIAN_MONKEY_PATCH_USER` and not `GUARDIAN_MONKEY_PATCH`
+- Integration test: bootstrap against an old product install and verify `django.setup()` succeeds
+
+**Failure modes**:
+- If a new incompatibility arises that isn't a settings rename (e.g., a missing model field), this approach doesn't help
+- If the product changes the setting to a different value or semantics, a simple rename might be wrong
+
+---
+
+### Option 2: Settings Allowlist (instead of copying all uppercase attributes)
+
+**What**: Instead of copying **all** uppercase attributes from `settings_serverless` (the current behavior at lines 601-604), maintain an explicit allowlist of known-needed settings. Unknown/deprecated settings are silently dropped.
+
+**How**:
+- In [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py), replace lines 601-604 with an allowlist approach:
+  ```python
+  REQUIRED_SETTINGS = {
+      "DATABASES", "INSTALLED_APPS", "MIDDLEWARE", "SECRET_KEY",
+      "AUTHENTICATION_BACKENDS", "ROOT_URLCONF", ...
+      # List verified settings that are needed
+  }
+  for setting in dir(settings_serverless):
+      if setting.isupper() and setting in REQUIRED_SETTINGS:
+          overrides[setting] = getattr(settings_serverless, setting)
+  ```
+
+**Pros**:
+- Prevents any deprecated/unknown settings from leaking into Django config
+- Proactively eliminates the entire class of "unexpected setting" issues
+- Makes the dependency on product settings explicit and documented
+
+**Cons**:
+- **High risk**: Requires knowing exactly which product settings are needed. Missing one → hard-to-debug runtime failures
+- Different product versions may need different settings → the allowlist must be version-aware or very broad
+- Significant upfront work to enumerate all needed settings
+- Product may add new settings in future versions that are critical; allowlist must be maintained
+
+**Tests**:
+- Unit test: inject a settings module with known-good and known-bad settings; verify only allowlisted ones pass through
+- Integration test: full bootstrap with real product installs (old and new)
+
+**Failure modes**:
+- Omitting a setting from the allowlist silently breaks functionality (e.g., missing an auth backend, a logging config, etc.)
+- Maintaining the allowlist across product versions is error-prone
+
+---
+
+### Option 3: Settings Denylist (blocklist deprecated keys)
+
+**What**: Keep the current "copy all uppercase" approach but maintain a blocklist of settings known to cause issues with the current dependency versions.
+
+**How**:
+- In [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py) `ADR.setup()`:
+  ```python
+  BLOCKED_SETTINGS = {"GUARDIAN_MONKEY_PATCH"}
+  for setting in dir(settings_serverless):
+      if setting.isupper() and setting not in BLOCKED_SETTINGS:
+          overrides[setting] = getattr(settings_serverless, setting)
+  ```
+- Combined with Option 1 (translate instead of block), this becomes a "transform + filter" layer.
+
+**Pros**:
+- Simple to implement
+- Less risk than allowlist (only blocks known-bad settings)
+- Easy to extend as new issues are discovered
+
+**Cons**:
+- Still reactive — new problems require new entries
+- Blocking a setting without replacing it may break expected behavior (e.g., guardian functionality might be disabled entirely)
+
+**Tests**:
+- Unit test: mock settings module with blocked keys, verify they don't appear in overrides
+- Verify guardian still works without the blocked setting
+
+**Failure modes**:
+- Blocking a setting that is actually needed for some functionality
+- Not knowing about a new problematic setting until a user reports it
+
+---
+
+### Option 4: Dependency Version Pinning / Constraints per Product Version
+
+**What**: Provide different dependency constraints depending on which product version the user targets. This could be via extras, constraint files, or documentation.
+
+#### Sub-option 4a: Extras in pyproject.toml
+
+```toml
+[project.optional-dependencies]
+product-v261 = [
+    "django>=4.2,<5.0",
+    "django-guardian>=2.4.0,<3.0.0",
+]
+product-v271 = [
+    "django>=5.2.11,<6.0.0",
+    "django-guardian>=3.2.0,<4.0.0",
+]
+```
+
+User installs: `pip install ansys-dynamicreporting-core[product-v261]`
+
+#### Sub-option 4b: Constraint files
+
+Ship constraint files (e.g., `constraints/v261.txt`, `constraints/v271.txt`):
+```
+# constraints/v261.txt
+django>=4.2,<5.0
+django-guardian>=2.4.0,<3.0.0
+```
+
+User installs: `pip install ansys-dynamicreporting-core -c constraints/v261.txt`
+
+#### Sub-option 4c: Environment markers (not really viable)
+
+Environment markers can't select based on product version — they only support Python version, OS, etc. **Not viable** for this use case.
+
+**Pros**:
+- Ensures the OSS library uses dependency versions that match the product
+- Eliminates version mismatch entirely
+- Clear, explicit contract with users
+
+**Cons**:
+- **Major packaging complexity**: testing matrix doubles for each supported product version
+- Users must know which product version they have before installing
+- Conflicting extras (only one set can be active) — can't easily switch product versions
+- The base `dependencies` in pyproject.toml must be broad enough to accommodate all extras, or the extras must override the base (which pip doesn't support — extras are additive, not override)
+- django 4.x and django 5.x are fundamentally different — the OSS code itself needs to work with both, which may not be feasible
+
+**Tests**:
+- CI matrix: test with each extra against corresponding product Docker image
+- Test that conflicting extras produce a pip resolution error (user-facing)
+
+**Failure modes**:
+- User installs wrong extra → same or different breakage
+- Maintaining support for two Django major versions in the codebase is costly
+- Extras don't override base dependencies — if base says `django>=5.2`, an extra can't downgrade to `django>=4.2`
+
+---
+
+### Option 5: Runtime Version Detection with Clear Error Messages
+
+**What**: At bootstrap time, detect the product version and the installed library versions, and raise clear, actionable errors if there's a known incompatibility.
+
+**How**:
+- In `ADR.setup()`, after detecting the product version (`self._ansys_version`) and before `django.setup()`:
+  ```python
+  import guardian
+  product_ver = self._ansys_version  # e.g., 261, 271
+  guardian_ver = tuple(int(x) for x in guardian.__version__.split("."))
+  if product_ver < 271 and guardian_ver >= (3, 0, 0):
+      raise ImproperlyConfiguredError(
+          f"Product version {product_ver} is not compatible with "
+          f"django-guardian {guardian.__version__}. Please install "
+          f"django-guardian<3.0.0 or upgrade your product installation."
+      )
+  ```
+
+**Pros**:
+- Does not silently break — gives the user a clear path forward
+- Easy to implement and maintain
+- Can serve as a complement to other options ("belt and suspenders")
+
+**Cons**:
+- Does not *fix* anything — just fails fast with a better message
+- Requires the user to take action (downgrade a dependency or upgrade product)
+- Downgrading `django-guardian` may conflict with other things in the user's environment
+
+**Tests**:
+- Unit test: mock `guardian.__version__` and `self._ansys_version`, verify correct error is raised or not
+
+**Failure modes**:
+- If the version check is too broad, it may block valid configurations
+- If too narrow, some incompatibilities slip through
+
+---
+
+### Option 6: Product-Version-Aware Adapter / Compatibility Shim Module
+
+**What**: Create a dedicated compatibility module (e.g., `serverless/_compat.py`) that centralizes all product-version-specific behavior. This module uses feature detection or version-based dispatch to adapt between old and new product APIs.
+
+**How**:
+- Create [serverless/_compat.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/_compat.py):
+  ```python
+  """Compatibility shims for different product versions."""
+
+  def sanitize_settings(overrides: dict, product_version: int) -> dict:
+      """Translate/fix settings from older product releases."""
+      # guardian setting rename
+      if "GUARDIAN_MONKEY_PATCH" in overrides and "GUARDIAN_MONKEY_PATCH_USER" not in overrides:
+          overrides["GUARDIAN_MONKEY_PATCH_USER"] = overrides.pop("GUARDIAN_MONKEY_PATCH")
+      # Future: add more translations here
+      return overrides
+
+  def get_render_error_html(*args, **kwargs):
+      """Wrapper around ceireports.utils.get_render_error_html with fallback."""
+      try:
+          from ceireports.utils import get_render_error_html as _impl
+          return _impl(*args, **kwargs)
+      except (ImportError, AttributeError):
+          return "<p>Error rendering content</p>"
+  ```
+- Update [adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_adr.py) to use `_compat.sanitize_settings(overrides, self._ansys_version)`
+- Update `template.py:632` and `item.py:718` to import from `_compat` instead of directly from `ceireports`
+
+**Pros**:
+- Single location for all compatibility logic — easy to audit, extend, and test
+- Handles both settings-level and API-level mismatches
+- Product-touching imports are isolated behind a single boundary
+- Natural place to add feature detection (try/except patterns)
+- Easy to deprecate shims once old product versions are EOL
+
+**Cons**:
+- Upfront investment to create and wire the module
+- Requires ongoing maintenance for each new incompatibility
+- Does not eliminate root cause (direct product import coupling)
+
+**Tests**:
+- Unit tests for each shim function with various product versions
+- Integration tests against old and new product Docker images
+
+**Failure modes**:
+- New incompatibilities still require code changes (not self-healing)
+- If a shim is incomplete or buggy, it may mask real errors
+
+---
+
+### Option 7: Import Boundary Module (Isolate All Product Imports)
+
+**What**: Create a single module that encapsulates **all** imports from the product (`ceireports` and friends). No other module in `pydynamicreporting` imports from the product directly. This module provides a stable internal API regardless of product version.
+
+**How**:
+- Create `serverless/_product_bridge.py`:
+  ```python
+  """Single point of contact with the proprietary product code."""
+
+  _settings_module = None
+  _product_version = None
+
+  def load_product(adr_path: str, product_version: int):
+      """Import product code and expose a clean interface."""
+      import sys
+      sys.path.append(adr_path)
+      global _settings_module, _product_version
+      from ceireports import settings_serverless
+      _settings_module = settings_serverless
+      _product_version = product_version
+
+  def get_settings_overrides() -> dict:
+      """Return sanitized settings dict for django.conf.settings.configure()."""
+      overrides = {}
+      for setting in dir(_settings_module):
+          if setting.isupper():
+              overrides[setting] = getattr(_settings_module, setting)
+      # Apply all sanitizations
+      _sanitize(overrides)
+      return overrides
+
+  def get_render_error_html(*args, **kwargs):
+      from ceireports.utils import get_render_error_html as _impl
+      return _impl(*args, **kwargs)
+
+  def _sanitize(overrides):
+      if "GUARDIAN_MONKEY_PATCH" in overrides:
+          overrides["GUARDIAN_MONKEY_PATCH_USER"] = overrides.pop("GUARDIAN_MONKEY_PATCH")
+  ```
+- Refactor [adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_adr.py) lines 592-604 to call `_product_bridge.load_product()` and `get_settings_overrides()`
+- Refactor `template.py:632` and `item.py:718` to call `_product_bridge.get_render_error_html()`
+
+**Pros**:
+- Strongest isolation: product imports are behind a single boundary
+- All future product-touching code goes through one module
+- Makes it easy to mock the entire product interface for testing
+- Clear API contract between OSS and product
+
+**Cons**:
+- Larger refactor than Option 1 or 6
+- Still requires per-incompatibility fixes inside the bridge module
+- May need to expose many product APIs through the bridge as usage grows
+
+**Tests**:
+- Mock `_product_bridge` in tests — no need for a real product install for unit tests
+- Integration tests against real installs via the bridge
+
+**Failure modes**:
+- If someone adds a direct product import outside the bridge (discipline issue)
+- Bridge must be updated as product API surface expands
+
+---
+
+### Option 8: Split Package Distribution
+
+**What**: Split `ansys-dynamicreporting-core` into two packages:
+1. `ansys-dynamicreporting-core` (base package, no Django, no serverless capability)
+2. `ansys-dynamicreporting-serverless` (serverless capabilities, depends on Django)
+
+Users who only need REST/service mode don't get Django at all. Users who need serverless mode install the serverless package with version-appropriate dependencies.
+
+**How**:
+- Move [serverless/](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/conftest.py#86-91) into a separate package
+- Base package has no Django dependency
+- Serverless package declares Django/guardian dependencies and can have version-specific extras
+
+**Pros**:
+- Clean separation of concerns
+- Base users don't carry Django/guardian risk at all
+- Each package can version independently
+
+**Cons**:
+- **Very disruptive**: breaks existing import paths (`from ansys.dynamicreporting.core.serverless import ADR` → changes)
+- Major CI/CD and release process changes (two packages to release)
+- Existing users must change their install commands
+- Shared code between the two packages creates an additional complexity layer
+
+**Tests**:
+- Test both packages install cleanly, independently and together
+- Migration guide for existing users
+
+**Failure modes**:
+- Version desync between the two packages
+- Users confused about which package to install
+- Excessive operational overhead for a small team
+
+---
+
+### Option 9: Runtime Dependency Installation / Version Check at Import
+
+**What**: Instead of declaring Django/guardian in `[project].dependencies`, make them optional and install or validate them at import time based on usage.
+
+**How**:
+- Move Django/guardian from `dependencies` to an optional extra name (e.g., `[project.optional-dependencies].serverless`)
+- In [serverless/__init__.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/__init__.py), check versions at import time and provide guidance
+
+**Pros**:
+- Users who don't use serverless don't need Django installed
+- Reduces attack surface for dependency conflicts
+
+**Cons**:
+- Bad UX: delayed errors when importing serverless module
+- Goes against Python packaging best practices
+- Hard to guarantee correct versions across the broader environment
+- pip can't resolve conflicts between mandatory and optional dependencies well
+
+**Tests**:
+- Test that importing [serverless](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/conftest.py#86-91) without Django gives a clear error
+- Test that installing the extra provides the right versions
+
+**Failure modes**:
+- Users forget to install the extra and get confusing import errors
+- Version conflicts between user's Django and the extra's Django
+
+---
+
+### Option 10: IPC (Non-HTTP) — Subprocess Isolation
+
+**What**: Instead of importing product code into the same Python process, run product-dependent operations in a subprocess that uses the product's own Python environment with matching dependency versions.
+
+**How**:
+- The product installation includes its own Python with correct Django/guardian versions
+- `pydynamicreporting` spawns the product's Python as a subprocess
+- Communication via stdin/stdout (JSON), pipes, or Unix domain sockets
+
+**Pros**:
+- Complete process isolation — dependency conflicts are impossible
+- Each side can have its own Django version
+- Product API changes don't crash the client process
+
+**Cons**:
+- **Significant architectural change** — near-complete rewrite of serverless module
+- Performance overhead from IPC serialization
+- Complex error handling across process boundary
+- Debugging becomes much harder
+- The product's Python may not be available or compatible
+- State management (Django ORM objects can't cross process boundary directly)
+- Does NOT meet the "avoid generating 1000 commands" constraint for bulk operations
+
+**Tests**:
+- End-to-end tests via subprocess
+- Test IPC protocol serialization/deserialization
+
+**Failure modes**:
+- Product Python environment missing or broken
+- Serialization overhead makes bulk operations impractical
+- Orphaned subprocesses on crash
+
+> [!WARNING]
+> This is labeled "IPC (non-HTTP)" as requested. It avoids network/HTTP but introduces significant complexity. The main constraint it violates is practicality for bulk ORM operations — each database query would require an IPC round-trip.
+
+---
+
+## E. Recommendation
+
+### Immediate fix: Option 1 + Option 5 (combined) — Settings Sanitization + Version Detection
+
+**Justification**:
+
+1. **Lowest risk, highest impact** for the immediate `GUARDIAN_MONKEY_PATCH` break
+2. **Evidence from repo**: The `overrides` dict is assembled in one place ([adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_adr.py) lines 601-604), making it trivial to add a sanitization step. The product version is already available as `self._ansys_version`
+3. **No packaging changes** — zero impact on existing users' install workflows
+4. **Testable without a product install** — the sanitization function can be unit tested with a mock settings dict
+5. **The [report_remote_server.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/utils/report_remote_server.py) path** (line 1219) uses `DJANGO_SETTINGS_MODULE` so it goes through Django's own settings loading — sanitization there is harder but also less critical (that path is legacy/GUI-focused)
+
+### Medium-term: Option 6 (Compatibility Shim Module)
+
+**Justification**:
+
+1. **Addresses the broader class** of issues without a large refactor
+2. **Centralizes** all product-interaction quirks in one place
+3. **Natural evolution** of Option 1 — the sanitization function graduates into a proper module
+4. **Manageable scope** compared to Options 7, 8, or 10
+5. **Already 3 product import sites** in the codebase (`settings_serverless` in [adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_adr.py), `get_render_error_html` in [template.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_template.py) and [item.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_item.py)) — enough to justify a dedicated module
+
+### Long-term: Option 7 (Import Boundary Module)
+
+If the number of product-touching imports grows, evolve Option 6 into a full boundary module. This becomes compelling if/when:
+- More than ~5 product import sites exist
+- Product API breaks become frequent
+- The team starts supporting 3+ concurrent product versions
+
+### What NOT to do
+
+- **Option 8 (split package)**: Too disruptive for the current team size and user base
+- **Option 10 (IPC/subprocess)**: Fundamentally changes the architecture; overhead for bulk ORM operations is prohibitive
+- **Option 4a/4b (version-specific deps)**: pip extras are additive and can't override base dependencies; maintaining two Django major version compatibility in code is impractical
+
+### Unknowns to verify quickly
+
+1. **What other settings in old product `settings_serverless` are incompatible with new dependency versions?**
+   - Grep the product's `ceireports/settings_serverless.py` for all uppercase settings and cross-reference with `django-guardian 3.x` and `django 5.2` changelogs
+2. **Does `ceireports.utils.get_render_error_html` API signature differ across product versions?**
+   - Check the function signature in old vs new product installs
+3. **Is `report_remote_server.py:create_new_local_database` used by serverless users?**
+   - If not (it seems to be a legacy GUI utility), it may not need the same urgency
+
+---
+
+## F. Minimal Patch Plan
+
+> [!IMPORTANT]
+> This patch is **not implemented** per the request. Only the exact edit locations and logic are described.
+
+### Target file: [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py)
+
+### Edit 1: Add sanitization function (new code, before class [ADR](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py#85-1781))
+
+**Location**: After the imports block (after line ~83), add:
+
+```python
+def _sanitize_product_settings(overrides: dict) -> dict:
+    """Translate deprecated product settings to match current dependency versions.
+
+    This function is called after extracting settings from the product's
+    ``settings_serverless`` module and before passing them to
+    ``django.conf.settings.configure()``. It ensures compatibility between
+    older product releases and newer versions of third-party dependencies
+    (e.g. django-guardian 3.x).
+
+    Parameters
+    ----------
+    overrides : dict
+        The settings dict to sanitize (modified in place).
+
+    Returns
+    -------
+    dict
+        The sanitized settings dict.
+    """
+    # django-guardian >= 3.0: GUARDIAN_MONKEY_PATCH was replaced by
+    # GUARDIAN_MONKEY_PATCH_USER. Older product releases still set the
+    # deprecated name.
+    if "GUARDIAN_MONKEY_PATCH" in overrides and "GUARDIAN_MONKEY_PATCH_USER" not in overrides:
+        overrides["GUARDIAN_MONKEY_PATCH_USER"] = overrides.pop("GUARDIAN_MONKEY_PATCH")
+    elif "GUARDIAN_MONKEY_PATCH" in overrides and "GUARDIAN_MONKEY_PATCH_USER" in overrides:
+        # Both present — keep only the new one
+        del overrides["GUARDIAN_MONKEY_PATCH"]
+
+    return overrides
+```
+
+### Edit 2: Call the sanitization function
+
+**Location**: Line 604-605 in `ADR.setup()`, after the settings-copy loop and before the DEBUG override:
+
+```python
+        # Current (line 604):
+        #             overrides[setting] = getattr(settings_serverless, setting)
+        #
+        # (line 605): blank line
+        # Add after line 604, before line 606:
+        overrides = _sanitize_product_settings(overrides)
+```
+
+### Edit 3: Add test
+
+**Location**: New test file or in existing [tests/serverless/test_adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_adr.py):
+
+```python
+def test_sanitize_product_settings_guardian_monkey_patch():
+    from ansys.dynamicreporting.core.serverless.adr import _sanitize_product_settings
+
+    # Old setting only → should be renamed
+    overrides = {"GUARDIAN_MONKEY_PATCH": True, "SECRET_KEY": "test"}
+    result = _sanitize_product_settings(overrides)
+    assert "GUARDIAN_MONKEY_PATCH" not in result
+    assert result["GUARDIAN_MONKEY_PATCH_USER"] is True
+    assert result["SECRET_KEY"] == "test"
+
+    # New setting already present → old one removed, new preserved
+    overrides = {"GUARDIAN_MONKEY_PATCH": True, "GUARDIAN_MONKEY_PATCH_USER": False}
+    result = _sanitize_product_settings(overrides)
+    assert "GUARDIAN_MONKEY_PATCH" not in result
+    assert result["GUARDIAN_MONKEY_PATCH_USER"] is False
+
+    # No guardian setting at all → no change
+    overrides = {"SECRET_KEY": "test", "DEBUG": True}
+    result = _sanitize_product_settings(overrides)
+    assert "GUARDIAN_MONKEY_PATCH" not in result
+    assert "GUARDIAN_MONKEY_PATCH_USER" not in result
+```
+
+### Summary of changes
+
+| Change | File | Lines | Risk |
+|--------|------|-------|------|
+| New `_sanitize_product_settings()` function | [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py) | +25 lines, after ~L83 | Low |
+| Call sanitization after settings copy | [serverless/adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/src/ansys/dynamicreporting/core/serverless/adr.py) | +1 line after L604 | Low |
+| Unit test | [tests/serverless/test_adr.py](file:///c:/ANSYSDev/cygwin64/home/vrajendr/Source/pydynamicreporting/tests/serverless/test_adr.py) | +20 lines | None |
+
+**Total diff**: ~46 lines added, 0 lines removed. No user-facing API changes. No dependency changes. No packaging changes.
