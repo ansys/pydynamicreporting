@@ -1,0 +1,6 @@
+font\_size
+==========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: PPTXLayout.font_size

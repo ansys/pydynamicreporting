@@ -1,0 +1,6 @@
+get\_params
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: HeaderLayout.get_params

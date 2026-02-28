@@ -1,0 +1,6 @@
+get\_html
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: BasicLayout.get_html

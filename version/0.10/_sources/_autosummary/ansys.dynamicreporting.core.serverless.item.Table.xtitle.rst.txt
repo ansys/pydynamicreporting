@@ -1,0 +1,6 @@
+xtitle
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.xtitle

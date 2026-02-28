@@ -1,0 +1,6 @@
+html\_font\_scale
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: PPTXLayout.html_font_scale

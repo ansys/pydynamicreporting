@@ -1,0 +1,6 @@
+source\_slide
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: PPTXSlideLayout.source_slide

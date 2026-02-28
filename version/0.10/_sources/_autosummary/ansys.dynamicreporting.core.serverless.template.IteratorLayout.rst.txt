@@ -1,0 +1,189 @@
+﻿IteratorLayout
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: IteratorLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      IteratorLayout.add_filter
+      
+      
+      IteratorLayout.add_params
+      
+      
+      IteratorLayout.add_properties
+      
+      
+      IteratorLayout.add_property
+      
+      
+      IteratorLayout.add_sort_fields
+      
+      
+      IteratorLayout.add_tag
+      
+      
+      IteratorLayout.as_dict
+      
+      
+      IteratorLayout.create
+      
+      
+      IteratorLayout.delete
+      
+      
+      IteratorLayout.filter
+      
+      
+      IteratorLayout.find
+      
+      
+      IteratorLayout.get
+      
+      
+      IteratorLayout.get_column_count
+      
+      
+      IteratorLayout.get_column_widths
+      
+      
+      IteratorLayout.get_comments
+      
+      
+      IteratorLayout.get_filter
+      
+      
+      IteratorLayout.get_filter_mode
+      
+      
+      IteratorLayout.get_html
+      
+      
+      IteratorLayout.get_params
+      
+      
+      IteratorLayout.get_property
+      
+      
+      IteratorLayout.get_skip
+      
+      
+      IteratorLayout.get_sort_fields
+      
+      
+      IteratorLayout.get_sort_selection
+      
+      
+      IteratorLayout.get_tags
+      
+      
+      IteratorLayout.get_transpose
+      
+      
+      IteratorLayout.reinit
+      
+      
+      IteratorLayout.rem_tag
+      
+      
+      IteratorLayout.remove_tag
+      
+      
+      IteratorLayout.render
+      
+      
+      IteratorLayout.render_pdf
+      
+      
+      IteratorLayout.reorder_child
+      
+      
+      IteratorLayout.reorder_children
+      
+      
+      IteratorLayout.save
+      
+      
+      IteratorLayout.set_column_count
+      
+      
+      IteratorLayout.set_column_widths
+      
+      
+      IteratorLayout.set_comments
+      
+      
+      IteratorLayout.set_filter
+      
+      
+      IteratorLayout.set_filter_mode
+      
+      
+      IteratorLayout.set_html
+      
+      
+      IteratorLayout.set_params
+      
+      
+      IteratorLayout.set_property
+      
+      
+      IteratorLayout.set_skip
+      
+      
+      IteratorLayout.set_sort_fields
+      
+      
+      IteratorLayout.set_sort_selection
+      
+      
+      IteratorLayout.set_tags
+      
+      
+      IteratorLayout.set_transpose
+      
+      
+      IteratorLayout.to_dict
+      
+      
+      IteratorLayout.to_json
+      
+      
+      IteratorLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      IteratorLayout.children_order
+      IteratorLayout.db
+      IteratorLayout.item_filter
+      IteratorLayout.master
+      IteratorLayout.name
+      IteratorLayout.params
+      IteratorLayout.parent
+      IteratorLayout.report_type
+      IteratorLayout.saved
+      IteratorLayout.tags
+      IteratorLayout.type
+      IteratorLayout.date
+      IteratorLayout.children
+      IteratorLayout.guid
+   
+   

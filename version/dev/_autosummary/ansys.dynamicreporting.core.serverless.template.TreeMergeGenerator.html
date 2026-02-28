@@ -1,0 +1,1061 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>TreeMergeGenerator &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=a23b20f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=a23b20f3" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=7512c61e"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_autosummary/ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="add_filter" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_filter.html" />
+    <link rel="prev" title="guid" href="ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator.guid.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1" />
+  <meta property="og:site_name" content="PyAnsys" />
+  <meta name="physics" content="dynamicreporting" />
+  <meta name="physics" content="reporting" />
+  <meta name="physics" content="report" />
+  <meta name="physics" content="adr" />
+  <meta name="physics" content="nexus" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/_autosummary/ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav>
+</div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+  
+</div></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    
+<!--
+  Announcement Version Loader
+  Dynamically loads the announcement.html content into the announcement_msg div.
+-->
+<div id="announcement_msg" aria-live="polite"></div>
+<script>
+  // Fetch and inject the announcement HTML content
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status} Announcement.html file not found, Please ignore this, if you are in dev/stable documentation`);
+      }
+      return response.text();
+    })
+    .then((text) => {
+      var msgDiv = document.getElementById("announcement_msg");
+      if (msgDiv) {
+        msgDiv.innerHTML = text;
+      }
+    })
+    .catch((error) => {
+      // Log only unexpected fetch errors
+      if (!(error.message && error.message.startsWith("HTTP error: 404"))) {
+        console.error(`Fetch problem: ${error.message} Announcement.html could not be loaded.`);
+      }
+    });
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav>
+</div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+  
+</div></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.html">ADR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html">ObjectSet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html">Session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html">Dataset</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.String.html">String</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.HTML.html">HTML</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.html">Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Tree.html">Tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html">File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Image.html">Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Animation.html">Animation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Scene.html">Scene</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html">Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.BasicLayout.html">BasicLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PanelLayout.html">PanelLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.BoxLayout.html">BoxLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TabLayout.html">TabLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.CarouselLayout.html">CarouselLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.SliderLayout.html">SliderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.FooterLayout.html">FooterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.HeaderLayout.html">HeaderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.IteratorLayout.html">IteratorLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TagPropertyLayout.html">TagPropertyLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TOCLayout.html">TOCLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.ReportLinkLayout.html">ReportLinkLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PPTXLayout.html">PPTXLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout.html">PPTXSlideLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.DataFilterLayout.html">DataFilterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.UserDefinedLayout.html">UserDefinedLayout</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeGenerator.html">TableMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableReduceGenerator.html">TableReduceGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator.html">TableMergeRCFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator.html">TableMergeValueFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMapGenerator.html">TableMapGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator.html">TableSortFilterGenerator</a></li>
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">TreeMergeGenerator</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_filter.html">add_filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_params.html">add_params</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_properties.html">add_properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property.html">add_property</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_sort_fields.html">add_sort_fields</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_tag.html">add_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.as_dict.html">as_dict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.create.html">create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.delete.html">delete</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.filter.html">filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.find.html">find</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get.html">get</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_append_tags.html">get_append_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter.html">get_filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter_mode.html">get_filter_mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_generated_items.html">get_generated_items</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_params.html">get_params</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_property.html">get_property</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_fields.html">get_sort_fields</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_selection.html">get_sort_selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_tags.html">get_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reinit.html">reinit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag.html">rem_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.remove_tag.html">remove_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render.html">render</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render_pdf.html">render_pdf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_child.html">reorder_child</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_children.html">reorder_children</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.save.html">save</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_append_tags.html">set_append_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter.html">set_filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter_mode.html">set_filter_mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_generated_items.html">set_generated_items</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_params.html">set_params</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_property.html">set_property</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_fields.html">set_sort_fields</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_selection.html">set_sort_selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_tags.html">set_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_dict.html">to_dict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_json.html">to_json</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.update_children_order.html">update_children_order</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order.html">children_order</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.db.html">db</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.item_filter.html">item_filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.master.html">master</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.name.html">name</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params.html">params</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.parent.html">parent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type.html">report_type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.saved.html">saved</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.tags.html">tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.type.html">type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.date.html">date</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children.html">children</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.guid.html">guid</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator.html">SQLQueryGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator.html">ItemsComparisonGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.StatisticalGenerator.html">StatisticalGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.IteratorGenerator.html">IteratorGenerator</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="../api_docs_serverless.html" class="nav-link">Serverless ADR API Reference</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">TreeMergeGenerator</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="treemergegenerator">
+<h1>TreeMergeGenerator<a class="headerlink" href="#treemergegenerator" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ansys.dynamicreporting.core.serverless.template.</span></span><span class="sig-name descname"><span class="pre">TreeMergeGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generator</span></code></p>
+<p>Generator that merges multiple tree structures.</p>
+<p class="rubric">Methods</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_filter.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_filter" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.add_filter</span></code></a>([filter_str])</p></td>
+<td><p>Append <code class="docutils literal notranslate"><span class="pre">filter_str</span></code> to the current item filter.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_params.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_params" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.add_params</span></code></a>(new_params)</p></td>
+<td><p>Merge <code class="docutils literal notranslate"><span class="pre">new_params</span></code> into the existing params dictionary.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_properties.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_properties" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_properties"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.add_properties</span></code></a>(new_props)</p></td>
+<td><p>Alias for <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_property()</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_property"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.add_property</span></code></a>(new_props)</p></td>
+<td><p>Merge <code class="docutils literal notranslate"><span class="pre">new_props</span></code> into the existing <code class="docutils literal notranslate"><span class="pre">properties</span></code> sub-dictionary.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_sort_fields.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_sort_fields" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_sort_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.add_sort_fields</span></code></a>(sort_field)</p></td>
+<td><p>Extend the existing sort field list with <code class="docutils literal notranslate"><span class="pre">sort_field</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_tag.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_tag" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.add_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.add_tag</span></code></a>(tag[, value])</p></td>
+<td><p>Add or update a single tag.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.as_dict.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.as_dict" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.as_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.as_dict</span></code></a>([recursive])</p></td>
+<td><p>Serialize the model into a plain dictionary.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.create.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.create" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.create"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.create</span></code></a>(**kwargs)</p></td>
+<td><p>Factory-style creation that dispatches to the correct subclass.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.delete.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.delete" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.delete"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.delete</span></code></a>()</p></td>
+<td><p>Delete this object from the database.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.filter.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.filter" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.filter</span></code></a>(**kwargs)</p></td>
+<td><p>Return a collection of templates, scoped by subclass <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type"><code class="xref py py-attr docutils literal notranslate"><span class="pre">report_type</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.find.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.find" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.find"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.find</span></code></a>([query])</p></td>
+<td><p>Search for templates using an ADR query string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get</span></code></a>(**kwargs)</p></td>
+<td><p>Retrieve a single template, scoped by subclass <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type"><code class="xref py py-attr docutils literal notranslate"><span class="pre">report_type</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_append_tags.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_append_tags" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_append_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_append_tags</span></code></a>()</p></td>
+<td><p>Return whether original item tags are appended to generated items.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_filter</span></code></a>()</p></td>
+<td><p>Return the raw item filter string.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter_mode.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter_mode" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_filter_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_filter_mode</span></code></a>()</p></td>
+<td><p>Return the filter mode (<code class="docutils literal notranslate"><span class="pre">'items'</span></code>, <code class="docutils literal notranslate"><span class="pre">'root_replace'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'root_append'</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_generated_items.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_generated_items" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_generated_items"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_generated_items</span></code></a>()</p></td>
+<td><p>Return how generated items are merged into the stream.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_params.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_params" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_params</span></code></a>()</p></td>
+<td><p>Deserialize <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params"><code class="xref py py-attr docutils literal notranslate"><span class="pre">params</span></code></a> into a Python dictionary.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_property.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_property" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_property"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_property</span></code></a>()</p></td>
+<td><p>Return the <code class="docutils literal notranslate"><span class="pre">properties</span></code> sub-dictionary from params (if present).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_fields.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_fields" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_sort_fields</span></code></a>()</p></td>
+<td><p>Return the configured sort fields list, if any.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_selection.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_selection" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_sort_selection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_sort_selection</span></code></a>()</p></td>
+<td><p>Return the sort selection mode (<code class="docutils literal notranslate"><span class="pre">'all'</span></code>, <code class="docutils literal notranslate"><span class="pre">'first'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'last'</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_tags.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_tags" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.get_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.get_tags</span></code></a>()</p></td>
+<td><p>Return the raw tag string stored on this object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reinit.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reinit" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reinit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.reinit</span></code></a>()</p></td>
+<td><p>Reset the in-memory ORM state for this object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.rem_tag</span></code></a>(tag)</p></td>
+<td><p>Remove a tag by key, if it exists.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.remove_tag.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.remove_tag" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.remove_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.remove_tag</span></code></a>(tag)</p></td>
+<td><p>Alias for <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rem_tag"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rem_tag()</span></code></a> for backwards compatibility.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.render</span></code></a>(*[, context, ...])</p></td>
+<td><p>Render the template to HTML.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render_pdf.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render_pdf" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.render_pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.render_pdf</span></code></a>(*[, context, ...])</p></td>
+<td><p>Render the template to a PDF byte stream.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_child.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_child" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_child"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.reorder_child</span></code></a>(...)</p></td>
+<td><p>Move a child template to a new position in <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children"><code class="xref py py-attr docutils literal notranslate"><span class="pre">children</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_children.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_children" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.reorder_children"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.reorder_children</span></code></a>()</p></td>
+<td><p>Reorder the children list based on the children_order string.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.save.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.save" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.save</span></code></a>(**kwargs)</p></td>
+<td><p>Save the template, enforcing parent/child invariants.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_append_tags.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_append_tags" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_append_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_append_tags</span></code></a>([value])</p></td>
+<td><p>Set whether original item tags are appended to generated items.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_filter</span></code></a>(filter_str)</p></td>
+<td><p>Replace the current item filter with <code class="docutils literal notranslate"><span class="pre">filter_str</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter_mode.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter_mode" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_filter_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_filter_mode</span></code></a>([value])</p></td>
+<td><p>Set the filter mode.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_generated_items.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_generated_items" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_generated_items"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_generated_items</span></code></a>(value)</p></td>
+<td><p>Set how generated items are merged into the stream.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_params.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_params" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_params</span></code></a>(new_params)</p></td>
+<td><p>Replace the current params dictionary.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_property.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_property" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_property"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_property</span></code></a>(new_props)</p></td>
+<td><p>Replace the <code class="docutils literal notranslate"><span class="pre">properties</span></code> sub-dictionary with <code class="docutils literal notranslate"><span class="pre">new_props</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_fields.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_fields" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_sort_fields</span></code></a>(sort_field)</p></td>
+<td><p>Set the full list of sort fields.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_selection.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_selection" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_sort_selection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_sort_selection</span></code></a>([value])</p></td>
+<td><p>Set the sort selection mode.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_tags.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_tags" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.set_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.set_tags</span></code></a>(tag_str)</p></td>
+<td><p>Replace all tags with the given tag string.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_dict.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_dict" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.to_dict</span></code></a>()</p></td>
+<td><p>Return a JSON-serializable dictionary for the full template tree.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_json.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_json" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.to_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.to_json</span></code></a>(filename)</p></td>
+<td><p>Dump the full template tree to a JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.update_children_order.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.update_children_order" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.update_children_order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.update_children_order</span></code></a>()</p></td>
+<td><p>Update <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order"><code class="xref py py-attr docutils literal notranslate"><span class="pre">children_order</span></code></a> from the current <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children"><code class="xref py py-attr docutils literal notranslate"><span class="pre">children</span></code></a> list.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Attributes</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children_order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.children_order</span></code></a></p></td>
+<td><p>Comma-separated list of child GUIDs in desired order.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.db.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.db" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.db"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.db</span></code></a></p></td>
+<td><p>Database alias in which this object is stored.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.item_filter.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.item_filter" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.item_filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.item_filter</span></code></a></p></td>
+<td><p>Default ADR query string used to select items for this template.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.master.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.master" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.master"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.master</span></code></a></p></td>
+<td><p>Whether this template is a root (no parent).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.name.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.name" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.name</span></code></a></p></td>
+<td><p>Human-readable name of the template.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.params</span></code></a></p></td>
+<td><p>JSON-encoded parameter dictionary backing this template configuration.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.parent.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.parent" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.parent"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.parent</span></code></a></p></td>
+<td><p>Parent template in the hierarchy, or <code class="docutils literal notranslate"><span class="pre">None</span></code> for a root template.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.report_type</span></code></a></p></td>
+<td><p>Canonical type string used for subclass dispatch and filtering.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.saved.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.saved" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.saved"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.saved</span></code></a></p></td>
+<td><p>Whether this object has been successfully saved to the database.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.tags.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.tags" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.tags</span></code></a></p></td>
+<td><p>Tag string used to group and filter objects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.type.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.type" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.type</span></code></a></p></td>
+<td><p>Alias for <a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type"><code class="xref py py-attr docutils literal notranslate"><span class="pre">report_type</span></code></a> for parity with items.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.date.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.date" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.date"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.date</span></code></a></p></td>
+<td><p>Template creation timestamp.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.children"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.children</span></code></a></p></td>
+<td><p>Ordered list of child templates that form this template's subtree.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.guid.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.guid" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.guid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TreeMergeGenerator.guid</span></code></a></p></td>
+<td><p>Globally unique identifier for this object.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.DoesNotExist">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.DoesNotExist" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DoesNotExist</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.IntegrityError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">IntegrityError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.IntegrityError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegrityError</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.MultipleObjectsReturned">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.MultipleObjectsReturned" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.NotSaved">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">NotSaved</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.NotSaved" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NotSaved</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type">
+<span class="sig-name descname"><span class="pre">report_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Generator:treemerge'</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type" title="Link to this definition">#</a></dt>
+<dd><p>Canonical type string used for subclass dispatch and filtering.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator"><code class="docutils literal notranslate"><span class="pre">TreeMergeGenerator</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">TreeMergeGenerator.DoesNotExist</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.IntegrityError"><code class="docutils literal notranslate"><span class="pre">TreeMergeGenerator.IntegrityError</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">TreeMergeGenerator.MultipleObjectsReturned</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.NotSaved"><code class="docutils literal notranslate"><span class="pre">TreeMergeGenerator.NotSaved</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.report_type"><code class="docutils literal notranslate"><span class="pre">TreeMergeGenerator.report_type</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+
+  
+  <nav class="tocsection editthispage" aria-label="Edit this page">
+    <a href="None" rel="noopener noreferrer">
+      <i class="fa-solid fa-pencil" aria-hidden="true"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </nav>
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/_autosummary/ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2026 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<!--
+  Theme Version Footer
+  Displays the Sphinx theme version and the last updated date.
+  Accessibility and semantic improvements included.
+-->
+<footer class="theme-version" aria-label="Theme version and last update">
+  <span>
+    
+      Built with the
+      <a href="https://sphinxdocs.ansys.com/version/stable/index.html" target="_blank" rel="noopener noreferrer">
+        Ansys Sphinx Theme
+      </a>
+      1.7.1.
+    
+  </span>
+  <br />
+  <span>Last updated on <time id="ast_build_date"></time></span>
+</footer>
+<script>
+  // Set the last updated date in a readable format
+  (function() {
+    var options = { day: "numeric", month: "long", year: "numeric" };
+    var ast_lastModifiedDate = new Date(document.lastModified);
+    var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+    var dateElem = document.getElementById("ast_build_date");
+    if (dateElem) {
+      dateElem.textContent = ast_build_date;
+    }
+  })();
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

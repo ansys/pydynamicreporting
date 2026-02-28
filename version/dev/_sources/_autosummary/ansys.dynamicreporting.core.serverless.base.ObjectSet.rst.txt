@@ -1,0 +1,35 @@
+﻿ObjectSet
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.base
+
+.. autoclass:: ObjectSet
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      ObjectSet.delete
+      
+      
+      ObjectSet.values_list
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      ObjectSet.saved
+   
+   

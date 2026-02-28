@@ -1,0 +1,6 @@
+rem\_tag
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: BoxLayout.rem_tag

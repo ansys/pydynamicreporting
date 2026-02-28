@@ -1,0 +1,6 @@
+histogram\_cumulative
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.histogram_cumulative

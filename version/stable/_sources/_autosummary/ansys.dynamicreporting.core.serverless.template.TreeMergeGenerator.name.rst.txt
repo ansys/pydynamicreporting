@@ -1,0 +1,6 @@
+name
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: TreeMergeGenerator.name

@@ -1,0 +1,6 @@
+media\_url
+==========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.media_url

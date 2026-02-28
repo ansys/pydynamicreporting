@@ -1,0 +1,6 @@
+yaxis\_tick\_delta
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.yaxis_tick_delta

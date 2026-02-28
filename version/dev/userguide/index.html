@@ -1,0 +1,897 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>User guide &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=a23b20f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=a23b20f3" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=7512c61e"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'userguide/index';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="API reference" href="../class_documentation.html" />
+    <link rel="prev" title="Getting started" href="../gettingstarted/index.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1" />
+  <meta property="og:site_name" content="PyAnsys" />
+  <meta name="physics" content="dynamicreporting" />
+  <meta name="physics" content="reporting" />
+  <meta name="physics" content="report" />
+  <meta name="physics" content="adr" />
+  <meta name="physics" content="nexus" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/userguide/index.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav>
+</div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+  
+</div></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    
+<!--
+  Announcement Version Loader
+  Dynamically loads the announcement.html content into the announcement_msg div.
+-->
+<div id="announcement_msg" aria-live="polite"></div>
+<script>
+  // Fetch and inject the announcement HTML content
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status} Announcement.html file not found, Please ignore this, if you are in dev/stable documentation`);
+      }
+      return response.text();
+    })
+    .then((text) => {
+      var msgDiv = document.getElementById("announcement_msg");
+      if (msgDiv) {
+        msgDiv.innerHTML = text;
+      }
+    })
+    .catch((error) => {
+      // Log only unexpected fetch errors
+      if (!(error.message && error.message.startsWith("HTTP error: 404"))) {
+        console.error(`Fetch problem: ${error.message} Announcement.html could not be loaded.`);
+      }
+    });
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav>
+</div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+  
+</div></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">User guide</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="user-guide">
+<h1>User guide<a class="headerlink" href="#user-guide" title="Link to this heading">#</a></h1>
+<p>This section describes concepts that you need to know to use PyDynamicReporting.</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">#</a></h2>
+<p>The PyDynamicReporting API has three main classes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Service</span></code>: Provides for starting and connecting to an Ansys Dynamic
+Reporting service. This class also provides for creating, querying, and
+deleting the database and for stopping an Ansys Dynamic <code class="docutils literal notranslate"><span class="pre">Report</span></code> service.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Item</span></code>: Provides access to the items in the database and allows
+them to be modified.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Report</span></code>: Provides access to and rendering of <code class="docutils literal notranslate"><span class="pre">Report</span></code> objects.</p></li>
+</ul>
+<p>PyDynamicReporting supports creating and pushing these items into an Ansys
+Dynamic Reporting service:</p>
+<ul class="simple">
+<li><p>Images</p></li>
+<li><p>Animations</p></li>
+<li><p>3D Scenes (AVZ file format supported)</p></li>
+<li><p>Tables</p></li>
+<li><p>Trees</p></li>
+<li><p>Text (HTML and LaTeX file formats supported)</p></li>
+<li><p>Files (generic file formats supported)</p></li>
+</ul>
+<p>This code connects to a running Ansys Dynamic Reporting service and
+pushes an image item on a new session:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">adr</span>
+
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v232&quot;</span><span class="p">)</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;my_machine:8010&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;MyUsername&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;MyPassword&quot;</span>
+<span class="p">)</span>
+<span class="n">first_image</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+<span class="n">first_image</span><span class="o">.</span><span class="n">item_image</span> <span class="o">=</span> <span class="s2">&quot;location\image</span><span class="se">\f</span><span class="s2">ile.png&quot;</span>
+<span class="n">first_image</span><span class="o">.</span><span class="n">visualize</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>A rendering of the image object is embedded in the current interpreter. You
+can follow the same steps to create and visualize other types of items.</p>
+<p>To get the URL corresponding to an item, use this attribute:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">first_image</span><span class="o">.</span><span class="n">url</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Similarly, to get the iframe corresponding to an item, use this attribute:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">first_image</span><span class="o">.</span><span class="n">get_iframe</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>With the corresponding URL or iframe, you can embed the item visualization
+into any other app.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you want to update an image, all you need to do is redefine
+the <code class="docutils literal notranslate"><span class="pre">item_image</span></code> attribute. The Ansys Dynamic Reporting database is
+automatically updated.</p>
+</div>
+</section>
+<section id="visualize-an-ansys-dynamic-reporting-item">
+<h2>Visualize an Ansys Dynamic reporting item<a class="headerlink" href="#visualize-an-ansys-dynamic-reporting-item" title="Link to this heading">#</a></h2>
+<p>PyDynamicReporting provides two main ways to visualize an item. The first is
+to visualize it standalone, as shown in the preceding code examples. The second
+is to visualize it together with all the other items that are present in the
+current Ansys Dynamic Reporting session.</p>
+<p>Each time that you use the PyDnamicReporting
+<a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.start.html#ansys.dynamicreporting.core.Service.start" title="ansys.dynamicreporting.core.Service.start"><code class="xref py py-func docutils literal notranslate"><span class="pre">start</span></code></a> method to
+start an Ansys Dynamic Reporting service or the
+<a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.connect.html#ansys.dynamicreporting.core.Service.connect" title="ansys.dynamicreporting.core.Service.connect"><code class="xref py py-func docutils literal notranslate"><span class="pre">connect</span></code></a> method
+to connect to one, you are connected to a specific session. Each
+session has its own GUID (globally unique identifier).</p>
+<p>On the Ansys Dynamic Reporting object, you can execute the
+<a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.visualize_report.html#ansys.dynamicreporting.core.Service.visualize_report" title="ansys.dynamicreporting.core.Service.visualize_report"><code class="xref py py-func docutils literal notranslate"><span class="pre">visualize_report</span></code></a>
+method to visualize all items that are present in the session.</p>
+<p>The following code embeds a widget in the app that you are running
+from. It shows that both items (image and text) have been created.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">adr</span>
+
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v232&quot;</span><span class="p">)</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;my_machine:8010&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;MyUsername&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;MyPassword&quot;</span>
+<span class="p">)</span>
+<span class="n">first_image</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+<span class="n">first_image</span><span class="o">.</span><span class="n">item_image</span> <span class="o">=</span> <span class="s2">&quot;location\image</span><span class="se">\f</span><span class="s2">ile.png&quot;</span>
+<span class="n">first_text</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+<span class="n">first_text</span><span class="o">.</span><span class="n">item_text</span> <span class="o">=</span> <span class="s2">&quot;&lt;h1&gt;My Title&lt;/h1&gt;This is the first example&quot;</span>
+<span class="n">adr_service</span><span class="o">.</span><span class="n">visualize_report</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="connect-to-and-query-an-existing-ansys-dynamic-reporting-session">
+<h2>Connect to and query an existing Ansys Dynamic Reporting session<a class="headerlink" href="#connect-to-and-query-an-existing-ansys-dynamic-reporting-session" title="Link to this heading">#</a></h2>
+<p>You can start an Ansys Dynamic Reporting session in one Python interpreter
+and connect to it in a different interpreter or on a different machine by passing the
+session GUID as the parameter in the <a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.connect.html#ansys.dynamicreporting.core.Service.connect" title="ansys.dynamicreporting.core.Service.connect"><code class="xref py py-func docutils literal notranslate"><span class="pre">connect</span></code></a>
+method.</p>
+<p>This code starts an Ansys Dynamic Reporting session in the first interpreter:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">adr</span>
+
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span>
+    <span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v232&quot;</span><span class="p">,</span>
+    <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;D:\tmp\test_pydynamicreporting&quot;</span><span class="p">,</span>
+    <span class="n">port</span><span class="o">=</span><span class="mi">8010</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">session_guid</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">session_guid</span>
+</pre></div>
+</div>
+<p>The session contains the GUID needed to connect to this session in a different
+interpreter or on a different machine.</p>
+<p>This GUID is then copied and pasted into another interpreter as shown in this code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">adr</span>
+
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v232&quot;</span><span class="p">)</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;http://localhost:8010&quot;</span><span class="p">,</span> <span class="n">session</span><span class="o">=</span><span class="n">session_guid</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Once you are connected to the session, you can query its items:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">all_items</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+<span class="n">only_images</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_type|cont|image|&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.query.html#ansys.dynamicreporting.core.Service.query" title="ansys.dynamicreporting.core.Service.query"><code class="xref py py-func docutils literal notranslate"><span class="pre">query</span></code></a> method takes
+a filter input that allows you to select the items to return. The query
+string follows the same structure as the queries described in
+<a class="reference external" href="https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v252/en/adr_ug/adr_ug_query_expressions.html">Query Expressions</a></p>
+<p>in the documentation for Ansys Dynamic Reporting.</p>
+<p>To get a list of the existing report templates in the database, use the
+<a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.get_list_reports.html#ansys.dynamicreporting.core.Service.get_list_reports" title="ansys.dynamicreporting.core.Service.get_list_reports"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_list_reports</span></code></a>
+method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">all_reports</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">get_list_reports</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>To query the database for a specific report, use the
+<a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.get_report.html#ansys.dynamicreporting.core.Service.get_report" title="ansys.dynamicreporting.core.Service.get_report"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_report</span></code></a>
+method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">my_report</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">get_report</span><span class="p">(</span><span class="n">report_name</span><span class="o">=</span><span class="s2">&quot;My Top Report&quot;</span><span class="p">)</span>
+<span class="n">my_report</span><span class="o">.</span><span class="n">visualize</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="backward-compatibility-with-template-generator-scripts">
+<h2>Backward compatibility with template generator scripts<a class="headerlink" href="#backward-compatibility-with-template-generator-scripts" title="Link to this heading">#</a></h2>
+<p>The template editor in Ansys Dynamic Reporting contains a feature for exporting
+a Python script to create report templates on the connected server with all their
+settings and properties and push these report templates to a new server.
+This script uses the low-level API for Ansys Dynamic Reporting, which preceded
+PyDynamicReporting.</p>
+<p>A legacy script starts with these lines of code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">cei</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">template_editor</span><span class="w"> </span><span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://127.0.0.1:9528&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Following these lines are a series of commands that describe the template names and properties.</p>
+<p>To convert a legacy script to a report template for PyDynamicReporting, replace the preceding
+lines in the legacy script with these lines:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">adr</span>
+
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v232&quot;</span><span class="p">)</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;http://localhost:8010&quot;</span><span class="p">)</span>
+<span class="n">server</span> <span class="o">=</span> <span class="n">adr_</span>
+<span class="n">service</span><span class="o">.</span><span class="n">serverobj</span>
+</pre></div>
+</div>
+<p>Everything else in the script remains the same.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#api-overview">API overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualize-an-ansys-dynamic-reporting-item">Visualize an Ansys Dynamic reporting item</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#connect-to-and-query-an-existing-ansys-dynamic-reporting-session">Connect to and query an existing Ansys Dynamic Reporting session</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#backward-compatibility-with-template-generator-scripts">Backward compatibility with template generator scripts</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+
+  
+  <nav class="tocsection editthispage" aria-label="Edit this page">
+    <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/userguide/index.rst" rel="noopener noreferrer">
+      <i class="fa-solid fa-pencil" aria-hidden="true"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </nav>
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/userguide/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2026 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<!--
+  Theme Version Footer
+  Displays the Sphinx theme version and the last updated date.
+  Accessibility and semantic improvements included.
+-->
+<footer class="theme-version" aria-label="Theme version and last update">
+  <span>
+    
+      Built with the
+      <a href="https://sphinxdocs.ansys.com/version/stable/index.html" target="_blank" rel="noopener noreferrer">
+        Ansys Sphinx Theme
+      </a>
+      1.7.1.
+    
+  </span>
+  <br />
+  <span>Last updated on <time id="ast_build_date"></time></span>
+</footer>
+<script>
+  // Set the last updated date in a readable format
+  (function() {
+    var options = { day: "numeric", month: "long", year: "numeric" };
+    var ast_lastModifiedDate = new Date(document.lastModified);
+    var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+    var dateElem = document.getElementById("ast_build_date");
+    if (dateElem) {
+      dateElem.textContent = ast_build_date;
+    }
+  })();
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

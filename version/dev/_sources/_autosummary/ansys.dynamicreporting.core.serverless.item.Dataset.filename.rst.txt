@@ -1,0 +1,6 @@
+filename
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Dataset.filename

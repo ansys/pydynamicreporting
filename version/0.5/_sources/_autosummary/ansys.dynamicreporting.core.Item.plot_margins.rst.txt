@@ -1,0 +1,6 @@
+plot\_margins
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.plot_margins

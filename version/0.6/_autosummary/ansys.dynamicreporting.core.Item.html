@@ -1,0 +1,898 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Item &#8212; PyDynamicReporting documentation |version|</title>
+
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=649a27d8" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/ansys_sphinx_theme.css?v=62c9ccaa" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+ 
+<link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+
+    <script src="../_static/documentation_options.js?v=dda85ae5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/js/table.js?v=b64f5182"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_autosummary/ansys.dynamicreporting.core.Item';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.6';
+        </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="add_tag" href="ansys.dynamicreporting.core.Item.add_tag.html" />
+    <link rel="prev" title="API reference" href="../class_documentation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/_autosummary/ansys.dynamicreporting.core.Item.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container"><!-- Debugging: html_theme_options =  -->
+
+<!-- If there is no MiliSearch enabled, use the PyData search -->
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+   
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys-logo-black-cropped.png" class="logo__image only-light" alt="Logo image"/>
+    <script>document.write(`<img src="../_static/pyansys-logo-black-cropped.png" class="logo__image only-dark" alt="Logo image"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.6  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>   <div class="container-xl">
+  <div class="row">
+    <div class="col-12 col-md-3" id="breadcrumbs-spacer"></div>
+    <div class="col-12 col-md-11 col-xl-9" id="breadcrumbs">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul> 
+<li class="nav-item nav-item-additional-breadcrumb">
+  <a href="https://docs.pyansys.com/">PyAnsys</a> » 
+</li>
+ 
+<li class="nav-item nav-item-0">
+  <a href="../index.html">PyDynamicReporting documentation |version|</a> » 
+</li>
+ 
+          <li class="nav-item nav-item-1"><a href="../class_documentation.html" accesskey="U">API reference</a> » </li>
+        <li class="nav-item nav-item-this"><a href="">Item</a></li> 
+      </ul>
+    </div></div>
+  </div>
+</div>
+ 
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.6  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Item</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.add_tag.html">add_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.get_iframe.html">get_iframe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.get_tags.html">get_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.rem_tag.html">rem_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.set_tags.html">set_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.visualize.html">visualize</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.url.html">url</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_text.html">item_text</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_image.html">item_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_scene.html">item_scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_animation.html">item_animation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_table.html">item_table</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.format.html">format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.format_column.html">format_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.labels_column.html">labels_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.format_row.html">format_row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.labels_row.html">labels_row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot.html">plot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.title.html">title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_color.html">line_color</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker.html">line_marker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_text.html">line_marker_text</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_size.html">line_marker_size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_opacity.html">line_marker_opacity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_scale.html">line_marker_scale</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_error_bars.html">line_error_bars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_style.html">line_style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_width.html">line_width</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.stacked.html">stacked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.xaxis.html">xaxis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.yaxis.html">yaxis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette.html">palette</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_position.html">palette_position</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_range.html">palette_range</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_show.html">palette_show</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_title.html">palette_title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.width.html">width</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.height.html">height</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.show_legend.html">show_legend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.legend_position.html">legend_position</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.show_legend_border.html">show_legend_border</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.show_border.html">show_border</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_margins.html">plot_margins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_title.html">plot_title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_xaxis_type.html">plot_xaxis_type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_yaxis_type.html">plot_yaxis_type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.xrange.html">xrange</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.yrange.html">yrange</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.xaxis_format.html">xaxis_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.yaxis_format.html">yaxis_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.xtitle.html">xtitle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.ytitle.html">ytitle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_justification.html">item_justification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.nan_display.html">nan_display</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_sort.html">table_sort</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_title.html">table_title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.align_column.html">align_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_search.html">table_search</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_page.html">table_page</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_pagemenu.html">table_pagemenu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_scrollx.html">table_scrollx</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_scrolly.html">table_scrolly</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_bordered.html">table_bordered</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_condensed.html">table_condensed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_wrap_content.html">table_wrap_content</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_default_col_labels.html">table_default_col_labels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_cond_format.html">table_cond_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.column_minimum.html">column_minimum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.Item.column_maximum.html">column_maximum</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.Service.html">Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.Report.html">Report</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../lowlevelapi/index.html">Low Level Python API</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="item">
+<h1>Item<a class="headerlink" href="#item" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.Item">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ansys.dynamicreporting.core.</span></span><span class="sig-name descname"><span class="pre">Item</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ADR</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.11/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.11/library/constants.html#None" title="(in Python v3.11)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.11/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.11/library/constants.html#None" title="(in Python v3.11)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ADR'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.Item" title="Link to this definition">#</a></dt>
+<dd><p>Provides for creating an object that represents an Ansys Dynamic Reporting item.</p>
+<p>Create an instance of this class for each item in the database that you want to
+interact with. When the object is created, no type is set. The type, determined the
+first time that you set the <code class="docutils literal notranslate"><span class="pre">item_*</span></code> attribute, cannot be changed.</p>
+<p>This code creates an instance with the object <code class="docutils literal notranslate"><span class="pre">my_txt</span></code> as a text item:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_txt</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_txt</span><span class="o">.</span><span class="n">item_text</span> <span class="o">=</span> <span class="s1">&#39;&lt;h1&gt;The test&lt;/h1&gt;This is a text item&#39;</span>
+</pre></div>
+</div>
+<p>The type of the item created in the preceding code cannot be changed. However,
+the attributes describing the object can be reset at any time. These hanges are
+automatically propagated into the database. The attributes described in the
+following “Parameters” section can be used to control the rendering of these objects.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>These attributes mirror the generic data item attributes described in
+<a class="reference external" href="https://nexusdemo.ensight.com/docs/html/Nexus.html?DataItems.html">Data Items</a> in the documentation for Ansys Dynamic Reporting.</p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>service</strong><span class="classifier"><a class="reference internal" href="ansys.dynamicreporting.core.Service.html#ansys.dynamicreporting.core.Service" title="ansys.dynamicreporting.core.Service"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.Service</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Ansys Dynamic Reporting object that provides the connection to the database
+that the item is to interact with. The default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt><strong>obj_name</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3.11/library/stdtypes.html#str" title="(in Python v3.11)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Name of the item object in the database. The default is <code class="docutils literal notranslate"><span class="pre">default</span></code>.</p>
+</dd>
+<dt><strong>source</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3.11/library/stdtypes.html#str" title="(in Python v3.11)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Name of the source for the item in the database. The default is <code class="docutils literal notranslate"><span class="pre">&quot;ADR&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Initialize the <code class="docutils literal notranslate"><span class="pre">Service</span></code> class inside an Ansys Dynamic Reporting service and
+create an object as a text item:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">ansys.dynamicreporting.core</span> <span class="k">as</span> <span class="nn">adr</span>
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">ansys_installation</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;C:\Program Files\ANSYS Inc\v232&#39;</span><span class="p">)</span>
+<span class="n">adr_service</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s1">&#39;http://localhost:8010&#39;</span><span class="p">)</span>
+<span class="n">my_txt</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+<span class="n">my_txt</span><span class="o">.</span><span class="n">item_text</span> <span class="o">=</span> <span class="s1">&#39;&lt;h1&gt;The test&lt;/h1&gt;This is a text item&#39;</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.add_tag.html#ansys.dynamicreporting.core.Item.add_tag" title="ansys.dynamicreporting.core.Item.add_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.add_tag</span></code></a>([tag, value])</p></td>
+<td><p>Add a tag to the item.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.get_iframe.html#ansys.dynamicreporting.core.Item.get_iframe" title="ansys.dynamicreporting.core.Item.get_iframe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.get_iframe</span></code></a>([width, height])</p></td>
+<td><p>Get the iframe object corresponding to the item.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.get_tags.html#ansys.dynamicreporting.core.Item.get_tags" title="ansys.dynamicreporting.core.Item.get_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.get_tags</span></code></a>()</p></td>
+<td><p>Get the tags on the item.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.rem_tag.html#ansys.dynamicreporting.core.Item.rem_tag" title="ansys.dynamicreporting.core.Item.rem_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.rem_tag</span></code></a>([tag])</p></td>
+<td><p>Remove a tag on the item.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.set_tags.html#ansys.dynamicreporting.core.Item.set_tags" title="ansys.dynamicreporting.core.Item.set_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.set_tags</span></code></a>([tagstring])</p></td>
+<td><p>Set tags on the item.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.visualize.html#ansys.dynamicreporting.core.Item.visualize" title="ansys.dynamicreporting.core.Item.visualize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.visualize</span></code></a>([new_tab])</p></td>
+<td><p>Render this item only.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.url.html#ansys.dynamicreporting.core.Item.url" title="ansys.dynamicreporting.core.Item.url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.url</span></code></a></p></td>
+<td><p>URL corresponding to the item</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_text.html#ansys.dynamicreporting.core.Item.item_text" title="ansys.dynamicreporting.core.Item.item_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.item_text</span></code></a></p></td>
+<td><p>Text (HTML and LaTeX formatting)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_image.html#ansys.dynamicreporting.core.Item.item_image" title="ansys.dynamicreporting.core.Item.item_image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.item_image</span></code></a></p></td>
+<td><p>Image object (Image and PNG binary files)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_scene.html#ansys.dynamicreporting.core.Item.item_scene" title="ansys.dynamicreporting.core.Item.item_scene"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.item_scene</span></code></a></p></td>
+<td><p>3D scene (AVZ, PLY, SCDOC, GLB, and STL files)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_animation.html#ansys.dynamicreporting.core.Item.item_animation" title="ansys.dynamicreporting.core.Item.item_animation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.item_animation</span></code></a></p></td>
+<td><p>Animation file (MP4/H.264 format files)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_table.html#ansys.dynamicreporting.core.Item.item_table" title="ansys.dynamicreporting.core.Item.item_table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.item_table</span></code></a></p></td>
+<td><p>Table values (Must be in a numpy array)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.format.html#ansys.dynamicreporting.core.Item.format" title="ansys.dynamicreporting.core.Item.format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.format</span></code></a></p></td>
+<td><p>Number format</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.format_column.html#ansys.dynamicreporting.core.Item.format_column" title="ansys.dynamicreporting.core.Item.format_column"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.format_column</span></code></a></p></td>
+<td><p>Column labels format</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.labels_column.html#ansys.dynamicreporting.core.Item.labels_column" title="ansys.dynamicreporting.core.Item.labels_column"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.labels_column</span></code></a></p></td>
+<td><p>Column labels</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.format_row.html#ansys.dynamicreporting.core.Item.format_row" title="ansys.dynamicreporting.core.Item.format_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.format_row</span></code></a></p></td>
+<td><p>Row labels format</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.labels_row.html#ansys.dynamicreporting.core.Item.labels_row" title="ansys.dynamicreporting.core.Item.labels_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.labels_row</span></code></a></p></td>
+<td><p>Row labels</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot.html#ansys.dynamicreporting.core.Item.plot" title="ansys.dynamicreporting.core.Item.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.plot</span></code></a></p></td>
+<td><p>Table display style</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.title.html#ansys.dynamicreporting.core.Item.title" title="ansys.dynamicreporting.core.Item.title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.title</span></code></a></p></td>
+<td><p>Common title</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_color.html#ansys.dynamicreporting.core.Item.line_color" title="ansys.dynamicreporting.core.Item.line_color"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_color</span></code></a></p></td>
+<td><p>Line/bar/pie/marker colors</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker.html#ansys.dynamicreporting.core.Item.line_marker" title="ansys.dynamicreporting.core.Item.line_marker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_marker</span></code></a></p></td>
+<td><p>Markers</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_text.html#ansys.dynamicreporting.core.Item.line_marker_text" title="ansys.dynamicreporting.core.Item.line_marker_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_marker_text</span></code></a></p></td>
+<td><p>Marker text</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_size.html#ansys.dynamicreporting.core.Item.line_marker_size" title="ansys.dynamicreporting.core.Item.line_marker_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_marker_size</span></code></a></p></td>
+<td><p>Marker size</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_opacity.html#ansys.dynamicreporting.core.Item.line_marker_opacity" title="ansys.dynamicreporting.core.Item.line_marker_opacity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_marker_opacity</span></code></a></p></td>
+<td><p>Marker opacity</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_marker_scale.html#ansys.dynamicreporting.core.Item.line_marker_scale" title="ansys.dynamicreporting.core.Item.line_marker_scale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_marker_scale</span></code></a></p></td>
+<td><p>Marker scaling</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_error_bars.html#ansys.dynamicreporting.core.Item.line_error_bars" title="ansys.dynamicreporting.core.Item.line_error_bars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_error_bars</span></code></a></p></td>
+<td><p>Error bars</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_style.html#ansys.dynamicreporting.core.Item.line_style" title="ansys.dynamicreporting.core.Item.line_style"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_style</span></code></a></p></td>
+<td><p>Line styling</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.line_width.html#ansys.dynamicreporting.core.Item.line_width" title="ansys.dynamicreporting.core.Item.line_width"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.line_width</span></code></a></p></td>
+<td><p>Line width</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.stacked.html#ansys.dynamicreporting.core.Item.stacked" title="ansys.dynamicreporting.core.Item.stacked"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.stacked</span></code></a></p></td>
+<td><p>Bar chart stacking</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.xaxis.html#ansys.dynamicreporting.core.Item.xaxis" title="ansys.dynamicreporting.core.Item.xaxis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.xaxis</span></code></a></p></td>
+<td><p>X axis rows</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.yaxis.html#ansys.dynamicreporting.core.Item.yaxis" title="ansys.dynamicreporting.core.Item.yaxis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.yaxis</span></code></a></p></td>
+<td><p>Y axis rows</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette.html#ansys.dynamicreporting.core.Item.palette" title="ansys.dynamicreporting.core.Item.palette"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.palette</span></code></a></p></td>
+<td><p>Color palette</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_position.html#ansys.dynamicreporting.core.Item.palette_position" title="ansys.dynamicreporting.core.Item.palette_position"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.palette_position</span></code></a></p></td>
+<td><p>Position of the colorbar</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_range.html#ansys.dynamicreporting.core.Item.palette_range" title="ansys.dynamicreporting.core.Item.palette_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.palette_range</span></code></a></p></td>
+<td><p>Range of the colorbar</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_show.html#ansys.dynamicreporting.core.Item.palette_show" title="ansys.dynamicreporting.core.Item.palette_show"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.palette_show</span></code></a></p></td>
+<td><p>Colorbar display</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.palette_title.html#ansys.dynamicreporting.core.Item.palette_title" title="ansys.dynamicreporting.core.Item.palette_title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.palette_title</span></code></a></p></td>
+<td><p>Colorbar title string</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.width.html#ansys.dynamicreporting.core.Item.width" title="ansys.dynamicreporting.core.Item.width"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.width</span></code></a></p></td>
+<td><p>Chart width</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.height.html#ansys.dynamicreporting.core.Item.height" title="ansys.dynamicreporting.core.Item.height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.height</span></code></a></p></td>
+<td><p>Chart height</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.show_legend.html#ansys.dynamicreporting.core.Item.show_legend" title="ansys.dynamicreporting.core.Item.show_legend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.show_legend</span></code></a></p></td>
+<td><p>Show legend</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.legend_position.html#ansys.dynamicreporting.core.Item.legend_position" title="ansys.dynamicreporting.core.Item.legend_position"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.legend_position</span></code></a></p></td>
+<td><p>Position the legend</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.show_legend_border.html#ansys.dynamicreporting.core.Item.show_legend_border" title="ansys.dynamicreporting.core.Item.show_legend_border"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.show_legend_border</span></code></a></p></td>
+<td><p>Show legend border</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.show_border.html#ansys.dynamicreporting.core.Item.show_border" title="ansys.dynamicreporting.core.Item.show_border"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.show_border</span></code></a></p></td>
+<td><p>Show plot border</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_margins.html#ansys.dynamicreporting.core.Item.plot_margins" title="ansys.dynamicreporting.core.Item.plot_margins"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.plot_margins</span></code></a></p></td>
+<td><p>Plot margins</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_title.html#ansys.dynamicreporting.core.Item.plot_title" title="ansys.dynamicreporting.core.Item.plot_title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.plot_title</span></code></a></p></td>
+<td><p>Plot title</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_xaxis_type.html#ansys.dynamicreporting.core.Item.plot_xaxis_type" title="ansys.dynamicreporting.core.Item.plot_xaxis_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.plot_xaxis_type</span></code></a></p></td>
+<td><p>X axis style</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.plot_yaxis_type.html#ansys.dynamicreporting.core.Item.plot_yaxis_type" title="ansys.dynamicreporting.core.Item.plot_yaxis_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.plot_yaxis_type</span></code></a></p></td>
+<td><p>Y axis style</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.xrange.html#ansys.dynamicreporting.core.Item.xrange" title="ansys.dynamicreporting.core.Item.xrange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.xrange</span></code></a></p></td>
+<td><p>X axis range</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.yrange.html#ansys.dynamicreporting.core.Item.yrange" title="ansys.dynamicreporting.core.Item.yrange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.yrange</span></code></a></p></td>
+<td><p>Y axis range</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.xaxis_format.html#ansys.dynamicreporting.core.Item.xaxis_format" title="ansys.dynamicreporting.core.Item.xaxis_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.xaxis_format</span></code></a></p></td>
+<td><p>X axis text format</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.yaxis_format.html#ansys.dynamicreporting.core.Item.yaxis_format" title="ansys.dynamicreporting.core.Item.yaxis_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.yaxis_format</span></code></a></p></td>
+<td><p>Y axis text format</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.xtitle.html#ansys.dynamicreporting.core.Item.xtitle" title="ansys.dynamicreporting.core.Item.xtitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.xtitle</span></code></a></p></td>
+<td><p>X axis title</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.ytitle.html#ansys.dynamicreporting.core.Item.ytitle" title="ansys.dynamicreporting.core.Item.ytitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.ytitle</span></code></a></p></td>
+<td><p>Y axis title</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.item_justification.html#ansys.dynamicreporting.core.Item.item_justification" title="ansys.dynamicreporting.core.Item.item_justification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.item_justification</span></code></a></p></td>
+<td><p>Table item justification</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.nan_display.html#ansys.dynamicreporting.core.Item.nan_display" title="ansys.dynamicreporting.core.Item.nan_display"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.nan_display</span></code></a></p></td>
+<td><p>NaN table display value</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_sort.html#ansys.dynamicreporting.core.Item.table_sort" title="ansys.dynamicreporting.core.Item.table_sort"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_sort</span></code></a></p></td>
+<td><p>Table sorting</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_title.html#ansys.dynamicreporting.core.Item.table_title" title="ansys.dynamicreporting.core.Item.table_title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_title</span></code></a></p></td>
+<td><p>Table title</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.align_column.html#ansys.dynamicreporting.core.Item.align_column" title="ansys.dynamicreporting.core.Item.align_column"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.align_column</span></code></a></p></td>
+<td><p>Column value alignment</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_search.html#ansys.dynamicreporting.core.Item.table_search" title="ansys.dynamicreporting.core.Item.table_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_search</span></code></a></p></td>
+<td><p>Search values</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_page.html#ansys.dynamicreporting.core.Item.table_page" title="ansys.dynamicreporting.core.Item.table_page"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_page</span></code></a></p></td>
+<td><p>Table paging</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_pagemenu.html#ansys.dynamicreporting.core.Item.table_pagemenu" title="ansys.dynamicreporting.core.Item.table_pagemenu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_pagemenu</span></code></a></p></td>
+<td><p>Table paging menu</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_scrollx.html#ansys.dynamicreporting.core.Item.table_scrollx" title="ansys.dynamicreporting.core.Item.table_scrollx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_scrollx</span></code></a></p></td>
+<td><p>Horizontal scrolling</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_scrolly.html#ansys.dynamicreporting.core.Item.table_scrolly" title="ansys.dynamicreporting.core.Item.table_scrolly"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_scrolly</span></code></a></p></td>
+<td><p>Vertical scrolling</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_bordered.html#ansys.dynamicreporting.core.Item.table_bordered" title="ansys.dynamicreporting.core.Item.table_bordered"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_bordered</span></code></a></p></td>
+<td><p>Table bordering</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_condensed.html#ansys.dynamicreporting.core.Item.table_condensed" title="ansys.dynamicreporting.core.Item.table_condensed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_condensed</span></code></a></p></td>
+<td><p>Table compactness</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_wrap_content.html#ansys.dynamicreporting.core.Item.table_wrap_content" title="ansys.dynamicreporting.core.Item.table_wrap_content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_wrap_content</span></code></a></p></td>
+<td><p>Table content wrapping</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_default_col_labels.html#ansys.dynamicreporting.core.Item.table_default_col_labels" title="ansys.dynamicreporting.core.Item.table_default_col_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_default_col_labels</span></code></a></p></td>
+<td><p>Default column labels</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.table_cond_format.html#ansys.dynamicreporting.core.Item.table_cond_format" title="ansys.dynamicreporting.core.Item.table_cond_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.table_cond_format</span></code></a></p></td>
+<td><p>Table conditional formatting</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.column_minimum.html#ansys.dynamicreporting.core.Item.column_minimum" title="ansys.dynamicreporting.core.Item.column_minimum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.column_minimum</span></code></a></p></td>
+<td><p>Parallel coords column range minimums</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.Item.column_maximum.html#ansys.dynamicreporting.core.Item.column_maximum" title="ansys.dynamicreporting.core.Item.column_maximum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item.column_maximum</span></code></a></p></td>
+<td><p>Parallel coords column range maximums</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.Item"><code class="docutils literal notranslate"><span class="pre">Item</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="http://github.com/ansys/pydynamicreporting/edit/main/ansys/dynamicreporting/core/adr_item.py">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div class="tocsection sourcelink">
+    <a href="../_sources/_autosummary/ansys.dynamicreporting.core.Item.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright (c) 2024 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  0.11.2. <br />Last updated on
+  <span id="date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var lastModifiedDate = new Date(document.lastModified);
+  var date = lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("date").innerHTML = date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

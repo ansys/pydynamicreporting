@@ -1,0 +1,6 @@
+get\_database\_config
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.get_database_config

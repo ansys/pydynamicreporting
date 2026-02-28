@@ -1,0 +1,6 @@
+render
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: File.render

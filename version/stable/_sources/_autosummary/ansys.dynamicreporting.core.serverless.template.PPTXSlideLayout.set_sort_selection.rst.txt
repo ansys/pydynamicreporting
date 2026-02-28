@@ -1,0 +1,6 @@
+set\_sort\_selection
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PPTXSlideLayout.set_sort_selection
