@@ -97,7 +97,7 @@ Use a Docker image to run ADR in containerized environments.
 
     adr = ADR(
         ansys_installation="docker",
-        docker_image="ghcr.io/ansys-internal/nexus_dev",
+        docker_image="ghcr.io/ansys-internal/adr_dev",
         db_directory=db_dir,
         media_directory=rf"{db_dir}\media",
     )

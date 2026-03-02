@@ -75,3 +75,4 @@ doc/_build
 *.tiff
 _test_enhanced_images.py
 local_tests/
+*.TGZ

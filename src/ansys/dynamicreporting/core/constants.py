@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-DOCKER_REPO_URL = "ghcr.io/ansys-internal/nexus"
-DOCKER_DEV_REPO_URL = "ghcr.io/ansys-internal/nexus_dev"
+DOCKER_REPO_URL = "ghcr.io/ansys-internal/adr_dev"
+DOCKER_DEV_REPO_URL = "ghcr.io/ansys-internal/adr_dev"
 DOCKER_DEFAULT_PORT = 8000
 
 LAYOUT_TYPES = (

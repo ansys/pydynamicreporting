@@ -67,17 +67,23 @@ def get_install_info(
         tuple[str, int]: Installation directory and version number.
     """
     dirs_to_check = []
+    # "ADR/" is the new installation layout (v271+); "CEI/" is the legacy layout.
+    # Both are checked for backwards compatibility, with "ADR/" tried first.
     if ansys_installation:
-        # User passed directory
-        dirs_to_check = [Path(ansys_installation) / "CEI", Path(ansys_installation)]
+        # User passed directory: check ADR/ (new), then CEI/ (legacy), then the base.
+        dirs_to_check = [
+            Path(ansys_installation) / "ADR",
+            Path(ansys_installation) / "CEI",
+            Path(ansys_installation),
+        ]
     else:
         # Environmental variable
         if "PYADR_ANSYS_INSTALLATION" in os.environ:
             env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
             # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
-            # where there is no CEI directory, but for folks using it in other
-            # ways, we'll add that one too, just in case.
-            dirs_to_check = [env_inst / "CEI", env_inst]
+            # where there is no ADR/CEI directory, but for folks using it in
+            # other ways, we'll add those too, just in case.
+            dirs_to_check = [env_inst / "ADR", env_inst / "CEI", env_inst]
         # 'enve' home directory (running in local distro)
         try:
             import enve
@@ -87,16 +93,19 @@ def get_install_info(
             pass
         # Look for Ansys install using target version number
         if f"AWP_ROOT{CURRENT_VERSION}" in os.environ:
-            dirs_to_check.append(Path(os.environ[f"AWP_ROOT{CURRENT_VERSION}"]) / "CEI")
+            awp_root = Path(os.environ[f"AWP_ROOT{CURRENT_VERSION}"])
+            # Check new layout (ADR/) first, then legacy (CEI/).
+            dirs_to_check.extend([awp_root / "ADR", awp_root / "CEI"])
         # Option for local development build
         if "CEIDEVROOTDOS" in os.environ:
             dirs_to_check.append(Path(os.environ["CEIDEVROOTDOS"]))
-        # Common, default install locations
+        # Common, default install locations.
+        # Try new layout (ADR/) first, then legacy (CEI/).
         if platform.system().startswith("Wind"):  # pragma: no cover
-            install_loc = Path(rf"C:\Program Files\ANSYS Inc\v{CURRENT_VERSION}\CEI")
+            base = Path(rf"C:\Program Files\ANSYS Inc\v{CURRENT_VERSION}")
         else:
-            install_loc = Path(f"/ansys_inc/v{CURRENT_VERSION}/CEI")
-        dirs_to_check.append(install_loc)
+            base = Path(f"/ansys_inc/v{CURRENT_VERSION}")
+        dirs_to_check.extend([base / "ADR", base / "CEI"])
 
     # find a valid installation directory
     install_dir = None

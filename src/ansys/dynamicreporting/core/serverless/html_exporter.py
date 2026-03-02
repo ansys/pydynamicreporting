@@ -234,28 +234,46 @@ class ServerlessReportExporter:
         """
         # --- MathJax (core + fonts) ---
         mathjax_files = [
-            "website/scripts/mathjax/jax/input/TeX/config.js",
-            "website/scripts/mathjax/jax/input/MathML/config.js",
-            "website/scripts/mathjax/jax/input/AsciiMath/config.js",
-            "website/scripts/mathjax/extensions/tex2jax.js",
-            "website/scripts/mathjax/extensions/mml2jax.js",
-            "website/scripts/mathjax/extensions/asciimath2jax.js",
-            "website/scripts/mathjax/extensions/MathZoom.js",
-            "website/scripts/mathjax/extensions/MathMenu.js",
-            "website/scripts/mathjax/extensions/MathEvents.js",
-            "website/scripts/mathjax/jax/element/mml/jax.js",
-            "website/scripts/mathjax/jax/input/TeX/jax.js",
-            "website/scripts/mathjax/extensions/TeX/AMSmath.js",
-            "website/scripts/mathjax/extensions/TeX/AMSsymbols.js",
-            "website/scripts/mathjax/extensions/TeX/noErrors.js",
-            "website/scripts/mathjax/extensions/TeX/noUndefined.js",
-            "website/scripts/mathjax/config/TeX-AMS-MML_SVG.js",
-            "website/scripts/mathjax/jax/output/SVG/jax.js",
-            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
-            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
-            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "website/scripts/mathjax/MathJax.js",  # important: top-level loader
-            "website/images/MenuArrow-15.png",
+            "website/scripts/mathjax/core.js",
+            "website/scripts/mathjax/loader.js",
+            "website/scripts/mathjax/startup.js",
+            "website/scripts/mathjax/tex-mml-chtml.js",  # important: top-level loader
+            "website/scripts/mathjax/LICENSE",
+            "website/scripts/mathjax/a11y/assistive-mml.js",
+            "website/scripts/mathjax/a11y/complexity.js",
+            "website/scripts/mathjax/a11y/explorer.js",
+            "website/scripts/mathjax/a11y/semantic-enrich.js",
+            "website/scripts/mathjax/a11y/speech.js",
+            "website/scripts/mathjax/a11y/sre.js",
+            "website/scripts/mathjax/input/mml/entities.js",
+            "website/scripts/mathjax/input/mml/extensions/mml3.js",
+            "website/scripts/mathjax/input/mml/extensions/mml3.sef.json",
+            "website/scripts/mathjax/input/tex/extensions/ams.js",
+            "website/scripts/mathjax/input/tex/extensions/noerrors.js",
+            "website/scripts/mathjax/input/tex/extensions/noundefined.js",
+            "website/scripts/mathjax/output/chtml.js",
+            "website/scripts/mathjax/output/svg.js",
+            "website/scripts/mathjax/sre/mathmaps/af.json",
+            "website/scripts/mathjax/sre/mathmaps/base.json",
+            "website/scripts/mathjax/sre/mathmaps/ca.json",
+            "website/scripts/mathjax/sre/mathmaps/da.json",
+            "website/scripts/mathjax/sre/mathmaps/de.json",
+            "website/scripts/mathjax/sre/mathmaps/en.json",
+            "website/scripts/mathjax/sre/mathmaps/es.json",
+            "website/scripts/mathjax/sre/mathmaps/euro.json",
+            "website/scripts/mathjax/sre/mathmaps/fr.json",
+            "website/scripts/mathjax/sre/mathmaps/hi.json",
+            "website/scripts/mathjax/sre/mathmaps/it.json",
+            "website/scripts/mathjax/sre/mathmaps/ko.json",
+            "website/scripts/mathjax/sre/mathmaps/nb.json",
+            "website/scripts/mathjax/sre/mathmaps/nemeth.json",
+            "website/scripts/mathjax/sre/mathmaps/nn.json",
+            "website/scripts/mathjax/sre/mathmaps/sv.json",
+            "website/scripts/mathjax/sre/speech-worker.js",
+            "website/scripts/mathjax/ui/lazy.js",
+            "website/scripts/mathjax/ui/menu.js",
+            "website/scripts/mathjax/ui/no-dark-mode.js",
+            "website/scripts/mathjax/ui/safe.js",
         ]
         for f in mathjax_files:
             target_path = "media/" + (
@@ -374,8 +392,17 @@ class ServerlessReportExporter:
                 write to ./media/<basename>
         - Handles scene.js renaming & inlining of its binary blocks.
         """
+        # Extract query string to preserve it in the result (e.g., MathJax config)
+        query_string = ""
+        if "?" in path_in_html:
+            query_string = path_in_html[path_in_html.index("?") :]
+
         if pathname in self._filemap:
-            return self._filemap[pathname]
+            cached_result = self._filemap[pathname]
+            # Don't append query string to data URIs
+            if cached_result.startswith("data:"):
+                return cached_result
+            return cached_result + query_string
 
         # Resolve source file location based on the raw pathname (no normalization)
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
@@ -446,7 +473,7 @@ class ServerlessReportExporter:
         target_file.write_bytes(content)
 
         self._filemap[pathname] = result
-        return result
+        return result + query_string
 
     def _find_block(self, text: str, start: int, prefix: str, suffix: str) -> tuple[int, int, str]:
         """
@@ -501,7 +528,10 @@ class ServerlessReportExporter:
         """
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
         if filename.endswith("ANSYSViewer_min.js"):
-            s = data.decode("utf-8")
+            try:
+                s = data.decode("utf-8")
+            except UnicodeDecodeError:
+                s = data.decode("latin-1")
             # Replace "<static>/website/images/" with dynamic base to ./media/
             s = s.replace(
                 f'"{self._static_url}website/images/"',
@@ -515,7 +545,10 @@ class ServerlessReportExporter:
             return s.encode("utf-8")
 
         if filename.endswith("viewer-loader.js"):
-            s = data.decode("utf-8")
+            try:
+                s = data.decode("utf-8")
+            except UnicodeDecodeError:
+                s = data.decode("latin-1")
             if ver:
                 s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
             return s.encode("utf-8")
