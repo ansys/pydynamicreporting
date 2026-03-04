@@ -64,7 +64,7 @@ test = [
     "pytest",
     "pytest-cov",
     "pyvista==0.47.0",
-    "vtk==9.5.2",
+    "vtk==9.6.0",
     "ansys-dpf-core==0.15.0",
 ]
 doc = [
