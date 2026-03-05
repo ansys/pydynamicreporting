@@ -72,11 +72,52 @@ The ``pydynamicreporting`` package supports Python 3.10 through 3.12 on
 Windows and Linux. It is currently available on the PyPI
 `repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
-To install the package, simply run
+For the base client package, run:
 
 .. code::
 
    pip install ansys-dynamicreporting-core
+
+This installs the core client dependencies needed for service-mode usage.
+
+Optional ``ext`` dependencies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Some functionality depends on an extended dependency set, including the
+Serverless stack and related data/export integrations. These dependencies are
+published as the optional ``ext`` extra.
+
+Install the package with the optional extra from PyPI using:
+
+.. code::
+
+   pip install "ansys-dynamicreporting-core[ext]"
+
+If you are installing from a local checkout instead of PyPI, use:
+
+.. code::
+
+   pip install ".[ext]"
+
+The ``ext`` extra currently includes these additional dependencies:
+
+- ``django``
+- ``django-guardian``
+- ``tzlocal``
+- ``numpy``
+- ``python-pptx``
+- ``pandas``
+- ``statsmodels``
+- ``psycopg[binary]``
+- ``qtpy``
+- ``lark``
+- ``bleach``
+- ``django-weasyprint``
+- ``weasyprint``
+
+Use the ``ext`` extra when you need functionality from
+``ansys.dynamicreporting.core.serverless`` or other features that rely on this
+extended stack. If you only need the base ADR client package, the standard
+installation without extras is sufficient.
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -115,6 +156,14 @@ The ``make install`` command does the following:
 
 This creates an "editable" installation that lets you develop and test
 PyDynamicReporting simultaneously.
+
+If you want an editable install with only the optional ADR extension
+dependencies, you can also run:
+
+.. code::
+
+   uv sync --frozen
+   uv run python -m pip install -e ".[ext]"
 
 **Developer workflow note**
 
