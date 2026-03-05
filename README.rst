@@ -84,7 +84,7 @@ Optional ``ext`` dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Some functionality depends on an extended dependency set, including the
 Serverless stack and related data/export integrations. These dependencies are
-published as the optional ``ext`` extra.
+published as the optional ``ext`` extra in ``pyproject.toml``.
 
 Install the package with the optional extra from PyPI using:
 
@@ -97,22 +97,6 @@ If you are installing from a local checkout instead of PyPI, use:
 .. code::
 
    pip install ".[ext]"
-
-The ``ext`` extra currently includes these additional dependencies:
-
-- ``django``
-- ``django-guardian``
-- ``tzlocal``
-- ``numpy``
-- ``python-pptx``
-- ``pandas``
-- ``statsmodels``
-- ``psycopg[binary]``
-- ``qtpy``
-- ``lark``
-- ``bleach``
-- ``django-weasyprint``
-- ``weasyprint``
 
 Use the ``ext`` extra when you need functionality from
 ``ansys.dynamicreporting.core.serverless`` or other features that rely on this
