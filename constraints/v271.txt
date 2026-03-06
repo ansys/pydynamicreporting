@@ -1,0 +1,4 @@
+# ADR 2027 R1 / v271 serverless dependency profile.
+django>=4.2.27,<5.0
+django-guardian>=2.4.0,<3.0.0
+djangorestframework>=3.15.2,<3.16.0

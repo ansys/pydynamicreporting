@@ -47,9 +47,12 @@ ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 ext = [
-    # core ADR dependencies
-    "django>=5.2.11,<6.0.0",
-    "django-guardian>=3.2.0,<4.0.0",
+    # Broad serverless compatibility envelope. Release-specific stacks belong
+    # in constraints files instead of mutually exclusive extras so uv.lock
+    # remains solvable.
+    "django>=4.2.27,<6.0.0",
+    "django-guardian>=2.4.0,<4.0.0",
+    "djangorestframework>=3.15.2,<3.17.0",
     "tzlocal>=5.3.1,<6.0",
     "numpy>=1.26.4,<2.0.0",
     "python-pptx>=1.0.2,<2.0.0",

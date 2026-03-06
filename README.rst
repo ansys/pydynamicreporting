@@ -103,6 +103,36 @@ Use the ``ext`` extra when you need functionality from
 extended stack. If you only need the base ADR client package, the standard
 installation without extras is sufficient.
 
+Serverless release constraints
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When you use Serverless ADR from an external Python virtual environment, the
+venv's Django-related packages are combined with the Django settings and apps
+that ship inside the installed ADR product release. If those two sides drift
+apart, ``ADR.setup()`` can fail during ``django.setup()`` even though the
+client environment and the product installation are each valid on their own.
+
+To keep the checked-in ``uv.lock`` solvable, the ``ext`` extra is intentionally
+a broad compatibility envelope rather than a set of mutually exclusive,
+release-specific extras. Product-line-specific dependency pins live under
+``constraints/`` and should be applied when creating a serverless venv for a
+specific ADR release.
+
+For example, for an ADR 2027 R1 / ``v271`` target from a source checkout, use:
+
+.. code:: bash
+
+   pip install -c constraints/v271.txt ".[ext]"
+
+If you are installing from PyPI instead of a local checkout, download the
+matching constraints file from this repository and use:
+
+.. code:: bash
+
+   pip install -c /path/to/v271.txt "ansys-dynamicreporting-core[ext]"
+
+Recommended practice is to keep one external serverless virtual environment
+per supported ADR product release family.
+
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
 This project uses `uv <https://github.com/astral-sh/uv>`_ for fast dependency
@@ -200,6 +230,11 @@ run the following commands to update the lock file:
 Then make sure to commit the updated ``uv.lock`` file.
 This ensures your local environment is synchronized with the latest dependency
 constraints.
+
+For serverless compatibility work, keep the optional ``ext`` extra broad enough
+to span the supported ADR product lines and place release-specific pins in
+``constraints/``. Adding mutually incompatible per-release extras breaks
+``uv lock`` because the repository maintains a single checked-in ``uv.lock``.
 
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
@@ -445,6 +480,25 @@ Options include:
   annual ADR product releases") and enforce it with runtime
   detection/fingerprinting of the targeted product release, clear error
   messages, and CI matrix coverage for each supported product line.
+
+Current repository mitigation
+"""""""""""""""""""""""""""
+
+This repository currently contains two concrete mitigations for the most common
+"new client deps <-> old server deps" failure mode:
+
+- ``ADR.setup()`` sanitizes imported product settings before calling
+  ``django.setup()`` so known setting transitions do not fail at import time.
+  The current shim translates ``GUARDIAN_MONKEY_PATCH`` to
+  ``GUARDIAN_MONKEY_PATCH_USER`` when newer ``django-guardian`` is installed,
+  and migrates ``DEFAULT_FILE_STORAGE`` to ``STORAGES["default"]`` for newer
+  Django releases.
+- Release-specific dependency profiles live in ``constraints/``. The current
+  example, ``constraints/v271.txt``, targets ADR 2027 R1 / ``v271``.
+
+These mitigations reduce breakage, but the primary recommendation is still to
+install the ``ext`` extra together with the constraints file that matches the
+target ADR release.
 
 .. note::
 

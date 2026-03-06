@@ -87,6 +87,65 @@ Example: Threading with Serverless ADR
         for t in threads:
             t.join()
 
+External Venv Dependency Drift
+------------------------------
+
+When Serverless ADR is used from a standalone Python virtual environment
+against an installed ADR product release, two independently versioned
+environments are combined in one Python process:
+
+- The Django settings, apps, migrations, and internal ADR modules that ship
+  with the installed product release.
+- The Django-related packages installed in the external client venv.
+
+If the client venv drifts ahead of the target product release,
+``ADR.setup()`` can fail inside ``django.setup()`` while product apps are
+being imported. A known example is newer ``django-guardian`` rejecting the
+legacy ``GUARDIAN_MONKEY_PATCH`` setting that older product releases still
+define.
+
+Current mitigation and recommendation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PyDynamicReporting currently mitigates this class of failure in two ways:
+
+- ``ADR.setup()`` now sanitizes the imported product settings before calling
+  ``django.setup()``. This compatibility shim currently handles known
+  transitions such as:
+
+  - ``GUARDIAN_MONKEY_PATCH`` -> ``GUARDIAN_MONKEY_PATCH_USER``
+  - ``DEFAULT_FILE_STORAGE`` -> ``STORAGES["default"]``
+
+- The optional ``ext`` dependency set in ``pyproject.toml`` now defines a
+  broad serverless compatibility envelope, while release-specific dependency
+  pins live in ``constraints/``. This repository keeps a single
+  checked-in ``uv.lock``, so release-specific stacks are documented as
+  constraints files rather than mutually incompatible extras.
+
+The compatibility shim is a safety net for known setting transitions. It is
+not a substitute for matching the external venv to the target ADR release.
+
+Recommended practice for external venv usage:
+
+- Install ``ansys-dynamicreporting-core[ext]`` together with the constraints
+  file that matches the target ADR release.
+- Keep one external serverless virtual environment per product release family.
+- Prefer the product-controlled Python environment when you do not need a
+  standalone venv.
+
+Example from a source checkout:
+
+.. code-block:: bash
+
+    pip install -c constraints/v271.txt ".[ext]"
+
+The current example profile, ``constraints/v271.txt``, targets
+ADR 2027 R1 / ``v271``.
+
+If you are installing from PyPI instead of a local checkout, copy the matching
+constraints file from ``constraints/`` in this repository and pass
+it to ``pip install -c ...``.
+
 Using Subprocesses for Multiple Configurations
 ----------------------------------------------
 
