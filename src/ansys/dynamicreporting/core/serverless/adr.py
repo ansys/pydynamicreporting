@@ -691,6 +691,11 @@ class ADR:
         # Work around Linux timezone issues when needed.
         report_utils.apply_timezone_workaround()
 
+        # === Settings compatibility shim ===
+        from ._compat import sanitize_settings
+
+        overrides = sanitize_settings(overrides)
+
         # Django settings + setup.
         try:
             from django.conf import settings
