@@ -1,0 +1,76 @@
+﻿Dataset
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: Dataset
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Dataset.add_tag
+      
+      
+      Dataset.as_dict
+      
+      
+      Dataset.create
+      
+      
+      Dataset.delete
+      
+      
+      Dataset.filter
+      
+      
+      Dataset.find
+      
+      
+      Dataset.get
+      
+      
+      Dataset.get_tags
+      
+      
+      Dataset.reinit
+      
+      
+      Dataset.rem_tag
+      
+      
+      Dataset.remove_tag
+      
+      
+      Dataset.save
+      
+      
+      Dataset.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Dataset.db
+      Dataset.dirname
+      Dataset.filename
+      Dataset.format
+      Dataset.numelements
+      Dataset.numparts
+      Dataset.saved
+      Dataset.tags
+      Dataset.guid
+   
+   

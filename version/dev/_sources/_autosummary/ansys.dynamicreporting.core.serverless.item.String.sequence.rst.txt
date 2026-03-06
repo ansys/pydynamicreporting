@@ -1,0 +1,6 @@
+sequence
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: String.sequence

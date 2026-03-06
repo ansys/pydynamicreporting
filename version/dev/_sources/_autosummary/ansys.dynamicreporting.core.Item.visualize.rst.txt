@@ -1,0 +1,6 @@
+visualize
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Item.visualize
