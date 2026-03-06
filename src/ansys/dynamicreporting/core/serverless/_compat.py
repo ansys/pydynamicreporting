@@ -1,3 +1,25 @@
+# Copyright (C) 2023 - 2026 ANSYS, Inc. and/or its affiliates.
+# SPDX-License-Identifier: MIT
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """Settings compatibility shim.
 
 Translates product settings to be compatible with the dependency versions
@@ -25,6 +47,7 @@ logger = logging.getLogger(__name__)
 # transform_func(overrides) -> overrides
 #   Mutates and returns the overrides dict.
 
+
 def _guardian_monkey_patch_rename(overrides: dict) -> dict:
     """Translate GUARDIAN_MONKEY_PATCH → GUARDIAN_MONKEY_PATCH_USER.
 
@@ -39,8 +62,7 @@ def _guardian_monkey_patch_rename(overrides: dict) -> dict:
         if new_key not in overrides:
             overrides[new_key] = overrides[old_key]
             logger.info(
-                f"Compat shim: Translated '{old_key}' → '{new_key}' "
-                f"(value={overrides[old_key]})"
+                f"Compat shim: Translated '{old_key}' → '{new_key}' (value={overrides[old_key]})"
             )
         del overrides[old_key]
     return overrides
@@ -51,10 +73,7 @@ def _guardian_needs_rename(overrides: dict, pkg_versions: dict) -> bool:
     guardian_ver = pkg_versions.get("django-guardian")
     if guardian_ver is None:
         return False
-    return (
-        "GUARDIAN_MONKEY_PATCH" in overrides
-        and guardian_ver >= Version("2.4.0")
-    )
+    return "GUARDIAN_MONKEY_PATCH" in overrides and guardian_ver >= Version("2.4.0")
 
 
 def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
@@ -71,8 +90,7 @@ def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
             storages["default"] = {"BACKEND": backend}
             overrides["STORAGES"] = storages
             logger.info(
-                f"Compat shim: Translated '{old_key}' → STORAGES['default'] "
-                f"(backend={backend})"
+                f"Compat shim: Translated '{old_key}' → STORAGES['default'] (backend={backend})"
             )
     return overrides
 
@@ -82,10 +100,7 @@ def _needs_storage_migration(overrides: dict, pkg_versions: dict) -> bool:
     django_ver = pkg_versions.get("django")
     if django_ver is None:
         return False
-    return (
-        "DEFAULT_FILE_STORAGE" in overrides
-        and django_ver >= Version("5.1")
-    )
+    return "DEFAULT_FILE_STORAGE" in overrides and django_ver >= Version("5.1")
 
 
 # The ordered registry of all known transformations.
