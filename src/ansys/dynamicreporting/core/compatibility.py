@@ -1,0 +1,159 @@
+# Copyright (C) 2023 - 2026 ANSYS, Inc. and/or its affiliates.
+# SPDX-License-Identifier: MIT
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""Public client-to-product compatibility metadata."""
+
+from dataclasses import dataclass
+import re
+
+from ._version import __version__
+
+_PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
+
+BUNDLED_PRODUCT_RELEASE = "27.1"
+SUPPORTED_PRODUCT_LINES = ("26", "27")
+SUPPORTED_PRODUCT_RELEASE_POLICY = (
+    "Supports the bundled annual product line and the previous annual product line."
+)
+# Keep the legacy three-digit install version available because the current
+# runtime and test infrastructure still key off values like ``271`` for install
+# lookup and static asset namespaces.
+DEFAULT_ANSYS_INSTALL_VERSION = str(
+    int("".join(BUNDLED_PRODUCT_RELEASE.split(".", maxsplit=1)))
+)
+
+
+@dataclass(frozen=True)
+class ProductCompatibility:
+    """Structured package compatibility metadata."""
+
+    client_version: str
+    client_major_epoch: int
+    bundled_product_release: str
+    supported_product_lines: tuple[str, ...]
+    support_policy: str
+
+
+def parse_product_release(product_release: str) -> tuple[str, int]:
+    """Parse a product release string like ``27.1`` into components."""
+    match = _PRODUCT_RELEASE_PATTERN.fullmatch(product_release)
+    if match is None:
+        raise ValueError(
+            "Product release must use the 'YY.R' format, for example '27.1' or '27.2'."
+        )
+
+    year_line = match.group("year_line")
+    release_index = int(match.group("release_index"))
+    if release_index < 1:
+        raise ValueError("Product release index must be 1 or greater.")
+    return year_line, release_index
+
+
+def product_release_to_install_version(product_release: str) -> int:
+    """Convert a public product release like ``27.1`` to the install version ``271``."""
+    year_line, release_index = parse_product_release(product_release)
+    return int(f"{year_line}{release_index}")
+
+
+def install_version_to_product_release(install_version: int | str) -> str:
+    """Convert an internal install version like ``271`` to ``27.1``."""
+    normalized = str(install_version).strip()
+    if not normalized.isdigit() or len(normalized) < 3:
+        raise ValueError(
+            "Install version must be a digit-only string or int with at least three digits."
+        )
+
+    year_line = normalized[:-1]
+    release_index = int(normalized[-1])
+    return f"{year_line}.{release_index}"
+
+
+def product_release_to_display_string(product_release: str) -> str:
+    """Convert ``27.1`` to ``2027 R1``."""
+    year_line, release_index = parse_product_release(product_release)
+    return f"20{year_line} R{release_index}"
+
+
+def product_release_to_short_label(product_release: str) -> str:
+    """Convert ``27.1`` to ``2027R1``."""
+    year_line, release_index = parse_product_release(product_release)
+    return f"20{year_line}R{release_index}"
+
+
+def product_release_to_product_line(product_release: str) -> str:
+    """Return the annual product line, for example ``27`` for ``27.2``."""
+    year_line, _ = parse_product_release(product_release)
+    return year_line
+
+
+def is_supported_product_release(
+    product_release: str, supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES
+) -> bool:
+    """Return ``True`` if the release belongs to one of the supported annual lines."""
+    return product_release_to_product_line(product_release) in supported_product_lines
+
+
+def get_client_major_epoch(client_version: str = __version__) -> int:
+    """Extract the SemVer major component from a client version string."""
+    # ``__version__`` may include dev/build suffixes, so only the leading
+    # numeric token is relevant for the compatibility epoch.
+    major_token = client_version.split(".", maxsplit=1)[0]
+    numeric = re.match(r"^\d+", major_token)
+    return int(numeric.group(0)) if numeric else 0
+
+
+def get_compatibility_info(client_version: str = __version__) -> ProductCompatibility:
+    """Return the public compatibility contract for the installed client."""
+    return ProductCompatibility(
+        client_version=client_version,
+        client_major_epoch=get_client_major_epoch(client_version),
+        bundled_product_release=BUNDLED_PRODUCT_RELEASE,
+        supported_product_lines=SUPPORTED_PRODUCT_LINES,
+        support_policy=SUPPORTED_PRODUCT_RELEASE_POLICY,
+    )
+
+
+def get_compatibility_warning_for_install_version(
+    install_version: int | str | None,
+    supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES,
+) -> str | None:
+    """Return a warning message when an install version falls outside the supported window."""
+    if install_version is None:
+        return None
+
+    try:
+        detected_release = install_version_to_product_release(install_version)
+    except ValueError:
+        # Preserve the historical behavior for unparseable versions by skipping
+        # the compatibility check instead of raising at import/constructor time.
+        return None
+
+    if is_supported_product_release(detected_release, supported_product_lines):
+        return None
+
+    supported_lines = ", ".join(f"{line}.*" for line in supported_product_lines)
+    return (
+        "Detected ADR product release "
+        f"{detected_release} is outside the supported window for this client. "
+        f"This client is bundled with {BUNDLED_PRODUCT_RELEASE} and supports annual lines "
+        f"{supported_lines}. Compatibility is not guaranteed."
+    )

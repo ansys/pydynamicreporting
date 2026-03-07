@@ -67,6 +67,7 @@ from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
+from ..compatibility import get_compatibility_warning_for_install_version
 from ..common_utils import get_install_info, populate_template
 from ..docker_support import DockerLauncher
 from ..exceptions import (
@@ -367,6 +368,11 @@ class ADR:
         if install_dir is None:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
         self._ansys_installation = Path(install_dir)
+        # Mirror the service-mode check: warn after resolving the install
+        # version, but do not block setup for an otherwise valid installation.
+        compatibility_warning = get_compatibility_warning_for_install_version(self._ansys_version)
+        if compatibility_warning:
+            warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
     @staticmethod
     def _check_dir(dir_):

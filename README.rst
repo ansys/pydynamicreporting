@@ -117,7 +117,8 @@ release-specific extras. Product-line-specific dependency pins live under
 ``constraints/`` and should be applied when creating a serverless venv for a
 specific ADR release.
 
-For example, for an ADR 2027 R1 / ``v271`` target from a source checkout, use:
+For example, for an ADR ``27.1`` / 2027 R1 / ``v271`` target from a source
+checkout, use:
 
 .. code:: bash
 
@@ -275,6 +276,30 @@ Versioning model
   timestamp**, for example ``0.10.1.devYYYYMMDDHHMMSS``.
 - No manual editing of ``pyproject.toml`` for versions;
   ``[tool.hatch.version]`` drives everything.
+- **Product compatibility** is declared separately from SemVer. The package
+  version stays plain SemVer, while the package metadata declares the bundled
+  ADR product release and the supported annual product lines.
+
+Product compatibility policy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Each client major line represents one ADR compatibility epoch.
+- A client line supports the current ADR annual product line and the previous
+  annual product line.
+- Minor and patch releases do not widen the compatibility window.
+- A new client major advances the window by one annual product line and drops
+  the oldest supported line.
+
+The current client line is bundled with ADR ``27.1`` and supports the
+``26.*`` and ``27.*`` annual product lines. If ADR later ships ``27.2``,
+that release is still covered by the same client compatibility epoch.
+
+For example, under this policy:
+
+- ``1.0.0`` could bundle ADR ``27.1`` and support ``26.*`` and ``27.*``.
+- ``1.2.0`` and ``1.2.2`` would still support ``26.*`` and ``27.*``.
+- ``2.0.0`` could bundle ADR ``28.1`` and support ``27.*`` and ``28.*``,
+  dropping support for ``26.*``.
 
 What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -494,7 +519,7 @@ This repository currently contains two concrete mitigations for the most common
   and migrates ``DEFAULT_FILE_STORAGE`` to ``STORAGES["default"]`` for newer
   Django releases.
 - Release-specific dependency profiles live in ``constraints/``. The current
-  example, ``constraints/v271.txt``, targets ADR 2027 R1 / ``v271``.
+  example, ``constraints/v271.txt``, targets ADR ``27.1`` / 2027 R1 / ``v271``.
 
 These mitigations reduce breakage, but the primary recommendation is still to
 install the ``ext`` extra together with the constraints file that matches the
@@ -505,6 +530,11 @@ target ADR release.
    The key goal is to ensure that an external virtual environment does **not**
    silently pick newer dependencies that are incompatible with an older
    installed product release.
+
+   This dependency-constraints guidance is complementary to the client
+   compatibility contract: the current client line is bundled with ADR
+   ``27.1`` and supports the ``26.*`` and ``27.*`` annual product lines,
+   while still using plain SemVer for package releases.
 
 Basic usage
 -----------

@@ -28,7 +28,7 @@ import urllib.parse
 
 import requests
 
-from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION as CURRENT_VERSION
 
 # Default Ansys version to use as a fallback.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
