@@ -27,7 +27,9 @@ import re
 
 import bleach
 
-from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+# Keep installation probing tied to the legacy three-digit version because the
+# current test/runtime environment expects install roots like ``v271``.
+from .compatibility import DEFAULT_ANSYS_INSTALL_VERSION as CURRENT_VERSION
 from .constants import JSON_NECESSARY_KEYS, JSON_TEMPLATE_KEYS, REPORT_TYPES
 from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError

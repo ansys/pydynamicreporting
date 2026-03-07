@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -53,27 +53,14 @@ wheels = [
 name = "ansys-dynamicreporting-core"
 source = { editable = "." }
 dependencies = [
-    { name = "bleach" },
-    { name = "django" },
-    { name = "django-guardian" },
-    { name = "django-weasyprint" },
     { name = "docker" },
-    { name = "lark" },
-    { name = "numpy" },
-    { name = "pandas" },
     { name = "pillow" },
     { name = "psutil" },
-    { name = "psycopg", extra = ["binary"] },
     { name = "pypng" },
     { name = "python-dateutil" },
-    { name = "python-pptx" },
     { name = "pytz" },
-    { name = "qtpy" },
     { name = "requests" },
-    { name = "statsmodels" },
-    { name = "tzlocal" },
     { name = "urllib3" },
-    { name = "weasyprint" },
 ]
 
 [package.optional-dependencies]
@@ -98,6 +85,22 @@ doc = [
     { name = "sphinx-copybutton" },
     { name = "sphinx-gallery" },
 ]
+ext = [
+    { name = "bleach" },
+    { name = "django" },
+    { name = "django-guardian" },
+    { name = "django-weasyprint" },
+    { name = "djangorestframework" },
+    { name = "lark" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "python-pptx" },
+    { name = "qtpy" },
+    { name = "statsmodels" },
+    { name = "tzlocal" },
+    { name = "weasyprint" },
+]
 test = [
     { name = "ansys-dpf-core" },
     { name = "pytest" },
@@ -110,46 +113,47 @@ test = [
 requires-dist = [
     { name = "ansys-dpf-core", marker = "extra == 'test'", specifier = "==0.15.0" },
     { name = "ansys-sphinx-theme", marker = "extra == 'doc'" },
-    { name = "bleach", specifier = ">=6.2.0" },
+    { name = "bleach", marker = "extra == 'ext'", specifier = ">=6.2.0" },
     { name = "codespell", marker = "extra == 'dev'" },
-    { name = "django", specifier = ">=5.2.11,<6.0.0" },
-    { name = "django-guardian", specifier = ">=3.2.0,<4.0.0" },
-    { name = "django-weasyprint", specifier = ">=2.4.0,<2.5.0" },
+    { name = "django", marker = "extra == 'ext'", specifier = ">=4.2.27,<6.0.0" },
+    { name = "django-guardian", marker = "extra == 'ext'", specifier = ">=2.4.0,<4.0.0" },
+    { name = "django-weasyprint", marker = "extra == 'ext'", specifier = ">=2.4.0,<2.5.0" },
+    { name = "djangorestframework", marker = "extra == 'ext'", specifier = ">=3.15.2,<3.17.0" },
     { name = "docker", specifier = ">=7.1.0" },
     { name = "docutils", marker = "extra == 'doc'", specifier = ">=0.21" },
     { name = "hatch", marker = "extra == 'dev'" },
     { name = "ipdb", marker = "extra == 'dev'" },
-    { name = "lark", specifier = ">=1.2.2,<1.3.0" },
-    { name = "numpy", specifier = ">=1.26.4,<2.0.0" },
+    { name = "lark", marker = "extra == 'ext'", specifier = ">=1.2.2,<1.3.0" },
+    { name = "numpy", marker = "extra == 'ext'", specifier = ">=1.26.4,<2.0.0" },
     { name = "numpydoc", marker = "extra == 'doc'" },
-    { name = "pandas", specifier = ">=2.2.2,<3.0.0" },
+    { name = "pandas", marker = "extra == 'ext'", specifier = ">=2.2.2,<3.0.0" },
     { name = "pillow", specifier = ">=9.3.0" },
     { name = "pip", marker = "extra == 'dev'" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "psutil", specifier = ">=6.0.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.6,<3.3.0" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'ext'", specifier = ">=3.2.6,<3.3.0" },
     { name = "pypng", specifier = ">=0.20220715.0" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "python-dateutil", specifier = ">=2.8.0" },
-    { name = "python-pptx", specifier = ">=1.0.2,<2.0.0" },
+    { name = "python-pptx", marker = "extra == 'ext'", specifier = ">=1.0.2,<2.0.0" },
     { name = "pytz", specifier = ">=2021.3" },
     { name = "pyvista", marker = "extra == 'test'", specifier = "==0.47.0" },
-    { name = "qtpy", specifier = ">=2.4.3,<2.5.0" },
+    { name = "qtpy", marker = "extra == 'ext'", specifier = ">=2.4.3,<2.5.0" },
     { name = "requests", specifier = ">=2.32" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sphinx", marker = "extra == 'doc'" },
     { name = "sphinx-copybutton", marker = "extra == 'doc'" },
     { name = "sphinx-gallery", marker = "extra == 'doc'" },
-    { name = "statsmodels", specifier = ">=0.14.2,<0.15.0" },
+    { name = "statsmodels", marker = "extra == 'ext'", specifier = ">=0.14.2,<0.15.0" },
     { name = "twine", marker = "extra == 'dev'" },
-    { name = "tzlocal", specifier = ">=5.3.1,<6.0" },
+    { name = "tzlocal", marker = "extra == 'ext'", specifier = ">=5.3.1,<6.0" },
     { name = "urllib3", specifier = "<3.0.0" },
     { name = "uv", marker = "extra == 'dev'" },
     { name = "vtk", marker = "extra == 'test'", specifier = "==9.5.2" },
-    { name = "weasyprint", specifier = ">=67.0" },
+    { name = "weasyprint", marker = "extra == 'ext'", specifier = ">=67.0" },
 ]
-provides-extras = ["dev", "doc", "test"]
+provides-extras = ["dev", "doc", "ext", "test"]
 
 [[package]]
 name = "ansys-sphinx-theme"
@@ -822,6 +826,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9d/77/330df7003eea657436c801a05a4953e78d2a50abafb551baf2b2a6560471/django_weasyprint-2.4.0.tar.gz", hash = "sha256:9a1d7c687a6c4678f3ac97e48b0ede495b47e17218e8ee6bea454bc8cfa6b60f", size = 14203, upload-time = "2025-03-06T09:48:55.259Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c9/9f/5ef4f290faf0f6e0c4a763367cba372ec5c92aeed2287963107f591910a7/django_weasyprint-2.4.0-py3-none-any.whl", hash = "sha256:06bc90bcc84f33d6675815498616cc82153ea924227d336bf32e5bf54da117d1", size = 8082, upload-time = "2025-03-06T09:48:54.213Z" },
+]
+
+[[package]]
+name = "djangorestframework"
+version = "3.16.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8a/95/5376fe618646fde6899b3cdc85fd959716bb67542e273a76a80d9f326f27/djangorestframework-3.16.1.tar.gz", hash = "sha256:166809528b1aced0a17dc66c24492af18049f2c9420dbd0be29422029cfc3ff7", size = 1089735, upload-time = "2025-08-06T17:50:53.251Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/ce/bf8b9d3f415be4ac5588545b5fcdbbb841977db1c1d923f7568eeabe1689/djangorestframework-3.16.1-py3-none-any.whl", hash = "sha256:33a59f47fb9c85ede792cbf88bde71893bcda0667bc573f784649521f1102cec", size = 1080442, upload-time = "2025-08-06T17:50:50.667Z" },
 ]
 
 [[package]]
