@@ -33,10 +33,12 @@ from ansys.dynamicreporting.core import (
     SUPPORTED_PRODUCT_RELEASE_POLICY,
     __ansys_version__,
     __ansys_version_str__,
+    ansys_version,
     get_compatibility_info,
 )
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.compatibility import (
+    DEFAULT_ANSYS_INSTALL_RELEASE,
     ProductCompatibility,
     get_compatibility_warning_for_install_version,
     install_version_to_product_release,
@@ -44,6 +46,7 @@ from ansys.dynamicreporting.core.compatibility import (
     parse_product_release,
     product_release_to_install_version,
 )
+from ansys.dynamicreporting.core.common_utils import InstallResolution
 from ansys.dynamicreporting.core.serverless import ADR
 
 
@@ -64,11 +67,13 @@ def test_install_version_conversion_round_trip():
 
 
 def test_supported_product_release_uses_annual_lines():
+    assert is_supported_product_release("25.1")
+    assert is_supported_product_release("25.2")
     assert is_supported_product_release("26.1")
     assert is_supported_product_release("26.2")
-    assert is_supported_product_release("27.1")
-    assert is_supported_product_release("27.2")
-    assert not is_supported_product_release("25.1")
+    assert not is_supported_product_release("27.1")
+    assert not is_supported_product_release("27.2")
+    assert not is_supported_product_release("24.1")
     assert not is_supported_product_release("28.1")
 
 
@@ -78,15 +83,20 @@ def test_public_compatibility_surface_is_consistent():
     assert compatibility.bundled_product_release == BUNDLED_PRODUCT_RELEASE
     assert compatibility.supported_product_lines == SUPPORTED_PRODUCT_LINES
     assert compatibility.support_policy == SUPPORTED_PRODUCT_RELEASE_POLICY
-    assert DEFAULT_ANSYS_VERSION == str(product_release_to_install_version(BUNDLED_PRODUCT_RELEASE))
+    assert BUNDLED_PRODUCT_RELEASE == "26.1"
+    assert SUPPORTED_PRODUCT_LINES == ("25", "26")
+    assert DEFAULT_ANSYS_VERSION == str(
+        product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
+    )
+    assert ansys_version == "2027R1"
     assert __ansys_version__ == DEFAULT_ANSYS_VERSION
-    assert __ansys_version_str__
+    assert __ansys_version_str__ == "2027 R1"
 
 
 def test_get_compatibility_warning_for_install_version():
-    assert get_compatibility_warning_for_install_version(271) is None
+    assert get_compatibility_warning_for_install_version(261) is None
     assert get_compatibility_warning_for_install_version(None) is None
-    warning_message = get_compatibility_warning_for_install_version(252)
+    warning_message = get_compatibility_warning_for_install_version(271)
     assert warning_message is not None
     assert "outside the supported window" in warning_message
 
@@ -98,8 +108,15 @@ def test_service_warns_for_unsupported_product_release(monkeypatch, tmp_path):
     # behavior and not the machine-specific installation search logic.
     monkeypatch.setattr(
         adr_service_module,
-        "get_install_info",
-        lambda ansys_installation=None, ansys_version=None: (str(install_dir), 252),
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=271,
+            detection_source="explicit_installation",
+            explicit_installation_requested=True,
+            explicit_version_requested=False,
+            implicit_dev_fallback_used=False,
+        ),
     )
 
     with warnings.catch_warnings(record=True) as caught:
@@ -114,13 +131,43 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
     install_dir.mkdir()
     monkeypatch.setattr(
         adr_service_module,
-        "get_install_info",
-        lambda ansys_installation=None, ansys_version=None: (str(install_dir), 271),
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=261,
+            detection_source="explicit_installation",
+            explicit_installation_requested=True,
+            explicit_version_requested=False,
+            implicit_dev_fallback_used=False,
+        ),
     )
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         Service(ansys_installation=str(install_dir))
+
+    assert not any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_service_suppresses_warning_for_implicit_dev_fallback(monkeypatch, tmp_path):
+    install_dir = tmp_path / "install"
+    install_dir.mkdir()
+    monkeypatch.setattr(
+        adr_service_module,
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=271,
+            detection_source="default_root_271",
+            explicit_installation_requested=False,
+            explicit_version_requested=False,
+            implicit_dev_fallback_used=True,
+        ),
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        Service()
 
     assert not any("outside the supported window" in str(w.message) for w in caught)
 
@@ -134,8 +181,15 @@ def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path)
     # tested deterministically without relying on a real ADR installation.
     monkeypatch.setattr(
         serverless_adr_module,
-        "get_install_info",
-        lambda ansys_installation=None, ansys_version=None: (str(install_dir), 252),
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=271,
+            detection_source="explicit_installation",
+            explicit_installation_requested=True,
+            explicit_version_requested=False,
+            implicit_dev_fallback_used=False,
+        ),
     )
 
     try:
@@ -156,8 +210,15 @@ def test_serverless_does_not_warn_when_install_version_is_unknown(monkeypatch, t
     monkeypatch.setattr(ADR, "_is_setup", False)
     monkeypatch.setattr(
         serverless_adr_module,
-        "get_install_info",
-        lambda ansys_installation=None, ansys_version=None: (str(install_dir), None),
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=None,
+            detection_source="explicit_installation",
+            explicit_installation_requested=True,
+            explicit_version_requested=False,
+            implicit_dev_fallback_used=False,
+        ),
     )
 
     try:
