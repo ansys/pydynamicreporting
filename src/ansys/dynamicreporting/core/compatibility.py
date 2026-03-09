@@ -29,17 +29,22 @@ from ._version import __version__
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
 
-BUNDLED_PRODUCT_RELEASE = "27.1"
-SUPPORTED_PRODUCT_LINES = ("26", "27")
+# Public compatibility metadata should describe the last shipped product line,
+# not whichever install tree current development happens to target.
+BUNDLED_PRODUCT_RELEASE = "26.1"
+SUPPORTED_PRODUCT_LINES = ("25", "26")
 SUPPORTED_PRODUCT_RELEASE_POLICY = (
     "Supports the bundled annual product line and the previous annual product line."
 )
-# Keep the legacy three-digit install version available because the current
-# runtime and test infrastructure still key off values like ``271`` for install
-# lookup and static asset namespaces.
-DEFAULT_ANSYS_INSTALL_VERSION = str(
-    int("".join(BUNDLED_PRODUCT_RELEASE.split(".", maxsplit=1)))
-)
+# Keep the legacy install-facing defaults separate from the public
+# compatibility contract. The repo's current runtime and test infrastructure
+# still keys off the in-development ``271`` layout, while the released client
+# compatibility contract remains tied to the last shipped product line.
+DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
+DEFAULT_ANSYS_INSTALL_VERSION = "271"
+# Probe newest internal/dev installs first, then fall back through released
+# installs so implicit discovery still works for users without ``v271``.
+AUTO_DETECT_INSTALL_VERSIONS = ("271", "261", "251")
 
 
 @dataclass(frozen=True)
@@ -123,6 +128,8 @@ def get_client_major_epoch(client_version: str = __version__) -> int:
 
 def get_compatibility_info(client_version: str = __version__) -> ProductCompatibility:
     """Return the public compatibility contract for the installed client."""
+    # Keep all public compatibility facts assembled in one place so docs,
+    # warnings, and future automation do not drift apart.
     return ProductCompatibility(
         client_version=client_version,
         client_major_epoch=get_client_major_epoch(client_version),
@@ -143,7 +150,7 @@ def get_compatibility_warning_for_install_version(
     try:
         detected_release = install_version_to_product_release(install_version)
     except ValueError:
-        # Preserve the historical behavior for unparseable versions by skipping
+        # Preserve the historical behavior for unparsable versions by skipping
         # the compatibility check instead of raising at import/constructor time.
         return None
 

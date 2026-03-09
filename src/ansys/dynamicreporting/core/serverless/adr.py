@@ -68,7 +68,7 @@ from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..compatibility import get_compatibility_warning_for_install_version
-from ..common_utils import get_install_info, populate_template
+from ..common_utils import populate_template, resolve_install_info
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -354,15 +354,23 @@ class ADR:
             except Exception as e:
                 self._logger.warning(f"Problem shutting down container/service: {str(e)}")
 
-            install_dir, self._ansys_version = get_install_info(
+            install_resolution = resolve_install_info(
                 ansys_installation=tmp_install_dir.name,
                 ansys_version=ansys_version,
             )
+            install_dir, self._ansys_version = (
+                install_resolution.install_dir,
+                install_resolution.version,
+            )
         else:
             # Local installation.
-            install_dir, self._ansys_version = get_install_info(
+            install_resolution = resolve_install_info(
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
+            )
+            install_dir, self._ansys_version = (
+                install_resolution.install_dir,
+                install_resolution.version,
             )
 
         if install_dir is None:
@@ -370,7 +378,13 @@ class ADR:
         self._ansys_installation = Path(install_dir)
         # Mirror the service-mode check: warn after resolving the install
         # version, but do not block setup for an otherwise valid installation.
-        compatibility_warning = get_compatibility_warning_for_install_version(self._ansys_version)
+        compatibility_warning = None
+        # Keep serverless aligned with service-mode: suppress only the implicit
+        # ``271`` dev fallback so explicit unsupported targets still warn.
+        if not install_resolution.implicit_dev_fallback_used:
+            compatibility_warning = get_compatibility_warning_for_install_version(
+                self._ansys_version
+            )
         if compatibility_warning:
             warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 

@@ -23,6 +23,7 @@
 from ._version import __version__
 from .compatibility import (
     BUNDLED_PRODUCT_RELEASE,
+    DEFAULT_ANSYS_INSTALL_RELEASE,
     DEFAULT_ANSYS_INSTALL_VERSION,
     SUPPORTED_PRODUCT_LINES,
     SUPPORTED_PRODUCT_RELEASE_POLICY,
@@ -37,12 +38,12 @@ VERSION = __version__
 # codebase, even though the source of truth now lives in ``compatibility.py``.
 DEFAULT_ANSYS_VERSION = DEFAULT_ANSYS_INSTALL_VERSION
 
-ansys_version = product_release_to_short_label(BUNDLED_PRODUCT_RELEASE)
+ansys_version = product_release_to_short_label(DEFAULT_ANSYS_INSTALL_RELEASE)
 
 # Preserve the historical package surface so existing imports keep resolving
 # while callers migrate to the explicit compatibility metadata names.
 __ansys_version__ = DEFAULT_ANSYS_VERSION
-__ansys_version_str__ = product_release_to_display_string(BUNDLED_PRODUCT_RELEASE)
+__ansys_version_str__ = product_release_to_display_string(DEFAULT_ANSYS_INSTALL_RELEASE)
 
 # Ease imports
 from ansys.dynamicreporting.core.adr_item import Item

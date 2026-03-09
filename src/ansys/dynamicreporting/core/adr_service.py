@@ -57,7 +57,7 @@ from .adr_item import Item
 from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
 from .compatibility import get_compatibility_warning_for_install_version
-from .common_utils import get_install_info
+from .common_utils import resolve_install_info
 from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -247,15 +247,24 @@ class Service:
 
         else:  # pragma: no cover
             # local installation
-            self._ansys_installation, self._ansys_version = get_install_info(
+            install_resolution = resolve_install_info(
                 ansys_installation=ansys_installation, ansys_version=ansys_version
+            )
+            self._ansys_installation, self._ansys_version = (
+                install_resolution.install_dir,
+                install_resolution.version,
             )
             # Run the compatibility check only after the traditional install
             # probing succeeds so unsupported releases warn without changing the
             # pre-existing install-detection flow.
-            compatibility_warning = get_compatibility_warning_for_install_version(
-                self._ansys_version
-            )
+            compatibility_warning = None
+            # Suppress the warning only for the implicit ``271`` dev fallback.
+            # Explicit ``271`` usage should still surface as outside the current
+            # released support window.
+            if not install_resolution.implicit_dev_fallback_used:
+                compatibility_warning = get_compatibility_warning_for_install_version(
+                    self._ansys_version
+                )
             if compatibility_warning:
                 warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
