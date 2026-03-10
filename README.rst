@@ -546,7 +546,7 @@ Options include:
   messages, and CI matrix coverage for each supported product line.
 
 Current repository mitigation
-""""""""""""""""""""""""""""
+-----------------------------
 
 This repository currently contains two concrete mitigations for the most common
 "new client deps <-> old server deps" failure mode:
