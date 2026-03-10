@@ -137,10 +137,10 @@ Example from a source checkout:
 
 .. code-block:: bash
 
-    pip install -c constraints/v271.txt .
+    pip install -c constraints/v261.txt .
 
-The current example profile, ``constraints/v271.txt``, targets
-ADR 2027 R1 / ``v271``.
+The current example profile, ``constraints/v261.txt``, targets
+ADR 2026 R1 / ``v261``.
 
 If you are installing from PyPI instead of a local checkout, copy the matching
 constraints file from ``constraints/`` in this repository and pass

@@ -109,19 +109,19 @@ compatibility envelope, while product-line-specific pins live under
 ``constraints/`` and should be applied when creating a serverless venv for a
 specific ADR release.
 
-For example, for an ADR ``27.1`` / 2027 R1 / ``v271`` target from a source
+For example, for an ADR ``26.1`` / 2026 R1 / ``v261`` target from a source
 checkout, use:
 
 .. code:: bash
 
-   pip install -c constraints/v271.txt .
+   pip install -c constraints/v261.txt .
 
 If you are installing from PyPI instead of a local checkout, download the
 matching constraints file from this repository and use:
 
 .. code:: bash
 
-   pip install -c /path/to/v271.txt ansys-dynamicreporting-core
+   pip install -c /path/to/v261.txt ansys-dynamicreporting-core
 
 Recommended practice is to keep one external serverless virtual environment
 per supported ADR product release family.
@@ -546,7 +546,7 @@ Options include:
   messages, and CI matrix coverage for each supported product line.
 
 Current repository mitigation
-"""""""""""""""""""""""""""
+""""""""""""""""""""""""""""
 
 This repository currently contains two concrete mitigations for the most common
 "new client deps <-> old server deps" failure mode:
@@ -559,8 +559,8 @@ This repository currently contains two concrete mitigations for the most common
   Django releases.
 - The base dependency set in ``pyproject.toml`` provides the broad serverless
   runtime, while release-specific dependency profiles live in ``constraints/``.
-  The current example, ``constraints/v271.txt``, targets ADR ``27.1`` / 2027
-  R1 / ``v271``.
+  The current example, ``constraints/v261.txt``, targets ADR ``26.1`` / 2026
+  R1 / ``v261``.
 
 These mitigations reduce breakage, but the primary recommendation is still to
 install the base package together with the constraints file that matches the
