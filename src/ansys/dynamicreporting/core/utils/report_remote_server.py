@@ -834,21 +834,27 @@ class Server:
         return templ
 
     def _download_report(self, url, file_name, directory_name=None):
-        resp = requests.get(url, allow_redirects=True)  # nosec B400
-        if resp.status_code != requests.codes.ok:
-            try:
-                detail = resp.json()["detail"]
-            except (JSONDecodeError, KeyError):
-                detail = f"Failed to export the PPTX report {file_name} at {url}: error {resp.status_code}"
-            raise Exception(detail)
-        # get abs path
-        if directory_name:
-            file_path = (Path(directory_name) / Path(file_name)).resolve()
-        else:
-            file_path = Path(file_name).resolve()
-        # write to disk
-        with open(file_path, "wb") as report:
-            report.write(resp.content)
+        with requests.get(url, allow_redirects=True, stream=True, timeout=(30, 180)) as resp:
+            if resp.status_code != requests.codes.ok:
+                try:
+                    detail = resp.json()["detail"]
+                except (JSONDecodeError, KeyError):
+                    detail = (
+                        f"Failed to export the PPTX report {file_name} at {url}: "
+                        f"error {resp.status_code}"
+                    )
+                raise Exception(detail)
+            # get abs path
+            if directory_name:
+                file_path = (Path(directory_name) / Path(file_name)).resolve()
+            else:
+                file_path = Path(file_name).resolve()
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            # write to disk
+            with open(file_path, "wb") as report:
+                for chunk in resp.iter_content(chunk_size=1024 * 64):
+                    if chunk:
+                        report.write(chunk)
 
     def build_url_with_query(self, report_guid, query, item_filter=None, rest_api=False):
         url = self.get_URL()
@@ -958,22 +964,24 @@ class Server:
         if query is None:
             query = {}
         url = self.build_url_with_query(report_guid, query)
-        resp = requests.get(url, allow_redirects=True)  # nosec B400
-        if resp.status_code == requests.codes.ok:
-            try:
-                links = report_utils.get_links_from_html(resp.text)
-                for link in links:
-                    url = urlparse(link)
-                    q_params = dict(urllib.parse.parse_qsl(url.query))
-                    file_format = q_params.get("format")
-                    if file_format != "pptx":
-                        continue
-                    self._download_report(link, q_params["filename"], directory_name=directory_name)
-            except Exception as e:
-                if print_allowed():
-                    print(f"Unable to get pptx from report '{report_guid}': {e}")
-        else:
-            raise Exception(f"The server returned an error code {resp.status_code}")
+        with requests.get(url, allow_redirects=True, stream=True, timeout=(60, 180)) as resp:
+            if resp.status_code == requests.codes.ok:
+                try:
+                    links = report_utils.get_links_from_html(resp.text)
+                    for link in links:
+                        parsed_url = urlparse(link)
+                        q_params = dict(urllib.parse.parse_qsl(parsed_url.query))
+                        file_format = q_params.get("format")
+                        if file_format != "pptx":
+                            continue
+                        self._download_report(
+                            link, q_params["filename"], directory_name=directory_name
+                        )
+                except Exception as e:
+                    if print_allowed():
+                        print(f"Unable to get pptx from report '{report_guid}': {e}")
+            else:
+                raise Exception(f"The server returned an error code {resp.status_code}")
 
     def get_templates_as_dict(self, root_guid):
         """
