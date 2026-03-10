@@ -78,30 +78,21 @@ For the base client package, run:
 
    pip install ansys-dynamicreporting-core
 
-This installs the core client dependencies needed for service-mode usage.
+This installs the core client dependencies needed for both service-mode usage
+and the common external-Python serverless workflow.
 
-Optional ``ext`` dependencies
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Some functionality depends on an extended dependency set, including the
-Serverless stack and related data/export integrations. These dependencies are
-published as the optional ``ext`` extra in ``pyproject.toml``.
-
-Install the package with the optional extra from PyPI using:
-
-.. code::
-
-   pip install "ansys-dynamicreporting-core[ext]"
+Core Serverless Dependencies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The base package now includes the Django/serverless runtime that most external
+Python users need. That means the standard installation supports both
+service-mode usage and the common serverless attachment workflow against an
+installed ADR product release.
 
 If you are installing from a local checkout instead of PyPI, use:
 
 .. code::
 
-   pip install ".[ext]"
-
-Use the ``ext`` extra when you need functionality from
-``ansys.dynamicreporting.core.serverless`` or other features that rely on this
-extended stack. If you only need the base ADR client package, the standard
-installation without extras is sufficient.
+   pip install .
 
 Serverless release constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -111,9 +102,10 @@ that ship inside the installed ADR product release. If those two sides drift
 apart, ``ADR.setup()`` can fail during ``django.setup()`` even though the
 client environment and the product installation are each valid on their own.
 
-To keep the checked-in ``uv.lock`` solvable, the ``ext`` extra is intentionally
-a broad compatibility envelope rather than a set of mutually exclusive,
-release-specific extras. Product-line-specific dependency pins live under
+To keep the checked-in ``uv.lock`` solvable, release-specific compatibility is
+managed through ``constraints/`` files rather than mutually incompatible
+extras. The base dependency set in ``pyproject.toml`` is the broad serverless
+compatibility envelope, while product-line-specific pins live under
 ``constraints/`` and should be applied when creating a serverless venv for a
 specific ADR release.
 
@@ -122,14 +114,14 @@ checkout, use:
 
 .. code:: bash
 
-   pip install -c constraints/v271.txt ".[ext]"
+   pip install -c constraints/v271.txt .
 
 If you are installing from PyPI instead of a local checkout, download the
 matching constraints file from this repository and use:
 
 .. code:: bash
 
-   pip install -c /path/to/v271.txt "ansys-dynamicreporting-core[ext]"
+   pip install -c /path/to/v271.txt ansys-dynamicreporting-core
 
 Recommended practice is to keep one external serverless virtual environment
 per supported ADR product release family.
@@ -172,13 +164,13 @@ The ``make install`` command does the following:
 This creates an "editable" installation that lets you develop and test
 PyDynamicReporting simultaneously.
 
-If you want an editable install with only the optional ADR extension
-dependencies, you can also run:
+If you want an editable install using the package dependency set directly, you
+can also run:
 
 .. code::
 
    uv sync --frozen
-   uv run python -m pip install -e ".[ext]"
+   uv run python -m pip install -e .
 
 **Developer workflow note**
 
@@ -232,8 +224,8 @@ Then make sure to commit the updated ``uv.lock`` file.
 This ensures your local environment is synchronized with the latest dependency
 constraints.
 
-For serverless compatibility work, keep the optional ``ext`` extra broad enough
-to span the supported ADR product lines and place release-specific pins in
+For serverless compatibility work, keep the base dependency set broad enough to
+span the supported ADR product lines and place release-specific pins in
 ``constraints/``. Adding mutually incompatible per-release extras breaks
 ``uv lock`` because the repository maintains a single checked-in ``uv.lock``.
 
@@ -536,11 +528,13 @@ This repository currently contains two concrete mitigations for the most common
   ``GUARDIAN_MONKEY_PATCH_USER`` when newer ``django-guardian`` is installed,
   and migrates ``DEFAULT_FILE_STORAGE`` to ``STORAGES["default"]`` for newer
   Django releases.
-- Release-specific dependency profiles live in ``constraints/``. The current
-  example, ``constraints/v271.txt``, targets ADR ``27.1`` / 2027 R1 / ``v271``.
+- The base dependency set in ``pyproject.toml`` provides the broad serverless
+  runtime, while release-specific dependency profiles live in ``constraints/``.
+  The current example, ``constraints/v271.txt``, targets ADR ``27.1`` / 2027
+  R1 / ``v271``.
 
 These mitigations reduce breakage, but the primary recommendation is still to
-install the ``ext`` extra together with the constraints file that matches the
+install the base package together with the constraints file that matches the
 target ADR release.
 
 .. note::

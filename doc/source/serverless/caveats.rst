@@ -116,8 +116,8 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
   - ``GUARDIAN_MONKEY_PATCH`` -> ``GUARDIAN_MONKEY_PATCH_USER``
   - ``DEFAULT_FILE_STORAGE`` -> ``STORAGES["default"]``
 
-- The optional ``ext`` dependency set in ``pyproject.toml`` now defines a
-  broad serverless compatibility envelope, while release-specific dependency
+- The base dependency set in ``pyproject.toml`` now defines the broad
+  serverless compatibility envelope, while release-specific dependency
   pins live in ``constraints/``. This repository keeps a single
   checked-in ``uv.lock``, so release-specific stacks are documented as
   constraints files rather than mutually incompatible extras.
@@ -127,7 +127,7 @@ not a substitute for matching the external venv to the target ADR release.
 
 Recommended practice for external venv usage:
 
-- Install ``ansys-dynamicreporting-core[ext]`` together with the constraints
+- Install ``ansys-dynamicreporting-core`` together with the constraints
   file that matches the target ADR release.
 - Keep one external serverless virtual environment per product release family.
 - Prefer the product-controlled Python environment when you do not need a
@@ -137,7 +137,7 @@ Example from a source checkout:
 
 .. code-block:: bash
 
-    pip install -c constraints/v271.txt ".[ext]"
+    pip install -c constraints/v271.txt .
 
 The current example profile, ``constraints/v271.txt``, targets
 ADR 2027 R1 / ``v271``.
