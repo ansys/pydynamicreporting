@@ -282,6 +282,17 @@ Product compatibility policy
 - A new client major advances the window by one annual product line and drops
   the oldest supported line.
 
+Policy start point
+""""""""""""""""""
+
+- ``0.x`` is the legacy transition line. ``0.10.x`` remains the last legacy
+  line tied to ADR ``26.1`` behavior.
+- ``1.0.0`` is the first fully policy-driven line. It starts the
+  product-release-aligned scheme with ADR ``27.1`` as the bundled release and
+  support for the ``26.*`` and ``27.*`` annual product lines.
+- Every future client major advances the supported window by exactly one ADR
+  annual product line.
+
 The client major line determines the ADR compatibility epoch:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
@@ -294,6 +305,24 @@ The client major line determines the ADR compatibility epoch:
 ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
 there is only one release per annual line, so ``26.*`` currently means
 ``26.1``, ``27.*`` means ``27.1``, and so on.
+
+What "supported" means
+""""""""""""""""""""""
+
+In this repository, "supported" is an explicit compatibility contract, not a
+vague "might work" statement.
+
+- A supported ADR product line is inside the documented client compatibility
+  window for that major release.
+- Supported lines are the scope for compatibility regressions and bug fixes.
+- Supported lines are covered by the repository's targeted compatibility
+  checks and release validation for this package policy.
+- Unsupported lines are best-effort only. They may still work in some cases,
+  but compatibility is not guaranteed and regressions are not treated as
+  policy violations.
+- When service-mode or serverless install detection identifies a product line
+  outside the supported window, PyDynamicReporting warns explicitly instead of
+  silently treating it as fully supported.
 
 The legacy package constants ``DEFAULT_ANSYS_VERSION``, ``ansys_version``,
 ``__ansys_version__``, and ``__ansys_version_str__`` remain install-facing
