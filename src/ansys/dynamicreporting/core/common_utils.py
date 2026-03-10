@@ -55,6 +55,29 @@ def get_install_version(install_dir: Path) -> int | None:
     return int(matches.group(1)) if matches else None
 
 
+def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
+    """Infer the install version from ``nexus###`` directories when needed.
+
+    Some explicit installation paths, such as copied Docker layouts or temp
+    directories created during tests, do not include a ``v###`` segment in the
+    path itself. In those cases the shipped ADR tree still exposes the version
+    through its ``nexus###/django/manage.py`` layout, which is stable across
+    the supported installation formats.
+    """
+    if install_dir is None or not install_dir.is_dir():
+        return None
+
+    detected_versions: list[int] = []
+    for child in install_dir.iterdir():
+        match = re.fullmatch(r"nexus(\d{3})", child.name)
+        if match and (child / "django" / "manage.py").exists():
+            detected_versions.append(int(match.group(1)))
+
+    if len(detected_versions) == 1:
+        return detected_versions[0]
+    return None
+
+
 @dataclass(frozen=True)
 class InstallResolution:
     """Internal install-resolution metadata used by runtime compatibility checks."""
@@ -168,6 +191,8 @@ def resolve_install_info(
             break
 
     version = get_install_version(install_dir)
+    if version is None:
+        version = _get_install_version_from_layout(install_dir)
     if version is None:
         version = ansys_version or int(DEFAULT_ANSYS_INSTALL_VERSION)
 

@@ -325,6 +325,20 @@ def test_get_install_info_provided_ansys_version(tmp_path):
     assert ver == provided_version
 
 
+@pytest.mark.ado_test
+def test_get_install_info_detects_version_from_install_layout(tmp_path):
+    install_dir = tmp_path / "install_no_version"
+    install_dir.mkdir()
+    nexus_dir = install_dir / "nexus271" / "django"
+    nexus_dir.mkdir(parents=True)
+    (nexus_dir / "manage.py").write_text("dummy content")
+
+    install, ver = get_install_info(ansys_installation=str(install_dir))
+
+    assert install == str(install_dir)
+    assert ver == 271
+
+
 # Test the branch for a valid 'enve' candidate.
 @pytest.mark.ado_test
 def test_get_install_info_with_enve(monkeypatch, tmp_path):
