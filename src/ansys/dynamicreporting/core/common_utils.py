@@ -79,11 +79,20 @@ def _default_install_root(version: str) -> Path:
     return Path(f"/ansys_inc/v{version}")
 
 
-def _append_unique(candidates: list[tuple[Path, str]], path: Path, source: str) -> None:
-    """Preserve candidate order while avoiding duplicate filesystem probes."""
+def _append_unique(
+    candidates: list[tuple[Path, str]], seen_candidates: set[str], path: Path, source: str
+) -> None:
+    """Preserve candidate order while avoiding duplicate filesystem probes.
+
+    Install discovery only considers a small fixed set of locations, but
+    keeping a companion set makes duplicate checks constant-time and avoids
+    rescanning the candidate list every time multiple sources resolve to the
+    same path.
+    """
     candidate = str(path)
-    if all(str(existing_path) != candidate for existing_path, _ in candidates):
+    if candidate not in seen_candidates:
         candidates.append((path, source))
+        seen_candidates.add(candidate)
 
 
 def _build_install_candidates(
@@ -91,6 +100,7 @@ def _build_install_candidates(
 ) -> list[tuple[Path, str]]:
     """Return candidate installation directories in probe order."""
     candidates: list[tuple[Path, str]] = []
+    seen_candidates: set[str] = set()
 
     if ansys_installation:
         # An explicit path always wins. Preserve the historical ADR -> CEI ->
@@ -100,18 +110,18 @@ def _build_install_candidates(
             Path(ansys_installation) / "CEI",
             Path(ansys_installation),
         ]:
-            _append_unique(candidates, path, "explicit_installation")
+            _append_unique(candidates, seen_candidates, path, "explicit_installation")
         return candidates
 
     if "PYADR_ANSYS_INSTALLATION" in os.environ:
         env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
         for path in [env_inst / "ADR", env_inst / "CEI", env_inst]:
-            _append_unique(candidates, path, "pyadr_env")
+            _append_unique(candidates, seen_candidates, path, "pyadr_env")
 
     try:
         import enve
 
-        _append_unique(candidates, Path(enve.home()), "enve")
+        _append_unique(candidates, seen_candidates, Path(enve.home()), "enve")
     except ModuleNotFoundError:
         pass
 
@@ -127,16 +137,16 @@ def _build_install_candidates(
         if awp_root_key in os.environ:
             awp_root = Path(os.environ[awp_root_key])
             for path in _candidate_dirs_for_install_root(awp_root):
-                _append_unique(candidates, path, f"awp_root_{version}")
+                _append_unique(candidates, seen_candidates, path, f"awp_root_{version}")
 
     if "CEIDEVROOTDOS" in os.environ:
-        _append_unique(candidates, Path(os.environ["CEIDEVROOTDOS"]), "ceidev")
+        _append_unique(candidates, seen_candidates, Path(os.environ["CEIDEVROOTDOS"]), "ceidev")
 
     for version in versions_to_probe:
         # Default install roots are the last probe source because env-based
         # overrides should remain higher precedence than machine-wide installs.
         for path in _candidate_dirs_for_install_root(_default_install_root(version)):
-            _append_unique(candidates, path, f"default_root_{version}")
+            _append_unique(candidates, seen_candidates, path, f"default_root_{version}")
 
     return candidates
 

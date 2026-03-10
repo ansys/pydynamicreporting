@@ -22,25 +22,29 @@
 
 """Settings compatibility shim.
 
-Translates product settings to be compatible with the dependency versions
-installed in the client's venv. This handles known deprecations, renames,
-and removals across product releases.
+Translate product settings so they remain compatible with the dependency
+versions installed in the client's venv. This module only handles known
+setting transitions between supported ADR product lines and current client
+dependencies.
 """
 
 from __future__ import annotations
 
 import importlib.metadata
 import logging
-import warnings
-
-from packaging.version import Version
+import re
+from typing import Callable
 
 logger = logging.getLogger(__name__)
+
+VersionKey = tuple[int, ...]
+ConditionFn = Callable[[dict, dict[str, VersionKey]], bool]
+TransformFn = Callable[[dict], dict]
 
 
 # Registry of settings transformations.
 # Each entry is:
-#   (setting_to_check, condition_func, transform_func, description)
+#   (description, condition_func, transform_func)
 #
 # condition_func(overrides, pkg_versions) -> bool
 #   Returns True if the transformation should be applied.
@@ -48,12 +52,29 @@ logger = logging.getLogger(__name__)
 #   Mutates and returns the overrides dict.
 
 
-def _guardian_monkey_patch_rename(overrides: dict) -> dict:
-    """Translate GUARDIAN_MONKEY_PATCH → GUARDIAN_MONKEY_PATCH_USER.
+def _normalize_version(version_string: str) -> VersionKey:
+    """Convert a package version string into a comparable numeric tuple.
 
-    django-guardian >= 2.4.0 deprecated GUARDIAN_MONKEY_PATCH in favor of
-    GUARDIAN_MONKEY_PATCH_USER. Versions >= 3.0 may raise at import time
-    if the old setting is present.
+    Only the leading numeric components are relevant for the floor checks in
+    this shim. Suffixes such as ``rc1`` or ``post1`` are ignored because the
+    current transformations only need stable minimum-version comparisons.
+    """
+    components: list[int] = []
+    for part in version_string.split("."):
+        match = re.match(r"^(\d+)", part)
+        if match is None:
+            break
+        components.append(int(match.group(1)))
+
+    return tuple(components)
+
+
+def _guardian_monkey_patch_rename(overrides: dict) -> dict:
+    """Translate ``GUARDIAN_MONKEY_PATCH`` to ``GUARDIAN_MONKEY_PATCH_USER``.
+
+    django-guardian >= 2.4.0 deprecated ``GUARDIAN_MONKEY_PATCH`` in favor of
+    ``GUARDIAN_MONKEY_PATCH_USER``. Versions >= 3.0 may raise at import time
+    if the old setting is still present.
     """
     old_key = "GUARDIAN_MONKEY_PATCH"
     new_key = "GUARDIAN_MONKEY_PATCH_USER"
@@ -62,25 +83,26 @@ def _guardian_monkey_patch_rename(overrides: dict) -> dict:
         if new_key not in overrides:
             overrides[new_key] = overrides[old_key]
             logger.info(
-                f"Compat shim: Translated '{old_key}' → '{new_key}' (value={overrides[old_key]})"
+                f"Compat shim: Translated '{old_key}' -> '{new_key}' (value={overrides[old_key]})"
             )
         del overrides[old_key]
     return overrides
 
 
-def _guardian_needs_rename(overrides: dict, pkg_versions: dict) -> bool:
-    """Check if guardian rename is needed."""
+def _guardian_needs_rename(overrides: dict, pkg_versions: dict[str, VersionKey]) -> bool:
+    """Check if the guardian setting rename is required."""
     guardian_ver = pkg_versions.get("django-guardian")
     if guardian_ver is None:
         return False
-    return "GUARDIAN_MONKEY_PATCH" in overrides and guardian_ver >= Version("2.4.0")
+    return "GUARDIAN_MONKEY_PATCH" in overrides and guardian_ver >= (2, 4, 0)
 
 
 def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
-    """Django 4.2+ deprecated DEFAULT_FILE_STORAGE in favor of STORAGES.
+    """Translate ``DEFAULT_FILE_STORAGE`` into ``STORAGES['default']``.
 
-    If the installed Django is >= 5.1 and the product still uses the old
-    setting, translate it.
+    Django 4.2 introduced ``STORAGES`` and later releases expect callers to
+    define the default backend there instead of through
+    ``DEFAULT_FILE_STORAGE``.
     """
     old_key = "DEFAULT_FILE_STORAGE"
     if old_key in overrides:
@@ -90,43 +112,40 @@ def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
             storages["default"] = {"BACKEND": backend}
             overrides["STORAGES"] = storages
             logger.info(
-                f"Compat shim: Translated '{old_key}' → STORAGES['default'] (backend={backend})"
+                f"Compat shim: Translated '{old_key}' -> STORAGES['default'] (backend={backend})"
             )
     return overrides
 
 
-def _needs_storage_migration(overrides: dict, pkg_versions: dict) -> bool:
-    """Check if DEFAULT_FILE_STORAGE → STORAGES migration is needed."""
+def _needs_storage_migration(overrides: dict, pkg_versions: dict[str, VersionKey]) -> bool:
+    """Check if the storage-setting migration is required."""
     django_ver = pkg_versions.get("django")
     if django_ver is None:
         return False
-    return "DEFAULT_FILE_STORAGE" in overrides and django_ver >= Version("5.1")
+    return "DEFAULT_FILE_STORAGE" in overrides and django_ver >= (5, 1)
 
 
-# The ordered registry of all known transformations.
-COMPAT_REGISTRY: list[tuple] = [
+COMPAT_REGISTRY: list[tuple[str, ConditionFn, TransformFn]] = [
     (
         "GUARDIAN_MONKEY_PATCH rename",
         _guardian_needs_rename,
         _guardian_monkey_patch_rename,
     ),
     (
-        "DEFAULT_FILE_STORAGE → STORAGES migration",
+        "DEFAULT_FILE_STORAGE -> STORAGES migration",
         _needs_storage_migration,
         _remove_deprecated_default_file_storage,
     ),
-    # Future entries go here:
-    # ("description", condition_func, transform_func),
 ]
 
 
-def _get_installed_versions() -> dict[str, Version]:
-    """Collect versions of critical packages."""
+def _get_installed_versions() -> dict[str, VersionKey]:
+    """Collect installed versions for the packages used by the shim rules."""
     packages = ["django", "django-guardian", "djangorestframework"]
-    versions = {}
+    versions: dict[str, VersionKey] = {}
     for pkg in packages:
         try:
-            versions[pkg] = Version(importlib.metadata.version(pkg))
+            versions[pkg] = _normalize_version(importlib.metadata.version(pkg))
         except importlib.metadata.PackageNotFoundError:
             pass
     return versions
@@ -138,17 +157,18 @@ def sanitize_settings(overrides: dict) -> dict:
     Parameters
     ----------
     overrides : dict
-        The settings dict built from the product's settings_serverless module.
+        The settings dict built from the product's ``settings_serverless``
+        module.
 
     Returns
     -------
     dict
-        The (potentially modified) settings dict, safe to pass to
+        The potentially modified settings dict, safe to pass to
         ``django.conf.settings.configure()``.
     """
     pkg_versions = _get_installed_versions()
 
-    applied = []
+    applied: list[str] = []
     for description, condition_fn, transform_fn in COMPAT_REGISTRY:
         if condition_fn(overrides, pkg_versions):
             overrides = transform_fn(overrides)
