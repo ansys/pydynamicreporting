@@ -329,10 +329,8 @@ class ReportDownloadHTML:
                             out_file.write(data)
                     else:
                         print(f"Unable to get {comment}: {url} ({resp.status_code})")
-            except requests.RequestException as e:
-                print(f"Unable to download {comment}: {f}\nError: {e}")
             except Exception as e:
-                print(f"Unable to download {comment}: {f}\nError: {e}")
+                print(f"Unable to download {comment}: {f}\nError {type(e).__name__}: {e}")
 
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
@@ -375,13 +373,14 @@ class ReportDownloadHTML:
                 len(tmp) * (4.0 / 3.0)
             ):
                 # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
-                results = "data:application/octet-stream;base64," + base64.b64encode(
-                    tmp
-                ).decode("utf-8")
+                results = "data:application/octet-stream;base64," + base64.b64encode(tmp).decode(
+                    "utf-8"
+                )
                 # for in the field debugging, allow for the data uri sources to be saved
                 if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
                     filename = os.path.join(self._directory, "media", basename)
-                    open(filename, "wb").write(tmp)
+                    with open(filename, "wb") as f:
+                        f.write(tmp)
             else:
                 # Special case for Babylon js viewer.  We get here via this link...
                 # <script src="/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/scene.js"></script>
@@ -389,9 +388,9 @@ class ReportDownloadHTML:
                 # load_binary_block('/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/p0_t0_b4_m0.bin', mesh0);
                 if basename.endswith("scene.js"):
                     tmp = tmp.decode("utf-8")
-                    tmp = self._replace_blocks(
-                        tmp, "load_binary_block(", ");", inline=True
-                    ).encode("utf-8")
+                    tmp = self._replace_blocks(tmp, "load_binary_block(", ");", inline=True).encode(
+                        "utf-8"
+                    )
                     # we need to prefix the .bin file and scene.js file with the GUID
                     basename = f"{os.path.basename(os.path.dirname(pathname))}_{basename}"
                 else:
@@ -405,7 +404,8 @@ class ReportDownloadHTML:
                 else:
                     results = f"./media/{basename}"
                 filename = os.path.join(self._directory, "media", basename)
-                open(filename, "wb").write(tmp)
+                with open(filename, "wb") as f:
+                    f.write(tmp)
         except requests.RequestException as e:
             print(f"Unable to read file via URL: {url}\nError: {str(e)}")
         except Exception as e:
