@@ -290,9 +290,18 @@ Product compatibility policy
 - A new client major advances the window by one annual product line and drops
   the oldest supported line.
 
-The current released client line is bundled with ADR ``26.1`` and supports the
-``25.*`` and ``26.*`` annual product lines. If ADR later ships ``26.2``,
-that release is still covered by the same client compatibility epoch.
+The client major line determines the ADR compatibility epoch:
+
+- ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
+  annual product lines.
+- ``1.x`` is bundled with ADR ``27.1`` and supports the ``26.*`` and ``27.*``
+  annual product lines.
+- ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
+  annual product lines.
+
+ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
+there is only one release per annual line, so ``26.*`` currently means
+``26.1``, ``27.*`` means ``27.1``, and so on.
 
 The legacy package constants ``DEFAULT_ANSYS_VERSION``, ``ansys_version``,
 ``__ansys_version__``, and ``__ansys_version_str__`` remain install-facing
@@ -540,9 +549,9 @@ target ADR release.
    installed product release.
 
    This dependency-constraints guidance is complementary to the client
-   compatibility contract: the current released client line is bundled with ADR
-   ``26.1`` and supports the ``25.*`` and ``26.*`` annual product lines,
-   while still using plain SemVer for package releases.
+   compatibility contract: the client major line determines the bundled ADR
+   annual product line and its previous annual line, while still using plain
+   SemVer for package releases.
 
 Basic usage
 -----------

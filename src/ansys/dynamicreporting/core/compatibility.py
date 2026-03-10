@@ -28,18 +28,16 @@ import re
 from ._version import __version__
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
+_CLIENT_MAJOR_BASE_PRODUCT_LINE = 26
+_CLIENT_MAJOR_BASE_BUNDLED_RELEASE = "26.1"
 
-# Public compatibility metadata should describe the last shipped product line,
-# not whichever install tree current development happens to target.
-BUNDLED_PRODUCT_RELEASE = "26.1"
-SUPPORTED_PRODUCT_LINES = ("25", "26")
 SUPPORTED_PRODUCT_RELEASE_POLICY = (
     "Supports the bundled annual product line and the previous annual product line."
 )
 # Keep the legacy install-facing defaults separate from the public
 # compatibility contract. The repo's current runtime and test infrastructure
 # still keys off the in-development ``271`` layout, while the released client
-# compatibility contract remains tied to the last shipped product line.
+# compatibility contract remains tied to the installed client major line.
 DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
 DEFAULT_ANSYS_INSTALL_VERSION = "271"
 # Probe newest internal/dev installs first, then fall back through released
@@ -56,6 +54,40 @@ class ProductCompatibility:
     bundled_product_release: str
     supported_product_lines: tuple[str, ...]
     support_policy: str
+
+
+def get_client_major_epoch(client_version: str = __version__) -> int:
+    """Extract the SemVer major component from a client version string."""
+    # ``__version__`` may include dev/build suffixes, so only the leading
+    # numeric token is relevant for the compatibility epoch.
+    major_token = client_version.split(".", maxsplit=1)[0]
+    numeric = re.match(r"^\d+", major_token)
+    return int(numeric.group(0)) if numeric else 0
+
+
+def product_line_for_client_major(client_major: int) -> str:
+    """Return the current annual product line for a client major epoch."""
+    if client_major < 0:
+        raise ValueError("Client major epoch must be 0 or greater.")
+    return str(_CLIENT_MAJOR_BASE_PRODUCT_LINE + client_major)
+
+
+def bundled_product_release_for_client_major(client_major: int) -> str:
+    """Return the bundled product release for a client major epoch."""
+    return f"{product_line_for_client_major(client_major)}.1"
+
+
+def supported_product_lines_for_client_major(client_major: int) -> tuple[str, str]:
+    """Return the previous/current annual product lines for a client major epoch."""
+    bundled_line = int(product_line_for_client_major(client_major))
+    return (str(bundled_line - 1), str(bundled_line))
+
+
+_CURRENT_CLIENT_MAJOR_EPOCH = get_client_major_epoch()
+# Public compatibility metadata follows the installed client major line.
+# Major ``0`` is permanently anchored to the shipped 2026 product epoch.
+BUNDLED_PRODUCT_RELEASE = bundled_product_release_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
+SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
 
 
 def parse_product_release(product_release: str) -> tuple[str, int]:
@@ -117,24 +149,16 @@ def is_supported_product_release(
     return product_release_to_product_line(product_release) in supported_product_lines
 
 
-def get_client_major_epoch(client_version: str = __version__) -> int:
-    """Extract the SemVer major component from a client version string."""
-    # ``__version__`` may include dev/build suffixes, so only the leading
-    # numeric token is relevant for the compatibility epoch.
-    major_token = client_version.split(".", maxsplit=1)[0]
-    numeric = re.match(r"^\d+", major_token)
-    return int(numeric.group(0)) if numeric else 0
-
-
 def get_compatibility_info(client_version: str = __version__) -> ProductCompatibility:
     """Return the public compatibility contract for the installed client."""
     # Keep all public compatibility facts assembled in one place so docs,
     # warnings, and future automation do not drift apart.
+    client_major_epoch = get_client_major_epoch(client_version)
     return ProductCompatibility(
         client_version=client_version,
-        client_major_epoch=get_client_major_epoch(client_version),
-        bundled_product_release=BUNDLED_PRODUCT_RELEASE,
-        supported_product_lines=SUPPORTED_PRODUCT_LINES,
+        client_major_epoch=client_major_epoch,
+        bundled_product_release=bundled_product_release_for_client_major(client_major_epoch),
+        supported_product_lines=supported_product_lines_for_client_major(client_major_epoch),
         support_policy=SUPPORTED_PRODUCT_RELEASE_POLICY,
     )
 

@@ -40,11 +40,14 @@ from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.compatibility import (
     DEFAULT_ANSYS_INSTALL_RELEASE,
     ProductCompatibility,
+    bundled_product_release_for_client_major,
     get_compatibility_warning_for_install_version,
     install_version_to_product_release,
     is_supported_product_release,
     parse_product_release,
+    product_line_for_client_major,
     product_release_to_install_version,
+    supported_product_lines_for_client_major,
 )
 from ansys.dynamicreporting.core.common_utils import InstallResolution
 from ansys.dynamicreporting.core.serverless import ADR
@@ -70,11 +73,38 @@ def test_supported_product_release_uses_annual_lines():
     assert is_supported_product_release("25.1")
     assert is_supported_product_release("25.2")
     assert is_supported_product_release("26.1")
-    assert is_supported_product_release("26.2")
     assert not is_supported_product_release("27.1")
-    assert not is_supported_product_release("27.2")
     assert not is_supported_product_release("24.1")
     assert not is_supported_product_release("28.1")
+
+
+def test_product_epoch_helpers_follow_major_mapping():
+    assert product_line_for_client_major(0) == "26"
+    assert bundled_product_release_for_client_major(0) == "26.1"
+    assert supported_product_lines_for_client_major(0) == ("25", "26")
+    assert product_line_for_client_major(1) == "27"
+    assert bundled_product_release_for_client_major(1) == "27.1"
+    assert supported_product_lines_for_client_major(1) == ("26", "27")
+    assert product_line_for_client_major(2) == "28"
+    assert bundled_product_release_for_client_major(2) == "28.1"
+    assert supported_product_lines_for_client_major(2) == ("27", "28")
+
+
+def test_major_zero_support_window_matches_current_policy():
+    supported_lines = supported_product_lines_for_client_major(0)
+    assert is_supported_product_release("25.1", supported_lines)
+    assert is_supported_product_release("25.2", supported_lines)
+    assert is_supported_product_release("26.1", supported_lines)
+    assert not is_supported_product_release("24.1", supported_lines)
+    assert not is_supported_product_release("27.1", supported_lines)
+
+
+def test_major_one_support_window_matches_current_policy():
+    supported_lines = supported_product_lines_for_client_major(1)
+    assert is_supported_product_release("26.1", supported_lines)
+    assert is_supported_product_release("27.1", supported_lines)
+    assert not is_supported_product_release("25.2", supported_lines)
+    assert not is_supported_product_release("28.1", supported_lines)
 
 
 def test_public_compatibility_surface_is_consistent():
@@ -91,6 +121,18 @@ def test_public_compatibility_surface_is_consistent():
     assert ansys_version == "2027R1"
     assert __ansys_version__ == DEFAULT_ANSYS_VERSION
     assert __ansys_version_str__ == "2027 R1"
+
+
+def test_compatibility_info_derives_from_client_major():
+    compatibility = get_compatibility_info("1.2.2")
+    assert compatibility.client_major_epoch == 1
+    assert compatibility.bundled_product_release == "27.1"
+    assert compatibility.supported_product_lines == ("26", "27")
+
+    next_major = get_compatibility_info("2.0.0")
+    assert next_major.client_major_epoch == 2
+    assert next_major.bundled_product_release == "28.1"
+    assert next_major.supported_product_lines == ("27", "28")
 
 
 def test_get_compatibility_warning_for_install_version():
