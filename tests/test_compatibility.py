@@ -118,9 +118,9 @@ def test_public_compatibility_surface_is_consistent():
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
     )
-    assert ansys_version == "2027R1"
+    assert ansys_version == "2026R1"
     assert __ansys_version__ == DEFAULT_ANSYS_VERSION
-    assert __ansys_version_str__ == "2027 R1"
+    assert __ansys_version_str__ == "2026 R1"
 
 
 def test_compatibility_info_derives_from_client_major():
@@ -157,7 +157,7 @@ def test_service_warns_for_unsupported_product_release(monkeypatch, tmp_path):
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_dev_fallback_used=False,
+            implicit_default_install_used=False,
         ),
     )
 
@@ -180,7 +180,7 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_dev_fallback_used=False,
+            implicit_default_install_used=False,
         ),
     )
 
@@ -191,7 +191,7 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
     assert not any("outside the supported window" in str(w.message) for w in caught)
 
 
-def test_service_suppresses_warning_for_implicit_dev_fallback(monkeypatch, tmp_path):
+def test_service_suppresses_warning_for_implicit_default_install(monkeypatch, tmp_path):
     install_dir = tmp_path / "install"
     install_dir.mkdir()
     monkeypatch.setattr(
@@ -199,11 +199,11 @@ def test_service_suppresses_warning_for_implicit_dev_fallback(monkeypatch, tmp_p
         "resolve_install_info",
         lambda ansys_installation=None, ansys_version=None: InstallResolution(
             install_dir=str(install_dir),
-            version=271,
-            detection_source="default_root_271",
+            version=261,
+            detection_source="default_root_261",
             explicit_installation_requested=False,
             explicit_version_requested=False,
-            implicit_dev_fallback_used=True,
+            implicit_default_install_used=True,
         ),
     )
 
@@ -230,7 +230,7 @@ def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path)
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_dev_fallback_used=False,
+            implicit_default_install_used=False,
         ),
     )
 
@@ -259,7 +259,7 @@ def test_serverless_does_not_warn_when_install_version_is_unknown(monkeypatch, t
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_dev_fallback_used=False,
+            implicit_default_install_used=False,
         ),
     )
 

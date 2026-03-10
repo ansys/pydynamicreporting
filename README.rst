@@ -307,9 +307,10 @@ The legacy package constants ``DEFAULT_ANSYS_VERSION``, ``ansys_version``,
 ``__ansys_version__``, and ``__ansys_version_str__`` remain install-facing
 compatibility shims for existing imports and runtime path resolution. They are
 not the public compatibility contract.
-Implicit install discovery probes the current internal baseline first
-(``271``), then falls back through released installs such as ``261`` and
-``251`` so current users are not blocked on a single unreleased default.
+Implicit install discovery now probes the released default install first
+(``261``), then falls back through older supported installs such as ``251``,
+while still allowing unreleased layouts like ``271`` when callers request them
+explicitly.
 
 For example, under this policy:
 

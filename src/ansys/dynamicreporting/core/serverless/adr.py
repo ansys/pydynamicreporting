@@ -379,9 +379,9 @@ class ADR:
         # Mirror the service-mode check: warn after resolving the install
         # version, but do not block setup for an otherwise valid installation.
         compatibility_warning = None
-        # Keep serverless aligned with service-mode: suppress only the implicit
-        # ``271`` dev fallback so explicit unsupported targets still warn.
-        if not install_resolution.implicit_dev_fallback_used:
+        # Keep serverless aligned with service-mode: suppress only the package
+        # default install path so explicit unsupported targets still warn.
+        if not install_resolution.implicit_default_install_used:
             compatibility_warning = get_compatibility_warning_for_install_version(
                 self._ansys_version
             )

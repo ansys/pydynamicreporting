@@ -35,14 +35,15 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
     "Supports the bundled annual product line and the previous annual product line."
 )
 # Keep the legacy install-facing defaults separate from the public
-# compatibility contract. The repo's current runtime and test infrastructure
-# still keys off the in-development ``271`` layout, while the released client
-# compatibility contract remains tied to the installed client major line.
-DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
-DEFAULT_ANSYS_INSTALL_VERSION = "271"
-# Probe newest internal/dev installs first, then fall back through released
-# installs so implicit discovery still works for users without ``v271``.
-AUTO_DETECT_INSTALL_VERSIONS = ("271", "261", "251")
+# compatibility contract. Default install lookup must stay on the latest
+# released ADR line so users who do not override ``ansys_version`` resolve a
+# real installation by default. Unreleased lines like ``271`` can still be
+# probed explicitly or as lower-priority fallbacks.
+DEFAULT_ANSYS_INSTALL_RELEASE = "26.1"
+DEFAULT_ANSYS_INSTALL_VERSION = "261"
+# Probe the released supported installs first, then keep ``271`` available as
+# a lower-priority candidate for environments that already have that layout.
+AUTO_DETECT_INSTALL_VERSIONS = ("261", "251", "271")
 
 
 @dataclass(frozen=True)

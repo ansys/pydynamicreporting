@@ -258,10 +258,10 @@ class Service:
             # probing succeeds so unsupported releases warn without changing the
             # pre-existing install-detection flow.
             compatibility_warning = None
-            # Suppress the warning only for the implicit ``271`` dev fallback.
-            # Explicit ``271`` usage should still surface as outside the current
-            # released support window.
-            if not install_resolution.implicit_dev_fallback_used:
+            # Suppress the warning only when the resolved install came from the
+            # package default. Explicit unsupported targets should still
+            # surface as outside the current released support window.
+            if not install_resolution.implicit_default_install_used:
                 compatibility_warning = get_compatibility_warning_for_install_version(
                     self._ansys_version
                 )
