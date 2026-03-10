@@ -94,9 +94,9 @@ When Serverless ADR is used from a standalone Python virtual environment
 against an installed ADR product release, two independently versioned
 environments are combined in one Python process:
 
-- The Django settings, apps, migrations, and internal ADR modules that ship
-  with the installed product release.
-- The Django-related packages installed in the external client venv.
+- The settings, apps, migrations, and internal ADR modules that ship with the
+  installed product release.
+- The packages installed in the external client venv.
 
 If the client venv drifts ahead of the target product release,
 ``ADR.setup()`` can fail inside ``django.setup()`` while product apps are

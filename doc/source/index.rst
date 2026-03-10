@@ -116,8 +116,8 @@ not define the public support contract.
 Serverless External Python Environments
 ---------------------------------------
 When Serverless ADR runs from an external Python virtual environment, the
-client-side Django dependency set is combined with the Django settings and apps
-shipped inside the installed ADR product release.
+client-side dependency set is combined with the settings and apps shipped
+inside the installed ADR product release.
 
 This means that external virtual environments should be treated as a versioned
 compatibility boundary.

@@ -97,8 +97,8 @@ If you are installing from a local checkout instead of PyPI, use:
 Serverless release constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 When you use Serverless ADR from an external Python virtual environment, the
-venv's Django-related packages are combined with the Django settings and apps
-that ship inside the installed ADR product release. If those two sides drift
+venv's dependency set is combined with the settings and apps that ship inside
+the installed ADR product release. If those two sides drift
 apart, ``ADR.setup()`` can fail during ``django.setup()`` even though the
 client environment and the product installation are each valid on their own.
 
