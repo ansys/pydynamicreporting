@@ -387,7 +387,8 @@ class ReportDownloadHTML:
                         results = f"{local_pathname}/{basename}"
                     else:
                         results = f"./media/{basename}"
-                        open(filename, "wb").write(tmp)
+                    filename = os.path.join(self._directory, "media", basename)
+                    open(filename, "wb").write(tmp)
             except Exception as e:
                 print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
         else:
