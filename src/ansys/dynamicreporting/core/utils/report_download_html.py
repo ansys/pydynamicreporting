@@ -154,21 +154,15 @@ class ReportDownloadHTML:
         for f in files:
             mangled = f.replace("media/", "/static/website/scripts/mathjax/")
             url = tmp.scheme + "://" + tmp.netloc + mangled
-            try:
-                with requests.get(
-                    url, allow_redirects=True, stream=True, timeout=(60, 180)
-                ) as resp:
-                    if resp.status_code == requests.codes.ok:
-                        filename = os.path.join(self._directory, f)
-                        os.makedirs(os.path.dirname(filename), exist_ok=True)
-                        with open(filename, "wb") as out_file:
-                            for chunk in resp.iter_content(chunk_size=8192):
-                                if chunk:
-                                    out_file.write(chunk)
-                    else:
-                        print(f"Unable to get: {url}")
-            except requests.RequestException as e:
-                print(f"Unable to download MathJax file: {f}\nError: {e}")
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            if resp.status_code == requests.codes.ok:
+                filename = os.path.join(self._directory, f)
+                try:
+                    open(filename, "wb").write(resp.content)
+                except Exception as e:
+                    print(f"Unable to download MathJax file: {f}\nError {str(e)}")
+            else:
+                print(f"Unable to get: {url}")
 
         # Additional files to be mapped to the media directory
         images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
@@ -311,26 +305,17 @@ class ReportDownloadHTML:
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
-            filename = self._directory + os.sep + target_path + os.sep + f
-            filename = os.path.normpath(filename)
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            try:
-                with requests.get(
-                    url, allow_redirects=True, stream=True, timeout=(60, 180)
-                ) as resp:
-                    if resp.status_code == requests.codes.ok:
-                        raw_data = b"".join(
-                            chunk for chunk in resp.iter_content(chunk_size=8192) if chunk
-                        )
-                        data = self.fix_viewer_component_paths(
-                            str(filename), raw_data, self._ansys_version
-                        )
-                        with open(filename, "wb") as out_file:
-                            out_file.write(data)
-                    else:
-                        print(f"Unable to get {comment}: {url} ({resp.status_code})")
-            except Exception as e:
-                print(f"Unable to download {comment}: {f}\nError {type(e).__name__}: {e}")
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            if resp.status_code == requests.codes.ok:
+                filename = self._directory + os.sep + target_path + os.sep + f
+                filename = os.path.normpath(filename)
+                try:
+                    data = self.fix_viewer_component_paths(
+                        str(filename), resp.content, self._ansys_version
+                    )
+                    open(filename, "wb").write(data)
+                except Exception as e:
+                    print(f"Unable to download {comment}: {f}\nError: {e}")
 
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
@@ -358,58 +343,55 @@ class ReportDownloadHTML:
             return self._filemap[pathname]
         tmp = urllib.parse.urlsplit(self._url)
         url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
+        resp = requests.get(url, allow_redirects=True)  # nosec B400
         results = pathname
-        basename = os.path.basename(pathname)
-        # "basename" is used in the media directory, avoid collisions.
-        basename = self._make_unique_basename(basename)
-        try:
-            with requests.get(url, allow_redirects=True, stream=True, timeout=(60, 180)) as resp:
-                resp.raise_for_status()
+        if resp.status_code == requests.codes.ok:
+            basename = os.path.basename(pathname)
+            # "basename" is used in the media directory, avoid collisions.
+            basename = self._make_unique_basename(basename)
+            try:
                 tmp = resp.content
-            # 4/3 is roughly the expansion factor of base64 encoding (3bytes encode to 4)
-            # Note: we will also inline any "scene" 3D file.  This can happen when processing
-            # a slider view "key_image" array.
-            if (inline or self.is_scene_file(pathname)) and self._should_use_data_uri(
-                len(tmp) * (4.0 / 3.0)
-            ):
-                # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
-                results = "data:application/octet-stream;base64," + base64.b64encode(tmp).decode(
-                    "utf-8"
-                )
-                # for in the field debugging, allow for the data uri sources to be saved
-                if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
-                    filename = os.path.join(self._directory, "media", basename)
-                    with open(filename, "wb") as f:
-                        f.write(tmp)
-            else:
-                # Special case for Babylon js viewer.  We get here via this link...
-                # <script src="/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/scene.js"></script>
-                # The downloaded file may have binary loader references like this:
-                # load_binary_block('/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/p0_t0_b4_m0.bin', mesh0);
-                if basename.endswith("scene.js"):
-                    tmp = tmp.decode("utf-8")
-                    tmp = self._replace_blocks(tmp, "load_binary_block(", ");", inline=True).encode(
-                        "utf-8"
-                    )
-                    # we need to prefix the .bin file and scene.js file with the GUID
-                    basename = f"{os.path.basename(os.path.dirname(pathname))}_{basename}"
+                # 4/3 is roughly the expansion factor of base64 encoding (3bytes encode to 4)
+                # Note: we will also inline any "scene" 3D file.  This can happen when processing
+                # a slider view "key_image" array.
+                if (inline or self.is_scene_file(pathname)) and self._should_use_data_uri(
+                    len(tmp) * (4.0 / 3.0)
+                ):
+                    # convert to inline data domain URI. Prefix:  'data:application/octet-stream;base64,'
+                    results = "data:application/octet-stream;base64," + base64.b64encode(
+                        tmp
+                    ).decode("utf-8")
+                    # for in the field debugging, allow for the data uri sources to be saved
+                    if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
+                        filename = os.path.join(self._directory, "media", basename)
+                        open(filename, "wb").write(tmp)
                 else:
-                    tmp = self.fix_viewer_component_paths(basename, tmp, self._ansys_version)
-                # get the output filename
-                if pathname.startswith(f"/static/ansys{self._ansys_version}/"):
-                    # if the content is part of the /ansys/ namespace, we keep the namespace,
-                    # but remove the /static prefix
-                    local_pathname = os.path.dirname(pathname).replace("/static/", "./")
-                    results = f"{local_pathname}/{basename}"
-                else:
-                    results = f"./media/{basename}"
-                filename = os.path.join(self._directory, "media", basename)
-                with open(filename, "wb") as f:
-                    f.write(tmp)
-        except requests.RequestException as e:
-            print(f"Unable to read file via URL: {url}\nError: {str(e)}")
-        except Exception as e:
-            print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
+                    # Special case for Babylon js viewer.  We get here via this link...
+                    # <script src="/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/scene.js"></script>
+                    # The downloaded file may have binary loader references like this:
+                    # load_binary_block('/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/p0_t0_b4_m0.bin', mesh0);
+                    if basename.endswith("scene.js"):
+                        tmp = tmp.decode("utf-8")
+                        tmp = self._replace_blocks(
+                            tmp, "load_binary_block(", ");", inline=True
+                        ).encode("utf-8")
+                        # we need to prefix the .bin file and scene.js file with the GUID
+                        basename = f"{os.path.basename(os.path.dirname(pathname))}_{basename}"
+                    else:
+                        tmp = self.fix_viewer_component_paths(basename, tmp, self._ansys_version)
+                    # get the output filename
+                    if pathname.startswith(f"/static/ansys{self._ansys_version}/"):
+                        # if the content is part of the /ansys/ namespace, we keep the namespace,
+                        # but remove the /static prefix
+                        local_pathname = os.path.dirname(pathname).replace("/static/", "./")
+                        results = f"{local_pathname}/{basename}"
+                    else:
+                        results = f"./media/{basename}"
+                        open(filename, "wb").write(tmp)
+            except Exception as e:
+                print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
+        else:
+            print(f"Unable to read file via URL: {url}")
         self._filemap[pathname] = results
         return self._filemap[pathname]
 
