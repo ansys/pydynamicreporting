@@ -974,7 +974,7 @@ class Server:
                     print(f"Unable to get pptx from report '{report_guid}': {e}")
         else:
             raise Exception(f"The server returned an error code {resp.status_code}")
-        
+
     def get_templates_as_dict(self, root_guid):
         """
         Convert report templates rooted at the specified root_guid into a JSON-compatible dictionary.
