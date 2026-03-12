@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.10.7] - <Unreleased>
+## [0.10.8] - <Unreleased>
 
 ### Added
 
@@ -27,9 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
-## Security
+## [0.10.7] - 2026-03-12
 
--
+### Changed
+
+- Raised the minimum supported `urllib3` version to `2.6.3`.
 
 ## [0.10.6] - 2025-12-16
 
