@@ -146,30 +146,48 @@ class ReportDownloadHTML:
             current = idx1 + len(new_path)
 
     def _download_special_files(self):
-        # MathJax
+        # MathJax ver 4.1.1
         files = [
-            "media/jax/input/TeX/config.js",
-            "media/jax/input/MathML/config.js",
-            "media/jax/input/AsciiMath/config.js",
-            "media/extensions/tex2jax.js",
-            "media/extensions/mml2jax.js",
-            "media/extensions/asciimath2jax.js",
-            "media/extensions/MathZoom.js",
-            "media/extensions/MathEvents.js",
-            "media/extensions/MathMenu.js",
-            "media/extensions/MathEvents.js",
-            "media/jax/element/mml/jax.js",
-            "media/jax/input/TeX/jax.js",
-            "media/extensions/TeX/AMSmath.js",
-            "media/extensions/TeX/AMSsymbols.js",
-            "media/extensions/TeX/noErrors.js",
-            "media/extensions/TeX/noUndefined.js",
-            "media/config/TeX-AMS-MML_SVG.js",
-            "media/jax/output/SVG/jax.js",
-            "media/jax/output/SVG/fonts/TeX/fontdata.js",
-            "media/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
-            "media/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "media/images/MenuArrow-15.png",
+            "media/core.js",
+            "media/loader.js",
+            "media/startup.js",
+            "media/tex-mml-chtml.js",  # important: top-level loader
+            "media/LICENSE",
+            "media/a11y/assistive-mml.js",
+            "media/a11y/complexity.js",
+            "media/a11y/explorer.js",
+            "media/a11y/semantic-enrich.js",
+            "media/a11y/speech.js",
+            "media/a11y/sre.js",
+            "media/input/mml/entities.js",
+            "media/input/mml/extensions/mml3.js",
+            "media/input/mml/extensions/mml3.sef.json",
+            "media/input/tex/extensions/ams.js",
+            "media/input/tex/extensions/noerrors.js",
+            "media/input/tex/extensions/noundefined.js",
+            "media/output/chtml.js",
+            "media/output/svg.js",
+            "media/sre/mathmaps/af.json",
+            "media/sre/mathmaps/base.json",
+            "media/sre/mathmaps/ca.json",
+            "media/sre/mathmaps/da.json",
+            "media/sre/mathmaps/de.json",
+            "media/sre/mathmaps/en.json",
+            "media/sre/mathmaps/es.json",
+            "media/sre/mathmaps/euro.json",
+            "media/sre/mathmaps/fr.json",
+            "media/sre/mathmaps/hi.json",
+            "media/sre/mathmaps/it.json",
+            "media/sre/mathmaps/ko.json",
+            "media/sre/mathmaps/nb.json",
+            "media/sre/mathmaps/nemeth.json",
+            "media/sre/mathmaps/nn.json",
+            "media/sre/mathmaps/sv.json",
+            "media/sre/speech-worker.js",
+            "media/ui/lazy.js",
+            "media/ui/menu.js",
+            "media/ui/no-dark-mode.js",
+            "media/ui/safe.js",
         ]
 
         tmp = urllib.parse.urlsplit(self._url)
@@ -529,19 +547,12 @@ class ReportDownloadHTML:
         if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
             raise ValueError("Cannot export into a Nexus database directory")
 
-        self._make_dir([self._directory, "media", "config"])
-        self._make_dir([self._directory, "media", "extensions", "TeX"])
-        self._make_dir(
-            [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Main", "Regular"]
-        )
-        self._make_dir(
-            [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Size1", "Regular"]
-        )
-        self._make_dir([self._directory, "media", "jax", "element", "mml"])
-        self._make_dir([self._directory, "media", "jax", "input", "TeX"])
-        self._make_dir([self._directory, "media", "jax", "input", "MathML"])
-        self._make_dir([self._directory, "media", "jax", "input", "AsciiMath"])
-        self._make_dir([self._directory, "media", "images"])
+        self._make_dir([self._directory, "media", "a11y"])
+        self._make_dir([self._directory, "media", "input", "mml", "extensions"])
+        self._make_dir([self._directory, "media", "input", "tex", "extensions"])
+        self._make_dir([self._directory, "media", "output"])
+        self._make_dir([self._directory, "media", "sre", "mathmaps"])
+        self._make_dir([self._directory, "media", "ui"])
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
