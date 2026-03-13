@@ -51,7 +51,7 @@ def test_get_install_info_valid_cei(tmp_path):
     assert ver == CURRENT_VERSION
 
 
-# ansys_installation provided, valid using the new "ADR" folder (v271+ layout).
+# ansys_installation provided, valid using the new "ADR" folder layout.
 @pytest.mark.ado_test
 def test_get_install_info_valid_adr(tmp_path):
     # Create a fake installation directory with the new "ADR" subfolder.
@@ -219,6 +219,91 @@ def test_get_install_info_none_no_valid(monkeypatch):
     assert ver == CURRENT_VERSION
 
 
+@pytest.mark.ado_test
+def test_get_install_info_implicit_falls_back_to_261(monkeypatch, tmp_path):
+    released_dir = tmp_path / "v261" / "ADR"
+    released_dir.mkdir(parents=True)
+
+    monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
+    monkeypatch.delenv(f"AWP_ROOT{CURRENT_VERSION}", raising=False)
+    monkeypatch.setenv("AWP_ROOT261", str(released_dir.parent))
+    monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+
+    install, ver = get_install_info()
+    assert install == str(released_dir)
+    assert ver == 261
+
+
+@pytest.mark.ado_test
+def test_get_install_info_prefers_default_261_over_271(monkeypatch, tmp_path):
+    default_dir = tmp_path / "v261" / "ADR"
+    default_dir.mkdir(parents=True)
+    newer_dir = tmp_path / "v271" / "ADR"
+    newer_dir.mkdir(parents=True)
+
+    monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
+    monkeypatch.setenv("AWP_ROOT261", str(default_dir.parent))
+    monkeypatch.setenv("AWP_ROOT271", str(newer_dir.parent))
+    monkeypatch.delenv("AWP_ROOT251", raising=False)
+    monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+
+    install, ver = get_install_info()
+    assert install == str(default_dir)
+    assert ver == 261
+
+
+@pytest.mark.ado_test
+def test_get_install_info_implicit_falls_back_to_251(monkeypatch, tmp_path):
+    released_dir = tmp_path / "v251" / "ADR"
+    released_dir.mkdir(parents=True)
+
+    monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
+    monkeypatch.delenv(f"AWP_ROOT{CURRENT_VERSION}", raising=False)
+    monkeypatch.delenv("AWP_ROOT261", raising=False)
+    monkeypatch.setenv("AWP_ROOT251", str(released_dir.parent))
+    monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+
+    install, ver = get_install_info()
+    assert install == str(released_dir)
+    assert ver == 251
+
+
+@pytest.mark.ado_test
+def test_get_install_info_explicit_version_does_not_probe_other_versions(monkeypatch, tmp_path):
+    target_dir = tmp_path / "v261" / "ADR"
+    target_dir.mkdir(parents=True)
+    ignored_dir = tmp_path / "v271" / "ADR"
+    ignored_dir.mkdir(parents=True)
+
+    monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
+    monkeypatch.setenv("AWP_ROOT261", str(target_dir.parent))
+    monkeypatch.setenv("AWP_ROOT271", str(ignored_dir.parent))
+    monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+
+    install, ver = get_install_info(ansys_version=261)
+    assert install == str(target_dir)
+    assert ver == 261
+
+
+@pytest.mark.ado_test
+def test_get_install_info_explicit_271_is_still_supported(monkeypatch, tmp_path):
+    target_dir = tmp_path / "v271" / "ADR"
+    target_dir.mkdir(parents=True)
+
+    monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
+    monkeypatch.setenv("AWP_ROOT271", str(target_dir.parent))
+    monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+
+    install, ver = get_install_info(ansys_version=271)
+    assert install == str(target_dir)
+    assert ver == 271
+
+
 # ansys_installation provided with no version in its path but with a provided ansys_version.
 @pytest.mark.ado_test
 def test_get_install_info_provided_ansys_version(tmp_path):
@@ -238,6 +323,20 @@ def test_get_install_info_provided_ansys_version(tmp_path):
     # Expect the base directory is returned and version equals the provided version.
     assert install == str(install_dir)
     assert ver == provided_version
+
+
+@pytest.mark.ado_test
+def test_get_install_info_detects_version_from_install_layout(tmp_path):
+    install_dir = tmp_path / "install_no_version"
+    install_dir.mkdir()
+    nexus_dir = install_dir / "nexus271" / "django"
+    nexus_dir.mkdir(parents=True)
+    (nexus_dir / "manage.py").write_text("dummy content")
+
+    install, ver = get_install_info(ansys_installation=str(install_dir))
+
+    assert install == str(install_dir)
+    assert ver == 271
 
 
 # Test the branch for a valid 'enve' candidate.
