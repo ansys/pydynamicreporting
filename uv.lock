@@ -144,7 +144,7 @@ requires-dist = [
     { name = "statsmodels", specifier = ">=0.14.2,<0.15.0" },
     { name = "twine", marker = "extra == 'dev'" },
     { name = "tzlocal", specifier = ">=5.3.1,<6.0" },
-    { name = "urllib3", specifier = "<3.0.0" },
+    { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uv", marker = "extra == 'dev'" },
     { name = "vtk", marker = "extra == 'test'", specifier = "==9.5.2" },
     { name = "weasyprint", specifier = ">=67.0" },
