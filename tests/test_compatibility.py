@@ -41,6 +41,7 @@ from ansys.dynamicreporting.core.compatibility import (
     DEFAULT_ANSYS_INSTALL_RELEASE,
     ProductCompatibility,
     bundled_product_release_for_client_major,
+    get_client_major_epoch,
     get_compatibility_warning_for_install_version,
     install_version_to_product_release,
     is_supported_product_release,
@@ -51,6 +52,19 @@ from ansys.dynamicreporting.core.compatibility import (
 )
 from ansys.dynamicreporting.core.common_utils import InstallResolution
 from ansys.dynamicreporting.core.serverless import ADR
+
+
+def _current_supported_lines() -> tuple[str, str]:
+    """Return the support window for the installed client major."""
+
+    return supported_product_lines_for_client_major(get_client_major_epoch())
+
+
+def _unsupported_newer_install_version() -> int:
+    """Build an install version just beyond the current support window."""
+
+    newest_supported_line = int(_current_supported_lines()[1])
+    return product_release_to_install_version(f"{newest_supported_line + 1}.1")
 
 
 def test_parse_product_release():
@@ -70,12 +84,15 @@ def test_install_version_conversion_round_trip():
 
 
 def test_supported_product_release_uses_annual_lines():
-    assert is_supported_product_release("25.1")
-    assert is_supported_product_release("25.2")
-    assert is_supported_product_release("26.1")
-    assert not is_supported_product_release("27.1")
-    assert not is_supported_product_release("24.1")
-    assert not is_supported_product_release("28.1")
+    supported_lines = _current_supported_lines()
+    oldest_supported_line, newest_supported_line = (int(line) for line in supported_lines)
+
+    # This assertion follows the installed client line, so it stays correct
+    # when the repo advances from 0.x to 1.x and beyond.
+    assert is_supported_product_release(f"{oldest_supported_line}.1", supported_lines)
+    assert is_supported_product_release(f"{newest_supported_line}.1", supported_lines)
+    assert not is_supported_product_release(f"{oldest_supported_line - 1}.1", supported_lines)
+    assert not is_supported_product_release(f"{newest_supported_line + 1}.1", supported_lines)
 
 
 def test_product_epoch_helpers_follow_major_mapping():
@@ -109,12 +126,14 @@ def test_major_one_support_window_matches_current_policy():
 
 def test_public_compatibility_surface_is_consistent():
     compatibility = get_compatibility_info()
+    current_major = get_client_major_epoch()
+
     assert isinstance(compatibility, ProductCompatibility)
     assert compatibility.bundled_product_release == BUNDLED_PRODUCT_RELEASE
     assert compatibility.supported_product_lines == SUPPORTED_PRODUCT_LINES
     assert compatibility.support_policy == SUPPORTED_PRODUCT_RELEASE_POLICY
-    assert BUNDLED_PRODUCT_RELEASE == "26.1"
-    assert SUPPORTED_PRODUCT_LINES == ("25", "26")
+    assert BUNDLED_PRODUCT_RELEASE == bundled_product_release_for_client_major(current_major)
+    assert SUPPORTED_PRODUCT_LINES == supported_product_lines_for_client_major(current_major)
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
     )
@@ -138,7 +157,9 @@ def test_compatibility_info_derives_from_client_major():
 def test_get_compatibility_warning_for_install_version():
     assert get_compatibility_warning_for_install_version(261) is None
     assert get_compatibility_warning_for_install_version(None) is None
-    warning_message = get_compatibility_warning_for_install_version(271)
+    warning_message = get_compatibility_warning_for_install_version(
+        _unsupported_newer_install_version()
+    )
     assert warning_message is not None
     assert "outside the supported window" in warning_message
 
@@ -153,7 +174,7 @@ def test_service_warns_for_unsupported_product_release(monkeypatch, tmp_path):
         "resolve_install_info",
         lambda ansys_installation=None, ansys_version=None: InstallResolution(
             install_dir=str(install_dir),
-            version=271,
+            version=_unsupported_newer_install_version(),
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
@@ -226,7 +247,7 @@ def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path)
         "resolve_install_info",
         lambda ansys_installation=None, ansys_version=None: InstallResolution(
             install_dir=str(install_dir),
-            version=271,
+            version=_unsupported_newer_install_version(),
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
