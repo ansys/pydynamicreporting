@@ -256,8 +256,8 @@ Creating a Release
 This project now uses **tag-driven releases** and **dynamic versions** powered
 by ``hatch-timestamp-version`` (based on ``hatch-vcs``). Stable releases are
 cut from **Git tags** (``vX.Y.Z``). Development builds use **UTC timestamped**
-versions derived from the most recent tag. **Release branches are no longer
-needed**; the version is always derived from tags.
+versions derived from the most recent tag. Version numbers come from tags, but
+maintained product lines can still use long-lived ``stable/`` branches.
 
 Versioning model
 ^^^^^^^^^^^^^^^^
@@ -271,6 +271,19 @@ Versioning model
 - **Product compatibility** is declared separately from SemVer. The package
   version stays plain SemVer, while the package metadata declares the bundled
   ADR product release and the supported annual product lines.
+
+Maintenance branch policy
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``main`` is reserved for the next ADR product line under development.
+- Long-lived maintenance branches use the ``stable/<product-line>.x`` naming
+  convention. For example, ``stable/26.x`` carries the ADR ``26.1`` support
+  line after ``0.10.7``.
+- Stable releases are still cut from tags, but the tag should be created from
+  the maintenance branch that owns that product line.
+- Backport only the specific fixes you want to ship on an older supported
+  line. Forward-port maintenance fixes from ``stable/<product-line>.x`` back
+  to ``main`` after they are released.
 
 Product compatibility policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -389,7 +402,9 @@ Patch releases
 - For a patch, update the changelog, ensure the working tree is clean, then
   run ``make tag`` again. This tags the next patch version determined by
   ``hatch version`` from your last tag.
-- No separate "release branch" is required; the version is derived from tags.
+- Use the maintenance branch for the supported product line when cutting the
+  tag. For example, future ADR ``26.1`` patch releases should be tagged from
+  ``stable/26.x`` rather than ``main``.
 
 Local dry-runs (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
