@@ -28,9 +28,12 @@ import urllib.parse
 
 import requests
 
-from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION as CURRENT_VERSION
+from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
 
 # Default Ansys version to use as a fallback.
+# Direct ``ReportDownloadHTML`` callers may not have a service object handy, so
+# preserve the historical bundled-product asset namespace until a concrete
+# server version is supplied.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
 
 

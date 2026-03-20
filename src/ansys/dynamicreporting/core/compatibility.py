@@ -118,6 +118,13 @@ def product_release_to_install_version(product_release: str) -> int:
     return int(f"{year_line}{release_index}")
 
 
+# HTML/static export helpers historically fell back to the bundled product
+# namespace when they could not discover a server-specific version.  Keep that
+# behavior separate from install probing so direct ``ReportDownloadHTML`` usage
+# stays backwards compatible without forcing constructor defaults back to 271.
+DEFAULT_STATIC_ASSET_VERSION = str(product_release_to_install_version(BUNDLED_PRODUCT_RELEASE))
+
+
 def install_version_to_product_release(install_version: int | str) -> str:
     """Convert an internal install version like ``271`` to ``27.1``."""
     normalized = str(install_version).strip()
