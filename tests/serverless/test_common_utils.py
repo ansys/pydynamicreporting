@@ -25,6 +25,10 @@ from pathlib import Path
 import pytest
 
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
+from ansys.dynamicreporting.core.compatibility import (
+    AUTO_DETECT_INSTALL_VERSIONS,
+    DEFAULT_ANSYS_INSTALL_VERSION,
+)
 from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
@@ -261,24 +265,27 @@ def test_get_install_info_implicit_prefers_271_over_261(monkeypatch, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_does_not_probe_251(monkeypatch, tmp_path):
-    legacy_dir = tmp_path / "v251" / "ADR"
-    legacy_dir.mkdir(parents=True)
+def test_get_install_info_implicit_ignores_unsupported_versions(monkeypatch, tmp_path):
+    supported_versions = {int(version) for version in AUTO_DETECT_INSTALL_VERSIONS}
+    # Pick a version outside the configured implicit probe window so the test
+    # continues to validate the support contract as releases advance.
+    unsupported_version = max(supported_versions) + 10
+    unsupported_dir = tmp_path / f"v{unsupported_version}" / "ADR"
+    unsupported_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
     monkeypatch.delenv(f"AWP_ROOT{CURRENT_VERSION}", raising=False)
-    monkeypatch.delenv("AWP_ROOT261", raising=False)
-    monkeypatch.delenv("AWP_ROOT271", raising=False)
-    monkeypatch.setenv("AWP_ROOT251", str(legacy_dir.parent))
+    for version in AUTO_DETECT_INSTALL_VERSIONS:
+        monkeypatch.delenv(f"AWP_ROOT{version}", raising=False)
+    monkeypatch.setenv(f"AWP_ROOT{unsupported_version}", str(unsupported_dir.parent))
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
-    # The supported implicit search window is now limited to 271 -> 261.
-    # Leaving only a 251 installation available should therefore behave as
-    # "no supported install found" rather than silently binding to 25.1.
+    # When only an unsupported install root is present, implicit discovery
+    # must ignore it and fall back to the package default version metadata.
     install, ver = get_install_info()
     assert install is None
-    assert ver == 261
+    assert ver == int(DEFAULT_ANSYS_INSTALL_VERSION)
 
 
 @pytest.mark.ado_test
