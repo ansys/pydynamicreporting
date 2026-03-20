@@ -139,6 +139,18 @@ Example from a source checkout:
 
     pip install -c constraints/v261.txt .
 
+Example for an editable source checkout:
+
+.. code-block:: bash
+
+    pip install -c constraints/v261.txt -e .
+
+Example from PyPI after downloading the matching constraints file locally:
+
+.. code-block:: bash
+
+    pip install -c /path/to/v261.txt ansys-dynamicreporting-core
+
 Using Subprocesses for Multiple Configurations
 ----------------------------------------------
 

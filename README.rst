@@ -109,12 +109,16 @@ compatibility envelope, while product-line-specific pins live under
 ``constraints/`` and should be applied when creating a serverless venv for a
 specific ADR release.
 
-For example, for an ADR ``26.1`` / 2026 R1 / ``v261`` target from a source
-checkout, use:
+For example, for an ADR ``26.1`` / 2026 R1 / ``v261`` target, you can install
+with the matching constraints file in any of these ways:
 
 .. code:: bash
 
+   # Source checkout
    pip install -c constraints/v261.txt .
+
+   # Editable source checkout
+   pip install -c constraints/v261.txt -e .
 
 If you are installing from PyPI instead of a local checkout, download the
 matching constraints file from this repository and use:
