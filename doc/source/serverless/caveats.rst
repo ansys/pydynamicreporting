@@ -129,8 +129,7 @@ Recommended practice for external venv usage:
 - Prefer ADR's internal Python environment when you do not need a
   standalone venv. This avoids the risk of drift and simplifies setup.
 
-The current example profile, ``constraints/v261.txt``, targets
-ADR 2026 R1 / ``v261``.
+Use the constraints profile that matches the ADR release you are targeting.
 
 If you are installing from PyPI instead of a local checkout, copy the matching
 constraints file from ``constraints/`` in the GitHub repository and pass
@@ -140,7 +139,7 @@ Example from a source checkout:
 
 .. code-block:: bash
 
-    pip install -c constraints/v261.txt .
+    pip install -c constraints/<target-release>.txt .
 
 Using Subprocesses for Multiple Configurations
 ----------------------------------------------
