@@ -62,7 +62,8 @@ Compatibility Policy
 PyDynamicReporting uses plain SemVer for package versions, but product
 compatibility is a separate explicit contract.
 
-- ``0.x`` is the legacy transition line.
+- ``0.x`` is the legacy transition line. ``0.10.x`` is the last legacy line
+  tied to ADR ``26.1`` behavior.
 - ``1.0.0`` is the first fully policy-driven line. Starting there, each client
   major version maps to one ADR annual product line.
 - A policy-driven client major supports the bundled ADR annual line and the
@@ -70,10 +71,18 @@ compatibility is a separate explicit contract.
 - Minor and patch releases stay inside the same support window.
 - Every future client major advances the support window by one ADR annual line.
 
-Under this policy, each client major line is bundled with one ADR annual
-product line and supports that line plus the immediately previous annual line.
-The support policy is based on annual product lines rather than individual
-point releases.
+Under this policy:
+
+- ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
+- ``1.x`` will be bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
+- ``2.x`` will be bundled with ADR ``28.1`` and supports ``27.*`` and ``28.*``.
+... and so on.
+
+ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
+annual line currently has only one concrete release, so ``26.*`` currently
+means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Synopsys
+changes the release cadence or adds more releases per line, but the support policy will remain the same
+since it is based on the annual product line, not the number of releases.
 
 What "Supported" Means
 ----------------------
@@ -97,11 +106,10 @@ If you do not pass ``ansys_version`` explicitly, PyDynamicReporting uses an
 install-facing default search order that is separate from the public support
 contract.
 
-- The install-facing default search order is independent from the public
-  compatibility contract.
-- Implicit install discovery probes the bundled install first to preserve the
-  historical default behavior, then falls back to the released compatibility
-  install when the bundled line is unavailable.
+- The current default released install target is ``261``.
+- Implicit install discovery probes ``271`` first to preserve the historical
+  bundled-line default, then falls back to ``261`` when the bundled line is
+  unavailable.
 - Older layouts remain available when you request them explicitly, but they
   are not part of the implicit default search path.
 
@@ -122,8 +130,7 @@ compatibility boundary.
   standalone venv.
   For eg:
    For Windows, the Python environment shipped with ADR is typically located at
-   ``C:\Program Files\ANSYS Inc\v<release>\ADR\bin\cpython`` or
-   ``C:\Program Files\ANSYS Inc\v<release>\CEI\bin\cpython``.
+   ``C:\Program Files\ANSYS Inc\v271\ADR\bin\cpython`` or ``C:\Program Files\ANSYS Inc\v271\CEI\bin\cpython``. 
    You can use this environment to run PyDynamicReporting without needing to set up a separate virtual environment.
 
 The repository also includes a settings compatibility shim for known

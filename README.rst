@@ -109,19 +109,19 @@ compatibility envelope, while product-line-specific pins live under
 ``constraints/`` and should be applied when creating a serverless venv for a
 specific ADR release.
 
-For example, for a target ADR release from a source checkout, use the
-matching constraints file:
+For example, for an ADR ``26.1`` / 2026 R1 / ``v261`` target from a source
+checkout, use:
 
 .. code:: bash
 
-   pip install -c constraints/<target-release>.txt .
+   pip install -c constraints/v261.txt .
 
 If you are installing from PyPI instead of a local checkout, download the
 matching constraints file from this repository and use:
 
 .. code:: bash
 
-   pip install -c /path/to/<target-release>.txt ansys-dynamicreporting-core
+   pip install -c /path/to/v261.txt ansys-dynamicreporting-core
 
 Recommended practice is to keep one external serverless virtual environment
 per supported ADR product release family.
@@ -277,7 +277,8 @@ Maintenance branch policy
 
 - ``main`` is reserved for the next ADR product line under development.
 - Long-lived maintenance branches use the ``stable/<product-line>.x`` naming
-  convention.
+  convention. For example, ``stable/26.x`` carries the ADR ``26.1`` support
+  line after ``0.10.7``.
 - Stable releases are still cut from tags, but the tag should be created from
   the maintenance branch that owns that product line.
 - Backport only the specific fixes you want to ship on an older supported
@@ -297,19 +298,26 @@ Product compatibility policy
 Policy start point
 """"""""""""""""""
 
-- ``0.x`` is the legacy transition line.
+- ``0.x`` is the legacy transition line. ``0.10.x`` remains the last legacy
+  line tied to ADR ``26.1`` behavior.
 - ``1.0.0`` is the first fully policy-driven line. It starts the
-  product-release-aligned scheme for major-version-based compatibility epochs.
+  product-release-aligned scheme with ADR ``27.1`` as the bundled release and
+  support for the ``26.*`` and ``27.*`` annual product lines.
 - Every future client major advances the supported window by exactly one ADR
   annual product line.
 
 The client major line determines the ADR compatibility epoch:
 
-- Each client major line is bundled with one ADR annual product line and
-  supports that line plus the immediately previous annual line.
+- ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
+  annual product lines.
+- ``1.x`` is bundled with ADR ``27.1`` and supports the ``26.*`` and ``27.*``
+  annual product lines.
+- ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
+  annual product lines.
 
-The compatibility contract is based on annual product lines rather than
-individual patch or point releases.
+ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
+there is only one release per annual line, so ``26.*`` currently means
+``26.1``, ``27.*`` means ``27.1``, and so on.
 
 What "supported" means
 """"""""""""""""""""""
@@ -334,16 +342,16 @@ The legacy package constants ``DEFAULT_ANSYS_VERSION``, ``ansys_version``,
 compatibility shims for existing imports and runtime path resolution. They are
 not the public compatibility contract.
 Implicit install discovery now preserves the historical bundled-line behavior
-by probing the bundled install first, then falling back to the released
-compatibility install when the bundled line is unavailable. Older layouts
-remain available when callers request them explicitly.
+by probing ``271`` first, then falling back to the released compatibility
+install ``261`` when the bundled line is unavailable. Older layouts remain
+available when callers request them explicitly.
 
 For example, under this policy:
 
-- A new client major can advance the support window by one ADR annual line.
-- Minor and patch releases stay inside that same compatibility window.
-- The next client major can advance the support window again and drop the
-  oldest supported annual line.
+- ``1.0.0`` could bundle ADR ``27.1`` and support ``26.*`` and ``27.*``.
+- ``1.2.0`` and ``1.2.2`` would still support ``26.*`` and ``27.*``.
+- ``2.0.0`` could bundle ADR ``28.1`` and support ``27.*`` and ``28.*``,
+  dropping support for ``26.*``.
 
 What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -395,7 +403,8 @@ Patch releases
   run ``make tag`` again. This tags the next patch version determined by
   ``hatch version`` from your last tag.
 - Use the maintenance branch for the supported product line when cutting the
-  tag.
+  tag. For example, future ADR ``26.1`` patch releases should be tagged from
+  ``stable/26.x`` rather than ``main``.
 
 Local dry-runs (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -565,7 +574,8 @@ This repository currently contains two concrete mitigations for the most common
   Django releases.
 - The base dependency set in ``pyproject.toml`` provides the broad serverless
   runtime, while release-specific dependency profiles live in ``constraints/``.
-  Use the profile that matches the ADR release you are targeting.
+  The current example, ``constraints/v261.txt``, targets ADR ``26.1`` / 2026
+  R1 / ``v261``.
 
 These mitigations reduce breakage, but the primary recommendation is still to
 install the base package together with the constraints file that matches the
