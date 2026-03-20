@@ -261,22 +261,24 @@ def test_get_install_info_implicit_prefers_271_over_261(monkeypatch, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_get_install_info_explicit_251_is_still_supported(monkeypatch, tmp_path):
-    released_dir = tmp_path / "v251" / "ADR"
-    released_dir.mkdir(parents=True)
+def test_get_install_info_implicit_does_not_probe_251(monkeypatch, tmp_path):
+    legacy_dir = tmp_path / "v251" / "ADR"
+    legacy_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
     monkeypatch.delenv(f"AWP_ROOT{CURRENT_VERSION}", raising=False)
     monkeypatch.delenv("AWP_ROOT261", raising=False)
-    monkeypatch.setenv("AWP_ROOT251", str(released_dir.parent))
+    monkeypatch.delenv("AWP_ROOT271", raising=False)
+    monkeypatch.setenv("AWP_ROOT251", str(legacy_dir.parent))
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
-    # Older installs remain reachable for callers that ask for them
-    # explicitly, which is safer than changing implicit discovery semantics.
-    install, ver = get_install_info(ansys_version=251)
-    assert install == str(released_dir)
-    assert ver == 251
+    # The supported implicit search window is now limited to 271 -> 261.
+    # Leaving only a 251 installation available should therefore behave as
+    # "no supported install found" rather than silently binding to 25.1.
+    install, ver = get_install_info()
+    assert install is None
+    assert ver == 261
 
 
 @pytest.mark.ado_test
