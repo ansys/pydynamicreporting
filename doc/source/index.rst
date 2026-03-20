@@ -74,12 +74,15 @@ compatibility is a separate explicit contract.
 Under this policy:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
-- ``1.x`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
-- ``2.x`` is bundled with ADR ``28.1`` and supports ``27.*`` and ``28.*``.
+- ``1.x`` will be bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
+- ``2.x`` will be bundled with ADR ``28.1`` and supports ``27.*`` and ``28.*``.
+... and so on.
 
 ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
 annual line currently has only one concrete release, so ``26.*`` currently
-means ``26.1``, ``27.*`` means ``27.1``, and so on.
+means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Synopsys
+changes the release cadence or adds more releases per line, but the support policy will remain the same
+since it is based on the annual product line, not the number of releases.
 
 What "Supported" Means
 ----------------------
@@ -108,15 +111,10 @@ contract.
 - ``271`` remains available when you request it explicitly, but it is not the
   default install search target.
 
-The legacy package constants ``DEFAULT_ANSYS_VERSION``, ``ansys_version``,
-``__ansys_version__``, and ``__ansys_version_str__`` remain install-facing
-compatibility shims for existing imports and runtime path resolution. They do
-not define the public support contract.
-
 Serverless External Python Environments
 ---------------------------------------
 When Serverless ADR runs from an external Python virtual environment, the
-client-side dependency set is combined with the settings and apps shipped
+client-side dependency set is combined with the set shipped
 inside the installed ADR product release.
 
 This means that external virtual environments should be treated as a versioned
@@ -126,10 +124,14 @@ compatibility boundary.
   product release you are targeting.
 - Keep one external serverless virtual environment per supported ADR product
   release family.
-- Prefer the product-controlled Python environment when you do not need a
+- Prefer the Python environment shipped with the ADR product when you do not need a
   standalone venv.
+  For eg:
+   For Windows, the Python environment shipped with ADR is typically located at
+   ``C:\Program Files\ANSYS Inc\v271\ADR\bin\cpython`` or ``C:\Program Files\ANSYS Inc\v271\CEI\bin\cpython``. 
+   You can use this environment to run PyDynamicReporting without needing to set up a separate virtual environment.
 
-The repository also includes a settings compatibility shim for known serverless
+The repository also includes a settings compatibility shim for known
 setting transitions, but that shim is only a safety net. It is not a
 replacement for using dependency constraints that match the target ADR
 installation.
