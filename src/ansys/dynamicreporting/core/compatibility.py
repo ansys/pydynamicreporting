@@ -41,9 +41,15 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # probed explicitly or as lower-priority fallbacks.
 DEFAULT_ANSYS_INSTALL_RELEASE = "26.1"
 DEFAULT_ANSYS_INSTALL_VERSION = "261"
-# Probe the released supported installs first, then keep ``271`` available as
-# a lower-priority candidate for environments that already have that layout.
-AUTO_DETECT_INSTALL_VERSIONS = ("261", "251", "271")
+# Preserve the historical no-argument constructor behavior by probing the
+# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
+# callers on the same default install they used on ``main`` while still
+# allowing a released ``261`` install as a lower-priority fallback.
+#
+# We intentionally do not probe ``251`` implicitly anymore.  Selecting an
+# older unsupported line without an explicit user request changes the meaning
+# of the default constructors too aggressively for a compatibility fix.
+AUTO_DETECT_INSTALL_VERSIONS = ("271", "261")
 
 
 @dataclass(frozen=True)

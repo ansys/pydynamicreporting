@@ -220,7 +220,9 @@ def test_get_install_info_none_no_valid(monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_falls_back_to_261(monkeypatch, tmp_path):
+def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(
+    monkeypatch, tmp_path
+):
     released_dir = tmp_path / "v261" / "ADR"
     released_dir.mkdir(parents=True)
 
@@ -230,32 +232,36 @@ def test_get_install_info_implicit_falls_back_to_261(monkeypatch, tmp_path):
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
+    # With no bundled-line install available, the released compatibility
+    # fallback should still keep implicit discovery useful.
     install, ver = get_install_info()
     assert install == str(released_dir)
     assert ver == 261
 
 
 @pytest.mark.ado_test
-def test_get_install_info_prefers_default_261_over_271(monkeypatch, tmp_path):
-    default_dir = tmp_path / "v261" / "ADR"
-    default_dir.mkdir(parents=True)
-    newer_dir = tmp_path / "v271" / "ADR"
-    newer_dir.mkdir(parents=True)
+def test_get_install_info_implicit_prefers_271_over_261(monkeypatch, tmp_path):
+    compatibility_dir = tmp_path / "v261" / "ADR"
+    compatibility_dir.mkdir(parents=True)
+    bundled_dir = tmp_path / "v271" / "ADR"
+    bundled_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
-    monkeypatch.setenv("AWP_ROOT261", str(default_dir.parent))
-    monkeypatch.setenv("AWP_ROOT271", str(newer_dir.parent))
+    monkeypatch.setenv("AWP_ROOT261", str(compatibility_dir.parent))
+    monkeypatch.setenv("AWP_ROOT271", str(bundled_dir.parent))
     monkeypatch.delenv("AWP_ROOT251", raising=False)
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
+    # Keep the default constructors aligned with the historical bundled-line
+    # behavior from ``main`` whenever both installs are present.
     install, ver = get_install_info()
-    assert install == str(default_dir)
-    assert ver == 261
+    assert install == str(bundled_dir)
+    assert ver == 271
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_falls_back_to_251(monkeypatch, tmp_path):
+def test_get_install_info_explicit_251_is_still_supported(monkeypatch, tmp_path):
     released_dir = tmp_path / "v251" / "ADR"
     released_dir.mkdir(parents=True)
 
@@ -266,7 +272,9 @@ def test_get_install_info_implicit_falls_back_to_251(monkeypatch, tmp_path):
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
-    install, ver = get_install_info()
+    # Older installs remain reachable for callers that ask for them
+    # explicitly, which is safer than changing implicit discovery semantics.
+    install, ver = get_install_info(ansys_version=251)
     assert install == str(released_dir)
     assert ver == 251
 

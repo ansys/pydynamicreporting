@@ -107,9 +107,11 @@ install-facing default search order that is separate from the public support
 contract.
 
 - The current default released install target is ``261``.
-- Implicit install discovery probes ``261`` first, then ``251``, then ``271``.
-- ``271`` remains available when you request it explicitly, but it is not the
-  default install search target.
+- Implicit install discovery probes ``271`` first to preserve the historical
+  bundled-line default, then falls back to ``261`` when the bundled line is
+  unavailable.
+- Older layouts remain available when you request them explicitly, but they
+  are not part of the implicit default search path.
 
 Serverless External Python Environments
 ---------------------------------------
