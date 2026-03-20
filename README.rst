@@ -277,8 +277,7 @@ Maintenance branch policy
 
 - ``main`` is reserved for the next ADR product line under development.
 - Long-lived maintenance branches use the ``stable/<product-line>.x`` naming
-  convention. For example, ``stable/26.x`` carries the ADR ``26.1`` support
-  line after ``0.10.7``.
+  convention.
 - Stable releases are still cut from tags, but the tag should be created from
   the maintenance branch that owns that product line.
 - Backport only the specific fixes you want to ship on an older supported
@@ -342,9 +341,9 @@ The legacy package constants ``DEFAULT_ANSYS_VERSION``, ``ansys_version``,
 compatibility shims for existing imports and runtime path resolution. They are
 not the public compatibility contract.
 Implicit install discovery now preserves the historical bundled-line behavior
-by probing ``271`` first, then falling back to the released compatibility
-install ``261`` when the bundled line is unavailable. Older layouts remain
-available when callers request them explicitly.
+by probing the bundled install first, then falling back to the released
+compatibility install when the bundled line is unavailable. Older layouts
+remain available when callers request them explicitly.
 
 For example, under this policy:
 
@@ -403,8 +402,7 @@ Patch releases
   run ``make tag`` again. This tags the next patch version determined by
   ``hatch version`` from your last tag.
 - Use the maintenance branch for the supported product line when cutting the
-  tag. For example, future ADR ``26.1`` patch releases should be tagged from
-  ``stable/26.x`` rather than ``main``.
+  tag.
 
 Local dry-runs (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -574,8 +572,7 @@ This repository currently contains two concrete mitigations for the most common
   Django releases.
 - The base dependency set in ``pyproject.toml`` provides the broad serverless
   runtime, while release-specific dependency profiles live in ``constraints/``.
-  The current example, ``constraints/v261.txt``, targets ADR ``26.1`` / 2026
-  R1 / ``v261``.
+  Use the profile that matches the ADR release you are targeting.
 
 These mitigations reduce breakage, but the primary recommendation is still to
 install the base package together with the constraints file that matches the

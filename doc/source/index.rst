@@ -106,10 +106,11 @@ If you do not pass ``ansys_version`` explicitly, PyDynamicReporting uses an
 install-facing default search order that is separate from the public support
 contract.
 
-- The current default released install target is ``261``.
-- Implicit install discovery probes ``271`` first to preserve the historical
-  bundled-line default, then falls back to ``261`` when the bundled line is
-  unavailable.
+- The install-facing default search order is independent from the public
+  compatibility contract.
+- Implicit install discovery probes the bundled install first to preserve the
+  historical default behavior, then falls back to the released compatibility
+  install when the bundled line is unavailable.
 - Older layouts remain available when you request them explicitly, but they
   are not part of the implicit default search path.
 
@@ -130,7 +131,8 @@ compatibility boundary.
   standalone venv.
   For eg:
    For Windows, the Python environment shipped with ADR is typically located at
-   ``C:\Program Files\ANSYS Inc\v271\ADR\bin\cpython`` or ``C:\Program Files\ANSYS Inc\v271\CEI\bin\cpython``. 
+   ``C:\Program Files\ANSYS Inc\v<release>\ADR\bin\cpython`` or
+   ``C:\Program Files\ANSYS Inc\v<release>\CEI\bin\cpython``.
    You can use this environment to run PyDynamicReporting without needing to set up a separate virtual environment.
 
 The repository also includes a settings compatibility shim for known
