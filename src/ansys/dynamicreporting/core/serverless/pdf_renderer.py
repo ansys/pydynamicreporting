@@ -68,7 +68,6 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    _WIDTH_FIT_BUFFER_PX: float = 32.0
 
     def __init__(
         self,
@@ -196,55 +195,91 @@ class PlaywrightPDFRenderer:
             self._css_length_to_px(self._margins["left"])
             + self._css_length_to_px(self._margins["right"])
         )
-        content_width_px = self._measure_content_width_px(page)
-        if content_width_px <= 0:
+        content_bounds_px = self._measure_content_bounds_px(page)
+        if content_bounds_px is None:
             self._logger.info("Using the configured PDF width because no visible report width was found.")
             return self._page_width
 
-        # Add a small buffer so Plotly legends and SVG strokes do not land exactly on the right
-        # page boundary after Chromium finishes its final layout pass.
-        fitted_width_px = content_width_px + margin_width_px + self._WIDTH_FIT_BUFFER_PX
+        content_left_px, content_right_px = content_bounds_px
+        content_width_px = content_right_px - content_left_px
+        fitted_width_px = content_width_px + margin_width_px
         pdf_width_px = max(configured_width_px, fitted_width_px)
         self._logger.info(
             "Computed browser PDF width fit: "
+            f"content_left_px={content_left_px:.2f}, "
+            f"content_right_px={content_right_px:.2f}, "
             f"content_width_px={content_width_px:.2f}, "
             f"configured_width_px={configured_width_px:.2f}, "
             f"fitted_width_px={pdf_width_px:.2f}"
         )
         return f"{pdf_width_px:.2f}px"
 
-    def _measure_content_width_px(self, page: Any) -> float:
-        """Measure the widest visible report element in CSS pixels."""
-        # Shadow-DOM hosts and light-DOM children both contribute because ADR mixes custom elements
-        # with plain DOM nodes, and viewers can render fixed-width proxy content inside either form.
-        return float(
-            page.evaluate(
-                """() => {
-                    const root = document.getElementById('report_root');
-                    if (!root) {
-                        return 0;
+    def _measure_content_bounds_px(self, page: Any) -> tuple[float, float] | None:
+        """Measure the true visible horizontal bounds of rendered report content."""
+        # Walk both light DOM and shadow DOM so the width calculation follows the actual browser
+        # render tree instead of relying on container widths or heuristic right-edge padding.
+        bounds = page.evaluate(
+            """() => {
+                const root = document.getElementById('report_root');
+                if (!root) {
+                    return null;
+                }
+
+                const rootRect = root.getBoundingClientRect();
+                let minLeft = rootRect.left;
+                let maxRight = rootRect.right;
+                let foundVisibleRect = false;
+                const stack = [root];
+
+                while (stack.length > 0) {
+                    const node = stack.pop();
+                    if (!(node instanceof Element)) {
+                        continue;
                     }
 
-                    const widths = [
-                        root.getBoundingClientRect().width,
-                        root.scrollWidth,
-                    ];
-                    const nodes = [root, ...root.querySelectorAll('*')];
-                    for (const node of nodes) {
-                        const style = window.getComputedStyle(node);
-                        if (style.display === 'none' || style.visibility === 'hidden') {
-                            continue;
-                        }
-                        if (node.getClientRects().length === 0) {
-                            continue;
-                        }
-                        const rect = node.getBoundingClientRect();
-                        widths.push(rect.width, node.scrollWidth || 0);
+                    for (const child of node.children) {
+                        stack.push(child);
                     }
-                    return Math.max(...widths);
-                }""",
-            )
+                    if (node.shadowRoot) {
+                        for (const child of node.shadowRoot.children) {
+                            stack.push(child);
+                        }
+                    }
+
+                    const style = window.getComputedStyle(node);
+                    if (style.display === 'none' || style.visibility === 'hidden') {
+                        continue;
+                    }
+
+                    const rects = node.getClientRects();
+                    for (const rect of rects) {
+                        if (rect.width === 0 && rect.height === 0) {
+                            continue;
+                        }
+                        foundVisibleRect = true;
+                        minLeft = Math.min(minLeft, rect.left);
+                        maxRight = Math.max(maxRight, rect.right);
+                    }
+                }
+
+                if (!foundVisibleRect) {
+                    return null;
+                }
+
+                return {
+                    left: minLeft - rootRect.left,
+                    right: maxRight - rootRect.left,
+                };
+            }""",
         )
+        if not bounds:
+            return None
+
+        left_px = float(bounds["left"])
+        right_px = float(bounds["right"])
+        if right_px <= left_px:
+            return None
+        return left_px, right_px
 
     def _css_length_to_px(self, value: str) -> float:
         """Convert a CSS absolute length to CSS pixels."""
