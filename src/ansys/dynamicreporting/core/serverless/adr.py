@@ -1331,8 +1331,8 @@ class ADR:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
-        browser_viewport_width: int = 1920,
-        browser_viewport_height: int = 1080,
+        browser_viewport_width: int = 1600,
+        browser_viewport_height: int = 900,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1361,10 +1361,10 @@ class ADR:
             If omitted, the renderer uses 10 mm margins on every side.
         browser_viewport_width : int, optional
             Browser viewport width, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``1920``.
+            before the PDF is captured. Default ``1600``.
         browser_viewport_height : int, optional
             Browser viewport height, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``1080``.
+            before the PDF is captured. Default ``900``.
         render_timeout : float, optional
             Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
@@ -1678,8 +1678,8 @@ class ADR:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
-        browser_viewport_width: int = 1920,
-        browser_viewport_height: int = 1080,
+        browser_viewport_width: int = 1600,
+        browser_viewport_height: int = 900,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
@@ -1710,10 +1710,10 @@ class ADR:
             If omitted, the renderer uses 10 mm margins on every side.
         browser_viewport_width : int, optional
             Browser viewport width, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``1920``.
+            before the PDF is captured. Default ``1600``.
         browser_viewport_height : int, optional
             Browser viewport height, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``1080``.
+            before the PDF is captured. Default ``900``.
         render_timeout : float, optional
             Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any

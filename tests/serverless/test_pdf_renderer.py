@@ -58,8 +58,8 @@ def _simple_renderer(
     page_height: str = "297mm",
     landscape: bool = False,
     margins: dict[str, str] | None = None,
-    browser_viewport_width: int = 1920,
-    browser_viewport_height: int = 1080,
+    browser_viewport_width: int = 1600,
+    browser_viewport_height: int = 900,
     render_timeout: float = 30.0,
 ) -> PlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
@@ -192,11 +192,22 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 def test_compute_pdf_width_expands_for_visible_content(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
     page = Mock()
-    page.evaluate.return_value = 960
+    page.evaluate.side_effect = [960, 1600]
 
     pdf_width = renderer._compute_pdf_width(page)
 
-    assert pdf_width == "1035.59px"
+    assert pdf_width == "1675.59px"
+
+
+@pytest.mark.unit
+def test_compute_pdf_width_preserves_wider_content_than_viewport(tmp_path):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
+    page = Mock()
+    page.evaluate.side_effect = [1800, 1600]
+
+    pdf_width = renderer._compute_pdf_width(page)
+
+    assert pdf_width == "1875.59px"
 
 
 @pytest.mark.unit

@@ -1585,8 +1585,8 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         page_height="297mm",
         landscape=False,
         margins=None,
-        browser_viewport_width=1920,
-        browser_viewport_height=1080,
+        browser_viewport_width=1600,
+        browser_viewport_height=900,
         render_timeout=30.0,
         logger=None,
     ):

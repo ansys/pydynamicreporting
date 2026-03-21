@@ -48,9 +48,9 @@ class PlaywrightPDFRenderer:
     margins : dict[str, str], optional
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` keys.
         If omitted, 10 mm margins are used on every side.
-    browser_viewport_width : int, default: 1920
+    browser_viewport_width : int, default: 1600
         Headless browser viewport width used to lay out responsive content before PDF capture.
-    browser_viewport_height : int, default: 1080
+    browser_viewport_height : int, default: 900
         Headless browser viewport height used to lay out responsive content before PDF capture.
     render_timeout : float, default: 30.0
         Per-signal timeout, in seconds, for asynchronous browser readiness checks.
@@ -72,8 +72,8 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1920
-    _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 1080
+    _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
+    _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
 
     def __init__(
         self,
@@ -217,18 +217,24 @@ class PlaywrightPDFRenderer:
             + self._css_length_to_px(self._margins["right"])
         )
         content_width_px = self._measure_content_width_px(page)
+        layout_width_px = self._measure_layout_width_px(page)
         if content_width_px <= 0:
             self._logger.info(
                 "Using the configured PDF width because no visible report width was found."
             )
             return self._page_width
 
-        pdf_width_px = max(configured_width_px, content_width_px + margin_width_px)
+        # The PDF page must preserve the same layout canvas that Chromium used while rendering
+        # the report. If the PDF content area is narrower than the browser viewport, responsive
+        # Plotly legends can still be clipped at the right edge even when the report root itself
+        # appears narrower than the viewport.
+        fitted_content_width_px = max(content_width_px, layout_width_px)
+        pdf_width_px = max(configured_width_px, fitted_content_width_px + margin_width_px)
         self._logger.info(
             "Computed browser PDF width fit: "
             f"content_width_px={content_width_px:.2f}, "
             f"configured_width_px={configured_width_px:.2f}, "
-            f"browser_viewport_width_px={self._browser_viewport_width:.2f}, "
+            f"layout_width_px={layout_width_px:.2f}, "
             f"fitted_width_px={pdf_width_px:.2f}"
         )
         return f"{pdf_width_px:.2f}px"
@@ -290,6 +296,20 @@ class PlaywrightPDFRenderer:
                         }
                     }
                     return maxRight;
+                }""",
+            )
+        )
+
+    def _measure_layout_width_px(self, page: Any) -> float:
+        """Measure the effective browser layout width in CSS pixels."""
+        return float(
+            page.evaluate(
+                """() => {
+                    return Math.max(
+                        window.innerWidth || 0,
+                        document.documentElement?.clientWidth || 0,
+                        document.body?.clientWidth || 0
+                    );
                 }""",
             )
         )
