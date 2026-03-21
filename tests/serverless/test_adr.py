@@ -1523,38 +1523,6 @@ def test_render_report_as_browser_pdf_render_failure(tmp_path, monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_render_report_as_browser_pdf_invalid_margins_fail_before_render(tmp_path, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import ADR
-
-    adr = object.__new__(ADR)
-    adr._media_directory = tmp_path / "media"
-    adr._static_directory = tmp_path / "static"
-    adr._media_directory.mkdir()
-    adr._static_directory.mkdir()
-    adr._media_url = "/media/"
-    adr._static_url = "/static/"
-    adr._ansys_version = 252
-    adr._debug = False
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
-    render_called = False
-
-    def fake_render_report(self, **kwargs):
-        nonlocal render_called
-        render_called = True
-        return "<html><body><p>Should not render</p></body></html>"
-
-    monkeypatch.setattr(ADR, "render_report", fake_render_report)
-
-    with pytest.raises(ADRException, match="define exactly the keys"):
-        adr.render_report_as_browser_pdf(
-            name="InvalidBrowserPDFMargins",
-            margins={"top": "10mm", "right": "10mm", "bottom": "10mm"},
-        )
-
-    assert render_called is False
-
-
-@pytest.mark.ado_test
 def test_export_report_as_browser_pdf_success(tmp_path, monkeypatch):
     from ansys.dynamicreporting.core.serverless import ADR
 
@@ -1614,15 +1582,11 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         filename="index.html",
         *,
         landscape=False,
-        margins=None,
-        render_timeout=30.0,
         logger=None,
     ):
         captured["html_dir"] = html_dir
         captured["filename"] = filename
         captured["landscape"] = landscape
-        captured["margins"] = margins
-        captured["render_timeout"] = render_timeout
         captured["logger"] = logger
 
     monkeypatch.setattr(ADR, "render_report", fake_render_report)
@@ -1630,17 +1594,12 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
     monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
-    custom_margins = {"top": "4mm", "right": "6mm", "bottom": "8mm", "left": "10mm"}
     pdf_bytes = adr.render_report_as_browser_pdf(
         name="TestBrowserPDFOptions",
         landscape=True,
-        margins=custom_margins,
-        render_timeout=12.5,
     )
 
     assert pdf_bytes == b"%PDF-mock"
     assert isinstance(captured["html_dir"], Path)
     assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
-    assert captured["margins"] == custom_margins
-    assert captured["render_timeout"] == 12.5

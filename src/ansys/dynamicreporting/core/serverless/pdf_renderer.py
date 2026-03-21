@@ -42,11 +42,6 @@ class PlaywrightPDFRenderer:
         HTML entry-point filename inside ``html_dir``.
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
-    margins : dict[str, str], optional
-        Page margins with ``top``, ``right``, ``bottom``, and ``left`` keys.
-        If omitted, 10 mm margins are used on every side.
-    render_timeout : float, default: 30.0
-        Per-signal timeout, in seconds, for asynchronous browser readiness checks.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -68,6 +63,7 @@ class PlaywrightPDFRenderer:
     _DEFAULT_PAGE_HEIGHT: str = "297mm"
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
+    _DEFAULT_RENDER_TIMEOUT: float = 30.0
 
     def __init__(
         self,
@@ -75,16 +71,14 @@ class PlaywrightPDFRenderer:
         filename: str = "index.html",
         *,
         landscape: bool = False,
-        margins: dict[str, str] | None = None,
-        render_timeout: float = 30.0,
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""
         self._html_dir = Path(html_dir)
         self._filename = filename
         self._landscape = landscape
-        self._margins = self._validate_margins(margins)
-        self._render_timeout = render_timeout
+        self._margins = dict(self._DEFAULT_MARGINS)
+        self._render_timeout = self._DEFAULT_RENDER_TIMEOUT
         self._logger = logger or get_logger()
 
     def render_pdf(self) -> bytes:
@@ -197,8 +191,8 @@ class PlaywrightPDFRenderer:
     def _compute_pdf_width(self, page: Any) -> str | None:
         """Compute an explicit PDF page width when needed to preserve browser content."""
         margin_width_px = (
-            self._css_length_to_px(self._margins["left"])
-            + self._css_length_to_px(self._margins["right"])
+            self._css_length_to_px(self._DEFAULT_MARGINS["left"])
+            + self._css_length_to_px(self._DEFAULT_MARGINS["right"])
         )
         content_width_px = self._measure_content_width_px(page)
         layout_width_px = self._measure_layout_width_px(page)
@@ -296,36 +290,6 @@ class PlaywrightPDFRenderer:
                 }""",
             )
         )
-
-    def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
-        """Validate PDF margin settings and return a defensive copy."""
-        if margins is None:
-            return dict(self._DEFAULT_MARGINS)
-
-        if not isinstance(margins, Mapping):
-            raise ADRException(
-                "PDF margins must be provided as a mapping with the keys "
-                "'top', 'right', 'bottom', and 'left'."
-            )
-
-        required_keys = set(self._DEFAULT_MARGINS)
-        provided_keys = set(margins)
-        if provided_keys != required_keys:
-            raise ADRException(
-                "PDF margins must define exactly the keys "
-                "'top', 'right', 'bottom', and 'left'."
-            )
-
-        validated_margins: dict[str, str] = {}
-        for key in ("top", "right", "bottom", "left"):
-            value = margins[key]
-            if not isinstance(value, str):
-                raise ADRException(f"PDF margin {key!r} must be a CSS length string.")
-            # Validate margin lengths immediately so configuration errors fail before the
-            # expensive browser launch/export path begins.
-            self._css_length_to_px(value)
-            validated_margins[key] = value
-        return validated_margins
 
     def _css_length_to_px(self, value: str) -> float:
         """Convert a CSS absolute length to CSS pixels."""

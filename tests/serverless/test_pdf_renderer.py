@@ -55,16 +55,12 @@ def _simple_renderer(
     body: str,
     *,
     landscape: bool = False,
-    margins: dict[str, str] | None = None,
-    render_timeout: float = 30.0,
 ) -> PlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
     html_dir = _write_html(tmp_path, body)
     return PlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
-        margins=margins,
-        render_timeout=render_timeout,
     )
 
 
@@ -81,17 +77,6 @@ def test_playwright_pdf_landscape(tmp_path):
         tmp_path,
         "<html><body><p>Landscape content</p></body></html>",
         landscape=True,
-    )
-    pdf_bytes = _render_or_skip(renderer)
-    assert pdf_bytes.startswith(b"%PDF-")
-
-
-@pytest.mark.unit
-def test_playwright_pdf_custom_margins(tmp_path):
-    renderer = _simple_renderer(
-        tmp_path,
-        "<html><body><p>Custom margins</p></body></html>",
-        margins={"top": "5mm", "right": "7mm", "bottom": "9mm", "left": "11mm"},
     )
     pdf_bytes = _render_or_skip(renderer)
     assert pdf_bytes.startswith(b"%PDF-")
@@ -147,7 +132,8 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
+    renderer = _simple_renderer(tmp_path, html)
+    renderer._render_timeout = 0.5
     pytest.importorskip("playwright.sync_api")
 
     with pytest.raises(ADRException, match="Browser PDF rendering failed"):
@@ -176,22 +162,3 @@ def test_css_length_to_px_supports_absolute_units(tmp_path):
     assert renderer._css_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._css_length_to_px("72pt") == pytest.approx(96.0)
 
-
-@pytest.mark.unit
-def test_invalid_margins_missing_keys_raise(tmp_path):
-    with pytest.raises(ADRException, match="define exactly the keys"):
-        _simple_renderer(
-            tmp_path,
-            "<html><body><p>Margins</p></body></html>",
-            margins={"top": "10mm", "right": "10mm", "bottom": "10mm"},
-        )
-
-
-@pytest.mark.unit
-def test_invalid_margins_non_mapping_raise(tmp_path):
-    with pytest.raises(ADRException, match="must be provided as a mapping"):
-        _simple_renderer(
-            tmp_path,
-            "<html><body><p>Margins</p></body></html>",
-            margins="10mm",
-        )

@@ -49,12 +49,12 @@ import platform
 import shutil
 import sys
 import tempfile
+from typing import Any
 import uuid
 import warnings
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
@@ -1328,8 +1328,6 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
-        margins: dict | None = None,
-        render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
         """Render a report as a browser-fidelity PDF byte stream via headless Chromium.
@@ -1348,11 +1346,6 @@ class ADR:
             Whether to render using a dark theme. Default ``False``.
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
-        margins : dict, optional
-            Dict with keys ``top``, ``right``, ``bottom``, and ``left``.
-            If omitted, the renderer uses 10 mm margins on every side.
-        render_timeout : float, optional
-            Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1390,8 +1383,6 @@ class ADR:
                 renderer = PlaywrightPDFRenderer(
                     html_dir=tmp_path,
                     landscape=landscape,
-                    margins=margins,
-                    render_timeout=render_timeout,
                     logger=self._logger,
                 )
 
@@ -1659,8 +1650,6 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
-        margins: dict | None = None,
-        render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
         """Export a report as a browser-fidelity PDF file via headless Chromium.
@@ -1681,11 +1670,6 @@ class ADR:
             Whether to render using a dark theme. Default ``False``.
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
-        margins : dict, optional
-            Dict with keys ``top``, ``right``, ``bottom``, and ``left``.
-            If omitted, the renderer uses 10 mm margins on every side.
-        render_timeout : float, optional
-            Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1712,8 +1696,6 @@ class ADR:
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
-            margins=margins,
-            render_timeout=render_timeout,
             **kwargs,
         )
 
