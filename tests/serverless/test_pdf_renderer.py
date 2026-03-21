@@ -58,8 +58,6 @@ def _simple_renderer(
     page_height: str = "297mm",
     landscape: bool = False,
     margins: dict[str, str] | None = None,
-    browser_viewport_width: int = 1600,
-    browser_viewport_height: int = 900,
     render_timeout: float = 30.0,
 ) -> PlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
@@ -70,8 +68,6 @@ def _simple_renderer(
         page_height=page_height,
         landscape=landscape,
         margins=margins,
-        browser_viewport_width=browser_viewport_width,
-        browser_viewport_height=browser_viewport_height,
         render_timeout=render_timeout,
     )
 
@@ -189,28 +185,6 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
 
 @pytest.mark.unit
-def test_compute_pdf_width_expands_for_visible_content(tmp_path):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
-    page = Mock()
-    page.evaluate.side_effect = [960, 1600]
-
-    pdf_width = renderer._compute_pdf_width(page)
-
-    assert pdf_width == "1675.59px"
-
-
-@pytest.mark.unit
-def test_compute_pdf_width_preserves_wider_content_than_viewport(tmp_path):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
-    page = Mock()
-    page.evaluate.side_effect = [1800, 1600]
-
-    pdf_width = renderer._compute_pdf_width(page)
-
-    assert pdf_width == "1875.59px"
-
-
-@pytest.mark.unit
 def test_css_length_to_px_supports_absolute_units(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
 
@@ -220,17 +194,20 @@ def test_css_length_to_px_supports_absolute_units(tmp_path):
 
 
 @pytest.mark.unit
-def test_validate_viewport_dimension_requires_positive_integer(tmp_path):
-    with pytest.raises(ADRException, match="browser_viewport_width"):
+def test_invalid_margins_missing_keys_raise(tmp_path):
+    with pytest.raises(ADRException, match="define exactly the keys"):
         _simple_renderer(
             tmp_path,
-            "<html><body><p>Viewport</p></body></html>",
-            browser_viewport_width=0,
+            "<html><body><p>Margins</p></body></html>",
+            margins={"top": "10mm", "right": "10mm", "bottom": "10mm"},
         )
 
-    with pytest.raises(ADRException, match="browser_viewport_height"):
+
+@pytest.mark.unit
+def test_invalid_margins_non_mapping_raise(tmp_path):
+    with pytest.raises(ADRException, match="must be provided as a mapping"):
         _simple_renderer(
             tmp_path,
-            "<html><body><p>Viewport</p></body></html>",
-            browser_viewport_height=-1,
+            "<html><body><p>Margins</p></body></html>",
+            margins="10mm",
         )

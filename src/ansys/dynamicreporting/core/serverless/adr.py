@@ -1331,8 +1331,6 @@ class ADR:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
-        browser_viewport_width: int = 1600,
-        browser_viewport_height: int = 900,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1351,7 +1349,9 @@ class ADR:
         dark_mode : bool, optional
             Whether to render using a dark theme. Default ``False``.
         page_width : str, optional
-            CSS dimension string for page width. Default ``"210mm"`` (A4).
+            Minimum CSS dimension string for page width. The renderer may widen the
+            final PDF page to preserve the browser layout width and avoid clipping.
+            Default ``"210mm"`` (A4).
         page_height : str, optional
             CSS dimension string for page height. Default ``"297mm"`` (A4).
         landscape : bool, optional
@@ -1359,12 +1359,6 @@ class ADR:
         margins : dict, optional
             Dict with keys ``top``, ``right``, ``bottom``, and ``left``.
             If omitted, the renderer uses 10 mm margins on every side.
-        browser_viewport_width : int, optional
-            Browser viewport width, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``1600``.
-        browser_viewport_height : int, optional
-            Browser viewport height, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``900``.
         render_timeout : float, optional
             Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
@@ -1399,6 +1393,17 @@ class ADR:
 
             with tempfile.TemporaryDirectory() as tmp_dir:
                 tmp_path = Path(tmp_dir)
+                # Build the renderer first so invalid PDF options fail before the report render
+                # and asset export pipeline does any meaningful work.
+                renderer = PlaywrightPDFRenderer(
+                    html_dir=tmp_path,
+                    page_width=page_width,
+                    page_height=page_height,
+                    landscape=landscape,
+                    margins=margins,
+                    render_timeout=render_timeout,
+                    logger=self._logger,
+                )
 
                 # Reuse the existing browser HTML render path, then export it into a self-contained
                 # directory so Chromium can load every asset from disk without a running web server.
@@ -1424,17 +1429,6 @@ class ADR:
                 )
                 exporter.export()
 
-                renderer = PlaywrightPDFRenderer(
-                    html_dir=tmp_path,
-                    page_width=page_width,
-                    page_height=page_height,
-                    landscape=landscape,
-                    margins=margins,
-                    browser_viewport_width=browser_viewport_width,
-                    browser_viewport_height=browser_viewport_height,
-                    render_timeout=render_timeout,
-                    logger=self._logger,
-                )
                 return renderer.render_pdf()
         except ADRException:
             raise
@@ -1678,8 +1672,6 @@ class ADR:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
-        browser_viewport_width: int = 1600,
-        browser_viewport_height: int = 900,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
@@ -1700,7 +1692,9 @@ class ADR:
         dark_mode : bool, optional
             Whether to render using a dark theme. Default ``False``.
         page_width : str, optional
-            CSS dimension string for page width. Default ``"210mm"`` (A4).
+            Minimum CSS dimension string for page width. The renderer may widen the
+            final PDF page to preserve the browser layout width and avoid clipping.
+            Default ``"210mm"`` (A4).
         page_height : str, optional
             CSS dimension string for page height. Default ``"297mm"`` (A4).
         landscape : bool, optional
@@ -1708,12 +1702,6 @@ class ADR:
         margins : dict, optional
             Dict with keys ``top``, ``right``, ``bottom``, and ``left``.
             If omitted, the renderer uses 10 mm margins on every side.
-        browser_viewport_width : int, optional
-            Browser viewport width, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``1600``.
-        browser_viewport_height : int, optional
-            Browser viewport height, in CSS pixels, used to lay out responsive content
-            before the PDF is captured. Default ``900``.
         render_timeout : float, optional
             Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
@@ -1745,8 +1733,6 @@ class ADR:
             page_height=page_height,
             landscape=landscape,
             margins=margins,
-            browser_viewport_width=browser_viewport_width,
-            browser_viewport_height=browser_viewport_height,
             render_timeout=render_timeout,
             **kwargs,
         )

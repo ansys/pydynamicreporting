@@ -22,6 +22,7 @@
 
 """Browser-fidelity HTML-to-PDF rendering for serverless ADR exports."""
 
+from collections.abc import Mapping
 import re
 from pathlib import Path
 from typing import Any
@@ -40,7 +41,8 @@ class PlaywrightPDFRenderer:
     filename : str, default: "index.html"
         HTML entry-point filename inside ``html_dir``.
     page_width : str, default: "210mm"
-        CSS page width passed to Chromium's PDF generator.
+        Minimum CSS page width passed to Chromium's PDF generator. The renderer may
+        widen the final PDF page to preserve the browser layout width and avoid clipping.
     page_height : str, default: "297mm"
         CSS page height passed to Chromium's PDF generator.
     landscape : bool, default: False
@@ -48,10 +50,6 @@ class PlaywrightPDFRenderer:
     margins : dict[str, str], optional
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` keys.
         If omitted, 10 mm margins are used on every side.
-    browser_viewport_width : int, default: 1600
-        Headless browser viewport width used to lay out responsive content before PDF capture.
-    browser_viewport_height : int, default: 900
-        Headless browser viewport height used to lay out responsive content before PDF capture.
     render_timeout : float, default: 30.0
         Per-signal timeout, in seconds, for asynchronous browser readiness checks.
     logger : Any, optional
@@ -84,8 +82,6 @@ class PlaywrightPDFRenderer:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        browser_viewport_width: int = _DEFAULT_BROWSER_VIEWPORT_WIDTH,
-        browser_viewport_height: int = _DEFAULT_BROWSER_VIEWPORT_HEIGHT,
         render_timeout: float = 30.0,
         logger: Any = None,
     ) -> None:
@@ -95,14 +91,7 @@ class PlaywrightPDFRenderer:
         self._page_width = page_width
         self._page_height = page_height
         self._landscape = landscape
-        # Copy the caller-provided mapping so later mutations do not alter this renderer's state.
-        self._margins = dict(margins) if margins is not None else dict(self._DEFAULT_MARGINS)
-        self._browser_viewport_width = self._validate_viewport_dimension(
-            "browser_viewport_width", browser_viewport_width
-        )
-        self._browser_viewport_height = self._validate_viewport_dimension(
-            "browser_viewport_height", browser_viewport_height
-        )
+        self._margins = self._validate_margins(margins)
         self._render_timeout = render_timeout
         self._logger = logger or get_logger()
 
@@ -138,8 +127,8 @@ class PlaywrightPDFRenderer:
                     # items lay themselves out deterministically before the PDF width is computed.
                     page = browser.new_page(
                         viewport={
-                            "width": self._browser_viewport_width,
-                            "height": self._browser_viewport_height,
+                            "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                            "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
                         }
                     )
                     file_url = (self._html_dir / self._filename).as_uri()
@@ -314,11 +303,35 @@ class PlaywrightPDFRenderer:
             )
         )
 
-    def _validate_viewport_dimension(self, name: str, value: int) -> int:
-        """Validate that a browser viewport dimension is a positive integer."""
-        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-            raise ADRException(f"{name!r} must be a positive integer.")
-        return value
+    def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
+        """Validate PDF margin settings and return a defensive copy."""
+        if margins is None:
+            return dict(self._DEFAULT_MARGINS)
+
+        if not isinstance(margins, Mapping):
+            raise ADRException(
+                "PDF margins must be provided as a mapping with the keys "
+                "'top', 'right', 'bottom', and 'left'."
+            )
+
+        required_keys = set(self._DEFAULT_MARGINS)
+        provided_keys = set(margins)
+        if provided_keys != required_keys:
+            raise ADRException(
+                "PDF margins must define exactly the keys "
+                "'top', 'right', 'bottom', and 'left'."
+            )
+
+        validated_margins: dict[str, str] = {}
+        for key in ("top", "right", "bottom", "left"):
+            value = margins[key]
+            if not isinstance(value, str):
+                raise ADRException(f"PDF margin {key!r} must be a CSS length string.")
+            # Validate margin lengths immediately so configuration errors fail before the
+            # expensive browser launch/export path begins.
+            self._css_length_to_px(value)
+            validated_margins[key] = value
+        return validated_margins
 
     def _css_length_to_px(self, value: str) -> float:
         """Convert a CSS absolute length to CSS pixels."""
