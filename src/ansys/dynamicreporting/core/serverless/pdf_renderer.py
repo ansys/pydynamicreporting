@@ -65,8 +65,6 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    _DEFAULT_PAGE_WIDTH: str = "210mm"
-    _DEFAULT_PAGE_HEIGHT: str = "297mm"
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
 
@@ -83,8 +81,6 @@ class PlaywrightPDFRenderer:
         """Initialize the renderer with a self-contained HTML export directory."""
         self._html_dir = Path(html_dir)
         self._filename = filename
-        self._page_width = self._DEFAULT_PAGE_WIDTH
-        self._page_height = self._DEFAULT_PAGE_HEIGHT
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = render_timeout
@@ -137,14 +133,15 @@ class PlaywrightPDFRenderer:
                     self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page)
                     pdf_width = self._compute_pdf_width(page)
+                    pdf_options = {
+                        "landscape": self._landscape,
+                        "margin": self._margins,
+                        "print_background": True,
+                    }
+                    if pdf_width is not None:
+                        pdf_options["width"] = pdf_width
 
-                    pdf_bytes = page.pdf(
-                        width=pdf_width,
-                        height=self._page_height,
-                        landscape=self._landscape,
-                        margin=self._margins,
-                        print_background=True,
-                    )
+                    pdf_bytes = page.pdf(**pdf_options)
                     self._logger.info(
                         f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
                     )
@@ -193,9 +190,8 @@ class PlaywrightPDFRenderer:
             """,
         )
 
-    def _compute_pdf_width(self, page: Any) -> str:
-        """Compute a PDF page width that is wide enough to preserve visible browser content."""
-        configured_width_px = self._css_length_to_px(self._page_width)
+    def _compute_pdf_width(self, page: Any) -> str | None:
+        """Compute an explicit PDF page width when needed to preserve browser content."""
         margin_width_px = (
             self._css_length_to_px(self._margins["left"])
             + self._css_length_to_px(self._margins["right"])
@@ -204,20 +200,19 @@ class PlaywrightPDFRenderer:
         layout_width_px = self._measure_layout_width_px(page)
         if content_width_px <= 0:
             self._logger.info(
-                "Using the configured PDF width because no visible report width was found."
+                "No visible report width was found; using Playwright's default PDF page width."
             )
-            return self._page_width
+            return None
 
         # The PDF page must preserve the same layout canvas that Chromium used while rendering
         # the report. If the PDF content area is narrower than the browser viewport, responsive
         # Plotly legends can still be clipped at the right edge even when the report root itself
         # appears narrower than the viewport.
         fitted_content_width_px = max(content_width_px, layout_width_px)
-        pdf_width_px = max(configured_width_px, fitted_content_width_px + margin_width_px)
+        pdf_width_px = fitted_content_width_px + margin_width_px
         self._logger.info(
             "Computed browser PDF width fit: "
             f"content_width_px={content_width_px:.2f}, "
-            f"configured_width_px={configured_width_px:.2f}, "
             f"layout_width_px={layout_width_px:.2f}, "
             f"fitted_width_px={pdf_width_px:.2f}"
         )
