@@ -65,6 +65,7 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
+    _DEFAULT_PAGE_HEIGHT: str = "297mm"
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
 
@@ -134,6 +135,9 @@ class PlaywrightPDFRenderer:
                     self._wait_for_render_ready(page)
                     pdf_width = self._compute_pdf_width(page)
                     pdf_options = {
+                        # Keep page height explicit so pagination remains under ADR's control
+                        # instead of depending entirely on Playwright's default page format.
+                        "height": self._DEFAULT_PAGE_HEIGHT,
                         "landscape": self._landscape,
                         "margin": self._margins,
                         "print_background": True,
