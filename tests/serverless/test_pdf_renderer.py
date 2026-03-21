@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from pathlib import Path
+from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
@@ -123,7 +124,7 @@ def test_playwright_missing_raises_error(tmp_path):
         return real_import(name, globals, locals, fromlist, level)
 
     with patch("builtins.__import__", side_effect=fake_import):
-        with pytest.raises(ADRException, match="ansys-dynamicreporting-core\\[pdf\\]"):
+        with pytest.raises(ADRException, match="ansys-dynamicreporting-core"):
             renderer.render_pdf()
 
 
@@ -151,19 +152,53 @@ def test_playwright_pdf_with_mathjax_content(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_signal_timeout(tmp_path):
-    # This mock Plotly element never fires the afterplot callback, so the readiness promise times out.
+    # This mock Plotly container never gets class 'loaded', so the readiness MutationObserver
+    # never fires and the promise times out.
     html = """
     <html>
-    <body>
-        <div class="js-plotly-plot" id="plot"></div>
-        <script>
-            document.getElementById("plot").on = function () {};
-        </script>
+    <body class="loaded">
+        <section id="report_root" style="opacity:1">
+            <div class="nexus-plot" id="plot"></div>
+        </section>
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html, render_timeout=0.2)
+    renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
     pytest.importorskip("playwright.sync_api")
 
     with pytest.raises(ADRException, match="Browser PDF rendering failed"):
         renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>CSS injection</p></body></html>")
+    page = Mock()
+
+    renderer._apply_pdf_capture_styles(page)
+
+    css = page.add_style_tag.call_args.kwargs["content"]
+    assert "adr-data-item" in css
+    assert ".nexus-plot" in css
+    assert "adr-panel" not in css
+    assert "[nexus_template]" not in css
+
+
+@pytest.mark.unit
+def test_compute_pdf_width_expands_for_visible_content(tmp_path):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
+    page = Mock()
+    page.evaluate.return_value = 960
+
+    pdf_width = renderer._compute_pdf_width(page)
+
+    assert pdf_width == "1067.59px"
+
+
+@pytest.mark.unit
+def test_css_length_to_px_supports_absolute_units(tmp_path):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
+
+    assert renderer._css_length_to_px("25.4mm") == pytest.approx(96.0)
+    assert renderer._css_length_to_px("1in") == pytest.approx(96.0)
+    assert renderer._css_length_to_px("72pt") == pytest.approx(96.0)

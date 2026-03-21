@@ -22,6 +22,7 @@
 
 """Browser-fidelity HTML-to-PDF rendering for serverless ADR exports."""
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,15 @@ class PlaywrightPDFRenderer:
         "bottom": "10mm",
         "left": "10mm",
     }
+    _CSS_UNIT_TO_PX: dict[str, float] = {
+        "": 1.0,
+        "px": 1.0,
+        "pt": 96.0 / 72.0,
+        "in": 96.0,
+        "cm": 96.0 / 2.54,
+        "mm": 96.0 / 25.4,
+    }
+    _WIDTH_FIT_BUFFER_PX: float = 32.0
 
     def __init__(
         self,
@@ -101,7 +111,7 @@ class PlaywrightPDFRenderer:
         except ImportError as exc:
             raise ADRException(
                 "Playwright is required for browser-fidelity PDF export. Install it with:\n"
-                "  pip install ansys-dynamicreporting-core[pdf]\n"
+                "  pip install ansys-dynamicreporting-core\n"
                 "  playwright install chromium"
             ) from exc
 
@@ -120,16 +130,20 @@ class PlaywrightPDFRenderer:
 
                     # Force screen media so the PDF matches the browser view instead of print CSS.
                     page.emulate_media(media="screen")
+                    self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page)
+                    pdf_width = self._compute_pdf_width(page)
 
                     pdf_bytes = page.pdf(
-                        width=self._page_width,
+                        width=pdf_width,
                         height=self._page_height,
                         landscape=self._landscape,
                         margin=self._margins,
                         print_background=True,
                     )
-                    self._logger.info(f"Browser PDF generated successfully ({len(pdf_bytes)} bytes).")
+                    self._logger.info(
+                        f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
+                    )
                     return pdf_bytes
                 finally:
                     browser.close()
@@ -138,15 +152,157 @@ class PlaywrightPDFRenderer:
         except Exception as exc:
             raise ADRException(f"Browser PDF rendering failed: {exc}") from exc
 
+    def _apply_pdf_capture_styles(self, page: Any) -> None:
+        """Inject PDF-only overrides that keep browser-rendered content fully visible on pages."""
+        # Chromium paginates based on the outer block formatting context. If a page-break rule is
+        # applied too high in the ADR layout tree, an entire panel becomes unbreakable and content
+        # can spill past the page boundary. Keep the override focused on the actual browser-rendered
+        # items so plots stay intact while their parent sections can still paginate normally.
+        page.add_style_tag(
+            content="""
+                @media print {
+                    adr-data-item,
+                    .nexus-plot,
+                    .nexus-plot > .plot-container,
+                    .js-plotly-plot,
+                    .plot-container,
+                    .svg-container {
+                        break-inside: avoid !important;
+                        page-break-inside: avoid !important;
+                    }
+
+                    adr-data-item,
+                    .nexus-plot,
+                    .plot-container,
+                    .svg-container,
+                    .main-svg,
+                    .table-responsive {
+                        overflow: visible !important;
+                        max-height: none !important;
+                    }
+
+                    .adr-spinner-loader-container,
+                    .modebar {
+                        display: none !important;
+                    }
+                }
+            """,
+        )
+
+    def _compute_pdf_width(self, page: Any) -> str:
+        """Compute a PDF page width that is wide enough to preserve visible browser content."""
+        configured_width_px = self._css_length_to_px(self._page_width)
+        margin_width_px = (
+            self._css_length_to_px(self._margins["left"])
+            + self._css_length_to_px(self._margins["right"])
+        )
+        content_width_px = self._measure_content_width_px(page)
+        if content_width_px <= 0:
+            self._logger.info("Using the configured PDF width because no visible report width was found.")
+            return self._page_width
+
+        # Add a small buffer so Plotly legends and SVG strokes do not land exactly on the right
+        # page boundary after Chromium finishes its final layout pass.
+        fitted_width_px = content_width_px + margin_width_px + self._WIDTH_FIT_BUFFER_PX
+        pdf_width_px = max(configured_width_px, fitted_width_px)
+        self._logger.info(
+            "Computed browser PDF width fit: "
+            f"content_width_px={content_width_px:.2f}, "
+            f"configured_width_px={configured_width_px:.2f}, "
+            f"fitted_width_px={pdf_width_px:.2f}"
+        )
+        return f"{pdf_width_px:.2f}px"
+
+    def _measure_content_width_px(self, page: Any) -> float:
+        """Measure the widest visible report element in CSS pixels."""
+        # Shadow-DOM hosts and light-DOM children both contribute because ADR mixes custom elements
+        # with plain DOM nodes, and viewers can render fixed-width proxy content inside either form.
+        return float(
+            page.evaluate(
+                """() => {
+                    const root = document.getElementById('report_root');
+                    if (!root) {
+                        return 0;
+                    }
+
+                    const widths = [
+                        root.getBoundingClientRect().width,
+                        root.scrollWidth,
+                    ];
+                    const nodes = [root, ...root.querySelectorAll('*')];
+                    for (const node of nodes) {
+                        const style = window.getComputedStyle(node);
+                        if (style.display === 'none' || style.visibility === 'hidden') {
+                            continue;
+                        }
+                        if (node.getClientRects().length === 0) {
+                            continue;
+                        }
+                        const rect = node.getBoundingClientRect();
+                        widths.push(rect.width, node.scrollWidth || 0);
+                    }
+                    return Math.max(...widths);
+                }""",
+            )
+        )
+
+    def _css_length_to_px(self, value: str) -> float:
+        """Convert a CSS absolute length to CSS pixels."""
+        match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*", value)
+        if match is None:
+            raise ADRException(f"Unsupported CSS length for PDF rendering: {value!r}")
+
+        number = float(match.group(1))
+        unit = match.group(2).lower()
+        if unit not in self._CSS_UNIT_TO_PX:
+            raise ADRException(f"Unsupported CSS length unit for PDF rendering: {value!r}")
+        return number * self._CSS_UNIT_TO_PX[unit]
+
     def _wait_for_render_ready(self, page: Any) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
         timeout_ms = int(self._render_timeout * 1000)
         self._logger.info("Waiting for browser render readiness signals.")
+        # Playwright's sync ``evaluate`` API uses the page's default timeout rather than a
+        # per-call ``timeout=...`` keyword, so set the readiness budget once for this phase.
+        page.set_default_timeout(timeout_ms)
 
-        # Web fonts can shift layout after the initial network load, so wait for font completion first.
-        page.evaluate("() => document.fonts.ready", timeout=timeout_ms)
+        # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
+        #    until all custom web-components are registered, which adds ``body.loaded``.
+        #    Without this, the entire PDF is blank.
+        page.evaluate(
+            """() => new Promise((resolve) => {
+                if (document.body.classList.contains('loaded')) { resolve(); return; }
+                const observer = new MutationObserver(() => {
+                    if (document.body.classList.contains('loaded')) {
+                        observer.disconnect();
+                        resolve();
+                    }
+                });
+                observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            })""",
+        )
 
-        # MathJax renders equations asynchronously; wait only when the runtime is present.
+        # 2. FOUC transition: ``body.loaded #report_root`` triggers a 0.4s opacity
+        #    transition. Wait for it to reach opacity 1 before capturing.
+        page.evaluate(
+            """() => new Promise((resolve) => {
+                const root = document.getElementById('report_root');
+                if (!root) { resolve(); return; }
+                const style = getComputedStyle(root);
+                if (style.opacity === '1') { resolve(); return; }
+                root.addEventListener('transitionend', function handler(e) {
+                    if (e.propertyName === 'opacity') {
+                        root.removeEventListener('transitionend', handler);
+                        resolve();
+                    }
+                });
+            })""",
+        )
+
+        # 3. Web fonts (FontAwesome woff2 + MathJax woff2).
+        page.evaluate("() => document.fonts.ready")
+
+        # 4. MathJax renders equations asynchronously; wait only when the runtime is present.
         page.evaluate(
             """() => {
                 return new Promise((resolve) => {
@@ -157,79 +313,110 @@ class PlaywrightPDFRenderer:
                     }
                 });
             }""",
-            timeout=timeout_ms,
         )
 
-        # Plotly charts publish an afterplot signal once their first full render is complete.
+        # 5. Plotly charts: each .nexus-plot container gets class 'loaded' after
+        #    Plotly.Plots.resize() resolves and the spinner hides.
         page.evaluate(
-            """() => {
-                return new Promise((resolve) => {
-                    const plots = document.querySelectorAll('.js-plotly-plot');
-                    if (plots.length === 0) {
-                        resolve();
-                        return;
-                    }
-                    let remaining = plots.length;
-                    plots.forEach((plot) => {
-                        if (plot.data) {
-                            remaining -= 1;
-                        } else {
-                            plot.on('plotly_afterplot', () => {
-                                remaining -= 1;
-                                if (remaining <= 0) {
-                                    resolve();
-                                }
-                            });
+            """() => new Promise((resolve) => {
+                const plots = document.querySelectorAll('.nexus-plot');
+                if (plots.length === 0) { resolve(); return; }
+                let remaining = plots.length;
+                function check() { if (--remaining <= 0) resolve(); }
+                plots.forEach((plot) => {
+                    if (plot.classList.contains('loaded')) { check(); return; }
+                    const observer = new MutationObserver(() => {
+                        if (plot.classList.contains('loaded')) {
+                            observer.disconnect();
+                            check();
                         }
                     });
-                    if (remaining <= 0) {
-                        resolve();
-                    }
+                    observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
                 });
-            }""",
-            timeout=timeout_ms,
+            })""",
         )
 
-        # DataTables mutates table markup after startup, so wait for each managed table to initialize.
+        # 6. Images: wait for every <img> to finish loading (covers static images,
+        #    scene proxy thumbnails, file proxy images, animation thumbnails).
         page.evaluate(
-            """() => {
-                return new Promise((resolve) => {
-                    if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') {
-                        resolve();
-                        return;
-                    }
-                    const tables = document.querySelectorAll('table.dataTable');
-                    if (tables.length === 0) {
-                        resolve();
-                        return;
-                    }
-                    let remaining = tables.length;
-                    tables.forEach((table) => {
-                        if ($.fn.DataTable.isDataTable(table)) {
-                            remaining -= 1;
-                        } else {
-                            $(table).on('init.dt', () => {
-                                remaining -= 1;
-                                if (remaining <= 0) {
-                                    resolve();
-                                }
-                            });
+            """() => new Promise((resolve) => {
+                const imgs = document.querySelectorAll('img');
+                if (imgs.length === 0) { resolve(); return; }
+                let remaining = imgs.length;
+                function done() { if (--remaining <= 0) resolve(); }
+                imgs.forEach((img) => {
+                    if (img.complete) { done(); return; }
+                    img.addEventListener('load', done, { once: true });
+                    img.addEventListener('error', done, { once: true });
+                });
+            })""",
+        )
+
+        # 7. Videos: wait for every <video> to have at least metadata loaded
+        #    (anim items produce <video> elements in browser render mode).
+        page.evaluate(
+            """() => new Promise((resolve) => {
+                const videos = document.querySelectorAll('video');
+                if (videos.length === 0) { resolve(); return; }
+                let remaining = videos.length;
+                function done() { if (--remaining <= 0) resolve(); }
+                videos.forEach((vid) => {
+                    if (vid.readyState >= 2) { done(); return; }
+                    vid.addEventListener('loadeddata', done, { once: true });
+                    vid.addEventListener('error', done, { once: true });
+                });
+            })""",
+        )
+
+        # 8. DataTables: each report table must be fully initialized.
+        #    Use table[id^="table_"] selector because the "dataTable" class is added
+        #    BY DataTables after init — table.dataTable would miss uninitialized tables.
+        #    (analysis §3.2, §7.1, Appendix C #14).
+        page.evaluate(
+            """() => new Promise((resolve) => {
+                if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') {
+                    resolve(); return;
+                }
+                const tables = document.querySelectorAll('table[id^="table_"]');
+                if (tables.length === 0) { resolve(); return; }
+                let remaining = tables.length;
+                function done() { if (--remaining <= 0) resolve(); }
+                tables.forEach((table) => {
+                    if ($.fn.DataTable.isDataTable(table)) { done(); return; }
+                    $(table).on('init.dt', function() { done(); });
+                });
+            })""",
+        )
+
+        # 9. Active 3D viewers: wait for each ansys-nexus-viewer spinner to hide.
+        #    In the browser render path, viewers have active="true" and load scene
+        #    data asynchronously. The #render-wait spinner hides on load complete.
+        page.evaluate(
+            """() => new Promise((resolve) => {
+                const viewers = document.querySelectorAll('ansys-nexus-viewer');
+                if (viewers.length === 0) { resolve(); return; }
+                let remaining = viewers.length;
+                function done() { if (--remaining <= 0) resolve(); }
+                viewers.forEach((viewer) => {
+                    const spinner = viewer.querySelector('#render-wait');
+                    if (!spinner || spinner.style.display !== 'block') { done(); return; }
+                    const observer = new MutationObserver(() => {
+                        if (spinner.style.display !== 'block') {
+                            observer.disconnect();
+                            done();
                         }
                     });
-                    if (remaining <= 0) {
-                        resolve();
-                    }
+                    observer.observe(spinner, { attributes: true, attributeFilter: ['style'] });
                 });
-            }""",
-            timeout=timeout_ms,
+            })""",
         )
 
-        # Double requestAnimationFrame waits for an actual paint after the preceding DOM/style work settles.
+        # 10. Double requestAnimationFrame waits for an actual composited frame
+        #     after all preceding DOM/style work settles.
         page.evaluate(
             """() => new Promise((resolve) =>
                 requestAnimationFrame(() => requestAnimationFrame(resolve))
             )""",
-            timeout=timeout_ms,
         )
 
         self._logger.info("Browser render readiness checks completed.")
