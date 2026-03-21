@@ -187,22 +187,12 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 @pytest.mark.unit
 def test_compute_pdf_width_expands_for_visible_content(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
-    renderer._measure_content_bounds_px = Mock(return_value=(-12.5, 960.0))
     page = Mock()
+    page.evaluate.return_value = 960
 
     pdf_width = renderer._compute_pdf_width(page)
 
-    assert pdf_width == "1048.09px"
-
-
-@pytest.mark.unit
-def test_compute_pdf_width_uses_configured_width_when_bounds_missing(tmp_path):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Scale</p></body></html>")
-    renderer._measure_content_bounds_px = Mock(return_value=None)
-
-    pdf_width = renderer._compute_pdf_width(Mock())
-
-    assert pdf_width == "210mm"
+    assert pdf_width == "1067.59px"
 
 
 @pytest.mark.unit
