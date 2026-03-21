@@ -397,8 +397,8 @@ class PlaywrightPDFRenderer:
             })""",
         )
 
-        # 7. Videos: wait for every <video> to have at least metadata loaded
-        #    (anim items produce <video> elements in browser render mode).
+        # 7. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
+        #    so the current frame is available before Chromium prints the page.
         page.evaluate(
             """() => new Promise((resolve) => {
                 const videos = document.querySelectorAll('video');

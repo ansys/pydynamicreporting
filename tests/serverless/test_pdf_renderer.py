@@ -55,13 +55,19 @@ def _simple_renderer(
     body: str,
     *,
     landscape: bool = False,
+    render_timeout: float | None = None,
 ) -> PlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
     html_dir = _write_html(tmp_path, body)
-    return PlaywrightPDFRenderer(
+    renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
     )
+    if render_timeout is not None:
+        # Keep the timeout override local to the test setup so individual tests do not need
+        # to reach into private state after construction.
+        renderer._render_timeout = render_timeout
+    return renderer
 
 
 @pytest.mark.unit
@@ -132,8 +138,7 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html)
-    renderer._render_timeout = 0.5
+    renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
     pytest.importorskip("playwright.sync_api")
 
     with pytest.raises(ADRException, match="Browser PDF rendering failed"):
@@ -161,4 +166,3 @@ def test_css_length_to_px_supports_absolute_units(tmp_path):
     assert renderer._css_length_to_px("25.4mm") == pytest.approx(96.0)
     assert renderer._css_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._css_length_to_px("72pt") == pytest.approx(96.0)
-
