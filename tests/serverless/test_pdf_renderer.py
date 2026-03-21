@@ -54,8 +54,6 @@ def _simple_renderer(
     tmp_path: Path,
     body: str,
     *,
-    page_width: str = "210mm",
-    page_height: str = "297mm",
     landscape: bool = False,
     margins: dict[str, str] | None = None,
     render_timeout: float = 30.0,
@@ -64,8 +62,6 @@ def _simple_renderer(
     html_dir = _write_html(tmp_path, body)
     return PlaywrightPDFRenderer(
         html_dir=html_dir,
-        page_width=page_width,
-        page_height=page_height,
         landscape=landscape,
         margins=margins,
         render_timeout=render_timeout,
@@ -75,18 +71,6 @@ def _simple_renderer(
 @pytest.mark.unit
 def test_playwright_pdf_from_simple_html(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
-    pdf_bytes = _render_or_skip(renderer)
-    assert pdf_bytes.startswith(b"%PDF-")
-
-
-@pytest.mark.unit
-def test_playwright_pdf_custom_page_size(tmp_path):
-    renderer = _simple_renderer(
-        tmp_path,
-        "<html><body><p>Custom page size</p></body></html>",
-        page_width="100mm",
-        page_height="150mm",
-    )
     pdf_bytes = _render_or_skip(renderer)
     assert pdf_bytes.startswith(b"%PDF-")
 

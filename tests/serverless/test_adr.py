@@ -1613,8 +1613,6 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         html_dir,
         filename="index.html",
         *,
-        page_width="210mm",
-        page_height="297mm",
         landscape=False,
         margins=None,
         render_timeout=30.0,
@@ -1622,8 +1620,6 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     ):
         captured["html_dir"] = html_dir
         captured["filename"] = filename
-        captured["page_width"] = page_width
-        captured["page_height"] = page_height
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
@@ -1637,8 +1633,6 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     custom_margins = {"top": "4mm", "right": "6mm", "bottom": "8mm", "left": "10mm"}
     pdf_bytes = adr.render_report_as_browser_pdf(
         name="TestBrowserPDFOptions",
-        page_width="100mm",
-        page_height="150mm",
         landscape=True,
         margins=custom_margins,
         render_timeout=12.5,
@@ -1647,8 +1641,6 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     assert pdf_bytes == b"%PDF-mock"
     assert isinstance(captured["html_dir"], Path)
     assert captured["filename"] == "index.html"
-    assert captured["page_width"] == "100mm"
-    assert captured["page_height"] == "150mm"
     assert captured["landscape"] is True
     assert captured["margins"] == custom_margins
     assert captured["render_timeout"] == 12.5

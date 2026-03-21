@@ -1327,8 +1327,6 @@ class ADR:
         context: dict | None = None,
         item_filter: str = "",
         dark_mode: bool = False,
-        page_width: str = "210mm",
-        page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
         render_timeout: float = 30.0,
@@ -1348,12 +1346,6 @@ class ADR:
             Filter expression for report items.
         dark_mode : bool, optional
             Whether to render using a dark theme. Default ``False``.
-        page_width : str, optional
-            Minimum CSS dimension string for page width. The renderer may widen the
-            final PDF page to preserve the browser layout width and avoid clipping.
-            Default ``"210mm"`` (A4).
-        page_height : str, optional
-            CSS dimension string for page height. Default ``"297mm"`` (A4).
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
         margins : dict, optional
@@ -1397,8 +1389,6 @@ class ADR:
                 # and asset export pipeline does any meaningful work.
                 renderer = PlaywrightPDFRenderer(
                     html_dir=tmp_path,
-                    page_width=page_width,
-                    page_height=page_height,
                     landscape=landscape,
                     margins=margins,
                     render_timeout=render_timeout,
@@ -1668,8 +1658,6 @@ class ADR:
         context: dict | None = None,
         item_filter: str = "",
         dark_mode: bool = False,
-        page_width: str = "210mm",
-        page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
         render_timeout: float = 30.0,
@@ -1691,12 +1679,6 @@ class ADR:
             Filter expression for report items.
         dark_mode : bool, optional
             Whether to render using a dark theme. Default ``False``.
-        page_width : str, optional
-            Minimum CSS dimension string for page width. The renderer may widen the
-            final PDF page to preserve the browser layout width and avoid clipping.
-            Default ``"210mm"`` (A4).
-        page_height : str, optional
-            CSS dimension string for page height. Default ``"297mm"`` (A4).
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
         margins : dict, optional
@@ -1729,8 +1711,6 @@ class ADR:
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
-            page_width=page_width,
-            page_height=page_height,
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,

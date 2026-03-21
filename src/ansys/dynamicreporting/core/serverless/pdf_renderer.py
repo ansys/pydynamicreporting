@@ -40,11 +40,6 @@ class PlaywrightPDFRenderer:
         Directory containing the exported offline HTML report and its assets.
     filename : str, default: "index.html"
         HTML entry-point filename inside ``html_dir``.
-    page_width : str, default: "210mm"
-        Minimum CSS page width passed to Chromium's PDF generator. The renderer may
-        widen the final PDF page to preserve the browser layout width and avoid clipping.
-    page_height : str, default: "297mm"
-        CSS page height passed to Chromium's PDF generator.
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
     margins : dict[str, str], optional
@@ -70,6 +65,8 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
+    _DEFAULT_PAGE_WIDTH: str = "210mm"
+    _DEFAULT_PAGE_HEIGHT: str = "297mm"
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
 
@@ -78,8 +75,6 @@ class PlaywrightPDFRenderer:
         html_dir: Path,
         filename: str = "index.html",
         *,
-        page_width: str = "210mm",
-        page_height: str = "297mm",
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = 30.0,
@@ -88,8 +83,8 @@ class PlaywrightPDFRenderer:
         """Initialize the renderer with a self-contained HTML export directory."""
         self._html_dir = Path(html_dir)
         self._filename = filename
-        self._page_width = page_width
-        self._page_height = page_height
+        self._page_width = self._DEFAULT_PAGE_WIDTH
+        self._page_height = self._DEFAULT_PAGE_HEIGHT
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = render_timeout
