@@ -1438,3 +1438,185 @@ def test_load_templates_from_file(adr_serverless):
 def test_load_templates_from_file_no_such_file(adr_serverless):
     with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
         adr_serverless.load_templates_from_file("nonexistent.json")
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_success(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
+
+    adr = object.__new__(ADR)
+    adr._media_directory = tmp_path / "media"
+    adr._static_directory = tmp_path / "static"
+    adr._media_directory.mkdir()
+    adr._static_directory.mkdir()
+    adr._media_url = "/media/"
+    adr._static_url = "/static/"
+    adr._ansys_version = 252
+    adr._debug = False
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+
+    def fake_render_report(self, **kwargs):
+        return "<html><body><h1>Browser PDF</h1></body></html>"
+
+    def fake_export(self):
+        # The PDF renderer is mocked in this test, so only the pipeline wiring matters here.
+        return None
+
+    monkeypatch.setattr(ADR, "render_report", fake_render_report)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    pdf_bytes = adr.render_report_as_browser_pdf(name="TestBrowserPDF")
+    assert pdf_bytes == b"%PDF-mock"
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_no_kwarg(tmp_path):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = object.__new__(ADR)
+    adr._static_directory = tmp_path / "static"
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr.render_report_as_browser_pdf()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_no_static_dir(tmp_path):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = object.__new__(ADR)
+    adr._static_directory = None
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+
+    with pytest.raises(
+        ImproperlyConfiguredError, match="The 'static_directory' must be configured"
+    ):
+        adr.render_report_as_browser_pdf(name="AnyBrowserPDF")
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_render_failure(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = object.__new__(ADR)
+    adr._media_directory = tmp_path / "media"
+    adr._static_directory = tmp_path / "static"
+    adr._media_directory.mkdir()
+    adr._static_directory.mkdir()
+    adr._media_url = "/media/"
+    adr._static_url = "/static/"
+    adr._ansys_version = 252
+    adr._debug = False
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+
+    def fake_render_report(self, **kwargs):
+        raise Exception("Simulated browser render failure")
+
+    monkeypatch.setattr(ADR, "render_report", fake_render_report)
+
+    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
+        adr.render_report_as_browser_pdf(name="FailingBrowserPDF")
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_success(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = object.__new__(ADR)
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    monkeypatch.setattr(ADR, "render_report_as_browser_pdf", lambda self, **kwargs: b"%PDF-mock")
+
+    output_file = tmp_path / "browser-output.pdf"
+    adr.export_report_as_browser_pdf(
+        filename=output_file,
+        name="TestBrowserPDFExport",
+    )
+
+    assert output_file.exists()
+    assert output_file.read_bytes() == b"%PDF-mock"
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_no_kwarg(tmp_path):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = object.__new__(ADR)
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+
+    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
+        adr.export_report_as_browser_pdf(filename=tmp_path / "browser-output.pdf")
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
+
+    adr = object.__new__(ADR)
+    adr._media_directory = tmp_path / "media"
+    adr._static_directory = tmp_path / "static"
+    adr._media_directory.mkdir()
+    adr._static_directory.mkdir()
+    adr._media_url = "/media/"
+    adr._static_url = "/static/"
+    adr._ansys_version = 252
+    adr._debug = False
+    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    captured: dict[str, object] = {}
+
+    def fake_render_report(self, **kwargs):
+        return "<html><body><p>Browser PDF options</p></body></html>"
+
+    def fake_export(self):
+        # Keep the test focused on argument plumbing instead of exporter internals.
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        page_width="210mm",
+        page_height="297mm",
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        logger=None,
+    ):
+        captured["html_dir"] = html_dir
+        captured["filename"] = filename
+        captured["page_width"] = page_width
+        captured["page_height"] = page_height
+        captured["landscape"] = landscape
+        captured["margins"] = margins
+        captured["render_timeout"] = render_timeout
+        captured["logger"] = logger
+
+    monkeypatch.setattr(ADR, "render_report", fake_render_report)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    custom_margins = {"top": "4mm", "right": "6mm", "bottom": "8mm", "left": "10mm"}
+    pdf_bytes = adr.render_report_as_browser_pdf(
+        name="TestBrowserPDFOptions",
+        page_width="100mm",
+        page_height="150mm",
+        landscape=True,
+        margins=custom_margins,
+        render_timeout=12.5,
+    )
+
+    assert pdf_bytes == b"%PDF-mock"
+    assert isinstance(captured["html_dir"], Path)
+    assert captured["filename"] == "index.html"
+    assert captured["page_width"] == "100mm"
+    assert captured["page_height"] == "150mm"
+    assert captured["landscape"] is True
+    assert captured["margins"] == custom_margins
+    assert captured["render_timeout"] == 12.5
