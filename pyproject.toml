@@ -60,6 +60,9 @@ bug_tracker = "https://github.com/ansys/pydynamicreporting/issues"
 ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
+pdf = [
+    "playwright>=1.40.0",
+]
 test = [
     "pytest",
     "pytest-cov",
