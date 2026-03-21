@@ -25,6 +25,7 @@ dependencies = [
     "bleach>=6.2.0",
     "django-weasyprint>=2.4.0,<2.5.0",
     "weasyprint>=67.0",
+    "playwright>=1.40.0",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
@@ -60,9 +61,6 @@ bug_tracker = "https://github.com/ansys/pydynamicreporting/issues"
 ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
-pdf = [
-    "playwright>=1.40.0",
-]
 test = [
     "pytest",
     "pytest-cov",
