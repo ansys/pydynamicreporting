@@ -1331,6 +1331,8 @@ class ADR:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
+        browser_viewport_width: int = 1920,
+        browser_viewport_height: int = 1080,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1357,6 +1359,12 @@ class ADR:
         margins : dict, optional
             Dict with keys ``top``, ``right``, ``bottom``, and ``left``.
             If omitted, the renderer uses 10 mm margins on every side.
+        browser_viewport_width : int, optional
+            Browser viewport width, in CSS pixels, used to lay out responsive content
+            before the PDF is captured. Default ``1920``.
+        browser_viewport_height : int, optional
+            Browser viewport height, in CSS pixels, used to lay out responsive content
+            before the PDF is captured. Default ``1080``.
         render_timeout : float, optional
             Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
@@ -1422,6 +1430,8 @@ class ADR:
                     page_height=page_height,
                     landscape=landscape,
                     margins=margins,
+                    browser_viewport_width=browser_viewport_width,
+                    browser_viewport_height=browser_viewport_height,
                     render_timeout=render_timeout,
                     logger=self._logger,
                 )
@@ -1668,6 +1678,8 @@ class ADR:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict | None = None,
+        browser_viewport_width: int = 1920,
+        browser_viewport_height: int = 1080,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
@@ -1696,6 +1708,12 @@ class ADR:
         margins : dict, optional
             Dict with keys ``top``, ``right``, ``bottom``, and ``left``.
             If omitted, the renderer uses 10 mm margins on every side.
+        browser_viewport_width : int, optional
+            Browser viewport width, in CSS pixels, used to lay out responsive content
+            before the PDF is captured. Default ``1920``.
+        browser_viewport_height : int, optional
+            Browser viewport height, in CSS pixels, used to lay out responsive content
+            before the PDF is captured. Default ``1080``.
         render_timeout : float, optional
             Maximum seconds to wait for each browser readiness signal before failing.
         **kwargs : Any
@@ -1727,6 +1745,8 @@ class ADR:
             page_height=page_height,
             landscape=landscape,
             margins=margins,
+            browser_viewport_width=browser_viewport_width,
+            browser_viewport_height=browser_viewport_height,
             render_timeout=render_timeout,
             **kwargs,
         )

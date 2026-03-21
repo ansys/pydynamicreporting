@@ -1585,6 +1585,8 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         page_height="297mm",
         landscape=False,
         margins=None,
+        browser_viewport_width=1920,
+        browser_viewport_height=1080,
         render_timeout=30.0,
         logger=None,
     ):
@@ -1594,6 +1596,8 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         captured["page_height"] = page_height
         captured["landscape"] = landscape
         captured["margins"] = margins
+        captured["browser_viewport_width"] = browser_viewport_width
+        captured["browser_viewport_height"] = browser_viewport_height
         captured["render_timeout"] = render_timeout
         captured["logger"] = logger
 
@@ -1609,6 +1613,8 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         page_height="150mm",
         landscape=True,
         margins=custom_margins,
+        browser_viewport_width=1600,
+        browser_viewport_height=900,
         render_timeout=12.5,
     )
 
@@ -1619,4 +1625,6 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     assert captured["page_height"] == "150mm"
     assert captured["landscape"] is True
     assert captured["margins"] == custom_margins
+    assert captured["browser_viewport_width"] == 1600
+    assert captured["browser_viewport_height"] == 900
     assert captured["render_timeout"] == 12.5

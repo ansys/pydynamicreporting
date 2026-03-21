@@ -48,6 +48,10 @@ class PlaywrightPDFRenderer:
     margins : dict[str, str], optional
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` keys.
         If omitted, 10 mm margins are used on every side.
+    browser_viewport_width : int, default: 1920
+        Headless browser viewport width used to lay out responsive content before PDF capture.
+    browser_viewport_height : int, default: 1080
+        Headless browser viewport height used to lay out responsive content before PDF capture.
     render_timeout : float, default: 30.0
         Per-signal timeout, in seconds, for asynchronous browser readiness checks.
     logger : Any, optional
@@ -68,7 +72,8 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    _WIDTH_FIT_BUFFER_PX: float = 32.0
+    _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1920
+    _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 1080
 
     def __init__(
         self,
@@ -79,6 +84,8 @@ class PlaywrightPDFRenderer:
         page_height: str = "297mm",
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        browser_viewport_width: int = _DEFAULT_BROWSER_VIEWPORT_WIDTH,
+        browser_viewport_height: int = _DEFAULT_BROWSER_VIEWPORT_HEIGHT,
         render_timeout: float = 30.0,
         logger: Any = None,
     ) -> None:
@@ -90,6 +97,12 @@ class PlaywrightPDFRenderer:
         self._landscape = landscape
         # Copy the caller-provided mapping so later mutations do not alter this renderer's state.
         self._margins = dict(margins) if margins is not None else dict(self._DEFAULT_MARGINS)
+        self._browser_viewport_width = self._validate_viewport_dimension(
+            "browser_viewport_width", browser_viewport_width
+        )
+        self._browser_viewport_height = self._validate_viewport_dimension(
+            "browser_viewport_height", browser_viewport_height
+        )
         self._render_timeout = render_timeout
         self._logger = logger or get_logger()
 
@@ -121,7 +134,14 @@ class PlaywrightPDFRenderer:
                 browser = playwright.chromium.launch(headless=True)
 
                 try:
-                    page = browser.new_page()
+                    # Fix the responsive layout width up front so Plotly and other browser-rendered
+                    # items lay themselves out deterministically before the PDF width is computed.
+                    page = browser.new_page(
+                        viewport={
+                            "width": self._browser_viewport_width,
+                            "height": self._browser_viewport_height,
+                        }
+                    )
                     file_url = (self._html_dir / self._filename).as_uri()
 
                     # Load the exported offline report exactly as Chromium would see it from disk.
@@ -198,25 +218,25 @@ class PlaywrightPDFRenderer:
         )
         content_width_px = self._measure_content_width_px(page)
         if content_width_px <= 0:
-            self._logger.info("Using the configured PDF width because no visible report width was found.")
+            self._logger.info(
+                "Using the configured PDF width because no visible report width was found."
+            )
             return self._page_width
 
-        # Add a small buffer so Plotly legends and SVG strokes do not land exactly on the right
-        # page boundary after Chromium finishes its final layout pass.
-        fitted_width_px = content_width_px + margin_width_px + self._WIDTH_FIT_BUFFER_PX
-        pdf_width_px = max(configured_width_px, fitted_width_px)
+        pdf_width_px = max(configured_width_px, content_width_px + margin_width_px)
         self._logger.info(
             "Computed browser PDF width fit: "
             f"content_width_px={content_width_px:.2f}, "
             f"configured_width_px={configured_width_px:.2f}, "
+            f"browser_viewport_width_px={self._browser_viewport_width:.2f}, "
             f"fitted_width_px={pdf_width_px:.2f}"
         )
         return f"{pdf_width_px:.2f}px"
 
     def _measure_content_width_px(self, page: Any) -> float:
-        """Measure the widest visible report element in CSS pixels."""
-        # Shadow-DOM hosts and light-DOM children both contribute because ADR mixes custom elements
-        # with plain DOM nodes, and viewers can render fixed-width proxy content inside either form.
+        """Measure the rightmost visible report content in CSS pixels."""
+        # Limit the query to elements that actually paint user-visible content. This keeps the
+        # probe close to O(number of rendered report objects) instead of walking the entire page.
         return float(
             page.evaluate(
                 """() => {
@@ -225,12 +245,36 @@ class PlaywrightPDFRenderer:
                         return 0;
                     }
 
-                    const widths = [
-                        root.getBoundingClientRect().width,
-                        root.scrollWidth,
+                    const rootRect = root.getBoundingClientRect();
+                    const candidateSelectors = [
+                        'adr-data-item',
+                        '.nexus-plot',
+                        '.js-plotly-plot',
+                        '.js-plotly-plot .plot-container',
+                        '.js-plotly-plot .svg-container',
+                        '.js-plotly-plot .main-svg',
+                        '.js-plotly-plot .legend',
+                        '.js-plotly-plot .legend text',
+                        '.table-responsive',
+                        'table',
+                        'img',
+                        'video',
+                        'canvas',
+                        'ansys-nexus-viewer'
                     ];
-                    const nodes = [root, ...root.querySelectorAll('*')];
-                    for (const node of nodes) {
+                    const candidates = [root];
+                    for (const selector of candidateSelectors) {
+                        candidates.push(...root.querySelectorAll(selector));
+                    }
+
+                    const seen = new Set();
+                    let maxRight = Math.max(rootRect.width, root.scrollWidth);
+                    for (const node of candidates) {
+                        if (seen.has(node)) {
+                            continue;
+                        }
+                        seen.add(node);
+
                         const style = window.getComputedStyle(node);
                         if (style.display === 'none' || style.visibility === 'hidden') {
                             continue;
@@ -239,12 +283,22 @@ class PlaywrightPDFRenderer:
                             continue;
                         }
                         const rect = node.getBoundingClientRect();
-                        widths.push(rect.width, node.scrollWidth || 0);
+                        const relativeLeft = rect.left - rootRect.left;
+                        maxRight = Math.max(maxRight, rect.right - rootRect.left);
+                        if ('scrollWidth' in node) {
+                            maxRight = Math.max(maxRight, relativeLeft + (node.scrollWidth || 0));
+                        }
                     }
-                    return Math.max(...widths);
+                    return maxRight;
                 }""",
             )
         )
+
+    def _validate_viewport_dimension(self, name: str, value: int) -> int:
+        """Validate that a browser viewport dimension is a positive integer."""
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ADRException(f"{name!r} must be a positive integer.")
+        return value
 
     def _css_length_to_px(self, value: str) -> float:
         """Convert a CSS absolute length to CSS pixels."""

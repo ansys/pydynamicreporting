@@ -58,6 +58,8 @@ def _simple_renderer(
     page_height: str = "297mm",
     landscape: bool = False,
     margins: dict[str, str] | None = None,
+    browser_viewport_width: int = 1920,
+    browser_viewport_height: int = 1080,
     render_timeout: float = 30.0,
 ) -> PlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
@@ -68,6 +70,8 @@ def _simple_renderer(
         page_height=page_height,
         landscape=landscape,
         margins=margins,
+        browser_viewport_width=browser_viewport_width,
+        browser_viewport_height=browser_viewport_height,
         render_timeout=render_timeout,
     )
 
@@ -192,7 +196,7 @@ def test_compute_pdf_width_expands_for_visible_content(tmp_path):
 
     pdf_width = renderer._compute_pdf_width(page)
 
-    assert pdf_width == "1067.59px"
+    assert pdf_width == "1035.59px"
 
 
 @pytest.mark.unit
@@ -202,3 +206,20 @@ def test_css_length_to_px_supports_absolute_units(tmp_path):
     assert renderer._css_length_to_px("25.4mm") == pytest.approx(96.0)
     assert renderer._css_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._css_length_to_px("72pt") == pytest.approx(96.0)
+
+
+@pytest.mark.unit
+def test_validate_viewport_dimension_requires_positive_integer(tmp_path):
+    with pytest.raises(ADRException, match="browser_viewport_width"):
+        _simple_renderer(
+            tmp_path,
+            "<html><body><p>Viewport</p></body></html>",
+            browser_viewport_width=0,
+        )
+
+    with pytest.raises(ADRException, match="browser_viewport_height"):
+        _simple_renderer(
+            tmp_path,
+            "<html><body><p>Viewport</p></body></html>",
+            browser_viewport_height=-1,
+        )
