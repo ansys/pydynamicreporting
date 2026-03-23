@@ -87,6 +87,70 @@ Example: Threading with Serverless ADR
         for t in threads:
             t.join()
 
+External Venv Dependency Drift
+------------------------------
+
+When Serverless ADR is used from a standalone Python virtual environment (venv)
+where the versions of installed packages are different from ADR's internal dependencies,
+against an installed ADR product release, two independently versioned
+environments are combined in one Python process:
+
+- The internal ADR modules/dependencies that ship with the
+  installed product release.
+- The packages installed in the virtual environment that contains pydynamicreporting (the client).
+
+If the client venv drifts ahead of the target product release,
+``ADR.setup()`` can fail inside ``django.setup()`` while the product's modules are
+being imported.
+
+Current mitigation and recommendation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PyDynamicReporting currently mitigates this class of failure in two ways:
+
+- ``ADR.setup()`` now sanitizes the imported product settings before reaching into the product's modules.
+  This allows the setup process to complete and the product's modules to be imported, even if the client venv
+  has newer versions of dependencies that would otherwise cause import errors.
+
+- The base dependency set in ``pyproject.toml`` now defines the broad
+  serverless compatibility envelope, while release-specific dependency
+  pins live in ``constraints/``. This repository keeps a single
+  checked-in ``uv.lock``, so release-specific stacks are documented as
+  constraints files rather than mutually incompatible extras.
+
+The compatibility shim is a safety net for known setting transitions in the core product. It is
+not a substitute for matching the external venv to the target ADR release.
+
+Recommended practice for external venv usage:
+
+- Install ``ansys-dynamicreporting-core`` together with the constraints
+  file that matches the target ADR release.
+- Keep one external serverless virtual environment per product release family.
+- Prefer ADR's internal Python environment when you do not need a
+  standalone venv. This avoids the risk of drift and simplifies setup.
+
+If you are installing from PyPI instead of a local checkout, copy the matching
+constraints file from ``constraints/`` in the GitHub repository and pass
+it to ``pip install -c ...``.
+
+Example from a source checkout:
+
+.. code-block:: bash
+
+    pip install -c constraints/v261.txt .
+
+Example for an editable source checkout:
+
+.. code-block:: bash
+
+    pip install -c constraints/v261.txt -e .
+
+Example from PyPI after downloading the matching constraints file locally:
+
+.. code-block:: bash
+
+    pip install -c /path/to/v261.txt ansys-dynamicreporting-core
+
 Using Subprocesses for Multiple Configurations
 ----------------------------------------------
 

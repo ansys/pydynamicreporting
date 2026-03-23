@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from dataclasses import dataclass
 import os
 from pathlib import Path
 import platform
@@ -27,7 +28,7 @@ import re
 
 import bleach
 
-from . import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from .compatibility import AUTO_DETECT_INSTALL_VERSIONS, DEFAULT_ANSYS_INSTALL_VERSION
 from .constants import JSON_NECESSARY_KEYS, JSON_TEMPLATE_KEYS, REPORT_TYPES
 from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
@@ -54,6 +55,183 @@ def get_install_version(install_dir: Path) -> int | None:
     return int(matches.group(1)) if matches else None
 
 
+def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
+    """Infer the install version from ``nexus###`` directories when needed.
+
+    Some explicit installation paths, such as copied Docker layouts or temp
+    directories created during tests, do not include a ``v###`` segment in the
+    path itself. In those cases the shipped ADR tree still exposes the version
+    through its ``nexus###/django/manage.py`` layout, which is stable across
+    the supported installation formats.
+    """
+    if install_dir is None or not install_dir.is_dir():
+        return None
+
+    detected_versions: list[int] = []
+    for child in install_dir.iterdir():
+        match = re.fullmatch(r"nexus(\d{3})", child.name)
+        if match and (child / "django" / "manage.py").exists():
+            detected_versions.append(int(match.group(1)))
+
+    if len(detected_versions) == 1:
+        return detected_versions[0]
+    return None
+
+
+@dataclass(frozen=True)
+class InstallResolution:
+    """Internal install-resolution metadata used by runtime compatibility checks."""
+
+    install_dir: str | None
+    version: int | None
+    detection_source: str
+    explicit_installation_requested: bool
+    explicit_version_requested: bool
+    implicit_default_install_used: bool
+
+
+def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
+    """Build candidate directories for both the new ADR and legacy CEI layouts."""
+    return [install_root / "ADR", install_root / "CEI"]
+
+
+def _default_install_root(version: str) -> Path:
+    """Return the conventional install root for a three-digit Ansys version."""
+    if platform.system().startswith("Wind"):  # pragma: no cover
+        return Path(rf"C:\Program Files\ANSYS Inc\v{version}")
+    return Path(f"/ansys_inc/v{version}")
+
+
+def _append_unique(
+    candidates: list[tuple[Path, str]], seen_candidates: set[str], path: Path, source: str
+) -> None:
+    """Preserve candidate order while avoiding duplicate filesystem probes.
+
+    Install discovery only considers a small fixed set of locations, but
+    keeping a companion set makes duplicate checks constant-time and avoids
+    rescanning the candidate list every time multiple sources resolve to the
+    same path.
+    """
+    candidate = str(path)
+    if candidate not in seen_candidates:
+        candidates.append((path, source))
+        seen_candidates.add(candidate)
+
+
+def _build_install_candidates(
+    ansys_installation: str | None = None, ansys_version: int | None = None
+) -> list[tuple[Path, str]]:
+    """Return candidate installation directories in probe order."""
+    candidates: list[tuple[Path, str]] = []
+    seen_candidates: set[str] = set()
+
+    if ansys_installation:
+        # An explicit path always wins. Preserve the historical ADR -> CEI ->
+        # base-directory order so callers see the same layout preference.
+        for path in [
+            Path(ansys_installation) / "ADR",
+            Path(ansys_installation) / "CEI",
+            Path(ansys_installation),
+        ]:
+            _append_unique(candidates, seen_candidates, path, "explicit_installation")
+        return candidates
+
+    if "PYADR_ANSYS_INSTALLATION" in os.environ:
+        env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
+        for path in [env_inst / "ADR", env_inst / "CEI", env_inst]:
+            _append_unique(candidates, seen_candidates, path, "pyadr_env")
+
+    try:
+        import enve
+
+        _append_unique(candidates, seen_candidates, Path(enve.home()), "enve")
+    except ModuleNotFoundError:
+        pass
+
+    # When callers pin ``ansys_version``, probe only that version family.
+    # Otherwise use the ordered fallback list to keep implicit discovery broad
+    # without resorting to repeated brute-force filesystem scans.
+    versions_to_probe = (
+        (str(ansys_version),) if ansys_version is not None else AUTO_DETECT_INSTALL_VERSIONS
+    )
+
+    for version in versions_to_probe:
+        awp_root_key = f"AWP_ROOT{version}"
+        if awp_root_key in os.environ:
+            awp_root = Path(os.environ[awp_root_key])
+            for path in _candidate_dirs_for_install_root(awp_root):
+                _append_unique(candidates, seen_candidates, path, f"awp_root_{version}")
+
+    if "CEIDEVROOTDOS" in os.environ:
+        _append_unique(candidates, seen_candidates, Path(os.environ["CEIDEVROOTDOS"]), "ceidev")
+
+    for version in versions_to_probe:
+        # Default install roots are the last probe source because env-based
+        # overrides should remain higher precedence than machine-wide installs.
+        for path in _candidate_dirs_for_install_root(_default_install_root(version)):
+            _append_unique(candidates, seen_candidates, path, f"default_root_{version}")
+
+    return candidates
+
+
+def resolve_install_info(
+    ansys_installation: str | None = None, ansys_version: int | None = None
+) -> InstallResolution:
+    """Resolve installation details while preserving ``get_install_info()`` semantics."""
+    candidates = _build_install_candidates(
+        ansys_installation=ansys_installation, ansys_version=ansys_version
+    )
+
+    install_dir: Path | None = None
+    detection_source = "fallback"
+    for candidate_dir, source in candidates:
+        if candidate_dir.is_dir():
+            install_dir = candidate_dir
+            detection_source = source
+            break
+
+    version = get_install_version(install_dir)
+    if version is None:
+        version = _get_install_version_from_layout(install_dir)
+    if version is None:
+        version = ansys_version or int(DEFAULT_ANSYS_INSTALL_VERSION)
+
+    if ansys_installation and (
+        install_dir is None
+        or not (install_dir / f"nexus{version}" / "django" / "manage.py").exists()
+    ):
+        raise InvalidAnsysPath(
+            f"Unable to detect an installation in: {[str(d) for d, _ in candidates]}"
+        )
+
+    implicit_default_install_used = (
+        ansys_installation is None
+        and ansys_version is None
+        and install_dir is not None
+        and str(version) == DEFAULT_ANSYS_INSTALL_VERSION
+        and detection_source
+        in {
+            f"awp_root_{DEFAULT_ANSYS_INSTALL_VERSION}",
+            f"default_root_{DEFAULT_ANSYS_INSTALL_VERSION}",
+            "ceidev",
+            "enve",
+            "pyadr_env",
+        }
+    )
+    # Record whether the resolved install came from the package default rather
+    # than an explicit request so callers can keep warning behavior aligned
+    # with the historical "use the default installation if available" flow.
+
+    return InstallResolution(
+        install_dir=str(install_dir) if install_dir is not None else None,
+        version=version,
+        detection_source=detection_source,
+        explicit_installation_requested=ansys_installation is not None,
+        explicit_version_requested=ansys_version is not None,
+        implicit_default_install_used=implicit_default_install_used,
+    )
+
+
 def get_install_info(
     ansys_installation: str | None = None, ansys_version: int | None = None
 ) -> tuple[str | None, int]:
@@ -66,70 +244,12 @@ def get_install_info(
     Returns:
         tuple[str, int]: Installation directory and version number.
     """
-    dirs_to_check = []
-    # "ADR/" is the new installation layout (v271+); "CEI/" is the legacy layout.
-    # Both are checked for backwards compatibility, with "ADR/" tried first.
-    if ansys_installation:
-        # User passed directory: check ADR/ (new), then CEI/ (legacy), then the base.
-        dirs_to_check = [
-            Path(ansys_installation) / "ADR",
-            Path(ansys_installation) / "CEI",
-            Path(ansys_installation),
-        ]
-    else:
-        # Environmental variable
-        if "PYADR_ANSYS_INSTALLATION" in os.environ:
-            env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
-            # Note: PYADR_ANSYS_INSTALLATION is designed for devel builds
-            # where there is no ADR/CEI directory, but for folks using it in
-            # other ways, we'll add those too, just in case.
-            dirs_to_check = [env_inst / "ADR", env_inst / "CEI", env_inst]
-        # 'enve' home directory (running in local distro)
-        try:
-            import enve
-
-            dirs_to_check.append(Path(enve.home()))
-        except ModuleNotFoundError:
-            pass
-        # Look for Ansys install using target version number
-        if f"AWP_ROOT{CURRENT_VERSION}" in os.environ:
-            awp_root = Path(os.environ[f"AWP_ROOT{CURRENT_VERSION}"])
-            # Check new layout (ADR/) first, then legacy (CEI/).
-            dirs_to_check.extend([awp_root / "ADR", awp_root / "CEI"])
-        # Option for local development build
-        if "CEIDEVROOTDOS" in os.environ:
-            dirs_to_check.append(Path(os.environ["CEIDEVROOTDOS"]))
-        # Common, default install locations.
-        # Try new layout (ADR/) first, then legacy (CEI/).
-        if platform.system().startswith("Wind"):  # pragma: no cover
-            base = Path(rf"C:\Program Files\ANSYS Inc\v{CURRENT_VERSION}")
-        else:
-            base = Path(f"/ansys_inc/v{CURRENT_VERSION}")
-        dirs_to_check.extend([base / "ADR", base / "CEI"])
-
-    # find a valid installation directory
-    install_dir = None
-    for dir_ in dirs_to_check:
-        if dir_.is_dir():
-            install_dir = dir_
-            break
-
-    version = get_install_version(install_dir)
-    # use user provided version only if install dir has no version
-    if version is None:
-        version = ansys_version or int(CURRENT_VERSION)
-
-    # raise if ansys_installation is provided but not found
-    if ansys_installation and (
-        install_dir is None
-        or not (install_dir / f"nexus{version}" / "django" / "manage.py").exists()
-    ):
-        raise InvalidAnsysPath(
-            f"Unable to detect an installation in: {[str(d) for d in dirs_to_check]}"
-        )
-    # if it is not found and the user did not provide a path, return None
-    # This is for backwards compatibility with the old behavior in the Service class
-    return str(install_dir) if install_dir is not None else None, version
+    resolution = resolve_install_info(
+        ansys_installation=ansys_installation, ansys_version=ansys_version
+    )
+    # Preserve the historical tuple return type even though resolution metadata
+    # now carries extra context for runtime compatibility warnings.
+    return resolution.install_dir, resolution.version
 
 
 def _check_template_name_convention(template_name):
