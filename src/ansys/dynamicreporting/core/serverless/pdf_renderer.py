@@ -190,10 +190,9 @@ class PlaywrightPDFRenderer:
 
     def _compute_pdf_width(self, page: Any) -> str | None:
         """Compute an explicit PDF page width when needed to preserve browser content."""
-        margin_width_px = (
-            self._css_length_to_px(self._DEFAULT_MARGINS["left"])
-            + self._css_length_to_px(self._DEFAULT_MARGINS["right"])
-        )
+        margin_width_px = self._css_length_to_px(
+            self._DEFAULT_MARGINS["left"]
+        ) + self._css_length_to_px(self._DEFAULT_MARGINS["right"])
         content_width_px = self._measure_content_width_px(page)
         layout_width_px = self._measure_layout_width_px(page)
         if content_width_px <= 0:
