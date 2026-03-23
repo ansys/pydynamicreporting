@@ -1645,7 +1645,7 @@ class ADR:
     def export_report_as_browser_pdf(
         self,
         *,
-        filename: str | Path = None,
+        filename: str | Path | None = None,
         context: dict | None = None,
         item_filter: str = "",
         dark_mode: bool = False,

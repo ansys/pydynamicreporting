@@ -22,7 +22,6 @@
 
 """Browser-fidelity HTML-to-PDF rendering for serverless ADR exports."""
 
-from collections.abc import Mapping
 import re
 from pathlib import Path
 from typing import Any
@@ -265,10 +264,10 @@ class PlaywrightPDFRenderer:
                             continue;
                         }
                         const rect = node.getBoundingClientRect();
-                        const relativeLeft = rect.left - rootRect.left;
+                        const offsetLeft = rect.left - rootRect.left;
                         maxRight = Math.max(maxRight, rect.right - rootRect.left);
                         if ('scrollWidth' in node) {
-                            maxRight = Math.max(maxRight, relativeLeft + (node.scrollWidth || 0));
+                            maxRight = Math.max(maxRight, offsetLeft + (node.scrollWidth || 0));
                         }
                     }
                     return maxRight;

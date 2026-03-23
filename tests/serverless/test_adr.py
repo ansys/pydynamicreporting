@@ -1440,6 +1440,11 @@ def test_load_templates_from_file_no_such_file(adr_serverless):
         adr_serverless.load_templates_from_file("nonexistent.json")
 
 
+def _noop_logger():
+    """Create a no-op logger for browser PDF tests that bypass full ADR setup."""
+    return type("Logger", (), {"info": lambda *args, **kwargs: None})()
+
+
 @pytest.mark.ado_test
 def test_render_report_as_browser_pdf_success(tmp_path, monkeypatch):
     from ansys.dynamicreporting.core.serverless import ADR
@@ -1455,7 +1460,7 @@ def test_render_report_as_browser_pdf_success(tmp_path, monkeypatch):
     adr._static_url = "/static/"
     adr._ansys_version = 252
     adr._debug = False
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
 
     def fake_render_report(self, **kwargs):
         return "<html><body><h1>Browser PDF</h1></body></html>"
@@ -1478,7 +1483,7 @@ def test_render_report_as_browser_pdf_no_kwarg(tmp_path):
 
     adr = object.__new__(ADR)
     adr._static_directory = tmp_path / "static"
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr.render_report_as_browser_pdf()
@@ -1490,7 +1495,7 @@ def test_render_report_as_browser_pdf_no_static_dir(tmp_path):
 
     adr = object.__new__(ADR)
     adr._static_directory = None
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
 
     with pytest.raises(
         ImproperlyConfiguredError, match="The 'static_directory' must be configured"
@@ -1511,7 +1516,7 @@ def test_render_report_as_browser_pdf_render_failure(tmp_path, monkeypatch):
     adr._static_url = "/static/"
     adr._ansys_version = 252
     adr._debug = False
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
 
     def fake_render_report(self, **kwargs):
         raise Exception("Simulated browser render failure")
@@ -1527,7 +1532,7 @@ def test_export_report_as_browser_pdf_success(tmp_path, monkeypatch):
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = object.__new__(ADR)
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
     monkeypatch.setattr(ADR, "render_report_as_browser_pdf", lambda self, **kwargs: b"%PDF-mock")
 
     output_file = tmp_path / "browser-output.pdf"
@@ -1545,7 +1550,7 @@ def test_export_report_as_browser_pdf_no_kwarg(tmp_path):
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = object.__new__(ADR)
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr.export_report_as_browser_pdf(filename=tmp_path / "browser-output.pdf")
@@ -1566,7 +1571,7 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     adr._static_url = "/static/"
     adr._ansys_version = 252
     adr._debug = False
-    adr._logger = type("Logger", (), {"info": lambda *args, **kwargs: None})()
+    adr._logger = _noop_logger()
     captured: dict[str, object] = {}
 
     def fake_render_report(self, **kwargs):
