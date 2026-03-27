@@ -191,8 +191,55 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     css = page.add_style_tag.call_args.kwargs["content"]
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
+    assert "@media print" not in css
     assert "adr-panel" not in css
     assert "[nexus_template]" not in css
+
+
+@pytest.mark.unit
+def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
+    html = """
+    <html>
+    <body>
+        <div class="nexus-plot" id="plot">
+            <div class="plot-container">Plot content</div>
+        </div>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+    pytest.importorskip("playwright.sync_api")
+    from playwright.sync_api import sync_playwright
+
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page()
+            page.goto((renderer._html_dir / renderer._filename).as_uri(), wait_until="load")
+            # The PDF renderer uses screen media so the captured PDF matches the browser layout.
+            # The anti-splitting rules must still apply in that media mode or Plotly figures can
+            # break across pages during PDF pagination.
+            page.emulate_media(media="screen")
+            renderer._apply_pdf_capture_styles(page)
+            plot_styles = page.evaluate(
+                """() => {
+                    const plot = document.getElementById('plot');
+                    const style = getComputedStyle(plot);
+                    return {
+                        breakInside: style.breakInside,
+                        pageBreakInside: style.pageBreakInside,
+                    };
+                }"""
+            )
+            browser.close()
+    except Exception as exc:
+        error_text = str(exc)
+        if "Executable doesn't exist" in error_text or "playwright install chromium" in error_text:
+            pytest.skip("Playwright Chromium is not installed in this environment.")
+        raise
+
+    assert plot_styles["breakInside"] == "avoid"
+    assert plot_styles["pageBreakInside"] == "avoid"
 
 
 @pytest.mark.unit

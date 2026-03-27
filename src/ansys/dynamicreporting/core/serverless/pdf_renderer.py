@@ -158,33 +158,36 @@ class PlaywrightPDFRenderer:
         # applied too high in the ADR layout tree, an entire panel becomes unbreakable and content
         # can spill past the page boundary. Keep the override focused on the actual browser-rendered
         # items so plots stay intact while their parent sections can still paginate normally.
+        #
+        # The renderer forces ``screen`` media before calling ``page.pdf()`` so the exported PDF
+        # matches the on-screen ADR layout. These capture overrides therefore must be unconditional
+        # CSS rules rather than ``@media print`` blocks, or Chromium will ignore them while laying
+        # out the PDF pages and large browser-rendered items can split across page boundaries.
         page.add_style_tag(
             content="""
-                @media print {
-                    adr-data-item,
-                    .nexus-plot,
-                    .nexus-plot > .plot-container,
-                    .js-plotly-plot,
-                    .plot-container,
-                    .svg-container {
-                        break-inside: avoid !important;
-                        page-break-inside: avoid !important;
-                    }
+                adr-data-item,
+                .nexus-plot,
+                .nexus-plot > .plot-container,
+                .js-plotly-plot,
+                .plot-container,
+                .svg-container {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                }
 
-                    adr-data-item,
-                    .nexus-plot,
-                    .plot-container,
-                    .svg-container,
-                    .main-svg,
-                    .table-responsive {
-                        overflow: visible !important;
-                        max-height: none !important;
-                    }
+                adr-data-item,
+                .nexus-plot,
+                .plot-container,
+                .svg-container,
+                .main-svg,
+                .table-responsive {
+                    overflow: visible !important;
+                    max-height: none !important;
+                }
 
-                    .adr-spinner-loader-container,
-                    .modebar {
-                        display: none !important;
-                    }
+                .adr-spinner-loader-container,
+                .modebar {
+                    display: none !important;
                 }
             """,
         )
