@@ -197,6 +197,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
     assert ".ansys-nexus-proxy" in css
+    assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "display: block !important;" in css
     assert "@media print" not in css
     assert "adr-panel" not in css
@@ -221,6 +222,20 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                 alt="preview"
                 src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
             />
+            <table class="table table-fit-head" id="kv-table">
+                <thead id="collapsed-head" style="visibility: collapse;">
+                    <tr>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>Application</th>
+                        <td>Fluent</td>
+                    </tr>
+                </tbody>
+            </table>
         </adr-data-item>
     </body>
     </html>
@@ -245,10 +260,12 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const plot = document.getElementById('plot');
                     const viewer = document.getElementById('viewer');
                     const image = document.getElementById('image');
+                    const collapsedHead = document.getElementById('collapsed-head');
                     const itemStyle = getComputedStyle(item);
                     const plotStyle = getComputedStyle(plot);
                     const viewerStyle = getComputedStyle(viewer);
                     const imageStyle = getComputedStyle(image);
+                    const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
                         item: {
                             display: itemStyle.display,
@@ -266,6 +283,11 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         image: {
                             breakInside: imageStyle.breakInside,
                             pageBreakInside: imageStyle.pageBreakInside,
+                        },
+                        collapsedHead: {
+                            display: collapsedHeadStyle.display,
+                            visibility: collapsedHeadStyle.visibility,
+                            height: collapsedHeadStyle.height,
                         },
                     };
                 }"""
@@ -286,6 +308,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["viewer"]["breakInside"] == "avoid"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
+    assert computed_styles["collapsedHead"]["display"] == "none"
+    assert computed_styles["collapsedHead"]["visibility"] == "hidden"
 
 
 @pytest.mark.unit

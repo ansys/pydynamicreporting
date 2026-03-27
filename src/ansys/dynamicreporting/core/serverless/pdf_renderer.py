@@ -163,6 +163,11 @@ class PlaywrightPDFRenderer:
         # matches the on-screen ADR layout. These capture overrides therefore must be unconditional
         # CSS rules rather than ``@media print`` blocks, or Chromium will ignore them while laying
         # out the PDF pages and large browser-rendered items can split across page boundaries.
+        #
+        # TODO: Remove the collapsed-header workaround once ADR stops emitting empty
+        # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
+        # PDF table layout still reserves space for those hidden header groups, which paints a
+        # blank top row even though the browser view looks correct.
         page.add_style_tag(
             content="""
                 adr-data-item,
@@ -210,6 +215,12 @@ class PlaywrightPDFRenderer:
                 .adr-spinner-loader-container,
                 .modebar {
                     display: none !important;
+                }
+
+                table.table-fit-head > thead[style*="visibility: collapse"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    height: 0 !important;
                 }
             """,
         )
