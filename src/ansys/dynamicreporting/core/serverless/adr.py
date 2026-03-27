@@ -1386,10 +1386,11 @@ class ADR:
                     logger=self._logger,
                 )
 
+                pdf_context = {"print": "pdf"}
                 # Reuse the existing browser HTML render path, then export it into a self-contained
                 # directory so Chromium can load every asset from disk without a running web server.
                 html_content = self.render_report(
-                    context=context,
+                    context={**(context or {}), **pdf_context},
                     item_filter=item_filter,
                     **kwargs,
                 )

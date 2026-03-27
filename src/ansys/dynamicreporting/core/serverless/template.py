@@ -576,6 +576,7 @@ class Template(BaseModel):
         ctx = context or {}
         return {
             "request": request,
+            "print": ctx.get("print", None),
             "ansys_version": None,
             "plotly": int(ctx.get("plotly", 0)),
             "page_width": float(ctx.get("pwidth", "10.5")),
@@ -620,6 +621,9 @@ class Template(BaseModel):
             items = Item.find(query=item_filter)
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
+            # print style
+            print_target = ctx.get('print', None)
+            TemplateEngine.set_print_style(print_target)
             # Properties that can change during iteration go into the global context.
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
             TemplateEngine.start_toc_session()
