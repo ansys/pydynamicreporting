@@ -126,6 +126,42 @@ def test_playwright_pdf_with_mathjax_content(tmp_path):
 
 
 @pytest.mark.unit
+def test_playwright_pdf_skips_datatables_wait_without_init_handlers(tmp_path):
+    # Print-mode browser exports can include DataTables assets and table IDs while intentionally
+    # skipping DataTables initialization. The readiness gate must treat those tables as complete
+    # instead of waiting forever for an init.dt event that will never be bound.
+    html = """
+    <html>
+    <body class="loaded">
+        <section id="report_root" style="opacity:1">
+            <table id="table_example"><tbody><tr><td>Cell</td></tr></tbody></table>
+        </section>
+        <script>
+            window.$ = function() {
+                return {
+                    on: function() {}
+                };
+            };
+            window.$.fn = {
+                DataTable: {
+                    isDataTable: function() {
+                        return false;
+                    }
+                }
+            };
+            window.$._data = function() {
+                return {};
+            };
+        </script>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+    pdf_bytes = _render_or_skip(renderer)
+    assert pdf_bytes.startswith(b"%PDF-")
+
+
+@pytest.mark.unit
 def test_playwright_pdf_signal_timeout(tmp_path):
     # This mock Plotly container never gets class 'loaded', so the readiness MutationObserver
     # never fires and the promise times out.

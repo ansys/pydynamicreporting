@@ -622,7 +622,7 @@ class Template(BaseModel):
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
             # print style
-            print_target = ctx.get('print', None)
+            print_target = ctx.get("print", None)
             TemplateEngine.set_print_style(print_target)
             # Properties that can change during iteration go into the global context.
             TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})

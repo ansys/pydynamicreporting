@@ -411,10 +411,11 @@ class PlaywrightPDFRenderer:
             })""",
         )
 
-        # 8. DataTables: each report table must be fully initialized.
-        #    Use table[id^="table_"] selector because the "dataTable" class is added
-        #    BY DataTables after init — table.dataTable would miss uninitialized tables.
-        #    (analysis §3.2, §7.1, Appendix C #14).
+        # 8. DataTables: only wait for tables that are actually scheduled to initialize.
+        #    Browser-PDF exports render tables in print mode for some reports, which keeps the
+        #    DataTables assets on the page but intentionally never binds ``init.dt`` handlers.
+        #    In that case, waiting for initialization would hang forever even though the table
+        #    markup is already final and printable.
         page.evaluate(
             """() => new Promise((resolve) => {
                 if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') {
@@ -422,10 +423,27 @@ class PlaywrightPDFRenderer:
                 }
                 const tables = document.querySelectorAll('table[id^="table_"]');
                 if (tables.length === 0) { resolve(); return; }
-                let remaining = tables.length;
-                function done() { if (--remaining <= 0) resolve(); }
+                const pendingTables = [];
+                function hasPendingInitHandler(table) {
+                    if (typeof $._data !== 'function') {
+                        return false;
+                    }
+                    const events = $._data(table, 'events') || {};
+                    const initHandlers = events.init || [];
+                    return initHandlers.some((handler) => handler.namespace === 'dt');
+                }
                 tables.forEach((table) => {
-                    if ($.fn.DataTable.isDataTable(table)) { done(); return; }
+                    if ($.fn.DataTable.isDataTable(table)) {
+                        return;
+                    }
+                    if (hasPendingInitHandler(table)) {
+                        pendingTables.push(table);
+                    }
+                });
+                if (pendingTables.length === 0) { resolve(); return; }
+                let remaining = pendingTables.length;
+                function done() { if (--remaining <= 0) resolve(); }
+                pendingTables.forEach((table) => {
                     $(table).on('init.dt', function() { done(); });
                 });
             })""",
