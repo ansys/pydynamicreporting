@@ -198,10 +198,11 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "video.img-fluid" in css
     assert ".ansys-nexus-proxy" in css
     assert "h2:has(+ section.adr-container)" in css
-    assert "adr-panel > [nexus_template]:first-of-type" in css
+    assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "display: block !important;" in css
     assert "@media print" not in css
+    assert "[nexus_template]" not in css
 
 
 @pytest.mark.unit
@@ -242,21 +243,12 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             </table>
         </adr-data-item>
         </section>
-        <adr-panel id="panel">
-            <template shadowrootmode="open">
-                <section class="adr-panel">
-                    <header class="adr-panel-header" id="panel-heading">
-                        <h2>System Information</h2>
-                    </header>
-                    <section class="adr-panel-body" id="panel-body">
-                        <slot></slot>
-                    </section>
-                </section>
-            </template>
-            <div id="panel-content" nexus_template="panel-content">
-                <p>Panel content</p>
-            </div>
-        </adr-panel>
+        <header class="adr-panel-header" id="panel-heading">
+            <h2>System Information</h2>
+        </header>
+        <section class="adr-panel-body" id="panel-body">
+            <p>Panel content</p>
+        </section>
     </body>
     </html>
     """
@@ -281,14 +273,14 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const plot = document.getElementById('plot');
                     const viewer = document.getElementById('viewer');
                     const image = document.getElementById('image');
-                    const panelContent = document.getElementById('panel-content');
+                    const panelHeading = document.getElementById('panel-heading');
                     const collapsedHead = document.getElementById('collapsed-head');
                     const sectionHeadingStyle = getComputedStyle(sectionHeading);
                     const itemStyle = getComputedStyle(item);
                     const plotStyle = getComputedStyle(plot);
                     const viewerStyle = getComputedStyle(viewer);
                     const imageStyle = getComputedStyle(image);
-                    const panelContentStyle = getComputedStyle(panelContent);
+                    const panelHeadingStyle = getComputedStyle(panelHeading);
                     const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
                         sectionHeading: {
@@ -312,9 +304,9 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                             breakInside: imageStyle.breakInside,
                             pageBreakInside: imageStyle.pageBreakInside,
                         },
-                        panelContent: {
-                            breakBefore: panelContentStyle.breakBefore,
-                            pageBreakBefore: panelContentStyle.pageBreakBefore,
+                        panelHeading: {
+                            breakAfter: panelHeadingStyle.breakAfter,
+                            pageBreakAfter: panelHeadingStyle.pageBreakAfter,
                         },
                         collapsedHead: {
                             display: collapsedHeadStyle.display,
@@ -342,8 +334,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["viewer"]["breakInside"] == "avoid"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
-    assert computed_styles["panelContent"]["breakBefore"] == "avoid"
-    assert computed_styles["panelContent"]["pageBreakBefore"] == "avoid"
+    assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
+    assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["collapsedHead"]["display"] == "none"
     assert computed_styles["collapsedHead"]["visibility"] == "hidden"
 
