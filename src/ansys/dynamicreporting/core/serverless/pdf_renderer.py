@@ -170,7 +170,27 @@ class PlaywrightPDFRenderer:
                 .nexus-plot > .plot-container,
                 .js-plotly-plot,
                 .plot-container,
-                .svg-container {
+                .svg-container,
+                .avz-viewer,
+                ansys-nexus-viewer {
+                    display: block !important;
+                }
+
+                adr-data-item,
+                .nexus-plot,
+                .nexus-plot > .plot-container,
+                .js-plotly-plot,
+                .plot-container,
+                .svg-container,
+                .avz-viewer,
+                ansys-nexus-viewer,
+                .table-responsive,
+                table.table,
+                table.tree,
+                img.img-fluid,
+                video.img-fluid,
+                .ansys-nexus-proxy,
+                canvas {
                     break-inside: avoid !important;
                     page-break-inside: avoid !important;
                 }
@@ -180,7 +200,9 @@ class PlaywrightPDFRenderer:
                 .plot-container,
                 .svg-container,
                 .main-svg,
-                .table-responsive {
+                .table-responsive,
+                .avz-viewer,
+                ansys-nexus-viewer {
                     overflow: visible !important;
                     max-height: none !important;
                 }

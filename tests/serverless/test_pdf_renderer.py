@@ -191,6 +191,13 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     css = page.add_style_tag.call_args.kwargs["content"]
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
+    assert ".avz-viewer" in css
+    assert "ansys-nexus-viewer" in css
+    assert "table.tree" in css
+    assert "img.img-fluid" in css
+    assert "video.img-fluid" in css
+    assert ".ansys-nexus-proxy" in css
+    assert "display: block !important;" in css
     assert "@media print" not in css
     assert "adr-panel" not in css
     assert "[nexus_template]" not in css
@@ -201,9 +208,20 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     html = """
     <html>
     <body>
-        <div class="nexus-plot" id="plot">
-            <div class="plot-container">Plot content</div>
-        </div>
+        <adr-data-item id="item">
+            <div class="nexus-plot" id="plot">
+                <div class="plot-container">Plot content</div>
+            </div>
+            <div class="avz-viewer" id="scene-wrap">
+                <ansys-nexus-viewer id="viewer"></ansys-nexus-viewer>
+            </div>
+            <img
+                id="image"
+                class="img img-fluid"
+                alt="preview"
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+            />
+        </adr-data-item>
     </body>
     </html>
     """
@@ -221,13 +239,34 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             # break across pages during PDF pagination.
             page.emulate_media(media="screen")
             renderer._apply_pdf_capture_styles(page)
-            plot_styles = page.evaluate(
+            computed_styles = page.evaluate(
                 """() => {
+                    const item = document.getElementById('item');
                     const plot = document.getElementById('plot');
-                    const style = getComputedStyle(plot);
+                    const viewer = document.getElementById('viewer');
+                    const image = document.getElementById('image');
+                    const itemStyle = getComputedStyle(item);
+                    const plotStyle = getComputedStyle(plot);
+                    const viewerStyle = getComputedStyle(viewer);
+                    const imageStyle = getComputedStyle(image);
                     return {
-                        breakInside: style.breakInside,
-                        pageBreakInside: style.pageBreakInside,
+                        item: {
+                            display: itemStyle.display,
+                            breakInside: itemStyle.breakInside,
+                        },
+                        plot: {
+                            display: plotStyle.display,
+                            breakInside: plotStyle.breakInside,
+                            pageBreakInside: plotStyle.pageBreakInside,
+                        },
+                        viewer: {
+                            display: viewerStyle.display,
+                            breakInside: viewerStyle.breakInside,
+                        },
+                        image: {
+                            breakInside: imageStyle.breakInside,
+                            pageBreakInside: imageStyle.pageBreakInside,
+                        },
                     };
                 }"""
             )
@@ -238,8 +277,15 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             pytest.skip("Playwright Chromium is not installed in this environment.")
         raise
 
-    assert plot_styles["breakInside"] == "avoid"
-    assert plot_styles["pageBreakInside"] == "avoid"
+    assert computed_styles["item"]["display"] == "block"
+    assert computed_styles["item"]["breakInside"] == "avoid"
+    assert computed_styles["plot"]["display"] == "block"
+    assert computed_styles["plot"]["breakInside"] == "avoid"
+    assert computed_styles["plot"]["pageBreakInside"] == "avoid"
+    assert computed_styles["viewer"]["display"] == "block"
+    assert computed_styles["viewer"]["breakInside"] == "avoid"
+    assert computed_styles["image"]["breakInside"] == "avoid"
+    assert computed_styles["image"]["pageBreakInside"] == "avoid"
 
 
 @pytest.mark.unit
