@@ -22,8 +22,10 @@
 
 """Browser-fidelity HTML-to-PDF rendering for serverless ADR exports."""
 
+import json
 import re
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 from ..adr_utils import get_logger
@@ -301,9 +303,55 @@ class PlaywrightPDFRenderer:
             raise ADRException(f"Unsupported CSS length unit for PDF rendering: {value!r}")
         return number * self._CSS_UNIT_TO_PX[unit]
 
+    def _evaluate_ready_step(
+        self,
+        page: Any,
+        *,
+        step_name: str,
+        wait_script: str,
+        deadline: float,
+    ) -> None:
+        """Run one readiness step while enforcing the remaining phase budget.
+
+        Playwright's sync ``evaluate`` API does not reliably time out unresolved JavaScript
+        promises, so each readiness step races its event-driven wait against the shared
+        browser-render deadline. This keeps the implementation signal-based while ensuring
+        that a missing readiness event fails fast instead of hanging forever.
+        """
+        remaining_ms = max(int((deadline - monotonic()) * 1000), 0)
+        if remaining_ms <= 0:
+            raise ADRException(
+                f"Browser PDF rendering failed: {step_name} timed out after {self._render_timeout:.1f}s"
+            )
+
+        page.evaluate(
+            f"""() => {{
+                const timeoutMs = {remaining_ms};
+                const stepName = {json.dumps(step_name)};
+                const waitForReady = {wait_script};
+                return new Promise((resolve, reject) => {{
+                    const timeoutId = setTimeout(() => {{
+                        reject(new Error(`${{stepName}} timed out after ${{timeoutMs}}ms`));
+                    }}, timeoutMs);
+
+                    Promise.resolve()
+                        .then(() => waitForReady())
+                        .then((value) => {{
+                            clearTimeout(timeoutId);
+                            resolve(value);
+                        }})
+                        .catch((error) => {{
+                            clearTimeout(timeoutId);
+                            reject(error);
+                        }});
+                }});
+            }}""",
+        )
+
     def _wait_for_render_ready(self, page: Any) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
         timeout_ms = int(self._render_timeout * 1000)
+        deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
         # Playwright's sync ``evaluate`` API uses the page's default timeout rather than a
         # per-call ``timeout=...`` keyword, so set the readiness budget once for this phase.
@@ -311,9 +359,14 @@ class PlaywrightPDFRenderer:
 
         # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
         #    until all custom web-components are registered, which adds ``body.loaded``.
-        #    Without this, the entire PDF is blank.
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        #    Skip this wait for non-ADR HTML that does not contain ``#report_root``.
+        self._evaluate_ready_step(
+            page,
+            step_name="FOUC gate",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
+                const root = document.getElementById('report_root');
+                if (!root) { resolve(); return; }
                 if (document.body.classList.contains('loaded')) { resolve(); return; }
                 const observer = new MutationObserver(() => {
                     if (document.body.classList.contains('loaded')) {
@@ -327,8 +380,11 @@ class PlaywrightPDFRenderer:
 
         # 2. FOUC transition: ``body.loaded #report_root`` triggers a 0.4s opacity
         #    transition. Wait for it to reach opacity 1 before capturing.
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        self._evaluate_ready_step(
+            page,
+            step_name="FOUC transition",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
                 const root = document.getElementById('report_root');
                 if (!root) { resolve(); return; }
                 const style = getComputedStyle(root);
@@ -343,11 +399,19 @@ class PlaywrightPDFRenderer:
         )
 
         # 3. Web fonts (FontAwesome woff2 + MathJax woff2).
-        page.evaluate("() => document.fonts.ready")
+        self._evaluate_ready_step(
+            page,
+            step_name="Web fonts",
+            deadline=deadline,
+            wait_script="() => document.fonts.ready",
+        )
 
         # 4. MathJax renders equations asynchronously; wait only when the runtime is present.
-        page.evaluate(
-            """() => {
+        self._evaluate_ready_step(
+            page,
+            step_name="MathJax",
+            deadline=deadline,
+            wait_script="""() => {
                 return new Promise((resolve) => {
                     if (typeof MathJax !== 'undefined' && MathJax.startup) {
                         MathJax.startup.promise.then(resolve);
@@ -360,8 +424,11 @@ class PlaywrightPDFRenderer:
 
         # 5. Plotly charts: each .nexus-plot container gets class 'loaded' after
         #    Plotly.Plots.resize() resolves and the spinner hides.
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        self._evaluate_ready_step(
+            page,
+            step_name="Plotly charts",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
                 const plots = document.querySelectorAll('.nexus-plot');
                 if (plots.length === 0) { resolve(); return; }
                 let remaining = plots.length;
@@ -381,8 +448,11 @@ class PlaywrightPDFRenderer:
 
         # 6. Images: wait for every <img> to finish loading (covers static images,
         #    scene proxy thumbnails, file proxy images, animation thumbnails).
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        self._evaluate_ready_step(
+            page,
+            step_name="Images",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
                 const imgs = document.querySelectorAll('img');
                 if (imgs.length === 0) { resolve(); return; }
                 let remaining = imgs.length;
@@ -397,8 +467,11 @@ class PlaywrightPDFRenderer:
 
         # 7. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
         #    so the current frame is available before Chromium prints the page.
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        self._evaluate_ready_step(
+            page,
+            step_name="Videos",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
                 const videos = document.querySelectorAll('video');
                 if (videos.length === 0) { resolve(); return; }
                 let remaining = videos.length;
@@ -416,8 +489,11 @@ class PlaywrightPDFRenderer:
         #    DataTables assets on the page but intentionally never binds ``init.dt`` handlers.
         #    In that case, waiting for initialization would hang forever even though the table
         #    markup is already final and printable.
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        self._evaluate_ready_step(
+            page,
+            step_name="DataTables",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
                 if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') {
                     resolve(); return;
                 }
@@ -452,8 +528,11 @@ class PlaywrightPDFRenderer:
         # 9. Active 3D viewers: wait for each ansys-nexus-viewer spinner to hide.
         #    In the browser render path, viewers have active="true" and load scene
         #    data asynchronously. The #render-wait spinner hides on load complete.
-        page.evaluate(
-            """() => new Promise((resolve) => {
+        self._evaluate_ready_step(
+            page,
+            step_name="3D viewers",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) => {
                 const viewers = document.querySelectorAll('ansys-nexus-viewer');
                 if (viewers.length === 0) { resolve(); return; }
                 let remaining = viewers.length;
@@ -474,8 +553,11 @@ class PlaywrightPDFRenderer:
 
         # 10. Double requestAnimationFrame waits for an actual composited frame
         #     after all preceding DOM/style work settles.
-        page.evaluate(
-            """() => new Promise((resolve) =>
+        self._evaluate_ready_step(
+            page,
+            step_name="Double requestAnimationFrame",
+            deadline=deadline,
+            wait_script="""() => new Promise((resolve) =>
                 requestAnimationFrame(() => requestAnimationFrame(resolve))
             )""",
         )

@@ -1321,6 +1321,106 @@ class ADR:
         except Exception as e:
             raise ADRException(f"PDF Report rendering failed: {e}")
 
+    def _resolve_browser_pdf_scratch_root(self) -> Path:
+        """Return the ADR database directory for browser-PDF scratch files.
+
+        The browser-PDF path stages a self-contained offline report bundle before Chromium opens
+        it. Reusing the ADR database directory keeps those scratch files on the same repository-
+        managed volume instead of the slower global temp directory used by the original code.
+
+        Returns
+        -------
+        Path
+            Existing ADR database directory used to host the temporary browser-PDF bundle.
+
+        Raises
+        ------
+        ADRException
+            If the ADR database directory is unavailable or does not exist.
+        """
+        db_directory = getattr(self, "_db_directory", None)
+        if db_directory is None:
+            raise ADRException(
+                "The ADR database directory must be configured for browser PDF export scratch files."
+            )
+
+        scratch_root = Path(db_directory)
+        if scratch_root.exists() and scratch_root.is_dir():
+            return scratch_root
+
+        raise ADRException(
+            "The ADR database directory must exist before browser PDF export scratch files can be created."
+        )
+
+    def _render_report_as_browser_pdf_impl(
+        self,
+        *,
+        context: dict | None = None,
+        item_filter: str = "",
+        dark_mode: bool = False,
+        landscape: bool = False,
+        **kwargs: Any,
+    ) -> bytes:
+        """Render a browser-fidelity PDF using the ADR database directory for staging."""
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        if self._static_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'static_directory' must be configured for browser PDF export."
+            )
+
+        scratch_root = self._resolve_browser_pdf_scratch_root()
+
+        try:
+            # Import lazily so Playwright remains an optional feature unless this path is used.
+            from .pdf_renderer import PlaywrightPDFRenderer
+
+            with tempfile.TemporaryDirectory(
+                prefix="adr-browser-pdf-",
+                dir=scratch_root,
+            ) as tmp_dir:
+                tmp_path = Path(tmp_dir)
+                # Build the renderer first so invalid PDF options fail before the report render
+                # and asset export pipeline does any meaningful work.
+                renderer = PlaywrightPDFRenderer(
+                    html_dir=tmp_path,
+                    landscape=landscape,
+                    logger=self._logger,
+                )
+
+                pdf_context = {"print": "pdf"}
+                # Reuse the existing browser HTML render path, then export it into a self-contained
+                # directory so Chromium can load every asset from disk without a running web server.
+                html_content = self.render_report(
+                    context={**(context or {}), **pdf_context},
+                    item_filter=item_filter,
+                    **kwargs,
+                )
+
+                exporter = ServerlessReportExporter(
+                    html_content=html_content,
+                    output_dir=tmp_path,
+                    media_dir=self._media_directory,
+                    static_dir=self._static_directory,
+                    media_url=self._media_url,
+                    static_url=self._static_url,
+                    filename="index.html",
+                    no_inline_files=True,
+                    ansys_version=str(self._ansys_version),
+                    dark_mode=dark_mode,
+                    debug=self._debug,
+                    logger=self._logger,
+                )
+                exporter.export()
+
+                return renderer.render_pdf()
+        except ADRException:
+            raise
+        except Exception as e:
+            raise ADRException(f"Browser PDF rendering failed: {e}") from e
+
     def render_report_as_browser_pdf(
         self,
         *,
@@ -1363,59 +1463,13 @@ class ADR:
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
         """
-        if not kwargs:
-            raise ADRException(
-                "At least one keyword argument must be provided to fetch the report."
-            )
-        if self._static_directory is None:
-            raise ImproperlyConfiguredError(
-                "The 'static_directory' must be configured for browser PDF export."
-            )
-
-        try:
-            # Import lazily so Playwright remains an optional feature unless this path is used.
-            from .pdf_renderer import PlaywrightPDFRenderer
-
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                tmp_path = Path(tmp_dir)
-                # Build the renderer first so invalid PDF options fail before the report render
-                # and asset export pipeline does any meaningful work.
-                renderer = PlaywrightPDFRenderer(
-                    html_dir=tmp_path,
-                    landscape=landscape,
-                    logger=self._logger,
-                )
-
-                pdf_context = {"print": "pdf"}
-                # Reuse the existing browser HTML render path, then export it into a self-contained
-                # directory so Chromium can load every asset from disk without a running web server.
-                html_content = self.render_report(
-                    context={**(context or {}), **pdf_context},
-                    item_filter=item_filter,
-                    **kwargs,
-                )
-
-                exporter = ServerlessReportExporter(
-                    html_content=html_content,
-                    output_dir=tmp_path,
-                    media_dir=self._media_directory,
-                    static_dir=self._static_directory,
-                    media_url=self._media_url,
-                    static_url=self._static_url,
-                    filename="index.html",
-                    no_inline_files=True,
-                    ansys_version=str(self._ansys_version),
-                    dark_mode=dark_mode,
-                    debug=self._debug,
-                    logger=self._logger,
-                )
-                exporter.export()
-
-                return renderer.render_pdf()
-        except ADRException:
-            raise
-        except Exception as e:
-            raise ADRException(f"Browser PDF rendering failed: {e}") from e
+        return self._render_report_as_browser_pdf_impl(
+            context=context,
+            item_filter=item_filter,
+            dark_mode=dark_mode,
+            landscape=landscape,
+            **kwargs,
+        )
 
     def export_report_as_pptx(
         self,
@@ -1692,7 +1746,7 @@ class ADR:
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        pdf_stream = self.render_report_as_browser_pdf(
+        pdf_stream = self._render_report_as_browser_pdf_impl(
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,

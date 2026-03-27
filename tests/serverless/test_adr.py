@@ -1452,8 +1452,10 @@ def test_render_report_as_browser_pdf_success(tmp_path, monkeypatch):
     from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
 
     adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
     adr._media_directory = tmp_path / "media"
     adr._static_directory = tmp_path / "static"
+    adr._db_directory.mkdir()
     adr._media_directory.mkdir()
     adr._static_directory.mkdir()
     adr._media_url = "/media/"
@@ -1478,10 +1480,64 @@ def test_render_report_as_browser_pdf_success(tmp_path, monkeypatch):
 
 
 @pytest.mark.ado_test
+def test_render_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
+
+    adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
+    adr._media_directory = tmp_path / "media"
+    adr._static_directory = tmp_path / "static"
+    adr._db_directory.mkdir()
+    adr._media_directory.mkdir()
+    adr._static_directory.mkdir()
+    adr._media_url = "/media/"
+    adr._static_url = "/static/"
+    adr._ansys_version = 252
+    adr._debug = False
+    adr._logger = _noop_logger()
+    captured: dict[str, object] = {}
+
+    def fake_render_report(self, **kwargs):
+        return "<html><body><h1>Browser PDF</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        logger=None,
+    ):
+        # Capture the scratch export path so the test can verify that browser-PDF staging stays
+        # on the fast ADR-managed volume instead of falling back to the global temp directory.
+        captured["html_dir"] = html_dir
+        captured["filename"] = filename
+        captured["landscape"] = landscape
+        captured["logger"] = logger
+
+    monkeypatch.setattr(ADR, "render_report", fake_render_report)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    pdf_bytes = adr.render_report_as_browser_pdf(name="TestBrowserPDF")
+
+    assert pdf_bytes == b"%PDF-mock"
+    assert Path(captured["html_dir"]).parent == adr._db_directory
+
+
+@pytest.mark.ado_test
 def test_render_report_as_browser_pdf_no_kwarg(tmp_path):
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
+    adr._db_directory.mkdir()
     adr._static_directory = tmp_path / "static"
     adr._logger = _noop_logger()
 
@@ -1494,6 +1550,8 @@ def test_render_report_as_browser_pdf_no_static_dir(tmp_path):
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
+    adr._db_directory.mkdir()
     adr._static_directory = None
     adr._logger = _noop_logger()
 
@@ -1508,8 +1566,10 @@ def test_render_report_as_browser_pdf_render_failure(tmp_path, monkeypatch):
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
     adr._media_directory = tmp_path / "media"
     adr._static_directory = tmp_path / "static"
+    adr._db_directory.mkdir()
     adr._media_directory.mkdir()
     adr._static_directory.mkdir()
     adr._media_url = "/media/"
@@ -1533,7 +1593,9 @@ def test_export_report_as_browser_pdf_success(tmp_path, monkeypatch):
 
     adr = object.__new__(ADR)
     adr._logger = _noop_logger()
-    monkeypatch.setattr(ADR, "render_report_as_browser_pdf", lambda self, **kwargs: b"%PDF-mock")
+    monkeypatch.setattr(
+        ADR, "_render_report_as_browser_pdf_impl", lambda self, **kwargs: b"%PDF-mock"
+    )
 
     output_file = tmp_path / "browser-output.pdf"
     adr.export_report_as_browser_pdf(
@@ -1543,6 +1605,65 @@ def test_export_report_as_browser_pdf_success(tmp_path, monkeypatch):
 
     assert output_file.exists()
     assert output_file.read_bytes() == b"%PDF-mock"
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
+
+    adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
+    adr._media_directory = tmp_path / "media"
+    adr._static_directory = tmp_path / "static"
+    adr._db_directory.mkdir()
+    adr._media_directory.mkdir()
+    adr._static_directory.mkdir()
+    adr._media_url = "/media/"
+    adr._static_url = "/static/"
+    adr._ansys_version = 252
+    adr._debug = False
+    adr._logger = _noop_logger()
+    captured: dict[str, object] = {}
+
+    def fake_render_report(self, **kwargs):
+        return "<html><body><h1>Browser PDF export</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        logger=None,
+    ):
+        # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
+        # both entry points avoid the slow global temp directory without changing the public API.
+        captured["html_dir"] = html_dir
+        captured["filename"] = filename
+        captured["landscape"] = landscape
+        captured["logger"] = logger
+
+    monkeypatch.setattr(ADR, "render_report", fake_render_report)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    output_dir = tmp_path / "exports"
+    output_dir.mkdir()
+    output_file = output_dir / "browser-output.pdf"
+    adr.export_report_as_browser_pdf(
+        filename=output_file,
+        name="TestBrowserPDFExport",
+    )
+
+    assert output_file.exists()
+    assert output_file.read_bytes() == b"%PDF-mock"
+    assert Path(captured["html_dir"]).parent == adr._db_directory
 
 
 @pytest.mark.ado_test
@@ -1563,8 +1684,10 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
 
     adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "db"
     adr._media_directory = tmp_path / "media"
     adr._static_directory = tmp_path / "static"
+    adr._db_directory.mkdir()
     adr._media_directory.mkdir()
     adr._static_directory.mkdir()
     adr._media_url = "/media/"
