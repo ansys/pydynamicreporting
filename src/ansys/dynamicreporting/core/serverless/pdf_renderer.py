@@ -164,6 +164,10 @@ class PlaywrightPDFRenderer:
         # CSS rules rather than ``@media print`` blocks, or Chromium will ignore them while laying
         # out the PDF pages and large browser-rendered items can split across page boundaries.
         #
+        # ADR exports section titles and panel headers as sibling blocks before the actual content.
+        # Keep those heading blocks with the first chunk of following content so Chromium does not
+        # leave a section title at the bottom of one page while pushing the table/plot to the next.
+        #
         # TODO: Remove the collapsed-header workaround once ADR stops emitting empty
         # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
         # PDF table layout still reserves space for those hidden header groups, which paints a
@@ -215,6 +219,17 @@ class PlaywrightPDFRenderer:
                 .adr-spinner-loader-container,
                 .modebar {
                     display: none !important;
+                }
+
+                h1:has(+ section.adr-container),
+                h2:has(+ section.adr-container),
+                h3:has(+ section.adr-container),
+                h4:has(+ section.adr-container),
+                h5:has(+ section.adr-container),
+                h6:has(+ section.adr-container),
+                header:has(+ section.adr-panel-body) {
+                    break-after: avoid !important;
+                    page-break-after: avoid !important;
                 }
 
                 table.table-fit-head > thead[style*="visibility: collapse"] {

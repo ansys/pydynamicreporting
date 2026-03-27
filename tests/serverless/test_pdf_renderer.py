@@ -197,10 +197,11 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
     assert ".ansys-nexus-proxy" in css
+    assert "h2:has(+ section.adr-container)" in css
+    assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "display: block !important;" in css
     assert "@media print" not in css
-    assert "adr-panel" not in css
     assert "[nexus_template]" not in css
 
 
@@ -209,6 +210,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     html = """
     <html>
     <body>
+        <a id="TOC_item_tgt_1"></a>
+        <br />
+        <h2 id="section-heading">Material Properties</h2>
+        <section class="adr-container" id="section-body">
         <adr-data-item id="item">
             <div class="nexus-plot" id="plot">
                 <div class="plot-container">Plot content</div>
@@ -237,6 +242,13 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                 </tbody>
             </table>
         </adr-data-item>
+        </section>
+        <header class="adr-panel-header" id="panel-heading">
+            <h2>System Information</h2>
+        </header>
+        <section class="adr-panel-body" id="panel-body">
+            <p>Panel content</p>
+        </section>
     </body>
     </html>
     """
@@ -256,17 +268,25 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             renderer._apply_pdf_capture_styles(page)
             computed_styles = page.evaluate(
                 """() => {
+                    const sectionHeading = document.getElementById('section-heading');
                     const item = document.getElementById('item');
                     const plot = document.getElementById('plot');
                     const viewer = document.getElementById('viewer');
                     const image = document.getElementById('image');
+                    const panelHeading = document.getElementById('panel-heading');
                     const collapsedHead = document.getElementById('collapsed-head');
+                    const sectionHeadingStyle = getComputedStyle(sectionHeading);
                     const itemStyle = getComputedStyle(item);
                     const plotStyle = getComputedStyle(plot);
                     const viewerStyle = getComputedStyle(viewer);
                     const imageStyle = getComputedStyle(image);
+                    const panelHeadingStyle = getComputedStyle(panelHeading);
                     const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
+                        sectionHeading: {
+                            breakAfter: sectionHeadingStyle.breakAfter,
+                            pageBreakAfter: sectionHeadingStyle.pageBreakAfter,
+                        },
                         item: {
                             display: itemStyle.display,
                             breakInside: itemStyle.breakInside,
@@ -284,6 +304,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                             breakInside: imageStyle.breakInside,
                             pageBreakInside: imageStyle.pageBreakInside,
                         },
+                        panelHeading: {
+                            breakAfter: panelHeadingStyle.breakAfter,
+                            pageBreakAfter: panelHeadingStyle.pageBreakAfter,
+                        },
                         collapsedHead: {
                             display: collapsedHeadStyle.display,
                             visibility: collapsedHeadStyle.visibility,
@@ -299,6 +323,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             pytest.skip("Playwright Chromium is not installed in this environment.")
         raise
 
+    assert computed_styles["sectionHeading"]["breakAfter"] == "avoid"
+    assert computed_styles["sectionHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["item"]["display"] == "block"
     assert computed_styles["item"]["breakInside"] == "avoid"
     assert computed_styles["plot"]["display"] == "block"
@@ -308,6 +334,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["viewer"]["breakInside"] == "avoid"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
+    assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
+    assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["collapsedHead"]["display"] == "none"
     assert computed_styles["collapsedHead"]["visibility"] == "hidden"
 
