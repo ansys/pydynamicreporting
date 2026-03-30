@@ -224,9 +224,7 @@ def test_get_install_info_none_no_valid(monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(
-    monkeypatch, tmp_path
-):
+def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(monkeypatch, tmp_path):
     released_dir = tmp_path / "v261" / "ADR"
     released_dir.mkdir(parents=True)
 
