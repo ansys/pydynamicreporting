@@ -581,8 +581,10 @@ class ReportDownloadHTML:
                 resp = requests.head(base + sentinel, allow_redirects=True)  # nosec B400
                 if resp.status_code == requests.codes.ok:
                     return version
-            except Exception:
-                pass
+            except (requests.ConnectionError, requests.Timeout, requests.RequestException):
+                # Server unreachable or request failed — skip this sentinel and
+                # try the next one.  If all fail, fall through to "unknown".
+                continue
         return "unknown"
 
     def _download(self):
