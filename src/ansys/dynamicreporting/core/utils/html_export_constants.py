@@ -64,7 +64,6 @@ FAVICON = "website/images/favicon.ico"
 # MathJax assets
 # -----------------------
 MATHJAX_FILES = [
-    # MathJax 4.x files
     "website/scripts/mathjax/core.js",
     "website/scripts/mathjax/loader.js",
     "website/scripts/mathjax/startup.js",
@@ -105,29 +104,6 @@ MATHJAX_FILES = [
     "website/scripts/mathjax/ui/menu.js",
     "website/scripts/mathjax/ui/no-dark-mode.js",
     "website/scripts/mathjax/ui/safe.js",
-    # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
-    "website/scripts/mathjax/jax/input/TeX/config.js",
-    "website/scripts/mathjax/jax/input/MathML/config.js",
-    "website/scripts/mathjax/jax/input/AsciiMath/config.js",
-    "website/scripts/mathjax/extensions/tex2jax.js",
-    "website/scripts/mathjax/extensions/mml2jax.js",
-    "website/scripts/mathjax/extensions/asciimath2jax.js",
-    "website/scripts/mathjax/extensions/MathZoom.js",
-    "website/scripts/mathjax/extensions/MathMenu.js",
-    "website/scripts/mathjax/extensions/MathEvents.js",
-    "website/scripts/mathjax/jax/element/mml/jax.js",
-    "website/scripts/mathjax/jax/input/TeX/jax.js",
-    "website/scripts/mathjax/extensions/TeX/AMSmath.js",
-    "website/scripts/mathjax/extensions/TeX/AMSsymbols.js",
-    "website/scripts/mathjax/extensions/TeX/noErrors.js",
-    "website/scripts/mathjax/extensions/TeX/noUndefined.js",
-    "website/scripts/mathjax/config/TeX-AMS-MML_SVG.js",
-    "website/scripts/mathjax/jax/output/SVG/jax.js",
-    "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
-    "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
-    "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-    "website/images/MenuArrow-15.png",
-    "website/scripts/mathjax/MathJax.js",  # important: top-level loader (MathJax 2.x)
 ]
 
 # -----------------------

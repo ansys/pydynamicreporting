@@ -148,7 +148,6 @@ class ReportDownloadHTML:
     def _download_special_files(self):
         # MathJax ver 4.1.1
         files = [
-            # MathJax 4.x files
             "media/core.js",
             "media/loader.js",
             "media/startup.js",
@@ -189,28 +188,6 @@ class ReportDownloadHTML:
             "media/ui/menu.js",
             "media/ui/no-dark-mode.js",
             "media/ui/safe.js",
-            # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
-            "media/jax/input/TeX/config.js",
-            "media/jax/input/MathML/config.js",
-            "media/jax/input/AsciiMath/config.js",
-            "media/extensions/tex2jax.js",
-            "media/extensions/mml2jax.js",
-            "media/extensions/asciimath2jax.js",
-            "media/extensions/MathZoom.js",
-            "media/extensions/MathEvents.js",
-            "media/extensions/MathMenu.js",
-            "media/jax/element/mml/jax.js",
-            "media/jax/input/TeX/jax.js",
-            "media/extensions/TeX/AMSmath.js",
-            "media/extensions/TeX/AMSsymbols.js",
-            "media/extensions/TeX/noErrors.js",
-            "media/extensions/TeX/noUndefined.js",
-            "media/config/TeX-AMS-MML_SVG.js",
-            "media/jax/output/SVG/jax.js",
-            "media/jax/output/SVG/fonts/TeX/fontdata.js",
-            "media/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
-            "media/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "media/images/MenuArrow-15.png",
         ]
 
         tmp = urllib.parse.urlsplit(self._url)
@@ -576,20 +553,6 @@ class ReportDownloadHTML:
         self._make_dir([self._directory, "media", "output"])
         self._make_dir([self._directory, "media", "sre", "mathmaps"])
         self._make_dir([self._directory, "media", "ui"])
-        # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
-        self._make_dir([self._directory, "media", "config"])
-        self._make_dir([self._directory, "media", "extensions", "TeX"])
-        self._make_dir(
-            [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Main", "Regular"]
-        )
-        self._make_dir(
-            [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Size1", "Regular"]
-        )
-        self._make_dir([self._directory, "media", "jax", "element", "mml"])
-        self._make_dir([self._directory, "media", "jax", "input", "TeX"])
-        self._make_dir([self._directory, "media", "jax", "input", "MathML"])
-        self._make_dir([self._directory, "media", "jax", "input", "AsciiMath"])
-        self._make_dir([self._directory, "media", "images"])
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
