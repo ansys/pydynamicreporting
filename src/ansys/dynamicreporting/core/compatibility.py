@@ -28,8 +28,8 @@ import re
 from ._version import __version__
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
-_CLIENT_MAJOR_BASE_PRODUCT_LINE = 26
-_CLIENT_MAJOR_BASE_BUNDLED_RELEASE = "26.1"
+_CLIENT_MAJOR_BASE_PRODUCT_LINE = 27
+_CLIENT_MAJOR_BASE_BUNDLED_RELEASE = "27.1"
 
 SUPPORTED_PRODUCT_RELEASE_POLICY = (
     "Supports the bundled annual product line and the previous annual product line."
@@ -37,16 +37,16 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # Keep the legacy install-facing defaults separate from the public
 # compatibility contract. Default install lookup must stay on the latest
 # released ADR line so users who do not override ``ansys_version`` resolve a
-# real installation by default. Unreleased lines like ``271`` can still be
+# real installation by default. Unreleased lines can still be
 # probed explicitly or as lower-priority fallbacks.
-DEFAULT_ANSYS_INSTALL_RELEASE = "26.1"
-DEFAULT_ANSYS_INSTALL_VERSION = "261"
+DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
+DEFAULT_ANSYS_INSTALL_VERSION = "271"
 # Preserve the historical no-argument constructor behavior by probing the
 # bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
 # callers on the same default install they used on ``main`` while still
-# allowing a released ``261`` install as a lower-priority fallback.
+# allowing a released install as a lower-priority fallback.
 #
-# We intentionally do not probe ``251`` implicitly anymore.  Selecting an
+# We intentionally do not probe older releases implicitly anymore.  Selecting an
 # older unsupported line without an explicit user request changes the meaning
 # of the default constructors too aggressively for a compatibility fix.
 AUTO_DETECT_INSTALL_VERSIONS = ("271", "261")
