@@ -257,14 +257,14 @@ class Service:
             # Run the compatibility check only after the traditional install
             # probing succeeds so unsupported releases warn without changing the
             # pre-existing install-detection flow.
-            compatibility_warning = None
-            # Suppress the warning only when the resolved install came from the
-            # package default. Explicit unsupported targets should still
-            # surface as outside the current released support window.
-            if not install_resolution.implicit_default_install_used:
-                compatibility_warning = get_compatibility_warning_for_install_version(
-                    self._ansys_version
-                )
+            #
+            # Implicit auto-discovery no longer suppresses the warning. If a
+            # machine only has an older unsupported ADR release available, we
+            # should still tell the user that the resolved install falls
+            # outside the supported window.
+            compatibility_warning = get_compatibility_warning_for_install_version(
+                self._ansys_version
+            )
             if compatibility_warning:
                 warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 

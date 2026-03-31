@@ -378,13 +378,13 @@ class ADR:
         self._ansys_installation = Path(install_dir)
         # Mirror the service-mode check: warn after resolving the install
         # version, but do not block setup for an otherwise valid installation.
-        compatibility_warning = None
-        # Keep serverless aligned with service-mode: suppress only the package
-        # default install path so explicit unsupported targets still warn.
-        if not install_resolution.implicit_default_install_used:
-            compatibility_warning = get_compatibility_warning_for_install_version(
-                self._ansys_version
-            )
+        #
+        # Implicit auto-discovery no longer suppresses the warning. If a
+        # machine only has an older unsupported ADR release available, setup
+        # should still surface that compatibility risk to the caller.
+        compatibility_warning = get_compatibility_warning_for_install_version(
+            self._ansys_version
+        )
         if compatibility_warning:
             warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 

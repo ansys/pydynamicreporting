@@ -212,7 +212,7 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
     assert not any("outside the supported window" in str(w.message) for w in caught)
 
 
-def test_service_suppresses_warning_for_implicit_default_install(monkeypatch, tmp_path):
+def test_service_warns_for_implicit_default_install_when_unsupported(monkeypatch, tmp_path):
     install_dir = tmp_path / "install"
     install_dir.mkdir()
     monkeypatch.setattr(
@@ -220,8 +220,8 @@ def test_service_suppresses_warning_for_implicit_default_install(monkeypatch, tm
         "resolve_install_info",
         lambda ansys_installation=None, ansys_version=None: InstallResolution(
             install_dir=str(install_dir),
-            version=261,
-            detection_source="default_root_261",
+            version=_unsupported_newer_install_version(),
+            detection_source="default_root_unsupported",
             explicit_installation_requested=False,
             explicit_version_requested=False,
             implicit_default_install_used=True,
@@ -232,7 +232,7 @@ def test_service_suppresses_warning_for_implicit_default_install(monkeypatch, tm
         warnings.simplefilter("always")
         Service()
 
-    assert not any("outside the supported window" in str(w.message) for w in caught)
+    assert any("outside the supported window" in str(w.message) for w in caught)
 
 
 def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path):
@@ -259,6 +259,35 @@ def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path)
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             ADR(ansys_installation=str(install_dir), in_memory=True)
+    finally:
+        ADR._instance = None
+        ADR._is_setup = False
+
+    assert any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_serverless_warns_for_implicit_default_install_when_unsupported(monkeypatch, tmp_path):
+    install_dir = tmp_path / "install"
+    install_dir.mkdir()
+    monkeypatch.setattr(ADR, "_instance", None)
+    monkeypatch.setattr(ADR, "_is_setup", False)
+    monkeypatch.setattr(
+        serverless_adr_module,
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=_unsupported_newer_install_version(),
+            detection_source="default_root_unsupported",
+            explicit_installation_requested=False,
+            explicit_version_requested=False,
+            implicit_default_install_used=True,
+        ),
+    )
+
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            ADR(in_memory=True)
     finally:
         ADR._instance = None
         ADR._is_setup = False
