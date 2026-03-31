@@ -80,7 +80,7 @@ Under this policy:
 
 ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
 annual line currently has only one concrete release, so ``26.*`` currently
-means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Synopsys
+means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Ansys/Synopsys
 changes the release cadence or adds more releases per line, but the support policy will remain the same
 since it is based on the annual product line, not the number of releases.
 
