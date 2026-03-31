@@ -234,6 +234,7 @@ class ServerlessReportExporter:
         """
         # --- MathJax (core + fonts) ---
         mathjax_files = [
+            # MathJax 4.x files
             "website/scripts/mathjax/core.js",
             "website/scripts/mathjax/loader.js",
             "website/scripts/mathjax/startup.js",
@@ -274,12 +275,40 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/ui/menu.js",
             "website/scripts/mathjax/ui/no-dark-mode.js",
             "website/scripts/mathjax/ui/safe.js",
+            # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
+            "website/scripts/mathjax/jax/input/TeX/config.js",
+            "website/scripts/mathjax/jax/input/MathML/config.js",
+            "website/scripts/mathjax/jax/input/AsciiMath/config.js",
+            "website/scripts/mathjax/extensions/tex2jax.js",
+            "website/scripts/mathjax/extensions/mml2jax.js",
+            "website/scripts/mathjax/extensions/asciimath2jax.js",
+            "website/scripts/mathjax/extensions/MathZoom.js",
+            "website/scripts/mathjax/extensions/MathMenu.js",
+            "website/scripts/mathjax/extensions/MathEvents.js",
+            "website/scripts/mathjax/jax/element/mml/jax.js",
+            "website/scripts/mathjax/jax/input/TeX/jax.js",
+            "website/scripts/mathjax/extensions/TeX/AMSmath.js",
+            "website/scripts/mathjax/extensions/TeX/AMSsymbols.js",
+            "website/scripts/mathjax/extensions/TeX/noErrors.js",
+            "website/scripts/mathjax/extensions/TeX/noUndefined.js",
+            "website/scripts/mathjax/config/TeX-AMS-MML_SVG.js",
+            "website/scripts/mathjax/jax/output/SVG/jax.js",
+            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
+            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
+            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
+            "website/scripts/mathjax/MathJax.js",  # important: top-level loader (MathJax 2.x)
+            "website/scripts/mathjax/extensions/HelpDialog.js",
+            "website/scripts/mathjax/images/MenuArrow-15.png",
+            "website/scripts/mathjax/images/CloseX-31.png",
         ]
+        # Use silent=True so that files absent from the current ADR install are
+        # skipped gracefully (e.g. MathJax 2.x files on a 4.x-only install, or
+        # vice-versa) without flooding the log with spurious warnings.
         for f in mathjax_files:
             target_path = "media/" + (
                 f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
             )
-            self._copy_static_file(f, target_path)
+            self._copy_static_file(f, target_path, silent=True)
 
         # --- Favicon ---
         # Legacy HTML links to favicon.ico, but only favicon.png exists in static.
@@ -347,8 +376,20 @@ class ServerlessReportExporter:
             "website/scripts/jquery.min.js", f"ansys{self._ansys_version}/nexus/utils/jquery.min.js"
         )
 
-    def _copy_static_file(self, source_rel_path: str, target_rel_path: str):
-        """Helper to copy a single file from the static source to the output directory."""
+    def _copy_static_file(self, source_rel_path: str, target_rel_path: str, silent: bool = False):
+        """Helper to copy a single file from the static source to the output directory.
+
+        Parameters
+        ----------
+        source_rel_path : str
+            Path relative to the static root.
+        target_rel_path : str
+            Path relative to the output directory.
+        silent : bool, optional
+            When True, missing source files are silently skipped instead of
+            emitting a warning.  Use this for optional/backward-compat assets
+            (e.g. MathJax 2.x files that may not exist on newer ADR installs).
+        """
         source_file = self._static_dir / source_rel_path
         target_file = self._output_dir / target_rel_path
         if source_file.is_file():
@@ -357,7 +398,7 @@ class ServerlessReportExporter:
             # Patch some viewer JS internals (loader/paths) if needed
             content = self._fix_viewer_component_paths(str(target_file), content)
             target_file.write_bytes(content)
-        else:
+        elif not silent:
             self._logger.warning(f"Warning: Static source file not found: {source_file}")
 
     def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
@@ -528,10 +569,7 @@ class ServerlessReportExporter:
         """
         ver = str(self._ansys_version) if self._ansys_version is not None else ""
         if filename.endswith("ANSYSViewer_min.js"):
-            try:
-                s = data.decode("utf-8")
-            except UnicodeDecodeError:
-                s = data.decode("latin-1")
+            s = data.decode("utf-8")
             # Replace "<static>/website/images/" with dynamic base to ./media/
             s = s.replace(
                 f'"{self._static_url}website/images/"',
@@ -545,10 +583,7 @@ class ServerlessReportExporter:
             return s.encode("utf-8")
 
         if filename.endswith("viewer-loader.js"):
-            try:
-                s = data.decode("utf-8")
-            except UnicodeDecodeError:
-                s = data.decode("latin-1")
+            s = data.decode("utf-8")
             if ver:
                 s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
             return s.encode("utf-8")
@@ -578,26 +613,51 @@ class ServerlessReportExporter:
         return html
 
     def _make_output_dirs(self):
-        """Creates the necessary directory structure in the output location."""
+        """Creates the necessary directory structure in the output location.
+
+        MathJax directory trees are created conditionally: the 4.x tree is only
+        created when ``tex-mml-chtml.js`` is found in the static directory, and
+        the legacy 2.x tree is only created when ``MathJax.js`` is found.  This
+        avoids creating empty dead directories on installs that only ship one
+        version of MathJax.
+        """
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
-        dirs_to_create = [
-            # MathJax (partial structure mirrored; files will ensure subfolders exist)
-            "media/config",
-            "media/extensions/TeX",
-            "media/jax/output/SVG/fonts/TeX/Main/Regular",
-            "media/jax/output/SVG/fonts/TeX/Size1/Regular",
-            "media/jax/element/mml",
-            "media/jax/input/TeX",
-            "media/jax/input/MathML",
-            "media/jax/input/AsciiMath",
-            "media/images",
+        # MathJax 4.x directory tree — only created when MathJax 4.x assets are present
+        if (self._static_dir / "website/scripts/mathjax/tex-mml-chtml.js").is_file():
+            for d in [
+                "media/a11y",
+                "media/input/mml/extensions",
+                "media/input/tex/extensions",
+                "media/output",
+                "media/sre/mathmaps",
+                "media/ui",
+            ]:
+                (self._output_dir / d).mkdir(parents=True, exist_ok=True)
+
+        # MathJax 2.x directory tree — only created when old MathJax assets are present
+        # (kept for backward compatibility with ADR installs that still ship MathJax 2.x)
+        if (self._static_dir / "website/scripts/mathjax/MathJax.js").is_file():
+            for d in [
+                "media/config",
+                "media/extensions/TeX",
+                "media/jax/output/SVG/fonts/TeX/Main/Regular",
+                "media/jax/output/SVG/fonts/TeX/Size1/Regular",
+                "media/jax/element/mml",
+                "media/jax/input/TeX",
+                "media/jax/input/MathML",
+                "media/jax/input/AsciiMath",
+                "media/images",
+            ]:
+                (self._output_dir / d).mkdir(parents=True, exist_ok=True)
+
+        # Common directories (always created regardless of MathJax version)
+        for d in [
             "webfonts",
             # Viewer
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
-        ]
-        for d in dirs_to_create:
+        ]:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)

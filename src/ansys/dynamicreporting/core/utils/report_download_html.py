@@ -148,6 +148,7 @@ class ReportDownloadHTML:
     def _download_special_files(self):
         # MathJax ver 4.1.1
         files = [
+            # MathJax 4.x files
             "media/core.js",
             "media/loader.js",
             "media/startup.js",
@@ -188,6 +189,28 @@ class ReportDownloadHTML:
             "media/ui/menu.js",
             "media/ui/no-dark-mode.js",
             "media/ui/safe.js",
+            # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
+            "media/jax/input/TeX/config.js",
+            "media/jax/input/MathML/config.js",
+            "media/jax/input/AsciiMath/config.js",
+            "media/extensions/tex2jax.js",
+            "media/extensions/mml2jax.js",
+            "media/extensions/asciimath2jax.js",
+            "media/extensions/MathZoom.js",
+            "media/extensions/MathEvents.js",
+            "media/extensions/MathMenu.js",
+            "media/jax/element/mml/jax.js",
+            "media/jax/input/TeX/jax.js",
+            "media/extensions/TeX/AMSmath.js",
+            "media/extensions/TeX/AMSsymbols.js",
+            "media/extensions/TeX/noErrors.js",
+            "media/extensions/TeX/noUndefined.js",
+            "media/config/TeX-AMS-MML_SVG.js",
+            "media/jax/output/SVG/jax.js",
+            "media/jax/output/SVG/fonts/TeX/fontdata.js",
+            "media/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
+            "media/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
+            "media/images/MenuArrow-15.png",
         ]
 
         tmp = urllib.parse.urlsplit(self._url)
@@ -534,6 +557,34 @@ class ReportDownloadHTML:
                 except Exception as e:
                     raise OSError(f"Unable to create target directory: {base}\nError: {str(e)}")
 
+    def _detect_mathjax_version(self) -> str:
+        """Probe the ADR server to determine which MathJax major version is installed.
+
+        Checks for the presence of each version's top-level sentinel file:
+
+        * MathJax 4.x: ``/static/website/scripts/mathjax/tex-mml-chtml.js``
+        * MathJax 2.x: ``/static/website/scripts/mathjax/MathJax.js``
+
+        Returns
+        -------
+        str
+            ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
+            detected, or ``"unknown"`` when neither sentinel file is reachable.
+        """
+        tmp = urllib.parse.urlsplit(self._url)
+        base = tmp.scheme + "://" + tmp.netloc + "/static/website/scripts/mathjax/"
+        for version, sentinel in (
+            ("4", "tex-mml-chtml.js"),
+            ("2", "MathJax.js"),
+        ):
+            try:
+                resp = requests.head(base + sentinel, allow_redirects=True)  # nosec B400
+                if resp.status_code == requests.codes.ok:
+                    return version
+            except Exception:
+                pass
+        return "unknown"
+
     def _download(self):
         self._filemap = dict()
         if self._url is None:
@@ -547,12 +598,56 @@ class ReportDownloadHTML:
         if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
             raise ValueError("Cannot export into a Nexus database directory")
 
-        self._make_dir([self._directory, "media", "a11y"])
-        self._make_dir([self._directory, "media", "input", "mml", "extensions"])
-        self._make_dir([self._directory, "media", "input", "tex", "extensions"])
-        self._make_dir([self._directory, "media", "output"])
-        self._make_dir([self._directory, "media", "sre", "mathmaps"])
-        self._make_dir([self._directory, "media", "ui"])
+        # Probe the server once to find out which MathJax major version is
+        # installed.  Only one version can be present at runtime, so we create
+        # only the matching directory tree to avoid leaving dead empty dirs.
+        mathjax_version = self._detect_mathjax_version()
+
+        # MathJax 4.x directory tree
+        if mathjax_version == "4":
+            self._make_dir([self._directory, "media", "a11y"])
+            self._make_dir([self._directory, "media", "input", "mml", "extensions"])
+            self._make_dir([self._directory, "media", "input", "tex", "extensions"])
+            self._make_dir([self._directory, "media", "output"])
+            self._make_dir([self._directory, "media", "sre", "mathmaps"])
+            self._make_dir([self._directory, "media", "ui"])
+
+        # MathJax 2.x directory tree (kept for backward compatibility)
+        if mathjax_version == "2":
+            self._make_dir([self._directory, "media", "config"])
+            self._make_dir([self._directory, "media", "extensions", "TeX"])
+            self._make_dir(
+                [
+                    self._directory,
+                    "media",
+                    "jax",
+                    "output",
+                    "SVG",
+                    "fonts",
+                    "TeX",
+                    "Main",
+                    "Regular",
+                ]
+            )
+            self._make_dir(
+                [
+                    self._directory,
+                    "media",
+                    "jax",
+                    "output",
+                    "SVG",
+                    "fonts",
+                    "TeX",
+                    "Size1",
+                    "Regular",
+                ]
+            )
+            self._make_dir([self._directory, "media", "jax", "element", "mml"])
+            self._make_dir([self._directory, "media", "jax", "input", "TeX"])
+            self._make_dir([self._directory, "media", "jax", "input", "MathML"])
+            self._make_dir([self._directory, "media", "jax", "input", "AsciiMath"])
+            self._make_dir([self._directory, "media", "images"])
+
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
