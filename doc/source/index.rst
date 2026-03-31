@@ -127,13 +127,6 @@ compatibility boundary.
   product release you are targeting.
 - Keep one external serverless virtual environment per supported ADR product
   release family.
-- Prefer the Python environment shipped with the ADR product when you do not need a
-  standalone venv.
-  For eg:
-   For Windows, the Python environment shipped with ADR is typically located at
-   ``C:\Program Files\ANSYS Inc\v<release>\ADR\bin\cpython`` or
-   ``C:\Program Files\ANSYS Inc\v<release>\CEI\bin\cpython``.
-   You can use this environment to run PyDynamicReporting without needing to set up a separate virtual environment.
 
 The repository also includes a settings compatibility shim for known
 setting transitions, but that shim is only a safety net. It is not a
