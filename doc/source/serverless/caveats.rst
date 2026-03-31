@@ -113,7 +113,7 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
   has newer versions of dependencies that would otherwise cause import errors.
 
 - The base dependency set in ``pyproject.toml`` now defines the broad
-  serverless compatibility envelope, while release-specific dependency
+  compatibility envelope, while release-specific dependency
   pins live in ``constraints/``. This repository keeps a single
   checked-in ``uv.lock``, so release-specific stacks are documented as
   constraints files rather than mutually incompatible extras.
@@ -125,25 +125,11 @@ Recommended practice for external venv usage:
 
 - Install ``ansys-dynamicreporting-core`` together with the constraints
   file that matches the target ADR release.
-- Keep one external serverless virtual environment per product release family.
-- Prefer ADR's internal Python environment when you do not need a
-  standalone venv. This avoids the risk of drift and simplifies setup.
+- Keep one external virtual environment per product release family.
 
 If you are installing from PyPI instead of a local checkout, copy the matching
 constraints file from ``constraints/`` in the GitHub repository and pass
 it to ``pip install -c ...``.
-
-Example from a source checkout:
-
-.. code-block:: bash
-
-    pip install -c constraints/v261.txt .
-
-Example for an editable source checkout:
-
-.. code-block:: bash
-
-    pip install -c constraints/v261.txt -e .
 
 Example from PyPI after downloading the matching constraints file locally:
 
