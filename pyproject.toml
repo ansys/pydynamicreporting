@@ -11,9 +11,8 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "pytz>=2021.3",
     "psutil>=6.0.0",
-    # Broad serverless compatibility envelope. Release-specific stacks belong
-    # in constraints files instead of mutually exclusive extras so uv.lock
-    # remains solvable.
+    # Broad serverless compatibility envelope that covers 2 supported releases per major version.
+    # Release-specific stacks belong in constraints files.
     "django>=4.2.27,<6.0.0",
     "django-guardian>=2.4.0,<4.0.0",
     "djangorestframework>=3.15.2,<3.17.0",
