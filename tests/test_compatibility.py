@@ -178,7 +178,6 @@ def test_service_warns_for_unsupported_product_release(monkeypatch, tmp_path):
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_default_install_used=False,
         ),
     )
 
@@ -201,7 +200,6 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_default_install_used=False,
         ),
     )
 
@@ -224,7 +222,6 @@ def test_service_warns_for_implicit_default_install_when_unsupported(monkeypatch
             detection_source="default_root_unsupported",
             explicit_installation_requested=False,
             explicit_version_requested=False,
-            implicit_default_install_used=True,
         ),
     )
 
@@ -251,7 +248,6 @@ def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path)
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_default_install_used=False,
         ),
     )
 
@@ -280,7 +276,6 @@ def test_serverless_warns_for_implicit_default_install_when_unsupported(monkeypa
             detection_source="default_root_unsupported",
             explicit_installation_requested=False,
             explicit_version_requested=False,
-            implicit_default_install_used=True,
         ),
     )
 
@@ -309,7 +304,6 @@ def test_serverless_does_not_warn_when_install_version_is_unknown(monkeypatch, t
             detection_source="explicit_installation",
             explicit_installation_requested=True,
             explicit_version_requested=False,
-            implicit_default_install_used=False,
         ),
     )
 

@@ -87,7 +87,6 @@ class InstallResolution:
     detection_source: str
     explicit_installation_requested: bool
     explicit_version_requested: bool
-    implicit_default_install_used: bool
 
 
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
@@ -204,31 +203,12 @@ def resolve_install_info(
             f"Unable to detect an installation in: {[str(d) for d, _ in candidates]}"
         )
 
-    implicit_default_install_used = (
-        ansys_installation is None
-        and ansys_version is None
-        and install_dir is not None
-        and str(version) == DEFAULT_ANSYS_INSTALL_VERSION
-        and detection_source
-        in {
-            f"awp_root_{DEFAULT_ANSYS_INSTALL_VERSION}",
-            f"default_root_{DEFAULT_ANSYS_INSTALL_VERSION}",
-            "ceidev",
-            "enve",
-            "pyadr_env",
-        }
-    )
-    # Record whether the resolved install came from the package default rather
-    # than an explicit request so callers can keep warning behavior aligned
-    # with the historical "use the default installation if available" flow.
-
     return InstallResolution(
         install_dir=str(install_dir) if install_dir is not None else None,
         version=version,
         detection_source=detection_source,
         explicit_installation_requested=ansys_installation is not None,
         explicit_version_requested=ansys_version is not None,
-        implicit_default_install_used=implicit_default_install_used,
     )
 
 
