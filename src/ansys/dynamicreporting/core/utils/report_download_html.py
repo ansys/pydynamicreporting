@@ -617,10 +617,30 @@ class ReportDownloadHTML:
             self._make_dir([self._directory, "media", "config"])
             self._make_dir([self._directory, "media", "extensions", "TeX"])
             self._make_dir(
-                [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Main", "Regular"]
+                [
+                    self._directory,
+                    "media",
+                    "jax",
+                    "output",
+                    "SVG",
+                    "fonts",
+                    "TeX",
+                    "Main",
+                    "Regular",
+                ]
             )
             self._make_dir(
-                [self._directory, "media", "jax", "output", "SVG", "fonts", "TeX", "Size1", "Regular"]
+                [
+                    self._directory,
+                    "media",
+                    "jax",
+                    "output",
+                    "SVG",
+                    "fonts",
+                    "TeX",
+                    "Size1",
+                    "Regular",
+                ]
             )
             self._make_dir([self._directory, "media", "jax", "element", "mml"])
             self._make_dir([self._directory, "media", "jax", "input", "TeX"])
