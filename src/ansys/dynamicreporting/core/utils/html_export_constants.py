@@ -63,6 +63,10 @@ FAVICON = "website/images/favicon.ico"
 # -----------------------
 # MathJax assets
 # -----------------------
+# This list covers both MathJax 4.x (current) and MathJax 2.x (legacy) assets so
+# that offline exports remain compatible with older ADR installations.  Consumers
+# MUST silently skip any entry that does not exist on the current install — only
+# one of the two version trees will be present at runtime.
 MATHJAX_FILES = [
     # MathJax 4.x files
     "website/scripts/mathjax/core.js",
