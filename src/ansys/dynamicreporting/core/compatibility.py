@@ -29,6 +29,7 @@ from ._version import __version__
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
 _CLIENT_MAJOR_ONE_PRODUCT_LINE = 27
+_PRODUCT_RELEASE_CENTURY_BASE = 2000
 
 SUPPORTED_PRODUCT_RELEASE_POLICY = (
     "Supports the bundled annual product line and the previous annual product line."
@@ -141,16 +142,22 @@ def install_version_to_product_release(install_version: int | str) -> str:
     return f"{year_line}.{release_index}"
 
 
+def product_release_to_calendar_year(product_release: str) -> int:
+    """Convert ``27.1`` to the calendar year ``2027``."""
+    year_line, _ = parse_product_release(product_release)
+    return _PRODUCT_RELEASE_CENTURY_BASE + int(year_line)
+
+
 def product_release_to_display_string(product_release: str) -> str:
     """Convert ``27.1`` to ``2027 R1``."""
-    year_line, release_index = parse_product_release(product_release)
-    return f"20{year_line} R{release_index}"
+    _, release_index = parse_product_release(product_release)
+    return f"{product_release_to_calendar_year(product_release)} R{release_index}"
 
 
 def product_release_to_short_label(product_release: str) -> str:
     """Convert ``27.1`` to ``2027R1``."""
-    year_line, release_index = parse_product_release(product_release)
-    return f"20{year_line}R{release_index}"
+    _, release_index = parse_product_release(product_release)
+    return f"{product_release_to_calendar_year(product_release)}R{release_index}"
 
 
 def product_release_to_product_line(product_release: str) -> str:
