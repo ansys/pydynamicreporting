@@ -600,6 +600,9 @@ class ReportDownloadHTML:
         if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
             raise ValueError("Cannot export into a Nexus database directory")
 
+        # media/ must always exist — _download_special_files() and _get_file() write into it.
+        self._make_dir([self._directory, "media"])
+
         # Probe the server once to find out which MathJax major version is
         # installed.  Only one version can be present at runtime, so we create
         # only the matching directory tree to avoid leaving dead empty dirs.

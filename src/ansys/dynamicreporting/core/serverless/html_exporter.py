@@ -233,8 +233,9 @@ class ServerlessReportExporter:
         by the legacy layout into the output directory.
         """
         # --- MathJax (core + fonts) ---
-        mathjax_files = [
-            # MathJax 4.x files
+        # Split into two version-specific lists so warnings can be selectively
+        # suppressed: only the non-installed version's files are silenced.
+        mathjax_4x_files = [
             "website/scripts/mathjax/core.js",
             "website/scripts/mathjax/loader.js",
             "website/scripts/mathjax/startup.js",
@@ -275,7 +276,9 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/ui/menu.js",
             "website/scripts/mathjax/ui/no-dark-mode.js",
             "website/scripts/mathjax/ui/safe.js",
-            # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
+        ]
+        # MathJax 2.x files (kept for backward compatibility with older ADR installs)
+        mathjax_2x_files = [
             "website/scripts/mathjax/jax/input/TeX/config.js",
             "website/scripts/mathjax/jax/input/MathML/config.js",
             "website/scripts/mathjax/jax/input/AsciiMath/config.js",
@@ -301,14 +304,24 @@ class ServerlessReportExporter:
             "website/scripts/mathjax/images/MenuArrow-15.png",
             "website/scripts/mathjax/images/CloseX-31.png",
         ]
-        # Use silent=True so that files absent from the current ADR install are
-        # skipped gracefully (e.g. MathJax 2.x files on a 4.x-only install, or
-        # vice-versa) without flooding the log with spurious warnings.
-        for f in mathjax_files:
+
+        # Detect which MathJax version is present on this ADR install.
+        # Warnings are emitted only for the installed version's missing files;
+        # the non-installed version's files are silently skipped.
+        has_4x = (self._static_dir / "website/scripts/mathjax/tex-mml-chtml.js").is_file()
+        has_2x = (self._static_dir / "website/scripts/mathjax/MathJax.js").is_file()
+
+        for f in mathjax_4x_files:
             target_path = "media/" + (
                 f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
             )
-            self._copy_static_file(f, target_path, silent=True)
+            self._copy_static_file(f, target_path, silent=not has_4x)
+
+        for f in mathjax_2x_files:
+            target_path = "media/" + (
+                f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+            )
+            self._copy_static_file(f, target_path, silent=not has_2x)
 
         # --- Favicon ---
         # Legacy HTML links to favicon.ico, but only favicon.png exists in static.
