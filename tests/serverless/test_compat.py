@@ -109,3 +109,28 @@ def test_sanitize_settings_is_noop_below_version_thresholds(monkeypatch):
 def test_normalize_version_ignores_non_numeric_suffixes():
     assert compat_module._normalize_version("5.1.2.post1") == (5, 1, 2)
     assert compat_module._normalize_version("2.4.0rc1") == (2, 4, 0)
+
+
+def test_guardian_rename_is_noop_when_old_key_absent():
+    # Transform function called directly (without condition gate) to cover
+    # the early-return branch when GUARDIAN_MONKEY_PATCH is not present.
+    overrides = {"SOME_OTHER_KEY": True}
+    result = compat_module._guardian_monkey_patch_rename(overrides)
+    assert result == {"SOME_OTHER_KEY": True}
+
+
+def test_storage_migration_is_noop_when_old_key_absent():
+    # Same as above for DEFAULT_FILE_STORAGE.
+    overrides = {"SOME_OTHER_KEY": True}
+    result = compat_module._remove_deprecated_default_file_storage(overrides)
+    assert result == {"SOME_OTHER_KEY": True}
+
+
+def test_get_installed_versions_returns_real_packages():
+    # Integration test: call _get_installed_versions without mocking to
+    # cover the real importlib.metadata path.  Django is a declared
+    # dependency so it should always be present in the test environment.
+    versions = compat_module._get_installed_versions()
+    assert "django" in versions
+    assert isinstance(versions["django"], tuple)
+    assert len(versions["django"]) >= 2

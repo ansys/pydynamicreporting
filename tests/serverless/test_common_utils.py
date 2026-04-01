@@ -29,6 +29,7 @@ from ansys.dynamicreporting.core.compatibility import (
     AUTO_DETECT_INSTALL_VERSIONS,
     DEFAULT_ANSYS_INSTALL_VERSION,
 )
+import ansys.dynamicreporting.core.common_utils as common_utils_module
 from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
@@ -278,6 +279,13 @@ def test_get_install_info_implicit_ignores_unsupported_versions(monkeypatch, tmp
     monkeypatch.setenv(f"AWP_ROOT{unsupported_version}", str(unsupported_dir.parent))
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
+    # Redirect default filesystem probes to a non-existent path so a real
+    # machine-wide Ansys installation does not interfere with this test.
+    monkeypatch.setattr(
+        common_utils_module,
+        "_default_install_root",
+        lambda version: tmp_path / "nonexistent" / f"v{version}",
+    )
 
     # When only an unsupported install root is present, implicit discovery
     # must ignore it and fall back to the package default version metadata.

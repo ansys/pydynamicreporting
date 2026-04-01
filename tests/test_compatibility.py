@@ -169,6 +169,19 @@ def test_get_compatibility_warning_for_install_version():
     assert "outside the supported window" in warning_message
 
 
+def test_get_compatibility_warning_skips_unparsable_install_version():
+    # Unparsable versions should fail-open (return None) instead of raising,
+    # so existing workflows are not disrupted by unexpected version formats.
+    assert get_compatibility_warning_for_install_version("ab") is None
+    assert get_compatibility_warning_for_install_version("1") is None
+
+
+@pytest.mark.parametrize("invalid_version", ["ab", "1", "  ", "12.3"])
+def test_install_version_to_product_release_rejects_invalid_input(invalid_version):
+    with pytest.raises(ValueError):
+        install_version_to_product_release(invalid_version)
+
+
 def test_service_warns_for_unsupported_product_release(monkeypatch, tmp_path):
     install_dir = tmp_path / "install"
     install_dir.mkdir()
