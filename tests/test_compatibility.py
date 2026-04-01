@@ -172,7 +172,7 @@ def test_get_compatibility_warning_for_install_version():
 def test_get_compatibility_warning_skips_unparsable_install_version():
     # Unparsable versions should fail-open (return None) instead of raising,
     # so existing workflows are not disrupted by unexpected version formats.
-    assert get_compatibility_warning_for_install_version("ab") is None
+    assert get_compatibility_warning_for_install_version("abc") is None
     assert get_compatibility_warning_for_install_version("1") is None
 
 
