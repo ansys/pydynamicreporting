@@ -93,7 +93,12 @@ def test_download(request, adr_service_query) -> None:
 
 def _make_downloader(url="http://localhost:8000/reports/report_display/") -> rd.ReportDownloadHTML:
     """Return a ReportDownloadHTML instance with a fake URL (no live server)."""
-    return rd.ReportDownloadHTML(url=url, directory=tempfile.mkdtemp())
+    tmpdir = tempfile.TemporaryDirectory()
+    downloader = rd.ReportDownloadHTML(url=url, directory=tmpdir.name)
+    # Keep a reference to the TemporaryDirectory so it is not garbage-collected
+    # (and thus deleted) before the downloader is done being used.
+    downloader._tmpdir = tmpdir  # type: ignore[attr-defined]
+    return downloader
 
 
 def test_detect_mathjax_version_4x() -> None:
