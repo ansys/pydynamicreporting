@@ -362,6 +362,23 @@ def test_get_install_info_detects_version_from_install_layout(tmp_path):
     assert ver == 271
 
 
+@pytest.mark.ado_test
+def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, caplog):
+    install_dir = tmp_path / "install_no_version"
+    install_dir.mkdir()
+    for version in ("261", "271"):
+        nexus_dir = install_dir / f"nexus{version}" / "django"
+        nexus_dir.mkdir(parents=True)
+        (nexus_dir / "manage.py").write_text("dummy content")
+
+    with caplog.at_level("WARNING"):
+        detected_version = common_utils_module._get_install_version_from_layout(install_dir)
+
+    assert detected_version is None
+    assert "Detected multiple ADR layout versions" in caplog.text
+    assert str(sorted([261, 271])) in caplog.text
+
+
 # Test the branch for a valid 'enve' candidate.
 @pytest.mark.ado_test
 def test_get_install_info_with_enve(monkeypatch, tmp_path):

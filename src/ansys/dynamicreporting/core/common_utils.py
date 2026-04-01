@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from dataclasses import dataclass
+import logging
 import os
 from pathlib import Path
 import platform
@@ -32,6 +33,8 @@ from .compatibility import AUTO_DETECT_INSTALL_VERSIONS, DEFAULT_ANSYS_INSTALL_V
 from .constants import JSON_NECESSARY_KEYS, JSON_TEMPLATE_KEYS, REPORT_TYPES
 from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
+
+logger = logging.getLogger(__name__)
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -75,6 +78,16 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
 
     if len(detected_versions) == 1:
         return detected_versions[0]
+    if len(detected_versions) > 1:
+        # Surface the ambiguity so callers can understand why layout-based
+        # inference fell back to a default version instead of picking one of
+        # several matching ADR trees implicitly.
+        logger.warning(
+            "Detected multiple ADR layout versions under %s: %s. "
+            "Falling back to the configured default install version.",
+            install_dir,
+            sorted(detected_versions),
+        )
     return None
 
 
