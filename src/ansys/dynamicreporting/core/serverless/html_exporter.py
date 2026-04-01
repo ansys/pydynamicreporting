@@ -227,6 +227,30 @@ class ServerlessReportExporter:
             text = text[:idx1] + new_path + text[idx2:]
             current = idx1 + len(new_path)
 
+    def _detect_mathjax_version(self) -> str:
+        """Detect which MathJax major version is installed in the static directory.
+
+        Checks for each version's top-level sentinel file:
+
+        * MathJax 4.x: ``website/scripts/mathjax/tex-mml-chtml.js``
+        * MathJax 2.x: ``website/scripts/mathjax/MathJax.js``
+
+        Only one version can be present at runtime; the sentinel files are
+        mutually exclusive between the two version trees.
+
+        Returns
+        -------
+        str
+            ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
+            detected, or ``"unknown"`` when neither sentinel file is found.
+        """
+        mathjax_root = self._static_dir / "website/scripts/mathjax"
+        if (mathjax_root / "tex-mml-chtml.js").is_file():
+            return "4"
+        if (mathjax_root / "MathJax.js").is_file():
+            return "2"
+        return "unknown"
+
     def _copy_special_files(self):
         """
         Copies static assets that are referenced indirectly (inside JS) or expected
@@ -306,22 +330,41 @@ class ServerlessReportExporter:
         ]
 
         # Detect which MathJax version is present on this ADR install.
-        # Warnings are emitted only for the installed version's missing files;
-        # the non-installed version's files are silently skipped.
-        has_4x = (self._static_dir / "website/scripts/mathjax/tex-mml-chtml.js").is_file()
-        has_2x = (self._static_dir / "website/scripts/mathjax/MathJax.js").is_file()
+        # Only one version can exist at runtime; files for the other are
+        # silently skipped without warnings.
+        mathjax_version = self._detect_mathjax_version()
 
-        for f in mathjax_4x_files:
-            target_path = "media/" + (
-                f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-            )
-            self._copy_static_file(f, target_path, silent=not has_4x)
-
-        for f in mathjax_2x_files:
-            target_path = "media/" + (
-                f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-            )
-            self._copy_static_file(f, target_path, silent=not has_2x)
+        if mathjax_version == "4":
+            # MathJax 4.x is installed — copy 4.x files normally, skip 2.x silently
+            for f in mathjax_4x_files:
+                target_path = "media/" + (
+                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+                )
+                self._copy_static_file(f, target_path)
+            for f in mathjax_2x_files:
+                target_path = "media/" + (
+                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+                )
+                self._copy_static_file(f, target_path, silent=True)
+        elif mathjax_version == "2":
+            # MathJax 2.x is installed — copy 2.x files normally, skip 4.x silently
+            for f in mathjax_2x_files:
+                target_path = "media/" + (
+                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+                )
+                self._copy_static_file(f, target_path)
+            for f in mathjax_4x_files:
+                target_path = "media/" + (
+                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+                )
+                self._copy_static_file(f, target_path, silent=True)
+        else:
+            # Version unknown — attempt all files silently (best-effort)
+            for f in mathjax_4x_files + mathjax_2x_files:
+                target_path = "media/" + (
+                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
+                )
+                self._copy_static_file(f, target_path, silent=True)
 
         # --- Favicon ---
         # Legacy HTML links to favicon.ico, but only favicon.png exists in static.
@@ -642,8 +685,10 @@ class ServerlessReportExporter:
         """
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
-        # MathJax 4.x directory tree — only created when MathJax 4.x assets are present
-        if (self._static_dir / "website/scripts/mathjax/tex-mml-chtml.js").is_file():
+        # Create MathJax directory tree for whichever version is installed.
+        # The two version trees are mutually exclusive, so we use if/elif.
+        mathjax_version = self._detect_mathjax_version()
+        if mathjax_version == "4":
             for d in [
                 "media/a11y",
                 "media/input/mml/extensions",
@@ -653,10 +698,8 @@ class ServerlessReportExporter:
                 "media/ui",
             ]:
                 (self._output_dir / d).mkdir(parents=True, exist_ok=True)
-
-        # MathJax 2.x directory tree — only created when old MathJax assets are present
-        # (kept for backward compatibility with ADR installs that still ship MathJax 2.x)
-        if (self._static_dir / "website/scripts/mathjax/MathJax.js").is_file():
+        elif mathjax_version == "2":
+            # Kept for backward compatibility with ADR installs that still ship MathJax 2.x
             for d in [
                 "media/config",
                 "media/extensions/TeX",
