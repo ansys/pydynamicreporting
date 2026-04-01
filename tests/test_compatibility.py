@@ -107,6 +107,11 @@ def test_product_epoch_helpers_follow_major_mapping():
     assert supported_product_lines_for_client_major(2) == ("27", "28")
 
 
+def test_product_epoch_helpers_reject_negative_major():
+    with pytest.raises(ValueError):
+        product_line_for_client_major(-1)
+
+
 def test_major_zero_support_window_matches_current_policy():
     supported_lines = supported_product_lines_for_client_major(0)
     assert is_supported_product_release("25.1", supported_lines)
@@ -137,9 +142,9 @@ def test_public_compatibility_surface_is_consistent():
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
     )
-    assert ansys_version == "2026R1"
+    assert ansys_version == "2027R1"
     assert __ansys_version__ == DEFAULT_ANSYS_VERSION
-    assert __ansys_version_str__ == "2026 R1"
+    assert __ansys_version_str__ == "2027 R1"
 
 
 def test_compatibility_info_derives_from_client_major():
