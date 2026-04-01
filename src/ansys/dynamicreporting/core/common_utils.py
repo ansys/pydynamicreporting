@@ -93,13 +93,10 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
 
 @dataclass(frozen=True)
 class InstallResolution:
-    """Internal install-resolution metadata used by runtime compatibility checks."""
+    """Resolved installation directory and version used by service/serverless setup."""
 
     install_dir: str | None
     version: int | None
-    detection_source: str
-    explicit_installation_requested: bool
-    explicit_version_requested: bool
 
 
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
@@ -195,11 +192,9 @@ def resolve_install_info(
     )
 
     install_dir: Path | None = None
-    detection_source = "fallback"
-    for candidate_dir, source in candidates:
+    for candidate_dir, _source in candidates:
         if candidate_dir.is_dir():
             install_dir = candidate_dir
-            detection_source = source
             break
 
     version = get_install_version(install_dir)
@@ -219,9 +214,6 @@ def resolve_install_info(
     return InstallResolution(
         install_dir=str(install_dir) if install_dir is not None else None,
         version=version,
-        detection_source=detection_source,
-        explicit_installation_requested=ansys_installation is not None,
-        explicit_version_requested=ansys_version is not None,
     )
 
 
@@ -240,8 +232,8 @@ def get_install_info(
     resolution = resolve_install_info(
         ansys_installation=ansys_installation, ansys_version=ansys_version
     )
-    # Preserve the historical tuple return type even though resolution metadata
-    # now carries extra context for runtime compatibility warnings.
+    # Preserve the historical tuple return type for external callers while
+    # the internal resolver returns a typed record for service/serverless code.
     return resolution.install_dir, resolution.version
 
 
