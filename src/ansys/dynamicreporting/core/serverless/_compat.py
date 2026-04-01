@@ -83,7 +83,7 @@ def _guardian_monkey_patch_rename(overrides: dict) -> dict:
         if new_key not in overrides:
             overrides[new_key] = overrides[old_key]
             logger.info(
-                f"Compat shim: Translated '{old_key}' -> '{new_key}' (value={overrides[old_key]})"
+                f"Compat shim: Translated '{old_key}' -> '{new_key}'"
             )
         del overrides[old_key]
     return overrides
