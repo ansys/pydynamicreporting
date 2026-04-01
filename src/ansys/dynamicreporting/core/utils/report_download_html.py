@@ -221,7 +221,9 @@ class ReportDownloadHTML:
             if resp.status_code == requests.codes.ok:
                 filename = os.path.join(self._directory, f)
                 try:
-                    open(filename, "wb").write(resp.content)
+                    os.makedirs(os.path.dirname(filename), exist_ok=True)
+                    with open(filename, "wb") as fh:
+                        fh.write(resp.content)
                 except Exception as e:
                     print(f"Unable to download MathJax file: {f}\nError {str(e)}")
             else:
