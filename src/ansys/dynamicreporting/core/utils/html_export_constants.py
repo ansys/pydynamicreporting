@@ -130,7 +130,7 @@ MATHJAX_FILES = [
     "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
     "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
     "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-    "website/images/MenuArrow-15.png",
+    "website/scripts/mathjax/images/MenuArrow-15.png",
     "website/scripts/mathjax/MathJax.js",  # important: top-level loader (MathJax 2.x)
 ]
 
