@@ -28,8 +28,7 @@ import re
 from ._version import __version__
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
-_CLIENT_MAJOR_BASE_PRODUCT_LINE = 26
-_CLIENT_MAJOR_BASE_BUNDLED_RELEASE = "26.1"
+_CLIENT_MAJOR_ONE_PRODUCT_LINE = 27
 
 SUPPORTED_PRODUCT_RELEASE_POLICY = (
     "Supports the bundled annual product line and the previous annual product line."
@@ -76,7 +75,11 @@ def product_line_for_client_major(client_major: int) -> str:
     """Return the current annual product line for a client major epoch."""
     if client_major < 0:
         raise ValueError("Client major epoch must be 0 or greater.")
-    return str(_CLIENT_MAJOR_BASE_PRODUCT_LINE + client_major)
+    # Client major ``1`` is the first release line that uses the new annual
+    # product-line mapping directly. Major ``0`` remains anchored to the
+    # previous shipped line for backwards compatibility with the pre-1.0
+    # package series.
+    return str(_CLIENT_MAJOR_ONE_PRODUCT_LINE + client_major - 1)
 
 
 def bundled_product_release_for_client_major(client_major: int) -> str:
