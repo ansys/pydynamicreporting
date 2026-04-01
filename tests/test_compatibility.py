@@ -81,6 +81,7 @@ def test_parse_product_release_rejects_invalid_values(invalid_release):
 def test_install_version_conversion_round_trip():
     assert product_release_to_install_version("27.1") == 271
     assert install_version_to_product_release(271) == "27.1"
+    assert install_version_to_product_release("271") == "27.1"
 
 
 def test_supported_product_release_uses_annual_lines():
@@ -174,9 +175,10 @@ def test_get_compatibility_warning_skips_unparsable_install_version():
     # so existing workflows are not disrupted by unexpected version formats.
     assert get_compatibility_warning_for_install_version("abc") is None
     assert get_compatibility_warning_for_install_version("1") is None
+    assert get_compatibility_warning_for_install_version("2710") is None
 
 
-@pytest.mark.parametrize("invalid_version", ["ab", "1", "  ", "12.3"])
+@pytest.mark.parametrize("invalid_version", ["ab", "1", "  ", "12.3", "270", "2710", "2712"])
 def test_install_version_to_product_release_rejects_invalid_input(invalid_version):
     with pytest.raises(ValueError):
         install_version_to_product_release(invalid_version)

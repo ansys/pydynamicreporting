@@ -132,13 +132,16 @@ DEFAULT_STATIC_ASSET_VERSION = str(product_release_to_install_version(BUNDLED_PR
 def install_version_to_product_release(install_version: int | str) -> str:
     """Convert an internal install version like ``271`` to ``27.1``."""
     normalized = str(install_version).strip()
-    if not normalized.isdigit() or len(normalized) < 3:
+    if not normalized.isdigit() or len(normalized) != 3:
         raise ValueError(
-            "Install version must be a digit-only string or int with at least three digits."
+            "Install version must be a digit-only string or int in 'YYR' format, "
+            "for example '271'."
         )
 
     year_line = normalized[:-1]
     release_index = int(normalized[-1])
+    if release_index < 1:
+        raise ValueError("Install version release index must be 1 or greater.")
     return f"{year_line}.{release_index}"
 
 
