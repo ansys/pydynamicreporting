@@ -200,7 +200,9 @@ def resolve_install_info(
         install_dir is None
         or not (install_dir / f"nexus{version}" / "django" / "manage.py").exists()
     ):
-        raise InvalidAnsysPath(f"Unable to detect an installation in: {[str(d) for d in candidates]}")
+        raise InvalidAnsysPath(
+            f"Unable to detect an installation in: {[str(d) for d in candidates]}"
+        )
 
     return InstallResolution(
         install_dir=str(install_dir) if install_dir is not None else None,

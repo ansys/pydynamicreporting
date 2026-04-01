@@ -382,9 +382,7 @@ class ADR:
         # Implicit auto-discovery no longer suppresses the warning. If a
         # machine only has an older unsupported ADR release available, setup
         # should still surface that compatibility risk to the caller.
-        compatibility_warning = get_compatibility_warning_for_install_version(
-            self._ansys_version
-        )
+        compatibility_warning = get_compatibility_warning_for_install_version(self._ansys_version)
         if compatibility_warning:
             warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
