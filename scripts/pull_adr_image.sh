@@ -5,4 +5,4 @@ set -ex
 _IMAGE_NAME="ghcr.io/ansys-internal/adr_dev"
 
 # Pull Ansys Dynamic Reporting image based on tag
-docker pull $_IMAGE_NAME:271-20260319173920
+docker pull $_IMAGE_NAME
