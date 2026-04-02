@@ -30,6 +30,7 @@ import requests
 
 from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
 from .html_export_constants import MATHJAX_2X_FILES, MATHJAX_4X_FILES, MATHJAX_VERSION_SENTINELS
+from .html_export_mathjax import detect_mathjax_version_from_html
 
 # Default Ansys version to use as a fallback.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
@@ -82,6 +83,11 @@ class ReportDownloadHTML:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False  # record this so we can get it externally
+        # Cache the rendered report HTML and resolved MathJax version for this
+        # downloader instance.  One export should use one stable answer, so
+        # repeating the same detection work only adds network I/O.
+        self._report_html: str | None = None
+        self._mathjax_version: str | None = None
 
     def _should_use_data_uri(self, size: int) -> bool:
         self._inline_size_exception = False
@@ -147,10 +153,9 @@ class ReportDownloadHTML:
             current = idx1 + len(new_path)
 
     def _download_special_files(self):
-        # The remote path already knows the installed MathJax major version, so
-        # only fetch the matching tree.  Unlike the serverless exporter, every
-        # extra check here is a network round-trip, so avoiding the other tree
-        # keeps offline export quiet and reduces unnecessary I/O.
+        # The remote path resolves the page's MathJax version before downloads
+        # begin, so only the matching asset tree needs to be fetched.  Avoiding
+        # the other tree keeps the export quiet and removes unnecessary GETs.
         mathjax_version = self._detect_mathjax_version()
         if mathjax_version == "4":
             self._download_mathjax_files(MATHJAX_4X_FILES, silent=False)
@@ -540,8 +545,8 @@ class ReportDownloadHTML:
                 except Exception as e:
                     raise OSError(f"Unable to create target directory: {base}\nError: {str(e)}")
 
-    def _detect_mathjax_version(self) -> str:
-        """Probe the ADR server to determine which MathJax major version is installed.
+    def _detect_mathjax_version_from_installation(self) -> str:
+        """Probe the ADR server for MathJax when page HTML is inconclusive.
 
         Checks for the presence of each version's top-level sentinel file:
 
@@ -567,28 +572,41 @@ class ReportDownloadHTML:
                 continue
         return "unknown"
 
-    def _download(self):
-        self._filemap = dict()
-        if self._url is None:
-            raise ValueError("No URL specified")
-        if self._directory is None:
-            raise ValueError("No directory specified")
+    def _detect_mathjax_version(self) -> str:
+        """Resolve the MathJax major version for the current export.
 
-        # Make sure we are not writing into a Nexus database directory (which has a media
-        # directory).  We do not check for a "media" directory as that breaks the use case of
-        # exporting repeatedly into the same root directory.
-        if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
-            raise ValueError("Cannot export into a Nexus database directory")
+        The rendered report HTML is the best source of truth because it names
+        the loader the page actually references.  If that HTML does not expose
+        a recognizable MathJax loader, fall back to the installation probe so
+        older report templates and unusual deployments still export cleanly.
+        """
+        if self._mathjax_version is not None:
+            return self._mathjax_version
 
-        # media/ must always exist — _download_special_files() and _get_file() write into it.
+        if self._report_html is not None:
+            html_version = detect_mathjax_version_from_html(self._report_html)
+            if html_version != "unknown":
+                self._mathjax_version = html_version
+                return self._mathjax_version
+
+        self._mathjax_version = self._detect_mathjax_version_from_installation()
+        return self._mathjax_version
+
+    def _make_output_dirs(self, mathjax_version: str) -> None:
+        """Create the offline export directory tree for one MathJax version.
+
+        Parameters
+        ----------
+        mathjax_version : str
+            Resolved MathJax major version.  ``"4"`` and ``"2"`` create only
+            the matching version-specific tree; ``"unknown"`` keeps only the
+            common export directories so the later best-effort download pass can
+            still write files without leaving dead empty version folders.
+        """
+        # media/ must always exist - both special-file downloads and rewritten
+        # report assets write into it regardless of the MathJax version.
         self._make_dir([self._directory, "media"])
 
-        # Probe the server once to find out which MathJax major version is
-        # installed.  Only one version can be present at runtime, so we create
-        # only the matching directory tree to avoid leaving dead empty dirs.
-        mathjax_version = self._detect_mathjax_version()
-
-        # MathJax 4.x directory tree
         if mathjax_version == "4":
             self._make_dir([self._directory, "media", "a11y"])
             self._make_dir([self._directory, "media", "input", "mml", "extensions"])
@@ -596,8 +614,6 @@ class ReportDownloadHTML:
             self._make_dir([self._directory, "media", "output"])
             self._make_dir([self._directory, "media", "sre", "mathmaps"])
             self._make_dir([self._directory, "media", "ui"])
-
-        # MathJax 2.x directory tree (kept for backward compatibility)
         elif mathjax_version == "2":
             self._make_dir([self._directory, "media", "config"])
             self._make_dir([self._directory, "media", "extensions", "TeX"])
@@ -658,14 +674,38 @@ class ReportDownloadHTML:
             ]
         )
 
-        # get the webpage html source
+    def _download(self):
+        self._filemap = dict()
+        self._report_html = None
+        self._mathjax_version = None
+        if self._url is None:
+            raise ValueError("No URL specified")
+        if self._directory is None:
+            raise ValueError("No directory specified")
+
+        # Make sure we are not writing into a Nexus database directory (which has a media
+        # directory).  We do not check for a "media" directory as that breaks the use case of
+        # exporting repeatedly into the same root directory.
+        if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
+            raise ValueError("Cannot export into a Nexus database directory")
+
+        # media/ must always exist — _download_special_files() and _get_file() write into it.
+        # Read the rendered report first so MathJax detection can follow the
+        # loader the page actually uses instead of guessing from installation
+        # layout alone.
         resp = requests.get(self._url)  # nosec B400
         if resp.status_code != requests.codes.ok:
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
+        self._report_html = resp.text
+
+        # Decide the MathJax tree after reading the report HTML so the export
+        # follows the loader the page actually references.
+        mathjax_version = self._detect_mathjax_version()
+        self._make_output_dirs(mathjax_version)
         # debugging...
         if self._debug:
             with open(os.path.join(self._directory, "index.raw"), "wb") as f:
-                f.write(resp.text.encode("utf8"))
+                f.write(self._report_html.encode("utf8"))
 
         # some files that hide out under some .js
         self._download_special_files()
@@ -700,7 +740,7 @@ class ReportDownloadHTML:
         #    tiff_promise_6ad0cc989c414473a4823bf42b2c4d92.then( nexus_image_load_tiff_image.bind(null, "nexus_image_6ad0cc989c414473a4823bf42b2c4d92"), nexus_image_general_error);
         # }
 
-        html = resp.text
+        html = self._report_html
         html = self._replace_blocks(html, "<link", "/>")
         html = self._replace_blocks(html, "<img id='guiicon", ">")
         html = self._replace_blocks(html, "e.src = '", "';")

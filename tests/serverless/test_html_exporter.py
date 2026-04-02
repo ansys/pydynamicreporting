@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import textwrap
+from unittest.mock import patch
 
 import pytest
 
@@ -47,7 +48,9 @@ def _fragment_with_static_ref(path: str) -> str:
     return f'<div class="body-content m-1"><link rel="stylesheet" href="{path}"/></div>'
 
 
-def _make_exporter_for_mathjax_detection(tmp_path: Path) -> ServerlessReportExporter:
+def _make_exporter_for_mathjax_detection(
+    tmp_path: Path, *, html_content: str = "<div/>"
+) -> ServerlessReportExporter:
     """Build a minimal exporter instance for filesystem-only MathJax tests.
 
     These tests exercise version detection directly, so they do not need the
@@ -55,7 +58,7 @@ def _make_exporter_for_mathjax_detection(tmp_path: Path) -> ServerlessReportExpo
     avoids mixing static-directory concerns with the broader export behavior.
     """
     return ServerlessReportExporter(
-        html_content="<div/>",
+        html_content=html_content,
         output_dir=tmp_path / "out",
         static_dir=tmp_path / "static",
         media_dir=tmp_path / "media",
@@ -360,6 +363,21 @@ def test_detect_mathjax_version_4x_from_static_tree(tmp_path: Path):
     assert exporter._detect_mathjax_version() == "4"
 
 
+def test_detect_mathjax_version_prefers_html_over_static_tree(tmp_path: Path):
+    """Rendered HTML should decide the version before static fallback probes."""
+    exporter = _make_exporter_for_mathjax_detection(
+        tmp_path,
+        html_content='<script src="/static/website/scripts/mathjax/tex-mml-chtml.js"></script>',
+    )
+
+    with patch.object(
+        exporter,
+        "_detect_mathjax_version_from_static_tree",
+        side_effect=AssertionError("static fallback should not run"),
+    ):
+        assert exporter._detect_mathjax_version() == "4"
+
+
 def test_detect_mathjax_version_2x_from_static_tree(tmp_path: Path):
     """A 2.x sentinel on disk should be reported when the 4.x loader is absent."""
     exporter = _make_exporter_for_mathjax_detection(tmp_path)
@@ -373,6 +391,14 @@ def test_detect_mathjax_version_unknown_when_no_sentinel_exists(tmp_path: Path):
     exporter = _make_exporter_for_mathjax_detection(tmp_path)
 
     assert exporter._detect_mathjax_version() == "unknown"
+
+
+def test_detect_mathjax_version_falls_back_to_static_tree_when_html_is_unknown(tmp_path: Path):
+    """Unknown HTML should defer to the static-tree sentinel check."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/MathJax.js", "")
+
+    assert exporter._detect_mathjax_version() == "2"
 
 
 def test_detect_mathjax_version_uses_cached_result_after_first_lookup(tmp_path: Path):
@@ -401,9 +427,11 @@ def test_detect_mathjax_version_uses_cached_result_after_first_lookup(tmp_path: 
 
 
 def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
-    """A 4.x install should create only the 4.x-specific directory layout."""
-    exporter = _make_exporter_for_mathjax_detection(tmp_path)
-    _write(exporter._static_dir / "website/scripts/mathjax/tex-mml-chtml.js", "")
+    """A page that references MathJax 4.x should get only the 4.x directory layout."""
+    exporter = _make_exporter_for_mathjax_detection(
+        tmp_path,
+        html_content='<script src="/static/website/scripts/mathjax/tex-mml-chtml.js"></script>',
+    )
 
     exporter._make_output_dirs()
 
@@ -438,9 +466,11 @@ def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
 
 
 def test_make_output_dirs_creates_only_2x_mathjax_tree(tmp_path: Path):
-    """A 2.x install should create only the legacy MathJax directory layout."""
-    exporter = _make_exporter_for_mathjax_detection(tmp_path)
-    _write(exporter._static_dir / "website/scripts/mathjax/MathJax.js", "")
+    """A page that references MathJax 2.x should get only the legacy directory layout."""
+    exporter = _make_exporter_for_mathjax_detection(
+        tmp_path,
+        html_content='<script src="/static/website/scripts/mathjax/MathJax.js"></script>',
+    )
 
     exporter._make_output_dirs()
 

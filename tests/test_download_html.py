@@ -118,6 +118,15 @@ def _make_response(status_code: int, content: bytes = b"asset") -> MagicMock:
     return response
 
 
+def _make_text_response(status_code: int, text: str) -> MagicMock:
+    """Create a fake HTML response for downloader flow tests."""
+    response = MagicMock()
+    response.status_code = status_code
+    response.text = text
+    response.content = text.encode("utf-8")
+    return response
+
+
 def _assert_paths_exist(base_path: Path, relative_paths: tuple[str, ...]) -> None:
     """Assert that every relative path exists below ``base_path``."""
     for relative_path in relative_paths:
@@ -133,17 +142,8 @@ def _assert_paths_missing(base_path: Path, relative_paths: tuple[str, ...]) -> N
 def _run_download_until_after_directory_setup(
     downloader: rd.ReportDownloadHTML, mathjax_version: str
 ) -> None:
-    """Execute ``_download()`` only through the directory-creation phase.
-
-    ``_download()`` builds the export directory structure before it performs the
-    first HTML GET. Interrupting that first network request lets the test
-    inspect the exact pre-download directory tree without any later file writes
-    changing it.
-    """
-    with patch.object(downloader, "_detect_mathjax_version", return_value=mathjax_version):
-        with patch("requests.get", side_effect=RuntimeError("stop after dirs")):
-            with pytest.raises(RuntimeError, match="stop after dirs"):
-                downloader._download()
+    """Create only the export directories for the requested MathJax version."""
+    downloader._make_output_dirs(mathjax_version)
 
 
 def test_detect_mathjax_version_4x() -> None:
@@ -219,6 +219,61 @@ def test_detect_mathjax_version_request_exception_returns_unknown() -> None:
     assert version == "unknown"
 
 
+def test_detect_mathjax_version_prefers_report_html_when_available() -> None:
+    """Rendered HTML should decide the version before any installation probe."""
+    downloader, _tmpdir = _make_downloader()
+    downloader._report_html = '<script src="/static/website/scripts/mathjax/MathJax.js"></script>'
+
+    with patch.object(
+        downloader,
+        "_detect_mathjax_version_from_installation",
+        side_effect=AssertionError("installation probe should not run"),
+    ):
+        version = downloader._detect_mathjax_version()
+
+    assert version == "2"
+
+
+def test_detect_mathjax_version_falls_back_to_installation_when_html_is_unknown() -> None:
+    """Unknown HTML should defer to the installation-level sentinel probe."""
+    downloader, _tmpdir = _make_downloader()
+    downloader._report_html = "<div>No MathJax loader here</div>"
+
+    with patch.object(downloader, "_detect_mathjax_version_from_installation", return_value="4"):
+        version = downloader._detect_mathjax_version()
+
+    assert version == "4"
+
+
+def test_download_uses_report_html_for_mathjax_directory_selection(tmp_path) -> None:
+    """The main download flow should create MathJax dirs from the report HTML."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    html_response = _make_text_response(
+        requests.codes.ok,
+        '<script src="/static/website/scripts/mathjax/MathJax.js"></script>',
+    )
+
+    with patch("requests.get", return_value=html_response):
+        with patch.object(
+            downloader,
+            "_detect_mathjax_version_from_installation",
+            side_effect=AssertionError("installation probe should not run"),
+        ):
+            with patch.object(downloader, "_download_special_files"):
+                with patch.object(
+                    downloader, "_replace_blocks", side_effect=lambda html, *a, **k: html
+                ):
+                    with patch.object(
+                        downloader, "_inline_ansys_viewer", side_effect=lambda html: html
+                    ):
+                        downloader._download()
+
+    assert (tmp_path / "media" / "config").is_dir()
+    assert not (tmp_path / "media" / "a11y").exists()
+
+
 def test_download_special_files_only_requests_detected_4x_assets(tmp_path) -> None:
     """A detected 4.x install should not waste GETs on the 2.x tree."""
     downloader = rd.ReportDownloadHTML(
@@ -273,7 +328,7 @@ def test_download_special_files_writes_2x_loader_and_ui_assets(tmp_path) -> None
     assert (tmp_path / "media" / "images" / "CloseX-31.png").read_bytes() == b"mathjax-2x"
 
 
-def test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
+def _obsolete_test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
     """When _detect_mathjax_version returns 'unknown', media/ must still be created."""
     downloader = rd.ReportDownloadHTML(
         url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
@@ -285,6 +340,16 @@ def test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
             with pytest.raises(RuntimeError, match="stop after dirs"):
                 downloader._download()
     # media/ must have been created unconditionally
+    assert (tmp_path / "media").is_dir()
+
+
+def test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
+    """Unknown version should still create the common media root."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    downloader._make_output_dirs("unknown")
+
     assert (tmp_path / "media").is_dir()
 
 

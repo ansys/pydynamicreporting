@@ -42,6 +42,7 @@ from ..utils.html_export_constants import (
     VIEWER_JS,
     VIEWER_UTILS,
 )
+from ..utils.html_export_mathjax import detect_mathjax_version_from_html
 
 
 class ServerlessReportExporter:
@@ -94,10 +95,10 @@ class ServerlessReportExporter:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False
-        # MathJax version detection is installation-level state, so cache it on
-        # the exporter instance.  The export flow asks the same question from
-        # both directory setup and asset-copy code paths; caching avoids a
-        # second filesystem walk while keeping the call sites simple.
+        # Cache the resolved MathJax version for the lifetime of one export.
+        # Directory creation and asset-copy logic both ask the same question;
+        # caching keeps the answer stable and avoids repeated HTML/static-tree
+        # scans during the same export.
         self._mathjax_version: str | None = None
 
     def _should_use_data_uri(self, size: int) -> bool:
@@ -235,8 +236,8 @@ class ServerlessReportExporter:
             text = text[:idx1] + new_path + text[idx2:]
             current = idx1 + len(new_path)
 
-    def _detect_mathjax_version(self) -> str:
-        """Detect which MathJax major version is installed in the static directory.
+    def _detect_mathjax_version_from_static_tree(self) -> str:
+        """Detect which MathJax major version is installed in the static tree.
 
         Checks for each version's top-level sentinel file:
 
@@ -263,10 +264,26 @@ class ServerlessReportExporter:
         # detection constant-time and avoids probing the larger asset trees.
         for version, sentinel in MATHJAX_VERSION_SENTINELS:
             if (mathjax_root / sentinel).is_file():
-                self._mathjax_version = version
-                return self._mathjax_version
+                return version
+        return "unknown"
 
-        self._mathjax_version = "unknown"
+    def _detect_mathjax_version(self) -> str:
+        """Resolve the MathJax major version for this export.
+
+        The rendered HTML is the best source of truth because it names the
+        loader the exported page actually references.  If the fragment does not
+        expose a recognizable MathJax script tag, fall back to the static
+        directory sentinel files so older templates still export correctly.
+        """
+        if self._mathjax_version is not None:
+            return self._mathjax_version
+
+        html_version = detect_mathjax_version_from_html(self._html_content)
+        if html_version != "unknown":
+            self._mathjax_version = html_version
+            return self._mathjax_version
+
+        self._mathjax_version = self._detect_mathjax_version_from_static_tree()
         return self._mathjax_version
 
     def _copy_mathjax_files(self, files: tuple[str, ...], *, silent: bool) -> None:
@@ -289,9 +306,9 @@ class ServerlessReportExporter:
         by the legacy layout into the output directory.
         """
         # --- MathJax (core + fonts) ---
-        # Detect which MathJax version is present on this ADR install.
-        # Only one version can exist at runtime; files for the other are
-        # silently skipped without warnings.
+        # Detect which MathJax loader the exported page expects.  HTML decides
+        # first; the static tree only acts as a fallback.  Files for the other
+        # major version are skipped quietly.
         mathjax_version = self._detect_mathjax_version()
 
         if mathjax_version == "4":
@@ -620,16 +637,15 @@ class ServerlessReportExporter:
     def _make_output_dirs(self):
         """Creates the necessary directory structure in the output location.
 
-        MathJax directory trees are created conditionally: the 4.x tree is only
-        created when ``tex-mml-chtml.js`` is found in the static directory, and
-        the legacy 2.x tree is only created when ``MathJax.js`` is found.  This
-        avoids creating empty dead directories on installs that only ship one
-        version of MathJax.
+        MathJax directory trees are created conditionally from the resolved
+        export-time MathJax version.  HTML script references decide first so the
+        directory layout matches the page being exported; static-tree sentinels
+        only act as a fallback when the HTML is inconclusive.
         """
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create MathJax directory tree for whichever version is installed.
-        # The two version trees are mutually exclusive, so we use if/elif.
+        # Create only the version-specific tree the exported page actually
+        # needs.  The two major-version layouts are mutually exclusive.
         mathjax_version = self._detect_mathjax_version()
         if mathjax_version == "4":
             for d in [
