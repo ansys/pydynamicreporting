@@ -28,11 +28,14 @@ import urllib.parse
 
 import requests
 
-from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
 from .html_export_constants import MATHJAX_2X_FILES, MATHJAX_4X_FILES, MATHJAX_VERSION_SENTINELS
 from .html_export_mathjax import detect_mathjax_version_from_html
 
 # Default Ansys version to use as a fallback.
+# Direct ``ReportDownloadHTML`` callers may not have a service object handy, so
+# preserve the historical bundled-product asset namespace until a concrete
+# server version is supplied.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
 
 

@@ -67,7 +67,8 @@ from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
-from ..common_utils import get_install_info, populate_template
+from ..compatibility import get_compatibility_warning_for_install_version
+from ..common_utils import populate_template, resolve_install_info
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -353,20 +354,37 @@ class ADR:
             except Exception as e:
                 self._logger.warning(f"Problem shutting down container/service: {str(e)}")
 
-            install_dir, self._ansys_version = get_install_info(
+            install_resolution = resolve_install_info(
                 ansys_installation=tmp_install_dir.name,
                 ansys_version=ansys_version,
             )
+            install_dir, self._ansys_version = (
+                install_resolution.install_dir,
+                install_resolution.version,
+            )
         else:
             # Local installation.
-            install_dir, self._ansys_version = get_install_info(
+            install_resolution = resolve_install_info(
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
+            )
+            install_dir, self._ansys_version = (
+                install_resolution.install_dir,
+                install_resolution.version,
             )
 
         if install_dir is None:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
         self._ansys_installation = Path(install_dir)
+        # Mirror the service-mode check: warn after resolving the install
+        # version, but do not block setup for an otherwise valid installation.
+        #
+        # Implicit auto-discovery no longer suppresses the warning. If a
+        # machine only has an older unsupported ADR release available, setup
+        # should still surface that compatibility risk to the caller.
+        compatibility_warning = get_compatibility_warning_for_install_version(self._ansys_version)
+        if compatibility_warning:
+            warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
     @staticmethod
     def _check_dir(dir_):
@@ -690,6 +708,11 @@ class ADR:
 
         # Work around Linux timezone issues when needed.
         report_utils.apply_timezone_workaround()
+
+        # === Settings compatibility shim ===
+        from ._compat import sanitize_settings
+
+        overrides = sanitize_settings(overrides)
 
         # Django settings + setup.
         try:

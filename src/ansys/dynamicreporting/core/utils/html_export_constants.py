@@ -23,9 +23,11 @@
 # This file centralizes constants and file lists used by both the server-based
 # and serverless HTML export implementations to avoid code duplication.
 
-from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
 
 # Default Ansys version to use as a fallback.
+# Keep export assets on the bundled namespace when the caller does not provide
+# a concrete server/install version.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
 
 # -----------------------

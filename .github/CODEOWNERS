@@ -17,6 +17,8 @@
 # anywhere in your repository.
 #apps/ @octocat
 
+pyproject.toml @viseshrp
+
 /src/ansys/dynamicreporting/core/serverless/ @viseshrp
 /src/ansys/dynamicreporting/core/utils/ @viseshrp
 

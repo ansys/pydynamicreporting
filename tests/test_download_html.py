@@ -28,11 +28,20 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+from ansys.dynamicreporting.core.compatibility import DEFAULT_STATIC_ASSET_VERSION
 from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils.html_export_constants import (
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
 )
+
+
+def test_download_defaults_to_bundled_asset_namespace() -> None:
+    # Direct helper usage often happens without a Service instance, so the
+    # fallback namespace should stay pinned to the bundled asset version.
+    downloader = rd.ReportDownloadHTML(url=None, directory=".")
+
+    assert downloader._ansys_version == DEFAULT_STATIC_ASSET_VERSION
 
 
 def test_download_use_data(request, adr_service_query) -> None:
