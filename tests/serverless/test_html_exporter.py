@@ -375,6 +375,31 @@ def test_detect_mathjax_version_unknown_when_no_sentinel_exists(tmp_path: Path):
     assert exporter._detect_mathjax_version() == "unknown"
 
 
+def test_detect_mathjax_version_uses_cached_result_after_first_lookup(tmp_path: Path):
+    """Repeated detector calls should reuse the first resolved installation state.
+
+    The exporter asks for the MathJax version from both directory creation and
+    asset-copy code paths during one export.  This test verifies that the
+    version is resolved once per exporter instance and then served from the
+    cache instead of touching the filesystem again.
+    """
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    mathjax_root = exporter._static_dir / "website/scripts/mathjax"
+    first_sentinel = mathjax_root / "tex-mml-chtml.js"
+    second_sentinel = mathjax_root / "MathJax.js"
+
+    _write(first_sentinel, "")
+    assert exporter._detect_mathjax_version() == "4"
+
+    # If the detector re-ran the filesystem scan, the changed sentinels below
+    # would flip the answer to 2.x.  A cached result keeps the export behavior
+    # stable for the lifetime of this exporter instance.
+    first_sentinel.unlink()
+    _write(second_sentinel, "")
+
+    assert exporter._detect_mathjax_version() == "4"
+
+
 def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
     """A 4.x install should create only the 4.x-specific directory layout."""
     exporter = _make_exporter_for_mathjax_detection(tmp_path)

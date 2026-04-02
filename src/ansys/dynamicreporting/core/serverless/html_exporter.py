@@ -94,6 +94,11 @@ class ServerlessReportExporter:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False
+        # MathJax version detection is installation-level state, so cache it on
+        # the exporter instance.  The export flow asks the same question from
+        # both directory setup and asset-copy code paths; caching avoids a
+        # second filesystem walk while keeping the call sites simple.
+        self._mathjax_version: str | None = None
 
     def _should_use_data_uri(self, size: int) -> bool:
         """Determines if an asset should be inlined based on settings and size limits."""
@@ -247,13 +252,22 @@ class ServerlessReportExporter:
             ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
             detected, or ``"unknown"`` when neither sentinel file is found.
         """
+        # Cache the result for the lifetime of the exporter.  A single export
+        # should see one stable ADR installation layout, so recomputing the
+        # same sentinel lookup adds I/O without changing the answer.
+        if self._mathjax_version is not None:
+            return self._mathjax_version
+
         mathjax_root = self._static_dir / "website/scripts/mathjax"
         # Only the version sentinel files need to be checked here.  That keeps
         # detection constant-time and avoids probing the larger asset trees.
         for version, sentinel in MATHJAX_VERSION_SENTINELS:
             if (mathjax_root / sentinel).is_file():
-                return version
-        return "unknown"
+                self._mathjax_version = version
+                return self._mathjax_version
+
+        self._mathjax_version = "unknown"
+        return self._mathjax_version
 
     def _copy_mathjax_files(self, files: tuple[str, ...], *, silent: bool) -> None:
         """Copy a version-specific MathJax asset set into the legacy media layout.

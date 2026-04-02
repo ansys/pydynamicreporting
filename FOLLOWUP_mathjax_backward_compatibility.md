@@ -30,7 +30,7 @@
 ## Deferred / Optional Review Items
 
 - [x] Shared MathJax constants would improve maintainability, but refactoring both exporters to consume a single source of truth is not required to make this branch correct.
-- Caching `_detect_mathjax_version()` in the serverless exporter is harmless, but the current double lookup is not a correctness problem.
+- [x] Cache `_detect_mathjax_version()` in the serverless exporter so one export does not repeat the same sentinel scan.
 - Changing `if` / `if` to `if` / `elif` in `report_download_html.py` is clearer, but it does not change behavior with the current return values.
 - Extracting helper functions for repeated copy loops would reduce duplication, but it is cleanup work rather than required follow-up.
 - [x] Add directory-creation tests that prove 4.x, 2.x, and unknown installs precreate the intended export tree for both exporters.
