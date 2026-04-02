@@ -22,7 +22,15 @@
 
 # version
 # ADR service core
-from ansys.dynamicreporting.core import Item, Report, Service, __version__
+from ansys.dynamicreporting.core import (
+    BUNDLED_PRODUCT_RELEASE,
+    Item,
+    Report,
+    Service,
+    SUPPORTED_PRODUCT_LINES,
+    __version__,
+    get_compatibility_info,
+)
 
 # ADR serverless core
 from ansys.dynamicreporting.core.serverless import (
@@ -71,3 +79,6 @@ from ansys.dynamicreporting.core.serverless import (
 from ansys.dynamicreporting.core.serverless import Item as ServerlessItem
 
 print(__version__)
+print(BUNDLED_PRODUCT_RELEASE)
+print(SUPPORTED_PRODUCT_LINES)
+print(get_compatibility_info())
