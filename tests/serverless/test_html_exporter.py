@@ -47,6 +47,24 @@ def _fragment_with_static_ref(path: str) -> str:
     return f'<div class="body-content m-1"><link rel="stylesheet" href="{path}"/></div>'
 
 
+def _make_exporter_for_mathjax_detection(tmp_path: Path) -> ServerlessReportExporter:
+    """Build a minimal exporter instance for filesystem-only MathJax tests.
+
+    These tests exercise version detection directly, so they do not need the
+    heavier ADR fixture.  Keeping the setup local makes the tests fast and
+    avoids mixing static-directory concerns with the broader export behavior.
+    """
+    return ServerlessReportExporter(
+        html_content="<div/>",
+        output_dir=tmp_path / "out",
+        static_dir=tmp_path / "static",
+        media_dir=tmp_path / "media",
+        static_url="/static/",
+        media_url="/media/",
+        ansys_version="252",
+    )
+
+
 # ----------------------------
 # tests
 # ----------------------------
@@ -320,3 +338,26 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
     out = (tmp_path / "export9" / "index.html").read_text(encoding="utf-8")
     # Exporter leaves the original path when it can't find a local file
     assert missing_href in out
+
+
+def test_detect_mathjax_version_4x_from_static_tree(tmp_path: Path):
+    """A 4.x sentinel on disk should be reported without probing the 2.x tree."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/tex-mml-chtml.js", "")
+
+    assert exporter._detect_mathjax_version() == "4"
+
+
+def test_detect_mathjax_version_2x_from_static_tree(tmp_path: Path):
+    """A 2.x sentinel on disk should be reported when the 4.x loader is absent."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/MathJax.js", "")
+
+    assert exporter._detect_mathjax_version() == "2"
+
+
+def test_detect_mathjax_version_unknown_when_no_sentinel_exists(tmp_path: Path):
+    """Missing sentinel files should leave the exporter in the unknown state."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+
+    assert exporter._detect_mathjax_version() == "unknown"
