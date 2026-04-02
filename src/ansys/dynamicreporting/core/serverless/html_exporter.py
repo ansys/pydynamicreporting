@@ -33,6 +33,9 @@ from ..utils.html_export_constants import (
     CONTEXT_MENU_JS,
     DRACO_JS,
     FONTS,
+    MATHJAX_2X_FILES,
+    MATHJAX_4X_FILES,
+    MATHJAX_VERSION_SENTINELS,
     NEXUS_IMAGES,
     THREE_JS,
     VIEWER_IMAGES_OLD,
@@ -245,11 +248,26 @@ class ServerlessReportExporter:
             detected, or ``"unknown"`` when neither sentinel file is found.
         """
         mathjax_root = self._static_dir / "website/scripts/mathjax"
-        if (mathjax_root / "tex-mml-chtml.js").is_file():
-            return "4"
-        if (mathjax_root / "MathJax.js").is_file():
-            return "2"
+        # Only the version sentinel files need to be checked here.  That keeps
+        # detection constant-time and avoids probing the larger asset trees.
+        for version, sentinel in MATHJAX_VERSION_SENTINELS:
+            if (mathjax_root / sentinel).is_file():
+                return version
         return "unknown"
+
+    def _copy_mathjax_files(self, files: tuple[str, ...], *, silent: bool) -> None:
+        """Copy a version-specific MathJax asset set into the legacy media layout.
+
+        The exported report expects MathJax files under ``./media`` regardless
+        of how they are stored under ``website/scripts/mathjax`` in the ADR
+        installation.  This helper keeps that path rewrite in one place so the
+        version branches below stay small and readable.
+        """
+        for source_rel_path in files:
+            # Every MathJax asset keeps the same relative path below the
+            # ``mathjax/`` folder; only the export root changes to ``media/``.
+            relative_path = source_rel_path.split("mathjax/", 1)[1]
+            self._copy_static_file(source_rel_path, f"media/{relative_path}", silent=silent)
 
     def _copy_special_files(self):
         """
@@ -257,114 +275,25 @@ class ServerlessReportExporter:
         by the legacy layout into the output directory.
         """
         # --- MathJax (core + fonts) ---
-        # Split into two version-specific lists so warnings can be selectively
-        # suppressed: only the non-installed version's files are silenced.
-        mathjax_4x_files = [
-            "website/scripts/mathjax/core.js",
-            "website/scripts/mathjax/loader.js",
-            "website/scripts/mathjax/startup.js",
-            "website/scripts/mathjax/tex-mml-chtml.js",  # important: top-level loader
-            "website/scripts/mathjax/LICENSE",
-            "website/scripts/mathjax/a11y/assistive-mml.js",
-            "website/scripts/mathjax/a11y/complexity.js",
-            "website/scripts/mathjax/a11y/explorer.js",
-            "website/scripts/mathjax/a11y/semantic-enrich.js",
-            "website/scripts/mathjax/a11y/speech.js",
-            "website/scripts/mathjax/a11y/sre.js",
-            "website/scripts/mathjax/input/mml/entities.js",
-            "website/scripts/mathjax/input/mml/extensions/mml3.js",
-            "website/scripts/mathjax/input/mml/extensions/mml3.sef.json",
-            "website/scripts/mathjax/input/tex/extensions/ams.js",
-            "website/scripts/mathjax/input/tex/extensions/noerrors.js",
-            "website/scripts/mathjax/input/tex/extensions/noundefined.js",
-            "website/scripts/mathjax/output/chtml.js",
-            "website/scripts/mathjax/output/svg.js",
-            "website/scripts/mathjax/sre/mathmaps/af.json",
-            "website/scripts/mathjax/sre/mathmaps/base.json",
-            "website/scripts/mathjax/sre/mathmaps/ca.json",
-            "website/scripts/mathjax/sre/mathmaps/da.json",
-            "website/scripts/mathjax/sre/mathmaps/de.json",
-            "website/scripts/mathjax/sre/mathmaps/en.json",
-            "website/scripts/mathjax/sre/mathmaps/es.json",
-            "website/scripts/mathjax/sre/mathmaps/euro.json",
-            "website/scripts/mathjax/sre/mathmaps/fr.json",
-            "website/scripts/mathjax/sre/mathmaps/hi.json",
-            "website/scripts/mathjax/sre/mathmaps/it.json",
-            "website/scripts/mathjax/sre/mathmaps/ko.json",
-            "website/scripts/mathjax/sre/mathmaps/nb.json",
-            "website/scripts/mathjax/sre/mathmaps/nemeth.json",
-            "website/scripts/mathjax/sre/mathmaps/nn.json",
-            "website/scripts/mathjax/sre/mathmaps/sv.json",
-            "website/scripts/mathjax/sre/speech-worker.js",
-            "website/scripts/mathjax/ui/lazy.js",
-            "website/scripts/mathjax/ui/menu.js",
-            "website/scripts/mathjax/ui/no-dark-mode.js",
-            "website/scripts/mathjax/ui/safe.js",
-        ]
-        # MathJax 2.x files (kept for backward compatibility with older ADR installs)
-        mathjax_2x_files = [
-            "website/scripts/mathjax/jax/input/TeX/config.js",
-            "website/scripts/mathjax/jax/input/MathML/config.js",
-            "website/scripts/mathjax/jax/input/AsciiMath/config.js",
-            "website/scripts/mathjax/extensions/tex2jax.js",
-            "website/scripts/mathjax/extensions/mml2jax.js",
-            "website/scripts/mathjax/extensions/asciimath2jax.js",
-            "website/scripts/mathjax/extensions/MathZoom.js",
-            "website/scripts/mathjax/extensions/MathMenu.js",
-            "website/scripts/mathjax/extensions/MathEvents.js",
-            "website/scripts/mathjax/jax/element/mml/jax.js",
-            "website/scripts/mathjax/jax/input/TeX/jax.js",
-            "website/scripts/mathjax/extensions/TeX/AMSmath.js",
-            "website/scripts/mathjax/extensions/TeX/AMSsymbols.js",
-            "website/scripts/mathjax/extensions/TeX/noErrors.js",
-            "website/scripts/mathjax/extensions/TeX/noUndefined.js",
-            "website/scripts/mathjax/config/TeX-AMS-MML_SVG.js",
-            "website/scripts/mathjax/jax/output/SVG/jax.js",
-            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
-            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
-            "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "website/scripts/mathjax/MathJax.js",  # important: top-level loader (MathJax 2.x)
-            "website/scripts/mathjax/extensions/HelpDialog.js",
-            "website/scripts/mathjax/images/MenuArrow-15.png",
-            "website/scripts/mathjax/images/CloseX-31.png",
-        ]
-
         # Detect which MathJax version is present on this ADR install.
         # Only one version can exist at runtime; files for the other are
         # silently skipped without warnings.
         mathjax_version = self._detect_mathjax_version()
 
         if mathjax_version == "4":
-            # MathJax 4.x is installed — copy 4.x files normally, skip 2.x silently
-            for f in mathjax_4x_files:
-                target_path = "media/" + (
-                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-                )
-                self._copy_static_file(f, target_path)
-            for f in mathjax_2x_files:
-                target_path = "media/" + (
-                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-                )
-                self._copy_static_file(f, target_path, silent=True)
+            # Copy the installed tree with warnings so a partial install is
+            # visible, then skip legacy-only files quietly.
+            self._copy_mathjax_files(MATHJAX_4X_FILES, silent=False)
+            self._copy_mathjax_files(MATHJAX_2X_FILES, silent=True)
         elif mathjax_version == "2":
-            # MathJax 2.x is installed — copy 2.x files normally, skip 4.x silently
-            for f in mathjax_2x_files:
-                target_path = "media/" + (
-                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-                )
-                self._copy_static_file(f, target_path)
-            for f in mathjax_4x_files:
-                target_path = "media/" + (
-                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-                )
-                self._copy_static_file(f, target_path, silent=True)
+            # The legacy tree still needs to export cleanly for older ADR
+            # installs, but newer-only files should not spam warnings.
+            self._copy_mathjax_files(MATHJAX_2X_FILES, silent=False)
+            self._copy_mathjax_files(MATHJAX_4X_FILES, silent=True)
         else:
-            # Version unknown — attempt all files silently (best-effort)
-            for f in mathjax_4x_files + mathjax_2x_files:
-                target_path = "media/" + (
-                    f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-                )
-                self._copy_static_file(f, target_path, silent=True)
+            # If detection fails, best-effort both trees silently so offline
+            # export still succeeds on unusual installations.
+            self._copy_mathjax_files(MATHJAX_4X_FILES + MATHJAX_2X_FILES, silent=True)
 
         # --- Favicon ---
         # Legacy HTML links to favicon.ico, but only favicon.png exists in static.

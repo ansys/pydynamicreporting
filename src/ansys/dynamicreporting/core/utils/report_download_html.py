@@ -29,6 +29,7 @@ import urllib.parse
 import requests
 
 from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from .html_export_constants import MATHJAX_2X_FILES, MATHJAX_4X_FILES, MATHJAX_VERSION_SENTINELS
 
 # Default Ansys version to use as a fallback.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
@@ -146,88 +147,19 @@ class ReportDownloadHTML:
             current = idx1 + len(new_path)
 
     def _download_special_files(self):
-        # MathJax ver 4.1.1
-        files = [
-            # MathJax 4.x files
-            "media/core.js",
-            "media/loader.js",
-            "media/startup.js",
-            "media/tex-mml-chtml.js",  # important: top-level loader
-            "media/LICENSE",
-            "media/a11y/assistive-mml.js",
-            "media/a11y/complexity.js",
-            "media/a11y/explorer.js",
-            "media/a11y/semantic-enrich.js",
-            "media/a11y/speech.js",
-            "media/a11y/sre.js",
-            "media/input/mml/entities.js",
-            "media/input/mml/extensions/mml3.js",
-            "media/input/mml/extensions/mml3.sef.json",
-            "media/input/tex/extensions/ams.js",
-            "media/input/tex/extensions/noerrors.js",
-            "media/input/tex/extensions/noundefined.js",
-            "media/output/chtml.js",
-            "media/output/svg.js",
-            "media/sre/mathmaps/af.json",
-            "media/sre/mathmaps/base.json",
-            "media/sre/mathmaps/ca.json",
-            "media/sre/mathmaps/da.json",
-            "media/sre/mathmaps/de.json",
-            "media/sre/mathmaps/en.json",
-            "media/sre/mathmaps/es.json",
-            "media/sre/mathmaps/euro.json",
-            "media/sre/mathmaps/fr.json",
-            "media/sre/mathmaps/hi.json",
-            "media/sre/mathmaps/it.json",
-            "media/sre/mathmaps/ko.json",
-            "media/sre/mathmaps/nb.json",
-            "media/sre/mathmaps/nemeth.json",
-            "media/sre/mathmaps/nn.json",
-            "media/sre/mathmaps/sv.json",
-            "media/sre/speech-worker.js",
-            "media/ui/lazy.js",
-            "media/ui/menu.js",
-            "media/ui/no-dark-mode.js",
-            "media/ui/safe.js",
-            # Support for old MathJax files (MathJax 2.x, kept for backward compatibility)
-            "media/jax/input/TeX/config.js",
-            "media/jax/input/MathML/config.js",
-            "media/jax/input/AsciiMath/config.js",
-            "media/extensions/tex2jax.js",
-            "media/extensions/mml2jax.js",
-            "media/extensions/asciimath2jax.js",
-            "media/extensions/MathZoom.js",
-            "media/extensions/MathEvents.js",
-            "media/extensions/MathMenu.js",
-            "media/jax/element/mml/jax.js",
-            "media/jax/input/TeX/jax.js",
-            "media/extensions/TeX/AMSmath.js",
-            "media/extensions/TeX/AMSsymbols.js",
-            "media/extensions/TeX/noErrors.js",
-            "media/extensions/TeX/noUndefined.js",
-            "media/config/TeX-AMS-MML_SVG.js",
-            "media/jax/output/SVG/jax.js",
-            "media/jax/output/SVG/fonts/TeX/fontdata.js",
-            "media/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
-            "media/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
-            "media/images/MenuArrow-15.png",
-        ]
-
-        tmp = urllib.parse.urlsplit(self._url)
-        for f in files:
-            mangled = f.replace("media/", "/static/website/scripts/mathjax/")
-            url = tmp.scheme + "://" + tmp.netloc + mangled
-            resp = requests.get(url, allow_redirects=True)  # nosec B400
-            if resp.status_code == requests.codes.ok:
-                filename = os.path.join(self._directory, f)
-                try:
-                    os.makedirs(os.path.dirname(filename), exist_ok=True)
-                    with open(filename, "wb") as fh:
-                        fh.write(resp.content)
-                except Exception as e:
-                    print(f"Unable to download MathJax file: {f}\nError {str(e)}")
-            else:
-                print(f"Unable to get: {url}")
+        # The remote path already knows the installed MathJax major version, so
+        # only fetch the matching tree.  Unlike the serverless exporter, every
+        # extra check here is a network round-trip, so avoiding the other tree
+        # keeps offline export quiet and reduces unnecessary I/O.
+        mathjax_version = self._detect_mathjax_version()
+        if mathjax_version == "4":
+            self._download_mathjax_files(MATHJAX_4X_FILES, silent=False)
+        elif mathjax_version == "2":
+            self._download_mathjax_files(MATHJAX_2X_FILES, silent=False)
+        else:
+            # Unknown installs still get a best-effort pass across both trees,
+            # but missing files stay silent because neither set is authoritative.
+            self._download_mathjax_files(MATHJAX_4X_FILES + MATHJAX_2X_FILES, silent=True)
 
         # Additional files to be mapped to the media directory
         images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
@@ -366,6 +298,55 @@ class ReportDownloadHTML:
             data = data.encode("utf-8")
         return data
 
+    @staticmethod
+    def _mathjax_media_path(source_rel_path: str) -> str:
+        """Map a static MathJax asset path to the exported ``media/`` layout.
+
+        ADR serves MathJax assets from ``website/scripts/mathjax/...``.  The
+        offline export keeps only the path segment below ``mathjax/`` and moves
+        it under ``media/`` so existing HTML references stay portable.
+        """
+        relative_path = source_rel_path.split("mathjax/", 1)[1]
+        return os.path.join("media", relative_path)
+
+    @staticmethod
+    def _write_binary_file(filename: str, data: bytes) -> None:
+        """Write a binary payload after ensuring its parent directory exists.
+
+        Several download paths save files under nested directories that may only
+        exist for one MathJax major version.  Centralizing the write keeps the
+        file-handle handling deterministic and avoids duplicating mkdir logic.
+        """
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "wb") as file_handle:
+            file_handle.write(data)
+
+    def _download_mathjax_files(self, files: tuple[str, ...], *, silent: bool) -> None:
+        """Download one MathJax asset set into the offline export tree.
+
+        Parameters
+        ----------
+        files : tuple[str, ...]
+            Static asset paths rooted at ``website/scripts/mathjax``.
+        silent : bool
+            When ``True``, missing files are ignored because version detection
+            failed and neither asset tree can be treated as authoritative.
+        """
+        tmp = urllib.parse.urlsplit(self._url)
+        mathjax_root_url = tmp.scheme + "://" + tmp.netloc + "/static/"
+
+        for source_rel_path in files:
+            url = mathjax_root_url + source_rel_path
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            if resp.status_code == requests.codes.ok:
+                filename = os.path.join(self._directory, self._mathjax_media_path(source_rel_path))
+                try:
+                    self._write_binary_file(filename, resp.content)
+                except OSError as e:
+                    print(f"Unable to download MathJax file: {source_rel_path}\nError {e}")
+            elif not silent:
+                print(f"Unable to get: {url}")
+
     def _download_static_files(self, files, source_path, target_path, comment):
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
@@ -378,7 +359,7 @@ class ReportDownloadHTML:
                     data = self.fix_viewer_component_paths(
                         str(filename), resp.content, self._ansys_version
                     )
-                    open(filename, "wb").write(data)
+                    self._write_binary_file(filename, data)
                 except Exception as e:
                     print(f"Unable to download {comment}: {f}\nError: {e}")
 
@@ -429,7 +410,7 @@ class ReportDownloadHTML:
                     # for in the field debugging, allow for the data uri sources to be saved
                     if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
                         filename = os.path.join(self._directory, "media", basename)
-                        open(filename, "wb").write(tmp)
+                        self._write_binary_file(filename, tmp)
                 else:
                     # Special case for Babylon js viewer.  We get here via this link...
                     # <script src="/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/scene.js"></script>
@@ -453,7 +434,7 @@ class ReportDownloadHTML:
                     else:
                         results = f"./media/{basename}"
                     filename = os.path.join(self._directory, "media", basename)
-                    open(filename, "wb").write(tmp)
+                    self._write_binary_file(filename, tmp)
             except Exception as e:
                 print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
         else:
@@ -575,10 +556,7 @@ class ReportDownloadHTML:
         """
         tmp = urllib.parse.urlsplit(self._url)
         base = tmp.scheme + "://" + tmp.netloc + "/static/website/scripts/mathjax/"
-        for version, sentinel in (
-            ("4", "tex-mml-chtml.js"),
-            ("2", "MathJax.js"),
-        ):
+        for version, sentinel in MATHJAX_VERSION_SENTINELS:
             try:
                 resp = requests.head(base + sentinel, allow_redirects=True)  # nosec B400
                 if resp.status_code == requests.codes.ok:
@@ -620,7 +598,7 @@ class ReportDownloadHTML:
             self._make_dir([self._directory, "media", "ui"])
 
         # MathJax 2.x directory tree (kept for backward compatibility)
-        if mathjax_version == "2":
+        elif mathjax_version == "2":
             self._make_dir([self._directory, "media", "config"])
             self._make_dir([self._directory, "media", "extensions", "TeX"])
             self._make_dir(

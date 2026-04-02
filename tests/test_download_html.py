@@ -28,6 +28,10 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core.utils import report_download_html as rd
+from ansys.dynamicreporting.core.utils.html_export_constants import (
+    MATHJAX_2X_FILES,
+    MATHJAX_4X_FILES,
+)
 
 
 def test_download_use_data(request, adr_service_query) -> None:
@@ -91,19 +95,31 @@ def test_download(request, adr_service_query) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_downloader(url="http://localhost:8000/reports/report_display/") -> rd.ReportDownloadHTML:
-    """Return a ReportDownloadHTML instance with a fake URL (no live server)."""
+def _make_downloader(
+    url="http://localhost:8000/reports/report_display/",
+) -> tuple[rd.ReportDownloadHTML, tempfile.TemporaryDirectory]:
+    """Return a downloader plus its tempdir so tests control cleanup explicitly."""
     tmpdir = tempfile.TemporaryDirectory()
     downloader = rd.ReportDownloadHTML(url=url, directory=tmpdir.name)
-    # Keep a reference to the TemporaryDirectory so it is not garbage-collected
-    # (and thus deleted) before the downloader is done being used.
-    downloader._tmpdir = tmpdir  # type: ignore[attr-defined]
-    return downloader
+    return downloader, tmpdir
+
+
+def _build_mathjax_url(source_rel_path: str) -> str:
+    """Build the remote static URL that ``_download_special_files()`` requests."""
+    return f"http://localhost:8000/static/{source_rel_path}"
+
+
+def _make_response(status_code: int, content: bytes = b"asset") -> MagicMock:
+    """Create a small fake ``requests`` response for MathJax download tests."""
+    response = MagicMock()
+    response.status_code = status_code
+    response.content = content
+    return response
 
 
 def test_detect_mathjax_version_4x() -> None:
     """HEAD returning 200 for the 4.x sentinel → version "4"."""
-    downloader = _make_downloader()
+    downloader, _tmpdir = _make_downloader()
     mock_resp = MagicMock()
     mock_resp.status_code = requests.codes.ok
     with patch("requests.head", return_value=mock_resp) as mock_head:
@@ -115,7 +131,7 @@ def test_detect_mathjax_version_4x() -> None:
 
 def test_detect_mathjax_version_2x() -> None:
     """HEAD returning 404 for 4.x and 200 for 2.x sentinel → version "2"."""
-    downloader = _make_downloader()
+    downloader, _tmpdir = _make_downloader()
 
     def _head_side_effect(url, **kwargs):
         resp = MagicMock()
@@ -132,7 +148,7 @@ def test_detect_mathjax_version_2x() -> None:
 
 def test_detect_mathjax_version_405_returns_unknown() -> None:
     """HEAD returning 405 (method not allowed) for all sentinels → "unknown"."""
-    downloader = _make_downloader()
+    downloader, _tmpdir = _make_downloader()
     mock_resp = MagicMock()
     mock_resp.status_code = 405
     with patch("requests.head", return_value=mock_resp):
@@ -142,7 +158,7 @@ def test_detect_mathjax_version_405_returns_unknown() -> None:
 
 def test_detect_mathjax_version_403_returns_unknown() -> None:
     """HEAD returning 403 (forbidden) for all sentinels → "unknown"."""
-    downloader = _make_downloader()
+    downloader, _tmpdir = _make_downloader()
     mock_resp = MagicMock()
     mock_resp.status_code = 403
     with patch("requests.head", return_value=mock_resp):
@@ -152,7 +168,7 @@ def test_detect_mathjax_version_403_returns_unknown() -> None:
 
 def test_detect_mathjax_version_connection_error_returns_unknown() -> None:
     """HEAD raising ConnectionError for all sentinels → "unknown"."""
-    downloader = _make_downloader()
+    downloader, _tmpdir = _make_downloader()
     with patch("requests.head", side_effect=requests.ConnectionError("unreachable")):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
@@ -160,10 +176,64 @@ def test_detect_mathjax_version_connection_error_returns_unknown() -> None:
 
 def test_detect_mathjax_version_timeout_returns_unknown() -> None:
     """HEAD raising Timeout for all sentinels → "unknown"."""
-    downloader = _make_downloader()
+    downloader, _tmpdir = _make_downloader()
     with patch("requests.head", side_effect=requests.Timeout("timed out")):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
+
+
+def test_download_special_files_only_requests_detected_4x_assets(tmp_path) -> None:
+    """A detected 4.x install should not waste GETs on the 2.x tree."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    requested_urls: list[str] = []
+    expected_urls = {_build_mathjax_url(source_rel_path) for source_rel_path in MATHJAX_4X_FILES}
+
+    def _get_side_effect(url, **kwargs):
+        requested_urls.append(url)
+        if url in expected_urls:
+            return _make_response(requests.codes.ok)
+        return _make_response(404)
+
+    with patch.object(downloader, "_detect_mathjax_version", return_value="4"):
+        # Stub unrelated asset downloads so this test only exercises MathJax behavior.
+        with patch.object(downloader, "_download_static_files"):
+            with patch("requests.get", side_effect=_get_side_effect):
+                with patch("builtins.print") as mock_print:
+                    downloader._download_special_files()
+
+    assert set(requested_urls) == expected_urls
+    assert not mock_print.called
+    assert not (tmp_path / "media" / "MathJax.js").exists()
+
+
+def test_download_special_files_writes_2x_loader_and_ui_assets(tmp_path) -> None:
+    """A detected 2.x install should write the loader and menu assets offline."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    requested_urls: list[str] = []
+    expected_urls = {_build_mathjax_url(source_rel_path) for source_rel_path in MATHJAX_2X_FILES}
+
+    def _get_side_effect(url, **kwargs):
+        requested_urls.append(url)
+        if url in expected_urls:
+            return _make_response(requests.codes.ok, content=b"mathjax-2x")
+        return _make_response(404)
+
+    with patch.object(downloader, "_detect_mathjax_version", return_value="2"):
+        # Stub unrelated asset downloads so this test only exercises MathJax behavior.
+        with patch.object(downloader, "_download_static_files"):
+            with patch("requests.get", side_effect=_get_side_effect):
+                with patch("builtins.print") as mock_print:
+                    downloader._download_special_files()
+
+    assert set(requested_urls) == expected_urls
+    assert not mock_print.called
+    assert (tmp_path / "media" / "MathJax.js").read_bytes() == b"mathjax-2x"
+    assert (tmp_path / "media" / "extensions" / "HelpDialog.js").read_bytes() == b"mathjax-2x"
+    assert (tmp_path / "media" / "images" / "CloseX-31.png").read_bytes() == b"mathjax-2x"
 
 
 def test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
