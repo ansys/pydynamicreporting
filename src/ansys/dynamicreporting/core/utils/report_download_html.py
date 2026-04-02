@@ -561,12 +561,20 @@ class ReportDownloadHTML:
         str
             ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
             detected, or ``"unknown"`` when neither sentinel file is reachable.
+
+        Notes
+        -----
+        Redirects stay disabled for these sentinel probes. Authentication gates
+        and other middleware commonly redirect missing/forbidden asset requests
+        to an HTML login page that still returns ``200`` after the redirect
+        chain. Treating only the direct HEAD response as authoritative avoids
+        false-positive version detection in those deployments.
         """
         tmp = urllib.parse.urlsplit(self._url)
         base = tmp.scheme + "://" + tmp.netloc + "/static/website/scripts/mathjax/"
         for version, sentinel in MATHJAX_VERSION_SENTINELS:
             try:
-                resp = requests.head(base + sentinel, allow_redirects=True)  # nosec B400
+                resp = requests.head(base + sentinel, allow_redirects=False)  # nosec B400
                 if resp.status_code == requests.codes.ok:
                     return version
             except (requests.ConnectionError, requests.Timeout, requests.RequestException):

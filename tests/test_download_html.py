@@ -23,8 +23,6 @@
 from pathlib import Path
 from os.path import join
 from unittest.mock import MagicMock, patch
-
-import pytest
 import requests
 
 from ansys.dynamicreporting.core.compatibility import DEFAULT_STATIC_ASSET_VERSION
@@ -202,6 +200,21 @@ def test_detect_mathjax_version_403_returns_unknown(tmp_path: Path) -> None:
     with patch("requests.head", return_value=mock_resp):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
+
+
+def test_detect_mathjax_version_does_not_follow_redirects(tmp_path: Path) -> None:
+    """Sentinel probes should reject redirect chains such as auth/login pages."""
+    downloader = _make_downloader(tmp_path)
+    mock_resp = MagicMock()
+    mock_resp.status_code = 302
+
+    with patch("requests.head", return_value=mock_resp) as mock_head:
+        version = downloader._detect_mathjax_version()
+
+    assert version == "unknown"
+    assert mock_head.call_count == len(rd.MATHJAX_VERSION_SENTINELS)
+    for head_call in mock_head.call_args_list:
+        assert head_call.kwargs["allow_redirects"] is False
 
 
 def test_detect_mathjax_version_connection_error_returns_unknown(tmp_path: Path) -> None:
