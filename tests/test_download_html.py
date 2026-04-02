@@ -101,7 +101,7 @@ def test_download(request, adr_service_query) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Unit tests for _detect_mathjax_version — no live ADR service needed
+# Unit tests for _detect_mathjax_version - no live ADR service needed
 # ---------------------------------------------------------------------------
 
 
@@ -156,7 +156,7 @@ def _run_download_until_after_directory_setup(
 
 
 def test_detect_mathjax_version_4x() -> None:
-    """HEAD returning 200 for the 4.x sentinel → version "4"."""
+    """HEAD returning 200 for the 4.x sentinel -> version "4"."""
     downloader, _tmpdir = _make_downloader()
     mock_resp = MagicMock()
     mock_resp.status_code = requests.codes.ok
@@ -168,7 +168,7 @@ def test_detect_mathjax_version_4x() -> None:
 
 
 def test_detect_mathjax_version_2x() -> None:
-    """HEAD returning 404 for 4.x and 200 for 2.x sentinel → version "2"."""
+    """HEAD returning 404 for 4.x and 200 for 2.x sentinel -> version "2"."""
     downloader, _tmpdir = _make_downloader()
 
     def _head_side_effect(url, **kwargs):
@@ -185,7 +185,7 @@ def test_detect_mathjax_version_2x() -> None:
 
 
 def test_detect_mathjax_version_405_returns_unknown() -> None:
-    """HEAD returning 405 (method not allowed) for all sentinels → "unknown"."""
+    """HEAD returning 405 (method not allowed) for all sentinels -> "unknown"."""
     downloader, _tmpdir = _make_downloader()
     mock_resp = MagicMock()
     mock_resp.status_code = 405
@@ -195,7 +195,7 @@ def test_detect_mathjax_version_405_returns_unknown() -> None:
 
 
 def test_detect_mathjax_version_403_returns_unknown() -> None:
-    """HEAD returning 403 (forbidden) for all sentinels → "unknown"."""
+    """HEAD returning 403 (forbidden) for all sentinels -> "unknown"."""
     downloader, _tmpdir = _make_downloader()
     mock_resp = MagicMock()
     mock_resp.status_code = 403
@@ -205,7 +205,7 @@ def test_detect_mathjax_version_403_returns_unknown() -> None:
 
 
 def test_detect_mathjax_version_connection_error_returns_unknown() -> None:
-    """HEAD raising ConnectionError for all sentinels → "unknown"."""
+    """HEAD raising ConnectionError for all sentinels -> "unknown"."""
     downloader, _tmpdir = _make_downloader()
     with patch("requests.head", side_effect=requests.ConnectionError("unreachable")):
         version = downloader._detect_mathjax_version()
@@ -213,7 +213,7 @@ def test_detect_mathjax_version_connection_error_returns_unknown() -> None:
 
 
 def test_detect_mathjax_version_timeout_returns_unknown() -> None:
-    """HEAD raising Timeout for all sentinels → "unknown"."""
+    """HEAD raising Timeout for all sentinels -> "unknown"."""
     downloader, _tmpdir = _make_downloader()
     with patch("requests.head", side_effect=requests.Timeout("timed out")):
         version = downloader._detect_mathjax_version()
@@ -335,21 +335,6 @@ def test_download_special_files_writes_2x_loader_and_ui_assets(tmp_path) -> None
     assert (tmp_path / "media" / "MathJax.js").read_bytes() == b"mathjax-2x"
     assert (tmp_path / "media" / "extensions" / "HelpDialog.js").read_bytes() == b"mathjax-2x"
     assert (tmp_path / "media" / "images" / "CloseX-31.png").read_bytes() == b"mathjax-2x"
-
-
-def _obsolete_test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
-    """When _detect_mathjax_version returns 'unknown', media/ must still be created."""
-    downloader = rd.ReportDownloadHTML(
-        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
-    )
-    with patch.object(downloader, "_detect_mathjax_version", return_value="unknown"):
-        # Only test that _make_dir is called for media/ — stop before the
-        # network fetch by simulating a failing GET after dir setup.
-        with patch("requests.get", side_effect=RuntimeError("stop after dirs")):
-            with pytest.raises(RuntimeError, match="stop after dirs"):
-                downloader._download()
-    # media/ must have been created unconditionally
-    assert (tmp_path / "media").is_dir()
 
 
 def test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
