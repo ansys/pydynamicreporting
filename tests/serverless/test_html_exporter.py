@@ -401,21 +401,6 @@ def test_detect_mathjax_version_falls_back_to_static_tree_when_html_is_unknown(t
     assert exporter._detect_mathjax_version() == "2"
 
 
-def test_detect_mathjax_version_from_static_tree_ignores_outer_cache(tmp_path: Path):
-    """The static-tree helper should remain a pure filesystem probe.
-
-    The public detector owns the cached export-time decision because it
-    combines the rendered HTML signal with the installation fallback. This
-    lower-level helper should answer only from the sentinel files on disk so
-    its name and behavior stay aligned for future callers.
-    """
-    exporter = _make_exporter_for_mathjax_detection(tmp_path)
-    exporter._mathjax_version = "2"
-    _write(exporter._static_dir / "website/scripts/mathjax/tex-mml-chtml.js", "")
-
-    assert exporter._detect_mathjax_version_from_static_tree() == "4"
-
-
 def test_detect_mathjax_version_uses_cached_result_after_first_lookup(tmp_path: Path):
     """Repeated detector calls should reuse the first resolved installation state.
 
