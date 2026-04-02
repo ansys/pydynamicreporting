@@ -134,8 +134,7 @@ def install_version_to_product_release(install_version: int | str) -> str:
     normalized = str(install_version).strip()
     if not normalized.isdigit() or len(normalized) != 3:
         raise ValueError(
-            "Install version must be a digit-only string or int in 'YYR' format, "
-            "for example '271'."
+            "Install version must be a digit-only string or int in 'YYR' format, for example '271'."
         )
 
     year_line = normalized[:-1]
