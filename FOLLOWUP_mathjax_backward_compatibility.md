@@ -33,4 +33,5 @@
 - Caching `_detect_mathjax_version()` in the serverless exporter is harmless, but the current double lookup is not a correctness problem.
 - Changing `if` / `if` to `if` / `elif` in `report_download_html.py` is clearer, but it does not change behavior with the current return values.
 - Extracting helper functions for repeated copy loops would reduce duplication, but it is cleanup work rather than required follow-up.
-- Additional branch-coverage tests such as separate `403` vs `405` assertions or a base `RequestException` case are optional once the higher-value behavior tests exist.
+- [x] Add directory-creation tests that prove 4.x, 2.x, and unknown installs precreate the intended export tree for both exporters.
+- [x] Add the remaining branch-coverage test for a direct `requests.RequestException` in the remote detector.

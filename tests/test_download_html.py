@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from pathlib import Path
 from os.path import join
 import tempfile
 from unittest.mock import MagicMock, patch
@@ -117,6 +118,34 @@ def _make_response(status_code: int, content: bytes = b"asset") -> MagicMock:
     return response
 
 
+def _assert_paths_exist(base_path: Path, relative_paths: tuple[str, ...]) -> None:
+    """Assert that every relative path exists below ``base_path``."""
+    for relative_path in relative_paths:
+        assert (base_path / relative_path).is_dir()
+
+
+def _assert_paths_missing(base_path: Path, relative_paths: tuple[str, ...]) -> None:
+    """Assert that every relative path is absent below ``base_path``."""
+    for relative_path in relative_paths:
+        assert not (base_path / relative_path).exists()
+
+
+def _run_download_until_after_directory_setup(
+    downloader: rd.ReportDownloadHTML, mathjax_version: str
+) -> None:
+    """Execute ``_download()`` only through the directory-creation phase.
+
+    ``_download()`` builds the export directory structure before it performs the
+    first HTML GET. Interrupting that first network request lets the test
+    inspect the exact pre-download directory tree without any later file writes
+    changing it.
+    """
+    with patch.object(downloader, "_detect_mathjax_version", return_value=mathjax_version):
+        with patch("requests.get", side_effect=RuntimeError("stop after dirs")):
+            with pytest.raises(RuntimeError, match="stop after dirs"):
+                downloader._download()
+
+
 def test_detect_mathjax_version_4x() -> None:
     """HEAD returning 200 for the 4.x sentinel → version "4"."""
     downloader, _tmpdir = _make_downloader()
@@ -178,6 +207,14 @@ def test_detect_mathjax_version_timeout_returns_unknown() -> None:
     """HEAD raising Timeout for all sentinels → "unknown"."""
     downloader, _tmpdir = _make_downloader()
     with patch("requests.head", side_effect=requests.Timeout("timed out")):
+        version = downloader._detect_mathjax_version()
+    assert version == "unknown"
+
+
+def test_detect_mathjax_version_request_exception_returns_unknown() -> None:
+    """HEAD raising RequestException for all sentinels should return unknown."""
+    downloader, _tmpdir = _make_downloader()
+    with patch("requests.head", side_effect=requests.RequestException("generic failure")):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
 
@@ -249,3 +286,125 @@ def test_download_creates_media_dir_when_version_unknown(tmp_path) -> None:
                 downloader._download()
     # media/ must have been created unconditionally
     assert (tmp_path / "media").is_dir()
+
+
+def test_download_creates_only_4x_mathjax_dirs_when_version_is_4(tmp_path) -> None:
+    """A detected 4.x install should precreate only the 4.x MathJax tree."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    ansys_root = f"ansys{downloader._ansys_version}"
+
+    _run_download_until_after_directory_setup(downloader, "4")
+
+    _assert_paths_exist(
+        tmp_path,
+        (
+            "media",
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+            "webfonts",
+            f"{ansys_root}/nexus/images",
+            f"{ansys_root}/nexus/utils",
+            f"{ansys_root}/nexus/threejs/libs/draco/gltf",
+            f"{ansys_root}/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_paths_missing(
+        tmp_path,
+        (
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+        ),
+    )
+
+
+def test_download_creates_only_2x_mathjax_dirs_when_version_is_2(tmp_path) -> None:
+    """A detected 2.x install should precreate only the legacy MathJax tree."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    ansys_root = f"ansys{downloader._ansys_version}"
+
+    _run_download_until_after_directory_setup(downloader, "2")
+
+    _assert_paths_exist(
+        tmp_path,
+        (
+            "media",
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/output/SVG/fonts/TeX/Main/Regular",
+            "media/jax/output/SVG/fonts/TeX/Size1/Regular",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+            "webfonts",
+            f"{ansys_root}/nexus/images",
+            f"{ansys_root}/nexus/utils",
+            f"{ansys_root}/nexus/threejs/libs/draco/gltf",
+            f"{ansys_root}/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_paths_missing(
+        tmp_path,
+        (
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+        ),
+    )
+
+
+def test_download_unknown_version_skips_all_version_specific_mathjax_dirs(tmp_path) -> None:
+    """Unknown version should leave only the common export directories in place."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/", directory=str(tmp_path)
+    )
+    ansys_root = f"ansys{downloader._ansys_version}"
+
+    _run_download_until_after_directory_setup(downloader, "unknown")
+
+    _assert_paths_exist(
+        tmp_path,
+        (
+            "media",
+            "webfonts",
+            f"{ansys_root}/nexus/images",
+            f"{ansys_root}/nexus/utils",
+            f"{ansys_root}/nexus/threejs/libs/draco/gltf",
+            f"{ansys_root}/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_paths_missing(
+        tmp_path,
+        (
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+        ),
+    )

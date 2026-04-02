@@ -65,6 +65,18 @@ def _make_exporter_for_mathjax_detection(tmp_path: Path) -> ServerlessReportExpo
     )
 
 
+def _assert_output_dirs_exist(base_path: Path, relative_paths: tuple[str, ...]) -> None:
+    """Assert that each expected output directory exists."""
+    for relative_path in relative_paths:
+        assert (base_path / relative_path).is_dir()
+
+
+def _assert_output_dirs_missing(base_path: Path, relative_paths: tuple[str, ...]) -> None:
+    """Assert that each directory path is absent from the export tree."""
+    for relative_path in relative_paths:
+        assert not (base_path / relative_path).exists()
+
+
 # ----------------------------
 # tests
 # ----------------------------
@@ -361,3 +373,116 @@ def test_detect_mathjax_version_unknown_when_no_sentinel_exists(tmp_path: Path):
     exporter = _make_exporter_for_mathjax_detection(tmp_path)
 
     assert exporter._detect_mathjax_version() == "unknown"
+
+
+def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
+    """A 4.x install should create only the 4.x-specific directory layout."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/tex-mml-chtml.js", "")
+
+    exporter._make_output_dirs()
+
+    _assert_output_dirs_exist(
+        exporter._output_dir,
+        (
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+            "webfonts",
+            "ansys252/nexus/images",
+            "ansys252/nexus/utils",
+            "ansys252/nexus/threejs/libs/draco/gltf",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_output_dirs_missing(
+        exporter._output_dir,
+        (
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+        ),
+    )
+
+
+def test_make_output_dirs_creates_only_2x_mathjax_tree(tmp_path: Path):
+    """A 2.x install should create only the legacy MathJax directory layout."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/MathJax.js", "")
+
+    exporter._make_output_dirs()
+
+    _assert_output_dirs_exist(
+        exporter._output_dir,
+        (
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/output/SVG/fonts/TeX/Main/Regular",
+            "media/jax/output/SVG/fonts/TeX/Size1/Regular",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+            "webfonts",
+            "ansys252/nexus/images",
+            "ansys252/nexus/utils",
+            "ansys252/nexus/threejs/libs/draco/gltf",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_output_dirs_missing(
+        exporter._output_dir,
+        (
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+        ),
+    )
+
+
+def test_make_output_dirs_unknown_version_skips_version_specific_dirs(tmp_path: Path):
+    """Unknown installs should still create the common export directories."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+
+    exporter._make_output_dirs()
+
+    _assert_output_dirs_exist(
+        exporter._output_dir,
+        (
+            "webfonts",
+            "ansys252/nexus/images",
+            "ansys252/nexus/utils",
+            "ansys252/nexus/threejs/libs/draco/gltf",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_output_dirs_missing(
+        exporter._output_dir,
+        (
+            "media",
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+        ),
+    )
