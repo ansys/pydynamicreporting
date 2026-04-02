@@ -22,7 +22,6 @@
 
 from pathlib import Path
 from os.path import join
-import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -106,12 +105,13 @@ def test_download(request, adr_service_query) -> None:
 
 
 def _make_downloader(
+    tmp_path: Path,
     url="http://localhost:8000/reports/report_display/",
-) -> tuple[rd.ReportDownloadHTML, tempfile.TemporaryDirectory]:
-    """Return a downloader plus its tempdir so tests control cleanup explicitly."""
-    tmpdir = tempfile.TemporaryDirectory()
-    downloader = rd.ReportDownloadHTML(url=url, directory=tmpdir.name)
-    return downloader, tmpdir
+) -> rd.ReportDownloadHTML:
+    """Build a downloader in a pytest-managed temporary directory."""
+    # ``tmp_path`` keeps cleanup deterministic and avoids depending on
+    # ``TemporaryDirectory`` finalizers or implementation-specific GC timing.
+    return rd.ReportDownloadHTML(url=url, directory=str(tmp_path))
 
 
 def _build_mathjax_url(source_rel_path: str) -> str:
@@ -155,9 +155,9 @@ def _run_download_until_after_directory_setup(
     downloader._make_output_dirs(mathjax_version)
 
 
-def test_detect_mathjax_version_4x() -> None:
+def test_detect_mathjax_version_4x(tmp_path: Path) -> None:
     """HEAD returning 200 for the 4.x sentinel -> version "4"."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     mock_resp = MagicMock()
     mock_resp.status_code = requests.codes.ok
     with patch("requests.head", return_value=mock_resp) as mock_head:
@@ -167,9 +167,9 @@ def test_detect_mathjax_version_4x() -> None:
     assert mock_head.call_count == 1
 
 
-def test_detect_mathjax_version_2x() -> None:
+def test_detect_mathjax_version_2x(tmp_path: Path) -> None:
     """HEAD returning 404 for 4.x and 200 for 2.x sentinel -> version "2"."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
 
     def _head_side_effect(url, **kwargs):
         resp = MagicMock()
@@ -184,9 +184,9 @@ def test_detect_mathjax_version_2x() -> None:
     assert version == "2"
 
 
-def test_detect_mathjax_version_405_returns_unknown() -> None:
+def test_detect_mathjax_version_405_returns_unknown(tmp_path: Path) -> None:
     """HEAD returning 405 (method not allowed) for all sentinels -> "unknown"."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     mock_resp = MagicMock()
     mock_resp.status_code = 405
     with patch("requests.head", return_value=mock_resp):
@@ -194,9 +194,9 @@ def test_detect_mathjax_version_405_returns_unknown() -> None:
     assert version == "unknown"
 
 
-def test_detect_mathjax_version_403_returns_unknown() -> None:
+def test_detect_mathjax_version_403_returns_unknown(tmp_path: Path) -> None:
     """HEAD returning 403 (forbidden) for all sentinels -> "unknown"."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     mock_resp = MagicMock()
     mock_resp.status_code = 403
     with patch("requests.head", return_value=mock_resp):
@@ -204,33 +204,33 @@ def test_detect_mathjax_version_403_returns_unknown() -> None:
     assert version == "unknown"
 
 
-def test_detect_mathjax_version_connection_error_returns_unknown() -> None:
+def test_detect_mathjax_version_connection_error_returns_unknown(tmp_path: Path) -> None:
     """HEAD raising ConnectionError for all sentinels -> "unknown"."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     with patch("requests.head", side_effect=requests.ConnectionError("unreachable")):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
 
 
-def test_detect_mathjax_version_timeout_returns_unknown() -> None:
+def test_detect_mathjax_version_timeout_returns_unknown(tmp_path: Path) -> None:
     """HEAD raising Timeout for all sentinels -> "unknown"."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     with patch("requests.head", side_effect=requests.Timeout("timed out")):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
 
 
-def test_detect_mathjax_version_request_exception_returns_unknown() -> None:
+def test_detect_mathjax_version_request_exception_returns_unknown(tmp_path: Path) -> None:
     """HEAD raising RequestException for all sentinels should return unknown."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     with patch("requests.head", side_effect=requests.RequestException("generic failure")):
         version = downloader._detect_mathjax_version()
     assert version == "unknown"
 
 
-def test_detect_mathjax_version_prefers_report_html_when_available() -> None:
+def test_detect_mathjax_version_prefers_report_html_when_available(tmp_path: Path) -> None:
     """Rendered HTML should decide the version before any installation probe."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     downloader._report_html = '<script src="/static/website/scripts/mathjax/MathJax.js"></script>'
 
     with patch.object(
@@ -243,9 +243,11 @@ def test_detect_mathjax_version_prefers_report_html_when_available() -> None:
     assert version == "2"
 
 
-def test_detect_mathjax_version_falls_back_to_installation_when_html_is_unknown() -> None:
+def test_detect_mathjax_version_falls_back_to_installation_when_html_is_unknown(
+    tmp_path: Path,
+) -> None:
     """Unknown HTML should defer to the installation-level sentinel probe."""
-    downloader, _tmpdir = _make_downloader()
+    downloader = _make_downloader(tmp_path)
     downloader._report_html = "<div>No MathJax loader here</div>"
 
     with patch.object(downloader, "_detect_mathjax_version_from_installation", return_value="4"):

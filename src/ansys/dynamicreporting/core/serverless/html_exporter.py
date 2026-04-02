@@ -237,15 +237,16 @@ class ServerlessReportExporter:
             current = idx1 + len(new_path)
 
     def _detect_mathjax_version_from_static_tree(self) -> str:
-        """Detect which MathJax major version is installed in the static tree.
+        """Probe the static tree for the installed MathJax major version.
 
         Checks for each version's top-level sentinel file:
 
         * MathJax 4.x: ``website/scripts/mathjax/tex-mml-chtml.js``
         * MathJax 2.x: ``website/scripts/mathjax/MathJax.js``
 
-        Only one version can be present at runtime; the sentinel files are
-        mutually exclusive between the two version trees.
+        This helper intentionally inspects only the filesystem.  Cache ownership
+        lives in :meth:`_detect_mathjax_version`, which combines the HTML-first
+        decision with this static-tree fallback.
 
         Returns
         -------
@@ -253,12 +254,6 @@ class ServerlessReportExporter:
             ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
             detected, or ``"unknown"`` when neither sentinel file is found.
         """
-        # Cache the result for the lifetime of the exporter.  A single export
-        # should see one stable ADR installation layout, so recomputing the
-        # same sentinel lookup adds I/O without changing the answer.
-        if self._mathjax_version is not None:
-            return self._mathjax_version
-
         mathjax_root = self._static_dir / "website/scripts/mathjax"
         # Only the version sentinel files need to be checked here.  That keeps
         # detection constant-time and avoids probing the larger asset trees.
