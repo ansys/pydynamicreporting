@@ -65,7 +65,15 @@ FAVICON = "website/images/favicon.ico"
 # -----------------------
 # MathJax assets
 # -----------------------
-MATHJAX_FILES = [
+# Keep the MathJax asset trees separate so exporters can do three things
+# without maintaining duplicate inline lists:
+# 1. detect the installed major version,
+# 2. fetch the matching files loudly, and
+# 3. fall back to a silent best-effort pass only when version detection fails.
+#
+# Both export paths depend on these constants, so changes here should cover
+# both the local-copy and remote-download workflows.
+MATHJAX_4X_FILES = (
     "website/scripts/mathjax/core.js",
     "website/scripts/mathjax/loader.js",
     "website/scripts/mathjax/startup.js",
@@ -106,7 +114,46 @@ MATHJAX_FILES = [
     "website/scripts/mathjax/ui/menu.js",
     "website/scripts/mathjax/ui/no-dark-mode.js",
     "website/scripts/mathjax/ui/safe.js",
-]
+)
+
+# The MathJax 2.x tree is deeper and includes both loader assets and the
+# context-menu resources that older ADR installs still reference offline.
+MATHJAX_2X_FILES = (
+    "website/scripts/mathjax/jax/input/TeX/config.js",
+    "website/scripts/mathjax/jax/input/MathML/config.js",
+    "website/scripts/mathjax/jax/input/AsciiMath/config.js",
+    "website/scripts/mathjax/extensions/tex2jax.js",
+    "website/scripts/mathjax/extensions/mml2jax.js",
+    "website/scripts/mathjax/extensions/asciimath2jax.js",
+    "website/scripts/mathjax/extensions/MathZoom.js",
+    "website/scripts/mathjax/extensions/MathMenu.js",
+    "website/scripts/mathjax/extensions/MathEvents.js",
+    "website/scripts/mathjax/jax/element/mml/jax.js",
+    "website/scripts/mathjax/jax/input/TeX/jax.js",
+    "website/scripts/mathjax/extensions/TeX/AMSmath.js",
+    "website/scripts/mathjax/extensions/TeX/AMSsymbols.js",
+    "website/scripts/mathjax/extensions/TeX/noErrors.js",
+    "website/scripts/mathjax/extensions/TeX/noUndefined.js",
+    "website/scripts/mathjax/config/TeX-AMS-MML_SVG.js",
+    "website/scripts/mathjax/jax/output/SVG/jax.js",
+    "website/scripts/mathjax/jax/output/SVG/fonts/TeX/fontdata.js",
+    "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Main/Regular/BasicLatin.js",
+    "website/scripts/mathjax/jax/output/SVG/fonts/TeX/Size1/Regular/Main.js",
+    "website/scripts/mathjax/MathJax.js",  # important: top-level loader (MathJax 2.x)
+    "website/scripts/mathjax/extensions/HelpDialog.js",
+    "website/scripts/mathjax/images/MenuArrow-15.png",
+    "website/scripts/mathjax/images/CloseX-31.png",
+)
+
+# Keep a combined list for callers that still need a flat view of all assets.
+MATHJAX_FILES = [*MATHJAX_4X_FILES, *MATHJAX_2X_FILES]
+
+# Sentinels are top-level loaders, so checking them keeps version detection
+# O(1) while avoiding directory scans or asset-by-asset probing.
+MATHJAX_VERSION_SENTINELS = (
+    ("4", "tex-mml-chtml.js"),
+    ("2", "MathJax.js"),
+)
 
 # -----------------------
 # Viewer-related assets
