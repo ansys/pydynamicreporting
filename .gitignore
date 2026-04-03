@@ -77,3 +77,4 @@ doc/_build
 _test_enhanced_images.py
 local_tests/
 *.TGZ
+local_docs/

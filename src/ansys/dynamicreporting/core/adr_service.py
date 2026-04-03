@@ -56,7 +56,8 @@ from ansys.dynamicreporting.core.utils import report_objects, report_remote_serv
 from .adr_item import Item
 from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
-from .common_utils import get_install_info
+from .compatibility import get_compatibility_warning_for_install_version
+from .common_utils import resolve_install_info
 from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -246,9 +247,26 @@ class Service:
 
         else:  # pragma: no cover
             # local installation
-            self._ansys_installation, self._ansys_version = get_install_info(
+            install_resolution = resolve_install_info(
                 ansys_installation=ansys_installation, ansys_version=ansys_version
             )
+            self._ansys_installation, self._ansys_version = (
+                install_resolution.install_dir,
+                install_resolution.version,
+            )
+            # Run the compatibility check only after the traditional install
+            # probing succeeds so unsupported releases warn without changing the
+            # pre-existing install-detection flow.
+            #
+            # Implicit auto-discovery no longer suppresses the warning. If a
+            # machine only has an older unsupported ADR release available, we
+            # should still tell the user that the resolved install falls
+            # outside the supported window.
+            compatibility_warning = get_compatibility_warning_for_install_version(
+                self._ansys_version
+            )
+            if compatibility_warning:
+                warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
     @property
     def session_guid(self):

@@ -57,6 +57,85 @@ This is useful for lightweight workflows or embedding reporting into your own ap
 
 See :doc:`Serverless ADR documentation <serverless/index>` for full details.
 
+Compatibility Policy
+--------------------
+PyDynamicReporting uses plain SemVer for package versions, but product
+compatibility is a separate explicit contract.
+
+- ``0.x`` is the legacy transition line. ``0.10.x`` is the last legacy line
+  tied to ADR ``26.1`` behavior.
+- ``1.0.0`` is the first fully policy-driven line. Starting there, each client
+  major version maps to one ADR annual product line.
+- A policy-driven client major supports the bundled ADR annual line and the
+  immediately previous annual line.
+- Minor and patch releases stay inside the same support window.
+- Every future client major advances the support window by one ADR annual line.
+
+Under this policy:
+
+- ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
+- ``1.x`` will be bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
+- ``2.x`` will be bundled with ADR ``28.1`` and supports ``27.*`` and ``28.*``.
+... and so on.
+
+ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
+annual line currently has only one concrete release, so ``26.*`` currently
+means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Ansys/Synopsys
+changes the release cadence or adds more releases per line, but the support policy will remain the same
+since it is based on the annual product line, not the number of releases.
+
+What "Supported" Means
+----------------------
+In PyDynamicReporting, "supported" is an explicit compatibility contract, not a
+best-effort guess.
+
+- A supported ADR product line is inside the documented compatibility window
+  for that client major release.
+- Supported lines are the scope for compatibility regressions and bug fixes.
+- Supported lines are covered by this repository's targeted compatibility
+  checks and release validation for the declared policy.
+- Unsupported lines may still work in some cases, but compatibility is not
+  guaranteed.
+- When service-mode or serverless install detection finds an ADR product line
+  outside the supported window, PyDynamicReporting warns instead of silently
+  treating it as fully supported.
+
+Install Detection Defaults
+--------------------------
+If you do not pass ``ansys_version`` explicitly, PyDynamicReporting uses an
+install-facing default search order that is separate from the public support
+contract.
+
+- The install-facing default search order is independent from the public
+  compatibility contract.
+- Implicit install discovery probes the bundled install first to preserve the
+  historical default behavior, then falls back to the released compatibility
+  install when the bundled line is unavailable.
+- Older layouts remain available when you request them explicitly, but they
+  are not part of the implicit default search path.
+
+Serverless External Python Environments
+---------------------------------------
+When Serverless ADR runs from an external Python virtual environment, the
+client-side dependency set is combined with the set shipped
+inside the installed ADR product release.
+
+This means that external virtual environments should be treated as a versioned
+compatibility boundary.
+
+- Install the package together with the constraints file that matches the ADR
+  product release you are targeting.
+- Keep one external serverless virtual environment per supported ADR product
+  release family.
+
+The repository also includes a settings compatibility shim for known
+setting transitions, but that shim is only a safety net. It is not a
+replacement for using dependency constraints that match the target ADR
+installation.
+
+For the detailed serverless caveats and dependency-drift explanation, see
+:doc:`serverless/caveats`.
+
 Documentation and issues
 ------------------------
 Documentation for the latest stable release of PyDynamicReporting is hosted at
