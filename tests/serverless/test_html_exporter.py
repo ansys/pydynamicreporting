@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import textwrap
+from unittest.mock import patch
 
 import pytest
 
@@ -45,6 +46,38 @@ def _write(p: Path, data: bytes | str):
 def _fragment_with_static_ref(path: str) -> str:
     # pure fragment (no <html>), to force the exporter to wrap into a full document
     return f'<div class="body-content m-1"><link rel="stylesheet" href="{path}"/></div>'
+
+
+def _make_exporter_for_mathjax_detection(
+    tmp_path: Path, *, html_content: str = "<div/>"
+) -> ServerlessReportExporter:
+    """Build a minimal exporter instance for filesystem-only MathJax tests.
+
+    These tests exercise version detection directly, so they do not need the
+    heavier ADR fixture.  Keeping the setup local makes the tests fast and
+    avoids mixing static-directory concerns with the broader export behavior.
+    """
+    return ServerlessReportExporter(
+        html_content=html_content,
+        output_dir=tmp_path / "out",
+        static_dir=tmp_path / "static",
+        media_dir=tmp_path / "media",
+        static_url="/static/",
+        media_url="/media/",
+        ansys_version="252",
+    )
+
+
+def _assert_output_dirs_exist(base_path: Path, relative_paths: tuple[str, ...]) -> None:
+    """Assert that each expected output directory exists."""
+    for relative_path in relative_paths:
+        assert (base_path / relative_path).is_dir()
+
+
+def _assert_output_dirs_missing(base_path: Path, relative_paths: tuple[str, ...]) -> None:
+    """Assert that each directory path is absent from the export tree."""
+    for relative_path in relative_paths:
+        assert not (base_path / relative_path).exists()
 
 
 # ----------------------------
@@ -320,3 +353,191 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
     out = (tmp_path / "export9" / "index.html").read_text(encoding="utf-8")
     # Exporter leaves the original path when it can't find a local file
     assert missing_href in out
+
+
+def test_detect_mathjax_version_4x_from_static_tree(tmp_path: Path):
+    """A 4.x sentinel on disk should be reported without probing the 2.x tree."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/tex-mml-chtml.js", "")
+
+    assert exporter._detect_mathjax_version() == "4"
+
+
+def test_detect_mathjax_version_prefers_html_over_static_tree(tmp_path: Path):
+    """Rendered HTML should decide the version before static fallback probes."""
+    exporter = _make_exporter_for_mathjax_detection(
+        tmp_path,
+        html_content='<script src="/static/website/scripts/mathjax/tex-mml-chtml.js"></script>',
+    )
+
+    with patch.object(
+        exporter,
+        "_detect_mathjax_version_from_static_tree",
+        side_effect=AssertionError("static fallback should not run"),
+    ):
+        assert exporter._detect_mathjax_version() == "4"
+
+
+def test_detect_mathjax_version_2x_from_static_tree(tmp_path: Path):
+    """A 2.x sentinel on disk should be reported when the 4.x loader is absent."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/MathJax.js", "")
+
+    assert exporter._detect_mathjax_version() == "2"
+
+
+def test_detect_mathjax_version_unknown_when_no_sentinel_exists(tmp_path: Path):
+    """Missing sentinel files should leave the exporter in the unknown state."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+
+    assert exporter._detect_mathjax_version() == "unknown"
+
+
+def test_detect_mathjax_version_falls_back_to_static_tree_when_html_is_unknown(tmp_path: Path):
+    """Unknown HTML should defer to the static-tree sentinel check."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    _write(exporter._static_dir / "website/scripts/mathjax/MathJax.js", "")
+
+    assert exporter._detect_mathjax_version() == "2"
+
+
+def test_detect_mathjax_version_uses_cached_result_after_first_lookup(tmp_path: Path):
+    """Repeated detector calls should reuse the first resolved installation state.
+
+    The exporter asks for the MathJax version from both directory creation and
+    asset-copy code paths during one export.  This test verifies that the
+    version is resolved once per exporter instance and then served from the
+    cache instead of touching the filesystem again.
+    """
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+    mathjax_root = exporter._static_dir / "website/scripts/mathjax"
+    first_sentinel = mathjax_root / "tex-mml-chtml.js"
+    second_sentinel = mathjax_root / "MathJax.js"
+
+    _write(first_sentinel, "")
+    assert exporter._detect_mathjax_version() == "4"
+
+    # If the detector re-ran the filesystem scan, the changed sentinels below
+    # would flip the answer to 2.x.  A cached result keeps the export behavior
+    # stable for the lifetime of this exporter instance.
+    first_sentinel.unlink()
+    _write(second_sentinel, "")
+
+    assert exporter._detect_mathjax_version() == "4"
+
+
+def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
+    """A page that references MathJax 4.x should get only the 4.x directory layout."""
+    exporter = _make_exporter_for_mathjax_detection(
+        tmp_path,
+        html_content='<script src="/static/website/scripts/mathjax/tex-mml-chtml.js"></script>',
+    )
+
+    exporter._make_output_dirs()
+
+    _assert_output_dirs_exist(
+        exporter._output_dir,
+        (
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+            "webfonts",
+            "ansys252/nexus/images",
+            "ansys252/nexus/utils",
+            "ansys252/nexus/threejs/libs/draco/gltf",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_output_dirs_missing(
+        exporter._output_dir,
+        (
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+        ),
+    )
+
+
+def test_make_output_dirs_creates_only_2x_mathjax_tree(tmp_path: Path):
+    """A page that references MathJax 2.x should get only the legacy directory layout."""
+    exporter = _make_exporter_for_mathjax_detection(
+        tmp_path,
+        html_content='<script src="/static/website/scripts/mathjax/MathJax.js"></script>',
+    )
+
+    exporter._make_output_dirs()
+
+    _assert_output_dirs_exist(
+        exporter._output_dir,
+        (
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/output/SVG/fonts/TeX/Main/Regular",
+            "media/jax/output/SVG/fonts/TeX/Size1/Regular",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+            "webfonts",
+            "ansys252/nexus/images",
+            "ansys252/nexus/utils",
+            "ansys252/nexus/threejs/libs/draco/gltf",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_output_dirs_missing(
+        exporter._output_dir,
+        (
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+        ),
+    )
+
+
+def test_make_output_dirs_unknown_version_skips_version_specific_dirs(tmp_path: Path):
+    """Unknown installs should still create the common export directories."""
+    exporter = _make_exporter_for_mathjax_detection(tmp_path)
+
+    exporter._make_output_dirs()
+
+    _assert_output_dirs_exist(
+        exporter._output_dir,
+        (
+            "webfonts",
+            "ansys252/nexus/images",
+            "ansys252/nexus/utils",
+            "ansys252/nexus/threejs/libs/draco/gltf",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
+        ),
+    )
+    _assert_output_dirs_missing(
+        exporter._output_dir,
+        (
+            "media",
+            "media/a11y",
+            "media/input/mml/extensions",
+            "media/input/tex/extensions",
+            "media/output",
+            "media/sre/mathmaps",
+            "media/ui",
+            "media/config",
+            "media/extensions/TeX",
+            "media/jax/element/mml",
+            "media/jax/input/TeX",
+            "media/jax/input/MathML",
+            "media/jax/input/AsciiMath",
+            "media/images",
+        ),
+    )
