@@ -29,7 +29,12 @@ import urllib.parse
 import requests
 
 from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
-from .html_export_constants import MATHJAX_2X_FILES, MATHJAX_4X_FILES, MATHJAX_VERSION_SENTINELS
+from .html_export_constants import (
+    MATHJAX_2X_FILES,
+    MATHJAX_4X_FILES,
+    MATHJAX_OPTIONAL_FILES,
+    MATHJAX_VERSION_SENTINELS,
+)
 from .html_export_mathjax import detect_mathjax_version_from_html
 
 # Default Ansys version to use as a fallback.
@@ -358,7 +363,7 @@ class ReportDownloadHTML:
                     self._write_binary_file(filename, resp.content)
                 except OSError as e:
                     print(f"Unable to download MathJax file: {source_rel_path}\nError {e}")
-            elif not silent:
+            elif not (silent or source_rel_path in MATHJAX_OPTIONAL_FILES):
                 print(f"Unable to get: {url}")
 
     def _download_static_files(self, files, source_path, target_path, comment):
