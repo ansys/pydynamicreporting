@@ -62,6 +62,7 @@ from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
+from . import _dep_check
 from .base import ObjectSet
 from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
@@ -611,6 +612,10 @@ class ADR:
             adr_path = (
                 self._ansys_installation / f"nexus{self._ansys_version}" / "django"
             ).resolve(strict=True)
+            # Validate the active Python environment before importing product
+            # settings so older 261 installs fail with a targeted compatibility
+            # error instead of a deeper Django import/configuration traceback.
+            _dep_check.enforce_runtime_dependencies(self._ansys_version)
             sys.path.append(str(adr_path))
             from ceireports import settings_serverless
         except (ImportError, OSError) as e:

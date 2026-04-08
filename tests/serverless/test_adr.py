@@ -123,6 +123,45 @@ def test_setup_after_setup(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_setup_enforces_runtime_dependencies_before_importing_settings(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import _dep_check
+
+    # Build the smallest install layout that passes install resolution.
+    # The dep-check hook should fail before any product Django settings import.
+    django_dir = tmp_path / "ADR" / "nexus261" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").write_text("", encoding="utf-8")
+
+    previous_instance = ADR._instance
+    previous_is_setup = ADR._is_setup
+    adr = None
+
+    def fake_enforce_runtime_dependencies(target_install_version: int) -> None:
+        assert target_install_version == 261
+        raise ImproperlyConfiguredError("dependency check blocked setup")
+
+    monkeypatch.setattr(_dep_check, "enforce_runtime_dependencies", fake_enforce_runtime_dependencies)
+
+    try:
+        ADR._instance = None
+        ADR._is_setup = False
+        adr = ADR(ansys_installation=str(tmp_path), ansys_version=261, in_memory=True)
+
+        with pytest.raises(ImproperlyConfiguredError, match="dependency check blocked setup"):
+            adr.setup()
+
+        assert not ADR._is_setup
+    finally:
+        if adr is not None:
+            # This path fails before Django settings are configured, so only the
+            # temporary directories need cleanup here.
+            for tmp_dir in adr._tmp_dirs:
+                tmp_dir.cleanup()
+        ADR._instance = previous_instance
+        ADR._is_setup = previous_is_setup
+
+
+@pytest.mark.ado_test
 def test_get_instance_session():
     from ansys.dynamicreporting.core.serverless import Session
 
