@@ -284,7 +284,10 @@ class ReportDownloadHTML:
     def fix_viewer_component_paths(filename, data, ansys_version):
         # Special case for AVZ viewer: ANSYSViewer_min.js to set the base path for images
         if filename.endswith("ANSYSViewer_min.js"):
-            data = data.decode("utf-8")
+            try:
+                data = data.decode("utf-8")
+            except UnicodeDecodeError:
+                data = data.decode("latin-1")
             data = data.replace(
                 '"/static/website/images/"',
                 r'document.URL.replace(/\\/g, "/").replace("index.html", "media/")',
@@ -299,7 +302,10 @@ class ReportDownloadHTML:
             data = data.encode("utf-8")
         # Special case for the AVZ viewer web component (loading proxy images and play arrow)
         elif filename.endswith("viewer-loader.js"):
-            data = data.decode("utf-8")
+            try:
+                data = data.decode("utf-8")
+            except UnicodeDecodeError:
+                data = data.decode("latin-1")
             data = data.replace(
                 f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
             )
