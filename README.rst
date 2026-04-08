@@ -172,6 +172,37 @@ For serverless compatibility work, keep the base dependency set broad enough to
 span the supported ADR product lines and place release-specific pins in
 ``constraints/``.
 
+Running Tests Locally (with Docker)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The test suite requires the ADR Docker image. You can run the full CI test pipeline locally:
+
+.. code::
+
+   # Authenticate with GitHub Container Registry (one-time)
+   docker login ghcr.io -u <YOUR_GITHUB_USERNAME>
+
+   # Pull the ADR Docker image
+   make pull-docker
+
+   # Run just the serverless tests (no Ansys license needed)
+   uv run python -m pytest tests/serverless/ -v
+
+   # Run the full suite with coverage (requires ANSYSLMD_LICENSE_FILE)
+   make test
+
+For the full test suite, set environment variables first:
+
+.. code::
+
+   # Windows (PowerShell):
+   $env:ANSYSLMD_LICENSE_FILE = "1055@your-license-server"
+
+   # Linux / macOS:
+   export ANSYSLMD_LICENSE_FILE="1055@your-license-server"
+
+For detailed documentation on test categories, fixture behavior, performance tips,
+and troubleshooting, see the **"Running the pytest suite locally"** section in ``AGENTS.md``.
+
 Local GitHub Actions
 ^^^^^^^^^^^^^^^^^^^^
 To run GitHub Actions on your local desktop, install the
