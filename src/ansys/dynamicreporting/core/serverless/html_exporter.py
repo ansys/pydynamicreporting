@@ -33,12 +33,17 @@ from ..utils.html_export_constants import (
     CONTEXT_MENU_JS,
     DRACO_JS,
     FONTS,
+    MATHJAX_2X_FILES,
+    MATHJAX_4X_FILES,
+    MATHJAX_OPTIONAL_FILES,
+    MATHJAX_VERSION_SENTINELS,
     NEXUS_IMAGES,
     THREE_JS,
     VIEWER_IMAGES_OLD,
     VIEWER_JS,
     VIEWER_UTILS,
 )
+from ..utils.html_export_mathjax import detect_mathjax_version_from_html
 
 
 class ServerlessReportExporter:
@@ -91,6 +96,11 @@ class ServerlessReportExporter:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False
+        # Cache the resolved MathJax version for the lifetime of one export.
+        # Directory creation and asset-copy logic both ask the same question;
+        # caching keeps the answer stable and avoids repeated HTML/static-tree
+        # scans during the same export.
+        self._mathjax_version: str | None = None
 
     def _should_use_data_uri(self, size: int) -> bool:
         """Determines if an asset should be inlined based on settings and size limits."""
@@ -227,59 +237,94 @@ class ServerlessReportExporter:
             text = text[:idx1] + new_path + text[idx2:]
             current = idx1 + len(new_path)
 
+    def _detect_mathjax_version_from_static_tree(self) -> str:
+        """Probe the static tree for the installed MathJax major version.
+
+        Checks for each version's top-level sentinel file:
+
+        * MathJax 4.x: ``website/scripts/mathjax/tex-mml-chtml.js``
+        * MathJax 2.x: ``website/scripts/mathjax/MathJax.js``
+
+        This helper intentionally inspects only the filesystem.  Cache ownership
+        lives in :meth:`_detect_mathjax_version`, which combines the HTML-first
+        decision with this static-tree fallback.
+
+        Returns
+        -------
+        str
+            ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
+            detected, or ``"unknown"`` when neither sentinel file is found.
+        """
+        mathjax_root = self._static_dir / "website/scripts/mathjax"
+        # Only the version sentinel files need to be checked here.  That keeps
+        # detection constant-time and avoids probing the larger asset trees.
+        for version, sentinel in MATHJAX_VERSION_SENTINELS:
+            if (mathjax_root / sentinel).is_file():
+                return version
+        return "unknown"
+
+    def _detect_mathjax_version(self) -> str:
+        """Resolve the MathJax major version for this export.
+
+        The rendered HTML is the best source of truth because it names the
+        loader the exported page actually references.  If the fragment does not
+        expose a recognizable MathJax script tag, fall back to the static
+        directory sentinel files so older templates still export correctly.
+        """
+        if self._mathjax_version is not None:
+            return self._mathjax_version
+
+        html_version = detect_mathjax_version_from_html(self._html_content)
+        if html_version != "unknown":
+            self._mathjax_version = html_version
+            return self._mathjax_version
+
+        self._mathjax_version = self._detect_mathjax_version_from_static_tree()
+        return self._mathjax_version
+
+    def _copy_mathjax_files(self, files: tuple[str, ...], *, silent: bool) -> None:
+        """Copy a version-specific MathJax asset set into the legacy media layout.
+
+        The exported report expects MathJax files under ``./media`` regardless
+        of how they are stored under ``website/scripts/mathjax`` in the ADR
+        installation.  This helper keeps that path rewrite in one place so the
+        version branches below stay small and readable.
+        """
+        for source_rel_path in files:
+            # Every MathJax asset keeps the same relative path below the
+            # ``mathjax/`` folder; only the export root changes to ``media/``.
+            relative_path = source_rel_path.split("mathjax/", 1)[1]
+            self._copy_static_file(
+                source_rel_path,
+                f"media/{relative_path}",
+                silent=(silent or source_rel_path in MATHJAX_OPTIONAL_FILES),
+            )
+
     def _copy_special_files(self):
         """
         Copies static assets that are referenced indirectly (inside JS) or expected
         by the legacy layout into the output directory.
         """
         # --- MathJax (core + fonts) ---
-        mathjax_files = [
-            "website/scripts/mathjax/core.js",
-            "website/scripts/mathjax/loader.js",
-            "website/scripts/mathjax/startup.js",
-            "website/scripts/mathjax/tex-mml-chtml.js",  # important: top-level loader
-            "website/scripts/mathjax/LICENSE",
-            "website/scripts/mathjax/a11y/assistive-mml.js",
-            "website/scripts/mathjax/a11y/complexity.js",
-            "website/scripts/mathjax/a11y/explorer.js",
-            "website/scripts/mathjax/a11y/semantic-enrich.js",
-            "website/scripts/mathjax/a11y/speech.js",
-            "website/scripts/mathjax/a11y/sre.js",
-            "website/scripts/mathjax/input/mml/entities.js",
-            "website/scripts/mathjax/input/mml/extensions/mml3.js",
-            "website/scripts/mathjax/input/mml/extensions/mml3.sef.json",
-            "website/scripts/mathjax/input/tex/extensions/ams.js",
-            "website/scripts/mathjax/input/tex/extensions/noerrors.js",
-            "website/scripts/mathjax/input/tex/extensions/noundefined.js",
-            "website/scripts/mathjax/output/chtml.js",
-            "website/scripts/mathjax/output/svg.js",
-            "website/scripts/mathjax/sre/mathmaps/af.json",
-            "website/scripts/mathjax/sre/mathmaps/base.json",
-            "website/scripts/mathjax/sre/mathmaps/ca.json",
-            "website/scripts/mathjax/sre/mathmaps/da.json",
-            "website/scripts/mathjax/sre/mathmaps/de.json",
-            "website/scripts/mathjax/sre/mathmaps/en.json",
-            "website/scripts/mathjax/sre/mathmaps/es.json",
-            "website/scripts/mathjax/sre/mathmaps/euro.json",
-            "website/scripts/mathjax/sre/mathmaps/fr.json",
-            "website/scripts/mathjax/sre/mathmaps/hi.json",
-            "website/scripts/mathjax/sre/mathmaps/it.json",
-            "website/scripts/mathjax/sre/mathmaps/ko.json",
-            "website/scripts/mathjax/sre/mathmaps/nb.json",
-            "website/scripts/mathjax/sre/mathmaps/nemeth.json",
-            "website/scripts/mathjax/sre/mathmaps/nn.json",
-            "website/scripts/mathjax/sre/mathmaps/sv.json",
-            "website/scripts/mathjax/sre/speech-worker.js",
-            "website/scripts/mathjax/ui/lazy.js",
-            "website/scripts/mathjax/ui/menu.js",
-            "website/scripts/mathjax/ui/no-dark-mode.js",
-            "website/scripts/mathjax/ui/safe.js",
-        ]
-        for f in mathjax_files:
-            target_path = "media/" + (
-                f.split("mathjax/")[-1] if "mathjax/" in f else os.path.basename(f)
-            )
-            self._copy_static_file(f, target_path)
+        # Detect which MathJax loader the exported page expects.  HTML decides
+        # first; the static tree only acts as a fallback.  Files for the other
+        # major version are skipped quietly.
+        mathjax_version = self._detect_mathjax_version()
+
+        if mathjax_version == "4":
+            # Copy the installed tree with warnings so a partial install is
+            # visible, then skip legacy-only files quietly.
+            self._copy_mathjax_files(MATHJAX_4X_FILES, silent=False)
+            self._copy_mathjax_files(MATHJAX_2X_FILES, silent=True)
+        elif mathjax_version == "2":
+            # The legacy tree still needs to export cleanly for older ADR
+            # installs, but newer-only files should not spam warnings.
+            self._copy_mathjax_files(MATHJAX_2X_FILES, silent=False)
+            self._copy_mathjax_files(MATHJAX_4X_FILES, silent=True)
+        else:
+            # If detection fails, best-effort both trees silently so offline
+            # export still succeeds on unusual installations.
+            self._copy_mathjax_files(MATHJAX_4X_FILES + MATHJAX_2X_FILES, silent=True)
 
         # --- Favicon ---
         # Legacy HTML links to favicon.ico, but only favicon.png exists in static.
@@ -347,8 +392,20 @@ class ServerlessReportExporter:
             "website/scripts/jquery.min.js", f"ansys{self._ansys_version}/nexus/utils/jquery.min.js"
         )
 
-    def _copy_static_file(self, source_rel_path: str, target_rel_path: str):
-        """Helper to copy a single file from the static source to the output directory."""
+    def _copy_static_file(self, source_rel_path: str, target_rel_path: str, silent: bool = False):
+        """Helper to copy a single file from the static source to the output directory.
+
+        Parameters
+        ----------
+        source_rel_path : str
+            Path relative to the static root.
+        target_rel_path : str
+            Path relative to the output directory.
+        silent : bool, optional
+            When True, missing source files are silently skipped instead of
+            emitting a warning.  Use this for optional/backward-compat assets
+            (e.g. MathJax 2.x files that may not exist on newer ADR installs).
+        """
         source_file = self._static_dir / source_rel_path
         target_file = self._output_dir / target_rel_path
         if source_file.is_file():
@@ -357,7 +414,7 @@ class ServerlessReportExporter:
             # Patch some viewer JS internals (loader/paths) if needed
             content = self._fix_viewer_component_paths(str(target_file), content)
             target_file.write_bytes(content)
-        else:
+        elif not silent:
             self._logger.warning(f"Warning: Static source file not found: {source_file}")
 
     def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
@@ -578,26 +635,50 @@ class ServerlessReportExporter:
         return html
 
     def _make_output_dirs(self):
-        """Creates the necessary directory structure in the output location."""
+        """Creates the necessary directory structure in the output location.
+
+        MathJax directory trees are created conditionally from the resolved
+        export-time MathJax version.  HTML script references decide first so the
+        directory layout matches the page being exported; static-tree sentinels
+        only act as a fallback when the HTML is inconclusive.
+        """
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
-        dirs_to_create = [
-            # MathJax (partial structure mirrored; files will ensure subfolders exist)
-            "media/config",
-            "media/extensions/TeX",
-            "media/jax/output/SVG/fonts/TeX/Main/Regular",
-            "media/jax/output/SVG/fonts/TeX/Size1/Regular",
-            "media/jax/element/mml",
-            "media/jax/input/TeX",
-            "media/jax/input/MathML",
-            "media/jax/input/AsciiMath",
-            "media/images",
+        # Create only the version-specific tree the exported page actually
+        # needs.  The two major-version layouts are mutually exclusive.
+        mathjax_version = self._detect_mathjax_version()
+        if mathjax_version == "4":
+            for d in [
+                "media/a11y",
+                "media/input/mml/extensions",
+                "media/input/tex/extensions",
+                "media/output",
+                "media/sre/mathmaps",
+                "media/ui",
+            ]:
+                (self._output_dir / d).mkdir(parents=True, exist_ok=True)
+        elif mathjax_version == "2":
+            # Kept for backward compatibility with ADR installs that still ship MathJax 2.x
+            for d in [
+                "media/config",
+                "media/extensions/TeX",
+                "media/jax/output/SVG/fonts/TeX/Main/Regular",
+                "media/jax/output/SVG/fonts/TeX/Size1/Regular",
+                "media/jax/element/mml",
+                "media/jax/input/TeX",
+                "media/jax/input/MathML",
+                "media/jax/input/AsciiMath",
+                "media/images",
+            ]:
+                (self._output_dir / d).mkdir(parents=True, exist_ok=True)
+
+        # Common directories (always created regardless of MathJax version)
+        for d in [
             "webfonts",
             # Viewer
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
             f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
-        ]
-        for d in dirs_to_create:
+        ]:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)

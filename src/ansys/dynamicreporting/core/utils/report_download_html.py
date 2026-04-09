@@ -28,9 +28,19 @@ import urllib.parse
 
 import requests
 
-from .. import DEFAULT_ANSYS_VERSION as CURRENT_VERSION
+from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
+from .html_export_constants import (
+    MATHJAX_2X_FILES,
+    MATHJAX_4X_FILES,
+    MATHJAX_OPTIONAL_FILES,
+    MATHJAX_VERSION_SENTINELS,
+)
+from .html_export_mathjax import detect_mathjax_version_from_html
 
 # Default Ansys version to use as a fallback.
+# Direct ``ReportDownloadHTML`` callers may not have a service object handy, so
+# preserve the historical bundled-product asset namespace until a concrete
+# server version is supplied.
 ANSYS_VERSION_FALLBACK = CURRENT_VERSION
 
 
@@ -81,6 +91,11 @@ class ReportDownloadHTML:
         self._total_data_uri_size = 0
         self._max_inline_size = 1024 * 1024 * 500  # 500MB
         self._inline_size_exception = False  # record this so we can get it externally
+        # Cache the rendered report HTML and resolved MathJax version for this
+        # downloader instance.  One export should use one stable answer, so
+        # repeating the same detection work only adds network I/O.
+        self._report_html: str | None = None
+        self._mathjax_version: str | None = None
 
     def _should_use_data_uri(self, size: int) -> bool:
         self._inline_size_exception = False
@@ -146,63 +161,18 @@ class ReportDownloadHTML:
             current = idx1 + len(new_path)
 
     def _download_special_files(self):
-        # MathJax ver 4.1.1
-        files = [
-            "media/core.js",
-            "media/loader.js",
-            "media/startup.js",
-            "media/tex-mml-chtml.js",  # important: top-level loader
-            "media/LICENSE",
-            "media/a11y/assistive-mml.js",
-            "media/a11y/complexity.js",
-            "media/a11y/explorer.js",
-            "media/a11y/semantic-enrich.js",
-            "media/a11y/speech.js",
-            "media/a11y/sre.js",
-            "media/input/mml/entities.js",
-            "media/input/mml/extensions/mml3.js",
-            "media/input/mml/extensions/mml3.sef.json",
-            "media/input/tex/extensions/ams.js",
-            "media/input/tex/extensions/noerrors.js",
-            "media/input/tex/extensions/noundefined.js",
-            "media/output/chtml.js",
-            "media/output/svg.js",
-            "media/sre/mathmaps/af.json",
-            "media/sre/mathmaps/base.json",
-            "media/sre/mathmaps/ca.json",
-            "media/sre/mathmaps/da.json",
-            "media/sre/mathmaps/de.json",
-            "media/sre/mathmaps/en.json",
-            "media/sre/mathmaps/es.json",
-            "media/sre/mathmaps/euro.json",
-            "media/sre/mathmaps/fr.json",
-            "media/sre/mathmaps/hi.json",
-            "media/sre/mathmaps/it.json",
-            "media/sre/mathmaps/ko.json",
-            "media/sre/mathmaps/nb.json",
-            "media/sre/mathmaps/nemeth.json",
-            "media/sre/mathmaps/nn.json",
-            "media/sre/mathmaps/sv.json",
-            "media/sre/speech-worker.js",
-            "media/ui/lazy.js",
-            "media/ui/menu.js",
-            "media/ui/no-dark-mode.js",
-            "media/ui/safe.js",
-        ]
-
-        tmp = urllib.parse.urlsplit(self._url)
-        for f in files:
-            mangled = f.replace("media/", "/static/website/scripts/mathjax/")
-            url = tmp.scheme + "://" + tmp.netloc + mangled
-            resp = requests.get(url, allow_redirects=True)  # nosec B400
-            if resp.status_code == requests.codes.ok:
-                filename = os.path.join(self._directory, f)
-                try:
-                    open(filename, "wb").write(resp.content)
-                except Exception as e:
-                    print(f"Unable to download MathJax file: {f}\nError {str(e)}")
-            else:
-                print(f"Unable to get: {url}")
+        # The remote path resolves the page's MathJax version before downloads
+        # begin, so only the matching asset tree needs to be fetched.  Avoiding
+        # the other tree keeps the export quiet and removes unnecessary GETs.
+        mathjax_version = self._detect_mathjax_version()
+        if mathjax_version == "4":
+            self._download_mathjax_files(MATHJAX_4X_FILES, silent=False)
+        elif mathjax_version == "2":
+            self._download_mathjax_files(MATHJAX_2X_FILES, silent=False)
+        else:
+            # Unknown installs still get a best-effort pass across both trees,
+            # but missing files stay silent because neither set is authoritative.
+            self._download_mathjax_files(MATHJAX_4X_FILES + MATHJAX_2X_FILES, silent=True)
 
         # Additional files to be mapped to the media directory
         images = ["menu_20_gray.png", "menu_20_white.png", "nexus_front_page.png", "nexus_logo.png"]
@@ -319,7 +289,10 @@ class ReportDownloadHTML:
     def fix_viewer_component_paths(filename, data, ansys_version):
         # Special case for AVZ viewer: ANSYSViewer_min.js to set the base path for images
         if filename.endswith("ANSYSViewer_min.js"):
-            data = data.decode("utf-8")
+            try:
+                data = data.decode("utf-8")
+            except UnicodeDecodeError:
+                data = data.decode("latin-1")
             data = data.replace(
                 '"/static/website/images/"',
                 r'document.URL.replace(/\\/g, "/").replace("index.html", "media/")',
@@ -334,12 +307,64 @@ class ReportDownloadHTML:
             data = data.encode("utf-8")
         # Special case for the AVZ viewer web component (loading proxy images and play arrow)
         elif filename.endswith("viewer-loader.js"):
-            data = data.decode("utf-8")
+            try:
+                data = data.decode("utf-8")
+            except UnicodeDecodeError:
+                data = data.decode("latin-1")
             data = data.replace(
                 f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
             )
             data = data.encode("utf-8")
         return data
+
+    @staticmethod
+    def _mathjax_media_path(source_rel_path: str) -> str:
+        """Map a static MathJax asset path to the exported ``media/`` layout.
+
+        ADR serves MathJax assets from ``website/scripts/mathjax/...``.  The
+        offline export keeps only the path segment below ``mathjax/`` and moves
+        it under ``media/`` so existing HTML references stay portable.
+        """
+        relative_path = source_rel_path.split("mathjax/", 1)[1]
+        return os.path.join("media", relative_path)
+
+    @staticmethod
+    def _write_binary_file(filename: str, data: bytes) -> None:
+        """Write a binary payload after ensuring its parent directory exists.
+
+        Several download paths save files under nested directories that may only
+        exist for one MathJax major version.  Centralizing the write keeps the
+        file-handle handling deterministic and avoids duplicating mkdir logic.
+        """
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "wb") as file_handle:
+            file_handle.write(data)
+
+    def _download_mathjax_files(self, files: tuple[str, ...], *, silent: bool) -> None:
+        """Download one MathJax asset set into the offline export tree.
+
+        Parameters
+        ----------
+        files : tuple[str, ...]
+            Static asset paths rooted at ``website/scripts/mathjax``.
+        silent : bool
+            When ``True``, missing files are ignored because version detection
+            failed and neither asset tree can be treated as authoritative.
+        """
+        tmp = urllib.parse.urlsplit(self._url)
+        mathjax_root_url = tmp.scheme + "://" + tmp.netloc + "/static/"
+
+        for source_rel_path in files:
+            url = mathjax_root_url + source_rel_path
+            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            if resp.status_code == requests.codes.ok:
+                filename = os.path.join(self._directory, self._mathjax_media_path(source_rel_path))
+                try:
+                    self._write_binary_file(filename, resp.content)
+                except OSError as e:
+                    print(f"Unable to download MathJax file: {source_rel_path}\nError {e}")
+            elif not (silent or source_rel_path in MATHJAX_OPTIONAL_FILES):
+                print(f"Unable to get: {url}")
 
     def _download_static_files(self, files, source_path, target_path, comment):
         tmp = urllib.parse.urlsplit(self._url)
@@ -353,7 +378,7 @@ class ReportDownloadHTML:
                     data = self.fix_viewer_component_paths(
                         str(filename), resp.content, self._ansys_version
                     )
-                    open(filename, "wb").write(data)
+                    self._write_binary_file(filename, data)
                 except Exception as e:
                     print(f"Unable to download {comment}: {f}\nError: {e}")
 
@@ -404,7 +429,7 @@ class ReportDownloadHTML:
                     # for in the field debugging, allow for the data uri sources to be saved
                     if "NEXUS_REPORT_DOWNLOAD_SAVE_DATAURI_SOURCE" in os.environ:
                         filename = os.path.join(self._directory, "media", basename)
-                        open(filename, "wb").write(tmp)
+                        self._write_binary_file(filename, tmp)
                 else:
                     # Special case for Babylon js viewer.  We get here via this link...
                     # <script src="/media/b4bb7a9e-aa4d-11e9-a8ef-44850048bb82_scene/scene.js"></script>
@@ -428,7 +453,7 @@ class ReportDownloadHTML:
                     else:
                         results = f"./media/{basename}"
                     filename = os.path.join(self._directory, "media", basename)
-                    open(filename, "wb").write(tmp)
+                    self._write_binary_file(filename, tmp)
             except Exception as e:
                 print(f"Unable to write downloaded file: {basename}\nError: {str(e)}")
         else:
@@ -534,25 +559,118 @@ class ReportDownloadHTML:
                 except Exception as e:
                     raise OSError(f"Unable to create target directory: {base}\nError: {str(e)}")
 
-    def _download(self):
-        self._filemap = dict()
-        if self._url is None:
-            raise ValueError("No URL specified")
-        if self._directory is None:
-            raise ValueError("No directory specified")
+    def _detect_mathjax_version_from_installation(self) -> str:
+        """Probe the ADR server for MathJax when page HTML is inconclusive.
 
-        # Make sure we are not writing into a Nexus database directory (which has a media
-        # directory).  We do not check for a "media" directory as that breaks the use case of
-        # exporting repeatedly into the same root directory.
-        if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
-            raise ValueError("Cannot export into a Nexus database directory")
+        Checks for the presence of each version's top-level sentinel file:
 
-        self._make_dir([self._directory, "media", "a11y"])
-        self._make_dir([self._directory, "media", "input", "mml", "extensions"])
-        self._make_dir([self._directory, "media", "input", "tex", "extensions"])
-        self._make_dir([self._directory, "media", "output"])
-        self._make_dir([self._directory, "media", "sre", "mathmaps"])
-        self._make_dir([self._directory, "media", "ui"])
+        * MathJax 4.x: ``/static/website/scripts/mathjax/tex-mml-chtml.js``
+        * MathJax 2.x: ``/static/website/scripts/mathjax/MathJax.js``
+
+        Returns
+        -------
+        str
+            ``"4"`` when MathJax 4.x is detected, ``"2"`` when MathJax 2.x is
+            detected, or ``"unknown"`` when neither sentinel file is reachable.
+
+        Notes
+        -----
+        Redirects stay disabled for these sentinel probes. Authentication gates
+        and other middleware commonly redirect missing/forbidden asset requests
+        to an HTML login page that still returns ``200`` after the redirect
+        chain. Treating only the direct HEAD response as authoritative avoids
+        false-positive version detection in those deployments.
+        """
+        tmp = urllib.parse.urlsplit(self._url)
+        base = tmp.scheme + "://" + tmp.netloc + "/static/website/scripts/mathjax/"
+        for version, sentinel in MATHJAX_VERSION_SENTINELS:
+            try:
+                resp = requests.head(base + sentinel, allow_redirects=False)  # nosec B400
+                if resp.status_code == requests.codes.ok:
+                    return version
+            except (requests.ConnectionError, requests.Timeout, requests.RequestException):
+                # Server unreachable or request failed — skip this sentinel and
+                # try the next one.  If all fail, fall through to "unknown".
+                continue
+        return "unknown"
+
+    def _detect_mathjax_version(self) -> str:
+        """Resolve the MathJax major version for the current export.
+
+        The rendered report HTML is the best source of truth because it names
+        the loader the page actually references.  If that HTML does not expose
+        a recognizable MathJax loader, fall back to the installation probe so
+        older report templates and unusual deployments still export cleanly.
+        """
+        if self._mathjax_version is not None:
+            return self._mathjax_version
+
+        if self._report_html is not None:
+            html_version = detect_mathjax_version_from_html(self._report_html)
+            if html_version != "unknown":
+                self._mathjax_version = html_version
+                return self._mathjax_version
+
+        self._mathjax_version = self._detect_mathjax_version_from_installation()
+        return self._mathjax_version
+
+    def _make_output_dirs(self, mathjax_version: str) -> None:
+        """Create the offline export directory tree for one MathJax version.
+
+        Parameters
+        ----------
+        mathjax_version : str
+            Resolved MathJax major version.  ``"4"`` and ``"2"`` create only
+            the matching version-specific tree; ``"unknown"`` keeps only the
+            common export directories so the later best-effort download pass can
+            still write files without leaving dead empty version folders.
+        """
+        # media/ must always exist - both special-file downloads and rewritten
+        # report assets write into it regardless of the MathJax version.
+        self._make_dir([self._directory, "media"])
+
+        if mathjax_version == "4":
+            self._make_dir([self._directory, "media", "a11y"])
+            self._make_dir([self._directory, "media", "input", "mml", "extensions"])
+            self._make_dir([self._directory, "media", "input", "tex", "extensions"])
+            self._make_dir([self._directory, "media", "output"])
+            self._make_dir([self._directory, "media", "sre", "mathmaps"])
+            self._make_dir([self._directory, "media", "ui"])
+        elif mathjax_version == "2":
+            self._make_dir([self._directory, "media", "config"])
+            self._make_dir([self._directory, "media", "extensions", "TeX"])
+            self._make_dir(
+                [
+                    self._directory,
+                    "media",
+                    "jax",
+                    "output",
+                    "SVG",
+                    "fonts",
+                    "TeX",
+                    "Main",
+                    "Regular",
+                ]
+            )
+            self._make_dir(
+                [
+                    self._directory,
+                    "media",
+                    "jax",
+                    "output",
+                    "SVG",
+                    "fonts",
+                    "TeX",
+                    "Size1",
+                    "Regular",
+                ]
+            )
+            self._make_dir([self._directory, "media", "jax", "element", "mml"])
+            self._make_dir([self._directory, "media", "jax", "input", "TeX"])
+            self._make_dir([self._directory, "media", "jax", "input", "MathML"])
+            self._make_dir([self._directory, "media", "jax", "input", "AsciiMath"])
+            self._make_dir([self._directory, "media", "images"])
+
         self._make_dir([self._directory, "webfonts"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "images"])
         self._make_dir([self._directory, f"ansys{self._ansys_version}", "nexus", "utils"])
@@ -578,14 +696,38 @@ class ReportDownloadHTML:
             ]
         )
 
-        # get the webpage html source
+    def _download(self):
+        self._filemap = dict()
+        self._report_html = None
+        self._mathjax_version = None
+        if self._url is None:
+            raise ValueError("No URL specified")
+        if self._directory is None:
+            raise ValueError("No directory specified")
+
+        # Make sure we are not writing into a Nexus database directory (which has a media
+        # directory).  We do not check for a "media" directory as that breaks the use case of
+        # exporting repeatedly into the same root directory.
+        if os.path.isfile(os.path.join(self._directory, "db.sqlite3")):
+            raise ValueError("Cannot export into a Nexus database directory")
+
+        # media/ must always exist — _download_special_files() and _get_file() write into it.
+        # Read the rendered report first so MathJax detection can follow the
+        # loader the page actually uses instead of guessing from installation
+        # layout alone.
         resp = requests.get(self._url)  # nosec B400
         if resp.status_code != requests.codes.ok:
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
+        self._report_html = resp.text
+
+        # Decide the MathJax tree after reading the report HTML so the export
+        # follows the loader the page actually references.
+        mathjax_version = self._detect_mathjax_version()
+        self._make_output_dirs(mathjax_version)
         # debugging...
         if self._debug:
             with open(os.path.join(self._directory, "index.raw"), "wb") as f:
-                f.write(resp.text.encode("utf8"))
+                f.write(self._report_html.encode("utf8"))
 
         # some files that hide out under some .js
         self._download_special_files()
@@ -620,7 +762,7 @@ class ReportDownloadHTML:
         #    tiff_promise_6ad0cc989c414473a4823bf42b2c4d92.then( nexus_image_load_tiff_image.bind(null, "nexus_image_6ad0cc989c414473a4823bf42b2c4d92"), nexus_image_general_error);
         # }
 
-        html = resp.text
+        html = self._report_html
         html = self._replace_blocks(html, "<link", "/>")
         html = self._replace_blocks(html, "<img id='guiicon", ">")
         html = self._replace_blocks(html, "e.src = '", "';")
