@@ -59,9 +59,7 @@ class NexusPDFSave:
             10,
         ]  # A4 page (210mmx297mm) in portrait with 10mm margins
         # print delay with a one-shot timer
-        self._print_delay = int(
-            os.environ.get("CEI_NEXUS_PDF_EXPORT_DELAY", "5000")
-        )  # time(ms)
+        self._print_delay = int(os.environ.get("CEI_NEXUS_PDF_EXPORT_DELAY", "5000"))  # time(ms)
         self._print_timer = QTimer()
         self._print_timer.setSingleShot(True)
 
@@ -101,12 +99,8 @@ class NexusPDFSave:
             layout = QtGui.QPageLayout.Orientation.Portrait
             if self._page[2]:
                 layout = QtGui.QPageLayout.Orientation.Landscape
-            margins = QtCore.QMarginsF(
-                self._page[3], self._page[4], self._page[5], self._page[6]
-            )
-            page = QtGui.QPageLayout(
-                pagesize, layout, margins, QtGui.QPageLayout.Unit.Millimeter
-            )
+            margins = QtCore.QMarginsF(self._page[3], self._page[4], self._page[5], self._page[6])
+            page = QtGui.QPageLayout(pagesize, layout, margins, QtGui.QPageLayout.Unit.Millimeter)
             # print with a delay
             self._print_timer.timeout.connect(
                 partial(self.webpage().printToPdf, self.pdf_callback, page)

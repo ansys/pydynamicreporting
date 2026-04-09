@@ -1700,9 +1700,7 @@ def launch_local_database_server(
 
     # Start the busy cursor
     if parent:
-        QtWidgets.QApplication.setOverrideCursor(
-            QtGui.QCursor(QtCore.Qt.CursorShape.WaitCursor)
-        )
+        QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.CursorShape.WaitCursor))
 
     # Here we run nexus_launcher with the following command line:
     # nexus_launcher.bat start --db_directory {dirname} --server_port {port} --internal_base_port {port} --instance_count 1

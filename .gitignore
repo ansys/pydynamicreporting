@@ -78,5 +78,5 @@ local_tests/
 *.TGZ
 local_docs/
 
-# VSCode workspace files 
+# VSCode workspace files
 *.code-workspace
