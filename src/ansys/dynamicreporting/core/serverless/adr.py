@@ -714,10 +714,15 @@ class ADR:
         # Work around Linux timezone issues when needed.
         report_utils.apply_timezone_workaround()
 
-        # === Settings compatibility shim ===
-        from ._compat import sanitize_settings
+        # === Settings compatibility plan ===
+        from ._compat import (
+            build_compatibility_plan,
+            run_post_configure_hooks,
+            run_pre_setup_hooks,
+        )
 
-        overrides = sanitize_settings(overrides)
+        compat_plan = build_compatibility_plan(overrides)
+        overrides = compat_plan.overrides
 
         # Django settings + setup.
         try:
@@ -727,6 +732,10 @@ class ADR:
                 import django
 
                 settings.configure(**overrides)
+                # Deferred compatibility hooks stay centralized in _compat.py.
+                # ADR.setup() only orchestrates the documented hook phases.
+                run_post_configure_hooks(compat_plan, settings)
+                run_pre_setup_hooks(compat_plan)
                 django.setup()
         except ImproperlyConfigured as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
