@@ -40,11 +40,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import importlib.metadata
+import logging
 from typing import Final
+import warnings
 
 from ..exceptions import ImproperlyConfiguredError
 
 VersionKey = tuple[int, ...]
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,7 @@ class DependencyAuditResult:
     target_install_version: int
     enforced: bool
     issues: tuple[DependencyIssue, ...]
+    supported_range_issues: tuple[DependencyIssue, ...]
 
 
 # Keep the monitored list small and explicit. These are the libraries whose
@@ -116,6 +120,32 @@ _V261_DEPENDENCY_WINDOWS: Final[dict[str, DependencyWindow]] = {
         minimum_version=(3, 15, 2),
         maximum_version=(3, 16, 0),
         requirement_text="djangorestframework>=3.15.2,<3.16.0",
+    ),
+}
+
+
+# This broader window mirrors the branch-level package policy in
+# ``pyproject.toml``. It defines the tested dependency range for current-line
+# serverless setup, but unlike the v261 profile it is not treated as an exact
+# reproduction target.
+_SUPPORTED_RANGE_WINDOWS: Final[dict[str, DependencyWindow]] = {
+    "django": DependencyWindow(
+        package_name="django",
+        minimum_version=(4, 2, 27),
+        maximum_version=(6, 0, 0),
+        requirement_text="django>=4.2.27,<6.0.0",
+    ),
+    "django-guardian": DependencyWindow(
+        package_name="django-guardian",
+        minimum_version=(2, 4, 0),
+        maximum_version=(4, 0, 0),
+        requirement_text="django-guardian>=2.4.0,<4.0.0",
+    ),
+    "djangorestframework": DependencyWindow(
+        package_name="djangorestframework",
+        minimum_version=(3, 15, 2),
+        maximum_version=(3, 17, 0),
+        requirement_text="djangorestframework>=3.15.2,<3.17.0",
     ),
 }
 
@@ -174,26 +204,18 @@ def _version_in_window(
     return expected_window.minimum_version <= normalized < expected_window.maximum_version
 
 
-def audit_runtime_dependencies(target_install_version: int) -> DependencyAuditResult:
-    """Audit runtime dependencies for one ADR install line.
+def _audit_against_windows(
+    expected_windows: dict[str, DependencyWindow],
+    installed_versions: dict[str, InstalledDependencyVersion],
+) -> tuple[DependencyIssue, ...]:
+    """Compare installed versions against one dependency window set.
 
-    Only install lines with an explicit profile are enforced. The current ADR
-    line ``271`` intentionally bypasses exact runtime enforcement here because
-    this check exists to protect backwards compatibility for ``261``.
+    The helper keeps the audit algorithm linear in the number of monitored
+    packages by iterating once over the expected window mapping and doing
+    constant-time dict lookups for installed versions.
     """
-    expected_windows = _ENFORCED_WINDOWS_BY_INSTALL_VERSION.get(target_install_version)
-    if expected_windows is None:
-        return DependencyAuditResult(
-            target_install_version=target_install_version,
-            enforced=False,
-            issues=(),
-        )
-
-    installed_versions = _get_installed_versions()
     issues: list[DependencyIssue] = []
 
-    # Iterate once over the expected profile so the audit cost stays linear in
-    # the monitored package count and the output order remains deterministic.
     for package_name, expected_window in expected_windows.items():
         installed_version = installed_versions.get(package_name)
         if installed_version is None:
@@ -215,10 +237,39 @@ def audit_runtime_dependencies(target_install_version: int) -> DependencyAuditRe
                 )
             )
 
+    return tuple(issues)
+
+
+def audit_runtime_dependencies(target_install_version: int) -> DependencyAuditResult:
+    """Audit runtime dependencies for one ADR install line.
+
+    The audit returns two distinct views of compatibility:
+
+    - exact-profile issues for install lines that require a strict
+      backwards-compatible environment, currently only ``261``
+    - supported-range issues for the broader branch-level dependency window
+
+    That separation lets setup fail for ``261`` while warning-only for current
+    lines that are outside the tested range but may still be handled by
+    compatibility shims.
+    """
+    installed_versions = _get_installed_versions()
+    expected_windows = _ENFORCED_WINDOWS_BY_INSTALL_VERSION.get(target_install_version)
+    supported_range_issues = _audit_against_windows(_SUPPORTED_RANGE_WINDOWS, installed_versions)
+
+    if expected_windows is None:
+        return DependencyAuditResult(
+            target_install_version=target_install_version,
+            enforced=False,
+            issues=(),
+            supported_range_issues=supported_range_issues,
+        )
+
     return DependencyAuditResult(
         target_install_version=target_install_version,
         enforced=True,
-        issues=tuple(issues),
+        issues=_audit_against_windows(expected_windows, installed_versions),
+        supported_range_issues=supported_range_issues,
     )
 
 
@@ -233,6 +284,35 @@ def _format_dependency_issues(issues: tuple[DependencyIssue, ...]) -> str:
     return "; ".join(formatted_issues)
 
 
+def _format_v261_guidance() -> str:
+    """Return the remediation guidance for exact v261 compatibility restores."""
+    return (
+        "Recreate or update the environment using the project's constraints/v261.txt "
+        "compatibility set before targeting this install."
+    )
+
+
+def _warn_for_supported_range_issues(
+    target_install_version: int, issues: tuple[DependencyIssue, ...]
+) -> None:
+    """Warn when a non-v261 setup falls outside the tested branch dependency range.
+
+    The warning is intentionally non-fatal because current-line compatibility
+    still benefits from the best-effort settings rewrites in ``_compat.py``.
+    """
+    if not issues or target_install_version == 261:
+        return
+
+    message = (
+        "The active Python environment is outside the tested serverless dependency "
+        f"range for ADR install version {target_install_version}. "
+        "Compatibility shims may still allow setup to proceed, but runtime behavior "
+        f"is best-effort. Detected dependency mismatches: {_format_dependency_issues(issues)}."
+    )
+    logger.warning(message)
+    warnings.warn(message, UserWarning, stacklevel=2)
+
+
 def enforce_runtime_dependencies(target_install_version: int) -> None:
     """Fail early when the active environment is incompatible with ADR ``261``.
 
@@ -242,11 +322,15 @@ def enforce_runtime_dependencies(target_install_version: int) -> None:
     """
     audit_result = audit_runtime_dependencies(target_install_version)
     if not audit_result.enforced or not audit_result.issues:
+        _warn_for_supported_range_issues(
+            target_install_version=target_install_version,
+            issues=audit_result.supported_range_issues,
+        )
         return
 
     raise ImproperlyConfiguredError(
         "ADR 2026 R1 (install version 261) requires the exact backwards-compatible "
         "dependency window for serverless setup. "
         f"Detected dependency mismatches: {_format_dependency_issues(audit_result.issues)}. "
-        "Use the 261 compatibility dependency set before targeting this install."
+        f"{_format_v261_guidance()}"
     )

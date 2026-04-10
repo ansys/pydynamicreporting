@@ -55,13 +55,25 @@ def test_v261_dependency_windows_stay_in_sync_with_constraints_file():
     }
 
 
-def test_audit_runtime_dependencies_skips_non_enforced_install_versions(monkeypatch):
+def test_supported_range_windows_stay_in_sync_with_pyproject():
+    pyproject_text = (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text(
+        encoding="utf-8"
+    )
+
+    for window in dep_check_module._SUPPORTED_RANGE_WINDOWS.values():
+        assert f'"{window.requirement_text}"' in pyproject_text
+
+
+def test_audit_runtime_dependencies_reports_supported_range_issues_for_current_line(monkeypatch):
     monkeypatch.setattr(dep_check_module, "_get_installed_versions", lambda: {})
 
     audit_result = audit_runtime_dependencies(271)
 
     assert not audit_result.enforced
     assert audit_result.issues == ()
+    assert {issue.package_name for issue in audit_result.supported_range_issues} == set(
+        dep_check_module.MONITORED_DEPENDENCIES
+    )
 
 
 def test_audit_runtime_dependencies_reports_missing_v261_packages(monkeypatch):
@@ -71,6 +83,9 @@ def test_audit_runtime_dependencies_reports_missing_v261_packages(monkeypatch):
 
     assert audit_result.enforced
     assert {issue.package_name for issue in audit_result.issues} == set(
+        dep_check_module.MONITORED_DEPENDENCIES
+    )
+    assert {issue.package_name for issue in audit_result.supported_range_issues} == set(
         dep_check_module.MONITORED_DEPENDENCIES
     )
 
@@ -90,6 +105,7 @@ def test_audit_runtime_dependencies_accepts_matching_v261_versions(monkeypatch):
 
     assert audit_result.enforced
     assert audit_result.issues == ()
+    assert audit_result.supported_range_issues == ()
 
 
 def test_audit_runtime_dependencies_reports_out_of_range_v261_versions(monkeypatch):
@@ -109,6 +125,7 @@ def test_audit_runtime_dependencies_reports_out_of_range_v261_versions(monkeypat
     assert {issue.package_name for issue in audit_result.issues} == set(
         dep_check_module.MONITORED_DEPENDENCIES
     )
+    assert audit_result.supported_range_issues == ()
 
 
 def test_enforce_runtime_dependencies_raises_for_v261_mismatch(monkeypatch):
@@ -122,11 +139,37 @@ def test_enforce_runtime_dependencies_raises_for_v261_mismatch(monkeypatch):
         },
     )
 
-    with pytest.raises(ImproperlyConfiguredError, match="ADR 2026 R1"):
+    with pytest.raises(
+        ImproperlyConfiguredError,
+        match=r"ADR 2026 R1.*constraints/v261\.txt",
+    ):
         enforce_runtime_dependencies(261)
 
 
-def test_enforce_runtime_dependencies_is_noop_for_current_line(monkeypatch):
-    monkeypatch.setattr(dep_check_module, "_get_installed_versions", lambda: {})
+def test_enforce_runtime_dependencies_warns_for_current_line_outside_supported_range(monkeypatch):
+    monkeypatch.setattr(
+        dep_check_module,
+        "_get_installed_versions",
+        lambda: {
+            "django": _installed_version("django", "6.0.0"),
+            "django-guardian": _installed_version("django-guardian", "4.0.0"),
+            "djangorestframework": _installed_version("djangorestframework", "3.17.0"),
+        },
+    )
+
+    with pytest.warns(UserWarning, match="outside the tested serverless dependency range"):
+        enforce_runtime_dependencies(271)
+
+
+def test_enforce_runtime_dependencies_is_noop_for_current_line_inside_supported_range(monkeypatch):
+    monkeypatch.setattr(
+        dep_check_module,
+        "_get_installed_versions",
+        lambda: {
+            "django": _installed_version("django", "5.2.11"),
+            "django-guardian": _installed_version("django-guardian", "3.2.0"),
+            "djangorestframework": _installed_version("djangorestframework", "3.16.5"),
+        },
+    )
 
     enforce_runtime_dependencies(271)
