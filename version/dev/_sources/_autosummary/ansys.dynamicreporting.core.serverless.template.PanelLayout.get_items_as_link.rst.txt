@@ -1,0 +1,6 @@
+get\_items\_as\_link
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PanelLayout.get_items_as_link

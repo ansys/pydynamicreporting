@@ -1,0 +1,6 @@
+name
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Image.name
