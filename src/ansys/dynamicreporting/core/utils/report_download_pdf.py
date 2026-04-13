@@ -36,7 +36,7 @@ except ImportError:
 # Classes for saving PDF representation
 # pagedef = {width}X{height}X{0=port|1=land}X{left}X{right}X{top}X{bottom} all in mm
 
-if _has_pyside6: # pragma: no cover
+if _has_pyside6:  # pragma: no cover
 
     class NexusPDFPage(QWebEnginePage):
         def __init__(self):
@@ -44,7 +44,6 @@ if _has_pyside6: # pragma: no cover
 
         def javaScriptConsoleMessage(self, level, message, line_number, source_id):
             pass
-
 
     class NexusPDFSave:
         def __init__(self, app, parent=None):
@@ -65,7 +64,9 @@ if _has_pyside6: # pragma: no cover
                 10,
             ]  # A4 page (210mmx297mm) in portrait with 10mm margins
             # print delay with a one-shot timer
-            self._print_delay = int(os.environ.get("CEI_NEXUS_PDF_EXPORT_DELAY", "5000"))  # time(ms)
+            self._print_delay = int(
+                os.environ.get("CEI_NEXUS_PDF_EXPORT_DELAY", "5000")
+            )  # time(ms)
             self._print_timer = QTimer()
             self._print_timer.setSingleShot(True)
 
@@ -105,8 +106,12 @@ if _has_pyside6: # pragma: no cover
                 layout = QtGui.QPageLayout.Orientation.Portrait
                 if self._page[2]:
                     layout = QtGui.QPageLayout.Orientation.Landscape
-                margins = QtCore.QMarginsF(self._page[3], self._page[4], self._page[5], self._page[6])
-                page = QtGui.QPageLayout(pagesize, layout, margins, QtGui.QPageLayout.Unit.Millimeter)
+                margins = QtCore.QMarginsF(
+                    self._page[3], self._page[4], self._page[5], self._page[6]
+                )
+                page = QtGui.QPageLayout(
+                    pagesize, layout, margins, QtGui.QPageLayout.Unit.Millimeter
+                )
                 # print with a delay
                 self._print_timer.timeout.connect(
                     partial(self.webpage().printToPdf, self.pdf_callback, page)

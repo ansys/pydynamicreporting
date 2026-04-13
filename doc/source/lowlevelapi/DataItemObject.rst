@@ -131,7 +131,7 @@ below:
 
 -  A string which is the binary data representation of the image. Note:
    this is the only format supported in a Python interpreter that lacks
-   the PySide6 and enve modules.
+   the enve modules.
 
    .. code-block:: python
 
