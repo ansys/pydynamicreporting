@@ -46,7 +46,12 @@ from requests import JSONDecodeError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from PySide6 import QtCore, QtGui, QtWidgets
+try:
+    from PySide6 import QtCore, QtGui, QtWidgets
+
+    _has_pyside6 = True
+except ImportError:
+    _has_pyside6 = False
 
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
@@ -644,7 +649,7 @@ class Server:
             n = 0
             if progress:
                 text = "Scanning datasets..."
-                if progress_qt:
+                if progress_qt and _has_pyside6:
                     text = QtWidgets.QApplication.translate("nexus", "Scanning datasets...")
                 progress.setLabelText(text)
                 progress.setMaximum(nobjs)
@@ -659,7 +664,7 @@ class Server:
             # now the associated sessions
             if progress:
                 text = "Scanning sessions..."
-                if progress_qt:
+                if progress_qt and _has_pyside6:
                     text = QtWidgets.QApplication.translate("nexus", "Scanning sessions...")
                 progress.setLabelText(text)
             for guid in session_set:
@@ -673,7 +678,7 @@ class Server:
             # get the selected templates
             if progress:
                 text = "Scanning templates..."
-                if progress_qt:
+                if progress_qt and _has_pyside6:
                     text = QtWidgets.QApplication.translate("nexus", "Scanning templates...")
                 progress.setLabelText(text)
             objs = source.get_objects(objtype=report_objects.TemplateREST, query=query)
@@ -932,7 +937,7 @@ class Server:
         query["print"] = "pdf"
         url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
-        if parent is not None:
+        if _has_pyside6 and (parent is not None):
             from .report_download_pdf import NexusPDFSave
 
             app = QtGui.QGuiApplication.instance()
@@ -1134,7 +1139,7 @@ def create_new_local_database(
 ):
     """Create a new, empty sqlite database  If parent is not None, a QtGui will be
     used."""
-    if parent:  # pragma: no cover
+    if parent and _has_pyside6:  # pragma: no cover
         title = QtWidgets.QApplication.translate(
             "nexus", "Select an empty folder to create the database in"
         )
@@ -1151,7 +1156,7 @@ def create_new_local_database(
         os.makedirs(db_dir)
     except OSError as e:
         if not os.path.isdir(db_dir):
-            if parent:  # pragma: no cover
+            if parent and _has_pyside6:  # pragma: no cover
                 msg = QtWidgets.QApplication.translate(
                     "nexus", "The selected directory could not be accessed."
                 )
@@ -1172,7 +1177,7 @@ def create_new_local_database(
     if os.path.isdir(os.path.join(db_dir, "media")) or os.path.isfile(
         os.path.join(db_dir, "db.sqlite3")
     ):
-        if parent:
+        if parent and _has_pyside6:
             msg = QtWidgets.QApplication.translate(
                 "nexus", "The selected directory already appears to have a database in it."
             )
@@ -1216,7 +1221,7 @@ def create_new_local_database(
             if srcdir not in sys.path:
                 sys.path.append(srcdir)
             error = False
-            if parent:
+            if parent and _has_pyside6:
                 QtWidgets.QApplication.setOverrideCursor(
                     QtGui.QCursor(QtCore.Qt.CursorShape.WaitCursor)
                 )
@@ -1243,7 +1248,7 @@ def create_new_local_database(
             except Exception as e:
                 logger.debug(f"Warning: {str(e)}")
                 error = True
-            if parent:
+            if parent and _has_pyside6:
                 QtWidgets.QApplication.restoreOverrideCursor()
             # Unset the environmental vars...
             os.environ.pop("CEI_NEXUS_SECRET_KEY")
@@ -1277,7 +1282,7 @@ def create_new_local_database(
             )
 
     except Exception as e:
-        if parent:
+        if parent and _has_pyside6:
             msg = QtWidgets.QApplication.translate(
                 "nexus", "The creation of a new, local database failed with the error:"
             )
@@ -1298,7 +1303,7 @@ def create_new_local_database(
         return_info["directory"] = db_dir
         return True
 
-    if parent:
+    if parent and _has_pyside6:
         msg = QtWidgets.QApplication.translate(
             "nexus", "A new Nexus database has been created in the folder:"
         )
@@ -1581,7 +1586,7 @@ def launch_local_database_server(
             return False
 
     # Handle the directory
-    if parent:  # pragma: no cover
+    if parent and _has_pyside6:  # pragma: no cover
         # skip the directory prompt if directory is valid
         if no_directory_prompt:
             db_dir = os.path.abspath(directory)
@@ -1677,7 +1682,7 @@ def launch_local_database_server(
         # validate will throw exceptions or return a float.
         _ = tmp_server.validate()
         # if we have a valid version number, then do not start a server!!!
-        if parent:
+        if parent and _has_pyside6:
             msg = QtWidgets.QApplication.translate(
                 "nexus",
                 "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port.",
@@ -1699,7 +1704,7 @@ def launch_local_database_server(
         pass
 
     # Start the busy cursor
-    if parent:
+    if parent and _has_pyside6:
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.CursorShape.WaitCursor))
 
     # Here we run nexus_launcher with the following command line:
@@ -1748,7 +1753,7 @@ def launch_local_database_server(
     local_use_tray = not terminate_on_python_exit
     if use_system_tray is not None:
         local_use_tray = use_system_tray
-    if local_use_tray and parent:
+    if local_use_tray and parent and _has_pyside6:
         command.extend(["--tray", "1"])
 
     # Capture stderr to leverage nexus_launcher CLI error checking.  Grabbing stdout as well, but not
@@ -1768,7 +1773,7 @@ def launch_local_database_server(
         monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
     except Exception as e:
         logger.debug(f"Warning: {str(e)}")
-        if parent:
+        if parent and _has_pyside6:
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = QtWidgets.QApplication.translate(
                 "nexus", "Launching a server for the selected local database failed. Error:"
@@ -1790,7 +1795,7 @@ def launch_local_database_server(
         monitor_alive = monitor_process.poll() is None
         # if we ran out of patience or the monitor process is dead, we have an error
         if ((time.time() - t0) > server_timeout) or (not monitor_alive):
-            if parent:
+            if parent and _has_pyside6:
                 QtWidgets.QApplication.restoreOverrideCursor()
                 msg = QtWidgets.QApplication.translate(
                     "nexus", "Unable to connect to the launched local Nexus server."
@@ -1842,7 +1847,7 @@ def launch_local_database_server(
     if local_lock:
         local_lock.release()
 
-    if parent:
+    if parent and _has_pyside6:
         QtWidgets.QApplication.restoreOverrideCursor()
         if verbose:
             hostname = settings.get("server_hostname", "127.0.0.1")
