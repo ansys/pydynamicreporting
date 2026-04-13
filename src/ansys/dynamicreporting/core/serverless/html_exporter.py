@@ -35,6 +35,7 @@ from ..utils.html_export_constants import (
     FONTS,
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
+    MATHJAX_OPTIONAL_FILES,
     MATHJAX_VERSION_SENTINELS,
     NEXUS_IMAGES,
     THREE_JS,
@@ -293,7 +294,11 @@ class ServerlessReportExporter:
             # Every MathJax asset keeps the same relative path below the
             # ``mathjax/`` folder; only the export root changes to ``media/``.
             relative_path = source_rel_path.split("mathjax/", 1)[1]
-            self._copy_static_file(source_rel_path, f"media/{relative_path}", silent=silent)
+            self._copy_static_file(
+                source_rel_path,
+                f"media/{relative_path}",
+                silent=(silent or source_rel_path in MATHJAX_OPTIONAL_FILES),
+            )
 
     def _copy_special_files(self):
         """

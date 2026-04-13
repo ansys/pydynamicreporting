@@ -148,6 +148,15 @@ MATHJAX_2X_FILES = (
 # Keep a combined list for callers that still need a flat view of all assets.
 MATHJAX_FILES = [*MATHJAX_4X_FILES, *MATHJAX_2X_FILES]
 
+# Some installs do not publish every ancillary MathJax file even when the main
+# loader and runtime assets are present.  Keep exporting these files when they
+# exist, but do not warn if they are absent.
+MATHJAX_OPTIONAL_FILES = frozenset(
+    {
+        "website/scripts/mathjax/LICENSE",
+    }
+)
+
 # Sentinels are top-level loaders, so checking them keeps version detection
 # O(1) while avoiding directory scans or asset-by-asset probing.
 MATHJAX_VERSION_SENTINELS = (
