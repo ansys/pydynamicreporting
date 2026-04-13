@@ -740,7 +740,7 @@ class Server:
                 nobjs += 1
         n = 0
         if progress:
-            if progress_qt:
+            if progress_qt and _has_pyside6:
                 s = QtWidgets.QApplication.translate("nexus", "Importing:")
                 s += report_utils.from_local_8bit(obj_type)
             else:
