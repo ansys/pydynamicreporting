@@ -1104,12 +1104,25 @@ def test_template_render(monkeypatch, adr_serverless):
         pytest.param({"print": "pdf"}, None, id="pdf-print-style"),
     ],
 )
-def test_tab_layout_render_flattens_inline_and_pdf_markup(adr_serverless, context, tabs_properties):
+def test_tab_layout_render_flattens_inline_and_pdf_markup(
+    adr_serverless, monkeypatch, context, tabs_properties
+):
     """Inline/PDF tabs should render children directly, not via interactive slots."""
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
     tabs_layout, first_marker, second_marker = _create_tab_layout_render_target(
         adr_serverless,
         name_prefix="test_tab_layout_render_flattened",
         properties=tabs_properties,
+    )
+
+    # This regression only cares about the body HTML produced by the server-side
+    # tab engine. Returning ``context["HTML"]`` avoids depending on the outer
+    # Django page template being present in every test environment.
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: context["HTML"],
     )
 
     rendered_html = tabs_layout.render(context=context)
@@ -1126,10 +1139,18 @@ def test_tab_layout_render_flattens_inline_and_pdf_markup(adr_serverless, contex
 
 
 @pytest.mark.ado_test
-def test_tab_layout_render_keeps_interactive_markup_by_default(adr_serverless):
+def test_tab_layout_render_keeps_interactive_markup_by_default(adr_serverless, monkeypatch):
     """Non-inline tabs should keep the interactive host so default behavior stays intact."""
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
     tabs_layout, first_marker, second_marker = _create_tab_layout_render_target(
         adr_serverless, name_prefix="test_tab_layout_render_interactive"
+    )
+
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: context["HTML"],
     )
 
     rendered_html = tabs_layout.render()
