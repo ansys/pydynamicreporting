@@ -78,3 +78,6 @@ _test_enhanced_images.py
 local_tests/
 *.TGZ
 local_docs/
+
+# VSCode workspace files
+*.code-workspace

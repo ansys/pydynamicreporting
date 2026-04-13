@@ -412,7 +412,7 @@ def to_local_8bit(v):
         # We are already the right type: str -> str
         if type(v) == str:
             return v
-        # Qt5 unicode -> 8bit str
+        # Qt unicode -> 8bit str
         if type(v) == unicode:
             return v.encode(platform_encoding())
     else:
