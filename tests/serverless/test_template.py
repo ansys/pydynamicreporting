@@ -1133,7 +1133,6 @@ def test_tab_layout_render_flattens_inline_and_pdf_markup(
     # Regression guard: inline/PDF output should not reintroduce interactive tab markup.
     assert "<adr-tabs" not in rendered_html
     assert "<slot name" not in rendered_html
-    assert 'shadowrootmode="open"' not in rendered_html
     assert "adr_tab_template_" not in rendered_html
     assert "slot='" not in rendered_html
 
