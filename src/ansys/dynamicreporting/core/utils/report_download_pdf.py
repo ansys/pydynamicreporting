@@ -32,7 +32,7 @@ try:
     from PySide6.QtCore import QTimer
 
     Millimeter = QtGui.QPageSize.Unit.Millimeter
-    Millimiter_layout = QtGui.QPageLayout.Unit.Millimeter
+    Millimeter_layout = QtGui.QPageLayout.Unit.Millimeter
     ExactMatch = QtGui.QPageSize.SizeMatchPolicy.ExactMatch
     Portrait = QtGui.QPageLayout.Orientation.Portrait
     Landscape = QtGui.QPageLayout.Orientation.Landscape
@@ -53,7 +53,7 @@ except ImportError:
             from qtpy.QtWebEngineWidgets import QWebEnginePage
 
         Millimeter = QtGui.QPageSize.Millimeter
-        Millimiter_layout = QtGui.QPageLayout.Millimeter
+        Millimeter_layout = QtGui.QPageLayout.Millimeter
         ExactMatch = QtGui.QPageSize.ExactMatch
         Portrait = QtGui.QPageLayout.Portrait
         Landscape = QtGui.QPageLayout.Landscape
@@ -143,7 +143,7 @@ if _has_pyside6 or _has_qt:  # pragma: no cover
                 margins = QtCore.QMarginsF(
                     self._page[3], self._page[4], self._page[5], self._page[6]
                 )
-                page = QtGui.QPageLayout(pagesize, layout, margins, Millimeter)
+                page = QtGui.QPageLayout(pagesize, layout, margins, Millimeter_layout)
                 # print with a delay
                 self._print_timer.timeout.connect(
                     partial(self.webpage().printToPdf, self.pdf_callback, page)

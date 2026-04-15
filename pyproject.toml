@@ -3,6 +3,8 @@ name = "ansys-dynamicreporting-core"
 dynamic = ["version"]
 requires-python = ">=3.10, <3.13"
 dependencies = [
+    "qtpy>=2.4.3,<2.5.0",
+    "PySide6>=6.9.0,<6.10.0",
     "docker>=7.1.0",
     "pypng>=0.20220715.0",
     "requests>=2.32",
@@ -22,8 +24,6 @@ dependencies = [
     "pandas>=2.2.2,<3.0.0",
     "statsmodels>=0.14.2,<0.15.0",
     "psycopg[binary]>=3.2.6,<3.3.0",
-    "qtpy>=2.4.3,<2.5.0",
-    "PySide6>=6.9.0,<6.10.0",
     "lark>=1.2.2,<1.3.0",
     "bleach>=6.2.0",
     "django-weasyprint>=2.4.0,<2.5.0",
