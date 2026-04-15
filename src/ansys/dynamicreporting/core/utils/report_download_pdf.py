@@ -26,12 +26,13 @@ import os
 _has_qt = False
 
 try:
-    from PySide6 import QtCore, QtGui
-    from PySide6.QtCore import QTimer
     from PySide6.QtWebEngineCore import QWebEnginePage
     from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6 import QtCore, QtGui
+    from PySide6.QtCore import QTimer
 
     Millimeter = QtGui.QPageSize.Unit.Millimeter
+    Millimiter_layout = QtGui.QPageLayout.Unit.Millimeter
     ExactMatch = QtGui.QPageSize.SizeMatchPolicy.ExactMatch
     Portrait = QtGui.QPageLayout.Orientation.Portrait
     Landscape = QtGui.QPageLayout.Orientation.Landscape
@@ -51,10 +52,11 @@ except ImportError:
         except ImportError:
             from qtpy.QtWebEngineWidgets import QWebEnginePage
 
-        Millimeter = QtGui.QPageSize.Unit.Millimeter
-        ExactMatch = QtGui.QPageSize.SizeMatchPolicy.ExactMatch
-        Portrait = QtGui.QPageLayout.Orientation.Portrait
-        Landscape = QtGui.QPageLayout.Orientation.Landscape
+        Millimeter = QtGui.QPageSize.Millimeter
+        Millimiter_layout = QtGui.QPageLayout.Millimeter
+        ExactMatch = QtGui.QPageSize.ExactMatch
+        Portrait = QtGui.QPageLayout.Portrait
+        Landscape = QtGui.QPageLayout.Landscape
         try:
             WriteOnly = QtCore.QIODevice.OpenModeFlag.WriteOnly
         except AttributeError:
