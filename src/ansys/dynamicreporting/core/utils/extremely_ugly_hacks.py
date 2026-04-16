@@ -29,9 +29,15 @@ from uuid import UUID
 from .report_utils import text_type
 
 
-# This fallback preserves cross-version pickle compatibility: NumPy 2.x payloads
-# can reference numpy._core, while older NumPy 1.x runtimes expect numpy.core.
-# If unpickling in an older runtime raises ModuleNotFoundError for numpy._core,
+# Compatibility matrix for client-side unpickling:
+# - NumPy 2 reader <- NumPy 2 payload: works with the normal pickle path.
+# - NumPy 2 reader <- NumPy 1 payload: also works with the normal compatibility
+#   fallbacks below.
+# - NumPy 1 reader <- NumPy 2 payload: may fail because the pickle references
+#   numpy._core, while NumPy 1 exposes numpy.core.
+# PyDynamicReporting supports the current and previous ADR product lines, so an
+# older NumPy 1 client can still read payloads produced by a newer NumPy 2 ADR
+# server. If the first pickle.loads() raises ModuleNotFoundError for numpy._core,
 # retry with a custom unpickler that rewrites numpy._core -> numpy.core.
 class RedirectNumpyUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
