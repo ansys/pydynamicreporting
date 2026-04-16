@@ -68,9 +68,9 @@ To reach the project support team, email
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.10 through 3.12 on
-Windows and Linux. It is currently available on the PyPI
-`repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
+The ``pydynamicreporting`` package supports Python 3.10 through 3.13 on
+Windows and Linux. It is currently available on
+`PyPI <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
 For the base client package, run:
 
