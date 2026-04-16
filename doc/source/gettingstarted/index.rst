@@ -22,7 +22,7 @@ To get a copy of Ansys, visit the `Ansys <https://www.ansys.com/>`_ website.
 Installation
 ~~~~~~~~~~~~
 
-The ``ansys-dynamicreporting-core`` package currently supports Python 3.9
+The ``ansys-dynamicreporting-core`` package currently supports Python 3.10
 through Python 3.13 on Windows and Linux.
 
 To install the latest package from GitHub, run this command:
