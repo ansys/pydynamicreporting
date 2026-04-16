@@ -22,10 +22,25 @@
 
 # All Python3 migration-related ugly hacks go here.
 import base64
+import io
 import pickle  # nosec B403
 from uuid import UUID
 
 from .report_utils import text_type
+
+
+# This fallback preserves cross-version pickle compatibility: NumPy 2.x payloads
+# can reference numpy._core, while older NumPy 1.x runtimes expect numpy.core.
+# If unpickling in an older runtime raises ModuleNotFoundError for numpy._core,
+# retry with a custom unpickler that rewrites numpy._core -> numpy.core.
+class RedirectNumpyUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        # Redirect deprecated NumPy internal modules for older NumPy 1.x readers.
+        if module.startswith("numpy._core."):
+            module = module.replace("numpy._core.", "numpy.core.", 1)
+        elif module == "numpy._core":
+            module = "numpy.core"
+        return super().find_class(module, name)
 
 
 def safe_unpickle(input_data, item_type=None):
@@ -77,6 +92,11 @@ def safe_unpickle(input_data, item_type=None):
                     # be default, we follow python3's way of loading: default encoding is ascii
                     # this will work if the data was dumped using python3's pickle. Just do the usual.
                     data = pickle.loads(bytes_data)  # nosec B301 B502
+                except ModuleNotFoundError as e:
+                    if "numpy._core" in str(e):
+                        data = RedirectNumpyUnpickler(io.BytesIO(bytes_data)).load()
+                    else:
+                        raise
                 except Exception:  # nosec
                     try:
                         data = pickle.loads(bytes_data, encoding="utf-8")  # nosec B301 B502
