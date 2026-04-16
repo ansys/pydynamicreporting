@@ -24,21 +24,20 @@ from functools import partial
 import os
 
 try:
-    from PySide6 import QtCore, QtGui
-    from PySide6.QtCore import QTimer
-    from PySide6.QtWebEngineCore import QWebEnginePage
-    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from qtpy import QtCore, QtGui, QtWebEngineWidgets
 
-    _has_pyside6 = True
-except ImportError:
-    _has_pyside6 = False
+    # Classes for saving PDF representation
+    # pagedef = {width}X{height}X{0=port|1=land}X{left}X{right}X{top}X{bottom} all in mm
+    from qtpy.QtCore import QTimer
 
-# Classes for saving PDF representation
-# pagedef = {width}X{height}X{0=port|1=land}X{left}X{right}X{top}X{bottom} all in mm
+    has_qt = True
+except Exception:
+    has_qt = False
 
-if _has_pyside6:  # pragma: no cover
 
-    class NexusPDFPage(QWebEnginePage):
+if has_qt:  # pragma: no cover
+
+    class NexusPDFPage(QtWebEngineWidgets.QWebEnginePage):
         def __init__(self):
             super().__init__()
 
@@ -81,7 +80,7 @@ if _has_pyside6:  # pragma: no cover
                 screen = self._app.primaryScreen()
                 dpi = screen.logicalDotsPerInch()
                 in_per_mm = 0.0393701
-                self._web_engine_view = QWebEngineView(self._parent)
+                self._web_engine_view = QtWebEngineWidgets.QWebEngineView(self._parent)
                 self._web_page = NexusPDFPage()
                 self._web_engine_view.setPage(self._web_page)
                 self._web_page.loadFinished.connect(self.load_finished)
@@ -99,19 +98,17 @@ if _has_pyside6:  # pragma: no cover
             if ok:
                 pagesize = QtGui.QPageSize(
                     QtCore.QSizeF(self._page[0], self._page[1]),
-                    QtGui.QPageSize.Unit.Millimeter,
+                    QtGui.QPageSize.Millimeter,
                     "",
-                    QtGui.QPageSize.SizeMatchPolicy.ExactMatch,
+                    QtGui.QPageSize.ExactMatch,
                 )
-                layout = QtGui.QPageLayout.Orientation.Portrait
+                layout = QtGui.QPageLayout.Portrait
                 if self._page[2]:
-                    layout = QtGui.QPageLayout.Orientation.Landscape
+                    layout = QtGui.QPageLayout.Landscape
                 margins = QtCore.QMarginsF(
                     self._page[3], self._page[4], self._page[5], self._page[6]
                 )
-                page = QtGui.QPageLayout(
-                    pagesize, layout, margins, QtGui.QPageLayout.Unit.Millimeter
-                )
+                page = QtGui.QPageLayout(pagesize, layout, margins, QtGui.QPageLayout.Millimeter)
                 # print with a delay
                 self._print_timer.timeout.connect(
                     partial(self.webpage().printToPdf, self.pdf_callback, page)
@@ -140,7 +137,7 @@ if _has_pyside6:  # pragma: no cover
                 self._print_timer.stop()
             # finish the pdf save
             f = QtCore.QFile(self._pdf_filename.absoluteFilePath())
-            if f.open(QtCore.QIODevice.OpenModeFlag.WriteOnly):
+            if f.open(QtCore.QIODevice.WriteOnly):
                 f.write(data)
                 f.close()
                 self._result = "ok"
