@@ -14,6 +14,7 @@ When you change code in this repo, aim to always:
   - `make check` (lockfile consistency + pre-commit)
   - `make test` (pytest + coverage)
   - `make smoketest` (fast import sanity check)
+- **After every commit**, activate the project virtual environment, run `uv sync --upgrade --all-extras` and `uv lock --upgrade`, and commit any resulting `uv.lock` update so CI `Security Scan` checks do not fail.
 - **Avoid unrelated reformatting** and keep diffs tight.
 
 ## Project overview

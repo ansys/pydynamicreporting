@@ -49,11 +49,11 @@ from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
 try:
-    from PySide6 import QtCore, QtGui
+    from qtpy import QtCore, QtGui
 
-    _has_pyside6 = True
+    has_qt = True
 except ImportError:
-    _has_pyside6 = False
+    has_qt = False
 
 try:
     import numpy
@@ -1329,7 +1329,7 @@ class ItemREST(BaseRESTObject):
         return value
 
     def set_payload_image(self, img):
-        if _has_pyside6:  # pragma: no cover
+        if has_qt:  # pragma: no cover
             if isinstance(img, QtGui.QImage):
                 tmpimg = img
             elif report_utils.is_enve_image_or_pil(img):
