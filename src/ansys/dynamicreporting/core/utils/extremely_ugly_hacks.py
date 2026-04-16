@@ -33,12 +33,13 @@ from .report_utils import text_type
 # - NumPy 2 reader <- NumPy 2 payload: works with the normal pickle path.
 # - NumPy 2 reader <- NumPy 1 payload: also works with the normal compatibility
 #   fallbacks below.
-# - NumPy 1 reader <- NumPy 2 payload: may fail because the pickle references
-#   numpy._core, while NumPy 1 exposes numpy.core.
+# - NumPy 1 reader <- NumPy 2 payload: retry with a redirecting unpickler when
+#   the pickle references numpy._core, while NumPy 1 exposes numpy.core.
 # PyDynamicReporting supports the current and previous ADR product lines, so an
 # older NumPy 1 client can still read payloads produced by a newer NumPy 2 ADR
-# server. If the first pickle.loads() raises ModuleNotFoundError for numpy._core,
-# retry with a custom unpickler that rewrites numpy._core -> numpy.core.
+# server. Apply that redirect to every pickle.loads() attempt so the NumPy 1 <-
+# NumPy 2 path stays covered even when we need the utf-8, latin-1, or bytes
+# compatibility fallbacks for older payload encodings.
 class RedirectNumpyUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
         # Redirect deprecated NumPy internal modules for older NumPy 1.x readers.
@@ -47,6 +48,23 @@ class RedirectNumpyUnpickler(pickle.Unpickler):
         elif module == "numpy._core":
             module = "numpy.core"
         return super().find_class(module, name)
+
+
+def _is_numpy_core_missing(error):
+    missing_module = getattr(error, "name", None)
+    return missing_module == "numpy._core" or "numpy._core" in str(error)
+
+
+def _load_pickle(bytes_data, **kwargs):
+    try:
+        return pickle.loads(bytes_data, **kwargs)  # nosec B301 B502
+    except ModuleNotFoundError as error:
+        if not _is_numpy_core_missing(error):
+            raise
+
+        # Keep the legacy encoding semantics while remapping NumPy 2's internal
+        # module path to the NumPy 1 name that older clients still expose.
+        return RedirectNumpyUnpickler(io.BytesIO(bytes_data), **kwargs).load()
 
 
 def safe_unpickle(input_data, item_type=None):
@@ -97,15 +115,14 @@ def safe_unpickle(input_data, item_type=None):
                 try:
                     # be default, we follow python3's way of loading: default encoding is ascii
                     # this will work if the data was dumped using python3's pickle. Just do the usual.
-                    data = pickle.loads(bytes_data)  # nosec B301 B502
-                except ModuleNotFoundError as e:
-                    if "numpy._core" in str(e):
-                        data = RedirectNumpyUnpickler(io.BytesIO(bytes_data)).load()
-                    else:
-                        raise
+                    data = _load_pickle(bytes_data)
+                except ModuleNotFoundError:
+                    raise
                 except Exception:  # nosec
                     try:
-                        data = pickle.loads(bytes_data, encoding="utf-8")  # nosec B301 B502
+                        data = _load_pickle(bytes_data, encoding="utf-8")
+                    except ModuleNotFoundError:
+                        raise
                     except Exception:
                         # if it fails, which it will if the data was dumped using python2's pickle, then:
                         # As per https://docs.python.org/3/library/pickle.html#pickle.loads,
@@ -113,7 +130,7 @@ def safe_unpickle(input_data, item_type=None):
                         # date and time pickled by Python 2."
                         # The data does contain a numpy array. So:
                         try:
-                            data = pickle.loads(bytes_data, encoding="latin-1")  # nosec B301 B502
+                            data = _load_pickle(bytes_data, encoding="latin-1")
 
                             # if the stream contains international characters which were 'loaded' with latin-1,
                             # we get garbage text. We have to detect that and then use a workaround.
@@ -122,13 +139,15 @@ def safe_unpickle(input_data, item_type=None):
                             # be a UnicodeDecodeError if you load with utf-8 in Python3.
                             # (latin-1 is not a subset of utf-8)
                             data = reconstruct_international_text(data)
+                        except ModuleNotFoundError:
+                            raise
 
                         except TypeError:  # https://bugs.python.org/issue22005
                             # todo: remove this when we have ONLY py3.7	to support
                             # this is a tree item ONLY case that has a pickled datetime obj,
                             # we use bytes as the encoding to workaround this issue, because
                             # other encodings will not work.
-                            data = pickle.loads(bytes_data, encoding="bytes")  # nosec B301 B502
+                            data = _load_pickle(bytes_data, encoding="bytes")
 
                             # check again, just in case
                             if item_type == "tree":

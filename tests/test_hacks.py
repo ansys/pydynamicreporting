@@ -65,7 +65,7 @@ def test_unpickle_error() -> None:
 
 
 @pytest.mark.ado_test
-def test_unpickle_numpy_core_redirect(monkeypatch) -> None:
+def test_unpickle_numpy_core_redirect_default(monkeypatch) -> None:
     payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
     original_loads = ex.pickle.loads
     call_count = 0
@@ -74,6 +74,72 @@ def test_unpickle_numpy_core_redirect(monkeypatch) -> None:
         nonlocal call_count
         call_count += 1
         if call_count == 1 and not args and not kwargs:
+            raise ModuleNotFoundError("No module named 'numpy._core'")
+        return original_loads(data, *args, **kwargs)
+
+    monkeypatch.setattr(ex.pickle, "loads", fake_loads)
+
+    result = ex.safe_unpickle(input_data=payload)
+
+    assert isinstance(result, np.ndarray)
+    assert result.tolist() == [[1.0, 2.0]]
+
+
+@pytest.mark.ado_test
+def test_unpickle_numpy_core_redirect_utf8_fallback(monkeypatch) -> None:
+    payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
+    original_loads = ex.pickle.loads
+
+    def fake_loads(data, *args, **kwargs):
+        if not args and not kwargs:
+            raise ValueError("force utf-8 fallback")
+        if kwargs == {"encoding": "utf-8"}:
+            raise ModuleNotFoundError("No module named 'numpy._core'")
+        return original_loads(data, *args, **kwargs)
+
+    monkeypatch.setattr(ex.pickle, "loads", fake_loads)
+
+    result = ex.safe_unpickle(input_data=payload)
+
+    assert isinstance(result, np.ndarray)
+    assert result.tolist() == [[1.0, 2.0]]
+
+
+@pytest.mark.ado_test
+def test_unpickle_numpy_core_redirect_latin1_fallback(monkeypatch) -> None:
+    payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
+    original_loads = ex.pickle.loads
+
+    def fake_loads(data, *args, **kwargs):
+        if not args and not kwargs:
+            raise ValueError("force utf-8 fallback")
+        if kwargs == {"encoding": "utf-8"}:
+            raise ValueError("force latin-1 fallback")
+        if kwargs == {"encoding": "latin-1"}:
+            raise ModuleNotFoundError("No module named 'numpy._core'")
+        return original_loads(data, *args, **kwargs)
+
+    monkeypatch.setattr(ex.pickle, "loads", fake_loads)
+
+    result = ex.safe_unpickle(input_data=payload)
+
+    assert isinstance(result, np.ndarray)
+    assert result.tolist() == [[1.0, 2.0]]
+
+
+@pytest.mark.ado_test
+def test_unpickle_numpy_core_redirect_bytes_fallback(monkeypatch) -> None:
+    payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
+    original_loads = ex.pickle.loads
+
+    def fake_loads(data, *args, **kwargs):
+        if not args and not kwargs:
+            raise ValueError("force utf-8 fallback")
+        if kwargs == {"encoding": "utf-8"}:
+            raise ValueError("force latin-1 fallback")
+        if kwargs == {"encoding": "latin-1"}:
+            raise TypeError("force bytes fallback")
+        if kwargs == {"encoding": "bytes"}:
             raise ModuleNotFoundError("No module named 'numpy._core'")
         return original_loads(data, *args, **kwargs)
 
