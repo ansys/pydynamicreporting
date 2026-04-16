@@ -356,11 +356,16 @@ class ReportDownloadHTML:
 
         for source_rel_path in files:
             url = mathjax_root_url + source_rel_path
-            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            resp = requests.get(url, allow_redirects=True, stream=True, timeout=300)
             if resp.status_code == requests.codes.ok:
                 filename = os.path.join(self._directory, self._mathjax_media_path(source_rel_path))
                 try:
-                    self._write_binary_file(filename, resp.content)
+                    # Read in chunks to avoid zip bomb attacks
+                    content = b""
+                    for chunk in resp.iter_content(chunk_size=65536):
+                        if chunk:
+                            content += chunk
+                    self._write_binary_file(filename, content)
                 except OSError as e:
                     print(f"Unable to download MathJax file: {source_rel_path}\nError {e}")
             elif not (silent or source_rel_path in MATHJAX_OPTIONAL_FILES):
@@ -370,13 +375,18 @@ class ReportDownloadHTML:
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
-            resp = requests.get(url, allow_redirects=True)  # nosec B400
+            resp = requests.get(url, allow_redirects=True, stream=True, timeout=300)
             if resp.status_code == requests.codes.ok:
                 filename = self._directory + os.sep + target_path + os.sep + f
                 filename = os.path.normpath(filename)
                 try:
+                    # Read in chunks to avoid zip bomb attacks
+                    content = b""
+                    for chunk in resp.iter_content(chunk_size=65536):
+                        if chunk:
+                            content += chunk
                     data = self.fix_viewer_component_paths(
-                        str(filename), resp.content, self._ansys_version
+                        str(filename), content, self._ansys_version
                     )
                     self._write_binary_file(filename, data)
                 except Exception as e:
@@ -408,14 +418,19 @@ class ReportDownloadHTML:
             return self._filemap[pathname]
         tmp = urllib.parse.urlsplit(self._url)
         url = tmp.scheme + "://" + tmp.netloc + path_plus_queries
-        resp = requests.get(url, allow_redirects=True)  # nosec B400
+        resp = requests.get(url, allow_redirects=True, stream=True, timeout=300)
         results = pathname
         if resp.status_code == requests.codes.ok:
             basename = os.path.basename(pathname)
             # "basename" is used in the media directory, avoid collisions.
             basename = self._make_unique_basename(basename)
             try:
-                tmp = resp.content
+                # Read in chunks to avoid zip bomb attacks
+                content = b""
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if chunk:
+                        content += chunk
+                tmp = content
                 # 4/3 is roughly the expansion factor of base64 encoding (3bytes encode to 4)
                 # Note: we will also inline any "scene" 3D file.  This can happen when processing
                 # a slider view "key_image" array.
@@ -585,7 +600,7 @@ class ReportDownloadHTML:
         base = tmp.scheme + "://" + tmp.netloc + "/static/website/scripts/mathjax/"
         for version, sentinel in MATHJAX_VERSION_SENTINELS:
             try:
-                resp = requests.head(base + sentinel, allow_redirects=False)  # nosec B400
+                resp = requests.head(base + sentinel, allow_redirects=False, timeout=300)
                 if resp.status_code == requests.codes.ok:
                     return version
             except (requests.ConnectionError, requests.Timeout, requests.RequestException):
@@ -715,7 +730,7 @@ class ReportDownloadHTML:
         # Read the rendered report first so MathJax detection can follow the
         # loader the page actually uses instead of guessing from installation
         # layout alone.
-        resp = requests.get(self._url)  # nosec B400
+        resp = requests.get(self._url, timeout=300)
         if resp.status_code != requests.codes.ok:
             raise RuntimeError(f"Unable to access {self._url} ({resp.status_code})")
         self._report_html = resp.text
