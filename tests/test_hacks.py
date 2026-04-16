@@ -165,7 +165,9 @@ def test_unpickle_other_module_not_found(monkeypatch) -> None:
 
     monkeypatch.setattr(ex.pickle, "loads", fake_loads)
 
-    with pytest.raises(Exception, match="Unable to decode the payload:: No module named 'other_module'"):
+    with pytest.raises(
+        Exception, match="Unable to decode the payload:: No module named 'other_module'"
+    ):
         ex.safe_unpickle(input_data=pickle.dumps("abcde"))
 
 
