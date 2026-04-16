@@ -131,7 +131,7 @@ below:
 
 -  A string which is the binary data representation of the image. Note:
    this is the only format supported in a Python interpreter that lacks
-   the enve modules.
+   the PyQt and enve modules.
 
    .. code-block:: python
 
@@ -144,7 +144,7 @@ below:
 
    .. code-block:: python
 
-      from PySide6 import QtGui
+      from PyQt4 import QtGui
 
       img = QtGui.QImage("example.png")
       item.set_payload_image(img)

@@ -161,7 +161,7 @@ information needed to connect to an ADR Nexus server. It then attempts to
 connect to the server and returns True if the connection succeeded. The
 server argument should be an instance of the report_remote_server.Server
 class which will be initialized with the entered values. This method can
-only be called from a PySide6 application. You can specify None for the
+only be called from a PyQt application. You can specify None for the
 parent, but it will have the same effect as displaying a modal dialog
 with no parent specified. Do not use this method if your application
 should not display any GUI.
