@@ -52,10 +52,39 @@ import numpy
 
 from ..adr_utils import table_attr
 from ..exceptions import ADRException
+from ..utils.extremely_ugly_hacks import safe_unpickle as client_safe_unpickle
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
 from .base import BaseModel, StrEnum, Validator
+
+
+def _serverless_safe_unpickle(input_data, item_type=None):
+    """Decode payloads via the client shim while preserving the old serverless error surface."""
+    try:
+        return client_safe_unpickle(input_data, item_type=item_type)
+    except Exception as error:
+        try:
+            from ceireports.exceptions import SafeUnpickleException
+        except Exception:
+            raise
+
+        try:
+            from django.conf import settings as django_settings
+
+            debug_enabled = bool(django_settings.configured and getattr(django_settings, "DEBUG", False))
+        except Exception:
+            debug_enabled = False
+
+        if debug_enabled:
+            raise
+
+        error_detail = str(error)
+        client_prefix = "Unable to decode the payload:: "
+        if error_detail.startswith(client_prefix):
+            error_detail = error_detail[len(client_prefix) :]
+
+        raise SafeUnpickleException(f"Unable to load the item from the database:: {error_detail}")
 
 
 class Session(BaseModel):
@@ -335,10 +364,8 @@ class SimplePayloadMixin:
     @classmethod
     def _from_db(cls, orm_instance, **kwargs):
         """Reconstruct content from the ORM ``payloaddata`` field."""
-        from data.extremely_ugly_hacks import safe_unpickle
-
         obj = super()._from_db(orm_instance, **kwargs)
-        obj.content = safe_unpickle(obj._orm_instance.payloaddata)
+        obj.content = _serverless_safe_unpickle(obj._orm_instance.payloaddata)
         return obj
 
     def save(self, **kwargs):
@@ -764,10 +791,8 @@ class Table(Item):
     @classmethod
     def _from_db(cls, orm_instance, **kwargs):
         """Rebuild the table array and payload properties from ``payloaddata``."""
-        from data.extremely_ugly_hacks import safe_unpickle
-
         obj = super()._from_db(orm_instance, **kwargs)
-        payload = safe_unpickle(obj._orm_instance.payloaddata)
+        payload = _serverless_safe_unpickle(obj._orm_instance.payloaddata)
         obj.content = payload.pop("array", None)
         for prop in cls._properties:
             if prop in payload:
