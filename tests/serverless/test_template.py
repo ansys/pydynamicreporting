@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 from uuid import uuid4
 
 import pytest
@@ -29,6 +30,49 @@ from ansys.dynamicreporting.core.exceptions import (
     TemplateDoesNotExist,
     TemplateReorderOutOfBounds,
 )
+
+
+def _create_tab_layout_render_target(
+    adr_serverless, *, name_prefix: str, properties: dict[str, object] | None = None
+):
+    """Build a small tabs report with stable markers for HTML-shape assertions.
+
+    The child layouts use unique text markers so the regression tests can assert
+    that tab content is rendered directly in inline/PDF mode instead of being
+    hidden behind interactive ``adr-tabs`` slot markup.
+    """
+    from ansys.dynamicreporting.core.serverless import BasicLayout, TabLayout
+
+    unique_suffix = uuid4().hex
+    first_marker = f"{name_prefix}-tab-alpha-{unique_suffix}"
+    second_marker = f"{name_prefix}-tab-beta-{unique_suffix}"
+
+    params = {"HTML": "<h2>Tabs Root</h2>"}
+    # The installed tab engine only merges ``params['properties']`` into the
+    # render context, so inline tab options must live there to exercise the
+    # real server-side code path.
+    if properties:
+        params["properties"] = properties
+
+    tabs_layout = adr_serverless.create_template(
+        TabLayout,
+        name=f"{name_prefix}_tabs_{unique_suffix}",
+        parent=None,
+        params=json.dumps(params),
+    )
+    adr_serverless.create_template(
+        BasicLayout,
+        name=f"{name_prefix}_alpha_{unique_suffix}",
+        parent=tabs_layout,
+        params=json.dumps({"HTML": f"<section>{first_marker}</section>"}),
+    )
+    adr_serverless.create_template(
+        BasicLayout,
+        name=f"{name_prefix}_beta_{unique_suffix}",
+        parent=tabs_layout,
+        params=json.dumps({"HTML": f"<section>{second_marker}</section>"}),
+    )
+    return tabs_layout, first_marker, second_marker
 
 
 @pytest.mark.ado_test
@@ -1050,6 +1094,73 @@ def test_template_render(monkeypatch, adr_serverless):
 
     # Assert that the final rendered content matches the fixed string.
     assert result == "dummy rendered content"
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(
+    ("context", "tabs_properties"),
+    [
+        pytest.param({}, {"inline_tabs": 1}, id="inline-tabs"),
+        pytest.param({"print": "pdf"}, None, id="pdf-print-style"),
+    ],
+)
+def test_tab_layout_render_flattens_inline_and_pdf_markup(
+    adr_serverless, monkeypatch, context, tabs_properties
+):
+    """Inline/PDF tabs should render children directly, not via interactive slots."""
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    tabs_layout, first_marker, second_marker = _create_tab_layout_render_target(
+        adr_serverless,
+        name_prefix="test_tab_layout_render_flattened",
+        properties=tabs_properties,
+    )
+
+    # This regression only cares about the body HTML produced by the server-side
+    # tab engine. Returning ``context["HTML"]`` avoids depending on the outer
+    # Django page template being present in every test environment.
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: context["HTML"],
+    )
+
+    rendered_html = tabs_layout.render(context=context)
+
+    # Both tab bodies must still render in inline/PDF mode.
+    assert first_marker in rendered_html
+    assert second_marker in rendered_html
+    # Regression guard: inline/PDF output should not reintroduce interactive tab markup.
+    assert "<adr-tabs" not in rendered_html
+    assert "<slot name" not in rendered_html
+    assert "adr_tab_template_" not in rendered_html
+    assert "slot='" not in rendered_html
+
+
+@pytest.mark.ado_test
+def test_tab_layout_render_keeps_interactive_markup_by_default(adr_serverless, monkeypatch):
+    """Non-inline tabs should keep the interactive host so default behavior stays intact."""
+    from ansys.dynamicreporting.core.serverless import template as template_module
+
+    tabs_layout, first_marker, second_marker = _create_tab_layout_render_target(
+        adr_serverless, name_prefix="test_tab_layout_render_interactive"
+    )
+
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: context["HTML"],
+    )
+
+    rendered_html = tabs_layout.render()
+
+    assert first_marker in rendered_html
+    assert second_marker in rendered_html
+    assert "<adr-tabs" in rendered_html
+    assert "<slot name" in rendered_html
+    assert 'shadowrootmode="open"' in rendered_html
+    assert "adr_tab_template_" in rendered_html
+    assert "slot='" in rendered_html
 
 
 @pytest.mark.ado_test
