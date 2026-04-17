@@ -22,6 +22,7 @@
 
 from pathlib import Path
 from random import random as r
+import sys
 import uuid
 
 import numpy as np
@@ -120,6 +121,146 @@ def test_get_database_config_after_setup(adr_serverless):
 def test_setup_after_setup(adr_serverless):
     with pytest.raises(RuntimeError):
         adr_serverless.setup(collect_static=True)
+
+
+@pytest.mark.ado_test
+def test_setup_enforces_runtime_dependencies_before_importing_settings(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import _dep_check
+
+    # Build the smallest install layout that passes install resolution.
+    # The dep-check hook should fail before any product Django settings import.
+    django_dir = tmp_path / "ADR" / "nexus261" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").write_text("", encoding="utf-8")
+
+    previous_instance = ADR._instance
+    previous_is_setup = ADR._is_setup
+    adr = None
+
+    def fake_enforce_runtime_dependencies(target_install_version: int) -> None:
+        assert target_install_version == 261
+        raise ImproperlyConfiguredError("dependency check blocked setup")
+
+    monkeypatch.setattr(_dep_check, "enforce_runtime_dependencies", fake_enforce_runtime_dependencies)
+
+    try:
+        ADR._instance = None
+        ADR._is_setup = False
+        adr = ADR(ansys_installation=str(tmp_path), ansys_version=261, in_memory=True)
+
+        with pytest.raises(ImproperlyConfiguredError, match="dependency check blocked setup"):
+            adr.setup()
+
+        assert not ADR._is_setup
+    finally:
+        if adr is not None:
+            # This path fails before Django settings are configured, so only the
+            # temporary directories need cleanup here.
+            for tmp_dir in adr._tmp_dirs:
+                tmp_dir.cleanup()
+        ADR._instance = previous_instance
+        ADR._is_setup = previous_is_setup
+
+
+@pytest.mark.ado_test
+def test_setup_runs_phased_compatibility_hooks_before_django_setup(tmp_path, monkeypatch):
+    import django
+
+    from ansys.dynamicreporting.core.serverless import _compat as compat_module
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    # Build the smallest importable ADR install tree needed to reach the Django
+    # configuration path. The compat hook test stops at django.setup(), so the
+    # product settings module only needs a minimal set of uppercase settings.
+    django_dir = tmp_path / "ADR" / "nexus271" / "django"
+    ceireports_dir = django_dir / "ceireports"
+    ceireports_dir.mkdir(parents=True)
+    (django_dir / "manage.py").write_text("", encoding="utf-8")
+    (ceireports_dir / "__init__.py").write_text("", encoding="utf-8")
+    (ceireports_dir / "settings_serverless.py").write_text(
+        "\n".join(
+            [
+                "SECRET_KEY = 'compat-test'",
+                "INSTALLED_APPS = []",
+                "MIDDLEWARE = []",
+                "ROOT_URLCONF = 'ceireports.urls'",
+                "TEMPLATES = []",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    previous_instance = ADR._instance
+    previous_is_setup = ADR._is_setup
+    previous_sys_path = list(sys.path)
+    adr = None
+    observed_calls = []
+
+    def always_enabled(overrides, pkg_versions):
+        return True
+
+    def build_post_configure_hook(overrides, pkg_versions):
+        return compat_module.PostConfigureHook(
+            description="test post-configure hook",
+            apply=lambda settings_obj: observed_calls.append("post-configure"),
+        )
+
+    def build_pre_setup_hook(overrides, pkg_versions):
+        return compat_module.PreSetupHook(
+            description="test pre-setup hook",
+            apply=lambda: observed_calls.append("pre-setup"),
+        )
+
+    def fake_django_setup():
+        observed_calls.append("django.setup")
+        raise RuntimeError("stop after phased compatibility hooks")
+
+    monkeypatch.setattr(adr_module._dep_check, "enforce_runtime_dependencies", lambda _: None)
+    monkeypatch.setattr(adr_module.report_utils, "apply_timezone_workaround", lambda: None)
+    monkeypatch.setattr(compat_module, "_get_installed_versions", lambda: {"django": (5, 2, 0)})
+    monkeypatch.setattr(compat_module, "PRE_CONFIGURE_RULES", [])
+    monkeypatch.setattr(
+        compat_module,
+        "POST_CONFIGURE_RULES",
+        [
+            compat_module.PostConfigureRule(
+                description="test post-configure rule",
+                condition=always_enabled,
+                build_hook=build_post_configure_hook,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        compat_module,
+        "PRE_SETUP_RULES",
+        [
+            compat_module.PreSetupRule(
+                description="test pre-setup rule",
+                condition=always_enabled,
+                build_hook=build_pre_setup_hook,
+            )
+        ],
+    )
+    monkeypatch.setattr(django, "setup", fake_django_setup)
+
+    try:
+        ADR._instance = None
+        ADR._is_setup = False
+        adr = ADR(ansys_installation=str(tmp_path), ansys_version=271, db_directory=tmp_path / "db")
+
+        with pytest.raises(RuntimeError, match="stop after phased compatibility hooks"):
+            adr.setup()
+
+        assert observed_calls == ["post-configure", "pre-setup", "django.setup"]
+        assert not ADR._is_setup
+    finally:
+        if adr is not None:
+            adr.close()
+        for module_name in ("ceireports.settings_serverless", "ceireports"):
+            sys.modules.pop(module_name, None)
+        sys.path[:] = previous_sys_path
+        ADR._instance = previous_instance
+        ADR._is_setup = previous_is_setup
 
 
 @pytest.mark.ado_test
