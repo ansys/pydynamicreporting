@@ -1658,6 +1658,10 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         captured["render_kwargs"] = kwargs
         return "<html><body><p>Browser PDF options</p></body></html>"
 
+    def fake_exporter_init(self, **kwargs):
+        # Capture exporter construction so option forwarding is verified directly.
+        captured["exporter_kwargs"] = kwargs
+
     def fake_export(self):
         # Keep the test focused on argument plumbing instead of exporter internals.
         return None
@@ -1678,6 +1682,7 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         captured["logger"] = logger
 
     monkeypatch.setattr(ADR, "render_report", fake_render_report)
+    monkeypatch.setattr(ServerlessReportExporter, "__init__", fake_exporter_init)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
     monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
     monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
@@ -1692,6 +1697,12 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     )
 
     assert pdf_bytes == b"%PDF-mock"
+    exporter_kwargs = captured["exporter_kwargs"]
+    assert isinstance(exporter_kwargs, dict)
+    assert exporter_kwargs["html_content"] == "<html><body><p>Browser PDF options</p></body></html>"
+    assert exporter_kwargs["filename"] == "index.html"
+    assert exporter_kwargs["no_inline_files"] is True
+    assert exporter_kwargs["dark_mode"] is True
     assert isinstance(captured["html_dir"], Path)
     assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
