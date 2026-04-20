@@ -37,12 +37,17 @@ class PlaywrightPDFRenderer:
 
     Parameters
     ----------
-    html_dir : Path
+    html_dir : Path or str
         Directory containing the exported offline HTML report and its assets.
     filename : str, default: "index.html"
         HTML entry-point filename inside ``html_dir``.
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
+    margins : dict[str, str], optional
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS lengths.
+        If omitted, 10 mm margins are used on every side.
+    render_timeout : float, default: 30.0
+        Maximum time, in seconds, to wait for browser readiness signals.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -68,18 +73,20 @@ class PlaywrightPDFRenderer:
 
     def __init__(
         self,
-        html_dir: Path,
+        html_dir: Path | str,
         filename: str = "index.html",
         *,
         landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""
-        self._html_dir = Path(html_dir)
+        self._html_dir = Path(html_dir).expanduser().resolve()
         self._filename = filename
         self._landscape = landscape
-        self._margins = dict(self._DEFAULT_MARGINS)
-        self._render_timeout = self._DEFAULT_RENDER_TIMEOUT
+        self._margins = self._validate_margins(margins)
+        self._render_timeout = self._validate_render_timeout(render_timeout)
         self._logger = logger or get_logger()
 
     def render_pdf(self) -> bytes:
@@ -95,6 +102,8 @@ class PlaywrightPDFRenderer:
         ADRException
             If Playwright is unavailable or the browser render/export flow fails.
         """
+        entrypoint_path = self._resolve_entrypoint_path()
+
         try:
             from playwright.sync_api import sync_playwright
         except ImportError as exc:
@@ -118,7 +127,7 @@ class PlaywrightPDFRenderer:
                             "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
                         }
                     )
-                    file_url = (self._html_dir / self._filename).as_uri()
+                    file_url = entrypoint_path.as_uri()
 
                     # Load the exported offline report exactly as Chromium would see it from disk.
                     self._logger.info(f"Loading exported HTML for browser PDF export: {file_url}")
@@ -242,9 +251,9 @@ class PlaywrightPDFRenderer:
 
     def _compute_pdf_width(self, page: Any) -> str | None:
         """Compute an explicit PDF page width when needed to preserve browser content."""
-        margin_width_px = self._css_length_to_px(
-            self._DEFAULT_MARGINS["left"]
-        ) + self._css_length_to_px(self._DEFAULT_MARGINS["right"])
+        margin_width_px = self._css_length_to_px(self._margins["left"]) + self._css_length_to_px(
+            self._margins["right"]
+        )
         content_width_px = self._measure_content_width_px(page)
         layout_width_px = self._measure_layout_width_px(page)
         if content_width_px <= 0:
@@ -353,6 +362,49 @@ class PlaywrightPDFRenderer:
         if unit not in self._CSS_UNIT_TO_PX:
             raise ADRException(f"Unsupported CSS length unit for PDF rendering: {value!r}")
         return number * self._CSS_UNIT_TO_PX[unit]
+
+    def _resolve_entrypoint_path(self) -> Path:
+        """Return the validated HTML entry-point path that Chromium can open."""
+        entrypoint_path = (self._html_dir / self._filename).resolve()
+        if not entrypoint_path.is_relative_to(self._html_dir):
+            raise ADRException(
+                "Browser PDF entry-point file must be inside the exported HTML directory."
+            )
+        if not entrypoint_path.is_file():
+            raise ADRException(f"Browser PDF entry-point file does not exist: {entrypoint_path}")
+        return entrypoint_path
+
+    def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
+        """Validate Playwright PDF margins and return a private copy."""
+        if margins is None:
+            return dict(self._DEFAULT_MARGINS)
+
+        expected_keys = set(self._DEFAULT_MARGINS)
+        margin_keys = set(margins)
+        missing_keys = expected_keys - margin_keys
+        extra_keys = margin_keys - expected_keys
+        if missing_keys or extra_keys:
+            raise ADRException(
+                "Browser PDF margins must contain exactly top, right, bottom, and left keys."
+            )
+
+        # Validate each margin now so width computation and Playwright rendering use the same
+        # supported absolute CSS length set.
+        validated = {key: str(margins[key]) for key in self._DEFAULT_MARGINS}
+        for margin_value in validated.values():
+            self._css_length_to_px(margin_value)
+        return validated
+
+    def _validate_render_timeout(self, render_timeout: float) -> float:
+        """Validate the browser readiness timeout."""
+        try:
+            timeout = float(render_timeout)
+        except (TypeError, ValueError) as exc:
+            raise ADRException("Browser PDF render_timeout must be a positive number.") from exc
+
+        if timeout <= 0:
+            raise ADRException("Browser PDF render_timeout must be a positive number.")
+        return timeout
 
     def _evaluate_ready_step(
         self,

@@ -62,11 +62,12 @@ def _simple_renderer(
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
+        render_timeout=(
+            PlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT
+            if render_timeout is None
+            else render_timeout
+        ),
     )
-    if render_timeout is not None:
-        # Keep the timeout override local to the test setup so individual tests do not need
-        # to reach into private state after construction.
-        renderer._render_timeout = render_timeout
     return renderer
 
 
@@ -101,6 +102,17 @@ def test_playwright_missing_raises_error(tmp_path):
     with patch("builtins.__import__", side_effect=fake_import):
         with pytest.raises(ADRException, match=r"ansys-dynamicreporting-core\[browser-pdf\]"):
             renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_validates_missing_entrypoint_before_import(tmp_path):
+    renderer = PlaywrightPDFRenderer(html_dir=tmp_path)
+
+    with patch("builtins.__import__") as import_mock:
+        with pytest.raises(ADRException, match="entry-point file does not exist"):
+            renderer.render_pdf()
+
+    import_mock.assert_not_called()
 
 
 @pytest.mark.unit
@@ -177,8 +189,16 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
     pytest.importorskip("playwright.sync_api")
 
-    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
+    try:
         renderer.render_pdf()
+    except ADRException as exc:
+        error_text = str(exc)
+        if "Executable doesn't exist" in error_text or "playwright install chromium" in error_text:
+            pytest.skip("Playwright Chromium is not installed in this environment.")
+        assert "Browser PDF rendering failed" in error_text
+        assert "timed out" in error_text
+    else:
+        pytest.fail("Expected render_pdf() to fail due to readiness timeout.")
 
 
 @pytest.mark.unit
@@ -347,3 +367,55 @@ def test_css_length_to_px_supports_absolute_units(tmp_path):
     assert renderer._css_length_to_px("25.4mm") == pytest.approx(96.0)
     assert renderer._css_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._css_length_to_px("72pt") == pytest.approx(96.0)
+
+
+@pytest.mark.unit
+def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
+    report_dir = tmp_path / "relative-report"
+    report_dir.mkdir()
+    html_dir = _write_html(report_dir, "<html><body>Relative</body></html>")
+    monkeypatch.chdir(tmp_path)
+
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir.name)
+
+    assert renderer._html_dir == html_dir.resolve()
+    assert renderer._resolve_entrypoint_path() == (html_dir / "index.html").resolve()
+
+
+@pytest.mark.unit
+def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
+        margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
+    )
+    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 100.0)
+    monkeypatch.setattr(renderer, "_measure_layout_width_px", lambda page: 200.0)
+
+    # The width uses the larger layout width plus the caller-provided left/right margins.
+    assert renderer._compute_pdf_width(Mock()) == "488.00px"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "kwargs, expected_error",
+    [
+        ({"render_timeout": 0}, "render_timeout must be a positive number"),
+        ({"margins": {"top": "10mm"}}, "margins must contain exactly"),
+        (
+            {
+                "margins": {
+                    "top": "1em",
+                    "right": "10mm",
+                    "bottom": "10mm",
+                    "left": "10mm",
+                }
+            },
+            "Unsupported CSS length unit",
+        ),
+    ],
+)
+def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected_error):
+    html_dir = _write_html(tmp_path, "<html><body>Invalid options</body></html>")
+
+    with pytest.raises(ADRException, match=expected_error):
+        PlaywrightPDFRenderer(html_dir=html_dir, **kwargs)
