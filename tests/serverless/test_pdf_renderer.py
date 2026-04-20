@@ -99,7 +99,7 @@ def test_playwright_missing_raises_error(tmp_path):
         return real_import(name, globals, locals, fromlist, level)
 
     with patch("builtins.__import__", side_effect=fake_import):
-        with pytest.raises(ADRException, match="ansys-dynamicreporting-core"):
+        with pytest.raises(ADRException, match=r"ansys-dynamicreporting-core\[browser-pdf\]"):
             renderer.render_pdf()
 
 
