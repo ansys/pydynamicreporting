@@ -1386,6 +1386,7 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
+        margins: dict[str, str] | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1415,6 +1416,7 @@ class ADR:
                 renderer = PlaywrightPDFRenderer(
                     html_dir=tmp_path,
                     landscape=landscape,
+                    margins=margins,
                     render_timeout=render_timeout,
                     logger=self._logger,
                 )
@@ -1457,6 +1459,7 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
+        margins: dict[str, str] | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1476,6 +1479,9 @@ class ADR:
             Whether to render using a dark theme. Default ``False``.
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+            If omitted, 10 mm margins are used on every side.
         render_timeout : float, optional
             Maximum time, in seconds, to wait for browser readiness signals.
             Default ``30.0``.
@@ -1491,8 +1497,7 @@ class ADR:
         Raises
         ------
         ADRException
-            If no keyword arguments are provided, Playwright is unavailable,
-            or browser PDF rendering fails.
+            If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
         """
@@ -1501,6 +1506,7 @@ class ADR:
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
+            margins=margins,
             render_timeout=render_timeout,
             **kwargs,
         )
@@ -1739,6 +1745,7 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
+        margins: dict[str, str] | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
@@ -1760,6 +1767,9 @@ class ADR:
             Whether to render using a dark theme. Default ``False``.
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+            If omitted, 10 mm margins are used on every side.
         render_timeout : float, optional
             Maximum time, in seconds, to wait for browser readiness signals.
             Default ``30.0``.
@@ -1774,8 +1784,7 @@ class ADR:
         Raises
         ------
         ADRException
-            If no keyword arguments are provided, Playwright is unavailable,
-            or browser PDF rendering fails.
+            If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
         """
@@ -1789,6 +1798,7 @@ class ADR:
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
+            margins=margins,
             render_timeout=render_timeout,
             **kwargs,
         )

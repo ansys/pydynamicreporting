@@ -1567,6 +1567,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp
         filename="index.html",
         *,
         landscape=False,
+        margins=None,
         render_timeout=30.0,
         logger=None,
     ):
@@ -1575,6 +1576,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp
         captured["html_dir"] = html_dir
         captured["filename"] = filename
         captured["landscape"] = landscape
+        captured["margins"] = margins
         captured["render_timeout"] = render_timeout
         captured["logger"] = logger
 
@@ -1586,14 +1588,17 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp
     output_dir = tmp_path / "exports"
     output_dir.mkdir()
     output_file = output_dir / "browser-output.pdf"
+    margins = {"top": "1in", "right": "12mm", "bottom": "1in", "left": "12mm"}
     adr.export_report_as_browser_pdf(
         filename=output_file,
+        margins=margins,
         name="TestBrowserPDFExport",
     )
 
     assert output_file.exists()
     assert output_file.read_bytes() == b"%PDF-mock"
     assert Path(captured["html_dir"]).parent == adr._db_directory
+    assert captured["margins"] == margins
     assert captured["render_timeout"] == 30.0
 
 
@@ -1672,12 +1677,14 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         filename="index.html",
         *,
         landscape=False,
+        margins=None,
         render_timeout=30.0,
         logger=None,
     ):
         captured["html_dir"] = html_dir
         captured["filename"] = filename
         captured["landscape"] = landscape
+        captured["margins"] = margins
         captured["render_timeout"] = render_timeout
         captured["logger"] = logger
 
@@ -1687,12 +1694,14 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
     monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
+    margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
     pdf_bytes = adr.render_report_as_browser_pdf(
         name="TestBrowserPDFOptions",
         context={"custom": "value"},
         item_filter="A|i_tags|cont|dp=dp227;",
         dark_mode=True,
         landscape=True,
+        margins=margins,
         render_timeout=12.5,
     )
 
@@ -1706,6 +1715,7 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     assert isinstance(captured["html_dir"], Path)
     assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
+    assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5
     assert captured["render_kwargs"] == {
         "context": {"custom": "value", "print": "pdf"},
