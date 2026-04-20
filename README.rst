@@ -68,9 +68,9 @@ To reach the project support team, email
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.10 through 3.12 on
-Windows and Linux. It is currently available on the PyPI
-`repository <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
+The ``pydynamicreporting`` package supports Python 3.10 through 3.13 on
+Windows and Linux. It is currently available on
+`PyPI <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
 For the base client package, run:
 
@@ -167,6 +167,24 @@ run the following commands to update the lock file:
 Then make sure to commit the updated ``uv.lock`` file.
 This ensures your local environment is synchronized with the latest dependency
 constraints.
+
+**Resolving CI Security Scan Errors**
+
+If CI reports a ``Security Scan`` error, first activate the virtual
+environment and then refresh the environment and lock file:
+
+.. code::
+
+  # Windows PowerShell
+  .\.venv\Scripts\Activate.ps1
+
+  # Linux/macOS
+  source .venv/bin/activate
+
+  uv sync --upgrade --all-extras
+  uv lock --upgrade
+
+After these commands finish, commit the updated ``uv.lock`` file.
 
 For serverless compatibility work, keep the base dependency set broad enough to
 span the supported ADR product lines and place release-specific pins in

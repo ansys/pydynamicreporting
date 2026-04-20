@@ -14,6 +14,7 @@ When you change code in this repo, aim to always:
   - `make check` (lockfile consistency + pre-commit)
   - `make test` (pytest + coverage)
   - `make smoketest` (fast import sanity check)
+- **After every commit**, activate the project virtual environment, run `uv sync --upgrade --all-extras` and `uv lock --upgrade`, and commit any resulting `uv.lock` update so CI `Security Scan` checks do not fail.
 - **Avoid unrelated reformatting** and keep diffs tight.
 
 ## Project overview
@@ -23,7 +24,7 @@ When you change code in this repo, aim to always:
 - **Repository**: https://github.com/ansys/pydynamicreporting
 - **Documentation**: https://dynamicreporting.docs.pyansys.com/
 - **Package**: `ansys-dynamicreporting-core` on PyPI
-- **Python support**: 3.10–3.12 (`requires-python = ">=3.10, <3.13"`)
+- **Python support**: 3.10–3.13 (`requires-python = ">=3.10, <3.14"`)
 - **License**: MIT
 
 ## Repository structure (high level)
@@ -51,7 +52,7 @@ Notes:
 This repo uses **uv** + a checked-in lockfile (`uv.lock`). The Makefile wraps the canonical workflows.
 
 ### Prerequisites
-- Python 3.10, 3.11, or 3.12
+- Python 3.10, 3.11, 3.12, or 3.13
 - `uv`
 - `make` (on Windows, `make install` uses Git Bash under the hood)
 
