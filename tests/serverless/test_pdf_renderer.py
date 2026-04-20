@@ -361,27 +361,28 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
 
 
 @pytest.mark.unit
-def test_css_length_to_px_supports_absolute_units(tmp_path):
+def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
 
-    assert renderer._css_length_to_px("25.4mm") == pytest.approx(96.0)
-    assert renderer._css_length_to_px("1in") == pytest.approx(96.0)
-    assert renderer._css_length_to_px("72pt") == pytest.approx(96.0)
+    assert renderer._pdf_length_to_px("25.4mm") == pytest.approx(96.0)
+    assert renderer._pdf_length_to_px("1in") == pytest.approx(96.0)
+    assert renderer._pdf_length_to_px("96px") == pytest.approx(96.0)
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "value, expected_error",
     [
-        ("calc(10px + 1in)", "Unsupported CSS length"),
-        ("1em", "Unsupported CSS length unit"),
+        ("calc(10px + 1in)", "Unsupported PDF length"),
+        ("1em", "Unsupported PDF length unit"),
+        ("72pt", "Unsupported PDF length unit"),
     ],
 )
-def test_css_length_to_px_rejects_relative_or_malformed_units(tmp_path, value, expected_error):
+def test_pdf_length_to_px_rejects_undocumented_or_malformed_units(tmp_path, value, expected_error):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Invalid units</p></body></html>")
 
     with pytest.raises(ADRException, match=expected_error):
-        renderer._css_length_to_px(value)
+        renderer._pdf_length_to_px(value)
 
 
 @pytest.mark.unit
@@ -475,7 +476,7 @@ def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, sho
                     "left": "10mm",
                 }
             },
-            "Unsupported CSS length unit",
+            "Unsupported PDF length unit",
         ),
     ],
 )

@@ -45,7 +45,7 @@ class PlaywrightPDFRenderer:
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
     margins : dict[str, str], optional
-        Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS lengths.
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, to wait for browser readiness signals.
@@ -59,10 +59,9 @@ class PlaywrightPDFRenderer:
         "bottom": "10mm",
         "left": "10mm",
     }
-    _CSS_UNIT_TO_PX: dict[str, float] = {
+    _PDF_UNIT_TO_PX: dict[str, float] = {
         "": 1.0,
         "px": 1.0,
-        "pt": 96.0 / 72.0,
         "in": 96.0,
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
@@ -259,7 +258,7 @@ class PlaywrightPDFRenderer:
 
     def _compute_pdf_width(self, page: Any) -> str | None:
         """Compute an explicit PDF page width when needed to preserve browser content."""
-        margin_width_px = self._css_length_to_px(self._margins["left"]) + self._css_length_to_px(
+        margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
             self._margins["right"]
         )
         content_width_px = self._measure_content_width_px(page)
@@ -359,17 +358,17 @@ class PlaywrightPDFRenderer:
             )
         )
 
-    def _css_length_to_px(self, value: str) -> float:
-        """Convert a CSS absolute length to CSS pixels."""
+    def _pdf_length_to_px(self, value: str) -> float:
+        """Convert a Playwright PDF length to CSS pixels."""
         match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*", value)
         if match is None:
-            raise ADRException(f"Unsupported CSS length for PDF rendering: {value!r}")
+            raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
 
         number = float(match.group(1))
         unit = match.group(2).lower()
-        if unit not in self._CSS_UNIT_TO_PX:
-            raise ADRException(f"Unsupported CSS length unit for PDF rendering: {value!r}")
-        return number * self._CSS_UNIT_TO_PX[unit]
+        if unit not in self._PDF_UNIT_TO_PX:
+            raise ADRException(f"Unsupported PDF length unit for browser PDF rendering: {value!r}")
+        return number * self._PDF_UNIT_TO_PX[unit]
 
     def _resolve_entrypoint_path(self) -> Path:
         """Return the validated HTML entry-point path that Chromium can open."""
@@ -413,10 +412,10 @@ class PlaywrightPDFRenderer:
             )
 
         # Validate each margin now so width computation and Playwright rendering use the same
-        # supported absolute CSS length set.
+        # documented PDF length unit set.
         validated = {key: str(margins[key]) for key in self._DEFAULT_MARGINS}
         for margin_value in validated.values():
-            self._css_length_to_px(margin_value)
+            self._pdf_length_to_px(margin_value)
         return validated
 
     def _validate_render_timeout(self, render_timeout: float) -> float:
