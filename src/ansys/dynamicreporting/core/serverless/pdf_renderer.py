@@ -110,9 +110,8 @@ class PlaywrightPDFRenderer:
             from playwright.sync_api import sync_playwright
         except ImportError as exc:
             raise ADRException(
-                "Playwright is required for browser-fidelity PDF export. Install it with:\n"
-                "  pip install ansys-dynamicreporting-core[browser-pdf]\n"
-                "  playwright install chromium"
+                "Playwright is a required dependency for browser-fidelity PDF export. "
+                "Reinstall ansys-dynamicreporting-core to restore the Playwright package."
             ) from exc
 
         try:

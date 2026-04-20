@@ -1402,7 +1402,7 @@ class ADR:
         scratch_root = self._resolve_browser_pdf_scratch_root()
 
         try:
-            # Import lazily so Playwright remains an optional feature unless this path is used.
+            # Import lazily so browser startup and Chromium use happen only on this export path.
             from .pdf_renderer import PlaywrightPDFRenderer
 
             with tempfile.TemporaryDirectory(

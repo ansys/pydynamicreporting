@@ -66,6 +66,7 @@ dependencies = [
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "pandas" },
     { name = "pillow" },
+    { name = "playwright" },
     { name = "psutil" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pypng" },
@@ -81,9 +82,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-browser-pdf = [
-    { name = "playwright" },
-]
 dev = [
     { name = "codespell" },
     { name = "hatch" },
@@ -134,7 +132,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.2,<3.0.0" },
     { name = "pillow", specifier = ">=9.3.0" },
     { name = "pip", marker = "extra == 'dev'" },
-    { name = "playwright", marker = "extra == 'browser-pdf'", specifier = ">=1.40.0,<2.0.0" },
+    { name = "playwright", specifier = ">=1.58.0,<2.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "psutil", specifier = ">=6.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.6,<3.3.0" },
@@ -159,7 +157,7 @@ requires-dist = [
     { name = "vtk", marker = "extra == 'test'", specifier = "==9.6.1" },
     { name = "weasyprint", specifier = ">=67.0" },
 ]
-provides-extras = ["browser-pdf", "dev", "doc", "test"]
+provides-extras = ["dev", "doc", "test"]
 
 [[package]]
 name = "ansys-sphinx-theme"
