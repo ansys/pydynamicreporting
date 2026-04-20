@@ -370,6 +370,37 @@ def test_css_length_to_px_supports_absolute_units(tmp_path):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "value, expected_error",
+    [
+        ("calc(10px + 1in)", "Unsupported CSS length"),
+        ("1em", "Unsupported CSS length unit"),
+    ],
+)
+def test_css_length_to_px_rejects_relative_or_malformed_units(tmp_path, value, expected_error):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Invalid units</p></body></html>")
+
+    with pytest.raises(ADRException, match=expected_error):
+        renderer._css_length_to_px(value)
+
+
+@pytest.mark.unit
+def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_path):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Deadline</p></body></html>")
+    page = Mock()
+
+    with pytest.raises(ADRException, match="Expired step timed out"):
+        renderer._evaluate_ready_step(
+            page,
+            step_name="Expired step",
+            wait_script="() => Promise.resolve()",
+            deadline=0.0,
+        )
+
+    page.evaluate.assert_not_called()
+
+
+@pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     report_dir = tmp_path / "relative-report"
     report_dir.mkdir()

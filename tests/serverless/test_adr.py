@@ -1655,6 +1655,7 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     captured: dict[str, object] = {}
 
     def fake_render_report(self, **kwargs):
+        captured["render_kwargs"] = kwargs
         return "<html><body><p>Browser PDF options</p></body></html>"
 
     def fake_export(self):
@@ -1683,6 +1684,9 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
 
     pdf_bytes = adr.render_report_as_browser_pdf(
         name="TestBrowserPDFOptions",
+        context={"custom": "value"},
+        item_filter="A|i_tags|cont|dp=dp227;",
+        dark_mode=True,
         landscape=True,
         render_timeout=12.5,
     )
@@ -1692,3 +1696,31 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
     assert captured["render_timeout"] == 12.5
+    assert captured["render_kwargs"] == {
+        "context": {"custom": "value", "print": "pdf"},
+        "item_filter": "A|i_tags|cont|dp=dp227;",
+        "name": "TestBrowserPDFOptions",
+    }
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_uses_template_guid_default_filename(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    class FakeTemplate:
+        guid = "browser-pdf-guid"
+
+    adr = object.__new__(ADR)
+    adr._logger = _noop_logger()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        ADR,
+        "_render_report_as_browser_pdf_impl",
+        lambda self, **kwargs: b"%PDF-default-name",
+    )
+    monkeypatch.setattr(adr_module.Template, "get", staticmethod(lambda **kwargs: FakeTemplate()))
+
+    adr.export_report_as_browser_pdf(name="DefaultBrowserPDF")
+
+    assert (tmp_path / "browser-pdf-guid.pdf").read_bytes() == b"%PDF-default-name"
