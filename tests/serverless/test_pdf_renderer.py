@@ -433,7 +433,6 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     [
         ("https://example.com/asset.js", True),
         ("http://example.com/image.png", True),
-        ("wss://example.com/socket", True),
         ("file:///tmp/report/index.html", False),
         ("data:image/gif;base64,AAAA", False),
         ("blob:null/1234", False),
@@ -453,12 +452,33 @@ def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, sho
     route_handler(route)
 
     assert pattern == "**/*"
+    context.route_web_socket.assert_called_once()
     if should_block:
         route.abort.assert_called_once_with()
         route.continue_.assert_not_called()
     else:
         route.continue_.assert_called_once_with()
         route.abort.assert_not_called()
+
+
+@pytest.mark.unit
+def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>WebSockets</body></html>")
+    )
+    context = Mock()
+
+    renderer._block_external_requests(context)
+
+    predicate, websocket_handler = context.route_web_socket.call_args.args
+    assert predicate("ws://example.com/socket") is True
+    assert predicate("wss://example.com/socket") is True
+    assert predicate("file:///tmp/report/index.html") is False
+
+    websocket_route = Mock()
+    websocket_handler(websocket_route)
+
+    websocket_route.close.assert_called_once_with()
 
 
 @pytest.mark.unit

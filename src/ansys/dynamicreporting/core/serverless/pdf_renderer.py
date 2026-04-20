@@ -70,7 +70,8 @@ class PlaywrightPDFRenderer:
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
-    _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https", "ws", "wss"}
+    _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
+    _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
 
     def __init__(
         self,
@@ -125,7 +126,8 @@ class PlaywrightPDFRenderer:
                         viewport={
                             "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
                             "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
-                        }
+                        },
+                        service_workers="block",
                     )
                     try:
                         self._block_external_requests(context)
@@ -392,10 +394,19 @@ class PlaywrightPDFRenderer:
                 return
             route.continue_()
 
+        def is_external_websocket(url: str) -> bool:
+            return urlsplit(url).scheme.lower() in self._BLOCKED_WEBSOCKET_SCHEMES
+
+        def route_websocket(websocket_route: Any) -> None:
+            websocket_route.close()
+
         # ADR's HTML exporter writes a self-contained file:// bundle. Blocking network schemes
         # prevents report HTML from calling back to arbitrary hosts during PDF generation while
         # still allowing file:, data:, and blob: resources that are part of the offline export.
+        # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
+        # connections through the dedicated route_web_socket API.
         context.route("**/*", route_request)
+        context.route_web_socket(is_external_websocket, route_websocket)
 
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
         """Validate Playwright PDF margins and return a private copy."""
