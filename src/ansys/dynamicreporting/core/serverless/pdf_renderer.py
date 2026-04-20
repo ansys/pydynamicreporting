@@ -29,6 +29,8 @@ from time import monotonic
 from typing import Any
 from urllib.parse import urlsplit
 
+from playwright.sync_api import sync_playwright
+
 from ..adr_utils import get_logger
 from ..exceptions import ADRException
 
@@ -102,17 +104,9 @@ class PlaywrightPDFRenderer:
         Raises
         ------
         ADRException
-            If Playwright is unavailable or the browser render/export flow fails.
+            If the browser render/export flow fails.
         """
         entrypoint_path = self._resolve_entrypoint_path()
-
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError as exc:
-            raise ADRException(
-                "Playwright is a required dependency for browser-fidelity PDF export. "
-                "Reinstall ansys-dynamicreporting-core to restore the Playwright package."
-            ) from exc
 
         try:
             with sync_playwright() as playwright:

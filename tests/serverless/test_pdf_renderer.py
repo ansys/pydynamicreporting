@@ -22,7 +22,6 @@
 
 from pathlib import Path
 from unittest.mock import Mock
-from unittest.mock import patch
 
 import pytest
 
@@ -90,29 +89,11 @@ def test_playwright_pdf_landscape(tmp_path):
 
 
 @pytest.mark.unit
-def test_playwright_missing_raises_error(tmp_path):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>No playwright</p></body></html>")
-    real_import = __import__
-
-    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name.startswith("playwright"):
-            raise ImportError("playwright is not installed")
-        return real_import(name, globals, locals, fromlist, level)
-
-    with patch("builtins.__import__", side_effect=fake_import):
-        with pytest.raises(ADRException, match="required dependency"):
-            renderer.render_pdf()
-
-
-@pytest.mark.unit
-def test_playwright_pdf_validates_missing_entrypoint_before_import(tmp_path):
+def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_path):
     renderer = PlaywrightPDFRenderer(html_dir=tmp_path)
 
-    with patch("builtins.__import__") as import_mock:
-        with pytest.raises(ADRException, match="entry-point file does not exist"):
-            renderer.render_pdf()
-
-    import_mock.assert_not_called()
+    with pytest.raises(ADRException, match="entry-point file does not exist"):
+        renderer.render_pdf()
 
 
 @pytest.mark.unit
