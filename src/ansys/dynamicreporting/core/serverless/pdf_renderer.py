@@ -138,7 +138,7 @@ class PlaywrightPDFRenderer:
                         self._logger.info(
                             f"Loading exported HTML for browser PDF export: {file_url}"
                         )
-                        page.goto(file_url, wait_until="networkidle")
+                        page.goto(file_url, wait_until="load")
 
                         # Force screen media so the PDF matches the browser view instead of print CSS.
                         page.emulate_media(media="screen")
@@ -450,10 +450,9 @@ class PlaywrightPDFRenderer:
     ) -> None:
         """Run one readiness step while enforcing the remaining phase budget.
 
-        Playwright's sync ``evaluate`` API does not reliably time out unresolved JavaScript
-        promises, so each readiness step races its event-driven wait against the shared
-        browser-render deadline. This keeps the implementation signal-based while ensuring
-        that a missing readiness event fails fast instead of hanging forever.
+        Playwright's Python ``evaluate`` API waits for returned JavaScript promises but does
+        not expose a per-call timeout argument. Each readiness promise therefore enforces the
+        remaining browser-render deadline inside the page instead of using fixed sleeps.
         """
         remaining_ms = max(int((deadline - monotonic()) * 1000), 0)
         if remaining_ms <= 0:
@@ -487,12 +486,8 @@ class PlaywrightPDFRenderer:
 
     def _wait_for_render_ready(self, page: Any) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
-        timeout_ms = int(self._render_timeout * 1000)
         deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
-        # Playwright's sync ``evaluate`` API uses the page's default timeout rather than a
-        # per-call ``timeout=...`` keyword, so set the readiness budget once for this phase.
-        page.set_default_timeout(timeout_ms)
 
         # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
         #    until all custom web-components are registered, which adds ``body.loaded``.
