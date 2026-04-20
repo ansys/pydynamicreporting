@@ -1345,35 +1345,39 @@ class ADR:
             raise ADRException(f"PDF Report rendering failed: {e}")
 
     def _resolve_browser_pdf_scratch_root(self) -> Path:
-        """Return the ADR database directory for browser-PDF scratch files.
+        """Return a writable root directory for browser-PDF scratch files.
 
         The browser-PDF path stages a self-contained offline report bundle before Chromium opens
         it. Reusing the ADR database directory keeps those scratch files on the same repository-
-        managed volume instead of the slower global temp directory used by the original code.
+        managed volume when a local database directory is available. External database
+        configurations do not have a local ADR database directory, so they fall back to a
+        dedicated system temporary directory.
 
         Returns
         -------
         Path
-            Existing ADR database directory used to host the temporary browser-PDF bundle.
+            Existing directory used to host the temporary browser-PDF bundle.
 
         Raises
         ------
         ADRException
-            If the ADR database directory is unavailable or does not exist.
+            If a configured ADR database directory does not exist.
         """
         db_directory = getattr(self, "_db_directory", None)
-        if db_directory is None:
+        if db_directory:
+            scratch_root = Path(db_directory)
+            if scratch_root.exists() and scratch_root.is_dir():
+                return scratch_root
+
             raise ADRException(
-                "The ADR database directory must be configured for browser PDF export scratch files."
+                "The ADR database directory must exist before browser PDF export scratch files can be created."
             )
 
-        scratch_root = Path(db_directory)
-        if scratch_root.exists() and scratch_root.is_dir():
-            return scratch_root
-
-        raise ADRException(
-            "The ADR database directory must exist before browser PDF export scratch files can be created."
-        )
+        # External database configurations do not have a local ADR database directory. Use a
+        # dedicated temp child so these scratch bundles do not mix with unrelated temp files.
+        scratch_root = Path(tempfile.gettempdir()) / "adr_browser_pdf_scratch"
+        scratch_root.mkdir(parents=True, exist_ok=True)
+        return scratch_root
 
     def _render_report_as_browser_pdf_impl(
         self,
@@ -1382,6 +1386,7 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
+        render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
         """Render a browser-fidelity PDF using the ADR database directory for staging."""
@@ -1410,6 +1415,7 @@ class ADR:
                 renderer = PlaywrightPDFRenderer(
                     html_dir=tmp_path,
                     landscape=landscape,
+                    render_timeout=render_timeout,
                     logger=self._logger,
                 )
 
@@ -1451,6 +1457,7 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
+        render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
         """Render a report as a browser-fidelity PDF byte stream via headless Chromium.
@@ -1469,6 +1476,9 @@ class ADR:
             Whether to render using a dark theme. Default ``False``.
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
+        render_timeout : float, optional
+            Maximum time, in seconds, to wait for browser readiness signals.
+            Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1491,6 +1501,7 @@ class ADR:
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
+            render_timeout=render_timeout,
             **kwargs,
         )
 
@@ -1728,6 +1739,7 @@ class ADR:
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
+        render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
         """Export a report as a browser-fidelity PDF file via headless Chromium.
@@ -1748,6 +1760,9 @@ class ADR:
             Whether to render using a dark theme. Default ``False``.
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
+        render_timeout : float, optional
+            Maximum time, in seconds, to wait for browser readiness signals.
+            Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1774,6 +1789,7 @@ class ADR:
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
+            render_timeout=render_timeout,
             **kwargs,
         )
 

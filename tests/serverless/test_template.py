@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 import json
+import sys
+import types
 from uuid import uuid4
 
 import pytest
@@ -1094,6 +1096,81 @@ def test_template_render(monkeypatch, adr_serverless):
 
     # Assert that the final rendered content matches the fixed string.
     assert result == "dummy rendered content"
+
+
+@pytest.mark.unit
+def test_template_render_resets_print_style_after_render(monkeypatch):
+    from datetime import timezone as datetime_timezone
+
+    from ansys.dynamicreporting.core.serverless import template as template_module
+    from ansys.dynamicreporting.core.serverless.template import BasicLayout
+
+    class FakeItem:
+        @staticmethod
+        def find(query):
+            return ["item"]
+
+    class FakeTemplateEngine:
+        print_style_calls: list[str | None] = []
+
+        @classmethod
+        def set_print_style(cls, target):
+            cls.print_style_calls.append(target)
+
+        @staticmethod
+        def set_global_context(context):
+            return None
+
+        @staticmethod
+        def start_toc_session():
+            return None
+
+        @staticmethod
+        def end_toc_session():
+            return "<toc>"
+
+    class FakeEngine:
+        def render(self, items, context):
+            assert FakeTemplateEngine.print_style_calls[-1] == "pdf"
+            assert items == ["item"]
+            assert context["print"] == "pdf"
+            return "<body>"
+
+    class FakeOrmTemplate:
+        def get_engine(self):
+            return FakeEngine()
+
+    data_module = types.ModuleType("data")
+    data_models_module = types.ModuleType("data.models")
+    data_models_module.Item = FakeItem
+    data_module.models = data_models_module
+    reports_module = types.ModuleType("reports")
+    reports_engine_module = types.ModuleType("reports.engine")
+    reports_engine_module.TemplateEngine = FakeTemplateEngine
+    reports_module.engine = reports_engine_module
+    monkeypatch.setitem(sys.modules, "data", data_module)
+    monkeypatch.setitem(sys.modules, "data.models", data_models_module)
+    monkeypatch.setitem(sys.modules, "reports", reports_module)
+    monkeypatch.setitem(sys.modules, "reports.engine", reports_engine_module)
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: context["HTML"],
+    )
+    monkeypatch.setattr(
+        template_module.timezone,
+        "get_current_timezone",
+        lambda: datetime_timezone.utc,
+    )
+
+    template = object.__new__(BasicLayout)
+    template.guid = "fake-template-guid"
+    template._orm_instance = FakeOrmTemplate()
+
+    rendered_html = template.render(context={"print": "pdf"})
+
+    assert rendered_html == "<body><toc>"
+    assert FakeTemplateEngine.print_style_calls == ["pdf", None]
 
 
 @pytest.mark.ado_test

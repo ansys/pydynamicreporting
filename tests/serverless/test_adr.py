@@ -1567,6 +1567,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp
         filename="index.html",
         *,
         landscape=False,
+        render_timeout=30.0,
         logger=None,
     ):
         # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
@@ -1574,6 +1575,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp
         captured["html_dir"] = html_dir
         captured["filename"] = filename
         captured["landscape"] = landscape
+        captured["render_timeout"] = render_timeout
         captured["logger"] = logger
 
     monkeypatch.setattr(ADR, "render_report", fake_render_report)
@@ -1592,6 +1594,33 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(tmp
     assert output_file.exists()
     assert output_file.read_bytes() == b"%PDF-mock"
     assert Path(captured["html_dir"]).parent == adr._db_directory
+    assert captured["render_timeout"] == 30.0
+
+
+@pytest.mark.ado_test
+def test_browser_pdf_scratch_root_falls_back_for_external_database(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    adr = object.__new__(ADR)
+    adr._db_directory = None
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+
+    scratch_root = adr._resolve_browser_pdf_scratch_root()
+
+    assert scratch_root == tmp_path / "adr_browser_pdf_scratch"
+    assert scratch_root.is_dir()
+
+
+@pytest.mark.ado_test
+def test_browser_pdf_scratch_root_rejects_missing_database_directory(tmp_path):
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    adr = object.__new__(ADR)
+    adr._db_directory = tmp_path / "missing-db"
+
+    with pytest.raises(ADRException, match="database directory must exist"):
+        adr._resolve_browser_pdf_scratch_root()
 
 
 @pytest.mark.ado_test
@@ -1638,11 +1667,13 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
         filename="index.html",
         *,
         landscape=False,
+        render_timeout=30.0,
         logger=None,
     ):
         captured["html_dir"] = html_dir
         captured["filename"] = filename
         captured["landscape"] = landscape
+        captured["render_timeout"] = render_timeout
         captured["logger"] = logger
 
     monkeypatch.setattr(ADR, "render_report", fake_render_report)
@@ -1653,9 +1684,11 @@ def test_render_report_as_browser_pdf_with_page_options(tmp_path, monkeypatch):
     pdf_bytes = adr.render_report_as_browser_pdf(
         name="TestBrowserPDFOptions",
         landscape=True,
+        render_timeout=12.5,
     )
 
     assert pdf_bytes == b"%PDF-mock"
     assert isinstance(captured["html_dir"], Path)
     assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
+    assert captured["render_timeout"] == 12.5

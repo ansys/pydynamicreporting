@@ -621,16 +621,20 @@ class Template(BaseModel):
             items = Item.find(query=item_filter)
             template_obj = self._orm_instance
             engine = template_obj.get_engine()
-            # print style
+            # Inform the template engine about the render target so layouts such as tabs can
+            # flatten interactive content for PDF output, then reset the global style below.
             print_target = ctx.get("print", None)
             TemplateEngine.set_print_style(print_target)
-            # Properties that can change during iteration go into the global context.
-            TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
-            TemplateEngine.start_toc_session()
-            # Render the report body.
-            html = engine.render(items, ctx)
-            # Append any generated TOC entries.
-            html += TemplateEngine.end_toc_session()
+            try:
+                # Properties that can change during iteration go into the global context.
+                TemplateEngine.set_global_context({"page_number": 1, "root_template": template_obj})
+                TemplateEngine.start_toc_session()
+                # Render the report body.
+                html = engine.render(items, ctx)
+                # Append any generated TOC entries.
+                html += TemplateEngine.end_toc_session()
+            finally:
+                TemplateEngine.set_print_style(None)
             ctx["HTML"] = html
         except Exception as e:
             from ceireports.utils import get_render_error_html
