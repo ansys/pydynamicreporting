@@ -27,6 +27,7 @@ import re
 from pathlib import Path
 from time import monotonic
 from typing import Any
+from urllib.parse import urlsplit
 
 from ..adr_utils import get_logger
 from ..exceptions import ADRException
@@ -70,6 +71,7 @@ class PlaywrightPDFRenderer:
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
+    _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https", "ws", "wss"}
 
     def __init__(
         self,
@@ -121,39 +123,46 @@ class PlaywrightPDFRenderer:
                 try:
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
                     # items lay themselves out deterministically before the PDF width is computed.
-                    page = browser.new_page(
+                    context = browser.new_context(
                         viewport={
                             "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
                             "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
                         }
                     )
-                    file_url = entrypoint_path.as_uri()
+                    try:
+                        self._block_external_requests(context)
+                        page = context.new_page()
+                        file_url = entrypoint_path.as_uri()
 
-                    # Load the exported offline report exactly as Chromium would see it from disk.
-                    self._logger.info(f"Loading exported HTML for browser PDF export: {file_url}")
-                    page.goto(file_url, wait_until="networkidle")
+                        # Load the exported offline report exactly as Chromium would see it from disk.
+                        self._logger.info(
+                            f"Loading exported HTML for browser PDF export: {file_url}"
+                        )
+                        page.goto(file_url, wait_until="networkidle")
 
-                    # Force screen media so the PDF matches the browser view instead of print CSS.
-                    page.emulate_media(media="screen")
-                    self._apply_pdf_capture_styles(page)
-                    self._wait_for_render_ready(page)
-                    pdf_width = self._compute_pdf_width(page)
-                    pdf_options = {
-                        # Keep page height explicit so pagination remains under ADR's control
-                        # instead of depending entirely on Playwright's default page format.
-                        "height": self._DEFAULT_PAGE_HEIGHT,
-                        "landscape": self._landscape,
-                        "margin": self._margins,
-                        "print_background": True,
-                    }
-                    if pdf_width is not None:
-                        pdf_options["width"] = pdf_width
+                        # Force screen media so the PDF matches the browser view instead of print CSS.
+                        page.emulate_media(media="screen")
+                        self._apply_pdf_capture_styles(page)
+                        self._wait_for_render_ready(page)
+                        pdf_width = self._compute_pdf_width(page)
+                        pdf_options = {
+                            # Keep page height explicit so pagination remains under ADR's control
+                            # instead of depending entirely on Playwright's default page format.
+                            "height": self._DEFAULT_PAGE_HEIGHT,
+                            "landscape": self._landscape,
+                            "margin": self._margins,
+                            "print_background": True,
+                        }
+                        if pdf_width is not None:
+                            pdf_options["width"] = pdf_width
 
-                    pdf_bytes = page.pdf(**pdf_options)
-                    self._logger.info(
-                        f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
-                    )
-                    return pdf_bytes
+                        pdf_bytes = page.pdf(**pdf_options)
+                        self._logger.info(
+                            f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
+                        )
+                        return pdf_bytes
+                    finally:
+                        context.close()
                 finally:
                     browser.close()
         except ADRException:
@@ -374,6 +383,22 @@ class PlaywrightPDFRenderer:
             raise ADRException(f"Browser PDF entry-point file does not exist: {entrypoint_path}")
         return entrypoint_path
 
+    def _block_external_requests(self, context: Any) -> None:
+        """Keep browser-PDF rendering offline while still allowing local export assets."""
+
+        def route_request(route: Any) -> None:
+            request_url = route.request.url
+            scheme = urlsplit(request_url).scheme.lower()
+            if scheme in self._BLOCKED_REQUEST_SCHEMES:
+                route.abort()
+                return
+            route.continue_()
+
+        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking network schemes
+        # prevents report HTML from calling back to arbitrary hosts during PDF generation while
+        # still allowing file:, data:, and blob: resources that are part of the offline export.
+        context.route("**/*", route_request)
+
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
         """Validate Playwright PDF margins and return a private copy."""
         if margins is None:
@@ -587,10 +612,10 @@ class PlaywrightPDFRenderer:
             })""",
         )
 
-        # 8. DataTables: only wait for tables that are actually scheduled to initialize.
+        # 8. DataTables: only wait for tables with evidence of active initialization.
         #    Browser-PDF exports render tables in print mode for some reports, which keeps the
         #    DataTables assets on the page but intentionally never binds ``init.dt`` handlers.
-        #    In that case, waiting for initialization would hang forever even though the table
+        #    In that case, waiting for every table[id^="table_"] would hang even though the
         #    markup is already final and printable.
         self._evaluate_ready_step(
             page,
@@ -603,6 +628,19 @@ class PlaywrightPDFRenderer:
                 const tables = document.querySelectorAll('table[id^="table_"]');
                 if (tables.length === 0) { resolve(); return; }
                 const pendingTables = [];
+                function isDataTableReady(table) {
+                    try {
+                        return $.fn.DataTable.isDataTable(table);
+                    } catch (e) {
+                        return true;
+                    }
+                }
+                function hasActiveDataTableSettings(table) {
+                    const settings = $.fn.dataTableSettings || [];
+                    return Array.prototype.some.call(settings, (setting) => {
+                        return setting && setting.nTable === table;
+                    });
+                }
                 function hasPendingInitHandler(table) {
                     if (typeof $._data !== 'function') {
                         return false;
@@ -612,10 +650,17 @@ class PlaywrightPDFRenderer:
                     return initHandlers.some((handler) => handler.namespace === 'dt');
                 }
                 tables.forEach((table) => {
-                    if ($.fn.DataTable.isDataTable(table)) {
+                    if (table.hasAttribute('data-dt-skip-init-wait')) {
                         return;
                     }
-                    if (hasPendingInitHandler(table)) {
+                    if (isDataTableReady(table)) {
+                        return;
+                    }
+                    if (
+                        hasActiveDataTableSettings(table) ||
+                        hasPendingInitHandler(table) ||
+                        table.closest('.dataTables_wrapper')
+                    ) {
                         pendingTables.push(table);
                     }
                 });
@@ -623,7 +668,30 @@ class PlaywrightPDFRenderer:
                 let remaining = pendingTables.length;
                 function done() { if (--remaining <= 0) resolve(); }
                 pendingTables.forEach((table) => {
-                    $(table).on('init.dt', function() { done(); });
+                    let observer = null;
+                    const $table = $(table);
+                    function cleanup() {
+                        if (observer) {
+                            observer.disconnect();
+                            observer = null;
+                        }
+                        $table.off('init.dt', checkComplete);
+                    }
+                    function checkComplete() {
+                        if (isDataTableReady(table)) {
+                            cleanup();
+                            done();
+                        }
+                    }
+                    $table.on('init.dt', checkComplete);
+                    if (typeof MutationObserver !== 'undefined') {
+                        observer = new MutationObserver(checkComplete);
+                        observer.observe(table, {
+                            attributes: true,
+                            attributeFilter: ['class']
+                        });
+                    }
+                    checkComplete();
                 });
             })""",
         )

@@ -397,6 +397,40 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
+    "url, should_block",
+    [
+        ("https://example.com/asset.js", True),
+        ("http://example.com/image.png", True),
+        ("wss://example.com/socket", True),
+        ("file:///tmp/report/index.html", False),
+        ("data:image/gif;base64,AAAA", False),
+        ("blob:null/1234", False),
+    ],
+)
+def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, should_block):
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Requests</body></html>")
+    )
+    context = Mock()
+
+    renderer._block_external_requests(context)
+
+    pattern, route_handler = context.route.call_args.args
+    route = Mock()
+    route.request.url = url
+    route_handler(route)
+
+    assert pattern == "**/*"
+    if should_block:
+        route.abort.assert_called_once_with()
+        route.continue_.assert_not_called()
+    else:
+        route.continue_.assert_called_once_with()
+        route.abort.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
     "kwargs, expected_error",
     [
         ({"render_timeout": 0}, "render_timeout must be a positive number"),
