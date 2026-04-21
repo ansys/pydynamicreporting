@@ -1391,10 +1391,6 @@ class ADR:
         **kwargs: Any,
     ) -> bytes:
         """Render a browser-fidelity PDF using the ADR database directory for staging."""
-        if not kwargs:
-            raise ADRException(
-                "At least one keyword argument must be provided to fetch the report."
-            )
         if self._static_directory is None:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured for browser PDF export."
@@ -1501,6 +1497,11 @@ class ADR:
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
         """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+
         return self._render_report_as_browser_pdf_impl(
             context=context,
             item_filter=item_filter,
