@@ -33,6 +33,7 @@ jobs:
           operating-system: ubuntu-latest
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-licenses: 'false'
+          checkout: false
 
       - name: Install from wheelhouse
         run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}

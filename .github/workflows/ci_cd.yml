@@ -59,6 +59,7 @@ jobs:
           operating-system: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
           check-licenses: 'false'
+          checkout: false
 
       - name: Install from wheelhouse
         run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
@@ -116,6 +117,7 @@ jobs:
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          checkout: false
 
   publish-to-azure:
     name: Publish to Azure PyPI

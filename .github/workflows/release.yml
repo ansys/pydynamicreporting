@@ -43,6 +43,7 @@ jobs:
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          checkout: false
 
   upload-release:
     name: Upload release to PyPI
