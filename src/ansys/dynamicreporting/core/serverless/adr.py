@@ -1363,7 +1363,7 @@ class ADR:
         ADRException
             If a configured ADR database directory does not exist.
         """
-        db_directory = getattr(self, "_db_directory", None)
+        db_directory = self._db_directory
         if db_directory:
             scratch_root = Path(db_directory)
             if scratch_root.exists() and scratch_root.is_dir():
