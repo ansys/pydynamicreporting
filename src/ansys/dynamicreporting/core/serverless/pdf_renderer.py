@@ -233,6 +233,16 @@ class PlaywrightPDFRenderer:
                     display: none !important;
                 }
 
+                #report_root {
+                    /* Wide browser-PDF pages can make 1px ADR borders look faint when PDF
+                       viewers scale the page down. Override ADR's border design tokens for
+                       capture instead of selecting individual report items or changing layout. */
+                    --adr-border-color: #adb5bd !important;
+                    --adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+
                 h1:has(+ section.adr-container),
                 h2:has(+ section.adr-container),
                 h3:has(+ section.adr-container),

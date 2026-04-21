@@ -201,6 +201,10 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "h2:has(+ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
+    assert "--adr-border-color: #adb5bd !important;" in css
+    assert "--adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;" in css
+    assert "-webkit-print-color-adjust: exact !important;" in css
+    assert "print-color-adjust: exact !important;" in css
     assert "display: block !important;" in css
     assert "@media print" not in css
     assert "[nexus_template]" not in css
@@ -210,7 +214,53 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     html = """
     <html>
+    <head>
+        <style>
+            :root {
+                --adr-border-color: #dee2e6;
+                --adr-border-color-translucent: rgba(0, 0, 0, 0.175);
+                --adr-border-width: 1px;
+            }
+
+            tbody,
+            td,
+            tfoot,
+            th,
+            thead,
+            tr {
+                border-color: inherit;
+                border-style: solid;
+                border-width: 0;
+            }
+
+            .table {
+                border-color: var(--adr-border-color);
+            }
+
+            .table-bordered > :not(caption) > * {
+                border-width: var(--adr-border-width) 0;
+            }
+
+            .table-bordered > :not(caption) > * > * {
+                border-width: 0 var(--adr-border-width);
+            }
+
+            .table td,
+            .table th {
+                border-top: 1px solid var(--adr-border-color);
+            }
+
+            .adr-panel {
+                border: var(--adr-border-width) solid var(--adr-border-color-translucent);
+            }
+
+            .adr-panel-header {
+                border-bottom: var(--adr-border-width) solid var(--adr-border-color-translucent);
+            }
+        </style>
+    </head>
     <body>
+        <section id="report_root">
         <a id="TOC_item_tgt_1"></a>
         <br />
         <h2 id="section-heading">Material Properties</h2>
@@ -228,7 +278,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                 alt="preview"
                 src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
             />
-            <table class="table table-fit-head" id="kv-table">
+            <table class="table table-bordered table-fit-head" id="kv-table">
                 <thead id="collapsed-head" style="visibility: collapse;">
                     <tr>
                         <th></th>
@@ -238,17 +288,20 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                 <tbody>
                     <tr>
                         <th>Application</th>
-                        <td>Fluent</td>
+                        <td id="table-cell">Fluent</td>
                     </tr>
                 </tbody>
             </table>
         </adr-data-item>
         </section>
-        <header class="adr-panel-header" id="panel-heading">
-            <h2>System Information</h2>
-        </header>
-        <section class="adr-panel-body" id="panel-body">
-            <p>Panel content</p>
+        <section class="adr-panel" id="panel">
+            <header class="adr-panel-header" id="panel-heading">
+                <h2>System Information</h2>
+            </header>
+            <section class="adr-panel-body" id="panel-body">
+                <p>Panel content</p>
+            </section>
+        </section>
         </section>
     </body>
     </html>
@@ -274,14 +327,20 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const plot = document.getElementById('plot');
                     const viewer = document.getElementById('viewer');
                     const image = document.getElementById('image');
+                    const root = document.getElementById('report_root');
+                    const panel = document.getElementById('panel');
                     const panelHeading = document.getElementById('panel-heading');
+                    const tableCell = document.getElementById('table-cell');
                     const collapsedHead = document.getElementById('collapsed-head');
                     const sectionHeadingStyle = getComputedStyle(sectionHeading);
                     const itemStyle = getComputedStyle(item);
                     const plotStyle = getComputedStyle(plot);
                     const viewerStyle = getComputedStyle(viewer);
                     const imageStyle = getComputedStyle(image);
+                    const rootStyle = getComputedStyle(root);
+                    const panelStyle = getComputedStyle(panel);
                     const panelHeadingStyle = getComputedStyle(panelHeading);
+                    const tableCellStyle = getComputedStyle(tableCell);
                     const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
                         sectionHeading: {
@@ -305,9 +364,29 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                             breakInside: imageStyle.breakInside,
                             pageBreakInside: imageStyle.pageBreakInside,
                         },
+                        root: {
+                            borderColorToken:
+                                rootStyle.getPropertyValue('--adr-border-color').trim(),
+                            translucentBorderColorToken:
+                                rootStyle.getPropertyValue(
+                                    '--adr-border-color-translucent'
+                                ).trim(),
+                            printColorAdjust:
+                                rootStyle.getPropertyValue('print-color-adjust'),
+                            webkitPrintColorAdjust:
+                                rootStyle.getPropertyValue('-webkit-print-color-adjust'),
+                        },
+                        panel: {
+                            borderTopColor: panelStyle.borderTopColor,
+                        },
                         panelHeading: {
                             breakAfter: panelHeadingStyle.breakAfter,
                             pageBreakAfter: panelHeadingStyle.pageBreakAfter,
+                            borderBottomColor: panelHeadingStyle.borderBottomColor,
+                        },
+                        tableCell: {
+                            borderTopColor: tableCellStyle.borderTopColor,
+                            borderRightColor: tableCellStyle.borderRightColor,
                         },
                         collapsedHead: {
                             display: collapsedHeadStyle.display,
@@ -335,8 +414,16 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["viewer"]["breakInside"] == "avoid"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
+    assert computed_styles["root"]["borderColorToken"] == "#adb5bd"
+    assert computed_styles["root"]["translucentBorderColorToken"] == "rgba(0, 0, 0, 0.28)"
+    assert computed_styles["root"]["printColorAdjust"] == "exact"
+    assert computed_styles["root"]["webkitPrintColorAdjust"] == "exact"
+    assert computed_styles["panel"]["borderTopColor"] == "rgba(0, 0, 0, 0.28)"
     assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
     assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
+    assert computed_styles["panelHeading"]["borderBottomColor"] == "rgba(0, 0, 0, 0.28)"
+    assert computed_styles["tableCell"]["borderTopColor"] == "rgb(173, 181, 189)"
+    assert computed_styles["tableCell"]["borderRightColor"] == "rgb(173, 181, 189)"
     assert computed_styles["collapsedHead"]["display"] == "none"
     assert computed_styles["collapsedHead"]["visibility"] == "hidden"
 
