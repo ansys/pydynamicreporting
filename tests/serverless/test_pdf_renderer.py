@@ -73,7 +73,10 @@ def _simple_renderer(
 
 
 def _stub_playwright_render(
-    monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
+    monkeypatch: pytest.MonkeyPatch,
+    renderer: PlaywrightPDFRenderer,
+    *,
+    pdf_width: str | None = None,
 ) -> Mock:
     """Mock Chromium rendering so tests can inspect Playwright calls without launching a browser."""
     page = Mock()
@@ -89,7 +92,7 @@ def _stub_playwright_render(
 
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return page
 
 
@@ -147,6 +150,32 @@ def test_playwright_pdf_clamps_submillisecond_navigation_timeout(tmp_path, monke
         wait_until="load",
         timeout=1,
     )
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
+    page = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    # A missing measured width must still produce a consistent A4-sized page.
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["width"] == PlaywrightPDFRenderer._DEFAULT_PAGE_WIDTH
+    assert pdf_options["height"] == PlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Measured width</p></body></html>")
+    page = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
+
+    renderer.render_pdf()
+
+    # Measured content width takes priority so wide browser-rendered content is not clipped.
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["width"] == "488.00px"
+    assert pdf_options["height"] == PlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
 
 
 @pytest.mark.unit

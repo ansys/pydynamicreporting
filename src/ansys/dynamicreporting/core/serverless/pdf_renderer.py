@@ -68,6 +68,7 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
+    _DEFAULT_PAGE_WIDTH: str = "210mm"
     _DEFAULT_PAGE_HEIGHT: str = "297mm"
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
@@ -149,16 +150,21 @@ class PlaywrightPDFRenderer:
                         self._apply_pdf_capture_styles(page)
                         self._wait_for_render_ready(page)
                         pdf_width = self._compute_pdf_width(page)
+                        # Keep the fallback page size internally consistent. Playwright defaults
+                        # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
+                        # mixed Letter-width/A4-height page when no content width can be measured.
+                        pdf_page_width = (
+                            pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
+                        )
                         pdf_options = {
                             # Keep page height explicit so pagination remains under ADR's control
                             # instead of depending entirely on Playwright's default page format.
+                            "width": pdf_page_width,
                             "height": self._DEFAULT_PAGE_HEIGHT,
                             "landscape": self._landscape,
                             "margin": self._margins,
                             "print_background": True,
                         }
-                        if pdf_width is not None:
-                            pdf_options["width"] = pdf_width
 
                         pdf_bytes = page.pdf(**pdf_options)
                         self._logger.info(
@@ -281,7 +287,7 @@ class PlaywrightPDFRenderer:
         layout_width_px = self._measure_layout_width_px(page)
         if content_width_px <= 0:
             self._logger.info(
-                "No visible report width was found; using Playwright's default PDF page width."
+                "No visible report width was found; using the default A4 PDF page width."
             )
             return None
 
