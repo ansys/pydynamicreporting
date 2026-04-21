@@ -564,9 +564,35 @@ class PlaywrightPDFRenderer:
             step_name="MathJax",
             deadline=deadline,
             wait_script="""() => {
-                return new Promise((resolve) => {
-                    if (typeof MathJax !== 'undefined' && MathJax.startup) {
-                        MathJax.startup.promise.then(resolve);
+                return new Promise((resolve, reject) => {
+                    if (typeof MathJax === 'undefined') {
+                        resolve();
+                        return;
+                    }
+
+                    // MathJax 4.1 documents MathDocument.whenReady() for synchronizing
+                    // with pending typesetting work. Keep the startup.promise fallback
+                    // for v3/v4 initial typesetting because ADR can export either shape.
+                    if (
+                        MathJax.startup &&
+                        MathJax.startup.document &&
+                        typeof MathJax.startup.document.whenReady === 'function'
+                    ) {
+                        MathJax.startup.document.whenReady(() => undefined).then(resolve, reject);
+                    } else if (
+                        MathJax.startup &&
+                        MathJax.startup.promise &&
+                        typeof MathJax.startup.promise.then === 'function'
+                    ) {
+                        MathJax.startup.promise.then(resolve, reject);
+                    } else if (
+                        MathJax.Hub &&
+                        typeof MathJax.Hub.Queue === 'function'
+                    ) {
+                        // PyDynamicReporting v1 compatibility shim: MathJax 2.0 uses
+                        // Hub.Queue() for synchronization. Remove this branch in v2 after
+                        // legacy MathJax 2 offline exports are no longer supported.
+                        MathJax.Hub.Queue(resolve);
                     } else {
                         resolve();
                     }
@@ -646,7 +672,29 @@ class PlaywrightPDFRenderer:
             step_name="DataTables",
             deadline=deadline,
             wait_script="""() => new Promise((resolve) => {
-                if (typeof $ === 'undefined' || typeof $.fn.DataTable === 'undefined') {
+                function getDataTableApi() {
+                    if (
+                        typeof DataTable !== 'undefined' &&
+                        typeof DataTable.isDataTable === 'function'
+                    ) {
+                        return DataTable;
+                    }
+                    if (typeof $ === 'undefined' || !$.fn) {
+                        return null;
+                    }
+                    if ($.fn.DataTable && typeof $.fn.DataTable.isDataTable === 'function') {
+                        return $.fn.DataTable;
+                    }
+                    if ($.fn.dataTable && typeof $.fn.dataTable.isDataTable === 'function') {
+                        // PyDynamicReporting v1 compatibility shim: older DataTables
+                        // integrations expose the static check on $.fn.dataTable. Remove
+                        // this branch in v2 when legacy exported bundles are dropped.
+                        return $.fn.dataTable;
+                    }
+                    return null;
+                }
+                const dataTableApi = getDataTableApi();
+                if (!dataTableApi) {
                     resolve(); return;
                 }
                 const tables = document.querySelectorAll('table[id^="table_"]');
@@ -654,24 +702,19 @@ class PlaywrightPDFRenderer:
                 const pendingTables = [];
                 function isDataTableReady(table) {
                     try {
-                        return $.fn.DataTable.isDataTable(table);
+                        return dataTableApi.isDataTable(table);
                     } catch (e) {
                         return true;
                     }
                 }
-                function hasActiveDataTableSettings(table) {
-                    const settings = $.fn.dataTableSettings || [];
-                    return Array.prototype.some.call(settings, (setting) => {
-                        return setting && setting.nTable === table;
-                    });
-                }
-                function hasPendingInitHandler(table) {
-                    if (typeof $._data !== 'function') {
-                        return false;
-                    }
-                    const events = $._data(table, 'events') || {};
-                    const initHandlers = events.init || [];
-                    return initHandlers.some((handler) => handler.namespace === 'dt');
+                function hasDataTableDom(table) {
+                    // Stick to public DataTables signals: initialized tables are reported
+                    // by isDataTable(), and initialized markup carries the documented
+                    // dataTable selector class or DataTables-generated wrapper elements.
+                    return (
+                        table.classList.contains('dataTable') ||
+                        table.closest('.dataTables_wrapper, .dt-container') !== null
+                    );
                 }
                 tables.forEach((table) => {
                     if (table.hasAttribute('data-dt-skip-init-wait')) {
@@ -680,15 +723,11 @@ class PlaywrightPDFRenderer:
                     if (isDataTableReady(table)) {
                         return;
                     }
-                    if (
-                        hasActiveDataTableSettings(table) ||
-                        hasPendingInitHandler(table) ||
-                        table.closest('.dataTables_wrapper')
-                    ) {
+                    if (hasDataTableDom(table)) {
                         pendingTables.push(table);
                     }
                 });
-                if (pendingTables.length === 0) { resolve(); return; }
+                if (pendingTables.length === 0 || typeof $ === 'undefined') { resolve(); return; }
                 let remaining = pendingTables.length;
                 function done() { if (--remaining <= 0) resolve(); }
                 pendingTables.forEach((table) => {

@@ -201,6 +201,61 @@ def test_playwright_pdf_with_mathjax_content(tmp_path):
 
 
 @pytest.mark.unit
+def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(tmp_path):
+    # MathJax 4.1 exposes MathDocument.whenReady() for pending typesetting work. The
+    # never-resolving startup promise proves that the renderer prefers that documented path.
+    html = """
+    <html>
+    <body>
+        <script>
+            window.MathJax = {
+                startup: {
+                    document: {
+                        whenReady: function(callback) {
+                            return Promise.resolve().then(callback);
+                        }
+                    },
+                    promise: new Promise(function() {})
+                },
+                whenReady: function() {
+                    throw new Error('unsupported top-level MathJax.whenReady was called');
+                }
+            };
+        </script>
+        <div>\\(a^2 + b^2 = c^2\\)</div>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+    pdf_bytes = _render_or_skip(renderer)
+    assert pdf_bytes.startswith(b"%PDF-")
+
+
+@pytest.mark.unit
+def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
+    # MathJax 2 exports still use Hub.Queue() to synchronize with the legacy renderer.
+    html = """
+    <html>
+    <body>
+        <script>
+            window.MathJax = {
+                Hub: {
+                    Queue: function(callback) {
+                        callback();
+                    }
+                }
+            };
+        </script>
+        <div>\\(e^{i\\pi} + 1 = 0\\)</div>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+    pdf_bytes = _render_or_skip(renderer)
+    assert pdf_bytes.startswith(b"%PDF-")
+
+
+@pytest.mark.unit
 def test_playwright_pdf_skips_datatables_wait_without_init_handlers(tmp_path):
     # Print-mode browser exports can include DataTables assets and table IDs while intentionally
     # skipping DataTables initialization. The readiness gate must treat those tables as complete
@@ -226,6 +281,50 @@ def test_playwright_pdf_skips_datatables_wait_without_init_handlers(tmp_path):
             };
             window.$._data = function() {
                 return {};
+            };
+        </script>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+    pdf_bytes = _render_or_skip(renderer)
+    assert pdf_bytes.startswith(b"%PDF-")
+
+
+@pytest.mark.unit
+def test_playwright_pdf_datatables_wait_avoids_private_jquery_state(tmp_path):
+    # DataTables documents public isDataTable() and init.dt APIs. The renderer should not inspect
+    # jQuery's private event cache or DataTables' private settings arrays to decide whether a
+    # static table is pending initialization.
+    html = """
+    <html>
+    <body class="loaded">
+        <section id="report_root" style="opacity:1">
+            <table id="table_example"><tbody><tr><td>Cell</td></tr></tbody></table>
+        </section>
+        <script>
+            window.$ = function() {
+                return {
+                    on: function() {
+                        throw new Error('static tables should not bind init handlers');
+                    },
+                    off: function() {}
+                };
+            };
+            window.$.fn = {
+                DataTable: {
+                    isDataTable: function() {
+                        return false;
+                    }
+                }
+            };
+            Object.defineProperty(window.$.fn, 'dataTableSettings', {
+                get: function() {
+                    throw new Error('private DataTables settings were accessed');
+                }
+            });
+            window.$._data = function() {
+                throw new Error('private jQuery event data was accessed');
             };
         </script>
     </body>
