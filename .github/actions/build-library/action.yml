@@ -18,10 +18,17 @@ inputs:
     required: false
     type: string
 
+  checkout:
+    description: "Whether to checkout the repository before building."
+    default: true
+    required: false
+    type: boolean
+
 runs:
   using: "composite"
   steps:
     - name: "Checkout (deep + tags)"
+      if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
