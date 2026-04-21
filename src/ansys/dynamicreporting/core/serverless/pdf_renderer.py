@@ -132,7 +132,17 @@ class PlaywrightPDFRenderer:
                         self._logger.info(
                             f"Loading exported HTML for browser PDF export: {file_url}"
                         )
-                        page.goto(file_url, wait_until="load")
+                        # Keep navigation under the caller-configured browser render budget.
+                        # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
+                        # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
+                        # Clamp to at least 1 ms because Playwright treats ``timeout=0`` as
+                        # disabling the timeout, which would invert a small positive ADR budget.
+                        navigation_timeout_ms = max(int(self._render_timeout * 1000), 1)
+                        page.goto(
+                            file_url,
+                            wait_until="load",
+                            timeout=navigation_timeout_ms,
+                        )
 
                         # Force screen media so the PDF matches the browser view instead of print CSS.
                         page.emulate_media(media="screen")

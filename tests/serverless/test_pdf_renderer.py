@@ -21,11 +21,13 @@
 # SOFTWARE.
 
 from pathlib import Path
+from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
 
 
@@ -70,6 +72,27 @@ def _simple_renderer(
     return renderer
 
 
+def _stub_playwright_render(
+    monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
+) -> Mock:
+    """Mock Chromium rendering so tests can inspect Playwright calls without launching a browser."""
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
+    return page
+
+
 @pytest.mark.unit
 def test_playwright_pdf_from_simple_html(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
@@ -94,6 +117,36 @@ def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_pa
 
     with pytest.raises(ADRException, match="entry-point file does not exist"):
         renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
+    page = _stub_playwright_render(monkeypatch, renderer)
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+    page.goto.assert_called_once_with(
+        (html_dir / "index.html").resolve().as_uri(),
+        wait_until="load",
+        timeout=12500,
+    )
+
+
+@pytest.mark.unit
+def test_playwright_pdf_clamps_submillisecond_navigation_timeout(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
+    page = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    # Playwright treats timeout=0 as "no timeout", so tiny positive ADR budgets clamp to 1 ms.
+    page.goto.assert_called_once_with(
+        (html_dir / "index.html").resolve().as_uri(),
+        wait_until="load",
+        timeout=1,
+    )
 
 
 @pytest.mark.unit
