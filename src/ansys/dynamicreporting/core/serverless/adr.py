@@ -1483,9 +1483,13 @@ class ADR:
         output_dir = Path(output_directory)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Standalone HTML export sets the render target explicitly so TemplateEngine can
+        # choose export-safe HTML behavior.
+        html_context = {**(context or {}), "print": "html"}
+
         # Render HTML via the template system.
         html_content = self.render_report(
-            context=context,
+            context=html_context,
             item_filter=item_filter,
             **kwargs,
         )

@@ -1151,6 +1151,37 @@ def test_export_report_as_html(adr_serverless, tmp_path, monkeypatch):
 
 
 @pytest.mark.ado_test
+@pytest.mark.parametrize(
+    ("context", "expected_context"),
+    [
+        (None, {"print": "html"}),
+        ({"custom": "value", "print": "pdf"}, {"custom": "value", "print": "html"}),
+    ],
+)
+def test_export_report_as_html_sets_html_print_context(
+    adr_serverless, tmp_path, monkeypatch, context, expected_context
+):
+    """Standalone HTML export should force the TemplateEngine print target."""
+    from ansys.dynamicreporting.core.serverless import ADR
+
+    render_contexts = []
+
+    def mock_render_report(self, name, **kwargs):
+        render_contexts.append(kwargs["context"])
+        return "<div>content</div>"
+
+    monkeypatch.setattr(ADR, "render_report", mock_render_report)
+
+    adr_serverless.export_report_as_html(
+        output_directory=tmp_path,
+        context=context,
+        name="TestExportReport",
+    )
+
+    assert render_contexts == [expected_context]
+
+
+@pytest.mark.ado_test
 def test_export_report_html_no_static_dir_fails(adr_serverless, tmp_path, monkeypatch):
     """
     Ensures that the export fails with a configuration error if the
