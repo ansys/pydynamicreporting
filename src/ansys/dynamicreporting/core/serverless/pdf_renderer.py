@@ -62,7 +62,7 @@ class PlaywrightPDFRenderer:
         "bottom": "10mm",
         "left": "10mm",
     }
-    #  Playwright's page.pdf() accepts lengths in px, in, cm, and mm. 
+    #  Playwright's page.pdf() accepts lengths in px, in, cm, and mm.
     # Map those units to CSS pixels for internal computations as per
     # the CSS specification standard.
     _PDF_UNIT_TO_PX: dict[str, float] = {
