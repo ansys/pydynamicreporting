@@ -132,6 +132,8 @@ class PlaywrightPDFRenderer:
                             "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
                         },
                         service_workers="block",
+                        accept_downloads=False,
+                        offline=True,
                     )
                     try:
                         self._block_external_requests(context)
