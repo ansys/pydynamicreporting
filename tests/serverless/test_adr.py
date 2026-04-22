@@ -1533,6 +1533,35 @@ def test_render_report_as_browser_pdf_render_failure(adr_serverless, monkeypatch
 
 
 @pytest.mark.ado_test
+def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+        PlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFRenderer", parent=None)
+
+    def fake_render(self, context, item_filter, request):
+        return "<html><body><h1>Browser PDF renderer failure</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_render_pdf(self):
+        raise Exception("Simulated browser PDF renderer failure")
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
+
+    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
+        adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFRenderer")
+
+
+@pytest.mark.ado_test
 def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     adr_serverless, tmp_path, monkeypatch
 ):
