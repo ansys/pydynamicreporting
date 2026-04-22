@@ -55,12 +55,16 @@ class PlaywrightPDFRenderer:
         Logger used for renderer lifecycle messages.
     """
 
+    # 10mm on all sides. This is the default page margin if the caller doesn't specify custom margins.
     _DEFAULT_MARGINS: dict[str, str] = {
         "top": "10mm",
         "right": "10mm",
         "bottom": "10mm",
         "left": "10mm",
     }
+    #  Playwright's page.pdf() accepts lengths in px, in, cm, and mm. 
+    # Map those units to CSS pixels for internal computations as per
+    # the CSS specification standard.
     _PDF_UNIT_TO_PX: dict[str, float] = {
         "": 1.0,
         "px": 1.0,
@@ -68,11 +72,16 @@ class PlaywrightPDFRenderer:
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
+    # the width of an A4 page
     _DEFAULT_PAGE_WIDTH: str = "210mm"
+    # the height of an A4 page
     _DEFAULT_PAGE_HEIGHT: str = "297mm"
+    # the default virtual browser viewport width and height
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
+    # Maximum time to wait for all JavaScript to finish rendering
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
+    # Network requests using these schemes are blocked to keep rendering offline.
     _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
     _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
 
@@ -685,12 +694,6 @@ class PlaywrightPDFRenderer:
                     if ($.fn.DataTable && typeof $.fn.DataTable.isDataTable === 'function') {
                         return $.fn.DataTable;
                     }
-                    if ($.fn.dataTable && typeof $.fn.dataTable.isDataTable === 'function') {
-                        // PyDynamicReporting v1 compatibility shim: older DataTables
-                        // integrations expose the static check on $.fn.dataTable. Remove
-                        // this branch in v2 when legacy exported bundles are dropped.
-                        return $.fn.dataTable;
-                    }
                     return null;
                 }
                 const dataTableApi = getDataTableApi();
@@ -713,7 +716,7 @@ class PlaywrightPDFRenderer:
                     // dataTable selector class or DataTables-generated wrapper elements.
                     return (
                         table.classList.contains('dataTable') ||
-                        table.closest('.dataTables_wrapper, .dt-container') !== null
+                        table.closest('.dt-container') !== null
                     );
                 }
                 tables.forEach((table) => {
