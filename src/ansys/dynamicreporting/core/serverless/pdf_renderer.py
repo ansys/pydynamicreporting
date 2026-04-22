@@ -442,8 +442,8 @@ class PlaywrightPDFRenderer:
         if margins is None:
             return dict(self._DEFAULT_MARGINS)
 
-        expected_keys = set(self._DEFAULT_MARGINS)
-        margin_keys = set(margins)
+        expected_keys = self._DEFAULT_MARGINS.keys()
+        margin_keys = margins.keys()
         missing_keys = expected_keys - margin_keys
         extra_keys = margin_keys - expected_keys
         if missing_keys or extra_keys:
@@ -453,7 +453,7 @@ class PlaywrightPDFRenderer:
 
         # Validate each margin now so width computation and Playwright rendering use the same
         # documented PDF length unit set.
-        validated = {key: str(margins[key]) for key in self._DEFAULT_MARGINS}
+        validated = {key: str(margins[key]) for key in expected_keys}
         for margin_value in validated.values():
             self._pdf_length_to_px(margin_value)
         return validated
