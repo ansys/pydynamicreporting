@@ -79,7 +79,7 @@ class PlaywrightPDFRenderer:
     # the default virtual browser viewport width and height
     _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
-    # Maximum time to wait for all JavaScript to finish rendering
+    # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
     # Network requests using these schemes are blocked to keep rendering offline.
     _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
@@ -460,13 +460,14 @@ class PlaywrightPDFRenderer:
 
     def _validate_render_timeout(self, render_timeout: float) -> float:
         """Validate the browser readiness timeout."""
+        error_message = "Browser PDF render_timeout must be a positive number."
         try:
             timeout = float(render_timeout)
         except (TypeError, ValueError) as exc:
-            raise ADRException("Browser PDF render_timeout must be a positive number.") from exc
+            raise ADRException(error_message) from exc
 
         if timeout <= 0:
-            raise ADRException("Browser PDF render_timeout must be a positive number.")
+            raise ADRException(error_message)
         return timeout
 
     def _evaluate_ready_step(
