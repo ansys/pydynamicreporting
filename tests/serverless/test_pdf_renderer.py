@@ -137,18 +137,18 @@ def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch
 
 
 @pytest.mark.unit
-def test_playwright_pdf_clamps_submillisecond_navigation_timeout(tmp_path, monkeypatch):
+def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
     page = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
-    # Playwright treats timeout=0 as "no timeout", so tiny positive ADR budgets clamp to 1 ms.
+    # Playwright treats timeout=0 as "no timeout", so tiny positive ADR budgets clamp to 1000 ms.
     page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
-        timeout=1,
+        timeout=1000,
     )
 
 

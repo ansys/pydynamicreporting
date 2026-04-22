@@ -147,9 +147,9 @@ class PlaywrightPDFRenderer:
                         # Keep navigation under the caller-configured browser render budget.
                         # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
                         # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
-                        # Clamp to at least 1 ms because Playwright treats ``timeout=0`` as
+                        # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
                         # disabling the timeout, which would invert a small positive ADR budget.
-                        navigation_timeout_ms = max(int(self._render_timeout * 1000), 1)
+                        navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
                         page.goto(
                             file_url,
                             wait_until="load",
