@@ -1483,7 +1483,7 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDF", parent=None)
 
-    def fake_render(self, context, item_filter, request):
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
         return "<html><body><h1>Browser PDF</h1></body></html>"
 
     def fake_export(self):
@@ -1523,7 +1523,7 @@ def test_render_report_as_browser_pdf_render_failure(adr_serverless, monkeypatch
 
     adr_serverless.create_template(BasicLayout, name="FailingBrowserPDF", parent=None)
 
-    def fake_render(self, context, item_filter, request):
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
         raise Exception("Simulated browser render failure")
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
@@ -1544,7 +1544,7 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
 
     adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFRenderer", parent=None)
 
-    def fake_render(self, context, item_filter, request):
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
         return "<html><body><h1>Browser PDF renderer failure</h1></body></html>"
 
     def fake_export(self):
@@ -1579,7 +1579,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     monkeypatch.setattr(adr_serverless, "_db_directory", db_directory)
     captured: dict[str, object] = {}
 
-    def fake_render(self, context, item_filter, request):
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
         return "<html><body><h1>Browser PDF export</h1></body></html>"
 
     def fake_export(self):
@@ -1670,9 +1670,10 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFOptions", parent=None)
     captured: dict[str, object] = {}
 
-    def fake_render(self, context, item_filter, request):
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
         captured["render_context"] = context
         captured["item_filter"] = item_filter
+        captured["embed_scene_data"] = embed_scene_data
         captured["request"] = request
         return "<html><body><p>Browser PDF options</p></body></html>"
 
@@ -1732,6 +1733,7 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert captured["render_timeout"] == 12.5
     assert captured["render_context"] == {"custom": "value", "print": "pdf"}
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["embed_scene_data"] is False
     assert captured["request"] is adr_serverless._request
 
 
