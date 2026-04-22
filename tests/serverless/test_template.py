@@ -34,49 +34,6 @@ from ansys.dynamicreporting.core.exceptions import (
 )
 
 
-def _create_tab_layout_render_target(
-    adr_serverless, *, name_prefix: str, properties: dict[str, object] | None = None
-):
-    """Build a small tabs report with stable markers for HTML-shape assertions.
-
-    The child layouts use unique text markers so the regression tests can assert
-    that tab content is rendered directly in inline/PDF mode instead of being
-    hidden behind interactive ``adr-tabs`` slot markup.
-    """
-    from ansys.dynamicreporting.core.serverless import BasicLayout, TabLayout
-
-    unique_suffix = uuid4().hex
-    first_marker = f"{name_prefix}-tab-alpha-{unique_suffix}"
-    second_marker = f"{name_prefix}-tab-beta-{unique_suffix}"
-
-    params = {"HTML": "<h2>Tabs Root</h2>"}
-    # The installed tab engine only merges ``params['properties']`` into the
-    # render context, so inline tab options must live there to exercise the
-    # real server-side code path.
-    if properties:
-        params["properties"] = properties
-
-    tabs_layout = adr_serverless.create_template(
-        TabLayout,
-        name=f"{name_prefix}_tabs_{unique_suffix}",
-        parent=None,
-        params=json.dumps(params),
-    )
-    adr_serverless.create_template(
-        BasicLayout,
-        name=f"{name_prefix}_alpha_{unique_suffix}",
-        parent=tabs_layout,
-        params=json.dumps({"HTML": f"<section>{first_marker}</section>"}),
-    )
-    adr_serverless.create_template(
-        BasicLayout,
-        name=f"{name_prefix}_beta_{unique_suffix}",
-        parent=tabs_layout,
-        params=json.dumps({"HTML": f"<section>{second_marker}</section>"}),
-    )
-    return tabs_layout, first_marker, second_marker
-
-
 @pytest.mark.ado_test
 def test_create_template_cls(adr_serverless):
     from ansys.dynamicreporting.core.serverless import PanelLayout
@@ -1096,6 +1053,49 @@ def test_template_render(monkeypatch, adr_serverless):
 
     # Assert that the final rendered content matches the fixed string.
     assert result == "dummy rendered content"
+
+
+def _create_tab_layout_render_target(
+    adr_serverless, *, name_prefix: str, properties: dict[str, object] | None = None
+):
+    """Build a small tabs report with stable markers for HTML-shape assertions.
+
+    The child layouts use unique text markers so the regression tests can assert
+    that tab content is rendered directly in inline/PDF mode instead of being
+    hidden behind interactive ``adr-tabs`` slot markup.
+    """
+    from ansys.dynamicreporting.core.serverless import BasicLayout, TabLayout
+
+    unique_suffix = uuid4().hex
+    first_marker = f"{name_prefix}-tab-alpha-{unique_suffix}"
+    second_marker = f"{name_prefix}-tab-beta-{unique_suffix}"
+
+    params = {"HTML": "<h2>Tabs Root</h2>"}
+    # The installed tab engine only merges ``params['properties']`` into the
+    # render context, so inline tab options must live there to exercise the
+    # real server-side code path.
+    if properties:
+        params["properties"] = properties
+
+    tabs_layout = adr_serverless.create_template(
+        TabLayout,
+        name=f"{name_prefix}_tabs_{unique_suffix}",
+        parent=None,
+        params=json.dumps(params),
+    )
+    adr_serverless.create_template(
+        BasicLayout,
+        name=f"{name_prefix}_alpha_{unique_suffix}",
+        parent=tabs_layout,
+        params=json.dumps({"HTML": f"<section>{first_marker}</section>"}),
+    )
+    adr_serverless.create_template(
+        BasicLayout,
+        name=f"{name_prefix}_beta_{unique_suffix}",
+        parent=tabs_layout,
+        params=json.dumps({"HTML": f"<section>{second_marker}</section>"}),
+    )
+    return tabs_layout, first_marker, second_marker
 
 
 @pytest.mark.unit
