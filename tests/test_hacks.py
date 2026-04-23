@@ -102,6 +102,39 @@ def test_load_pickle_retries_legacy_numpy_core(monkeypatch) -> None:
 
 
 @pytest.mark.ado_test
+def test_load_pickle_retries_legacy_numpy_core_attribute_error(monkeypatch) -> None:
+    captured = {}
+
+    def fake_loads(data, *args, **kwargs):
+        raise AttributeError("module numpy.core has no attribute multiarray")
+
+    class DummyUnpickler:
+        def __init__(self, buffer, **kwargs):
+            captured["bytes"] = buffer.getvalue()
+            captured["kwargs"] = kwargs
+
+        def load(self):
+            return "redirected"
+
+    monkeypatch.setattr(ex.pickle, "loads", fake_loads)
+    monkeypatch.setattr(ex, "RedirectNumpyUnpickler", DummyUnpickler)
+
+    assert ex._load_pickle(b"legacy-payload") == "redirected"
+    assert captured == {"bytes": b"legacy-payload", "kwargs": {}}
+
+
+@pytest.mark.ado_test
+def test_load_pickle_other_attribute_error_is_not_swallowed(monkeypatch) -> None:
+    def fake_loads(data, *args, **kwargs):
+        raise AttributeError("some unrelated attribute problem")
+
+    monkeypatch.setattr(ex.pickle, "loads", fake_loads)
+
+    with pytest.raises(AttributeError, match="some unrelated attribute problem"):
+        ex._load_pickle(b"legacy-payload")
+
+
+@pytest.mark.ado_test
 def test_unpickle_numpy_core_redirect_default(monkeypatch) -> None:
     payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
     original_loads = ex.pickle.loads

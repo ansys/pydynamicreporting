@@ -81,12 +81,12 @@ def _is_numpy_core_missing(error):
 def _load_pickle(bytes_data, **kwargs):
     try:
         return pickle.loads(bytes_data, **kwargs)  # nosec B301 B502
-    except ModuleNotFoundError as error:
+    except (AttributeError, ModuleNotFoundError) as error:
         if not _is_numpy_core_missing(error):
             raise
 
-        # Keep the legacy encoding semantics while remapping NumPy 2's internal
-        # module path to the NumPy 1 name that older clients still expose.
+        # Keep the legacy encoding semantics while remapping NumPy internal
+        # module paths across NumPy 1 and NumPy 2.
         return RedirectNumpyUnpickler(io.BytesIO(bytes_data), **kwargs).load()
 
 
