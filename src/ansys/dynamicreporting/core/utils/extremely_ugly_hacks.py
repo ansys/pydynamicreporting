@@ -29,30 +29,53 @@ from uuid import UUID
 from .report_utils import text_type
 
 
+NUMPY_MODULE_ALIASES = {
+    "numpy._core": "numpy.core",
+    "numpy.core": "numpy._core",
+}
+
+NUMPY_MODULE_PREFIX_ALIASES = {
+    "numpy._core.": "numpy.core.",
+    "numpy.core.": "numpy._core.",
+}
+
+
+def _redirect_numpy_module(module):
+    compat_module = NUMPY_MODULE_ALIASES.get(module)
+    if compat_module is not None:
+        return compat_module
+
+    for old_prefix, new_prefix in NUMPY_MODULE_PREFIX_ALIASES.items():
+        if module.startswith(old_prefix):
+            return module.replace(old_prefix, new_prefix, 1)
+
+    return None
+
+
 # Compatibility matrix for client-side unpickling:
-# - NumPy 2 reader <- NumPy 2 payload: works with the normal pickle path.
-# - NumPy 2 reader <- NumPy 1 payload: also works with the normal compatibility
-#   fallbacks below.
+# - NumPy 2 reader <- NumPy 1 payload: retry with a redirecting unpickler when
+#   the pickle references numpy.core, while NumPy 2 exposes numpy._core.
 # - NumPy 1 reader <- NumPy 2 payload: retry with a redirecting unpickler when
 #   the pickle references numpy._core, while NumPy 1 exposes numpy.core.
-# PyDynamicReporting supports the current and previous ADR product lines, so an
-# older NumPy 1 client can still read payloads produced by a newer NumPy 2 ADR
-# server. Apply that redirect to every pickle.loads() attempt so the NumPy 1 <-
-# NumPy 2 path stays covered even when we need the utf-8, latin-1, or bytes
-# compatibility fallbacks for older payload encodings.
+# - The utf-8, latin-1, and bytes compatibility fallbacks should preserve the
+#   same redirect semantics for both directions.
 class RedirectNumpyUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
-        # Redirect deprecated NumPy internal modules for older NumPy 1.x readers.
-        if module.startswith("numpy._core."):
-            module = module.replace("numpy._core.", "numpy.core.", 1)
-        elif module == "numpy._core":
-            module = "numpy.core"
-        return super().find_class(module, name)
+        try:
+            return super().find_class(module, name)
+        except (AttributeError, ModuleNotFoundError):
+            compat_module = _redirect_numpy_module(module)
+            if compat_module is None:
+                raise
+            return super().find_class(compat_module, name)
 
 
 def _is_numpy_core_missing(error):
     missing_module = getattr(error, "name", None)
-    return missing_module == "numpy._core" or "numpy._core" in str(error)
+    if missing_module in NUMPY_MODULE_ALIASES:
+        return True
+    error_message = str(error)
+    return any(module_name in error_message for module_name in NUMPY_MODULE_ALIASES)
 
 
 def _load_pickle(bytes_data, **kwargs):

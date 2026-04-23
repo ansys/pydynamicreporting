@@ -65,6 +65,43 @@ def test_unpickle_error() -> None:
 
 
 @pytest.mark.ado_test
+@pytest.mark.parametrize(
+    ("module_name", "expected"),
+    [
+        ("numpy._core", "numpy.core"),
+        ("numpy._core.multiarray", "numpy.core.multiarray"),
+        ("numpy.core", "numpy._core"),
+        ("numpy.core.multiarray", "numpy._core.multiarray"),
+        ("other.module", None),
+    ],
+)
+def test_redirect_numpy_module(module_name, expected) -> None:
+    assert ex._redirect_numpy_module(module_name) == expected
+
+
+@pytest.mark.ado_test
+def test_load_pickle_retries_legacy_numpy_core(monkeypatch) -> None:
+    captured = {}
+
+    def fake_loads(data, *args, **kwargs):
+        raise ModuleNotFoundError("No module named 'numpy.core'")
+
+    class DummyUnpickler:
+        def __init__(self, buffer, **kwargs):
+            captured["bytes"] = buffer.getvalue()
+            captured["kwargs"] = kwargs
+
+        def load(self):
+            return "redirected"
+
+    monkeypatch.setattr(ex.pickle, "loads", fake_loads)
+    monkeypatch.setattr(ex, "RedirectNumpyUnpickler", DummyUnpickler)
+
+    assert ex._load_pickle(b"legacy-payload") == "redirected"
+    assert captured == {"bytes": b"legacy-payload", "kwargs": {}}
+
+
+@pytest.mark.ado_test
 def test_unpickle_numpy_core_redirect_default(monkeypatch) -> None:
     payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
     original_loads = ex.pickle.loads
@@ -80,6 +117,17 @@ def test_unpickle_numpy_core_redirect_default(monkeypatch) -> None:
     monkeypatch.setattr(ex.pickle, "loads", fake_loads)
 
     result = ex.safe_unpickle(input_data=payload)
+
+    assert isinstance(result, np.ndarray)
+    assert result.tolist() == [[1.0, 2.0]]
+
+
+@pytest.mark.ado_test
+def test_unpickle_numpy__core_payload_redirects_to_numpy_core() -> None:
+    payload = pickle.dumps(np.array([[1.0, 2.0]]), protocol=0)
+    compat_payload = payload.replace(b"numpy.core.multiarray", b"numpy._core.multiarray")
+
+    result = ex.safe_unpickle(input_data=compat_payload)
 
     assert isinstance(result, np.ndarray)
     assert result.tolist() == [[1.0, 2.0]]
