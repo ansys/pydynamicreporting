@@ -248,7 +248,9 @@ def test_string_from_db_uses_client_safe_unpickle(monkeypatch):
     from ansys.dynamicreporting.core.serverless import item as item_module
 
     _patch_serverless_unpickle_dependencies(monkeypatch)
-    monkeypatch.setattr(item_module, "client_safe_unpickle", lambda payload, item_type=None: "client payload")
+    monkeypatch.setattr(
+        item_module, "client_safe_unpickle", lambda payload, item_type=None: "client payload"
+    )
 
     orm_instance = _FakeOrmInstance(payloaddata=b"payload")
     obj = item_module.String._from_db(orm_instance)

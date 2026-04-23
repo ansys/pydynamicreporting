@@ -72,7 +72,9 @@ def _serverless_safe_unpickle(input_data, item_type=None):
         try:
             from django.conf import settings as django_settings
 
-            debug_enabled = bool(django_settings.configured and getattr(django_settings, "DEBUG", False))
+            debug_enabled = bool(
+                django_settings.configured and getattr(django_settings, "DEBUG", False)
+            )
         except Exception:
             debug_enabled = False
 
