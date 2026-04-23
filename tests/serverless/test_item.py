@@ -21,13 +21,70 @@
 # SOFTWARE.
 
 from pathlib import Path
+import sys
 import tempfile
+import types
 from uuid import uuid4
 
+import numpy as np
 from PIL import Image as PILImage
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import ADRException
+
+
+class _FakeOrmField:
+    def __init__(self, name):
+        self.name = name
+
+
+class _FakeOrmMeta:
+    def __init__(self, *field_names):
+        self._fields = [_FakeOrmField(field_name) for field_name in field_names]
+
+    def get_fields(self):
+        return self._fields
+
+
+class _FakeOrmInstance:
+    def __init__(self, **values):
+        for name, value in values.items():
+            setattr(self, name, value)
+        self._meta = _FakeOrmMeta(*values.keys())
+
+
+def _fail_if_product_safe_unpickle_is_used(*args, **kwargs):
+    raise AssertionError("serverless item reconstruction should use the client safe_unpickle")
+
+
+def _patch_serverless_unpickle_dependencies(monkeypatch):
+    from ansys.dynamicreporting.core.serverless.adr import ADR
+
+    monkeypatch.setattr(ADR, "ensure_setup", classmethod(lambda cls: None))
+
+    product_package = types.ModuleType("data")
+    product_package.__path__ = []
+    product_hacks = types.ModuleType("data.extremely_ugly_hacks")
+    product_hacks.safe_unpickle = _fail_if_product_safe_unpickle_is_used
+    product_package.extremely_ugly_hacks = product_hacks
+
+    monkeypatch.setitem(sys.modules, "data", product_package)
+    monkeypatch.setitem(sys.modules, "data.extremely_ugly_hacks", product_hacks)
+
+
+def _patch_product_safe_unpickle_exception(monkeypatch):
+    cei_package = types.ModuleType("ceireports")
+    exceptions_module = types.ModuleType("ceireports.exceptions")
+
+    class FakeSafeUnpickleException(Exception):
+        pass
+
+    exceptions_module.SafeUnpickleException = FakeSafeUnpickleException
+    cei_package.exceptions = exceptions_module
+
+    monkeypatch.setitem(sys.modules, "ceireports", cei_package)
+    monkeypatch.setitem(sys.modules, "ceireports.exceptions", exceptions_module)
+    return FakeSafeUnpickleException
 
 
 @pytest.mark.ado_test
@@ -184,6 +241,68 @@ def test_item_cls_filter(adr_serverless):
         )[0].guid
         == intro_html.guid
     )
+
+
+@pytest.mark.ado_test
+def test_string_from_db_uses_client_safe_unpickle(monkeypatch):
+    from ansys.dynamicreporting.core.serverless import item as item_module
+
+    _patch_serverless_unpickle_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        item_module, "client_safe_unpickle", lambda payload, item_type=None: "client payload"
+    )
+
+    orm_instance = _FakeOrmInstance(payloaddata=b"payload")
+    obj = item_module.String._from_db(orm_instance)
+
+    assert obj.content == "client payload"
+    assert obj._orm_instance is orm_instance
+
+
+@pytest.mark.ado_test
+def test_table_from_db_uses_client_safe_unpickle(monkeypatch):
+    from ansys.dynamicreporting.core.serverless import item as item_module
+
+    _patch_serverless_unpickle_dependencies(monkeypatch)
+    monkeypatch.setattr(
+        item_module,
+        "client_safe_unpickle",
+        lambda payload, item_type=None: {
+            "array": np.array([[1.0, 2.0]]),
+            "rowlbls": ["row-1"],
+            "collbls": ["col-1", "col-2"],
+        },
+    )
+
+    orm_instance = _FakeOrmInstance(payloaddata=b"payload")
+    obj = item_module.Table._from_db(orm_instance)
+
+    assert obj.content.tolist() == [[1.0, 2.0]]
+    assert obj.rowlbls == ["row-1"]
+    assert obj.collbls == ["col-1", "col-2"]
+    assert obj._orm_instance is orm_instance
+
+
+@pytest.mark.ado_test
+def test_string_from_db_preserves_product_unpickle_exception(monkeypatch):
+    from ansys.dynamicreporting.core.serverless import item as item_module
+
+    _patch_serverless_unpickle_dependencies(monkeypatch)
+    fake_exception = _patch_product_safe_unpickle_exception(monkeypatch)
+    monkeypatch.setattr(
+        item_module,
+        "client_safe_unpickle",
+        lambda payload, item_type=None: (_ for _ in ()).throw(
+            Exception("Unable to decode the payload:: broken payload")
+        ),
+    )
+
+    orm_instance = _FakeOrmInstance(payloaddata=b"payload")
+    with pytest.raises(
+        fake_exception,
+        match="Unable to load the item from the database:: broken payload",
+    ):
+        item_module.String._from_db(orm_instance)
 
 
 @pytest.mark.ado_test
