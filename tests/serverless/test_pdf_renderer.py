@@ -257,6 +257,9 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     """
     renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
 
+    # pytest.raises() can only capture the exception; it cannot assert two independent
+    # message fragments and explicitly fail when no exception is raised. The try/except/else
+    # pattern handles all three cases: correct failure, wrong message, and no failure.
     try:
         renderer.render_pdf()
     except ADRException as exc:
@@ -392,6 +395,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     </html>
     """
     renderer = _simple_renderer(tmp_path, html)
+    # Import at function scope: this test is the only caller and keeping it here makes the
+    # Chromium dependency explicit and co-located with its use rather than a module-level side effect.
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
@@ -479,6 +484,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     };
                 }"""
         )
+        # sync_playwright()'s context manager stops the Playwright server but does not
+        # close the browser; call close() explicitly before the with-block exits.
         browser.close()
 
     assert computed_styles["sectionHeading"]["breakAfter"] == "avoid"
