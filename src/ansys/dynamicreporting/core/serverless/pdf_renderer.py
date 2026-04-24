@@ -740,7 +740,15 @@ class PlaywrightPDFRenderer:
                     let remaining = imgs.length;
                     function done() { if (--remaining <= 0) resolve(); }
                     imgs.forEach((img) => {
-                        if (img.complete) { done(); return; }
+                        // Require both a source and decoded image dimensions before fast-passing
+                        // the image. ``img.complete`` alone is too weak because a src-less <img>
+                        // can already report complete even though async product code has not yet
+                        // populated the final image bytes.
+                        const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));
+                        if (hasSource && img.complete && img.naturalWidth > 0) {
+                            done();
+                            return;
+                        }
                         img.addEventListener('load', done, { once: true });
                         img.addEventListener('error', done, { once: true });
                     });

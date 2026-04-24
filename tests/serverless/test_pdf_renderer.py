@@ -651,6 +651,28 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_images_step_requires_source_and_decoded_dimensions(
+    tmp_path, monkeypatch
+):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
+    wait_scripts = {}
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        wait_scripts[step_name] = wait_script
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+
+    renderer._wait_for_render_ready(Mock())
+
+    image_wait_script = wait_scripts["Images"]
+    assert (
+        "const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));" in image_wait_script
+    )
+    assert "if (hasSource && img.complete && img.naturalWidth > 0)" in image_wait_script
+    assert "img.addEventListener('load', done, { once: true });" in image_wait_script
+
+
+@pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     report_dir = tmp_path / "relative-report"
     report_dir.mkdir()
