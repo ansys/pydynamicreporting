@@ -256,86 +256,6 @@ def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
 
 
 @pytest.mark.unit
-def test_playwright_pdf_skips_datatables_wait_without_init_handlers(tmp_path):
-    # Print-mode browser exports can include DataTables assets and table IDs while intentionally
-    # skipping DataTables initialization. The readiness gate must treat those tables as complete
-    # instead of waiting forever for an init.dt event that will never be bound.
-    html = """
-    <html>
-    <body class="loaded">
-        <section id="report_root" style="opacity:1">
-            <table id="table_example"><tbody><tr><td>Cell</td></tr></tbody></table>
-        </section>
-        <script>
-            window.$ = function() {
-                return {
-                    on: function() {}
-                };
-            };
-            window.$.fn = {
-                DataTable: {
-                    isDataTable: function() {
-                        return false;
-                    }
-                }
-            };
-            window.$._data = function() {
-                return {};
-            };
-        </script>
-    </body>
-    </html>
-    """
-    renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
-    assert pdf_bytes.startswith(b"%PDF-")
-
-
-@pytest.mark.unit
-def test_playwright_pdf_datatables_wait_avoids_private_jquery_state(tmp_path):
-    # DataTables documents public isDataTable() and init.dt APIs. The renderer should not inspect
-    # jQuery's private event cache or DataTables' private settings arrays to decide whether a
-    # static table is pending initialization.
-    html = """
-    <html>
-    <body class="loaded">
-        <section id="report_root" style="opacity:1">
-            <table id="table_example"><tbody><tr><td>Cell</td></tr></tbody></table>
-        </section>
-        <script>
-            window.$ = function() {
-                return {
-                    on: function() {
-                        throw new Error('static tables should not bind init handlers');
-                    },
-                    off: function() {}
-                };
-            };
-            window.$.fn = {
-                DataTable: {
-                    isDataTable: function() {
-                        return false;
-                    }
-                }
-            };
-            Object.defineProperty(window.$.fn, 'dataTableSettings', {
-                get: function() {
-                    throw new Error('private DataTables settings were accessed');
-                }
-            });
-            window.$._data = function() {
-                throw new Error('private jQuery event data was accessed');
-            };
-        </script>
-    </body>
-    </html>
-    """
-    renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
-    assert pdf_bytes.startswith(b"%PDF-")
-
-
-@pytest.mark.unit
 def test_playwright_pdf_signal_timeout(tmp_path):
     # This mock Plotly container never gets class 'loaded', so the readiness MutationObserver
     # never fires and the promise times out.
@@ -670,6 +590,30 @@ def test_wait_for_render_ready_images_step_requires_source_and_decoded_dimension
     )
     assert "if (hasSource && img.complete && img.naturalWidth > 0)" in image_wait_script
     assert "img.addEventListener('load', done, { once: true });" in image_wait_script
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
+    step_names = []
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        step_names.append(step_name)
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+
+    renderer._wait_for_render_ready(Mock())
+
+    assert step_names == [
+        "FOUC gate",
+        "FOUC transition",
+        "Web fonts",
+        "MathJax",
+        "Plotly charts",
+        "Images",
+        "Videos",
+        "Double requestAnimationFrame",
+    ]
 
 
 @pytest.mark.unit
