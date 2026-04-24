@@ -36,7 +36,7 @@ pull-docker:
 	bash scripts/pull_adr_image.sh
 
 test:
-	uv run python -m pip install -e .[test]
+	uv sync --frozen --extra test
 	uv run python -m pytest \
 		-rvx --setup-show \
 		--cov=ansys.dynamicreporting.core \
@@ -56,8 +56,7 @@ build: clean ## Build package using uv
 install: ## 🚀 Set up environment and install project
 	@echo "🚀 Syncing dependencies with uv..."
 	uv sync --frozen --all-extras
-	@echo "🔧 Installing project in editable mode..."
-	uv run python -m pip install -e .
+	@echo "✅ Environment ready (project installed editable via uv sync)."
 
 .PHONY: check-dist
 check-dist: ## Validate dist/ artifacts (long description, format)

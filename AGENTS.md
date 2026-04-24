@@ -72,8 +72,10 @@ If you’re not using `make`, the equivalent is:
 
 ```bash
 uv sync --frozen --all-extras
-uv run python -m pip install -e .
 ```
+
+Important:
+- Avoid mixing `uv sync` with `pip install -e .` for this repo. Use `uv sync` as the single installer path to prevent stale `*.dist-info` metadata.
 
 ## Code style and standards
 
