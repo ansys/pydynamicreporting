@@ -67,6 +67,10 @@ jobs:
             libgl1-mesa-dev \
             libxrender1
 
+      - name: Install Playwright Chromium
+        shell: bash
+        run: uv run playwright install --with-deps chromium
+
       - name: Install DPF
         id: set-server-path
         uses: ansys/pydpf-actions/install-dpf-server@v2.3
