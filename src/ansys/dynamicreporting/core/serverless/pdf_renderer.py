@@ -20,7 +20,46 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Browser-fidelity HTML-to-PDF rendering for serverless ADR exports."""
+"""Browser-fidelity HTML-to-PDF rendering for serverless ADR exports.
+
+Architecture
+------------
+This renderer intentionally relies on two linked Chromium layout phases instead of
+treating PDF export as a screenshot of already-painted viewport pixels:
+
+    offline file:// HTML export
+              |
+              v
+    +-----------------------------------------------+
+    | Phase A: live browser / continuous-media pass |
+    | - fixed viewport for deterministic JS layout  |
+    | - execute ADR, Plotly, MathJax, viewers       |
+    | - wait for readiness signals                  |
+    | - inject capture CSS                          |
+    | - measure content width from the live page    |
+    +-----------------------------------------------+
+              |
+              v
+    +-----------------------------------------------+
+    | Phase B: paged PDF generation pass            |
+    | - call page.pdf(width=measured, ...)          |
+    | - Chromium generates paged output             |
+    | - requested paper width defines page area     |
+    | - auto-width nodes/divs can use that width    |
+    | - wide legends/content avoid right clipping   |
+    +-----------------------------------------------+
+
+- Playwright documents ``page.pdf()`` as generating a PDF of the page, with print CSS
+  media by default, unless ``page.emulate_media(media="screen")`` is used first (as in our case).
+- MDN distinguishes the viewport used for continuous media from the page area used for
+  paged media, and notes that the initial containing block changes accordingly.
+
+That distinction matters for browser-PDF exports. Phase A stabilizes responsive
+browser-rendered content such as Plotly against a fixed viewport so width measurements
+are deterministic. Phase B then feeds the measured width back into ``page.pdf()`` so
+the final paged layout has enough horizontal space to preserve content that would
+otherwise overflow or be clipped at the right edge.
+"""
 
 import json
 import re
@@ -177,6 +216,13 @@ class PlaywrightPDFRenderer:
                             "print_background": True,
                         }
 
+                        # Playwright describes page.pdf() as generating paged output, not a bitmap
+                        # snapshot of the already-painted viewport. MDN's paged-media model also
+                        # distinguishes the continuous-media viewport from the paged page area.
+                        # Passing the measured width here therefore gives the PDF generation pass a
+                        # wider page area even though the live browser pass already ran. Elements
+                        # such as #report_root that remain auto-width can then lay out against that
+                        # wider paged space without us assigning them an explicit width in the DOM.
                         pdf_bytes = page.pdf(**pdf_options)
                         self._logger.info(
                             f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
@@ -306,6 +352,8 @@ class PlaywrightPDFRenderer:
         # the report. If the PDF content area is narrower than the browser viewport, responsive
         # Plotly legends can still be clipped at the right edge even when the report root itself
         # appears narrower than the viewport.
+        # if actual content is wider, use that
+        # if the viewport/layout canvas is wider, use that instead
         fitted_content_width_px = max(content_width_px, layout_width_px)
         pdf_width_px = fitted_content_width_px + margin_width_px
         self._logger.info(
@@ -329,6 +377,9 @@ class PlaywrightPDFRenderer:
                     }
 
                     const rootRect = root.getBoundingClientRect();
+                    // Measure a curated set of content-bearing descendants instead of walking the
+                    // entire DOM. New ADR content types that can widen the report should update
+                    // this list so the width probe keeps seeing the real rendered geometry.
                     const candidateSelectors = [
                         'adr-data-item',
                         '.nexus-plot',
@@ -351,6 +402,9 @@ class PlaywrightPDFRenderer:
                     }
 
                     const seen = new Set();
+                    // Start with the report root's own visible width and scrollable width. The
+                    // scrollWidth fallback helps when child content extends farther right than the
+                    // root's immediate visible box.
                     let maxRight = Math.max(rootRect.width, root.scrollWidth);
                     for (const node of candidates) {
                         if (seen.has(node)) {
@@ -362,13 +416,28 @@ class PlaywrightPDFRenderer:
                         if (style.display === 'none' || style.visibility === 'hidden') {
                             continue;
                         }
+                        // Skip elements that have no layout box of their own. For example,
+                        // display: contents nodes do not produce client rects even though their
+                        // children can still render and be measured separately.
                         if (node.getClientRects().length === 0) {
                             continue;
                         }
+                        // Measure the node in viewport coordinates, then convert that geometry
+                        // into #report_root-relative coordinates for width comparisons.
                         const rect = node.getBoundingClientRect();
+                        // offsetLeft is how far this node starts from the left edge of the report
+                        // root, which lets scrollWidth-based checks compute a root-relative
+                        // rightmost extent.
                         const offsetLeft = rect.left - rootRect.left;
+                        // Width is tracked as the farthest rightward extent reached by any
+                        // measured node, relative to the left edge of #report_root. The
+                        // right edge matters here because browser-rendered content can overflow
+                        // past the root's nominal box, so "space remaining to the root edge"
+                        // would under-measure the PDF width we actually need.
                         maxRight = Math.max(maxRight, rect.right - rootRect.left);
                         if ('scrollWidth' in node) {
+                            // scrollWidth catches horizontally scrollable content that can extend
+                            // beyond the node's current client box.
                             maxRight = Math.max(maxRight, offsetLeft + (node.scrollWidth || 0));
                         }
                     }
@@ -378,14 +447,21 @@ class PlaywrightPDFRenderer:
         )
 
     def _measure_layout_width_px(self, page: Any) -> float:
-        """Measure the effective browser layout width in CSS pixels."""
+        """Measure the effective browser layout width in CSS pixels.
+
+        _measure_content_width_px() reports how far visible content extends to the right.
+        Some responsive content may lay out relative to the viewport rather than the report
+        root; so return the widest of both.
+        """
         return float(
             page.evaluate(
                 """() => {
+                    // Use the widest of the common viewport/document width signals so the PDF
+                    // preserves the layout canvas Chromium actually used while rendering.
                     return Math.max(
-                        window.innerWidth || 0,
-                        document.documentElement?.clientWidth || 0,
-                        document.body?.clientWidth || 0
+                        window.innerWidth || 0,  // The viewport width
+                        document.documentElement?.clientWidth || 0,  // <html> element width
+                        document.body?.clientWidth || 0  // <body> element width
                     );
                 }""",
             )
@@ -524,22 +600,30 @@ class PlaywrightPDFRenderer:
         # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
         #    until all custom web-components are registered, which adds ``body.loaded``.
         #    Skip this wait for non-ADR HTML that does not contain ``#report_root``.
+        #
+        #    FOUC (Flash Of Unstyled Content) is a brief flash of default/uninitialized
+        #    styling that can occur before web components or framework styles apply.
+        #    ADR intentionally avoids FOUC by keeping the root hidden until components
+        #    finish initializing; the renderer waits for the ``body.loaded`` signal so
+        #    the PDF captures the final, styled layout rather than an interim state.
         self._evaluate_ready_step(
             page,
             step_name="FOUC gate",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                const root = document.getElementById('report_root');
-                if (!root) { resolve(); return; }
-                if (document.body.classList.contains('loaded')) { resolve(); return; }
-                const observer = new MutationObserver(() => {
-                    if (document.body.classList.contains('loaded')) {
-                        observer.disconnect();
-                        resolve();
-                    }
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const root = document.getElementById('report_root');
+                    if (!root) { resolve(); return; }
+                    if (document.body.classList.contains('loaded')) { resolve(); return; }
+                    const observer = new MutationObserver(() => {
+                        if (document.body.classList.contains('loaded')) {
+                            observer.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
                 });
-                observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-            })""",
+            }""",
         )
 
         # 2. FOUC transition: ``body.loaded #report_root`` triggers a 0.4s opacity
@@ -548,26 +632,31 @@ class PlaywrightPDFRenderer:
             page,
             step_name="FOUC transition",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                const root = document.getElementById('report_root');
-                if (!root) { resolve(); return; }
-                const style = getComputedStyle(root);
-                if (style.opacity === '1') { resolve(); return; }
-                root.addEventListener('transitionend', function handler(e) {
-                    if (e.propertyName === 'opacity') {
-                        root.removeEventListener('transitionend', handler);
-                        resolve();
-                    }
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const root = document.getElementById('report_root');
+                    if (!root) { resolve(); return; }
+                    const style = getComputedStyle(root);
+                    if (style.opacity === '1') { resolve(); return; }
+                    root.addEventListener('transitionend', function handler(e) {
+                        if (e.propertyName === 'opacity') {
+                            root.removeEventListener('transitionend', handler);
+                            resolve();
+                        }
+                    });
                 });
-            })""",
+            }""",
         )
 
         # 3. Web fonts (FontAwesome woff2 + MathJax woff2).
+        # document.fonts.ready promise resolves when font loading for the document has finished.
         self._evaluate_ready_step(
             page,
             step_name="Web fonts",
             deadline=deadline,
-            wait_script="() => document.fonts.ready",
+            wait_script="""() => {
+                return document.fonts.ready;
+            }""",
         )
 
         # 4. MathJax renders equations asynchronously; wait only when the runtime is present.
@@ -618,22 +707,24 @@ class PlaywrightPDFRenderer:
             page,
             step_name="Plotly charts",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                const plots = document.querySelectorAll('.nexus-plot');
-                if (plots.length === 0) { resolve(); return; }
-                let remaining = plots.length;
-                function check() { if (--remaining <= 0) resolve(); }
-                plots.forEach((plot) => {
-                    if (plot.classList.contains('loaded')) { check(); return; }
-                    const observer = new MutationObserver(() => {
-                        if (plot.classList.contains('loaded')) {
-                            observer.disconnect();
-                            check();
-                        }
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const plots = document.querySelectorAll('.nexus-plot');
+                    if (plots.length === 0) { resolve(); return; }
+                    let remaining = plots.length;
+                    function check() { if (--remaining <= 0) resolve(); }
+                    plots.forEach((plot) => {
+                        if (plot.classList.contains('loaded')) { check(); return; }
+                        const observer = new MutationObserver(() => {
+                            if (plot.classList.contains('loaded')) {
+                                observer.disconnect();
+                                check();
+                            }
+                        });
+                        observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
                     });
-                    observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
                 });
-            })""",
+            }""",
         )
 
         # 6. Images: wait for every <img> to finish loading (covers static images,
@@ -642,17 +733,19 @@ class PlaywrightPDFRenderer:
             page,
             step_name="Images",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                const imgs = document.querySelectorAll('img');
-                if (imgs.length === 0) { resolve(); return; }
-                let remaining = imgs.length;
-                function done() { if (--remaining <= 0) resolve(); }
-                imgs.forEach((img) => {
-                    if (img.complete) { done(); return; }
-                    img.addEventListener('load', done, { once: true });
-                    img.addEventListener('error', done, { once: true });
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const imgs = document.querySelectorAll('img');
+                    if (imgs.length === 0) { resolve(); return; }
+                    let remaining = imgs.length;
+                    function done() { if (--remaining <= 0) resolve(); }
+                    imgs.forEach((img) => {
+                        if (img.complete) { done(); return; }
+                        img.addEventListener('load', done, { once: true });
+                        img.addEventListener('error', done, { once: true });
+                    });
                 });
-            })""",
+            }""",
         )
 
         # 7. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
@@ -661,17 +754,19 @@ class PlaywrightPDFRenderer:
             page,
             step_name="Videos",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                const videos = document.querySelectorAll('video');
-                if (videos.length === 0) { resolve(); return; }
-                let remaining = videos.length;
-                function done() { if (--remaining <= 0) resolve(); }
-                videos.forEach((vid) => {
-                    if (vid.readyState >= 2) { done(); return; }
-                    vid.addEventListener('loadeddata', done, { once: true });
-                    vid.addEventListener('error', done, { once: true });
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const videos = document.querySelectorAll('video');
+                    if (videos.length === 0) { resolve(); return; }
+                    let remaining = videos.length;
+                    function done() { if (--remaining <= 0) resolve(); }
+                    videos.forEach((vid) => {
+                        if (vid.readyState >= 2) { done(); return; }
+                        vid.addEventListener('loadeddata', done, { once: true });
+                        vid.addEventListener('error', done, { once: true });
+                    });
                 });
-            })""",
+            }""",
         )
 
         # 8. DataTables: only wait for tables with evidence of active initialization.
@@ -683,86 +778,90 @@ class PlaywrightPDFRenderer:
             page,
             step_name="DataTables",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                function getDataTableApi() {
-                    if (
-                        typeof DataTable !== 'undefined' &&
-                        typeof DataTable.isDataTable === 'function'
-                    ) {
-                        return DataTable;
-                    }
-                    if (typeof $ === 'undefined' || !$.fn) {
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    function getDataTableApi() {
+                        if (
+                            typeof DataTable !== 'undefined' &&
+                            typeof DataTable.isDataTable === 'function'
+                        ) {
+                            return DataTable;
+                        }
+                        if (typeof $ === 'undefined' || !$.fn) {
+                            return null;
+                        }
+                        if ($.fn.DataTable && typeof $.fn.DataTable.isDataTable === 'function') {
+                            return $.fn.DataTable;
+                        }
                         return null;
                     }
-                    if ($.fn.DataTable && typeof $.fn.DataTable.isDataTable === 'function') {
-                        return $.fn.DataTable;
+                    const dataTableApi = getDataTableApi();
+                    if (!dataTableApi) {
+                        resolve(); return;
                     }
-                    return null;
-                }
-                const dataTableApi = getDataTableApi();
-                if (!dataTableApi) {
-                    resolve(); return;
-                }
-                const tables = document.querySelectorAll('table[id^="table_"]');
-                if (tables.length === 0) { resolve(); return; }
-                const pendingTables = [];
-                function isDataTableReady(table) {
-                    try {
-                        return dataTableApi.isDataTable(table);
-                    } catch (e) {
-                        return true;
-                    }
-                }
-                function hasDataTableDom(table) {
-                    // Stick to public DataTables signals: initialized tables are reported
-                    // by isDataTable(), and initialized markup carries the documented
-                    // dataTable selector class or DataTables-generated wrapper elements.
-                    return (
-                        table.classList.contains('dataTable') ||
-                        table.closest('.dt-container') !== null
-                    );
-                }
-                tables.forEach((table) => {
-                    if (table.hasAttribute('data-dt-skip-init-wait')) {
-                        return;
-                    }
-                    if (isDataTableReady(table)) {
-                        return;
-                    }
-                    if (hasDataTableDom(table)) {
-                        pendingTables.push(table);
-                    }
-                });
-                if (pendingTables.length === 0 || typeof $ === 'undefined') { resolve(); return; }
-                let remaining = pendingTables.length;
-                function done() { if (--remaining <= 0) resolve(); }
-                pendingTables.forEach((table) => {
-                    let observer = null;
-                    const $table = $(table);
-                    function cleanup() {
-                        if (observer) {
-                            observer.disconnect();
-                            observer = null;
+                    const tables = document.querySelectorAll('table[id^="table_"]');
+                    if (tables.length === 0) { resolve(); return; }
+                    const pendingTables = [];
+                    function isDataTableReady(table) {
+                        try {
+                            return dataTableApi.isDataTable(table);
+                        } catch (e) {
+                            return true;
                         }
-                        $table.off('init.dt', checkComplete);
                     }
-                    function checkComplete() {
+                    function hasDataTableDom(table) {
+                        // Stick to public DataTables signals: initialized tables are reported
+                        // by isDataTable(), and initialized markup carries the documented
+                        // dataTable selector class or DataTables-generated wrapper elements.
+                        return (
+                            table.classList.contains('dataTable') ||
+                            table.closest('.dt-container') !== null
+                        );
+                    }
+                    tables.forEach((table) => {
+                        if (table.hasAttribute('data-dt-skip-init-wait')) {
+                            return;
+                        }
                         if (isDataTableReady(table)) {
-                            cleanup();
-                            done();
+                            return;
                         }
+                        if (hasDataTableDom(table)) {
+                            pendingTables.push(table);
+                        }
+                    });
+                    if (pendingTables.length === 0 || typeof $ === 'undefined') {
+                        resolve(); return;
                     }
-                    $table.on('init.dt', checkComplete);
-                    if (typeof MutationObserver !== 'undefined') {
-                        observer = new MutationObserver(checkComplete);
-                        observer.observe(table, {
-                            attributes: true,
-                            attributeFilter: ['class']
-                        });
-                    }
-                    checkComplete();
+                    let remaining = pendingTables.length;
+                    function done() { if (--remaining <= 0) resolve(); }
+                    pendingTables.forEach((table) => {
+                        let observer = null;
+                        const $table = $(table);
+                        function cleanup() {
+                            if (observer) {
+                                observer.disconnect();
+                                observer = null;
+                            }
+                            $table.off('init.dt', checkComplete);
+                        }
+                        function checkComplete() {
+                            if (isDataTableReady(table)) {
+                                cleanup();
+                                done();
+                            }
+                        }
+                        $table.on('init.dt', checkComplete);
+                        if (typeof MutationObserver !== 'undefined') {
+                            observer = new MutationObserver(checkComplete);
+                            observer.observe(table, {
+                                attributes: true,
+                                attributeFilter: ['class']
+                            });
+                        }
+                        checkComplete();
+                    });
                 });
-            })""",
+            }""",
         )
 
         # 9. Active 3D viewers: wait for each ansys-nexus-viewer spinner to hide.
@@ -772,23 +871,25 @@ class PlaywrightPDFRenderer:
             page,
             step_name="3D viewers",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) => {
-                const viewers = document.querySelectorAll('ansys-nexus-viewer');
-                if (viewers.length === 0) { resolve(); return; }
-                let remaining = viewers.length;
-                function done() { if (--remaining <= 0) resolve(); }
-                viewers.forEach((viewer) => {
-                    const spinner = viewer.querySelector('#render-wait');
-                    if (!spinner || spinner.style.display !== 'block') { done(); return; }
-                    const observer = new MutationObserver(() => {
-                        if (spinner.style.display !== 'block') {
-                            observer.disconnect();
-                            done();
-                        }
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const viewers = document.querySelectorAll('ansys-nexus-viewer');
+                    if (viewers.length === 0) { resolve(); return; }
+                    let remaining = viewers.length;
+                    function done() { if (--remaining <= 0) resolve(); }
+                    viewers.forEach((viewer) => {
+                        const spinner = viewer.querySelector('#render-wait');
+                        if (!spinner || spinner.style.display !== 'block') { done(); return; }
+                        const observer = new MutationObserver(() => {
+                            if (spinner.style.display !== 'block') {
+                                observer.disconnect();
+                                done();
+                            }
+                        });
+                        observer.observe(spinner, { attributes: true, attributeFilter: ['style'] });
                     });
-                    observer.observe(spinner, { attributes: true, attributeFilter: ['style'] });
                 });
-            })""",
+            }""",
         )
 
         # 10. Double requestAnimationFrame waits for an actual composited frame
@@ -797,9 +898,11 @@ class PlaywrightPDFRenderer:
             page,
             step_name="Double requestAnimationFrame",
             deadline=deadline,
-            wait_script="""() => new Promise((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(resolve))
-            )""",
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    requestAnimationFrame(() => requestAnimationFrame(resolve));
+                });
+            }""",
         )
 
         self._logger.info("Browser render readiness checks completed.")
