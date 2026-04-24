@@ -49,12 +49,12 @@ import platform
 import shutil
 import sys
 import tempfile
+from typing import Any
 import uuid
 import warnings
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
@@ -1344,6 +1344,174 @@ class ADR:
         except Exception as e:
             raise ADRException(f"PDF Report rendering failed: {e}")
 
+    def _resolve_browser_pdf_scratch_root(self) -> Path:
+        """Return a writable root directory for browser-PDF scratch files.
+
+        The browser-PDF path stages a self-contained offline report bundle before Chromium opens
+        it. Reusing the ADR database directory keeps those scratch files on the same repository-
+        managed volume when a local database directory is available. External database
+        configurations do not have a local ADR database directory, so they fall back to a
+        dedicated system temporary directory.
+
+        Returns
+        -------
+        Path
+            Existing directory used to host the temporary browser-PDF bundle.
+
+        Raises
+        ------
+        ADRException
+            If a configured ADR database directory does not exist.
+        """
+        db_directory = self._db_directory
+        if db_directory:
+            scratch_root = Path(db_directory)
+            if scratch_root.exists() and scratch_root.is_dir():
+                return scratch_root
+
+            raise ADRException(
+                "The ADR database directory must exist before browser PDF export scratch files can be created."
+            )
+
+        # External database configurations do not have a local ADR database directory. Use a
+        # dedicated temp child so these scratch bundles do not mix with unrelated temp files.
+        scratch_root = Path(tempfile.gettempdir()) / "adr_browser_pdf_scratch"
+        scratch_root.mkdir(parents=True, exist_ok=True)
+        return scratch_root
+
+    def _render_report_as_browser_pdf_impl(
+        self,
+        *,
+        context: dict | None = None,
+        item_filter: str = "",
+        dark_mode: bool = False,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = 30.0,
+        **kwargs: Any,
+    ) -> bytes:
+        """Render a browser-fidelity PDF using the ADR database directory for staging."""
+        if self._static_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'static_directory' must be configured for browser PDF export."
+            )
+
+        scratch_root = self._resolve_browser_pdf_scratch_root()
+
+        try:
+            # Import lazily so browser startup and Chromium use happen only on this export path.
+            from .pdf_renderer import PlaywrightPDFRenderer
+
+            with tempfile.TemporaryDirectory(
+                prefix="adr-browser-pdf-",
+                dir=scratch_root,
+            ) as tmp_dir:
+                tmp_path = Path(tmp_dir)
+                # Build the renderer first so invalid PDF options fail before the report render
+                # and asset export pipeline does any meaningful work.
+                renderer = PlaywrightPDFRenderer(
+                    html_dir=tmp_path,
+                    landscape=landscape,
+                    margins=margins,
+                    render_timeout=render_timeout,
+                    logger=self._logger,
+                )
+
+                pdf_context = {"print": "pdf"}
+                # Reuse the existing browser HTML render path, then export it into a self-contained
+                # directory so Chromium can load every asset from disk without a running web server.
+                html_content = self.render_report(
+                    context={**(context or {}), **pdf_context},
+                    item_filter=item_filter,
+                    **kwargs,
+                )
+
+                exporter = ServerlessReportExporter(
+                    html_content=html_content,
+                    output_dir=tmp_path,
+                    media_dir=self._media_directory,
+                    static_dir=self._static_directory,
+                    media_url=self._media_url,
+                    static_url=self._static_url,
+                    filename="index.html",
+                    no_inline_files=True,
+                    ansys_version=str(self._ansys_version),
+                    dark_mode=dark_mode,
+                    debug=self._debug,
+                    logger=self._logger,
+                )
+                exporter.export()
+
+                return renderer.render_pdf()
+        except ADRException:
+            raise
+        except Exception as e:
+            raise ADRException(f"Browser PDF rendering failed: {e}") from e
+
+    def render_report_as_browser_pdf(
+        self,
+        *,
+        context: dict | None = None,
+        item_filter: str = "",
+        dark_mode: bool = False,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = 30.0,
+        **kwargs: Any,
+    ) -> bytes:
+        """Render a report as a browser-fidelity PDF byte stream via headless Chromium.
+
+        Unlike ``render_report_as_pdf()`` which uses WeasyPrint (static CSS rendering),
+        this method produces PDF output that matches the on-screen browser appearance
+        by using Playwright + headless Chromium.
+
+        Parameters
+        ----------
+        context : dict, optional
+            Additional rendering context.
+        item_filter : str, optional
+            Filter expression for report items.
+        dark_mode : bool, optional
+            Whether to render using a dark theme. Default ``False``.
+        landscape : bool, optional
+            Whether to use landscape orientation. Default ``False``.
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+            If omitted, 10 mm margins are used on every side.
+        render_timeout : float, optional
+            Maximum time, in seconds, to wait for browser readiness signals.
+            Default ``30.0``.
+        **kwargs : Any
+            Additional keyword arguments used to fetch the report template.
+            At least one keyword argument must be provided.
+
+        Returns
+        -------
+        bytes
+            PDF content generated by headless Chromium.
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or browser PDF rendering fails.
+        ImproperlyConfiguredError
+            If ``static_directory`` is not configured.
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+
+        return self._render_report_as_browser_pdf_impl(
+            context=context,
+            item_filter=item_filter,
+            dark_mode=dark_mode,
+            landscape=landscape,
+            margins=margins,
+            render_timeout=render_timeout,
+            **kwargs,
+        )
+
     def export_report_as_pptx(
         self,
         *,
@@ -1573,6 +1741,82 @@ class ADR:
         with open(output_path, "wb") as f:
             f.write(pdf_stream)
         self._logger.info(f"Successfully exported report to: {output_path}")
+
+    def export_report_as_browser_pdf(
+        self,
+        *,
+        filename: str | Path | None = None,
+        context: dict | None = None,
+        item_filter: str = "",
+        dark_mode: bool = False,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = 30.0,
+        **kwargs: Any,
+    ) -> None:
+        """Export a report as a browser-fidelity PDF file via headless Chromium.
+
+        Unlike ``export_report_as_pdf()`` which uses WeasyPrint (static CSS rendering),
+        this method produces PDF output that matches the on-screen browser appearance
+        by using Playwright + headless Chromium.
+
+        Parameters
+        ----------
+        filename : str or Path, optional
+            Output PDF path. If omitted, uses ``"<guid>.pdf"``.
+        context : dict, optional
+            Additional rendering context.
+        item_filter : str, optional
+            Filter expression for report items.
+        dark_mode : bool, optional
+            Whether to render using a dark theme. Default ``False``.
+        landscape : bool, optional
+            Whether to use landscape orientation. Default ``False``.
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+            If omitted, 10 mm margins are used on every side.
+        render_timeout : float, optional
+            Maximum time, in seconds, to wait for browser readiness signals.
+            Default ``30.0``.
+        **kwargs : Any
+            Additional keyword arguments used to fetch the report template.
+            At least one keyword argument must be provided.
+
+        Returns
+        -------
+            None
+
+        Raises
+        ------
+        ADRException
+            If no keyword arguments are provided or browser PDF rendering fails.
+        ImproperlyConfiguredError
+            If ``static_directory`` is not configured.
+        """
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+
+        pdf_stream = self._render_report_as_browser_pdf_impl(
+            context=context,
+            item_filter=item_filter,
+            dark_mode=dark_mode,
+            landscape=landscape,
+            margins=margins,
+            render_timeout=render_timeout,
+            **kwargs,
+        )
+
+        if filename is not None:
+            output_path = Path(filename)
+        else:
+            template = Template.get(**kwargs)
+            output_path = Path(f"{template.guid}.pdf")
+
+        with open(output_path, "wb") as f:
+            f.write(pdf_stream)
+        self._logger.info(f"Successfully exported browser PDF to: {output_path}")
 
     @staticmethod
     def query(
