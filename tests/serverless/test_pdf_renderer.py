@@ -38,19 +38,6 @@ def _write_html(tmp_path: Path, body: str) -> Path:
     return tmp_path
 
 
-def _render_or_skip(renderer: PlaywrightPDFRenderer) -> bytes:
-    """Render a PDF unless Playwright's Chromium binary is unavailable locally."""
-    pytest.importorskip("playwright.sync_api")
-
-    try:
-        return renderer.render_pdf()
-    except ADRException as exc:
-        error_text = str(exc)
-        if "Executable doesn't exist" in error_text or "playwright install chromium" in error_text:
-            pytest.skip("Playwright Chromium is not installed in this environment.")
-        raise
-
-
 def _simple_renderer(
     tmp_path: Path,
     body: str,
@@ -99,7 +86,7 @@ def _stub_playwright_render(
 @pytest.mark.unit
 def test_playwright_pdf_from_simple_html(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
-    pdf_bytes = _render_or_skip(renderer)
+    pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
@@ -110,7 +97,7 @@ def test_playwright_pdf_landscape(tmp_path):
         "<html><body><p>Landscape content</p></body></html>",
         landscape=True,
     )
-    pdf_bytes = _render_or_skip(renderer)
+    pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
@@ -196,7 +183,7 @@ def test_playwright_pdf_with_mathjax_content(tmp_path):
     </html>
     """
     renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
+    pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
@@ -227,7 +214,7 @@ def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(tmp_path):
     </html>
     """
     renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
+    pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
@@ -251,87 +238,7 @@ def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
     </html>
     """
     renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
-    assert pdf_bytes.startswith(b"%PDF-")
-
-
-@pytest.mark.unit
-def test_playwright_pdf_skips_datatables_wait_without_init_handlers(tmp_path):
-    # Print-mode browser exports can include DataTables assets and table IDs while intentionally
-    # skipping DataTables initialization. The readiness gate must treat those tables as complete
-    # instead of waiting forever for an init.dt event that will never be bound.
-    html = """
-    <html>
-    <body class="loaded">
-        <section id="report_root" style="opacity:1">
-            <table id="table_example"><tbody><tr><td>Cell</td></tr></tbody></table>
-        </section>
-        <script>
-            window.$ = function() {
-                return {
-                    on: function() {}
-                };
-            };
-            window.$.fn = {
-                DataTable: {
-                    isDataTable: function() {
-                        return false;
-                    }
-                }
-            };
-            window.$._data = function() {
-                return {};
-            };
-        </script>
-    </body>
-    </html>
-    """
-    renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
-    assert pdf_bytes.startswith(b"%PDF-")
-
-
-@pytest.mark.unit
-def test_playwright_pdf_datatables_wait_avoids_private_jquery_state(tmp_path):
-    # DataTables documents public isDataTable() and init.dt APIs. The renderer should not inspect
-    # jQuery's private event cache or DataTables' private settings arrays to decide whether a
-    # static table is pending initialization.
-    html = """
-    <html>
-    <body class="loaded">
-        <section id="report_root" style="opacity:1">
-            <table id="table_example"><tbody><tr><td>Cell</td></tr></tbody></table>
-        </section>
-        <script>
-            window.$ = function() {
-                return {
-                    on: function() {
-                        throw new Error('static tables should not bind init handlers');
-                    },
-                    off: function() {}
-                };
-            };
-            window.$.fn = {
-                DataTable: {
-                    isDataTable: function() {
-                        return false;
-                    }
-                }
-            };
-            Object.defineProperty(window.$.fn, 'dataTableSettings', {
-                get: function() {
-                    throw new Error('private DataTables settings were accessed');
-                }
-            });
-            window.$._data = function() {
-                throw new Error('private jQuery event data was accessed');
-            };
-        </script>
-    </body>
-    </html>
-    """
-    renderer = _simple_renderer(tmp_path, html)
-    pdf_bytes = _render_or_skip(renderer)
+    pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
@@ -349,14 +256,11 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     </html>
     """
     renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
-    pytest.importorskip("playwright.sync_api")
 
     try:
         renderer.render_pdf()
     except ADRException as exc:
         error_text = str(exc)
-        if "Executable doesn't exist" in error_text or "playwright install chromium" in error_text:
-            pytest.skip("Playwright Chromium is not installed in this environment.")
         assert "Browser PDF rendering failed" in error_text
         assert "timed out" in error_text
     else:
@@ -488,21 +392,19 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     </html>
     """
     renderer = _simple_renderer(tmp_path, html)
-    pytest.importorskip("playwright.sync_api")
     from playwright.sync_api import sync_playwright
 
-    try:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
-            page = browser.new_page()
-            page.goto((renderer._html_dir / renderer._filename).as_uri(), wait_until="load")
-            # The PDF renderer uses screen media so the captured PDF matches the browser layout.
-            # The anti-splitting rules must still apply in that media mode or Plotly figures can
-            # break across pages during PDF pagination.
-            page.emulate_media(media="screen")
-            renderer._apply_pdf_capture_styles(page)
-            computed_styles = page.evaluate(
-                """() => {
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._filename).as_uri(), wait_until="load")
+        # The PDF renderer uses screen media so the captured PDF matches the browser layout.
+        # The anti-splitting rules must still apply in that media mode or Plotly figures can
+        # break across pages during PDF pagination.
+        page.emulate_media(media="screen")
+        renderer._apply_pdf_capture_styles(page)
+        computed_styles = page.evaluate(
+            """() => {
                     const sectionHeading = document.getElementById('section-heading');
                     const item = document.getElementById('item');
                     const plot = document.getElementById('plot');
@@ -576,13 +478,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         },
                     };
                 }"""
-            )
-            browser.close()
-    except Exception as exc:
-        error_text = str(exc)
-        if "Executable doesn't exist" in error_text or "playwright install chromium" in error_text:
-            pytest.skip("Playwright Chromium is not installed in this environment.")
-        raise
+        )
+        browser.close()
 
     assert computed_styles["sectionHeading"]["breakAfter"] == "avoid"
     assert computed_styles["sectionHeading"]["pageBreakAfter"] == "avoid"
@@ -648,6 +545,52 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
         )
 
     page.evaluate.assert_not_called()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_images_step_requires_source_and_decoded_dimensions(
+    tmp_path, monkeypatch
+):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
+    wait_scripts = {}
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        wait_scripts[step_name] = wait_script
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+
+    renderer._wait_for_render_ready(Mock())
+
+    image_wait_script = wait_scripts["Images"]
+    assert (
+        "const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));" in image_wait_script
+    )
+    assert "if (hasSource && img.complete && img.naturalWidth > 0)" in image_wait_script
+    assert "img.addEventListener('load', done, { once: true });" in image_wait_script
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
+    step_names = []
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        step_names.append(step_name)
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+
+    renderer._wait_for_render_ready(Mock())
+
+    assert step_names == [
+        "FOUC gate",
+        "FOUC transition",
+        "Web fonts",
+        "MathJax",
+        "Plotly charts",
+        "Images",
+        "Videos",
+        "Double requestAnimationFrame",
+    ]
 
 
 @pytest.mark.unit
