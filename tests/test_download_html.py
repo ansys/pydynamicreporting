@@ -122,6 +122,8 @@ def _make_response(status_code: int, content: bytes = b"asset") -> MagicMock:
     response = MagicMock()
     response.status_code = status_code
     response.content = content
+    # Mock iter_content to properly yield chunks like the real requests library
+    response.iter_content = lambda chunk_size: iter([content]) if content else iter([])
     return response
 
 
