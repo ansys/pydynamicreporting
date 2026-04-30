@@ -23,8 +23,8 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
 
-      - name: Set up Python
-        uses: ./.github/actions/setup-python-env
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v10
@@ -33,6 +33,7 @@ jobs:
           operating-system: ubuntu-latest
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-licenses: 'false'
+          checkout: false
 
       - name: Install from wheelhouse
         run: uv run python -m pip install --no-index --find-links=wheelhouse ${{ env.PACKAGE_NAME }}
