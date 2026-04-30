@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v10
+        uses: ansys/actions/doc-build@v10.2.12
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Deploy development documentation
-        uses: ansys/actions/doc-deploy-dev@v10
+        uses: ansys/actions/doc-deploy-dev@v10.2.12
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.GITHUB_TOKEN }}

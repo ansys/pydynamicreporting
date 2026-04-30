@@ -27,7 +27,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Build wheelhouse
-        uses: ansys/actions/build-wheelhouse@v10
+        uses: ansys/actions/build-wheelhouse@v10.2.12
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.0.14
+        uses: ansys/actions/check-vulnerabilities@v10.2.12
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
@@ -79,7 +79,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.0.14
+        uses: ansys/actions/check-vulnerabilities@v10.2.12
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
