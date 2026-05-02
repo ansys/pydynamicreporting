@@ -1,0 +1,6 @@
+render\_report
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.render_report

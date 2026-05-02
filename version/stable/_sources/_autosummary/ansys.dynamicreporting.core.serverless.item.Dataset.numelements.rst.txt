@@ -1,0 +1,6 @@
+numelements
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Dataset.numelements

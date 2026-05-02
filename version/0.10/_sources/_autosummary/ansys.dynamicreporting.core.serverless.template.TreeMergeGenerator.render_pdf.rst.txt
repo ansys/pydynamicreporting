@@ -1,0 +1,6 @@
+render\_pdf
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TreeMergeGenerator.render_pdf

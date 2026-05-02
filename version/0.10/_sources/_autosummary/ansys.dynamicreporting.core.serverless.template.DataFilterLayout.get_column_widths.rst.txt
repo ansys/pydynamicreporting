@@ -1,0 +1,6 @@
+get\_column\_widths
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: DataFilterLayout.get_column_widths
