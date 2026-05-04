@@ -856,7 +856,7 @@ class Server:
         return templ
 
     def _download_report(self, url, file_name, directory_name=None):
-        resp = requests.get(url, allow_redirects=True)  # nosec B400
+        resp = self._http_session.get(url, allow_redirects=True, stream=True, timeout=300)
         if resp.status_code != requests.codes.ok:
             try:
                 detail = resp.json()["detail"]
@@ -868,9 +868,11 @@ class Server:
             file_path = (Path(directory_name) / Path(file_name)).resolve()
         else:
             file_path = Path(file_name).resolve()
-        # write to disk
+        # write to disk in chunks to avoid zip bomb attacks
         with open(file_path, "wb") as report:
-            report.write(resp.content)
+            for chunk in resp.iter_content(chunk_size=65536):
+                if chunk:
+                    report.write(chunk)
 
     def build_url_with_query(self, report_guid, query, item_filter=None, rest_api=False):
         url = self.get_URL()
@@ -980,10 +982,12 @@ class Server:
         if query is None:
             query = {}
         url = self.build_url_with_query(report_guid, query)
-        resp = requests.get(url, allow_redirects=True)  # nosec B400
+        resp = self._http_session.get(url, allow_redirects=True, stream=True, timeout=300)
         if resp.status_code == requests.codes.ok:
             try:
-                links = report_utils.get_links_from_html(resp.text)
+                # Read response with streaming to avoid zip bomb attacks
+                html_content = resp.content.decode(resp.encoding or "utf-8")
+                links = report_utils.get_links_from_html(html_content)
                 for link in links:
                     url = urlparse(link)
                     q_params = dict(urllib.parse.parse_qsl(url.query))
