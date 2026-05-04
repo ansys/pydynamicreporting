@@ -70,7 +70,7 @@ test = [
     "pytest-cov",
     "pyvista==0.47.3",
     "vtk==9.6.1",
-    "ansys-dpf-core==0.15.0"
+    "ansys-dpf-core==0.16.0"
 ]
 doc = [
     "ansys-sphinx-theme",
