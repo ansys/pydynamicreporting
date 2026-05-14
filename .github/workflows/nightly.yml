@@ -72,7 +72,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.2.12
+        uses: ansys/actions/check-vulnerabilities@v10.3.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
@@ -82,7 +82,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.2.12
+        uses: ansys/actions/check-vulnerabilities@v10.3.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
