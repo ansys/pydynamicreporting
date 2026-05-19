@@ -555,7 +555,7 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_images_step_requires_source_and_decoded_dimensions(
+def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
     tmp_path, monkeypatch
 ):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
@@ -567,13 +567,52 @@ def test_wait_for_render_ready_images_step_requires_source_and_decoded_dimension
     monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
 
     renderer._wait_for_render_ready(Mock())
-
     image_wait_script = wait_scripts["Images"]
-    assert (
-        "const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));" in image_wait_script
-    )
-    assert "if (hasSource && img.complete && img.naturalWidth > 0)" in image_wait_script
-    assert "img.addEventListener('load', done, { once: true });" in image_wait_script
+
+    report_dir = tmp_path / "delayed-image-report"
+    report_dir.mkdir()
+    _write_html(report_dir, "<html><body><img id='delayed' alt='preview' /></body></html>")
+
+    # Use a real page here so the image readiness step is validated by behavior rather
+    # than by asserting exact JavaScript source text.
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        page.evaluate(
+            f"""() => {{
+                window.waitReadyDone = false;
+                window.waitReadyError = null;
+                const waitForReady = {image_wait_script};
+                waitForReady()
+                    .then(() => {{
+                        window.waitReadyDone = true;
+                    }})
+                    .catch((error) => {{
+                        window.waitReadyError = String(error);
+                    }});
+            }}"""
+        )
+
+        # Browsers report src-less images as complete, so the regression is that the
+        # readiness step must still wait for a real source/load instead of resolving now.
+        assert page.evaluate("() => document.getElementById('delayed').complete") is True
+        assert page.evaluate("() => window.waitReadyDone") is False
+        assert page.evaluate("() => window.waitReadyError") is None
+
+        page.evaluate(
+            """() => {
+                document.getElementById('delayed').src =
+                    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+            }"""
+        )
+        # Poll the page until the async image-readiness promise resolves.
+        page.wait_for_function("() => window.waitReadyDone === true")
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
 
 
 @pytest.mark.unit
