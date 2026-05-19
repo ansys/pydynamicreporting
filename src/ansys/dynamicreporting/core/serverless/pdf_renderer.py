@@ -756,7 +756,87 @@ class PlaywrightPDFRenderer:
             }""",
         )
 
-        # 7. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
+        # 7. Iframes: report-link layouts load a nested document first, then expand the
+        #    iframe itself asynchronously from a hidden 10px placeholder to its measured
+        #    content height. Wait for same-origin frames to finish that post-load expansion.
+        #
+        #    For cross-origin or otherwise inaccessible iframe documents, ``page.goto(...,
+        #    wait_until="load")`` has already waited for the eager iframe load. Those frames
+        #    expose no stable DOM contract to poll from the parent document, so the dedicated
+        #    iframe wait only extends readiness when same-origin access is available.
+        self._evaluate_ready_step(
+            page,
+            step_name="Iframes",
+            deadline=deadline,
+            wait_script="""() => {
+                return new Promise((resolve) => {
+                    const frames = Array.from(document.querySelectorAll('iframe'));
+                    if (frames.length === 0) { resolve(); return; }
+                    let remaining = frames.length;
+                    function done() { if (--remaining <= 0) resolve(); }
+                    function hasSource(frame) {
+                        return Boolean(frame.getAttribute('src') || frame.getAttribute('srcdoc'));
+                    }
+                    function isExpanded(frame) {
+                        const style = getComputedStyle(frame);
+                        const rect = frame.getBoundingClientRect();
+                        return style.display !== 'none' && rect.height > 10;
+                    }
+                    function isReady(frame) {
+                        if (!hasSource(frame)) {
+                            return true;
+                        }
+                        try {
+                            const childDocument = frame.contentDocument;
+                            if (!childDocument) {
+                                return true;
+                            }
+                            if (childDocument.readyState !== 'complete') {
+                                return false;
+                            }
+                            const bodyHeight = childDocument.body ? childDocument.body.scrollHeight : 0;
+                            const documentHeight = childDocument.documentElement
+                                ? childDocument.documentElement.scrollHeight
+                                : 0;
+                            const childHeight = Math.max(bodyHeight, documentHeight);
+                            return childHeight === 0 || isExpanded(frame);
+                        } catch (error) {
+                            return true;
+                        }
+                    }
+                    frames.forEach((frame) => {
+                        if (isReady(frame)) { done(); return; }
+                        let finished = false;
+                        let observer = null;
+                        const maybeDone = () => {
+                            if (finished || !isReady(frame)) {
+                                return;
+                            }
+                            finished = true;
+                            frame.removeEventListener('load', handleLoad);
+                            if (observer) {
+                                observer.disconnect();
+                            }
+                            done();
+                        };
+                        const handleLoad = () => {
+                            // Let any inline iframe onload handler run its own DOM/style updates,
+                            // then re-check after the next paint so height/display changes are visible.
+                            requestAnimationFrame(() => requestAnimationFrame(maybeDone));
+                        };
+                        frame.addEventListener('load', handleLoad, { once: true });
+                        observer = new MutationObserver(maybeDone);
+                        observer.observe(frame, {
+                            attributes: true,
+                            attributeFilter: ['style', 'class', 'src', 'srcdoc'],
+                        });
+                        maybeDone();
+                    });
+                });
+            }""",
+        )
+
+        # 8. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
         #    so the current frame is available before Chromium prints the page.
         self._evaluate_ready_step(
             page,
@@ -777,7 +857,7 @@ class PlaywrightPDFRenderer:
             }""",
         )
 
-        # 8. Double requestAnimationFrame waits for an actual composited frame
+        # 9. Double requestAnimationFrame waits for an actual composited frame
         #     after all preceding DOM/style work settles.
         self._evaluate_ready_step(
             page,

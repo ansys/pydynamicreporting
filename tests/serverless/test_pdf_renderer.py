@@ -614,6 +614,106 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Iframes</p></body></html>")
+    wait_scripts = {}
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        wait_scripts[step_name] = wait_script
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+
+    renderer._wait_for_render_ready(Mock())
+    iframe_wait_script = wait_scripts["Iframes"]
+
+    report_dir = tmp_path / "delayed-iframe-report"
+    report_dir.mkdir()
+    (report_dir / "child.html").write_text(
+        "<html><body style='margin:0'><div style='height:240px'>Child report</div></body></html>",
+        encoding="utf-8",
+    )
+    _write_html(
+        report_dir,
+        """<html><body>
+        <script>
+            window.frameExpandGate = new Promise((resolve) => {
+                window.releaseFrameExpand = resolve;
+            });
+            window.deferFrameExpand = (frame) => {
+                window.frameExpandGate.then(() => {
+                    frame.style.display = 'block';
+                    frame.style.height =
+                        frame.contentDocument.documentElement.scrollHeight + 'px';
+                });
+            };
+        </script>
+        <iframe
+            id="linked-report"
+            src="child.html"
+            style="display: none; height: 10px; width: 320px; border: 0;"
+            onload="window.deferFrameExpand(this)"
+        ></iframe>
+        </body></html>""",
+    )
+
+    # Use a real page here so the iframe readiness step is validated by behavior rather
+    # than by asserting exact JavaScript source text.
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        page.evaluate(
+            f"""() => {{
+                window.waitReadyDone = false;
+                window.waitReadyError = null;
+                const waitForReady = {iframe_wait_script};
+                waitForReady()
+                    .then(() => {{
+                        window.waitReadyDone = true;
+                    }})
+                    .catch((error) => {{
+                        window.waitReadyError = String(error);
+                    }});
+            }}"""
+        )
+
+        # The iframe document is already loaded here, but the element itself is still
+        # collapsed until the parent page releases the deferred onload expansion hook.
+        assert page.evaluate("() => window.waitReadyDone") is False
+        assert (
+            page.evaluate(
+                "() => getComputedStyle(document.getElementById('linked-report')).display"
+            )
+            == "none"
+        )
+        assert page.evaluate(
+            "() => document.getElementById('linked-report').getBoundingClientRect().height"
+        ) == pytest.approx(10.0)
+        assert page.evaluate("() => window.waitReadyError") is None
+
+        page.evaluate("() => window.releaseFrameExpand()")
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert (
+            page.evaluate(
+                "() => getComputedStyle(document.getElementById('linked-report')).display"
+            )
+            == "block"
+        )
+        assert (
+            page.evaluate(
+                "() => document.getElementById('linked-report').getBoundingClientRect().height"
+            )
+            > 10
+        )
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
     step_names = []
@@ -632,6 +732,7 @@ def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch)
         "MathJax",
         "Plotly charts",
         "Images",
+        "Iframes",
         "Videos",
         "Double requestAnimationFrame",
     ]
