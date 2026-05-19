@@ -1379,8 +1379,9 @@ class ADR:
         scratch_root.mkdir(parents=True, exist_ok=True)
         return scratch_root
 
-    def _render_report_as_browser_pdf_impl(
+    def _render_template_as_browser_pdf(
         self,
+        template: Template,
         *,
         context: dict | None = None,
         item_filter: str = "",
@@ -1390,7 +1391,13 @@ class ADR:
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
-        """Render a browser-fidelity PDF using the ADR database directory for staging."""
+        """Render one resolved template as a browser-fidelity PDF byte stream.
+
+        The public browser-PDF entry points resolve the template up front so they can
+        reuse the same object for both rendering and any export-time filename decisions.
+        Keeping the staging/export/render pipeline here avoids duplicating that logic
+        while still preventing a second ``Template.get(**kwargs)`` lookup.
+        """
         if self._static_directory is None:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured for browser PDF export."
@@ -1418,13 +1425,17 @@ class ADR:
                 )
 
                 pdf_context = {"print": "pdf"}
-                # Reuse the existing browser HTML render path, then export it into a self-contained
-                # directory so Chromium can load every asset from disk without a running web server.
-                html_content = self.render_report(
-                    context={**(context or {}), **pdf_context},
-                    item_filter=item_filter,
-                    **kwargs,
-                )
+                # Browser PDF stages the same print-mode HTML that export_report_as_html() uses,
+                # but it renders from a concrete Template instance so the caller can reuse that
+                # resolved object for default filenames and other metadata-derived decisions.
+                try:
+                    html_content = template.render(
+                        context={**(context or {}), **pdf_context},
+                        item_filter=item_filter,
+                        request=self._request,
+                    )
+                except Exception as e:
+                    raise ADRException(f"Report rendering failed: {e}") from e
 
                 exporter = ServerlessReportExporter(
                     html_content=html_content,
@@ -1502,14 +1513,16 @@ class ADR:
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        return self._render_report_as_browser_pdf_impl(
+        template = Template.get(**kwargs)
+
+        return self._render_template_as_browser_pdf(
+            template,
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,
-            **kwargs,
         )
 
     def export_report_as_pptx(
@@ -1798,20 +1811,20 @@ class ADR:
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        pdf_stream = self._render_report_as_browser_pdf_impl(
+        template = Template.get(**kwargs)
+        pdf_stream = self._render_template_as_browser_pdf(
+            template,
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,
-            **kwargs,
         )
 
         if filename is not None:
             output_path = Path(filename)
         else:
-            template = Template.get(**kwargs)
             output_path = Path(f"{template.guid}.pdf")
 
         with open(output_path, "wb") as f:

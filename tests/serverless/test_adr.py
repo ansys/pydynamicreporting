@@ -1749,10 +1749,48 @@ def test_export_report_as_browser_pdf_uses_template_guid_default_filename(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         ADR,
-        "_render_report_as_browser_pdf_impl",
-        lambda self, **kwargs: b"%PDF-default-name",
+        "_render_template_as_browser_pdf",
+        lambda self, template, **kwargs: b"%PDF-default-name",
     )
 
     adr_serverless.export_report_as_browser_pdf(name="DefaultBrowserPDF")
 
     assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-default-name"
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_default_filename_reuses_template_lookup(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless.template import Template
+
+    template = adr_serverless.create_template(
+        BasicLayout, name="SingleLookupBrowserPDF", parent=None
+    )
+    captured_calls: list[dict[str, str]] = []
+    rendered_templates: list[Template] = []
+    original_get = Template.get
+
+    def capture_get(**kwargs):
+        # The no-filename export path needs the template GUID after rendering. Capturing the
+        # lookup count here locks in that ADR reuses the same resolved Template object instead
+        # of querying the database a second time just to rebuild the default filename.
+        captured_calls.append(dict(kwargs))
+        return original_get(**kwargs)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Template, "get", staticmethod(capture_get))
+    monkeypatch.setattr(
+        ADR,
+        "_render_template_as_browser_pdf",
+        lambda self, resolved_template, **kwargs: rendered_templates.append(resolved_template)
+        or b"%PDF-single-lookup",
+    )
+
+    adr_serverless.export_report_as_browser_pdf(name="SingleLookupBrowserPDF")
+
+    assert captured_calls == [{"name": "SingleLookupBrowserPDF"}]
+    assert rendered_templates == [template]
+    assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-single-lookup"
