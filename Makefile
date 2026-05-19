@@ -36,7 +36,6 @@ pull-docker:
 	bash scripts/pull_adr_image.sh
 
 test:
-	uv sync --frozen --extra test
 	uv run python -m pytest \
 		-rvx --setup-show \
 		--cov=ansys.dynamicreporting.core \
