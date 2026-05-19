@@ -555,9 +555,7 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
-    tmp_path, monkeypatch
-):
+def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = {}
 
