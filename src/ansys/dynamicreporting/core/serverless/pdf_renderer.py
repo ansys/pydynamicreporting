@@ -161,6 +161,7 @@ class PlaywrightPDFRenderer:
             with sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
                 browser = playwright.chromium.launch(headless=True)
+                context = None
 
                 try:
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
@@ -174,63 +175,63 @@ class PlaywrightPDFRenderer:
                         accept_downloads=False,
                         offline=True,
                     )
-                    try:
-                        self._block_external_requests(context)
-                        page = context.new_page()
-                        file_url = entrypoint_path.as_uri()
+                    self._block_external_requests(context)
+                    page = context.new_page()
+                    file_url = entrypoint_path.as_uri()
 
-                        # Load the exported offline report exactly as Chromium would see it from disk.
-                        self._logger.info(
-                            f"Loading exported HTML for browser PDF export: {file_url}"
-                        )
-                        # Keep navigation under the caller-configured browser render budget.
-                        # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
-                        # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
-                        # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
-                        # disabling the timeout, which would invert a small positive ADR budget.
-                        navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
-                        page.goto(
-                            file_url,
-                            wait_until="load",
-                            timeout=navigation_timeout_ms,
-                        )
+                    # Load the exported offline report exactly as Chromium would see it from disk.
+                    self._logger.info(f"Loading exported HTML for browser PDF export: {file_url}")
+                    # Keep navigation under the caller-configured browser render budget.
+                    # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
+                    # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
+                    # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
+                    # disabling the timeout, which would invert a small positive ADR budget.
+                    navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
+                    page.goto(
+                        file_url,
+                        wait_until="load",
+                        timeout=navigation_timeout_ms,
+                    )
 
-                        # Force screen media so the PDF matches the browser view instead of print CSS.
-                        page.emulate_media(media="screen")
-                        self._apply_pdf_capture_styles(page)
-                        self._wait_for_render_ready(page)
-                        pdf_width = self._compute_pdf_width(page)
-                        # Keep the fallback page size internally consistent. Playwright defaults
-                        # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
-                        # mixed Letter-width/A4-height page when no content width can be measured.
-                        pdf_page_width = (
-                            pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
-                        )
-                        pdf_options = {
-                            # Keep page height explicit so pagination remains under ADR's control
-                            # instead of depending entirely on Playwright's default page format.
-                            "width": pdf_page_width,
-                            "height": self._DEFAULT_PAGE_HEIGHT,
-                            "landscape": self._landscape,
-                            "margin": self._margins,
-                            "print_background": True,
-                        }
+                    # Force screen media so the PDF matches the browser view instead of print CSS.
+                    page.emulate_media(media="screen")
+                    self._apply_pdf_capture_styles(page)
+                    self._wait_for_render_ready(page)
+                    pdf_width = self._compute_pdf_width(page)
+                    # Keep the fallback page size internally consistent. Playwright defaults
+                    # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
+                    # mixed Letter-width/A4-height page when no content width can be measured.
+                    pdf_page_width = (
+                        pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
+                    )
+                    pdf_options = {
+                        # Keep page height explicit so pagination remains under ADR's control
+                        # instead of depending entirely on Playwright's default page format.
+                        "width": pdf_page_width,
+                        "height": self._DEFAULT_PAGE_HEIGHT,
+                        "landscape": self._landscape,
+                        "margin": self._margins,
+                        "print_background": True,
+                    }
 
-                        # Playwright describes page.pdf() as generating paged output, not a bitmap
-                        # snapshot of the already-painted viewport. MDN's paged-media model also
-                        # distinguishes the continuous-media viewport from the paged page area.
-                        # Passing the measured width here therefore gives the PDF generation pass a
-                        # wider page area even though the live browser pass already ran. Elements
-                        # such as #report_root that remain auto-width can then lay out against that
-                        # wider paged space without us assigning them an explicit width in the DOM.
-                        pdf_bytes = page.pdf(**pdf_options)
-                        self._logger.info(
-                            f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
-                        )
-                        return pdf_bytes
-                    finally:
-                        context.close()
+                    # Playwright describes page.pdf() as generating paged output, not a bitmap
+                    # snapshot of the already-painted viewport. MDN's paged-media model also
+                    # distinguishes the continuous-media viewport from the paged page area.
+                    # Passing the measured width here therefore gives the PDF generation pass a
+                    # wider page area even though the live browser pass already ran. Elements
+                    # such as #report_root that remain auto-width can then lay out against that
+                    # wider paged space without us assigning them an explicit width in the DOM.
+                    pdf_bytes = page.pdf(**pdf_options)
+                    self._logger.info(
+                        f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
+                    )
+                    return pdf_bytes
                 finally:
+                    # Playwright recommends explicitly closing contexts created via
+                    # browser.new_context() before browser.close() so their resources flush
+                    # gracefully. Guard the call because context creation itself can fail.
+                    if context is not None:
+                        context.close()
                     browser.close()
         except ADRException:
             raise

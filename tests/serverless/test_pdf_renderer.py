@@ -140,6 +140,25 @@ def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, m
 
 
 @pytest.mark.unit
+def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir)
+    browser = Mock()
+    browser.new_context.side_effect = RuntimeError("new context boom")
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+
+    with pytest.raises(ADRException, match="Browser PDF rendering failed: new context boom"):
+        renderer.render_pdf()
+
+    browser.close.assert_called_once_with()
+
+
+@pytest.mark.unit
 def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
     page = _stub_playwright_render(monkeypatch, renderer)
