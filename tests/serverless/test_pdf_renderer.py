@@ -752,6 +752,16 @@ def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
 
 
 @pytest.mark.unit
+def test_resolve_entrypoint_path_rejects_parent_traversal(tmp_path):
+    html_dir = _write_html(tmp_path, "<html><body>Traversal</body></html>")
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir, filename="../../etc/passwd")
+
+    # Entry-point validation must reject filenames that escape the exported HTML bundle.
+    with pytest.raises(ADRException, match="entry-point file must be inside"):
+        renderer._resolve_entrypoint_path()
+
+
+@pytest.mark.unit
 def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
@@ -824,6 +834,18 @@ def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
     [
         ({"render_timeout": 0}, "render_timeout must be a positive number"),
         ({"margins": {"top": "10mm"}}, "margins must contain exactly"),
+        (
+            {
+                "margins": {
+                    "top": "10mm",
+                    "right": "10mm",
+                    "bottom": "10mm",
+                    "left": "10mm",
+                    "extra": "5mm",
+                }
+            },
+            "margins must contain exactly",
+        ),
         (
             {
                 "margins": {
