@@ -637,6 +637,54 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 
 
 @pytest.mark.unit
+def test_evaluate_ready_step_logs_duration_on_success(tmp_path, monkeypatch):
+    logger = Mock()
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"), logger=logger
+    )
+    page = Mock()
+    monotonic_values = iter([100.0, 100.1, 100.35])
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+
+    renderer._evaluate_ready_step(
+        page,
+        step_name="Test step",
+        wait_script="() => Promise.resolve()",
+        deadline=101.0,
+    )
+
+    page.evaluate.assert_called_once()
+    logger.debug.assert_called_once_with(
+        "Browser render readiness step completed in 250.0 ms: Test step"
+    )
+
+
+@pytest.mark.unit
+def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
+    logger = Mock()
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
+        logger=logger,
+    )
+    page = Mock()
+    page.evaluate.side_effect = RuntimeError("step boom")
+    monotonic_values = iter([200.0, 200.2, 200.45])
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+
+    with pytest.raises(RuntimeError, match="step boom"):
+        renderer._evaluate_ready_step(
+            page,
+            step_name="Broken step",
+            wait_script="() => Promise.resolve()",
+            deadline=201.0,
+        )
+
+    logger.debug.assert_called_once_with(
+        "Browser render readiness step failed in 250.0 ms: Broken step"
+    )
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)

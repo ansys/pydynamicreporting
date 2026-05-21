@@ -571,29 +571,40 @@ class PlaywrightPDFRenderer:
                 f"Browser PDF rendering failed: {step_name} timed out after {self._render_timeout:.1f}s"
             )
 
-        page.evaluate(
-            f"""() => {{
-                const timeoutMs = {remaining_ms};
-                const stepName = {json.dumps(step_name)};
-                const waitForReady = {wait_script};
-                return new Promise((resolve, reject) => {{
-                    const timeoutId = setTimeout(() => {{
-                        reject(new Error(`${{stepName}} timed out after ${{timeoutMs}}ms`));
-                    }}, timeoutMs);
+        step_started = monotonic()
+        step_outcome = "completed"
+        try:
+            page.evaluate(
+                f"""() => {{
+                    const timeoutMs = {remaining_ms};
+                    const stepName = {json.dumps(step_name)};
+                    const waitForReady = {wait_script};
+                    return new Promise((resolve, reject) => {{
+                        const timeoutId = setTimeout(() => {{
+                            reject(new Error(`${{stepName}} timed out after ${{timeoutMs}}ms`));
+                        }}, timeoutMs);
 
-                    Promise.resolve()
-                        .then(() => waitForReady())
-                        .then((value) => {{
-                            clearTimeout(timeoutId);
-                            resolve(value);
-                        }})
-                        .catch((error) => {{
-                            clearTimeout(timeoutId);
-                            reject(error);
-                        }});
-                }});
-            }}""",
-        )
+                        Promise.resolve()
+                            .then(() => waitForReady())
+                            .then((value) => {{
+                                clearTimeout(timeoutId);
+                                resolve(value);
+                            }})
+                            .catch((error) => {{
+                                clearTimeout(timeoutId);
+                                reject(error);
+                            }});
+                    }});
+                }}""",
+            )
+        except Exception:
+            step_outcome = "failed"
+            raise
+        finally:
+            elapsed_ms = (monotonic() - step_started) * 1000.0
+            self._logger.debug(
+                f"Browser render readiness step {step_outcome} in {elapsed_ms:.1f} ms: {step_name}"
+            )
 
     def _wait_for_render_ready(self, page: Any) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
