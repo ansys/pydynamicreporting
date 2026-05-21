@@ -166,6 +166,37 @@ def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_
 
 
 @pytest.mark.unit
+def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
+    page = _stub_playwright_render(monkeypatch, renderer, pdf_width="420.00px")
+    call_order: list[str] = []
+
+    # Width measurement depends on the capture CSS already being present, and readiness
+    # waits must observe the same styled DOM that Chromium will later print to PDF.
+    monkeypatch.setattr(
+        renderer,
+        "_apply_pdf_capture_styles",
+        lambda observed_page: call_order.append("styles"),
+    )
+    monkeypatch.setattr(
+        renderer,
+        "_wait_for_render_ready",
+        lambda observed_page: call_order.append("ready"),
+    )
+
+    def capture_width(observed_page):
+        call_order.append("width")
+        return "420.00px"
+
+    monkeypatch.setattr(renderer, "_compute_pdf_width", capture_width)
+
+    renderer.render_pdf()
+
+    assert call_order == ["styles", "ready", "width"]
+    page.pdf.assert_called_once()
+
+
+@pytest.mark.unit
 def test_playwright_pdf_with_mathjax_content(tmp_path):
     # The inline MathJax stub gives the readiness check a real startup promise to await.
     html = """
