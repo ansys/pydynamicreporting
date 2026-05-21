@@ -723,7 +723,9 @@ class PlaywrightPDFRenderer:
         )
 
         # 5. Plotly charts: each .nexus-plot container gets class 'loaded' after
-        #    Plotly.Plots.resize() resolves and the spinner hides.
+        #    Plotly.Plots.resize() resolves, but theme-mismatch rerenders can leave the
+        #    sibling ADR loader overlay visible until a later style update. Wait for both
+        #    the product-owned loaded class and a hidden loader overlay before capture.
         self._evaluate_ready_step(
             page,
             step_name="Plotly charts",
@@ -734,15 +736,40 @@ class PlaywrightPDFRenderer:
                     if (plots.length === 0) { resolve(); return; }
                     let remaining = plots.length;
                     function check() { if (--remaining <= 0) resolve(); }
+                    function findLoader(plot) {
+                        const item = plot.closest('adr-data-item');
+                        return item ? item.querySelector('.adr-spinner-loader-container') : null;
+                    }
+                    function loaderHidden(loader) {
+                        if (!loader) {
+                            return true;
+                        }
+                        const style = getComputedStyle(loader);
+                        return (
+                            style.display === 'none' ||
+                            style.visibility === 'hidden' ||
+                            style.opacity === '0'
+                        );
+                    }
+                    function isReady(plot) {
+                        return plot.classList.contains('loaded') && loaderHidden(findLoader(plot));
+                    }
                     plots.forEach((plot) => {
-                        if (plot.classList.contains('loaded')) { check(); return; }
+                        if (isReady(plot)) { check(); return; }
+                        const loader = findLoader(plot);
                         const observer = new MutationObserver(() => {
-                            if (plot.classList.contains('loaded')) {
+                            if (isReady(plot)) {
                                 observer.disconnect();
                                 check();
                             }
                         });
                         observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
+                        if (loader) {
+                            observer.observe(loader, {
+                                attributes: true,
+                                attributeFilter: ['style', 'class', 'hidden'],
+                            });
+                        }
                     });
                 });
             }""",

@@ -779,14 +779,21 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_plotly_step_waits_for_loaded_class(tmp_path, monkeypatch):
+def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loader(
+    tmp_path, monkeypatch
+):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "plotly-ready-report"
     report_dir.mkdir()
     _write_html(
         report_dir,
-        "<html><body><section class='nexus-plot' id='plot'></section></body></html>",
+        """<html><body>
+        <adr-data-item>
+            <section class='nexus-plot' id='plot'></section>
+            <section class='adr-spinner-loader-container' id='loader'></section>
+        </adr-data-item>
+        </body></html>""",
     )
 
     from playwright.sync_api import sync_playwright
@@ -800,6 +807,8 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class(tmp_path, monk
 
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate("() => document.getElementById('plot').classList.add('loaded')")
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate("() => document.getElementById('loader').style.display = 'none'")
         page.wait_for_function("() => window.waitReadyDone === true")
 
         assert page.evaluate("() => window.waitReadyError") is None
