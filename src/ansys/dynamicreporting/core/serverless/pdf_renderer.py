@@ -496,8 +496,9 @@ class PlaywrightPDFRenderer:
 
         def route_request(route: Any) -> None:
             request_url = route.request.url
-            scheme = urlsplit(request_url).scheme.lower()
-            if scheme in self._BLOCKED_REQUEST_SCHEMES:
+            parsed_url = urlsplit(request_url)
+            scheme = parsed_url.scheme.lower()
+            if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
                 route.abort()
                 return
             route.continue_()
@@ -508,9 +509,10 @@ class PlaywrightPDFRenderer:
         def route_websocket(websocket_route: Any) -> None:
             websocket_route.close()
 
-        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking network schemes
-        # prevents report HTML from calling back to arbitrary hosts during PDF generation while
-        # still allowing file:, data:, and blob: resources that are part of the offline export.
+        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking known network
+        # schemes plus any authority-bearing URL prevents report HTML from calling back to
+        # arbitrary hosts during PDF generation while still allowing local file:, data:, and
+        # blob: resources that are part of the offline export.
         # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
         # connections through the dedicated route_web_socket API.
         context.route("**/*", route_request)
