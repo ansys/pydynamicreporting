@@ -758,8 +758,8 @@ class PlaywrightPDFRenderer:
         )
 
         # 7. Iframes: report-link layouts load a nested document first, then expand the
-        #    iframe itself asynchronously from a hidden 10px placeholder to its measured
-        #    content height. Wait for same-origin frames to finish that post-load expansion.
+        #    iframe element asynchronously to the nested document's measured height. Wait
+        #    for same-origin frames to finish that post-load expansion before capture.
         #
         #    For cross-origin or otherwise inaccessible iframe documents, ``page.goto(...,
         #    wait_until="load")`` has already waited for the eager iframe load. Those frames
@@ -778,10 +778,24 @@ class PlaywrightPDFRenderer:
                     function hasSource(frame) {
                         return Boolean(frame.getAttribute('src') || frame.getAttribute('srcdoc'));
                     }
-                    function isExpanded(frame) {
+                    function getChildHeight(childDocument) {
+                        const bodyHeight = childDocument.body ? childDocument.body.scrollHeight : 0;
+                        const documentHeight = childDocument.documentElement
+                            ? childDocument.documentElement.scrollHeight
+                            : 0;
+                        return Math.max(bodyHeight, documentHeight);
+                    }
+                    function hasExpandedHeight(frame, childHeight) {
                         const style = getComputedStyle(frame);
-                        const rect = frame.getBoundingClientRect();
-                        return style.display !== 'none' && rect.height > 10;
+                        if (style.display === 'none') {
+                            return false;
+                        }
+
+                        // Compare against the child document's own measured height instead of
+                        // a product-specific placeholder size. Report-link iframes can be tiny,
+                        // so readiness should key off the final nested content height rather
+                        // than an arbitrary minimum visible height threshold.
+                        return frame.clientHeight >= childHeight;
                     }
                     function isReady(frame) {
                         if (!hasSource(frame)) {
@@ -795,12 +809,8 @@ class PlaywrightPDFRenderer:
                             if (childDocument.readyState !== 'complete') {
                                 return false;
                             }
-                            const bodyHeight = childDocument.body ? childDocument.body.scrollHeight : 0;
-                            const documentHeight = childDocument.documentElement
-                                ? childDocument.documentElement.scrollHeight
-                                : 0;
-                            const childHeight = Math.max(bodyHeight, documentHeight);
-                            return childHeight === 0 || isExpanded(frame);
+                            const childHeight = getChildHeight(childDocument);
+                            return hasExpandedHeight(frame, childHeight);
                         } catch (error) {
                             return true;
                         }

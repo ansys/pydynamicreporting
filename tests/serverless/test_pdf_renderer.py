@@ -678,10 +678,6 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
 
     report_dir = tmp_path / "delayed-iframe-report"
     report_dir.mkdir()
-    (report_dir / "child.html").write_text(
-        "<html><body style='margin:0'><div style='height:240px'>Child report</div></body></html>",
-        encoding="utf-8",
-    )
     _write_html(
         report_dir,
         """<html><body>
@@ -691,7 +687,7 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
             });
             window.deferFrameExpand = (frame) => {
                 window.frameExpandGate.then(() => {
-                    frame.style.display = 'block';
+                    frame.style.visibility = 'visible';
                     frame.style.height =
                         frame.contentDocument.documentElement.scrollHeight + 'px';
                 });
@@ -699,8 +695,8 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
         </script>
         <iframe
             id="linked-report"
-            src="child.html"
-            style="display: none; height: 10px; width: 320px; border: 0;"
+            srcdoc="<html><body style='margin:0'><div style='height:8px'></div></body></html>"
+            style="visibility: hidden; height: 1px; width: 320px; border: 0;"
             onload="window.deferFrameExpand(this)"
         ></iframe>
         </body></html>""",
@@ -732,16 +728,32 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
 
         # The iframe document is already loaded here, but the element itself is still
         # collapsed until the parent page releases the deferred onload expansion hook.
+        page.wait_for_function(
+            """() => {
+                const frame = document.getElementById('linked-report');
+                return frame.contentDocument && frame.contentDocument.readyState === 'complete';
+            }"""
+        )
+        child_height = page.evaluate(
+            """() => {
+                const frame = document.getElementById('linked-report');
+                return frame.contentDocument.documentElement.scrollHeight;
+            }"""
+        )
         assert page.evaluate("() => window.waitReadyDone") is False
         assert (
             page.evaluate(
-                "() => getComputedStyle(document.getElementById('linked-report')).display"
+                "() => getComputedStyle(document.getElementById('linked-report')).visibility"
             )
-            == "none"
+            == "hidden"
         )
-        assert page.evaluate(
-            "() => document.getElementById('linked-report').getBoundingClientRect().height"
-        ) == pytest.approx(10.0)
+        # Keep the nested document intentionally tiny so this regression would fail if the
+        # readiness step still relied on a hardcoded minimum iframe height threshold.
+        assert child_height <= 10
+        assert (
+            page.evaluate("() => document.getElementById('linked-report').clientHeight")
+            < child_height
+        )
         assert page.evaluate("() => window.waitReadyError") is None
 
         page.evaluate("() => window.releaseFrameExpand()")
@@ -749,15 +761,13 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
 
         assert (
             page.evaluate(
-                "() => getComputedStyle(document.getElementById('linked-report')).display"
+                "() => getComputedStyle(document.getElementById('linked-report')).visibility"
             )
-            == "block"
+            == "visible"
         )
         assert (
-            page.evaluate(
-                "() => document.getElementById('linked-report').getBoundingClientRect().height"
-            )
-            > 10
+            page.evaluate("() => document.getElementById('linked-report').clientHeight")
+            == child_height
         )
         assert page.evaluate("() => window.waitReadyError") is None
         browser.close()
