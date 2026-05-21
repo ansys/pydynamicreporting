@@ -1652,6 +1652,111 @@ def test_browser_pdf_scratch_root_rejects_missing_database_directory(
 
 
 @pytest.mark.ado_test
+def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+        PlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanup", parent=None)
+    monkeypatch.setattr(adr_serverless, "_db_directory", None)
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+    captured: dict[str, Path] = {}
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        return "<html><body><h1>Fallback cleanup</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        logger=None,
+    ):
+        # The render helper stages browser-PDF bundles in a dedicated temp child. Once the
+        # temporary child is gone, the empty fallback parent should also be removed cleanly.
+        captured["html_dir"] = Path(html_dir)
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanup")
+
+    scratch_root = tmp_path / "adr_browser_pdf_scratch"
+    assert pdf_bytes == b"%PDF-mock"
+    assert captured["html_dir"].parent == scratch_root
+    assert not scratch_root.exists()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+        PlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanupOSError", parent=None)
+    monkeypatch.setattr(adr_serverless, "_db_directory", None)
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        return "<html><body><h1>Fallback cleanup OSError</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        logger=None,
+    ):
+        return None
+
+    original_rmdir = Path.rmdir
+
+    def raising_rmdir(path):
+        if path == tmp_path / "adr_browser_pdf_scratch":
+            raise OSError("scratch root busy")
+        return original_rmdir(path)
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(Path, "rmdir", raising_rmdir)
+
+    pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanupOSError")
+
+    assert pdf_bytes == b"%PDF-mock"
+    assert (tmp_path / "adr_browser_pdf_scratch").is_dir()
+
+
+@pytest.mark.ado_test
 def test_export_report_as_browser_pdf_no_kwarg(adr_serverless, tmp_path):
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.export_report_as_browser_pdf(filename=tmp_path / "browser-output.pdf")

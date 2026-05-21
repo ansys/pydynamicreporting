@@ -1379,6 +1379,23 @@ class ADR:
         scratch_root.mkdir(parents=True, exist_ok=True)
         return scratch_root
 
+    def _cleanup_browser_pdf_scratch_root(self, scratch_root: Path) -> None:
+        """Remove an empty fallback scratch parent after browser-PDF rendering.
+
+        The per-render ``TemporaryDirectory`` is still responsible for deleting its own child
+        directory. This helper only tries to remove the dedicated fallback parent that ADR
+        created under the system temp directory for external-database configurations.
+        """
+        if self._db_directory is not None:
+            return
+
+        try:
+            scratch_root.rmdir()
+        except OSError:
+            # Concurrent exports, stale child directories, or already-removed roots should not
+            # turn a successful browser-PDF render into a cleanup failure.
+            return
+
     def _render_template_as_browser_pdf(
         self,
         template: Template,
@@ -1458,6 +1475,8 @@ class ADR:
             raise
         except Exception as e:
             raise ADRException(f"Browser PDF rendering failed: {e}") from e
+        finally:
+            self._cleanup_browser_pdf_scratch_root(scratch_root)
 
     def render_report_as_browser_pdf(
         self,
