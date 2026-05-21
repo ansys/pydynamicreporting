@@ -787,14 +787,16 @@ class PlaywrightPDFRenderer:
                     }
                     function hasExpandedHeight(frame, childHeight) {
                         const style = getComputedStyle(frame);
-                        if (style.display === 'none') {
+                        if (style.display === 'none' || style.visibility === 'hidden') {
                             return false;
                         }
 
                         // Compare against the child document's own measured height instead of
                         // a product-specific placeholder size. Report-link iframes can be tiny,
                         // so readiness should key off the final nested content height rather
-                        // than an arbitrary minimum visible height threshold.
+                        // than an arbitrary minimum visible height threshold. Visibility also
+                        // matters because hidden placeholder frames can still report a positive
+                        // clientHeight before the onload expansion makes them visible.
                         return frame.clientHeight >= childHeight;
                     }
                     function isReady(frame) {
