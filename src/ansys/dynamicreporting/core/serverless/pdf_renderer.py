@@ -63,6 +63,7 @@ otherwise overflow or be clipped at the right edge.
 
 import json
 import re
+from math import ceil
 from pathlib import Path
 from time import monotonic
 from typing import Any
@@ -89,7 +90,10 @@ class PlaywrightPDFRenderer:
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
-        Maximum time, in seconds, to wait for browser readiness signals.
+        Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
+        has been staged. This shared budget covers browser launch, navigation, readiness waits,
+        and other browser-side preparation steps, but not server-side template rendering or
+        offline asset export.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -156,14 +160,23 @@ class PlaywrightPDFRenderer:
             If the browser render/export flow fails.
         """
         entrypoint_path = self._resolve_entrypoint_path()
+        browser_phase_deadline = monotonic() + self._render_timeout
 
         try:
             with sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = playwright.chromium.launch(headless=True)
+                browser = playwright.chromium.launch(
+                    headless=True,
+                    timeout=self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "browser launch"
+                    ),
+                )
                 context = None
 
                 try:
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "browser context creation"
+                    )
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
                     # items lay themselves out deterministically before the PDF width is computed.
                     context = browser.new_context(
@@ -176,17 +189,20 @@ class PlaywrightPDFRenderer:
                         offline=True,
                     )
                     self._block_external_requests(context)
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "page creation"
+                    )
                     page = context.new_page()
                     file_url = entrypoint_path.as_uri()
 
                     # Load the exported offline report exactly as Chromium would see it from disk.
                     self._logger.info(f"Loading exported HTML for browser PDF export: {file_url}")
-                    # Keep navigation under the caller-configured browser render budget.
-                    # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
-                    # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
-                    # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
-                    # disabling the timeout, which would invert a small positive ADR budget.
-                    navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
+                    # Keep navigation inside the same shared browser-phase budget used by the
+                    # later readiness checks. Playwright documents ``page.goto(timeout=...)`` in
+                    # milliseconds, so convert the remaining budget just before navigation.
+                    navigation_timeout_ms = self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "page navigation"
+                    )
                     page.goto(
                         file_url,
                         wait_until="load",
@@ -196,7 +212,10 @@ class PlaywrightPDFRenderer:
                     # Force screen media so the PDF matches the browser view instead of print CSS.
                     page.emulate_media(media="screen")
                     self._apply_pdf_capture_styles(page)
-                    self._wait_for_render_ready(page)
+                    self._wait_for_render_ready(page, deadline=browser_phase_deadline)
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "PDF width measurement"
+                    )
                     pdf_width = self._compute_pdf_width(page)
                     # Keep the fallback page size internally consistent. Playwright defaults
                     # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
@@ -221,6 +240,13 @@ class PlaywrightPDFRenderer:
                     # wider page area even though the live browser pass already ran. Elements
                     # such as #report_root that remain auto-width can then lay out against that
                     # wider paged space without us assigning them an explicit width in the DOM.
+                    #
+                    # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
+                    # so this deadline check is a preflight guard rather than an interruptible
+                    # in-flight timeout.
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "PDF generation"
+                    )
                     pdf_bytes = page.pdf(**pdf_options)
                     self._logger.info(
                         f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
@@ -540,7 +566,7 @@ class PlaywrightPDFRenderer:
         return validated
 
     def _validate_render_timeout(self, render_timeout: float) -> float:
-        """Validate the browser readiness timeout."""
+        """Validate the shared browser-phase timeout."""
         error_message = "Browser PDF render_timeout must be a positive number."
         try:
             timeout = float(render_timeout)
@@ -550,6 +576,22 @@ class PlaywrightPDFRenderer:
         if timeout <= 0:
             raise ADRException(error_message)
         return timeout
+
+    def _remaining_browser_phase_timeout_ms(self, deadline: float, phase_name: str) -> int:
+        """Return the remaining browser-phase budget in milliseconds.
+
+        The browser-PDF public API exposes ``render_timeout`` in seconds for the Chromium
+        rendering phase as a whole. Convert the remaining monotonic budget just before each
+        browser-side operation so navigation and readiness waits spend from one shared deadline
+        instead of each resetting a fresh timeout window.
+        """
+        remaining_ms = ceil((deadline - monotonic()) * 1000)
+        if remaining_ms <= 0:
+            raise ADRException(
+                f"Browser PDF rendering failed: {phase_name} timed out after "
+                f"{self._render_timeout:.1f}s"
+            )
+        return remaining_ms
 
     def _evaluate_ready_step(
         self,
@@ -613,9 +655,10 @@ class PlaywrightPDFRenderer:
                 f"Browser render readiness step {step_outcome} in {elapsed_ms:.1f} ms: {step_name}"
             )
 
-    def _wait_for_render_ready(self, page: Any) -> None:
+    def _wait_for_render_ready(self, page: Any, *, deadline: float | None = None) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
-        deadline = monotonic() + self._render_timeout
+        if deadline is None:
+            deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
 
         # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``

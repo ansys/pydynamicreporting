@@ -1509,8 +1509,10 @@ class ADR:
             Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
             If omitted, 10 mm margins are used on every side.
         render_timeout : float, optional
-            Maximum time, in seconds, to wait for browser readiness signals.
-            Default ``30.0``.
+            Maximum time, in seconds, for the Chromium render phase after the offline HTML
+            bundle has been staged. This shared browser-side budget covers launch, navigation,
+            readiness waits, and related browser preparation, but not server-side report
+            rendering or offline asset export. Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1826,8 +1828,10 @@ class ADR:
             Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
             If omitted, 10 mm margins are used on every side.
         render_timeout : float, optional
-            Maximum time, in seconds, to wait for browser readiness signals.
-            Default ``30.0``.
+            Maximum time, in seconds, for the Chromium render phase after the offline HTML
+            bundle has been staged. This shared browser-side budget covers launch, navigation,
+            readiness waits, and related browser preparation, but not server-side report
+            rendering or offline asset export. Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.

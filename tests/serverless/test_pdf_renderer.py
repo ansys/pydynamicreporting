@@ -78,7 +78,7 @@ def _stub_playwright_render(
     playwright_manager.__enter__.return_value = playwright
 
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return page
 
@@ -142,12 +142,30 @@ def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_pa
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
+    tmp_path, monkeypatch
+):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
+
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
+    playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
     page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
@@ -156,19 +174,71 @@ def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch
 
 
 @pytest.mark.unit
-def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, monkeypatch):
+def test_playwright_pdf_rounds_tiny_browser_phase_timeouts_up_to_one_millisecond(
+    tmp_path, monkeypatch
+):
     html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
+
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     renderer.render_pdf()
 
-    # Playwright treats timeout=0 as "no timeout", so tiny positive ADR budgets clamp to 1000 ms.
+    # Playwright treats timeout=0 as "no timeout", so a tiny positive shared budget still rounds
+    # up to the smallest positive millisecond value instead of accidentally disabling timeouts.
+    playwright.chromium.launch.assert_called_once_with(headless=True, timeout=1)
     page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
-        timeout=1000,
+        timeout=1,
     )
+
+
+@pytest.mark.unit
+def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=10.0)
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+    captured_deadline: dict[str, float] = {}
+    monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
+
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+
+    def capture_ready(page, deadline=None):
+        captured_deadline["value"] = deadline
+
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", capture_ready)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
+
+    renderer.render_pdf()
+
+    # The readiness phase must spend from the original browser deadline instead of resetting a
+    # fresh render_timeout window after navigation has already consumed part of the budget.
+    assert captured_deadline["value"] == 110.0
 
 
 @pytest.mark.unit
@@ -232,7 +302,7 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
     monkeypatch.setattr(
         renderer,
         "_wait_for_render_ready",
-        lambda observed_page: call_order.append("ready"),
+        lambda observed_page, deadline=None: call_order.append("ready"),
     )
 
     def capture_width(observed_page):
