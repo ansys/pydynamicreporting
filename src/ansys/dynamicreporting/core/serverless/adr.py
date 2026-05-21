@@ -1507,6 +1507,24 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Examples
+        --------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+        ...     db_directory=r"C:\\DBs\\docex",
+        ...     media_directory=r"C:\\DBs\\docex\\media",
+        ...     static_directory=r"C:\\static",
+        ... )
+        >>> adr.setup(collect_static=True)
+        >>> pdf_bytes = adr.render_report_as_browser_pdf(
+        ...     name="Serverless Simulation Report",
+        ...     landscape=True,
+        ...     margins={"top": "12mm", "right": "12mm", "bottom": "12mm", "left": "12mm"},
+        ... )
+        >>> with open("browser-report.pdf", "wb") as f:
+        ...     f.write(pdf_bytes)
         """
         if not kwargs:
             raise ADRException(
@@ -1805,6 +1823,23 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Examples
+        --------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+        ...     db_directory=r"C:\\DBs\\docex",
+        ...     media_directory=r"C:\\DBs\\docex\\media",
+        ...     static_directory=r"C:\\static",
+        ... )
+        >>> adr.setup(collect_static=True)
+        >>> adr.export_report_as_browser_pdf(
+        ...     filename="browser-report.pdf",
+        ...     name="Serverless Simulation Report",
+        ...     item_filter="A|i_tags|cont|dp=dp227;",
+        ...     landscape=True,
+        ... )
         """
         if not kwargs:
             raise ADRException(
