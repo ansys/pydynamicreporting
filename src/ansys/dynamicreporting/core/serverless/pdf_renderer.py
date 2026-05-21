@@ -777,99 +777,7 @@ class PlaywrightPDFRenderer:
             }""",
         )
 
-        # 7. Iframes: report-link layouts load a nested document first, then expand the
-        #    iframe element asynchronously to the nested document's measured height. Wait
-        #    for same-origin frames to finish that post-load expansion before capture.
-        #
-        #    For cross-origin or otherwise inaccessible iframe documents, ``page.goto(...,
-        #    wait_until="load")`` has already waited for the eager iframe load. Those frames
-        #    expose no stable DOM contract to poll from the parent document, so the dedicated
-        #    iframe wait only extends readiness when same-origin access is available.
-        self._evaluate_ready_step(
-            page,
-            step_name="Iframes",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const frames = Array.from(document.querySelectorAll('iframe'));
-                    if (frames.length === 0) { resolve(); return; }
-                    let remaining = frames.length;
-                    function done() { if (--remaining <= 0) resolve(); }
-                    function hasSource(frame) {
-                        return Boolean(frame.getAttribute('src') || frame.getAttribute('srcdoc'));
-                    }
-                    function getChildHeight(childDocument) {
-                        const bodyHeight = childDocument.body ? childDocument.body.scrollHeight : 0;
-                        const documentHeight = childDocument.documentElement
-                            ? childDocument.documentElement.scrollHeight
-                            : 0;
-                        return Math.max(bodyHeight, documentHeight);
-                    }
-                    function hasExpandedHeight(frame, childHeight) {
-                        const style = getComputedStyle(frame);
-                        if (style.display === 'none' || style.visibility === 'hidden') {
-                            return false;
-                        }
-
-                        // Compare against the child document's own measured height instead of
-                        // a product-specific placeholder size. Report-link iframes can be tiny,
-                        // so readiness should key off the final nested content height rather
-                        // than an arbitrary minimum visible height threshold. Visibility also
-                        // matters because hidden placeholder frames can still report a positive
-                        // clientHeight before the onload expansion makes them visible.
-                        return frame.clientHeight >= childHeight;
-                    }
-                    function isReady(frame) {
-                        if (!hasSource(frame)) {
-                            return true;
-                        }
-                        try {
-                            const childDocument = frame.contentDocument;
-                            if (!childDocument) {
-                                return true;
-                            }
-                            if (childDocument.readyState !== 'complete') {
-                                return false;
-                            }
-                            const childHeight = getChildHeight(childDocument);
-                            return hasExpandedHeight(frame, childHeight);
-                        } catch (error) {
-                            return true;
-                        }
-                    }
-                    frames.forEach((frame) => {
-                        if (isReady(frame)) { done(); return; }
-                        let finished = false;
-                        let observer = null;
-                        const maybeDone = () => {
-                            if (finished || !isReady(frame)) {
-                                return;
-                            }
-                            finished = true;
-                            frame.removeEventListener('load', handleLoad);
-                            if (observer) {
-                                observer.disconnect();
-                            }
-                            done();
-                        };
-                        const handleLoad = () => {
-                            // Let any inline iframe onload handler run its own DOM/style updates,
-                            // then re-check after the next paint so height/display changes are visible.
-                            requestAnimationFrame(() => requestAnimationFrame(maybeDone));
-                        };
-                        frame.addEventListener('load', handleLoad, { once: true });
-                        observer = new MutationObserver(maybeDone);
-                        observer.observe(frame, {
-                            attributes: true,
-                            attributeFilter: ['style', 'class', 'src', 'srcdoc'],
-                        });
-                        maybeDone();
-                    });
-                });
-            }""",
-        )
-
-        # 8. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
+        # 7. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
         #    so the current frame is available before Chromium prints the page.
         self._evaluate_ready_step(
             page,
@@ -890,7 +798,7 @@ class PlaywrightPDFRenderer:
             }""",
         )
 
-        # 9. Double requestAnimationFrame waits for an actual composited frame
+        # 8. Double requestAnimationFrame waits for an actual composited frame
         #     after all preceding DOM/style work settles.
         self._evaluate_ready_step(
             page,
