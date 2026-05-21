@@ -83,6 +83,38 @@ def _stub_playwright_render(
     return page
 
 
+def _capture_ready_step_scripts(
+    monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
+) -> dict[str, str]:
+    """Capture the JavaScript readiness script for each named step."""
+    wait_scripts: dict[str, str] = {}
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        wait_scripts[step_name] = wait_script
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+    renderer._wait_for_render_ready(Mock())
+    return wait_scripts
+
+
+def _start_wait_script(page, wait_script: str) -> None:
+    """Run one readiness step script on the page and expose its eventual result."""
+    page.evaluate(
+        f"""() => {{
+            window.waitReadyDone = false;
+            window.waitReadyError = null;
+            const waitForReady = {wait_script};
+            waitForReady()
+                .then(() => {{
+                    window.waitReadyDone = true;
+                }})
+                .catch((error) => {{
+                    window.waitReadyError = String(error);
+                }});
+        }}"""
+    )
+
+
 @pytest.mark.unit
 def test_playwright_pdf_from_simple_html(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
@@ -605,16 +637,123 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "fouc-gate-no-root-report"
+    report_dir.mkdir()
+    _write_html(report_dir, "<html><body><p>No report root</p></body></html>")
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["FOUC gate"])
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC gate</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "fouc-gate-loaded-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        "<html><body><section id='report_root'>Report</section></body></html>",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["FOUC gate"])
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate("() => document.body.classList.add('loaded')")
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "fouc-transition-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <section id="report_root" style="opacity: 0; transition: opacity 0.4s linear;">Report</section>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["FOUC transition"])
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                const root = document.getElementById('report_root');
+                root.style.opacity = '1';
+                root.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }));
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_plotly_step_waits_for_loaded_class(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "plotly-ready-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        "<html><body><section class='nexus-plot' id='plot'></section></body></html>",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["Plotly charts"])
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate("() => document.getElementById('plot').classList.add('loaded')")
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
-    wait_scripts = {}
-
-    def capture_ready_step(page, step_name, wait_script, deadline):
-        wait_scripts[step_name] = wait_script
-
-    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
-
-    renderer._wait_for_render_ready(Mock())
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
 
     report_dir = tmp_path / "delayed-image-report"
@@ -630,20 +769,7 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        page.evaluate(
-            f"""() => {{
-                window.waitReadyDone = false;
-                window.waitReadyError = null;
-                const waitForReady = {image_wait_script};
-                waitForReady()
-                    .then(() => {{
-                        window.waitReadyDone = true;
-                    }})
-                    .catch((error) => {{
-                        window.waitReadyError = String(error);
-                    }});
-            }}"""
-        )
+        _start_wait_script(page, image_wait_script)
 
         # Browsers report src-less images as complete, so the regression is that the
         # readiness step must still wait for a real source/load instead of resolving now.
@@ -666,14 +792,7 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
 @pytest.mark.unit
 def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Iframes</p></body></html>")
-    wait_scripts = {}
-
-    def capture_ready_step(page, step_name, wait_script, deadline):
-        wait_scripts[step_name] = wait_script
-
-    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
-
-    renderer._wait_for_render_ready(Mock())
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     iframe_wait_script = wait_scripts["Iframes"]
 
     report_dir = tmp_path / "delayed-iframe-report"
@@ -711,20 +830,7 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        page.evaluate(
-            f"""() => {{
-                window.waitReadyDone = false;
-                window.waitReadyError = null;
-                const waitForReady = {iframe_wait_script};
-                waitForReady()
-                    .then(() => {{
-                        window.waitReadyDone = true;
-                    }})
-                    .catch((error) => {{
-                        window.waitReadyError = String(error);
-                    }});
-            }}"""
-        )
+        _start_wait_script(page, iframe_wait_script)
 
         # The iframe document is already loaded here, but the element itself is still
         # collapsed until the parent page releases the deferred onload expansion hook.
@@ -769,6 +875,72 @@ def test_wait_for_render_ready_iframes_step_waits_for_async_expansion(tmp_path, 
             page.evaluate("() => document.getElementById('linked-report').clientHeight")
             == child_height
         )
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "video-ready-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <video id="delayed-video"></video>
+        <script>
+            window.videoReadyState = 0;
+            Object.defineProperty(document.getElementById('delayed-video'), 'readyState', {
+                configurable: true,
+                get() { return window.videoReadyState; }
+            });
+        </script>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["Videos"])
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                window.videoReadyState = 2;
+                document.getElementById('delayed-video').dispatchEvent(new Event('loadeddata'));
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Animation frame</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "double-raf-report"
+    report_dir.mkdir()
+    _write_html(report_dir, "<html><body><p>Animation frame</p></body></html>")
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["Double requestAnimationFrame"])
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.wait_for_function("() => window.waitReadyDone === true")
+
         assert page.evaluate("() => window.waitReadyError") is None
         browser.close()
 
