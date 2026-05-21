@@ -567,6 +567,13 @@ class PlaywrightPDFRenderer:
         """
         remaining_ms = max(int((deadline - monotonic()) * 1000), 0)
         if remaining_ms <= 0:
+            # Emit a separate diagnostic for steps that exhausted the shared render
+            # budget before the renderer could hand control to Playwright.
+            self._logger.debug(
+                "Browser render readiness step failed before browser evaluation "
+                "because the shared render budget was exhausted: "
+                f"{step_name}"
+            )
             raise ADRException(
                 f"Browser PDF rendering failed: {step_name} timed out after {self._render_timeout:.1f}s"
             )

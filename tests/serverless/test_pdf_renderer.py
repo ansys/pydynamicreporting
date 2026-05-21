@@ -622,7 +622,11 @@ def test_pdf_length_to_px_rejects_undocumented_or_malformed_units(tmp_path, valu
 
 @pytest.mark.unit
 def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_path):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Deadline</p></body></html>")
+    logger = Mock()
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body><p>Deadline</p></body></html>"),
+        logger=logger,
+    )
     page = Mock()
 
     with pytest.raises(ADRException, match="Expired step timed out"):
@@ -634,6 +638,10 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
         )
 
     page.evaluate.assert_not_called()
+    logger.debug.assert_called_once_with(
+        "Browser render readiness step failed before browser evaluation "
+        "because the shared render budget was exhausted: Expired step"
+    )
 
 
 @pytest.mark.unit
