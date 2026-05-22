@@ -819,7 +819,8 @@ class PlaywrightPDFRenderer:
         )
 
         # 6. Images: wait for every <img> to finish loading (covers static images,
-        #    scene proxy thumbnails, file proxy images, animation thumbnails).
+        #    scene proxy thumbnails, file proxy images, animation thumbnails, and
+        #    canvas-backed enhanced-image/deep-image views).
         self._evaluate_ready_step(
             page,
             step_name="Images",
@@ -830,18 +831,72 @@ class PlaywrightPDFRenderer:
                     if (imgs.length === 0) { resolve(); return; }
                     let remaining = imgs.length;
                     function done() { if (--remaining <= 0) resolve(); }
-                    imgs.forEach((img) => {
+                    function findCompanionCanvas(img) {
+                        if (!img.id) {
+                            return null;
+                        }
+                        return document.getElementById(`${img.id}_canvas`);
+                    }
+                    function companionCanvasReady(img) {
+                        const canvas = findCompanionCanvas(img);
+                        if (!canvas) {
+                            return true;
+                        }
+                        const style = getComputedStyle(canvas);
+                        return style.display !== 'none' && style.visibility !== 'hidden';
+                    }
+                    function isReady(img) {
                         // Require both a source and decoded image dimensions before fast-passing
                         // the image. ``img.complete`` alone is too weak because a src-less <img>
                         // can already report complete even though async product code has not yet
                         // populated the final image bytes.
+                        //
+                        // ADR slider/deep-image widgets also render into a companion <canvas>
+                        // after the underlying <img> load finishes. Those widgets can keep a
+                        // stale completed <img> source around while a new TIFF or enhanced-image
+                        // decode is still in flight, so do not treat the image as ready until the
+                        // visible companion canvas has been unhidden.
                         const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));
-                        if (hasSource && img.complete && img.naturalWidth > 0) {
+                        return hasSource && img.complete && img.naturalWidth > 0 && companionCanvasReady(img);
+                    }
+                    imgs.forEach((img) => {
+                        if (isReady(img)) {
                             done();
                             return;
                         }
-                        img.addEventListener('load', done, { once: true });
-                        img.addEventListener('error', done, { once: true });
+                        let observer = null;
+                        function cleanup() {
+                            img.removeEventListener('load', onLoad);
+                            img.removeEventListener('error', onError);
+                            if (observer) {
+                                observer.disconnect();
+                            }
+                        }
+                        function onLoad() {
+                            if (isReady(img)) {
+                                cleanup();
+                                done();
+                            }
+                        }
+                        function onError() {
+                            cleanup();
+                            done();
+                        }
+                        img.addEventListener('load', onLoad, { once: true });
+                        img.addEventListener('error', onError, { once: true });
+                        const companionCanvas = findCompanionCanvas(img);
+                        if (companionCanvas) {
+                            observer = new MutationObserver(() => {
+                                if (isReady(img)) {
+                                    cleanup();
+                                    done();
+                                }
+                            });
+                            observer.observe(companionCanvas, {
+                                attributes: true,
+                                attributeFilter: ['style', 'class', 'hidden'],
+                            });
+                        }
                     });
                 });
             }""",

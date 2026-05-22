@@ -925,6 +925,55 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
+    tmp_path, monkeypatch
+):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    image_wait_script = wait_scripts["Images"]
+
+    report_dir = tmp_path / "canvas-backed-image-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <img
+            id="enhanced"
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+            alt="preview"
+        />
+        <canvas id="enhanced_canvas" style="visibility: hidden;"></canvas>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, image_wait_script)
+
+        # ADR slider/deep-image views can keep a completed <img> source around while the
+        # visible companion canvas is still hidden during async TIFF/enhanced-image work.
+        assert page.evaluate("() => document.getElementById('enhanced').complete") is True
+        assert page.evaluate("() => window.waitReadyDone") is False
+        assert page.evaluate("() => window.waitReadyError") is None
+
+        page.evaluate(
+            """() => {
+                const canvas = document.getElementById('enhanced_canvas');
+                canvas.style.visibility = 'visible';
+                canvas.style.display = 'inline';
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
