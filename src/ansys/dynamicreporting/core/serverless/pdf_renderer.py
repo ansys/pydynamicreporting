@@ -661,6 +661,13 @@ class PlaywrightPDFRenderer:
             deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
 
+        # The readiness pipeline intentionally waits only on product-owned signals that ADR
+        # emits during its staged print-mode browser render. HTML items and layout ``HTML``
+        # fragments are rendered from raw macro-expanded HTML, so arbitrary custom JavaScript
+        # inside those fragments does not have a separate readiness contract here. Supported
+        # browser-PDF reports therefore assume such HTML is static or settles itself through
+        # one of the standard signals below.
+
         # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
         #    until all custom web-components are registered, which adds ``body.loaded``.
         #    Skip this wait for non-ADR HTML that does not contain ``#report_root``.

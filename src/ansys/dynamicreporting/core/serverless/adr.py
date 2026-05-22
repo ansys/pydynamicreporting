@@ -1529,6 +1529,16 @@ class ADR:
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
 
+        Notes
+        -----
+        Browser-PDF readiness waits cover ADR-owned signals such as web-component
+        initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
+        layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
+        underlying template system, so custom asynchronous JavaScript inside those
+        fragments does not get a separate readiness hook here. Static HTML content is
+        supported, but arbitrary async HTML content can still be captured before it
+        finishes updating unless it settles through the built-in browser-PDF signals.
+
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
@@ -1846,6 +1856,16 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Notes
+        -----
+        Browser-PDF readiness waits cover ADR-owned signals such as web-component
+        initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
+        layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
+        underlying template system, so custom asynchronous JavaScript inside those
+        fragments does not get a separate readiness hook here. Static HTML content is
+        supported, but arbitrary async HTML content can still be captured before it
+        finishes updating unless it settles through the built-in browser-PDF signals.
 
         Examples
         --------
