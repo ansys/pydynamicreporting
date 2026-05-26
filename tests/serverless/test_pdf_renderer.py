@@ -803,9 +803,7 @@ def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
         render_timeout=5.0,
     )
     page = Mock()
-    page.evaluate.side_effect = RuntimeError(
-        "Page.evaluate: Error: Plotly charts timed out after 499ms"
-    )
+    page.evaluate.return_value = {"__adrTimedOut": True}
 
     with pytest.raises(
         ADRException,

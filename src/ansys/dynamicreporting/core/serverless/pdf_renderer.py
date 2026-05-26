@@ -633,39 +633,30 @@ class PlaywrightPDFRenderer:
         step_started = monotonic()
         step_outcome = "completed"
         try:
-            page.evaluate(
+            evaluate_result = page.evaluate(
                 f"""() => {{
                     const timeoutMs = {remaining_ms};
-                    const stepName = {json.dumps(step_name)};
                     const waitForReady = {wait_script};
-                    return new Promise((resolve, reject) => {{
-                        const timeoutId = setTimeout(() => {{
-                            reject(new Error(`${{stepName}} timed out after ${{timeoutMs}}ms`));
+                    const timeoutResult = new Promise((resolve) => {{
+                        setTimeout(() => {{
+                            resolve({{ __adrTimedOut: true }});
                         }}, timeoutMs);
-
-                        Promise.resolve()
-                            .then(() => waitForReady())
-                            .then((value) => {{
-                                clearTimeout(timeoutId);
-                                resolve(value);
-                            }})
-                            .catch((error) => {{
-                                clearTimeout(timeoutId);
-                                reject(error);
-                            }});
                     }});
+                    const readinessResult = Promise.resolve()
+                        .then(() => waitForReady())
+                        .then((value) => {{
+                            return {{ __adrTimedOut: false, value }};
+                        }});
+                    return Promise.race([readinessResult, timeoutResult]);
                 }}""",
             )
-        except Exception as exc:
-            step_outcome = "failed"
-            # The in-page timeout guard rejects with a step-scoped message. Translate that
-            # back into the same public timeout contract used for the rest of the renderer
-            # so callers do not depend on Playwright's wrapped JavaScript error text.
-            if f"{step_name} timed out after" in str(exc):
+            if isinstance(evaluate_result, dict) and evaluate_result.get("__adrTimedOut") is True:
                 raise ADRException(
                     f"Browser PDF rendering failed: {step_name} timed out after "
                     f"{self._render_timeout:.1f}s"
-                ) from exc
+                )
+        except Exception as exc:
+            step_outcome = "failed"
             raise
         finally:
             elapsed_ms = (monotonic() - step_started) * 1000.0
