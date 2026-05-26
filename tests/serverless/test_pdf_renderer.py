@@ -417,7 +417,10 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     except ADRException as exc:
         error_text = str(exc)
         assert "Browser PDF rendering failed" in error_text
-        assert "timed out" in error_text
+        # The shared browser-phase deadline can expire either while the page is still
+        # navigating or later during the readiness wait, depending on runner speed.
+        normalized_error_text = error_text.lower()
+        assert "timed out" in normalized_error_text or "timeout" in normalized_error_text
     else:
         pytest.fail("Expected render_pdf() to fail due to readiness timeout.")
 
