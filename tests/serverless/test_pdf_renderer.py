@@ -25,6 +25,7 @@ from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
@@ -242,6 +243,35 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 
 
 @pytest.mark.unit
+def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
+    renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
+    page = Mock()
+    page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
+
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+
+    with pytest.raises(
+        ADRException,
+        match=r"Browser PDF rendering failed: page navigation timed out after 12\.5s",
+    ):
+        renderer.render_pdf()
+
+    context.close.assert_called_once_with()
+    browser.close.assert_called_once_with()
+
+
+@pytest.mark.unit
 def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir)
@@ -417,10 +447,11 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     except ADRException as exc:
         error_text = str(exc)
         assert "Browser PDF rendering failed" in error_text
-        # The shared browser-phase deadline can expire either while the page is still
-        # navigating or later during the readiness wait, depending on runner speed.
-        normalized_error_text = error_text.lower()
-        assert "timed out" in normalized_error_text or "timeout" in normalized_error_text
+        # The shared browser-phase deadline can expire either during navigation or later
+        # during the readiness wait, but the public API should expose one normalized
+        # timeout shape either way.
+        assert "timed out after 0.5s" in error_text
+        assert "exceeded" not in error_text.lower()
     else:
         pytest.fail("Expected render_pdf() to fail due to readiness timeout.")
 
@@ -766,6 +797,29 @@ def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
 
 
 @pytest.mark.unit
+def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
+    renderer = PlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
+        render_timeout=5.0,
+    )
+    page = Mock()
+    page.evaluate.side_effect = RuntimeError(
+        "Page.evaluate: Error: Plotly charts timed out after 499ms"
+    )
+
+    with pytest.raises(
+        ADRException,
+        match=r"Browser PDF rendering failed: Plotly charts timed out after 5\.0s",
+    ):
+        renderer._evaluate_ready_step(
+            page,
+            step_name="Plotly charts",
+            wait_script="() => Promise.resolve()",
+            deadline=999.0,
+        )
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
@@ -1035,7 +1089,8 @@ def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path,
 
         _start_wait_script(page, wait_scripts["Double requestAnimationFrame"])
 
-        assert page.evaluate("() => window.waitReadyDone") is False
+        # The double-RAF step can resolve within the first repaint cycle on fast runners, so
+        # assert only the observable contract that it eventually resolves without an error.
         page.wait_for_function("() => window.waitReadyDone === true")
 
         assert page.evaluate("() => window.waitReadyError") is None

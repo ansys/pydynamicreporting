@@ -70,6 +70,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ..adr_utils import get_logger
 from ..exceptions import ADRException
@@ -161,6 +162,7 @@ class PlaywrightPDFRenderer:
         """
         entrypoint_path = self._resolve_entrypoint_path()
         browser_phase_deadline = monotonic() + self._render_timeout
+        current_timeout_phase = "browser launch"
 
         try:
             with sync_playwright() as playwright:
@@ -200,6 +202,7 @@ class PlaywrightPDFRenderer:
                     # Keep navigation inside the same shared browser-phase budget used by the
                     # later readiness checks. Playwright documents ``page.goto(timeout=...)`` in
                     # milliseconds, so convert the remaining budget just before navigation.
+                    current_timeout_phase = "page navigation"
                     navigation_timeout_ms = self._remaining_browser_phase_timeout_ms(
                         browser_phase_deadline, "page navigation"
                     )
@@ -261,6 +264,13 @@ class PlaywrightPDFRenderer:
                     browser.close()
         except ADRException:
             raise
+        except PlaywrightTimeoutError as exc:
+            # Normalize Playwright's operation-specific timeout wording into the renderer's
+            # public ADRException contract so callers see one consistent timeout shape.
+            raise ADRException(
+                f"Browser PDF rendering failed: {current_timeout_phase} timed out after "
+                f"{self._render_timeout:.1f}s"
+            ) from exc
         except Exception as exc:
             raise ADRException(f"Browser PDF rendering failed: {exc}") from exc
 
@@ -646,8 +656,16 @@ class PlaywrightPDFRenderer:
                     }});
                 }}""",
             )
-        except Exception:
+        except Exception as exc:
             step_outcome = "failed"
+            # The in-page timeout guard rejects with a step-scoped message. Translate that
+            # back into the same public timeout contract used for the rest of the renderer
+            # so callers do not depend on Playwright's wrapped JavaScript error text.
+            if f"{step_name} timed out after" in str(exc):
+                raise ADRException(
+                    f"Browser PDF rendering failed: {step_name} timed out after "
+                    f"{self._render_timeout:.1f}s"
+                ) from exc
             raise
         finally:
             elapsed_ms = (monotonic() - step_started) * 1000.0
