@@ -22,7 +22,7 @@
 
 """Regression coverage for the shared browser-PDF renderer module path."""
 
-from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+from ansys.dynamicreporting.core.utils.pdf_renderer import (
     PlaywrightPDFRenderer as ServerlessRenderer,
 )
 from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer as SharedRenderer

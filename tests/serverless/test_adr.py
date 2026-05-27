@@ -1477,7 +1477,7 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
         PlaywrightPDFRenderer,
     )
 
@@ -1538,7 +1538,7 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
         PlaywrightPDFRenderer,
     )
 
@@ -1569,7 +1569,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
         PlaywrightPDFRenderer,
     )
 
@@ -1663,7 +1663,7 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
         PlaywrightPDFRenderer,
     )
 
