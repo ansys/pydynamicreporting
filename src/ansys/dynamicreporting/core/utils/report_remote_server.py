@@ -935,13 +935,33 @@ class Server:
         render_timeout=30.0,
         ansys_version=None,
     ):
-        """Export a report as a browser-fidelity PDF via the shared Playwright renderer.
+        """
+        Export a report as a browser-fidelity PDF.
 
-        This path deliberately reuses the existing server HTML export pipeline first.
-        Doing so keeps all remote-server asset rewriting, MathJax detection, and viewer
-        payload staging in one place.  The Playwright renderer then opens that offline
-        HTML bundle from disk and prints it with the same Chromium-based technique used
-        by the serverless export API.
+        This method uses a headless browser to render the report's HTML output and print it to PDF, which
+        ensures that the PDF output closely matches what a user would get if they printed the report to PDF from
+        a web browser.
+
+        Parameters
+        ----------
+        report_guid : str
+            The GUID of the report to export.
+        file_name : str
+            The name of the output PDF file.
+        query : dict, optional
+            A dictionary of query parameters to include in the report generation request.
+        item_filter : list of str, optional
+            A list of item filter strings to include in the report generation request.
+        landscape : bool, optional
+            Whether to render the PDF in landscape orientation. Default is False (portrait).
+        margins : dict, optional
+            A dictionary specifying the PDF margins in inches. Keys can include 'top', 'right', 'bottom', 'left'.
+            For example: {'top': 0.5, 'right': 0.5, 'bottom': 0.5, 'left': 0.5}
+        render_timeout : float, optional
+            The maximum time in seconds to wait for the report to render in the headless browser before
+            timing out. Default is 30 seconds.
+        ansys_version : str, optional
+            The version of Ansys to use for rendering the report. If not specified, the server's default version will be used.
         """
         if not file_name:
             raise ADRException("A non-empty file_name must be provided for browser PDF export.")
