@@ -1246,6 +1246,9 @@ def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
     "kwargs, expected_error",
     [
         ({"render_timeout": 0}, "render_timeout must be a positive number"),
+        ({"render_timeout": "abc"}, "render_timeout must be a positive number"),
+        ({"render_timeout": None}, "render_timeout must be a positive number"),
+        ({"render_timeout": []}, "render_timeout must be a positive number"),
         ({"margins": {"top": "10mm"}}, "margins must contain exactly"),
         (
             {

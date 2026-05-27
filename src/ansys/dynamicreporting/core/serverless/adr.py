@@ -1406,7 +1406,6 @@ class ADR:
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = 30.0,
-        **kwargs: Any,
     ) -> bytes:
         """Render one resolved template as a browser-fidelity PDF byte stream.
 
@@ -1445,6 +1444,9 @@ class ADR:
                 # Browser PDF stages the same print-mode HTML that export_report_as_html() uses,
                 # but it renders from a concrete Template instance so the caller can reuse that
                 # resolved object for default filenames and other metadata-derived decisions.
+                # Keep ``embed_scene_data`` at the existing ``Template.render()`` default so this
+                # path stays aligned with ``render_report()`` unless a future public browser-PDF
+                # API intentionally exposes scene-data inlining as a separate option.
                 try:
                     html_content = template.render(
                         context={**(context or {}), **pdf_context},
