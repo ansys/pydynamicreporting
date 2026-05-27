@@ -318,6 +318,8 @@ class PlaywrightPDFRenderer:
                 .table-responsive,
                 table.table,
                 table.tree,
+                adr-slider-template > section[id^="slider_container_"],
+                adr-slider-template > section[id^="slider_container_"] > section.adr-row,
                 img.img-fluid,
                 video.img-fluid,
                 .ansys-nexus-proxy,
@@ -939,7 +941,7 @@ class PlaywrightPDFRenderer:
             }""",
         )
 
-        # 8. Double requestAnimationFrame waits for an actual composited frame
+        # 8. Double requestAnimationFrame gives the page another repaint opportunity
         #     after all preceding DOM/style work settles.
         self._evaluate_ready_step(
             page,

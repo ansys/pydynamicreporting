@@ -469,6 +469,8 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert ".avz-viewer" in css
     assert "ansys-nexus-viewer" in css
     assert "table.tree" in css
+    assert 'adr-slider-template > section[id^="slider_container_"]' in css
+    assert 'adr-slider-template > section[id^="slider_container_"] > section.adr-row' in css
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
     assert ".ansys-nexus-proxy" in css
@@ -568,6 +570,18 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             </table>
         </adr-data-item>
         </section>
+        <adr-slider-template>
+            <section class="adr-container" id="slider_container_test">
+                <section class="adr-row" id="slider_row">
+                    <section class="adr-slider-panzoom-container">
+                        <p>Controls</p>
+                    </section>
+                    <section>
+                        <p>Slider content</p>
+                    </section>
+                </section>
+            </section>
+        </adr-slider-template>
         <section class="adr-panel" id="panel">
             <header class="adr-panel-header" id="panel-heading">
                 <h2>System Information</h2>
@@ -604,6 +618,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const root = document.getElementById('report_root');
                     const panel = document.getElementById('panel');
                     const panelHeading = document.getElementById('panel-heading');
+                    const sliderContainer = document.getElementById('slider_container_test');
+                    const sliderRow = document.getElementById('slider_row');
                     const tableCell = document.getElementById('table-cell');
                     const collapsedHead = document.getElementById('collapsed-head');
                     const sectionHeadingStyle = getComputedStyle(sectionHeading);
@@ -614,6 +630,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const rootStyle = getComputedStyle(root);
                     const panelStyle = getComputedStyle(panel);
                     const panelHeadingStyle = getComputedStyle(panelHeading);
+                    const sliderContainerStyle = getComputedStyle(sliderContainer);
+                    const sliderRowStyle = getComputedStyle(sliderRow);
                     const tableCellStyle = getComputedStyle(tableCell);
                     const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
@@ -658,6 +676,14 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                             pageBreakAfter: panelHeadingStyle.pageBreakAfter,
                             borderBottomColor: panelHeadingStyle.borderBottomColor,
                         },
+                        sliderContainer: {
+                            breakInside: sliderContainerStyle.breakInside,
+                            pageBreakInside: sliderContainerStyle.pageBreakInside,
+                        },
+                        sliderRow: {
+                            breakInside: sliderRowStyle.breakInside,
+                            pageBreakInside: sliderRowStyle.pageBreakInside,
+                        },
                         tableCell: {
                             borderTopColor: tableCellStyle.borderTopColor,
                             borderRightColor: tableCellStyle.borderRightColor,
@@ -693,6 +719,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
     assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["panelHeading"]["borderBottomColor"] == "rgba(0, 0, 0, 0.28)"
+    assert computed_styles["sliderContainer"]["breakInside"] == "avoid"
+    assert computed_styles["sliderContainer"]["pageBreakInside"] == "avoid"
+    assert computed_styles["sliderRow"]["breakInside"] == "avoid"
+    assert computed_styles["sliderRow"]["pageBreakInside"] == "avoid"
     assert computed_styles["tableCell"]["borderTopColor"] == "rgb(173, 181, 189)"
     assert computed_styles["tableCell"]["borderRightColor"] == "rgb(173, 181, 189)"
     assert computed_styles["collapsedHead"]["display"] == "none"
