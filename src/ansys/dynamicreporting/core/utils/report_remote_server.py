@@ -562,7 +562,7 @@ class Server:
                     r = self._http_session.put(url, auth=auth, files=files)
                 except Exception as e:
                     logger.debug(f"Warning: {str(e)}")
-                    r = self._http_session.Response()
+                    r = requests.Response()
                     r.status_code = requests.codes.client_closed_request
             ret = r.status_code
             # we map 201 (created) to 200 (ok) to simplify error handling...
