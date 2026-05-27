@@ -20,12 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Browser-fidelity HTML-to-PDF rendering for ADR exports.
-
-This module holds the shared Playwright renderer used by both:
-
-- the serverless ADR export path, which stages HTML from Django-rendered content
-- the remote-server export path, which stages HTML through the existing HTML downloader
+"""Browser-fidelity HTML-to-PDF rendering for serverless ADR exports.
 
 Architecture
 ------------
