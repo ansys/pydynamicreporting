@@ -25,6 +25,7 @@ from os import environ
 from pathlib import Path
 from random import randint
 import re
+from unittest.mock import Mock
 import uuid
 
 import pytest
@@ -36,6 +37,32 @@ from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
+
+
+def test_put_objects_file_upload_failure_returns_response_status() -> None:
+    server = r.Server(url="http://localhost")
+    server._api_version = 1
+
+    response = requests.Response()
+    response.status_code = requests.codes.ok
+    server._http_session.post = Mock(return_value=response)
+    server._http_session.put = Mock(side_effect=requests.RequestException("upload failed"))
+
+    class DummyObject:
+        saved = False
+        server_api_version = None
+
+        @staticmethod
+        def get_url_data():
+            return "/api/items/", {}
+
+        @staticmethod
+        def get_url_file():
+            return "/api/items/test/file/", "test.txt", b"payload"
+
+    status = server.put_objects(DummyObject())
+
+    assert status == requests.codes.client_closed_request
 
 
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
