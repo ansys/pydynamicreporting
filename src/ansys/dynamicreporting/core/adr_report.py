@@ -761,6 +761,72 @@ class Report:
             self.service.logger.error(f"Can not export static HTML report: {str(e)}")
         return success
 
+    def export_browser_pdf(
+        self,
+        file_name: str = "",
+        query_params: dict | None = None,
+        item_filter: str | None = None,
+        *,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = 30.0,
+    ) -> bool:
+        """
+        Export report as a browser-fidelity PDF.
+
+        Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
+        first stages an offline HTML export and then asks headless Chromium to print that
+        exact bundle.  That preserves browser-rendered behavior such as JavaScript layout,
+        Plotly charts, and MathJax output.
+
+        Parameters
+        ----------
+        file_name : str
+            Path and filename for the PDF file to export.
+        query_params : dict, optional
+            Dictionary for parameters to apply to the report template. Default: None
+        item_filter : str, optional
+            String corresponding to query to run on the database items before rendering the report.
+            Default: None
+        landscape : bool, optional
+            Whether to export the PDF in landscape orientation. Default: False
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` lengths accepted by
+            Playwright's PDF API. Default: None, which uses the renderer defaults.
+        render_timeout : float, optional
+            Maximum time, in seconds, to spend waiting for browser readiness signals.
+            Default: 30.0
+
+        Returns
+        -------
+        bool
+            Success status of the browser PDF export: True if it worked, False otherwise
+        """
+        success = False
+        if self.service is None:  # pragma: no cover
+            self.service.logger.error("No connection to any report")
+            return ""
+        if self.service.serverobj is None:  # pragma: no cover
+            self.service.logger.error("No connection to any server")
+            return ""
+        try:
+            if query_params is None:
+                query_params = {}
+            self.service.serverobj.export_report_as_browser_pdf(
+                report_guid=self.report.guid,
+                file_name=file_name,
+                query=query_params,
+                item_filter=item_filter,
+                landscape=landscape,
+                margins=margins,
+                render_timeout=render_timeout,
+                ansys_version=self.service._ansys_version,
+            )
+            success = True
+        except Exception as e:  # pragma: no cover
+            self.service.logger.error(f"Can not export browser pdf report: {str(e)}")
+        return success
+
     def export_json(self, json_file_path: str) -> None:
         """
         Export this report to a JSON-formatted file.

@@ -1400,7 +1400,7 @@ class ADR:
 
         try:
             # Import lazily so browser startup and Chromium use happen only on this export path.
-            from .pdf_renderer import PlaywrightPDFRenderer
+            from ..utils.pdf_renderer import PlaywrightPDFRenderer
 
             with tempfile.TemporaryDirectory(
                 prefix="adr-browser-pdf-",

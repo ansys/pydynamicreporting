@@ -26,9 +26,9 @@ from unittest.mock import Mock
 
 import pytest
 
+import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core.exceptions import ADRException
-from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
+from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer
 
 
 def _write_html(tmp_path: Path, body: str) -> Path:

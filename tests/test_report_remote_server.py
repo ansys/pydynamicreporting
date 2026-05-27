@@ -32,6 +32,7 @@ import requests
 
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
+from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
@@ -284,6 +285,136 @@ def test_export_html(adr_service_query) -> None:
     s = adr_service_query.serverobj
     s.export_report_as_html(report_guid=my_report.report.guid, directory_name="htmltest")
     assert success is True
+
+
+def test_export_browser_pdf_stages_html_then_renders(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer
+
+    server = r.Server()
+    captured: dict[str, object] = {}
+
+    def fake_export_report_as_html(
+        report_guid,
+        directory_name,
+        query=None,
+        item_filter=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
+    ):
+        # The browser path should reuse the existing HTML export contract unchanged, so capture
+        # every forwarded option and materialize the entrypoint the renderer expects.
+        captured["report_guid"] = report_guid
+        captured["directory_name"] = directory_name
+        captured["query"] = query
+        captured["item_filter"] = item_filter
+        captured["filename"] = filename
+        captured["no_inline_files"] = no_inline_files
+        captured["ansys_version"] = ansys_version
+        Path(directory_name, filename).write_text(
+            "<html><body>browser pdf</body></html>", encoding="utf-8"
+        )
+
+    def fake_renderer_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        logger=None,
+    ):
+        captured["renderer_html_dir"] = html_dir
+        captured["renderer_filename"] = filename
+        captured["renderer_landscape"] = landscape
+        captured["renderer_margins"] = margins
+        captured["renderer_render_timeout"] = render_timeout
+        captured["renderer_logger"] = logger
+
+    monkeypatch.setattr(server, "export_report_as_html", fake_export_report_as_html)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_renderer_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-browser")
+
+    output_file = tmp_path / "browser-report.pdf"
+    query = {"colormode": "dark"}
+    margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
+    server.export_report_as_browser_pdf(
+        report_guid="report-guid",
+        file_name=str(output_file),
+        query=query,
+        item_filter="A|i_tags|cont|dp=dp227;",
+        landscape=True,
+        margins=margins,
+        render_timeout=12.5,
+        ansys_version=252,
+    )
+
+    assert output_file.read_bytes() == b"%PDF-browser"
+    assert Path(captured["renderer_html_dir"]) == Path(captured["directory_name"])
+    assert captured["renderer_filename"] == "index.html"
+    assert captured["renderer_landscape"] is True
+    assert captured["renderer_margins"] == margins
+    assert captured["renderer_render_timeout"] == 12.5
+    assert captured["report_guid"] == "report-guid"
+    assert captured["filename"] == "index.html"
+    assert captured["no_inline_files"] is True
+    assert captured["query"] == {"colormode": "dark"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["ansys_version"] == 252
+    assert query == {"colormode": "dark"}
+
+
+def test_export_browser_pdf_requires_file_name() -> None:
+    server = r.Server()
+
+    with pytest.raises(ADRException, match="non-empty file_name"):
+        server.export_report_as_browser_pdf(report_guid="report-guid", file_name="")
+
+
+def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer
+
+    server = r.Server()
+
+    def fake_export_report_as_html(
+        report_guid,
+        directory_name,
+        query=None,
+        item_filter=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
+    ):
+        Path(directory_name, filename).write_text(
+            "<html><body>browser pdf</body></html>", encoding="utf-8"
+        )
+
+    def fake_renderer_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        logger=None,
+    ):
+        return None
+
+    monkeypatch.setattr(server, "export_report_as_html", fake_export_report_as_html)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_renderer_init)
+    monkeypatch.setattr(
+        PlaywrightPDFRenderer,
+        "render_pdf",
+        lambda self: (_ for _ in ()).throw(RuntimeError("Simulated renderer failure")),
+    )
+
+    with pytest.raises(ADRException, match="Browser PDF export failed"):
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(tmp_path / "browser-report.pdf"),
+        )
 
 
 @pytest.mark.ado_test

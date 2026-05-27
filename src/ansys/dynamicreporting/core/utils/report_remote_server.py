@@ -57,6 +57,7 @@ from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
+from ..exceptions import ADRException
 from .encoders import BaseEncoder
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
@@ -921,6 +922,75 @@ class Server:
             ansys_version=_ansys_version,
         )
         worker.download()
+
+    def export_report_as_browser_pdf(
+        self,
+        report_guid,
+        file_name,
+        query=None,
+        item_filter=None,
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        ansys_version=None,
+    ):
+        """Export a report as a browser-fidelity PDF via the shared Playwright renderer.
+
+        This path deliberately reuses the existing server HTML export pipeline first.
+        Doing so keeps all remote-server asset rewriting, MathJax detection, and viewer
+        payload staging in one place.  The Playwright renderer then opens that offline
+        HTML bundle from disk and prints it with the same Chromium-based technique used
+        by the serverless export API.
+        """
+        if not file_name:
+            raise ADRException("A non-empty file_name must be provided for browser PDF export.")
+
+        # Copy the caller's query dictionary so the HTML export helper can append its print
+        # mode without mutating the caller's state.  That keeps one request configuration
+        # reusable across multiple export formats.
+        staged_query = dict(query or {})
+        output_path = Path(os.path.abspath(file_name))
+
+        try:
+            # Import lazily so regular server workflows do not pay the Playwright import cost
+            # unless they actually request browser-fidelity PDF output.
+            from .pdf_renderer import PlaywrightPDFRenderer
+
+            with tempfile.TemporaryDirectory(prefix="adr-browser-pdf-") as tmp_dir:
+                staged_html_dir = Path(tmp_dir)
+
+                # Build the renderer before downloading the HTML bundle so invalid margin or
+                # timeout options fail immediately, without spending time on network I/O.
+                renderer = PlaywrightPDFRenderer(
+                    html_dir=staged_html_dir,
+                    landscape=landscape,
+                    margins=margins,
+                    render_timeout=render_timeout,
+                    logger=logger,
+                )
+
+                # Stage a file://-safe HTML bundle using the exact remote HTML export path.
+                # ``no_inline_files=True`` keeps large assets on disk, which reduces memory
+                # churn and matches the browser-PDF strategy already used on the serverless side.
+                self.export_report_as_html(
+                    report_guid=report_guid,
+                    directory_name=staged_html_dir,
+                    query=staged_query,
+                    item_filter=item_filter,
+                    filename="index.html",
+                    no_inline_files=True,
+                    ansys_version=ansys_version,
+                )
+                pdf_bytes = renderer.render_pdf()
+
+        except ADRException:
+            raise
+        except Exception as exc:
+            raise ADRException(f"Browser PDF export failed: {exc}") from exc
+
+        with open(output_path, "wb") as report:
+            report.write(pdf_bytes)
 
     def export_report_as_pdf(
         self,
