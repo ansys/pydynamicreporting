@@ -38,6 +38,38 @@ from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
 
 
+class _CopyItemsSource:
+    def __init__(self, *, file_status=requests.codes.ok, payload=b"payload") -> None:
+        self.file_status = file_status
+        self.payload = payload
+        self.item = ro.ItemREST()
+        self.item.guid = str(uuid.uuid4())
+        self.item.session = str(uuid.uuid4())
+        self.item.dataset = str(uuid.uuid4())
+        self.item.fileurl = "image.png"
+        self.dataset = ro.DatasetREST()
+        self.dataset.guid = self.item.dataset
+        self.session = ro.SessionREST()
+        self.session.guid = self.item.session
+
+    def get_objects(self, objtype, query=None):
+        if objtype is ro.ItemREST:
+            return [self.item]
+        return []
+
+    def get_object_from_guid(self, guid, objtype=None):
+        if objtype is ro.DatasetREST and guid == self.dataset.guid:
+            return self.dataset
+        if objtype is ro.SessionREST and guid == self.session.guid:
+            return self.session
+        return None
+
+    def get_file(self, obj, fileobj):
+        if self.file_status == requests.codes.ok:
+            fileobj.write(self.payload)
+        return self.file_status
+
+
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
     db_dir = tmp_path / "test_copy_item"
     port = 8000 + randint(0, 3999)
@@ -71,6 +103,51 @@ def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
     finally:
         tmp_adr.stop()
     assert success
+
+
+def test_copy_items_uses_requests_compatible_temp_file(monkeypatch) -> None:
+    server = r.Server()
+    source = _CopyItemsSource()
+
+    def fake_put_objects(objects) -> int:
+        obj = objects[0]
+        if isinstance(obj, ro.ItemREST):
+            prepared = requests.Request(
+                "PUT",
+                "http://example.test/item/api_payload/test-guid",
+                files={"file": ("image.png", obj.fileobj)},
+            ).prepare()
+            assert prepared.headers["Content-Length"]
+        return requests.codes.ok
+
+    monkeypatch.setattr(server, "put_objects", fake_put_objects)
+
+    assert server.copy_items(source=source, obj_type="item", progress=False, progress_qt=False)
+
+
+def test_copy_items_returns_false_on_item_upload_failure(monkeypatch) -> None:
+    server = r.Server()
+    source = _CopyItemsSource()
+
+    def fake_put_objects(objects) -> int:
+        obj = objects[0]
+        if isinstance(obj, ro.ItemREST):
+            server._last_error = "upload failed"
+            return requests.codes.client_closed_request
+        return requests.codes.ok
+
+    monkeypatch.setattr(server, "put_objects", fake_put_objects)
+
+    assert not server.copy_items(source=source, obj_type="item", progress=False, progress_qt=False)
+
+
+def test_copy_items_returns_false_on_file_download_failure(monkeypatch) -> None:
+    server = r.Server()
+    source = _CopyItemsSource(file_status=requests.codes.service_unavailable)
+
+    monkeypatch.setattr(server, "put_objects", lambda objects: requests.codes.ok)
+
+    assert not server.copy_items(source=source, obj_type="item", progress=False, progress_qt=False)
 
 
 @pytest.mark.ado_test

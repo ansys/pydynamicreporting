@@ -561,8 +561,9 @@ class Server:
                     r = self._http_session.put(url, auth=auth, files=files)
                 except Exception as e:
                     logger.debug(f"Warning: {str(e)}")
-                    r = requests.Response()
-                    r.status_code = requests.codes.client_closed_request
+                    self._last_error = str(e)
+                    success = requests.codes.client_closed_request
+                    continue
             ret = r.status_code
             # we map 201 (created) to 200 (ok) to simplify error handling...
             if ret == requests.codes.created:
@@ -749,6 +750,7 @@ class Server:
             progress.setMaximum(nobjs)
 
         for obj in copy_list:
+            fileobj = None
             try:
                 if progress:
                     progress.setValue(n)
@@ -759,20 +761,32 @@ class Server:
                 file_url = getattr(obj, "fileurl", None)
                 if file_url:
                     # need to pull the file from this url...
-                    obj.fileobj = tempfile.NamedTemporaryFile()
-                    if source.get_file(obj, obj.fileobj) != requests.codes.ok:
-                        obj.fileobj = None
-                self.put_objects([obj])
-                # clean up temp file
-                fileobj = getattr(obj, "fileobj", None)
-                if fileobj:
-                    fileobj.close()
+                    fileobj = tempfile.SpooledTemporaryFile()
+                    obj.fileobj = fileobj
+                    file_status = source.get_file(obj, fileobj)
+                    if file_status != requests.codes.ok:
+                        if print_allowed():
+                            print(f"Failure while copying {obj}: unable to fetch file payload")
+                        return False
+                ret = self.put_objects([obj])
+                if ret != requests.codes.ok:
+                    error_text = self.get_last_error()
+                    if print_allowed():
+                        if error_text:
+                            print(f"Failure while copying {obj}: {error_text}")
+                        else:
+                            print(f"Failure while copying {obj}: server returned status {ret}")
+                    return False
                 if type(obj) not in skip_count_types:
                     n += 1
             except Exception as e:
                 if print_allowed():
                     print(f"Failure while copying {obj}: {e}")
                 return False
+            finally:
+                if fileobj:
+                    fileobj.close()
+                    obj.fileobj = None
         if progress:
             progress.setValue(nobjs)
         return True
