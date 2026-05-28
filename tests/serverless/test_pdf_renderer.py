@@ -28,6 +28,7 @@ import pytest
 
 import ansys.dynamicreporting.core.utils.pdf_renderer as shared_pdf_renderer_module
 from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.utils.pdf_renderer import _PlaywrightReportURLPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer
 
 
@@ -98,6 +99,30 @@ def _stub_playwright_render(
     return page
 
 
+def _stub_playwright_render_session(
+    monkeypatch: pytest.MonkeyPatch,
+    renderer: PlaywrightPDFRenderer,
+    *,
+    pdf_width: str | None = None,
+) -> tuple[Mock, Mock, Mock]:
+    """Mock Chromium rendering and return the page, context, and browser handles."""
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    playwright_manager.__enter__.return_value = playwright
+
+    monkeypatch.setattr(shared_pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
+    return page, context, browser
+
+
 @pytest.mark.unit
 def test_playwright_pdf_from_simple_html(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
@@ -152,6 +177,64 @@ def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, m
         wait_until="load",
         timeout=1000,
     )
+
+
+@pytest.mark.unit
+def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
+    renderer = _PlaywrightReportURLPDFRenderer(
+        url="http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
+        auth_cookies=[
+            {
+                "name": "sessionid",
+                "value": "abc123",
+                "domain": "127.0.0.1",
+                "path": "/",
+                "httpOnly": True,
+                "sameSite": "Lax",
+            }
+        ],
+        render_timeout=12.5,
+    )
+    page, context, browser = _stub_playwright_render_session(monkeypatch, renderer)
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+    page.goto.assert_called_once_with(
+        "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
+        wait_until="load",
+        timeout=12500,
+    )
+    # The live report path must stay online so Chromium can fetch the report and assets directly
+    # from the already-running ADR service instead of expecting a staged offline bundle.
+    browser.new_context.assert_called_once_with(
+        viewport={
+            "width": PlaywrightPDFRenderer._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+            "height": PlaywrightPDFRenderer._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
+        },
+        service_workers="block",
+        accept_downloads=False,
+    )
+    context.add_cookies.assert_called_once_with(
+        [
+            {
+                "name": "sessionid",
+                "value": "abc123",
+                "domain": "127.0.0.1",
+                "path": "/",
+                "httpOnly": True,
+                "sameSite": "Lax",
+            }
+        ]
+    )
+    # The live path stays online and therefore must not install the offline-only network blocks
+    # used by file:// exports.
+    context.route.assert_not_called()
+    context.route_web_socket.assert_not_called()
+
+
+@pytest.mark.unit
+def test_live_report_url_renderer_validates_absolute_urls():
+    with pytest.raises(ADRException, match="report URL is not valid"):
+        _PlaywrightReportURLPDFRenderer(url="/reports/report_display/?view=report-guid")
 
 
 @pytest.mark.unit

@@ -23,17 +23,17 @@
 """
 Browser-fidelity HTML-to-PDF rendering for ADR exports.
 
-This module holds the shared Playwright renderer used by both:
+This module holds the shared Playwright renderers used by both:
 
 - the serverless ADR export path, which stages HTML from Django-rendered content
-- the remote-server export path, which stages HTML through the existing HTML downloader
+- the remote-server export path, which opens the live report page directly
 
 Architecture
 ------------
 This renderer intentionally relies on two linked Chromium layout phases instead of
 treating PDF export as a screenshot of already-painted viewport pixels:
 
-    offline file:// HTML export
+    browser-loadable report source
               |
               v
     +-----------------------------------------------+
@@ -132,7 +132,7 @@ class PlaywrightPDFRenderer:
 
     def __init__(
         self,
-        html_dir: Path | str,
+        html_dir: Path | str | None,
         filename: str = "index.html",
         *,
         landscape: bool = False,
@@ -141,7 +141,7 @@ class PlaywrightPDFRenderer:
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""
-        self._html_dir = Path(html_dir).expanduser().resolve()
+        self._html_dir = None if html_dir is None else Path(html_dir).expanduser().resolve()
         self._filename = filename
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
@@ -161,7 +161,7 @@ class PlaywrightPDFRenderer:
         ADRException
             If the browser render/export flow fails.
         """
-        entrypoint_path = self._resolve_entrypoint_path()
+        navigation_target = self._get_navigation_target()
 
         try:
             with sync_playwright() as playwright:
@@ -171,24 +171,13 @@ class PlaywrightPDFRenderer:
                 try:
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
                     # items lay themselves out deterministically before the PDF width is computed.
-                    context = browser.new_context(
-                        viewport={
-                            "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
-                            "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
-                        },
-                        service_workers="block",
-                        accept_downloads=False,
-                        offline=True,
-                    )
+                    context = self._new_browser_context(browser)
                     try:
-                        self._block_external_requests(context)
+                        self._prepare_context(context)
                         page = context.new_page()
-                        file_url = entrypoint_path.as_uri()
 
-                        # Load the exported offline report exactly as Chromium would see it from disk.
-                        self._logger.info(
-                            f"Loading exported HTML for browser PDF export: {file_url}"
-                        )
+                        # Load the source page exactly as Chromium will render it for the PDF pass.
+                        self._logger.info(f"Loading browser PDF source: {navigation_target}")
                         # Keep navigation under the caller-configured browser render budget.
                         # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
                         # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
@@ -196,7 +185,7 @@ class PlaywrightPDFRenderer:
                         # disabling the timeout, which would invert a small positive ADR budget.
                         navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
                         page.goto(
-                            file_url,
+                            navigation_target,
                             wait_until="load",
                             timeout=navigation_timeout_ms,
                         )
@@ -242,6 +231,31 @@ class PlaywrightPDFRenderer:
             raise
         except Exception as exc:
             raise ADRException(f"Browser PDF rendering failed: {exc}") from exc
+
+    def _get_navigation_target(self) -> str:
+        """Return the URL Chromium should open for the browser-PDF render pass."""
+        return self._resolve_entrypoint_path().as_uri()
+
+    def _new_browser_context(self, browser: Any) -> Any:
+        """Create the browser context used by the offline HTML renderer.
+
+        The serverless path renders a fully staged ``file://`` bundle, so the
+        context is explicitly offline and blocks service workers to keep the
+        browser phase deterministic and self-contained.
+        """
+        return browser.new_context(
+            viewport={
+                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
+            },
+            service_workers="block",
+            accept_downloads=False,
+            offline=True,
+        )
+
+    def _prepare_context(self, context: Any) -> None:
+        """Configure the browser context before opening the source page."""
+        self._block_external_requests(context)
 
     def _apply_pdf_capture_styles(self, page: Any) -> None:
         """Inject PDF-only overrides that keep browser-rendered content fully visible on pages."""
@@ -487,6 +501,8 @@ class PlaywrightPDFRenderer:
 
     def _resolve_entrypoint_path(self) -> Path:
         """Return the validated HTML entry-point path that Chromium can open."""
+        if self._html_dir is None:
+            raise ADRException("Browser PDF HTML directory is not configured for this renderer.")
         entrypoint_path = (self._html_dir / self._filename).resolve()
         if not entrypoint_path.is_relative_to(self._html_dir):
             raise ADRException(
@@ -912,3 +928,67 @@ class PlaywrightPDFRenderer:
         )
 
         self._logger.info("Browser render readiness checks completed.")
+
+
+class _PlaywrightReportURLPDFRenderer(PlaywrightPDFRenderer):
+    """Render a live ADR report URL to PDF via headless Chromium.
+
+    The remote-server browser-PDF path already has a running report server, so
+    it can render the live report page directly instead of first staging an
+    offline HTML bundle.  This class reuses the shared browser readiness and
+    PDF sizing flow while keeping network access enabled for same-page assets.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        *,
+        auth_cookies: list[dict[str, object]] | None = None,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = PlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
+        logger: Any = None,
+    ) -> None:
+        self._url = self._validate_url(url)
+        self._auth_cookies = [] if auth_cookies is None else list(auth_cookies)
+        super().__init__(
+            html_dir=None,
+            landscape=landscape,
+            margins=margins,
+            render_timeout=render_timeout,
+            logger=logger,
+        )
+
+    def _get_navigation_target(self) -> str:
+        """Return the live report URL for the browser-PDF render pass."""
+        return self._url
+
+    def _new_browser_context(self, browser: Any) -> Any:
+        """Create the browser context used by the live remote-report renderer.
+
+        Unlike the offline HTML renderer, the live report path must keep network
+        access enabled so Chromium can fetch the report HTML and its assets from
+        the already-running ADR service.
+        """
+        return browser.new_context(
+            viewport={
+                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
+            },
+            service_workers="block",
+            accept_downloads=False,
+        )
+
+    def _prepare_context(self, context: Any) -> None:
+        """Seed the live report context with any authenticated ADR web-session cookies."""
+        if self._auth_cookies:
+            context.add_cookies(self._auth_cookies)
+        return None
+
+    @staticmethod
+    def _validate_url(url: str) -> str:
+        """Validate that the live report renderer received an absolute URL."""
+        parsed_url = urlsplit(url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise ADRException(f"Browser PDF report URL is not valid: {url!r}")
+        return url

@@ -775,16 +775,19 @@ class Report:
         Export report as a browser-fidelity PDF.
 
         Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
-        first stages an offline HTML export and then asks headless Chromium to print that
-        exact bundle.  That preserves browser-rendered behavior such as JavaScript layout,
-        Plotly charts, and MathJax output.
+        asks headless Chromium to render the report through ADR's browser-facing output and
+        then print that browser view to PDF. That preserves browser-rendered behavior such
+        as JavaScript layout, Plotly charts, and MathJax output.
 
         Parameters
         ----------
         file_name : str
             Path and filename for the PDF file to export.
         query_params : dict, optional
-            Dictionary for parameters to apply to the report template. Default: None
+            Dictionary for parameters to apply to the report template. On the
+            remote-service path these values are forwarded as report-generation
+            query parameters, which is the server-side equivalent of passing a
+            serverless render ``context``. Default: None
         item_filter : str, optional
             String corresponding to query to run on the database items before rendering the report.
             Default: None
