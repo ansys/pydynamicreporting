@@ -29,6 +29,7 @@ dependencies = [
     "django-weasyprint>=2.4.0,<2.5.0",
     "weasyprint>=67.0",
     "playwright>=1.58.0,<2.0.0",
+    "pydantic>=2.13.4",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
@@ -68,7 +69,7 @@ ci = "https://github.com/ansys/pydynamicreporting/actions"
 test = [
     "pytest",
     "pytest-cov",
-    "pyvista==0.47.3",
+    "pyvista==0.48.2",
     "vtk==9.6.1",
     "ansys-dpf-core==0.16.0"
 ]
