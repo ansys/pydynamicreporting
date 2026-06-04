@@ -120,7 +120,14 @@ class Server:
     Implements REST protocols.
     """
 
-    def __init__(self, url=None, username=None, password=None, ansys_version=None):
+    def __init__(
+        self,
+        url=None,
+        username=None,
+        password=None,
+        ansys_version=None,
+        ansys_installation=None,
+    ):
         # Check on the validity of url formatting
         if url is not None:
             o = urlparse(url)
@@ -130,6 +137,10 @@ class Server:
                     print("Error: invalid URL. Setting it to None")
                 url = None
         self._ansys_version = ansys_version
+        # Preserve the install root when the higher-level Service resolved one.
+        # Browser-PDF export uses it only as a hint for the product-shipped
+        # Playwright browser cache; ordinary REST traffic does not depend on it.
+        self._ansys_installation = ansys_installation
         self.cur_url = url
         self.cur_username = username
         self.cur_password = password
@@ -1083,6 +1094,8 @@ class Server:
                 landscape=landscape,
                 margins=margins,
                 render_timeout=render_timeout,
+                ansys_installation=self._ansys_installation,
+                ansys_version=self._ansys_version or ansys_version,
                 logger=logger,
             )
             pdf_bytes = renderer.render_pdf()

@@ -339,7 +339,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     from ansys.dynamicreporting.core.utils import pdf_renderer
     from ansys.dynamicreporting.core.utils import report_utils
 
-    server = r.Server()
+    server = r.Server(ansys_installation=r"C:\Program Files\ANSYS Inc\v252\ADR")
     server.set_URL("http://127.0.0.1:8000")
     server.set_username("nexus")
     server.set_password("cei")
@@ -385,6 +385,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             landscape=False,
             margins=None,
             render_timeout=30.0,
+            ansys_installation=None,
+            ansys_version=None,
             logger=None,
         ):
             captured["renderer_url"] = url
@@ -392,6 +394,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             captured["renderer_landscape"] = landscape
             captured["renderer_margins"] = margins
             captured["renderer_render_timeout"] = render_timeout
+            captured["renderer_ansys_installation"] = ansys_installation
+            captured["renderer_ansys_version"] = ansys_version
             captured["renderer_logger"] = logger
 
         def render_pdf(
@@ -445,6 +449,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     assert captured["renderer_landscape"] is True
     assert captured["renderer_margins"] == margins
     assert captured["renderer_render_timeout"] == 12.5
+    assert captured["renderer_ansys_installation"] == r"C:\Program Files\ANSYS Inc\v252\ADR"
+    assert captured["renderer_ansys_version"] == 252
     assert captured["report_guid"] == "report-guid"
     assert captured["query"] == {"colormode": "dark", "print": "pdf"}
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
@@ -480,6 +486,8 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
             landscape=False,
             margins=None,
             render_timeout=30.0,
+            ansys_installation=None,
+            ansys_version=None,
             logger=None,
         ):
             return None
