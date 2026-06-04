@@ -807,11 +807,12 @@ class Report:
         """
         success = False
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            # Match the method's bool contract even on disconnected Report objects.
+            print("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:
             if query_params is None:
                 query_params = {}

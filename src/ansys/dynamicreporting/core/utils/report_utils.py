@@ -489,7 +489,13 @@ def authenticate_web_session(server):
     the authenticated shared ``requests.Session`` so callers can reuse the same
     cookie jar for subsequent non-REST work.
     """
-    username, passwd = server.get_auth()
+    credentials = server.get_auth()
+    # Browser-facing downloads can be attempted before username/password auth is configured.
+    # Treat that as an unauthenticated session instead of crashing during tuple unpacking.
+    if credentials is None:
+        return None
+
+    username, passwd = credentials
     login_url = server.build_request_url("/login/")
 
     session = server._http_session

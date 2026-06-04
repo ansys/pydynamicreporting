@@ -173,6 +173,12 @@ def test_authenticate_web_session_logs_in_shared_session() -> None:
     )
 
 
+def test_authenticate_web_session_returns_none_without_configured_auth() -> None:
+    server = SimpleNamespace(get_auth=lambda: None)
+
+    assert ru.authenticate_web_session(server) is None
+
+
 def test_run_web_request_uses_authenticated_session(monkeypatch) -> None:
     session = Mock()
     response = Mock()
@@ -188,6 +194,14 @@ def test_run_web_request_uses_authenticated_session(monkeypatch) -> None:
     assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is response
     session.prepare_request.assert_called_once()
     session.send.assert_called_once_with(prepared_request, stream=False)
+
+
+def test_run_web_request_returns_none_without_authenticated_session(monkeypatch) -> None:
+    server = SimpleNamespace()
+
+    monkeypatch.setattr(ru, "authenticate_web_session", lambda server_obj: None)
+
+    assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is None
 
 
 @pytest.mark.ado_test

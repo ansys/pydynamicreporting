@@ -252,6 +252,33 @@ def test_export_browser_pdf_returns_false_on_failure(tmp_path) -> None:
     assert success is False
 
 
+def test_export_browser_pdf_returns_false_without_service(tmp_path) -> None:
+    my_report = Report(
+        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
+def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
+    service = SimpleNamespace(
+        serverobj=None,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        _ansys_version=252,
+    )
+    my_report = Report(
+        service=service,
+        report_name="My Top Report",
+        report_obj=SimpleNamespace(guid="report-guid"),
+    )
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
 @pytest.mark.ado_test
 def test_save_as_html(adr_service_query) -> None:
     success = False
