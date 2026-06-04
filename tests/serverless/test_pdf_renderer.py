@@ -26,6 +26,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    PlaywrightPDFRenderer as LegacyPlaywrightPDFRenderer,
+)
 import ansys.dynamicreporting.core.utils.pdf_renderer as shared_pdf_renderer_module
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils.pdf_renderer import _PlaywrightReportURLPDFRenderer
@@ -91,8 +94,8 @@ def _stub_playwright_render(
     playwright_manager = MagicMock()
     playwright_manager.__enter__.return_value = playwright
 
-    # The public serverless import path is preserved, but the class now lives in the shared
-    # utils module. Patch the implementation module so render_pdf() sees the mocked browser.
+    # Both the legacy serverless import path and the shared utils import path resolve to the
+    # shared implementation module, so patch that module to intercept render_pdf() reliably.
     monkeypatch.setattr(shared_pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
@@ -121,6 +124,11 @@ def _stub_playwright_render_session(
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return page, context, browser
+
+
+@pytest.mark.unit
+def test_legacy_serverless_renderer_import_path_is_preserved():
+    assert LegacyPlaywrightPDFRenderer is PlaywrightPDFRenderer
 
 
 @pytest.mark.unit
