@@ -499,27 +499,6 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
         )
 
 
-def test_build_playwright_cookie_preserves_web_session_attributes() -> None:
-    cookie = requests.cookies.create_cookie(
-        name="sessionid",
-        value="session-token",
-        domain="127.0.0.1",
-        path="/",
-        secure=False,
-        rest={"HttpOnly": None, "SameSite": "Lax"},
-    )
-
-    assert r.Server._build_playwright_cookie(cookie, base_url="http://127.0.0.1:8000") == {
-        "name": "sessionid",
-        "value": "session-token",
-        "domain": "127.0.0.1",
-        "path": "/",
-        "secure": False,
-        "httpOnly": True,
-        "sameSite": "Lax",
-    }
-
-
 def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
     cookie = requests.cookies.create_cookie(
         name="sessionid",

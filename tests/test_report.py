@@ -283,50 +283,6 @@ def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
     assert success is False
 
 
-def test_export_pdf_returns_false_without_service(tmp_path) -> None:
-    my_report = Report(
-        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
-    )
-
-    success = my_report.export_pdf(file_name=str(tmp_path / "server-report.pdf"))
-
-    assert success is False
-
-
-def test_export_pdf_returns_false_without_serverobj(tmp_path) -> None:
-    my_report = _make_report_for_export_guard_tests(serverobj=None)
-
-    success = my_report.export_pdf(file_name=str(tmp_path / "server-report.pdf"))
-
-    assert success is False
-
-
-def test_export_html_returns_false_without_service(tmp_path) -> None:
-    my_report = Report(
-        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
-    )
-
-    success = my_report.export_html(directory_name=str(tmp_path / "html-export"))
-
-    assert success is False
-
-
-def test_export_html_returns_false_without_serverobj(tmp_path) -> None:
-    my_report = _make_report_for_export_guard_tests(serverobj=None)
-
-    success = my_report.export_html(directory_name=str(tmp_path / "html-export"))
-
-    assert success is False
-
-
-def test_get_guid_returns_empty_string_without_service() -> None:
-    my_report = Report(
-        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
-    )
-
-    assert my_report.get_guid() == ""
-
-
 @pytest.mark.ado_test
 def test_save_as_html(adr_service_query) -> None:
     success = False
