@@ -252,7 +252,6 @@ def test_export_browser_pdf_forwards_options(tmp_path) -> None:
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5
-    assert captured["ansys_version"] == 252
 
 
 def test_export_browser_pdf_returns_false_on_failure(tmp_path) -> None:

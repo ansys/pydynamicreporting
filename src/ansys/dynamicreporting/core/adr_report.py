@@ -830,7 +830,6 @@ class Report:
                 landscape=landscape,
                 margins=margins,
                 render_timeout=render_timeout,
-                ansys_version=self.service._ansys_version,
             )
             success = True
         except Exception as e:  # pragma: no cover

@@ -1030,7 +1030,6 @@ class Server:
         landscape=False,
         margins=None,
         render_timeout=30.0,
-        ansys_version=None,
     ):
         """
         Export a report as a browser-fidelity PDF.
@@ -1062,10 +1061,6 @@ class Server:
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
-        ansys_version : str, optional
-            Retained for API compatibility with the other export helpers. The
-            live browser-render path uses the connected server's own asset and
-            report-generation versioning.
         """
         if not file_name:
             raise ADRException("A non-empty file_name must be provided for browser PDF export.")

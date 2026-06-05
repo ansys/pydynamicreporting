@@ -415,7 +415,6 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         landscape=True,
         margins=margins,
         render_timeout=12.5,
-        ansys_version=252,
     )
 
     assert output_file.read_bytes() == b"%PDF-browser"
