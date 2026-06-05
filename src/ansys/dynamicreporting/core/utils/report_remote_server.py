@@ -949,6 +949,8 @@ class Server:
         converts the resulting session cookies into Playwright's cookie format so
         the live browser-PDF path reuses the same authenticated web session.
         """
+        # Anonymous server objects have no login state to mirror into Chromium, so the
+        # remote renderer should open the report without seeded browser cookies.
         if self.get_auth() is None:
             return []
 
@@ -991,11 +993,16 @@ class Server:
         if cookie.expires is not None:
             playwright_cookie["expires"] = float(cookie.expires)
 
-        cookie_rest = getattr(cookie, "_rest", {})
-        if "HttpOnly" in cookie_rest or "httponly" in cookie_rest:
+        # http.cookiejar exposes non-standard cookie attributes through public accessors.
+        # Use those instead of reaching into the Cookie object's private storage.
+        if cookie.has_nonstandard_attr("HttpOnly") or cookie.has_nonstandard_attr("httponly"):
             playwright_cookie["httpOnly"] = True
 
-        same_site = cookie_rest.get("SameSite", cookie_rest.get("samesite"))
+        same_site = None
+        for attr_name in ("SameSite", "samesite"):
+            if cookie.has_nonstandard_attr(attr_name):
+                same_site = cookie.get_nonstandard_attr(attr_name)
+                break
         if same_site in {"Strict", "Lax", "None"}:
             playwright_cookie["sameSite"] = same_site
 
@@ -1099,14 +1106,14 @@ class Server:
                 logger=logger,
             )
             pdf_bytes = renderer.render_pdf()
+            # Keep filesystem failures under the same ADRException contract as the render flow
+            # so callers do not have to distinguish between browser and write-path failures.
+            output_path.write_bytes(pdf_bytes)
 
         except ADRException:
             raise
         except Exception as exc:
             raise ADRException(f"Browser PDF export failed: {exc}") from exc
-
-        with open(output_path, "wb") as report:
-            report.write(pdf_bytes)
 
     def export_report_as_pdf(
         self,

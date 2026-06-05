@@ -529,6 +529,101 @@ def test_build_playwright_cookie_preserves_web_session_attributes() -> None:
     }
 
 
+def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="",
+        path="/",
+        secure=False,
+    )
+
+    assert r.Server._build_playwright_cookie(cookie, base_url="http://127.0.0.1:8000") == {
+        "name": "sessionid",
+        "value": "session-token",
+        "url": "http://127.0.0.1:8000",
+        "secure": False,
+        "httpOnly": True,
+    }
+
+
+def test_build_playwright_cookie_requires_domain_or_base_url() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="",
+        path="/",
+        secure=False,
+    )
+
+    with pytest.raises(ADRException, match="missing a domain and base URL"):
+        r.Server._build_playwright_cookie(cookie)
+
+
+def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+
+    monkeypatch.setattr(
+        report_utils,
+        "authenticate_web_session",
+        lambda server_obj: (_ for _ in ()).throw(AssertionError("auth helper should not run")),
+    )
+
+    assert server._get_browser_auth_cookies() == []
+
+
+def test_get_browser_auth_cookies_requires_authenticated_session(monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: None)
+
+    with pytest.raises(ADRException, match="Unable to authenticate the browser PDF web session"):
+        server._get_browser_auth_cookies()
+
+
+def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    class FakeRenderer:
+        def __init__(self, url, **kwargs):
+            self.url = url
+
+        def render_pdf(self):
+            return b"%PDF-browser"
+
+    monkeypatch.setattr(
+        server,
+        "build_url_with_query",
+        lambda report_guid, query, item_filter=None, rest_api=False: (
+            "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+        ),
+    )
+    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: requests.Session())
+    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+
+    output_directory = tmp_path / "browser-report.pdf"
+    output_directory.mkdir()
+
+    with pytest.raises(ADRException, match="Browser PDF export failed"):
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(output_directory),
+        )
+
+
 @pytest.mark.ado_test
 def test_export_pdf(adr_service_query, get_exec) -> None:
     exec_basis = get_exec
