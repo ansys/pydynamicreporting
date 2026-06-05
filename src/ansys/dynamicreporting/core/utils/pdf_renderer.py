@@ -67,9 +67,7 @@ the final paged layout has enough horizontal space to preserve content that woul
 otherwise overflow or be clipped at the right edge.
 """
 
-from contextlib import contextmanager
 import json
-import os
 import re
 from pathlib import Path
 from time import monotonic
@@ -79,7 +77,6 @@ from urllib.parse import urlsplit
 from playwright.sync_api import sync_playwright
 
 from ..adr_utils import get_logger
-from ..common_utils import resolve_playwright_browsers_path
 from ..exceptions import ADRException
 
 
@@ -99,14 +96,6 @@ class PlaywrightPDFRenderer:
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, to wait for browser readiness signals.
-    ansys_installation : Path or str, optional
-        Resolved Ansys installation root used to locate a product-shipped
-        Playwright browser cache before falling back to the user's normal
-        Playwright cache.
-    ansys_version : int or str, optional
-        Ansys version associated with ``ansys_installation``.  This is used
-        only to locate ``apex###/machines/...`` runtime assets when the product
-        ships Playwright browsers inside the installation tree.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -149,8 +138,6 @@ class PlaywrightPDFRenderer:
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
-        ansys_installation: Path | str | None = None,
-        ansys_version: int | str | None = None,
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""
@@ -159,52 +146,7 @@ class PlaywrightPDFRenderer:
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = self._validate_render_timeout(render_timeout)
-        # Keep the raw install metadata so the renderer can locate a product-managed
-        # Playwright browser cache without changing the public browser-PDF API shape.
-        self._ansys_installation = (
-            None if ansys_installation is None else Path(ansys_installation).expanduser()
-        )
-        self._ansys_version = ansys_version
         self._logger = logger or get_logger()
-
-    def _resolve_playwright_browser_cache(self) -> Path | None:
-        """Return a shipped Playwright browser cache under the Ansys install, if any."""
-        return resolve_playwright_browsers_path(
-            ansys_installation=(
-                None if self._ansys_installation is None else str(self._ansys_installation)
-            ),
-            ansys_version=self._ansys_version,
-        )
-
-    @contextmanager
-    def _playwright_browser_cache_env(self):
-        """Temporarily point Playwright at the product-shipped browser cache.
-
-        Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
-        share browser binaries across environments.  Respect any caller-provided
-        value first, and only install a temporary process-local fallback when the
-        user has not already chosen a cache location.
-        """
-        if "PLAYWRIGHT_BROWSERS_PATH" in os.environ:
-            yield
-            return
-
-        browser_cache_dir = self._resolve_playwright_browser_cache()
-        if browser_cache_dir is None:
-            yield
-            return
-
-        self._logger.info(
-            "Using product-shipped Playwright browser cache: %s",
-            browser_cache_dir,
-        )
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache_dir)
-        try:
-            yield
-        finally:
-            # Remove only the temporary override installed above so later code
-            # sees the same environment the caller started with.
-            os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
 
     def render_pdf(self) -> bytes:
         """Render the exported HTML report to PDF bytes.
@@ -222,70 +164,69 @@ class PlaywrightPDFRenderer:
         navigation_target = self._get_navigation_target()
 
         try:
-            with self._playwright_browser_cache_env():
-                with sync_playwright() as playwright:
-                    self._logger.info("Launching headless Chromium for browser PDF export.")
-                    browser = playwright.chromium.launch(headless=True)
+            with sync_playwright() as playwright:
+                self._logger.info("Launching headless Chromium for browser PDF export.")
+                browser = playwright.chromium.launch(headless=True)
 
+                try:
+                    # Fix the responsive layout width up front so Plotly and other browser-rendered
+                    # items lay themselves out deterministically before the PDF width is computed.
+                    context = self._new_browser_context(browser)
                     try:
-                        # Fix the responsive layout width up front so Plotly and other browser-rendered
-                        # items lay themselves out deterministically before the PDF width is computed.
-                        context = self._new_browser_context(browser)
-                        try:
-                            self._prepare_context(context)
-                            page = context.new_page()
+                        self._prepare_context(context)
+                        page = context.new_page()
 
-                            # Load the source page exactly as Chromium will render it for the PDF pass.
-                            self._logger.info(f"Loading browser PDF source: {navigation_target}")
-                            # Keep navigation under the caller-configured browser render budget.
-                            # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
-                            # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
-                            # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
-                            # disabling the timeout, which would invert a small positive ADR budget.
-                            navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
-                            page.goto(
-                                navigation_target,
-                                wait_until="load",
-                                timeout=navigation_timeout_ms,
-                            )
+                        # Load the source page exactly as Chromium will render it for the PDF pass.
+                        self._logger.info(f"Loading browser PDF source: {navigation_target}")
+                        # Keep navigation under the caller-configured browser render budget.
+                        # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
+                        # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
+                        # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
+                        # disabling the timeout, which would invert a small positive ADR budget.
+                        navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
+                        page.goto(
+                            navigation_target,
+                            wait_until="load",
+                            timeout=navigation_timeout_ms,
+                        )
 
-                            # Force screen media so the PDF matches the browser view instead of print CSS.
-                            page.emulate_media(media="screen")
-                            self._apply_pdf_capture_styles(page)
-                            self._wait_for_render_ready(page)
-                            pdf_width = self._compute_pdf_width(page)
-                            # Keep the fallback page size internally consistent. Playwright defaults
-                            # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
-                            # mixed Letter-width/A4-height page when no content width can be measured.
-                            pdf_page_width = (
-                                pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
-                            )
-                            pdf_options = {
-                                # Keep page height explicit so pagination remains under ADR's control
-                                # instead of depending entirely on Playwright's default page format.
-                                "width": pdf_page_width,
-                                "height": self._DEFAULT_PAGE_HEIGHT,
-                                "landscape": self._landscape,
-                                "margin": self._margins,
-                                "print_background": True,
-                            }
+                        # Force screen media so the PDF matches the browser view instead of print CSS.
+                        page.emulate_media(media="screen")
+                        self._apply_pdf_capture_styles(page)
+                        self._wait_for_render_ready(page)
+                        pdf_width = self._compute_pdf_width(page)
+                        # Keep the fallback page size internally consistent. Playwright defaults
+                        # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
+                        # mixed Letter-width/A4-height page when no content width can be measured.
+                        pdf_page_width = (
+                            pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
+                        )
+                        pdf_options = {
+                            # Keep page height explicit so pagination remains under ADR's control
+                            # instead of depending entirely on Playwright's default page format.
+                            "width": pdf_page_width,
+                            "height": self._DEFAULT_PAGE_HEIGHT,
+                            "landscape": self._landscape,
+                            "margin": self._margins,
+                            "print_background": True,
+                        }
 
-                            # Playwright describes page.pdf() as generating paged output, not a bitmap
-                            # snapshot of the already-painted viewport. MDN's paged-media model also
-                            # distinguishes the continuous-media viewport from the paged page area.
-                            # Passing the measured width here therefore gives the PDF generation pass a
-                            # wider page area even though the live browser pass already ran. Elements
-                            # such as #report_root that remain auto-width can then lay out against that
-                            # wider paged space without us assigning them an explicit width in the DOM.
-                            pdf_bytes = page.pdf(**pdf_options)
-                            self._logger.info(
-                                f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
-                            )
-                            return pdf_bytes
-                        finally:
-                            context.close()
+                        # Playwright describes page.pdf() as generating paged output, not a bitmap
+                        # snapshot of the already-painted viewport. MDN's paged-media model also
+                        # distinguishes the continuous-media viewport from the paged page area.
+                        # Passing the measured width here therefore gives the PDF generation pass a
+                        # wider page area even though the live browser pass already ran. Elements
+                        # such as #report_root that remain auto-width can then lay out against that
+                        # wider paged space without us assigning them an explicit width in the DOM.
+                        pdf_bytes = page.pdf(**pdf_options)
+                        self._logger.info(
+                            f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
+                        )
+                        return pdf_bytes
                     finally:
-                        browser.close()
+                        context.close()
+                finally:
+                    browser.close()
         except ADRException:
             raise
         except Exception as exc:
@@ -1010,8 +951,6 @@ class _PlaywrightReportURLPDFRenderer(PlaywrightPDFRenderer):
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = PlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
-        ansys_installation: Path | str | None = None,
-        ansys_version: int | str | None = None,
         logger: Any = None,
     ) -> None:
         self._url = self._validate_url(url)
@@ -1021,8 +960,6 @@ class _PlaywrightReportURLPDFRenderer(PlaywrightPDFRenderer):
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,
-            ansys_installation=ansys_installation,
-            ansys_version=ansys_version,
             logger=logger,
         )
 

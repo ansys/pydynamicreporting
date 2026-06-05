@@ -25,7 +25,6 @@
 from os import path
 from pathlib import Path
 from random import randint
-from types import SimpleNamespace
 import warnings
 
 import pytest
@@ -99,44 +98,6 @@ def test_unit_nexus_connect() -> None:
     except NotValidServer:
         success = True
     assert success
-
-
-def test_connect_passes_install_root_to_server(monkeypatch) -> None:
-    captured: dict[str, object | None] = {}
-
-    class FakeServer:
-        def __init__(
-            self,
-            url=None,
-            username=None,
-            password=None,
-            ansys_version=None,
-            ansys_installation=None,
-        ):
-            captured["url"] = url
-            captured["username"] = username
-            captured["password"] = password
-            captured["ansys_version"] = ansys_version
-            captured["ansys_installation"] = ansys_installation
-            self._default_session = SimpleNamespace(guid="session-guid")
-
-        def validate(self):
-            return True
-
-        def get_default_session(self):
-            return self._default_session
-
-    monkeypatch.setattr(report_remote_server, "Server", FakeServer)
-    service = Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v271")
-    service._ansys_version = 271
-
-    service.connect(url="http://localhost:8000", username="nexus", password="cei")
-
-    assert captured["url"] == "http://localhost:8000"
-    assert captured["username"] == "nexus"
-    assert captured["password"] == "cei"
-    assert captured["ansys_version"] == 271
-    assert captured["ansys_installation"] == service._ansys_installation
 
 
 @pytest.mark.ado_test

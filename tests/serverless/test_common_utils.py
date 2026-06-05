@@ -30,11 +30,7 @@ from ansys.dynamicreporting.core.compatibility import (
     DEFAULT_ANSYS_INSTALL_VERSION,
 )
 import ansys.dynamicreporting.core.common_utils as common_utils_module
-from ansys.dynamicreporting.core.common_utils import (
-    get_install_info,
-    get_install_version,
-    resolve_playwright_browsers_path,
-)
+from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
@@ -381,68 +377,6 @@ def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, c
     assert detected_version is None
     assert "Detected multiple ADR layout versions" in caplog.text
     assert str(sorted([261, 271])) in caplog.text
-
-
-@pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_prefers_resolved_adr_install(tmp_path, monkeypatch):
-    install_root = tmp_path / "v271"
-    adr_dir = install_root / "ADR"
-    browser_cache_dir = adr_dir / "apex271" / "machines" / "win64" / "playwright-browsers"
-    browser_cache_dir.mkdir(parents=True)
-    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
-    manage_py.parent.mkdir(parents=True)
-    manage_py.write_text("dummy content")
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
-
-    browser_path = resolve_playwright_browsers_path(ansys_installation=str(install_root))
-
-    assert browser_path == browser_cache_dir
-
-
-@pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_supports_direct_apex_layout(tmp_path, monkeypatch):
-    install_dir = tmp_path / "staged-install"
-    browser_cache_dir = install_dir / "machines" / "win64" / "playwright-browsers"
-    browser_cache_dir.mkdir(parents=True)
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
-
-    browser_path = resolve_playwright_browsers_path(
-        ansys_installation=str(install_dir),
-        ansys_version=271,
-    )
-
-    assert browser_path == browser_cache_dir
-
-
-@pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_uses_linux_machine_layout(tmp_path, monkeypatch):
-    install_root = tmp_path / "v271"
-    adr_dir = install_root / "ADR"
-    browser_cache_dir = adr_dir / "apex271" / "machines" / "linux_2.6_64" / "playwright-browsers"
-    browser_cache_dir.mkdir(parents=True)
-    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
-    manage_py.parent.mkdir(parents=True)
-    manage_py.write_text("dummy content")
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Linux")
-
-    browser_path = resolve_playwright_browsers_path(ansys_installation=str(install_root))
-
-    assert browser_path == browser_cache_dir
-
-
-@pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_returns_none_on_unsupported_platform(
-    tmp_path, monkeypatch
-):
-    install_root = tmp_path / "v271"
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Darwin")
-
-    browser_path = resolve_playwright_browsers_path(
-        ansys_installation=str(install_root),
-        ansys_version=271,
-    )
-
-    assert browser_path is None
 
 
 # Test the branch for a valid 'enve' candidate.

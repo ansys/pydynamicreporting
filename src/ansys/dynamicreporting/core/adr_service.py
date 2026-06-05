@@ -325,11 +325,7 @@ class Service:
             self.logger.warning("Already connected to a dynamic reporting service.\n")
             return
         self.serverobj = report_remote_server.Server(
-            url=url,
-            username=username,
-            password=password,
-            ansys_version=self._ansys_version,
-            ansys_installation=self._ansys_installation,
+            url=url, username=username, password=password, ansys_version=self._ansys_version
         )
         try:
             self.serverobj.validate()
@@ -492,15 +488,11 @@ class Service:
                 username=username,
                 password=password,
                 ansys_version=self._ansys_version,
-                ansys_installation=self._ansys_installation,
             )
 
         else:  # pragma: no cover
             # we're not using docker
-            self.serverobj = report_remote_server.Server(
-                ansys_version=self._ansys_version,
-                ansys_installation=self._ansys_installation,
-            )
+            self.serverobj = report_remote_server.Server()
             self.__checkport__()
             launched = False
             launch_kwargs = {
