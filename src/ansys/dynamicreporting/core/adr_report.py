@@ -792,8 +792,7 @@ class Report:
         query_params : dict, optional
             Dictionary for parameters to apply to the report template. On the
             remote-service path these values are forwarded as report-generation
-            query parameters, which is the server-side equivalent of passing a
-            serverless render ``context``. Default: None
+            query parameters. Default: None
         item_filter : str, optional
             String corresponding to query to run on the database items before rendering the report.
             Default: None
