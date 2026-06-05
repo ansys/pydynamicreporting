@@ -576,8 +576,12 @@ class PlaywrightPDFRenderer:
 
         def route_request(route: Any) -> None:
             request_url = route.request.url
-            scheme = urlsplit(request_url).scheme.lower()
-            if scheme in self._BLOCKED_REQUEST_SCHEMES:
+            parsed_url = urlsplit(request_url)
+            scheme = parsed_url.scheme.lower()
+            # urlsplit() only populates netloc when a URL carries an explicit authority.
+            # For an offline file:// export, any authority-bearing URL points away from the
+            # staged bundle and must be treated as an external fetch.
+            if scheme in self._BLOCKED_REQUEST_SCHEMES or bool(parsed_url.netloc):
                 route.abort()
                 return
             route.continue_()
@@ -1046,7 +1050,6 @@ class _PlaywrightReportURLPDFRenderer(PlaywrightPDFRenderer):
         """Seed the live report context with any authenticated ADR web-session cookies."""
         if self._auth_cookies:
             context.add_cookies(self._auth_cookies)
-        return None
 
     @staticmethod
     def _validate_url(url: str) -> str:

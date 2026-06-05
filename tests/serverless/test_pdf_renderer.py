@@ -867,6 +867,14 @@ def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
 
 
 @pytest.mark.unit
+def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
+    renderer = PlaywrightPDFRenderer(html_dir=None)
+
+    with pytest.raises(ADRException, match="HTML directory is not configured"):
+        renderer._resolve_entrypoint_path()
+
+
+@pytest.mark.unit
 def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
@@ -885,6 +893,8 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     [
         ("https://example.com/asset.js", True),
         ("http://example.com/image.png", True),
+        ("//example.com/asset.js", True),
+        ("file://example.com/asset.js", True),
         ("file:///tmp/report/index.html", False),
         ("data:image/gif;base64,AAAA", False),
         ("blob:null/1234", False),
