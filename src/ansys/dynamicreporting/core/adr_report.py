@@ -41,6 +41,7 @@ Examples
 """
 
 import json
+import logging
 import os
 import sys
 from typing import Optional
@@ -49,6 +50,8 @@ import webbrowser
 
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
 from ansys.dynamicreporting.core.utils import report_objects
+
+LOGGER = logging.getLogger(__name__)
 
 try:
     from IPython.display import IFrame
@@ -242,7 +245,8 @@ class Report:
         """
         guid = ""
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
+            # Detached Report objects cannot forward errors through a Service logger yet.
+            LOGGER.error("No connection to any report")
             return guid
         if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
@@ -671,11 +675,12 @@ class Report:
         """
         success = False  # pragma: no cover
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            # Detached Report objects cannot forward errors through a Service logger yet.
+            LOGGER.error("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:  # pragma: no cover
             if query_params is None:
                 query_params = {}
@@ -739,11 +744,12 @@ class Report:
         """
         success = False
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            # Detached Report objects cannot forward errors through a Service logger yet.
+            LOGGER.error("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:
             if query_params is None:
                 query_params = {}
@@ -808,7 +814,7 @@ class Report:
         success = False
         if self.service is None:  # pragma: no cover
             # Match the method's bool contract even on disconnected Report objects.
-            print("No connection to any report")
+            LOGGER.error("No connection to any report")
             return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")

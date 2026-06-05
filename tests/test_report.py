@@ -177,6 +177,20 @@ def _make_report_for_browser_pdf_tests(export_impl) -> Report:
     )
 
 
+def _make_report_for_export_guard_tests(*, serverobj) -> Report:
+    """Build a minimal Report instance for disconnected or partially connected export paths."""
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-export-guards"),
+        _ansys_version=252,
+    )
+    return Report(
+        service=service,
+        report_name="My Top Report",
+        report_obj=SimpleNamespace(guid="report-guid"),
+    )
+
+
 @pytest.mark.ado_test
 def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
     exec_basis = get_exec
@@ -263,20 +277,55 @@ def test_export_browser_pdf_returns_false_without_service(tmp_path) -> None:
 
 
 def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
-    service = SimpleNamespace(
-        serverobj=None,
-        logger=logging.getLogger("test-report-browser-pdf"),
-        _ansys_version=252,
-    )
-    my_report = Report(
-        service=service,
-        report_name="My Top Report",
-        report_obj=SimpleNamespace(guid="report-guid"),
-    )
+    my_report = _make_report_for_export_guard_tests(serverobj=None)
 
     success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
 
     assert success is False
+
+
+def test_export_pdf_returns_false_without_service(tmp_path) -> None:
+    my_report = Report(
+        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_pdf(file_name=str(tmp_path / "server-report.pdf"))
+
+    assert success is False
+
+
+def test_export_pdf_returns_false_without_serverobj(tmp_path) -> None:
+    my_report = _make_report_for_export_guard_tests(serverobj=None)
+
+    success = my_report.export_pdf(file_name=str(tmp_path / "server-report.pdf"))
+
+    assert success is False
+
+
+def test_export_html_returns_false_without_service(tmp_path) -> None:
+    my_report = Report(
+        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_html(directory_name=str(tmp_path / "html-export"))
+
+    assert success is False
+
+
+def test_export_html_returns_false_without_serverobj(tmp_path) -> None:
+    my_report = _make_report_for_export_guard_tests(serverobj=None)
+
+    success = my_report.export_html(directory_name=str(tmp_path / "html-export"))
+
+    assert success is False
+
+
+def test_get_guid_returns_empty_string_without_service() -> None:
+    my_report = Report(
+        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    assert my_report.get_guid() == ""
 
 
 @pytest.mark.ado_test
