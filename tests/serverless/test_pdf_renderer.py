@@ -78,7 +78,7 @@ def _stub_playwright_render(
     renderer: PlaywrightPDFRenderer,
     *,
     pdf_width: str | None = None,
-) -> Mock:
+) -> tuple[Mock, Mock, Mock]:
     """Mock Chromium rendering so tests can inspect Playwright calls without launching a browser."""
     page = Mock()
     page.pdf.return_value = b"%PDF-mock"
@@ -92,30 +92,6 @@ def _stub_playwright_render(
     playwright_manager.__enter__.return_value = playwright
 
     # Patch the implementation module directly so render_pdf() uses the mocked Playwright entrypoint.
-    monkeypatch.setattr(shared_pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
-    return page
-
-
-def _stub_playwright_render_session(
-    monkeypatch: pytest.MonkeyPatch,
-    renderer: PlaywrightPDFRenderer,
-    *,
-    pdf_width: str | None = None,
-) -> tuple[Mock, Mock, Mock]:
-    """Mock Chromium rendering and return the page, context, and browser handles."""
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
-
     monkeypatch.setattr(shared_pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
@@ -152,7 +128,7 @@ def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_pa
 def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     page.goto.assert_called_once_with(
@@ -166,7 +142,7 @@ def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch
 def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -194,7 +170,7 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
         ],
         render_timeout=12.5,
     )
-    page, context, browser = _stub_playwright_render_session(monkeypatch, renderer)
+    page, context, browser = _stub_playwright_render(monkeypatch, renderer)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     page.goto.assert_called_once_with(
@@ -239,7 +215,7 @@ def test_live_report_url_renderer_validates_absolute_urls():
 @pytest.mark.unit
 def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -252,7 +228,7 @@ def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path
 @pytest.mark.unit
 def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Measured width</p></body></html>")
-    page = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
 
     renderer.render_pdf()
 
