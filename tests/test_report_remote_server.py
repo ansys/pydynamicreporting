@@ -611,7 +611,9 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
             "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
         ),
     )
-    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: requests.Session())
+    monkeypatch.setattr(
+        report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
+    )
     monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
 
     output_directory = tmp_path / "browser-report.pdf"
