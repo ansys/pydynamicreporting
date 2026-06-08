@@ -24,6 +24,7 @@ import collections
 import configparser
 import functools
 import hashlib
+from http.cookiejar import Cookie
 import inspect
 import json
 import logging
@@ -57,6 +58,7 @@ from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
+from ..exceptions import ADRException
 from .encoders import BaseEncoder
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
@@ -891,6 +893,110 @@ class Server:
             url += query_str
         return url
 
+    def _download_report_as_html_bundle(
+        self,
+        report_guid,
+        directory_name,
+        query=None,
+        item_filter=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
+    ):
+        """Download a standalone HTML bundle for a report-generation request.
+
+        This private helper centralizes the remote HTML-download flow used by
+        standalone HTML export. Callers are responsible for preparing the final
+        query dictionary, including the desired ``print`` target, before
+        delegating here.
+        """
+        directory_path = os.path.abspath(directory_name)
+        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
+
+        url = self.build_url_with_query(report_guid, query or {}, item_filter)
+        # Ask the server for the Ansys version number when possible so the downloader rewrites
+        # static asset paths against the same product namespace the report was generated with.
+        resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
+        if ansys_version:
+            resolved_ansys_version = ansys_version
+
+        worker = ReportDownloadHTML(
+            url=url,
+            directory=directory_path,
+            filename=filename,
+            no_inline_files=no_inline_files,
+            ansys_version=resolved_ansys_version,
+        )
+        worker.download()
+
+    def _get_browser_auth_cookies(self) -> list[dict[str, object]]:
+        """Return Playwright cookie objects for authenticated browser-report access.
+
+        ADR's report-display pages are browser-facing Django views, not REST API
+        endpoints. The remote client already knows how to log its shared
+        ``requests.Session`` into that web experience for downloads; this helper
+        converts the resulting session cookies into Playwright's cookie format so
+        the live browser-PDF path reuses the same authenticated web session.
+        """
+        # Anonymous server objects have no login state to mirror into Chromium, so the
+        # remote renderer should open the report without seeded browser cookies.
+        if self.get_auth() is None:
+            return []
+
+        session = report_utils.authenticate_web_session(self)
+        if session is None:
+            raise ADRException(
+                "Unable to authenticate the browser PDF web session for report export."
+            )
+
+        base_url = self.get_URL()
+        cookies: list[dict[str, object]] = []
+        for cookie in session.cookies:
+            cookies.append(self._build_playwright_cookie(cookie, base_url=base_url))
+        return cookies
+
+    @staticmethod
+    def _build_playwright_cookie(
+        cookie: Cookie, *, base_url: str | None = None
+    ) -> dict[str, object]:
+        """Convert one requests cookie into Playwright's cookie dictionary shape."""
+        playwright_cookie: dict[str, object] = {
+            "name": cookie.name,
+            "value": cookie.value,
+            "secure": bool(cookie.secure),
+        }
+
+        # Playwright requires either ``url`` or both ``domain`` and ``path``.
+        # Preserve the server-issued domain/path pair when available so the
+        # browser context sees the same scoping rules as requests.
+        if cookie.domain:
+            playwright_cookie["domain"] = cookie.domain
+            playwright_cookie["path"] = cookie.path or "/"
+        elif base_url:
+            playwright_cookie["url"] = base_url
+        else:
+            raise ADRException(
+                f"Browser PDF authentication cookie is missing a domain and base URL: {cookie.name!r}"
+            )
+
+        if cookie.expires is not None:
+            playwright_cookie["expires"] = float(cookie.expires)
+
+        # http.cookiejar exposes non-standard cookie attributes through public accessors.
+        # Use those instead of reaching into the Cookie object's private storage.
+        if cookie.has_nonstandard_attr("HttpOnly") or cookie.has_nonstandard_attr("httponly"):
+            playwright_cookie["httpOnly"] = True
+
+        same_site = None
+        for attr_name in ("SameSite", "samesite"):
+            if cookie.has_nonstandard_attr(attr_name):
+                same_site = cookie.get_nonstandard_attr(attr_name)
+                break
+        if same_site in {"Strict", "Lax", "None"}:
+            playwright_cookie["sameSite"] = same_site
+
+        return playwright_cookie
+
     def export_report_as_html(
         self,
         report_guid,
@@ -904,23 +1010,92 @@ class Server:
         if query is None:
             query = {}
         query["print"] = "html"
-        directory_path = os.path.abspath(directory_name)
-        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
-
-        url = self.build_url_with_query(report_guid, query, item_filter)
-        # ask the server for the Ansys version number. It will generally know it.
-        _ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
-        if ansys_version:
-            _ansys_version = ansys_version
-
-        worker = ReportDownloadHTML(
-            url=url,
-            directory=directory_path,
+        self._download_report_as_html_bundle(
+            report_guid=report_guid,
+            directory_name=directory_name,
+            query=query,
+            item_filter=item_filter,
             filename=filename,
             no_inline_files=no_inline_files,
-            ansys_version=_ansys_version,
+            ansys_version=ansys_version,
         )
-        worker.download()
+
+    def export_report_as_browser_pdf(
+        self,
+        report_guid,
+        file_name,
+        query=None,
+        item_filter=None,
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+    ):
+        """
+        Export a report as a browser-fidelity PDF.
+
+        This method uses a headless browser to open the live ADR report page and
+        print it to PDF.  That keeps the browser-PDF path simple on the remote
+        server side: unlike the serverless path, there is already a running web
+        server, so Chromium can render the report directly instead of staging an
+        offline HTML export first.
+
+        Parameters
+        ----------
+        report_guid : str
+            The GUID of the report to export.
+        file_name : str
+            The name of the output PDF file.
+        query : dict, optional
+            A dictionary of query parameters to include in the report generation request.
+            These play the same role on the remote-service side that ``context`` does
+            for serverless rendering. This method merges them with ``print='pdf'`` for
+            the live browser-render request without mutating the caller's dictionary.
+        item_filter : str, optional
+            ADR filter string to include in the report generation request.
+        landscape : bool, optional
+            Whether to render the PDF in landscape orientation. Default is False (portrait).
+        margins : dict, optional
+            A dictionary specifying PDF margin lengths accepted by Playwright.
+            Keys can include ``top``, ``right``, ``bottom``, and ``left``.
+        render_timeout : float, optional
+            The maximum time in seconds to wait for the report to render in the headless browser before
+            timing out. Default is 30 seconds.
+        """
+        if not file_name:
+            raise ADRException("A non-empty file_name must be provided for browser PDF export.")
+
+        # Copy the caller's query dictionary so the browser-specific ``print='pdf'`` flag does
+        # not leak back into the caller's reusable request configuration.
+        browser_query = dict(query or {})
+        browser_query["print"] = "pdf"
+        output_path = Path(os.path.abspath(file_name))
+
+        try:
+            # Import lazily so regular server workflows do not pay the Playwright import cost
+            # unless they actually request browser-fidelity PDF output.
+            from .pdf_renderer import _PlaywrightReportURLPDFRenderer
+
+            report_url = self.build_url_with_query(report_guid, browser_query, item_filter)
+            browser_auth_cookies = self._get_browser_auth_cookies()
+
+            renderer = _PlaywrightReportURLPDFRenderer(
+                url=report_url,
+                auth_cookies=browser_auth_cookies,
+                landscape=landscape,
+                margins=margins,
+                render_timeout=render_timeout,
+                logger=logger,
+            )
+            pdf_bytes = renderer.render_pdf()
+            # Keep filesystem failures under the same ADRException contract as the render flow
+            # so callers do not have to distinguish between browser and write-path failures.
+            output_path.write_bytes(pdf_bytes)
+
+        except ADRException:
+            raise
+        except Exception as exc:
+            raise ADRException(f"Browser PDF export failed: {exc}") from exc
 
     def export_report_as_pdf(
         self,

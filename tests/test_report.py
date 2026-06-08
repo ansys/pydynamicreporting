@@ -21,7 +21,9 @@
 # SOFTWARE.
 
 import json
+import logging
 import os
+from types import SimpleNamespace
 import warnings
 
 import pytest
@@ -161,6 +163,34 @@ def test_unit_no_url(request) -> None:
     assert err_msg
 
 
+def _make_report_for_browser_pdf_tests(export_impl) -> Report:
+    """Build a minimal Report instance that exercises only browser-PDF forwarding logic."""
+    service = SimpleNamespace(
+        serverobj=SimpleNamespace(export_report_as_browser_pdf=export_impl),
+        logger=logging.getLogger("test-report-browser-pdf"),
+        _ansys_version=252,
+    )
+    return Report(
+        service=service,
+        report_name="My Top Report",
+        report_obj=SimpleNamespace(guid="report-guid"),
+    )
+
+
+def _make_report_for_export_guard_tests(*, serverobj) -> Report:
+    """Build a minimal Report instance for disconnected or partially connected export paths."""
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-export-guards"),
+        _ansys_version=252,
+    )
+    return Report(
+        service=service,
+        report_name="My Top Report",
+        report_obj=SimpleNamespace(guid="report-guid"),
+    )
+
+
 @pytest.mark.ado_test
 def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
     exec_basis = get_exec
@@ -193,6 +223,64 @@ def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
     else:  # If no local installation, then skip this test
         success = True
     assert success is True
+
+
+def test_export_browser_pdf_forwards_options(tmp_path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_export_report_as_browser_pdf(**kwargs):
+        captured.update(kwargs)
+
+    my_report = _make_report_for_browser_pdf_tests(fake_export_report_as_browser_pdf)
+
+    output_file = tmp_path / "browser-report.pdf"
+    margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
+    success = my_report.export_browser_pdf(
+        file_name=str(output_file),
+        query_params={"colormode": "dark"},
+        item_filter="A|i_tags|cont|dp=dp227;",
+        landscape=True,
+        margins=margins,
+        render_timeout=12.5,
+    )
+
+    assert success is True
+    assert captured["report_guid"] == "report-guid"
+    assert captured["file_name"] == str(output_file)
+    assert captured["query"] == {"colormode": "dark"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["landscape"] is True
+    assert captured["margins"] == margins
+    assert captured["render_timeout"] == 12.5
+
+
+def test_export_browser_pdf_returns_false_on_failure(tmp_path) -> None:
+    def fake_export_report_as_browser_pdf(**kwargs):
+        raise RuntimeError("Simulated browser export failure")
+
+    my_report = _make_report_for_browser_pdf_tests(fake_export_report_as_browser_pdf)
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
+def test_export_browser_pdf_returns_false_without_service(tmp_path) -> None:
+    my_report = Report(
+        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
+def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
+    my_report = _make_report_for_export_guard_tests(serverobj=None)
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
 
 
 @pytest.mark.ado_test

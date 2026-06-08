@@ -32,6 +32,7 @@ import requests
 
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
+from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
@@ -284,6 +285,315 @@ def test_export_html(adr_service_query) -> None:
     s = adr_service_query.serverobj
     s.export_report_as_html(report_guid=my_report.report.guid, directory_name="htmltest")
     assert success is True
+
+
+def test_export_html_sets_html_print_query(monkeypatch) -> None:
+    server = r.Server()
+    captured: dict[str, object] = {}
+
+    def fake_download_report_as_html_bundle(
+        report_guid,
+        directory_name,
+        query=None,
+        item_filter=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
+    ):
+        captured["report_guid"] = report_guid
+        captured["directory_name"] = directory_name
+        captured["query"] = query
+        captured["item_filter"] = item_filter
+        captured["filename"] = filename
+        captured["no_inline_files"] = no_inline_files
+        captured["ansys_version"] = ansys_version
+
+    monkeypatch.setattr(
+        server,
+        "_download_report_as_html_bundle",
+        fake_download_report_as_html_bundle,
+    )
+
+    query = {"colormode": "dark"}
+    server.export_report_as_html(
+        report_guid="report-guid",
+        directory_name="html-output",
+        query=query,
+        item_filter="A|i_tags|cont|dp=dp227;",
+        filename="report.html",
+        no_inline_files=True,
+        ansys_version=252,
+    )
+
+    assert captured["report_guid"] == "report-guid"
+    assert captured["directory_name"] == "html-output"
+    assert captured["query"] == {"colormode": "dark", "print": "html"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["filename"] == "report.html"
+    assert captured["no_inline_files"] is True
+    assert captured["ansys_version"] == 252
+    assert query == {"colormode": "dark", "print": "html"}
+
+
+def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+    captured: dict[str, object] = {}
+
+    def fake_build_url_with_query(report_guid, query, item_filter=None, rest_api=False):
+        captured["report_guid"] = report_guid
+        captured["query"] = query
+        captured["item_filter"] = item_filter
+        captured["rest_api"] = rest_api
+        return "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+
+    def fail_if_html_downloaded(**kwargs):
+        raise AssertionError("Remote browser-PDF export should not stage an offline HTML bundle.")
+
+    fake_session = requests.Session()
+    fake_session.cookies.set_cookie(
+        requests.cookies.create_cookie(
+            name="csrftoken",
+            value="csrf-token",
+            domain="127.0.0.1",
+            path="/",
+            expires=1234567890,
+            rest={"SameSite": "Lax"},
+        )
+    )
+    fake_session.cookies.set_cookie(
+        requests.cookies.create_cookie(
+            name="sessionid",
+            value="session-token",
+            domain="127.0.0.1",
+            path="/",
+            rest={"HttpOnly": None, "SameSite": "Lax"},
+        )
+    )
+
+    class FakeRenderer:
+        def __init__(
+            self,
+            url,
+            *,
+            auth_cookies=None,
+            landscape=False,
+            margins=None,
+            render_timeout=30.0,
+            logger=None,
+        ):
+            captured["renderer_url"] = url
+            captured["renderer_auth_cookies"] = auth_cookies
+            captured["renderer_landscape"] = landscape
+            captured["renderer_margins"] = margins
+            captured["renderer_render_timeout"] = render_timeout
+            captured["renderer_logger"] = logger
+
+        def render_pdf(
+            self,
+        ):
+            return b"%PDF-browser"
+
+    monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
+    monkeypatch.setattr(server, "_download_report_as_html_bundle", fail_if_html_downloaded)
+    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: fake_session)
+    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+
+    output_file = tmp_path / "browser-report.pdf"
+    query = {"colormode": "dark"}
+    margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
+    server.export_report_as_browser_pdf(
+        report_guid="report-guid",
+        file_name=str(output_file),
+        query=query,
+        item_filter="A|i_tags|cont|dp=dp227;",
+        landscape=True,
+        margins=margins,
+        render_timeout=12.5,
+    )
+
+    assert output_file.read_bytes() == b"%PDF-browser"
+    assert captured["renderer_url"] == (
+        "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+    )
+    assert captured["renderer_auth_cookies"] == [
+        {
+            "name": "csrftoken",
+            "value": "csrf-token",
+            "domain": "127.0.0.1",
+            "path": "/",
+            "secure": False,
+            "expires": 1234567890.0,
+            "sameSite": "Lax",
+        },
+        {
+            "name": "sessionid",
+            "value": "session-token",
+            "domain": "127.0.0.1",
+            "path": "/",
+            "secure": False,
+            "httpOnly": True,
+            "sameSite": "Lax",
+        },
+    ]
+    assert captured["renderer_landscape"] is True
+    assert captured["renderer_margins"] == margins
+    assert captured["renderer_render_timeout"] == 12.5
+    assert captured["report_guid"] == "report-guid"
+    assert captured["query"] == {"colormode": "dark", "print": "pdf"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["rest_api"] is False
+    assert query == {"colormode": "dark"}
+
+
+def test_export_browser_pdf_requires_file_name() -> None:
+    server = r.Server()
+
+    with pytest.raises(ADRException, match="non-empty file_name"):
+        server.export_report_as_browser_pdf(report_guid="report-guid", file_name="")
+
+
+def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    def fake_build_url_with_query(report_guid, query, item_filter=None, rest_api=False):
+        return "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+
+    class FakeRenderer:
+        def __init__(
+            self,
+            url,
+            *,
+            auth_cookies=None,
+            landscape=False,
+            margins=None,
+            render_timeout=30.0,
+            logger=None,
+        ):
+            return None
+
+        def render_pdf(self):
+            raise RuntimeError("Simulated renderer failure")
+
+    monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
+    monkeypatch.setattr(
+        report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
+    )
+    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+
+    with pytest.raises(ADRException, match="Browser PDF export failed"):
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(tmp_path / "browser-report.pdf"),
+        )
+
+
+def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="",
+        path="/",
+        secure=False,
+    )
+
+    assert r.Server._build_playwright_cookie(cookie, base_url="http://127.0.0.1:8000") == {
+        "name": "sessionid",
+        "value": "session-token",
+        "url": "http://127.0.0.1:8000",
+        "secure": False,
+        "httpOnly": True,
+    }
+
+
+def test_build_playwright_cookie_requires_domain_or_base_url() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="",
+        path="/",
+        secure=False,
+    )
+
+    with pytest.raises(ADRException, match="missing a domain and base URL"):
+        r.Server._build_playwright_cookie(cookie)
+
+
+def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+
+    monkeypatch.setattr(
+        report_utils,
+        "authenticate_web_session",
+        lambda server_obj: (_ for _ in ()).throw(AssertionError("auth helper should not run")),
+    )
+
+    assert server._get_browser_auth_cookies() == []
+
+
+def test_get_browser_auth_cookies_requires_authenticated_session(monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: None)
+
+    with pytest.raises(ADRException, match="Unable to authenticate the browser PDF web session"):
+        server._get_browser_auth_cookies()
+
+
+def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+    from ansys.dynamicreporting.core.utils import report_utils
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    class FakeRenderer:
+        def __init__(self, url, **kwargs):
+            self.url = url
+
+        def render_pdf(self):
+            return b"%PDF-browser"
+
+    monkeypatch.setattr(
+        server,
+        "build_url_with_query",
+        lambda report_guid, query, item_filter=None, rest_api=False: (
+            "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+        ),
+    )
+    monkeypatch.setattr(
+        report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
+    )
+    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+
+    output_directory = tmp_path / "browser-report.pdf"
+    output_directory.mkdir()
+
+    with pytest.raises(ADRException, match="Browser PDF export failed"):
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(output_directory),
+        )
 
 
 @pytest.mark.ado_test

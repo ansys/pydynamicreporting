@@ -26,9 +26,10 @@ from unittest.mock import Mock
 
 import pytest
 
+import ansys.dynamicreporting.core.utils.pdf_renderer as shared_pdf_renderer_module
 from ansys.dynamicreporting.core.exceptions import ADRException
-from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
+from ansys.dynamicreporting.core.utils.pdf_renderer import _PlaywrightReportURLPDFRenderer
+from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer
 
 
 def _write_html(tmp_path: Path, body: str) -> Path:
@@ -77,7 +78,7 @@ def _stub_playwright_render(
     renderer: PlaywrightPDFRenderer,
     *,
     pdf_width: str | None = None,
-) -> Mock:
+) -> tuple[Mock, Mock, Mock]:
     """Mock Chromium rendering so tests can inspect Playwright calls without launching a browser."""
     page = Mock()
     page.pdf.return_value = b"%PDF-mock"
@@ -90,10 +91,11 @@ def _stub_playwright_render(
     playwright_manager = MagicMock()
     playwright_manager.__enter__.return_value = playwright
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    # Patch the implementation module directly so render_pdf() uses the mocked Playwright entrypoint.
+    monkeypatch.setattr(shared_pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
-    return page
+    return page, context, browser
 
 
 @pytest.mark.unit
@@ -126,7 +128,7 @@ def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_pa
 def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     page.goto.assert_called_once_with(
@@ -140,7 +142,7 @@ def test_playwright_pdf_uses_render_timeout_for_navigation(tmp_path, monkeypatch
 def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -153,9 +155,67 @@ def test_playwright_pdf_clamps_tiny_navigation_timeout_to_one_second(tmp_path, m
 
 
 @pytest.mark.unit
+def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
+    renderer = _PlaywrightReportURLPDFRenderer(
+        url="http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
+        auth_cookies=[
+            {
+                "name": "sessionid",
+                "value": "abc123",
+                "domain": "127.0.0.1",
+                "path": "/",
+                "httpOnly": True,
+                "sameSite": "Lax",
+            }
+        ],
+        render_timeout=12.5,
+    )
+    page, context, browser = _stub_playwright_render(monkeypatch, renderer)
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+    page.goto.assert_called_once_with(
+        "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
+        wait_until="load",
+        timeout=12500,
+    )
+    # The live report path must stay online so Chromium can fetch the report and assets directly
+    # from the already-running ADR service instead of expecting a staged offline bundle.
+    browser.new_context.assert_called_once_with(
+        viewport={
+            "width": PlaywrightPDFRenderer._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+            "height": PlaywrightPDFRenderer._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
+        },
+        service_workers="block",
+        accept_downloads=False,
+    )
+    context.add_cookies.assert_called_once_with(
+        [
+            {
+                "name": "sessionid",
+                "value": "abc123",
+                "domain": "127.0.0.1",
+                "path": "/",
+                "httpOnly": True,
+                "sameSite": "Lax",
+            }
+        ]
+    )
+    # The live path stays online and therefore must not install the offline-only network blocks
+    # used by file:// exports.
+    context.route.assert_not_called()
+    context.route_web_socket.assert_not_called()
+
+
+@pytest.mark.unit
+def test_live_report_url_renderer_validates_absolute_urls():
+    with pytest.raises(ADRException, match="report URL is not valid"):
+        _PlaywrightReportURLPDFRenderer(url="/reports/report_display/?view=report-guid")
+
+
+@pytest.mark.unit
 def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
-    page = _stub_playwright_render(monkeypatch, renderer)
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
@@ -168,7 +228,7 @@ def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path
 @pytest.mark.unit
 def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Measured width</p></body></html>")
-    page = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
 
     renderer.render_pdf()
 
@@ -664,6 +724,14 @@ def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
 
 
 @pytest.mark.unit
+def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
+    renderer = PlaywrightPDFRenderer(html_dir=None)
+
+    with pytest.raises(ADRException, match="HTML directory is not configured"):
+        renderer._resolve_entrypoint_path()
+
+
+@pytest.mark.unit
 def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
@@ -682,6 +750,8 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     [
         ("https://example.com/asset.js", True),
         ("http://example.com/image.png", True),
+        ("//example.com/asset.js", True),
+        ("file://example.com/asset.js", True),
         ("file:///tmp/report/index.html", False),
         ("data:image/gif;base64,AAAA", False),
         ("blob:null/1234", False),
