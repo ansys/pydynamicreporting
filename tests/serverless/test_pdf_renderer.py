@@ -777,15 +777,24 @@ def test_playwright_pdf_uses_product_browser_cache_when_user_env_is_unset(tmp_pa
     playwright = Mock()
     playwright.chromium.launch.return_value = browser
     playwright_manager = MagicMock()
+    runtime_override_envs = {
+        env_var: f"{env_var.lower()}-value"
+        for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+    }
 
     def fake_enter():
         # Playwright resolves the browser registry when the driver starts, so the
         # environment must already be pointing at the shipped cache by this point.
         env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        env_seen["transient_override_envs"] = {
+            env_var: os.environ.get(env_var) for env_var in runtime_override_envs
+        }
         return playwright
 
     playwright_manager.__enter__.side_effect = fake_enter
     monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
+    for env_var, env_value in runtime_override_envs.items():
+        monkeypatch.setenv(env_var, env_value)
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browsers_path",
@@ -797,7 +806,10 @@ def test_playwright_pdf_uses_product_browser_cache_when_user_env_is_unset(tmp_pa
 
     assert renderer.render_pdf() == b"%PDF-mock"
     assert env_seen["playwright_browsers_path"] == str(browser_cache_dir)
+    assert all(value is None for value in env_seen["transient_override_envs"].values())
     assert "PLAYWRIGHT_BROWSERS_PATH" not in os.environ
+    for env_var, env_value in runtime_override_envs.items():
+        assert os.environ[env_var] == env_value
 
 
 @pytest.mark.unit
@@ -819,15 +831,26 @@ def test_playwright_pdf_preserves_user_browser_cache_env(tmp_path, monkeypatch):
     playwright = Mock()
     playwright.chromium.launch.return_value = browser
     playwright_manager = MagicMock()
+    runtime_override_envs = {
+        env_var: f"{env_var.lower()}-value"
+        for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+    }
 
     def fake_enter():
         # User configuration wins over any product fallback so shared tooling can
-        # keep using a custom browser cache location unchanged.
+        # keep using a custom browser cache location unchanged, while the client
+        # still strips unrelated process-wide Playwright overrides for the
+        # browser-PDF launch itself.
         env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        env_seen["transient_override_envs"] = {
+            env_var: os.environ.get(env_var) for env_var in runtime_override_envs
+        }
         return playwright
 
     playwright_manager.__enter__.side_effect = fake_enter
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_cache)
+    for env_var, env_value in runtime_override_envs.items():
+        monkeypatch.setenv(env_var, env_value)
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browsers_path",
@@ -839,4 +862,7 @@ def test_playwright_pdf_preserves_user_browser_cache_env(tmp_path, monkeypatch):
 
     assert renderer.render_pdf() == b"%PDF-mock"
     assert env_seen["playwright_browsers_path"] == user_browser_cache
+    assert all(value is None for value in env_seen["transient_override_envs"].values())
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_cache
+    for env_var, env_value in runtime_override_envs.items():
+        assert os.environ[env_var] == env_value

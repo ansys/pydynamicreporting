@@ -134,6 +134,20 @@ class PlaywrightPDFRenderer:
     # Network requests using these schemes are blocked to keep rendering offline.
     _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
     _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
+    # These process-level Playwright overrides are useful for installs and ad hoc
+    # debugging, but browser-PDF export should not inherit them implicitly from a
+    # developer shell or CI worker.  `PLAYWRIGHT_BROWSERS_PATH` is handled
+    # separately because it is the supported shared-cache override we intentionally
+    # preserve when the caller sets it explicitly.
+    _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
+        "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
+        "PLAYWRIGHT_DOWNLOAD_HOST",
+        "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+        "PLAYWRIGHT_FIREFOX_DOWNLOAD_HOST",
+        "PLAYWRIGHT_WEBKIT_DOWNLOAD_HOST",
+        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD",
+        "PLAYWRIGHT_SKIP_BROWSER_GC",
+    )
 
     def __init__(
         self,
@@ -176,29 +190,33 @@ class PlaywrightPDFRenderer:
 
         Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
         share browser binaries across environments.  Respect any caller-provided
-        value first, and only install a temporary process-local fallback when the
-        user has not already chosen a cache location.
+        value first, but still clear the other process-wide Playwright override
+        variables so browser-PDF export does not inherit installer/debug knobs
+        from an unrelated shell session.
         """
-        if "PLAYWRIGHT_BROWSERS_PATH" in os.environ:
-            yield
-            return
-
-        browser_cache_dir = self._resolve_playwright_browser_cache()
-        if browser_cache_dir is None:
-            yield
-            return
-
-        self._logger.info(
-            "Using product-shipped Playwright browser cache: %s",
-            browser_cache_dir,
-        )
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache_dir)
+        restored_override_envs = {
+            env_var: os.environ.pop(env_var)
+            for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+            if env_var in os.environ
+        }
+        installed_browser_cache_env = False
         try:
+            if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
+                browser_cache_dir = self._resolve_playwright_browser_cache()
+                if browser_cache_dir is not None:
+                    self._logger.info(
+                        "Using product-shipped Playwright browser cache: %s",
+                        browser_cache_dir,
+                    )
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache_dir)
+                    installed_browser_cache_env = True
             yield
         finally:
-            # Remove only the temporary override installed above so later code
-            # sees the same environment the caller started with.
-            os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+            if installed_browser_cache_env:
+                # Remove only the temporary cache override installed above so
+                # later code sees the same environment the caller started with.
+                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+            os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
         """Render the exported HTML report to PDF bytes.
