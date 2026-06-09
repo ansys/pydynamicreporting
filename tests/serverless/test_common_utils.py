@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 from pathlib import Path
 
 import pytest
@@ -38,6 +39,40 @@ from ansys.dynamicreporting.core.common_utils import (
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
+
+
+def _create_packaged_playwright_cache(
+    machine_root: Path,
+    *,
+    machine_arch: str,
+    revision: str = "1223",
+    packaged_cache_dir: str | None = None,
+    write_metadata: bool = True,
+    create_marker: bool = True,
+) -> Path:
+    """Create a minimal packaged Playwright cache that matches the ADR layout contract."""
+    browser_cache_dir = machine_root / "playwright-browsers"
+    packaged_dir_name = packaged_cache_dir or f"chromium_headless_shell-{revision}"
+    packaged_dir = browser_cache_dir / packaged_dir_name
+    packaged_dir.mkdir(parents=True)
+    if create_marker:
+        (packaged_dir / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
+
+    if write_metadata:
+        metadata = {
+            "browser_name": "chromium-headless-shell",
+            "browser_version": "141.0.7390.37",
+            "machine_arch": machine_arch,
+            "packaged_cache_dir": packaged_dir_name,
+            "playwright_version": "1.60.0",
+            "revision": revision,
+        }
+        (machine_root / "playwright-browser-package.json").write_text(
+            json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    return browser_cache_dir
 
 
 # ansys_installation provided, valid using the legacy "CEI" folder.
@@ -387,8 +422,10 @@ def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, c
 def test_resolve_playwright_browsers_path_prefers_resolved_adr_install(tmp_path, monkeypatch):
     install_root = tmp_path / "v271"
     adr_dir = install_root / "ADR"
-    browser_cache_dir = adr_dir / "apex271" / "machines" / "win64" / "playwright-browsers"
-    browser_cache_dir.mkdir(parents=True)
+    browser_cache_dir = _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+    )
     manage_py = adr_dir / "nexus271" / "django" / "manage.py"
     manage_py.parent.mkdir(parents=True)
     manage_py.write_text("dummy content")
@@ -402,8 +439,10 @@ def test_resolve_playwright_browsers_path_prefers_resolved_adr_install(tmp_path,
 @pytest.mark.ado_test
 def test_resolve_playwright_browsers_path_supports_direct_apex_layout(tmp_path, monkeypatch):
     install_dir = tmp_path / "staged-install"
-    browser_cache_dir = install_dir / "machines" / "win64" / "playwright-browsers"
-    browser_cache_dir.mkdir(parents=True)
+    browser_cache_dir = _create_packaged_playwright_cache(
+        install_dir / "machines" / "win64",
+        machine_arch="win64",
+    )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
 
     browser_path = resolve_playwright_browsers_path(
@@ -418,8 +457,10 @@ def test_resolve_playwright_browsers_path_supports_direct_apex_layout(tmp_path, 
 def test_resolve_playwright_browsers_path_uses_linux_machine_layout(tmp_path, monkeypatch):
     install_root = tmp_path / "v271"
     adr_dir = install_root / "ADR"
-    browser_cache_dir = adr_dir / "apex271" / "machines" / "linux_2.6_64" / "playwright-browsers"
-    browser_cache_dir.mkdir(parents=True)
+    browser_cache_dir = _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "linux_2.6_64",
+        machine_arch="linux_2.6_64",
+    )
     manage_py = adr_dir / "nexus271" / "django" / "manage.py"
     manage_py.parent.mkdir(parents=True)
     manage_py.write_text("dummy content")
@@ -441,6 +482,68 @@ def test_resolve_playwright_browsers_path_returns_none_on_unsupported_platform(
         ansys_installation=str(install_root),
         ansys_version=271,
     )
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_requires_metadata_file(tmp_path, monkeypatch):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+        write_metadata=False,
+    )
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(ansys_installation=str(install_root))
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_requires_matching_metadata_revision(
+    tmp_path, monkeypatch
+):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+        packaged_cache_dir="chromium_headless_shell-9999",
+        revision="1223",
+    )
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(ansys_installation=str(install_root))
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_requires_installation_complete_marker(
+    tmp_path, monkeypatch
+):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+        create_marker=False,
+    )
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(ansys_installation=str(install_root))
 
     assert browser_path is None
 

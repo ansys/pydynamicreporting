@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from dataclasses import dataclass
+import json
 import logging
 import os
 from pathlib import Path
@@ -35,6 +36,9 @@ from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
 logger = logging.getLogger(__name__)
+
+_PLAYWRIGHT_BROWSER_CACHE_PREFIX = "chromium_headless_shell"
+_PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright-browser-package.json"
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -254,6 +258,117 @@ def _playwright_machine_arch() -> str | None:
     return None
 
 
+def _cache_dir_matches_revision(cache_dir_name: str, revision: str) -> bool:
+    """Return whether a packaged cache directory name matches the metadata revision.
+
+    The ADR product helper keeps exactly one browser directory under
+    ``playwright-browsers`` and names it after the Playwright-managed cache root.
+    The normal form is ``chromium_headless_shell-<revision>``, while some
+    platform-specific payloads can include an additional ``_special`` suffix.
+    """
+    revision_pattern = re.compile(
+        rf"^{_PLAYWRIGHT_BROWSER_CACHE_PREFIX}(?:_.*_special)?-{re.escape(revision)}$"
+    )
+    return revision_pattern.match(cache_dir_name) is not None
+
+
+def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> bool:
+    """Validate the product-shipped Playwright cache layout before advertising it.
+
+    Browser-PDF export should only point Playwright at a product-managed cache
+    when the stripped package layout is complete and self-consistent.  This keeps
+    the runtime honest to the product packaging contract instead of silently
+    accepting stale or partially copied browser directories.
+    """
+    if not browser_dir.is_dir():
+        return False
+
+    metadata_path = browser_dir.parent / _PLAYWRIGHT_BROWSER_METADATA_NAME
+    if not metadata_path.is_file():
+        logger.warning(
+            "Ignoring product Playwright cache at %s because metadata file %s is missing.",
+            browser_dir,
+            metadata_path,
+        )
+        return False
+
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Ignoring product Playwright cache at %s because metadata file %s is unreadable: %s",
+            browser_dir,
+            metadata_path,
+            exc,
+        )
+        return False
+
+    if not isinstance(metadata, dict):
+        logger.warning(
+            "Ignoring product Playwright cache at %s because metadata file %s does not contain "
+            "a JSON object.",
+            browser_dir,
+            metadata_path,
+        )
+        return False
+
+    packaged_cache_dir = str(metadata.get("packaged_cache_dir", "")).strip()
+    revision = str(metadata.get("revision", "")).strip()
+    metadata_arch = str(metadata.get("machine_arch", "")).strip()
+    if not packaged_cache_dir or not revision or metadata_arch != machine_arch:
+        logger.warning(
+            "Ignoring product Playwright cache at %s because metadata file %s is incomplete or "
+            "targets machine arch %r instead of %r.",
+            browser_dir,
+            metadata_path,
+            metadata_arch,
+            machine_arch,
+        )
+        return False
+
+    packaged_dirs = sorted(path for path in browser_dir.iterdir() if path.is_dir())
+    if len(packaged_dirs) != 1:
+        logger.warning(
+            "Ignoring product Playwright cache at %s because it contains %d packaged browser "
+            "directories instead of exactly one.",
+            browser_dir,
+            len(packaged_dirs),
+        )
+        return False
+
+    packaged_dir = packaged_dirs[0]
+    if packaged_dir.name != packaged_cache_dir:
+        logger.warning(
+            "Ignoring product Playwright cache at %s because packaged directory %s does not "
+            "match metadata entry %s.",
+            browser_dir,
+            packaged_dir.name,
+            packaged_cache_dir,
+        )
+        return False
+
+    if not _cache_dir_matches_revision(packaged_dir.name, revision):
+        logger.warning(
+            "Ignoring product Playwright cache at %s because packaged directory %s does not "
+            "match metadata revision %s.",
+            browser_dir,
+            packaged_dir.name,
+            revision,
+        )
+        return False
+
+    marker_path = packaged_dir / "INSTALLATION_COMPLETE"
+    if not marker_path.is_file():
+        logger.warning(
+            "Ignoring product Playwright cache at %s because installation marker %s is missing.",
+            browser_dir,
+            marker_path,
+        )
+        return False
+
+    return True
+
+
 def resolve_playwright_browsers_path(
     ansys_installation: str | None = None, ansys_version: int | str | None = None
 ) -> Path | None:
@@ -357,7 +472,7 @@ def resolve_playwright_browsers_path(
         )
 
     for browser_dir in candidate_browser_dirs.values():
-        if browser_dir.is_dir():
+        if _validate_playwright_browsers_path(browser_dir, machine_arch):
             return browser_dir
     return None
 
