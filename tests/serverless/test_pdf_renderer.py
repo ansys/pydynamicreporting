@@ -913,6 +913,27 @@ def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, sho
 
 
 @pytest.mark.unit
+def test_block_file_urls_with_authority_component():
+    renderer = PlaywrightPDFRenderer(html_dir=Path("."))
+    context = Mock()
+    renderer._block_external_requests(context)
+    _, route_handler = context.route.call_args.args
+
+    for url in ("file://example.com/path", "file://example.com:8080/path"):
+        route = Mock()
+        route.request.url = url
+        route_handler(route)
+        route.abort.assert_called_once_with()
+        route.continue_.assert_not_called()
+
+    route = Mock()
+    route.request.url = "file:///path/to/local/file"
+    route_handler(route)
+    route.continue_.assert_called_once_with()
+    route.abort.assert_not_called()
+
+
+@pytest.mark.unit
 def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>WebSockets</body></html>")
