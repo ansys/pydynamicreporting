@@ -548,6 +548,101 @@ def test_resolve_playwright_browsers_path_requires_installation_complete_marker(
     assert browser_path is None
 
 
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_unreadable_metadata(tmp_path, monkeypatch):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    machine_root = adr_dir / "apex271" / "machines" / "win64"
+    _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
+    # Metadata is present but not valid JSON, so the cache cannot be trusted.
+    (machine_root / "playwright-browser-package.json").write_text(
+        "{ not valid json", encoding="utf-8"
+    )
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert resolve_playwright_browsers_path(ansys_installation=str(install_root)) is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_non_object_metadata(tmp_path, monkeypatch):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    machine_root = adr_dir / "apex271" / "machines" / "win64"
+    _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
+    # Valid JSON, but a list instead of the expected metadata object.
+    (machine_root / "playwright-browser-package.json").write_text("[]", encoding="utf-8")
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert resolve_playwright_browsers_path(ansys_installation=str(install_root)) is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_machine_arch_mismatch(tmp_path, monkeypatch):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    # Cache sits under win64 but its metadata advertises a different machine arch.
+    _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "win64",
+        machine_arch="linux_2.6_64",
+    )
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert resolve_playwright_browsers_path(ansys_installation=str(install_root)) is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_multiple_packaged_dirs(tmp_path, monkeypatch):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    browser_cache_dir = _create_packaged_playwright_cache(
+        adr_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+    )
+    # A second packaged directory breaks the "exactly one browser directory" contract.
+    (browser_cache_dir / "chromium_headless_shell-0001").mkdir()
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert resolve_playwright_browsers_path(ansys_installation=str(install_root)) is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_packaged_dir_name_mismatch(tmp_path, monkeypatch):
+    install_root = tmp_path / "v271"
+    adr_dir = install_root / "ADR"
+    machine_root = adr_dir / "apex271" / "machines" / "win64"
+    _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
+    # Metadata names a packaged directory that does not exist on disk.
+    metadata = {
+        "browser_name": "chromium-headless-shell",
+        "browser_version": "141.0.7390.37",
+        "machine_arch": "win64",
+        "packaged_cache_dir": "chromium_headless_shell-0000",
+        "playwright_version": "1.60.0",
+        "revision": "1223",
+    }
+    (machine_root / "playwright-browser-package.json").write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    manage_py = adr_dir / "nexus271" / "django" / "manage.py"
+    manage_py.parent.mkdir(parents=True)
+    manage_py.write_text("dummy content")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert resolve_playwright_browsers_path(ansys_installation=str(install_root)) is None
+
+
 # Test the branch for a valid 'enve' candidate.
 @pytest.mark.ado_test
 def test_get_install_info_with_enve(monkeypatch, tmp_path):
