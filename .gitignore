@@ -79,3 +79,5 @@ local_tests/
 *.TGZ
 local_docs/
 /.claude
+# Workspace files are user-specific
+*.code-workspace
