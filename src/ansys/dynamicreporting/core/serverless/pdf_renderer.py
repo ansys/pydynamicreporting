@@ -536,6 +536,10 @@ class PlaywrightPDFRenderer:
             request_url = route.request.url
             parsed_url = urlsplit(request_url)
             scheme = parsed_url.scheme.lower()
+            # Block both known-external schemes (http, https, ws, wss) and any URL with an
+            # authority component (netloc). The netloc check catches protocol-relative URLs
+            # like //example.com/file and file:// URLs with hostnames like file://example.com/file
+            # that the scheme check alone would miss.
             if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
                 route.abort()
                 return
