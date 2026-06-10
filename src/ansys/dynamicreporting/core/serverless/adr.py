@@ -1379,8 +1379,26 @@ class ADR:
         scratch_root.mkdir(parents=True, exist_ok=True)
         return scratch_root
 
-    def _render_report_as_browser_pdf_impl(
+    def _cleanup_browser_pdf_scratch_root(self, scratch_root: Path) -> None:
+        """Remove an empty fallback scratch parent after browser-PDF rendering.
+
+        The per-render ``TemporaryDirectory`` is still responsible for deleting its own child
+        directory. This helper only tries to remove the dedicated fallback parent that ADR
+        created under the system temp directory for external-database configurations.
+        """
+        if self._db_directory is not None:
+            return
+
+        try:
+            scratch_root.rmdir()
+        except OSError:
+            # Concurrent exports, stale child directories, or already-removed roots should not
+            # turn a successful browser-PDF render into a cleanup failure.
+            return
+
+    def _render_template_as_browser_pdf(
         self,
+        template: Template,
         *,
         context: dict | None = None,
         item_filter: str = "",
@@ -1388,9 +1406,14 @@ class ADR:
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = 30.0,
-        **kwargs: Any,
     ) -> bytes:
-        """Render a browser-fidelity PDF using the ADR database directory for staging."""
+        """Render one resolved template as a browser-fidelity PDF byte stream.
+
+        The public browser-PDF entry points resolve the template up front so they can
+        reuse the same object for both rendering and any export-time filename decisions.
+        Keeping the staging/export/render pipeline here avoids duplicating that logic
+        while still preventing a second ``Template.get(**kwargs)`` lookup.
+        """
         if self._static_directory is None:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured for browser PDF export."
@@ -1418,13 +1441,20 @@ class ADR:
                 )
 
                 pdf_context = {"print": "pdf"}
-                # Reuse the existing browser HTML render path, then export it into a self-contained
-                # directory so Chromium can load every asset from disk without a running web server.
-                html_content = self.render_report(
-                    context={**(context or {}), **pdf_context},
-                    item_filter=item_filter,
-                    **kwargs,
-                )
+                # Browser PDF stages the same print-mode HTML that export_report_as_html() uses,
+                # but it renders from a concrete Template instance so the caller can reuse that
+                # resolved object for default filenames and other metadata-derived decisions.
+                # Keep ``embed_scene_data`` at the existing ``Template.render()`` default so this
+                # path stays aligned with ``render_report()`` unless a future public browser-PDF
+                # API intentionally exposes scene-data inlining as a separate option.
+                try:
+                    html_content = template.render(
+                        context={**(context or {}), **pdf_context},
+                        item_filter=item_filter,
+                        request=self._request,
+                    )
+                except Exception as e:
+                    raise ADRException(f"Report rendering failed: {e}") from e
 
                 exporter = ServerlessReportExporter(
                     html_content=html_content,
@@ -1447,6 +1477,8 @@ class ADR:
             raise
         except Exception as e:
             raise ADRException(f"Browser PDF rendering failed: {e}") from e
+        finally:
+            self._cleanup_browser_pdf_scratch_root(scratch_root)
 
     def render_report_as_browser_pdf(
         self,
@@ -1479,8 +1511,10 @@ class ADR:
             Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
             If omitted, 10 mm margins are used on every side.
         render_timeout : float, optional
-            Maximum time, in seconds, to wait for browser readiness signals.
-            Default ``30.0``.
+            Maximum time, in seconds, for the Chromium render phase after the offline HTML
+            bundle has been staged. This shared browser-side budget covers launch, navigation,
+            readiness waits, and related browser preparation, but not server-side report
+            rendering or offline asset export. Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1496,20 +1530,50 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Notes
+        -----
+        Browser-PDF readiness waits cover ADR-owned signals such as web-component
+        initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
+        layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
+        underlying template system, so custom asynchronous JavaScript inside those
+        fragments does not get a separate readiness hook here. Static HTML content is
+        supported, but arbitrary async HTML content can still be captured before it
+        finishes updating unless it settles through the built-in browser-PDF signals.
+
+        Examples
+        --------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+        ...     db_directory=r"C:\\DBs\\docex",
+        ...     media_directory=r"C:\\DBs\\docex\\media",
+        ...     static_directory=r"C:\\static",
+        ... )
+        >>> adr.setup(collect_static=True)
+        >>> pdf_bytes = adr.render_report_as_browser_pdf(
+        ...     name="Serverless Simulation Report",
+        ...     landscape=True,
+        ...     margins={"top": "12mm", "right": "12mm", "bottom": "12mm", "left": "12mm"},
+        ... )
+        >>> with open("browser-report.pdf", "wb") as f:
+        ...     f.write(pdf_bytes)
         """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        return self._render_report_as_browser_pdf_impl(
+        template = Template.get(**kwargs)
+
+        return self._render_template_as_browser_pdf(
+            template,
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,
-            **kwargs,
         )
 
     def export_report_as_pptx(
@@ -1776,8 +1840,10 @@ class ADR:
             Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
             If omitted, 10 mm margins are used on every side.
         render_timeout : float, optional
-            Maximum time, in seconds, to wait for browser readiness signals.
-            Default ``30.0``.
+            Maximum time, in seconds, for the Chromium render phase after the offline HTML
+            bundle has been staged. This shared browser-side budget covers launch, navigation,
+            readiness waits, and related browser preparation, but not server-side report
+            rendering or offline asset export. Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1792,26 +1858,53 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Notes
+        -----
+        Browser-PDF readiness waits cover ADR-owned signals such as web-component
+        initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
+        layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
+        underlying template system, so custom asynchronous JavaScript inside those
+        fragments does not get a separate readiness hook here. Static HTML content is
+        supported, but arbitrary async HTML content can still be captured before it
+        finishes updating unless it settles through the built-in browser-PDF signals.
+
+        Examples
+        --------
+        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> adr = ADR(
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+        ...     db_directory=r"C:\\DBs\\docex",
+        ...     media_directory=r"C:\\DBs\\docex\\media",
+        ...     static_directory=r"C:\\static",
+        ... )
+        >>> adr.setup(collect_static=True)
+        >>> adr.export_report_as_browser_pdf(
+        ...     filename="browser-report.pdf",
+        ...     name="Serverless Simulation Report",
+        ...     item_filter="A|i_tags|cont|dp=dp227;",
+        ...     landscape=True,
+        ... )
         """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        pdf_stream = self._render_report_as_browser_pdf_impl(
+        template = Template.get(**kwargs)
+        pdf_stream = self._render_template_as_browser_pdf(
+            template,
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,
-            **kwargs,
         )
 
         if filename is not None:
             output_path = Path(filename)
         else:
-            template = Template.get(**kwargs)
             output_path = Path(f"{template.guid}.pdf")
 
         with open(output_path, "wb") as f:
