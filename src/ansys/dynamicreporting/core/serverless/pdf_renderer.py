@@ -204,7 +204,7 @@ class PlaywrightPDFRenderer:
                     # milliseconds, so convert the remaining budget just before navigation.
                     current_timeout_phase = "page navigation"
                     navigation_timeout_ms = self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "page navigation"
+                        browser_phase_deadline, current_timeout_phase
                     )
                     page.goto(
                         file_url,
@@ -666,10 +666,8 @@ class PlaywrightPDFRenderer:
                 f"Browser render readiness step {step_outcome} in {elapsed_ms:.1f} ms: {step_name}"
             )
 
-    def _wait_for_render_ready(self, page: Any, *, deadline: float | None = None) -> None:
+    def _wait_for_render_ready(self, page: Any, *, deadline: float) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
-        if deadline is None:
-            deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
 
         # The readiness pipeline intentionally waits only on product-owned signals that ADR
