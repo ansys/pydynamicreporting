@@ -627,8 +627,9 @@ class PlaywrightPDFRenderer:
         not expose a per-call timeout argument. Each readiness promise therefore enforces the
         remaining browser-render deadline inside the page instead of using fixed sleeps.
         """
-        remaining_ms = max(int((deadline - monotonic()) * 1000), 0)
-        if remaining_ms <= 0:
+        try:
+            remaining_ms = self._remaining_browser_phase_timeout_ms(deadline, step_name)
+        except ADRException:
             # Emit a separate diagnostic for steps that exhausted the shared render
             # budget before the renderer could hand control to Playwright.
             self._logger.debug(
@@ -636,9 +637,7 @@ class PlaywrightPDFRenderer:
                 "because the shared render budget was exhausted: "
                 f"{step_name}"
             )
-            raise ADRException(
-                f"Browser PDF rendering failed: {step_name} timed out after {self._render_timeout:.1f}s"
-            )
+            raise
 
         step_started = monotonic()
         step_outcome = "completed"
