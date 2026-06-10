@@ -204,7 +204,7 @@ class PlaywrightPDFRenderer:
                     # milliseconds, so convert the remaining budget just before navigation.
                     current_timeout_phase = "page navigation"
                     navigation_timeout_ms = self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "page navigation"
+                        browser_phase_deadline, current_timeout_phase
                     )
                     page.goto(
                         file_url,
@@ -536,6 +536,10 @@ class PlaywrightPDFRenderer:
             request_url = route.request.url
             parsed_url = urlsplit(request_url)
             scheme = parsed_url.scheme.lower()
+            # Block both known-external schemes (http, https, ws, wss) and any URL with an
+            # authority component (netloc). The netloc check catches protocol-relative URLs
+            # like //example.com/file and file:// URLs with hostnames like file://example.com/file
+            # that the scheme check alone would miss.
             if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
                 route.abort()
                 return
@@ -597,6 +601,10 @@ class PlaywrightPDFRenderer:
         browser-side operation so navigation and readiness waits spend from one shared deadline
         instead of each resetting a fresh timeout window.
         """
+        # ceil() rounds up to ensure timeout is never 0. ceil(0.0001 * 1000) = 1 instead of 0.
+        # Playwright treats timeout=0 as "no timeout", so rounding down to 0 would accidentally
+        # disable the timeout. Fractional milliseconds are always rounded up, giving the operation
+        # slightly more time rather than slightly less.
         remaining_ms = ceil((deadline - monotonic()) * 1000)
         if remaining_ms <= 0:
             raise ADRException(
@@ -619,8 +627,9 @@ class PlaywrightPDFRenderer:
         not expose a per-call timeout argument. Each readiness promise therefore enforces the
         remaining browser-render deadline inside the page instead of using fixed sleeps.
         """
-        remaining_ms = max(int((deadline - monotonic()) * 1000), 0)
-        if remaining_ms <= 0:
+        try:
+            remaining_ms = self._remaining_browser_phase_timeout_ms(deadline, step_name)
+        except ADRException:
             # Emit a separate diagnostic for steps that exhausted the shared render
             # budget before the renderer could hand control to Playwright.
             self._logger.debug(
@@ -628,9 +637,7 @@ class PlaywrightPDFRenderer:
                 "because the shared render budget was exhausted: "
                 f"{step_name}"
             )
-            raise ADRException(
-                f"Browser PDF rendering failed: {step_name} timed out after {self._render_timeout:.1f}s"
-            )
+            raise
 
         step_started = monotonic()
         step_outcome = "completed"
@@ -644,10 +651,9 @@ class PlaywrightPDFRenderer:
                             resolve({{ __adrTimedOut: true }});
                         }}, timeoutMs);
                     }});
-                    const readinessResult = Promise.resolve()
-                        .then(() => waitForReady())
-                        .then((value) => {{
-                            return {{ __adrTimedOut: false, value }};
+                    const readinessResult = waitForReady()
+                        .then(() => {{
+                            return {{ __adrTimedOut: false }};
                         }});
                     return Promise.race([readinessResult, timeoutResult]);
                 }}""",
@@ -666,10 +672,8 @@ class PlaywrightPDFRenderer:
                 f"Browser render readiness step {step_outcome} in {elapsed_ms:.1f} ms: {step_name}"
             )
 
-    def _wait_for_render_ready(self, page: Any, *, deadline: float | None = None) -> None:
+    def _wait_for_render_ready(self, page: Any, *, deadline: float) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
-        if deadline is None:
-            deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
 
         # The readiness pipeline intentionally waits only on product-owned signals that ADR
