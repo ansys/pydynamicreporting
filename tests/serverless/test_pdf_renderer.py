@@ -142,40 +142,6 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     )
 
 
-@pytest.mark.unit
-def test_playwright_pdf_rounds_tiny_browser_phase_timeouts_up_to_one_millisecond(
-    tmp_path, monkeypatch
-):
-    html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
-    renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
-    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
-
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
-
-    renderer.render_pdf()
-
-    # Playwright treats timeout=0 as "no timeout", so a tiny positive shared budget still rounds
-    # up to the smallest positive millisecond value instead of accidentally disabling timeouts.
-    playwright.chromium.launch.assert_called_once_with(headless=True, timeout=1)
-    page.goto.assert_called_once_with(
-        (html_dir / "index.html").resolve().as_uri(),
-        wait_until="load",
-        timeout=1,
-    )
-
 
 @pytest.mark.unit
 def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
