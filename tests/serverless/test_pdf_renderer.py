@@ -792,6 +792,60 @@ def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch)
     ]
 
 
+def _capture_ready_step_scripts(
+    monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
+) -> dict[str, str]:
+    """Capture the JavaScript readiness script for each named step."""
+    wait_scripts: dict[str, str] = {}
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        wait_scripts[step_name] = wait_script
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+    renderer._wait_for_render_ready(Mock(), deadline=0.0)
+    return wait_scripts
+
+
+def _start_wait_script(page, wait_script: str) -> None:
+    """Run one readiness step script on the page and expose its eventual result."""
+    page.evaluate(
+        f"""() => {{
+            window.waitReadyDone = false;
+            window.waitReadyError = null;
+            const waitForReady = {wait_script};
+            waitForReady()
+                .then(() => {{
+                    window.waitReadyDone = true;
+                }})
+                .catch((error) => {{
+                    window.waitReadyError = String(error);
+                }});
+        }}"""
+    )
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "fouc-gate-no-root-report"
+    report_dir.mkdir()
+    _write_html(report_dir, "<html><body><p>No report root</p></body></html>")
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["FOUC gate"])
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
 @pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     report_dir = tmp_path / "relative-report"
