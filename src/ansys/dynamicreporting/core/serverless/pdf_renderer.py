@@ -651,10 +651,9 @@ class PlaywrightPDFRenderer:
                             resolve({{ __adrTimedOut: true }});
                         }}, timeoutMs);
                     }});
-                    const readinessResult = Promise.resolve()
-                        .then(() => waitForReady())
-                        .then((value) => {{
-                            return {{ __adrTimedOut: false, value }};
+                    const readinessResult = waitForReady()
+                        .then(() => {{
+                            return {{ __adrTimedOut: false }};
                         }});
                     return Promise.race([readinessResult, timeoutResult]);
                 }}""",
