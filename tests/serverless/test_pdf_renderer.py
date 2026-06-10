@@ -778,7 +778,7 @@ def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch)
 
     monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
 
-    renderer._wait_for_render_ready(Mock())
+    renderer._wait_for_render_ready(Mock(), deadline=0.0)
 
     assert step_names == [
         "FOUC gate",
