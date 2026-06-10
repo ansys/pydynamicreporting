@@ -154,7 +154,6 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     )
 
 
-
 @pytest.mark.unit
 def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
