@@ -875,6 +875,42 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, m
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "fouc-transition-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <section id="report_root" style="opacity: 0; transition: opacity 0.4s linear;">Report</section>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["FOUC transition"])
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                const root = document.getElementById('report_root');
+                root.style.opacity = '1';
+                root.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }));
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     report_dir = tmp_path / "relative-report"
     report_dir.mkdir()
