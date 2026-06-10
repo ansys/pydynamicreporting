@@ -601,6 +601,10 @@ class PlaywrightPDFRenderer:
         browser-side operation so navigation and readiness waits spend from one shared deadline
         instead of each resetting a fresh timeout window.
         """
+        # ceil() rounds up to ensure timeout is never 0. ceil(0.0001 * 1000) = 1 instead of 0.
+        # Playwright treats timeout=0 as "no timeout", so rounding down to 0 would accidentally
+        # disable the timeout. Fractional milliseconds are always rounded up, giving the operation
+        # slightly more time rather than slightly less.
         remaining_ms = ceil((deadline - monotonic()) * 1000)
         if remaining_ms <= 0:
             raise ADRException(
