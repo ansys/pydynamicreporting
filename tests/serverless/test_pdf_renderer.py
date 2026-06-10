@@ -948,6 +948,42 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    image_wait_script = wait_scripts["Images"]
+
+    report_dir = tmp_path / "delayed-image-report"
+    report_dir.mkdir()
+    _write_html(report_dir, "<html><body><img id='delayed' alt='preview' /></body></html>")
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, image_wait_script)
+
+        # Browsers report src-less images as complete, so the regression is that the
+        # readiness step must still wait for a real source/load instead of resolving now.
+        assert page.evaluate("() => document.getElementById('delayed').complete") is True
+        assert page.evaluate("() => window.waitReadyDone") is False
+        assert page.evaluate("() => window.waitReadyError") is None
+
+        page.evaluate(
+            """() => {
+                document.getElementById('delayed').src =
+                    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     report_dir = tmp_path / "relative-report"
     report_dir.mkdir()
