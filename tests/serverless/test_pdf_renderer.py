@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -60,13 +61,18 @@ def _simple_renderer(
     return renderer
 
 
-def _stub_playwright_render(
-    monkeypatch: pytest.MonkeyPatch,
-    renderer: PlaywrightPDFRenderer,
-    *,
-    pdf_width: str | None = None,
-) -> Mock:
-    """Mock Chromium rendering so tests can inspect Playwright calls without launching a browser."""
+@dataclass(frozen=True)
+class _FakePlaywrightStack:
+    """The mocked Playwright object graph that ``render_pdf`` walks, exposed for assertions."""
+
+    playwright: Mock
+    browser: Mock
+    context: Mock
+    page: Mock
+
+
+def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> _FakePlaywrightStack:
+    """Build a fake Chromium stack and route ``sync_playwright`` to it without launching a browser."""
     page = Mock()
     page.pdf.return_value = b"%PDF-mock"
     context = Mock()
@@ -79,9 +85,25 @@ def _stub_playwright_render(
     playwright_manager.__enter__.return_value = playwright
 
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    return _FakePlaywrightStack(
+        playwright=playwright,
+        browser=browser,
+        context=context,
+        page=page,
+    )
+
+
+def _stub_playwright_render(
+    monkeypatch: pytest.MonkeyPatch,
+    renderer: PlaywrightPDFRenderer,
+    *,
+    pdf_width: str | None = None,
+) -> Mock:
+    """Stub the full render path (skipping readiness waits and width measurement) and return the page."""
+    stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
-    return page
+    return stack.page
 
 
 @pytest.mark.unit
@@ -116,26 +138,16 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 ):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
+    stack = _stub_playwright_stack(monkeypatch)
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
-    page.goto.assert_called_once_with(
+    stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
+    stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
         timeout=12500,
@@ -147,20 +159,10 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=10.0)
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
+    _stub_playwright_stack(monkeypatch)
     captured_deadline: dict[str, float] = {}
     monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     def capture_ready(page, deadline=None):
@@ -180,19 +182,10 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = Mock()
-    page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
+    stack = _stub_playwright_stack(monkeypatch)
+    stack.page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     with pytest.raises(
@@ -201,27 +194,21 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
     ):
         renderer.render_pdf()
 
-    context.close.assert_called_once_with()
-    browser.close.assert_called_once_with()
+    stack.context.close.assert_called_once_with()
+    stack.browser.close.assert_called_once_with()
 
 
 @pytest.mark.unit
 def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir)
-    browser = Mock()
-    browser.new_context.side_effect = RuntimeError("new context boom")
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
-
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    stack = _stub_playwright_stack(monkeypatch)
+    stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
     with pytest.raises(ADRException, match="Browser PDF rendering failed: new context boom"):
         renderer.render_pdf()
 
-    browser.close.assert_called_once_with()
+    stack.browser.close.assert_called_once_with()
 
 
 @pytest.mark.unit
