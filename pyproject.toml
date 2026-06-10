@@ -29,6 +29,7 @@ dependencies = [
     "django-weasyprint>=2.4.0,<2.5.0",
     "weasyprint>=67.0",
     "playwright>=1.58.0,<2.0.0",
+    "pydantic>=2.13.4",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"

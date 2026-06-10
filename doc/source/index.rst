@@ -7,6 +7,7 @@ PyDynamicReporting
 
    gettingstarted/index
    userguide/index
+   userguide/json_importer_models
    class_documentation
    examples/index
    serverless/index

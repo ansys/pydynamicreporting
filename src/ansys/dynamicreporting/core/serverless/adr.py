@@ -1103,6 +1103,29 @@ class ADR:
         root_template.save()
         self._build_templates_from_parent(root_id_str, root_template, templates)
 
+    def import_json_items(
+        self,
+        json_file_path: str | Path,
+    ) -> Any:
+        """Import report items from a JSON payload into the current ADR database.
+
+        Creates a default root template and saves all imported items to the database.
+
+        Parameters
+        ----------
+        json_file_path : str or Path
+            Path to the JSON payload file.
+
+        Returns
+        -------
+        Any
+            Parsed report-items returned by the JSON importer.
+        """
+        from .json_importer import ServerlessReportItemImporter
+
+        importer = ServerlessReportItemImporter(self)
+        return importer._import_json_items(json_file_path)
+
     @staticmethod
     def get_report(**kwargs) -> Template:
         """Fetch a root report template (no parent) using template fields.
