@@ -1,0 +1,6 @@
+add\_sort\_fields
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.add_sort_fields

@@ -1,0 +1,6 @@
+palette\_position
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.palette_position

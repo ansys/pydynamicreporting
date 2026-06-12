@@ -1,0 +1,198 @@
+﻿SliderLayout
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: SliderLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      SliderLayout.add_filter
+      
+      
+      SliderLayout.add_map_to_slider
+      
+      
+      SliderLayout.add_params
+      
+      
+      SliderLayout.add_properties
+      
+      
+      SliderLayout.add_property
+      
+      
+      SliderLayout.add_sort_fields
+      
+      
+      SliderLayout.add_tag
+      
+      
+      SliderLayout.as_dict
+      
+      
+      SliderLayout.create
+      
+      
+      SliderLayout.delete
+      
+      
+      SliderLayout.filter
+      
+      
+      SliderLayout.find
+      
+      
+      SliderLayout.get
+      
+      
+      SliderLayout.get_column_count
+      
+      
+      SliderLayout.get_column_widths
+      
+      
+      SliderLayout.get_comments
+      
+      
+      SliderLayout.get_filter
+      
+      
+      SliderLayout.get_filter_mode
+      
+      
+      SliderLayout.get_html
+      
+      
+      SliderLayout.get_map_to_slider
+      
+      
+      SliderLayout.get_params
+      
+      
+      SliderLayout.get_property
+      
+      
+      SliderLayout.get_skip
+      
+      
+      SliderLayout.get_sort_fields
+      
+      
+      SliderLayout.get_sort_selection
+      
+      
+      SliderLayout.get_tags
+      
+      
+      SliderLayout.get_transpose
+      
+      
+      SliderLayout.reinit
+      
+      
+      SliderLayout.rem_tag
+      
+      
+      SliderLayout.remove_tag
+      
+      
+      SliderLayout.render
+      
+      
+      SliderLayout.render_pdf
+      
+      
+      SliderLayout.reorder_child
+      
+      
+      SliderLayout.reorder_children
+      
+      
+      SliderLayout.save
+      
+      
+      SliderLayout.set_column_count
+      
+      
+      SliderLayout.set_column_widths
+      
+      
+      SliderLayout.set_comments
+      
+      
+      SliderLayout.set_filter
+      
+      
+      SliderLayout.set_filter_mode
+      
+      
+      SliderLayout.set_html
+      
+      
+      SliderLayout.set_map_to_slider
+      
+      
+      SliderLayout.set_params
+      
+      
+      SliderLayout.set_property
+      
+      
+      SliderLayout.set_skip
+      
+      
+      SliderLayout.set_sort_fields
+      
+      
+      SliderLayout.set_sort_selection
+      
+      
+      SliderLayout.set_tags
+      
+      
+      SliderLayout.set_transpose
+      
+      
+      SliderLayout.to_dict
+      
+      
+      SliderLayout.to_json
+      
+      
+      SliderLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      SliderLayout.children_order
+      SliderLayout.db
+      SliderLayout.item_filter
+      SliderLayout.master
+      SliderLayout.name
+      SliderLayout.params
+      SliderLayout.parent
+      SliderLayout.report_type
+      SliderLayout.saved
+      SliderLayout.tags
+      SliderLayout.type
+      SliderLayout.date
+      SliderLayout.children
+      SliderLayout.guid
+   
+   

@@ -1,0 +1,6 @@
+get\_sort\_fields
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TreeMergeGenerator.get_sort_fields

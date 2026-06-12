@@ -1,0 +1,6 @@
+output\_pptx
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: PPTXLayout.output_pptx

@@ -1,0 +1,6 @@
+legend\_position
+================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.legend_position

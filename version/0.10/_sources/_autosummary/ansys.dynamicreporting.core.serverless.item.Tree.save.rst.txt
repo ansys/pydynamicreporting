@@ -1,0 +1,6 @@
+save
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Tree.save

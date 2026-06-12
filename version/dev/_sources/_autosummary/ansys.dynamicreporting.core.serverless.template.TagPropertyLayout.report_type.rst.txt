@@ -1,0 +1,6 @@
+report\_type
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: TagPropertyLayout.report_type
