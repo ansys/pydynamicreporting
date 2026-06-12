@@ -1899,12 +1899,12 @@ def test_export_report_as_browser_pdf_default_filename_reuses_template_lookup(
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(Template, "get", staticmethod(capture_get))
-    monkeypatch.setattr(
-        ADR,
-        "_render_template_as_browser_pdf",
-        lambda self, resolved_template, **kwargs: rendered_templates.append(resolved_template)
-        or b"%PDF-single-lookup",
-    )
+
+    def fake_render_pdf(self, resolved_template, **kwargs):
+        rendered_templates.append(resolved_template)
+        return b"%PDF-single-lookup"
+
+    monkeypatch.setattr(ADR, "_render_template_as_browser_pdf", fake_render_pdf)
 
     adr_serverless.export_report_as_browser_pdf(name="SingleLookupBrowserPDF")
 

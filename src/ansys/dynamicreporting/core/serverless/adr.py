@@ -1386,6 +1386,8 @@ class ADR:
         directory. This helper only tries to remove the dedicated fallback parent that ADR
         created under the system temp directory for external-database configurations.
         """
+        # When a local db_directory exists, the scratch root lives inside it and
+        # the per-render TemporaryDirectory handles all cleanup.
         if self._db_directory is not None:
             return
 

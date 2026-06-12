@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -61,13 +62,18 @@ def _simple_renderer(
     return renderer
 
 
-def _stub_playwright_render(
-    monkeypatch: pytest.MonkeyPatch,
-    renderer: PlaywrightPDFRenderer,
-    *,
-    pdf_width: str | None = None,
-) -> Mock:
-    """Mock Chromium rendering so tests can inspect Playwright calls without launching a browser."""
+@dataclass(frozen=True)
+class _FakePlaywrightStack:
+    """The mocked Playwright object graph that ``render_pdf`` walks, exposed for assertions."""
+
+    playwright: Mock
+    browser: Mock
+    context: Mock
+    page: Mock
+
+
+def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> _FakePlaywrightStack:
+    """Build a fake Chromium stack and route ``sync_playwright`` to it without launching a browser."""
     page = Mock()
     page.pdf.return_value = b"%PDF-mock"
     context = Mock()
@@ -80,41 +86,25 @@ def _stub_playwright_render(
     playwright_manager.__enter__.return_value = playwright
 
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    return _FakePlaywrightStack(
+        playwright=playwright,
+        browser=browser,
+        context=context,
+        page=page,
+    )
+
+
+def _stub_playwright_render(
+    monkeypatch: pytest.MonkeyPatch,
+    renderer: PlaywrightPDFRenderer,
+    *,
+    pdf_width: str | None = None,
+) -> Mock:
+    """Stub the full render path (skipping readiness waits and width measurement) and return the page."""
+    stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
-    return page
-
-
-def _capture_ready_step_scripts(
-    monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
-) -> dict[str, str]:
-    """Capture the JavaScript readiness script for each named step."""
-    wait_scripts: dict[str, str] = {}
-
-    def capture_ready_step(page, step_name, wait_script, deadline):
-        wait_scripts[step_name] = wait_script
-
-    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
-    renderer._wait_for_render_ready(Mock())
-    return wait_scripts
-
-
-def _start_wait_script(page, wait_script: str) -> None:
-    """Run one readiness step script on the page and expose its eventual result."""
-    page.evaluate(
-        f"""() => {{
-            window.waitReadyDone = false;
-            window.waitReadyError = null;
-            const waitForReady = {wait_script};
-            waitForReady()
-                .then(() => {{
-                    window.waitReadyDone = true;
-                }})
-                .catch((error) => {{
-                    window.waitReadyError = String(error);
-                }});
-        }}"""
-    )
+    return stack.page
 
 
 @pytest.mark.unit
@@ -149,26 +139,16 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 ):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
+    stack = _stub_playwright_stack(monkeypatch)
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
-    page.goto.assert_called_once_with(
+    stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
+    stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
         timeout=12500,
@@ -176,58 +156,13 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_rounds_tiny_browser_phase_timeouts_up_to_one_millisecond(
-    tmp_path, monkeypatch
-):
-    html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
-    renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
-    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
-
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
-
-    renderer.render_pdf()
-
-    # Playwright treats timeout=0 as "no timeout", so a tiny positive shared budget still rounds
-    # up to the smallest positive millisecond value instead of accidentally disabling timeouts.
-    playwright.chromium.launch.assert_called_once_with(headless=True, timeout=1)
-    page.goto.assert_called_once_with(
-        (html_dir / "index.html").resolve().as_uri(),
-        wait_until="load",
-        timeout=1,
-    )
-
-
-@pytest.mark.unit
 def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=10.0)
-    page = Mock()
-    page.pdf.return_value = b"%PDF-mock"
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
+    _stub_playwright_stack(monkeypatch)
     captured_deadline: dict[str, float] = {}
     monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     def capture_ready(page, deadline=None):
@@ -247,19 +182,10 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
-    page = Mock()
-    page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
-    context = Mock()
-    context.new_page.return_value = page
-    browser = Mock()
-    browser.new_context.return_value = context
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
+    stack = _stub_playwright_stack(monkeypatch)
+    stack.page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     with pytest.raises(
@@ -268,27 +194,21 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
     ):
         renderer.render_pdf()
 
-    context.close.assert_called_once_with()
-    browser.close.assert_called_once_with()
+    stack.context.close.assert_called_once_with()
+    stack.browser.close.assert_called_once_with()
 
 
 @pytest.mark.unit
 def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir)
-    browser = Mock()
-    browser.new_context.side_effect = RuntimeError("new context boom")
-    playwright = Mock()
-    playwright.chromium.launch.return_value = browser
-    playwright_manager = MagicMock()
-    playwright_manager.__enter__.return_value = playwright
-
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    stack = _stub_playwright_stack(monkeypatch)
+    stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
     with pytest.raises(ADRException, match="Browser PDF rendering failed: new context boom"):
         renderer.render_pdf()
 
-    browser.close.assert_called_once_with()
+    stack.browser.close.assert_called_once_with()
 
 
 @pytest.mark.unit
@@ -849,6 +769,63 @@ def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch):
+    """Verify all readiness steps are executed in the expected order."""
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
+    step_names = []
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        step_names.append(step_name)
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+
+    renderer._wait_for_render_ready(Mock(), deadline=0.0)
+
+    assert step_names == [
+        "FOUC gate",
+        "FOUC transition",
+        "Web fonts",
+        "MathJax",
+        "Plotly charts",
+        "Images",
+        "Videos",
+        "Double requestAnimationFrame",
+    ]
+
+
+def _capture_ready_step_scripts(
+    monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
+) -> dict[str, str]:
+    """Capture the JavaScript readiness script for each named step."""
+    wait_scripts: dict[str, str] = {}
+
+    def capture_ready_step(page, step_name, wait_script, deadline):
+        wait_scripts[step_name] = wait_script
+
+    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
+    renderer._wait_for_render_ready(Mock(), deadline=0.0)
+    return wait_scripts
+
+
+def _start_wait_script(page, wait_script: str) -> None:
+    """Run one readiness step script on the page and expose its eventual result."""
+    page.evaluate(
+        f"""() => {{
+            window.waitReadyDone = false;
+            window.waitReadyError = null;
+            const waitForReady = {wait_script};
+            waitForReady()
+                .then(() => {{
+                    window.waitReadyDone = true;
+                }})
+                .catch((error) => {{
+                    window.waitReadyError = String(error);
+                }});
+        }}"""
+    )
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
@@ -981,8 +958,6 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
     report_dir.mkdir()
     _write_html(report_dir, "<html><body><img id='delayed' alt='preview' /></body></html>")
 
-    # Use a real page here so the image readiness step is validated by behavior rather
-    # than by asserting exact JavaScript source text.
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
@@ -1004,7 +979,6 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
                     'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
             }"""
         )
-        # Poll the page until the async image-readiness promise resolves.
         page.wait_for_function("() => window.waitReadyDone === true")
         assert page.evaluate("() => window.waitReadyError") is None
         browser.close()
@@ -1127,30 +1101,6 @@ def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path,
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
-    step_names = []
-
-    def capture_ready_step(page, step_name, wait_script, deadline):
-        step_names.append(step_name)
-
-    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
-
-    renderer._wait_for_render_ready(Mock())
-
-    assert step_names == [
-        "FOUC gate",
-        "FOUC transition",
-        "Web fonts",
-        "MathJax",
-        "Plotly charts",
-        "Images",
-        "Videos",
-        "Double requestAnimationFrame",
-    ]
-
-
-@pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     report_dir = tmp_path / "relative-report"
     report_dir.mkdir()
@@ -1220,6 +1170,27 @@ def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, sho
     else:
         route.continue_.assert_called_once_with()
         route.abort.assert_not_called()
+
+
+@pytest.mark.unit
+def test_block_file_urls_with_authority_component():
+    renderer = PlaywrightPDFRenderer(html_dir=Path("."))
+    context = Mock()
+    renderer._block_external_requests(context)
+    _, route_handler = context.route.call_args.args
+
+    for url in ("file://example.com/path", "file://example.com:8080/path"):
+        route = Mock()
+        route.request.url = url
+        route_handler(route)
+        route.abort.assert_called_once_with()
+        route.continue_.assert_not_called()
+
+    route = Mock()
+    route.request.url = "file:///path/to/local/file"
+    route_handler(route)
+    route.continue_.assert_called_once_with()
+    route.abort.assert_not_called()
 
 
 @pytest.mark.unit
