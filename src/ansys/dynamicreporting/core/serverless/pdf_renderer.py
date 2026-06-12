@@ -65,12 +65,14 @@ from contextlib import contextmanager
 import json
 import os
 import re
+from math import ceil
 from pathlib import Path
 from time import monotonic
 from typing import Any
 from urllib.parse import urlsplit
 
 from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ..adr_utils import get_logger
 from ..common_utils import resolve_playwright_browsers_path
@@ -92,7 +94,10 @@ class PlaywrightPDFRenderer:
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
-        Maximum time, in seconds, to wait for browser readiness signals.
+        Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
+        has been staged. This shared budget covers browser launch, navigation, readiness waits,
+        and other browser-side preparation steps, but not server-side template rendering or
+        offline asset export.
     ansys_installation : Path or str, optional
         Resolved Ansys installation root used to locate a product-shipped
         Playwright browser cache before falling back to the user's normal
@@ -232,15 +237,26 @@ class PlaywrightPDFRenderer:
             If the browser render/export flow fails.
         """
         entrypoint_path = self._resolve_entrypoint_path()
+        browser_phase_deadline = monotonic() + self._render_timeout
+        current_timeout_phase = "browser launch"
 
         try:
             # Point Playwright at the product-shipped browser cache (when available and not
             # already overridden by the caller) before the driver resolves browser binaries.
             with self._playwright_browser_cache_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = playwright.chromium.launch(headless=True)
+                browser = playwright.chromium.launch(
+                    headless=True,
+                    timeout=self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "browser launch"
+                    ),
+                )
+                context = None
 
                 try:
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "browser context creation"
+                    )
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
                     # items lay themselves out deterministically before the PDF width is computed.
                     context = browser.new_context(
@@ -252,66 +268,87 @@ class PlaywrightPDFRenderer:
                         accept_downloads=False,
                         offline=True,
                     )
-                    try:
-                        self._block_external_requests(context)
-                        page = context.new_page()
-                        file_url = entrypoint_path.as_uri()
+                    self._block_external_requests(context)
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "page creation"
+                    )
+                    page = context.new_page()
+                    file_url = entrypoint_path.as_uri()
 
-                        # Load the exported offline report exactly as Chromium would see it from disk.
-                        self._logger.info(
-                            f"Loading exported HTML for browser PDF export: {file_url}"
-                        )
-                        # Keep navigation under the caller-configured browser render budget.
-                        # Playwright documents ``page.goto(timeout=...)`` in milliseconds, while
-                        # ADR exposes ``render_timeout`` in seconds for the whole render workflow.
-                        # Clamp to at least 1000 ms because Playwright treats ``timeout=0`` as
-                        # disabling the timeout, which would invert a small positive ADR budget.
-                        navigation_timeout_ms = max(int(self._render_timeout * 1000), 1000)
-                        page.goto(
-                            file_url,
-                            wait_until="load",
-                            timeout=navigation_timeout_ms,
-                        )
+                    # Load the exported offline report exactly as Chromium would see it from disk.
+                    self._logger.info(f"Loading exported HTML for browser PDF export: {file_url}")
+                    # Keep navigation inside the same shared browser-phase budget used by the
+                    # later readiness checks. Playwright documents ``page.goto(timeout=...)`` in
+                    # milliseconds, so convert the remaining budget just before navigation.
+                    current_timeout_phase = "page navigation"
+                    navigation_timeout_ms = self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "page navigation"
+                    )
+                    page.goto(
+                        file_url,
+                        wait_until="load",
+                        timeout=navigation_timeout_ms,
+                    )
 
-                        # Force screen media so the PDF matches the browser view instead of print CSS.
-                        page.emulate_media(media="screen")
-                        self._apply_pdf_capture_styles(page)
-                        self._wait_for_render_ready(page)
-                        pdf_width = self._compute_pdf_width(page)
-                        # Keep the fallback page size internally consistent. Playwright defaults
-                        # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
-                        # mixed Letter-width/A4-height page when no content width can be measured.
-                        pdf_page_width = (
-                            pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
-                        )
-                        pdf_options = {
-                            # Keep page height explicit so pagination remains under ADR's control
-                            # instead of depending entirely on Playwright's default page format.
-                            "width": pdf_page_width,
-                            "height": self._DEFAULT_PAGE_HEIGHT,
-                            "landscape": self._landscape,
-                            "margin": self._margins,
-                            "print_background": True,
-                        }
+                    # Force screen media so the PDF matches the browser view instead of print CSS.
+                    page.emulate_media(media="screen")
+                    self._apply_pdf_capture_styles(page)
+                    self._wait_for_render_ready(page, deadline=browser_phase_deadline)
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "PDF width measurement"
+                    )
+                    pdf_width = self._compute_pdf_width(page)
+                    # Keep the fallback page size internally consistent. Playwright defaults
+                    # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
+                    # mixed Letter-width/A4-height page when no content width can be measured.
+                    pdf_page_width = (
+                        pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
+                    )
+                    pdf_options = {
+                        # Keep page height explicit so pagination remains under ADR's control
+                        # instead of depending entirely on Playwright's default page format.
+                        "width": pdf_page_width,
+                        "height": self._DEFAULT_PAGE_HEIGHT,
+                        "landscape": self._landscape,
+                        "margin": self._margins,
+                        "print_background": True,
+                    }
 
-                        # Playwright describes page.pdf() as generating paged output, not a bitmap
-                        # snapshot of the already-painted viewport. MDN's paged-media model also
-                        # distinguishes the continuous-media viewport from the paged page area.
-                        # Passing the measured width here therefore gives the PDF generation pass a
-                        # wider page area even though the live browser pass already ran. Elements
-                        # such as #report_root that remain auto-width can then lay out against that
-                        # wider paged space without us assigning them an explicit width in the DOM.
-                        pdf_bytes = page.pdf(**pdf_options)
-                        self._logger.info(
-                            f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
-                        )
-                        return pdf_bytes
-                    finally:
-                        context.close()
+                    # Playwright describes page.pdf() as generating paged output, not a bitmap
+                    # snapshot of the already-painted viewport. MDN's paged-media model also
+                    # distinguishes the continuous-media viewport from the paged page area.
+                    # Passing the measured width here therefore gives the PDF generation pass a
+                    # wider page area even though the live browser pass already ran. Elements
+                    # such as #report_root that remain auto-width can then lay out against that
+                    # wider paged space without us assigning them an explicit width in the DOM.
+                    #
+                    # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
+                    # so this deadline check is a preflight guard rather than an interruptible
+                    # in-flight timeout.
+                    self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "PDF generation"
+                    )
+                    pdf_bytes = page.pdf(**pdf_options)
+                    self._logger.info(
+                        f"Browser PDF generated successfully ({len(pdf_bytes)} bytes)."
+                    )
+                    return pdf_bytes
                 finally:
+                    # Playwright recommends explicitly closing contexts created via
+                    # browser.new_context() before browser.close() so their resources flush
+                    # gracefully. Guard the call because context creation itself can fail.
+                    if context is not None:
+                        context.close()
                     browser.close()
         except ADRException:
             raise
+        except PlaywrightTimeoutError as exc:
+            # Normalize Playwright's operation-specific timeout wording into the renderer's
+            # public ADRException contract so callers see one consistent timeout shape.
+            raise ADRException(
+                f"Browser PDF rendering failed: {current_timeout_phase} timed out after "
+                f"{self._render_timeout:.1f}s"
+            ) from exc
         except Exception as exc:
             raise ADRException(f"Browser PDF rendering failed: {exc}") from exc
 
@@ -359,6 +396,8 @@ class PlaywrightPDFRenderer:
                 .table-responsive,
                 table.table,
                 table.tree,
+                adr-slider-template > section[id^="slider_container_"],
+                adr-slider-template > section[id^="slider_container_"] > section.adr-row,
                 img.img-fluid,
                 video.img-fluid,
                 .ansys-nexus-proxy,
@@ -573,8 +612,9 @@ class PlaywrightPDFRenderer:
 
         def route_request(route: Any) -> None:
             request_url = route.request.url
-            scheme = urlsplit(request_url).scheme.lower()
-            if scheme in self._BLOCKED_REQUEST_SCHEMES:
+            parsed_url = urlsplit(request_url)
+            scheme = parsed_url.scheme.lower()
+            if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
                 route.abort()
                 return
             route.continue_()
@@ -585,9 +625,10 @@ class PlaywrightPDFRenderer:
         def route_websocket(websocket_route: Any) -> None:
             websocket_route.close()
 
-        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking network schemes
-        # prevents report HTML from calling back to arbitrary hosts during PDF generation while
-        # still allowing file:, data:, and blob: resources that are part of the offline export.
+        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking known network
+        # schemes plus any authority-bearing URL prevents report HTML from calling back to
+        # arbitrary hosts during PDF generation while still allowing local file:, data:, and
+        # blob: resources that are part of the offline export.
         # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
         # connections through the dedicated route_web_socket API.
         context.route("**/*", route_request)
@@ -615,7 +656,7 @@ class PlaywrightPDFRenderer:
         return validated
 
     def _validate_render_timeout(self, render_timeout: float) -> float:
-        """Validate the browser readiness timeout."""
+        """Validate the shared browser-phase timeout."""
         error_message = "Browser PDF render_timeout must be a positive number."
         try:
             timeout = float(render_timeout)
@@ -625,6 +666,22 @@ class PlaywrightPDFRenderer:
         if timeout <= 0:
             raise ADRException(error_message)
         return timeout
+
+    def _remaining_browser_phase_timeout_ms(self, deadline: float, phase_name: str) -> int:
+        """Return the remaining browser-phase budget in milliseconds.
+
+        The browser-PDF public API exposes ``render_timeout`` in seconds for the Chromium
+        rendering phase as a whole. Convert the remaining monotonic budget just before each
+        browser-side operation so navigation and readiness waits spend from one shared deadline
+        instead of each resetting a fresh timeout window.
+        """
+        remaining_ms = ceil((deadline - monotonic()) * 1000)
+        if remaining_ms <= 0:
+            raise ADRException(
+                f"Browser PDF rendering failed: {phase_name} timed out after "
+                f"{self._render_timeout:.1f}s"
+            )
+        return remaining_ms
 
     def _evaluate_ready_step(
         self,
@@ -642,38 +699,63 @@ class PlaywrightPDFRenderer:
         """
         remaining_ms = max(int((deadline - monotonic()) * 1000), 0)
         if remaining_ms <= 0:
+            # Emit a separate diagnostic for steps that exhausted the shared render
+            # budget before the renderer could hand control to Playwright.
+            self._logger.debug(
+                "Browser render readiness step failed before browser evaluation "
+                "because the shared render budget was exhausted: "
+                f"{step_name}"
+            )
             raise ADRException(
                 f"Browser PDF rendering failed: {step_name} timed out after {self._render_timeout:.1f}s"
             )
 
-        page.evaluate(
-            f"""() => {{
-                const timeoutMs = {remaining_ms};
-                const stepName = {json.dumps(step_name)};
-                const waitForReady = {wait_script};
-                return new Promise((resolve, reject) => {{
-                    const timeoutId = setTimeout(() => {{
-                        reject(new Error(`${{stepName}} timed out after ${{timeoutMs}}ms`));
-                    }}, timeoutMs);
-
-                    Promise.resolve()
+        step_started = monotonic()
+        step_outcome = "completed"
+        try:
+            evaluate_result = page.evaluate(
+                f"""() => {{
+                    const timeoutMs = {remaining_ms};
+                    const waitForReady = {wait_script};
+                    const timeoutResult = new Promise((resolve) => {{
+                        setTimeout(() => {{
+                            resolve({{ __adrTimedOut: true }});
+                        }}, timeoutMs);
+                    }});
+                    const readinessResult = Promise.resolve()
                         .then(() => waitForReady())
                         .then((value) => {{
-                            clearTimeout(timeoutId);
-                            resolve(value);
-                        }})
-                        .catch((error) => {{
-                            clearTimeout(timeoutId);
-                            reject(error);
+                            return {{ __adrTimedOut: false, value }};
                         }});
-                }});
-            }}""",
-        )
+                    return Promise.race([readinessResult, timeoutResult]);
+                }}""",
+            )
+            if isinstance(evaluate_result, dict) and evaluate_result.get("__adrTimedOut") is True:
+                raise ADRException(
+                    f"Browser PDF rendering failed: {step_name} timed out after "
+                    f"{self._render_timeout:.1f}s"
+                )
+        except Exception as exc:
+            step_outcome = "failed"
+            raise
+        finally:
+            elapsed_ms = (monotonic() - step_started) * 1000.0
+            self._logger.debug(
+                f"Browser render readiness step {step_outcome} in {elapsed_ms:.1f} ms: {step_name}"
+            )
 
-    def _wait_for_render_ready(self, page: Any) -> None:
+    def _wait_for_render_ready(self, page: Any, *, deadline: float | None = None) -> None:
         """Wait for browser rendering signals that indicate the page is ready to print."""
-        deadline = monotonic() + self._render_timeout
+        if deadline is None:
+            deadline = monotonic() + self._render_timeout
         self._logger.info("Waiting for browser render readiness signals.")
+
+        # The readiness pipeline intentionally waits only on product-owned signals that ADR
+        # emits during its staged print-mode browser render. HTML items and layout ``HTML``
+        # fragments are rendered from raw macro-expanded HTML, so arbitrary custom JavaScript
+        # inside those fragments does not have a separate readiness contract here. Supported
+        # browser-PDF reports therefore assume such HTML is static or settles itself through
+        # one of the standard signals below.
 
         # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
         #    until all custom web-components are registered, which adds ``body.loaded``.
@@ -780,7 +862,9 @@ class PlaywrightPDFRenderer:
         )
 
         # 5. Plotly charts: each .nexus-plot container gets class 'loaded' after
-        #    Plotly.Plots.resize() resolves and the spinner hides.
+        #    Plotly.Plots.resize() resolves, but theme-mismatch rerenders can leave the
+        #    sibling ADR loader overlay visible until a later style update. Wait for both
+        #    the product-owned loaded class and a hidden loader overlay before capture.
         self._evaluate_ready_step(
             page,
             step_name="Plotly charts",
@@ -791,22 +875,48 @@ class PlaywrightPDFRenderer:
                     if (plots.length === 0) { resolve(); return; }
                     let remaining = plots.length;
                     function check() { if (--remaining <= 0) resolve(); }
+                    function findLoader(plot) {
+                        const item = plot.closest('adr-data-item');
+                        return item ? item.querySelector('.adr-spinner-loader-container') : null;
+                    }
+                    function loaderHidden(loader) {
+                        if (!loader) {
+                            return true;
+                        }
+                        const style = getComputedStyle(loader);
+                        return (
+                            style.display === 'none' ||
+                            style.visibility === 'hidden' ||
+                            style.opacity === '0'
+                        );
+                    }
+                    function isReady(plot) {
+                        return plot.classList.contains('loaded') && loaderHidden(findLoader(plot));
+                    }
                     plots.forEach((plot) => {
-                        if (plot.classList.contains('loaded')) { check(); return; }
+                        if (isReady(plot)) { check(); return; }
+                        const loader = findLoader(plot);
                         const observer = new MutationObserver(() => {
-                            if (plot.classList.contains('loaded')) {
+                            if (isReady(plot)) {
                                 observer.disconnect();
                                 check();
                             }
                         });
                         observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
+                        if (loader) {
+                            observer.observe(loader, {
+                                attributes: true,
+                                attributeFilter: ['style', 'class', 'hidden'],
+                            });
+                        }
                     });
                 });
             }""",
         )
 
         # 6. Images: wait for every <img> to finish loading (covers static images,
-        #    scene proxy thumbnails, file proxy images, animation thumbnails).
+        #    scene proxy thumbnails, file proxy images, animation thumbnails, and
+        #    canvas-backed enhanced-image/deep-image views).
         self._evaluate_ready_step(
             page,
             step_name="Images",
@@ -817,10 +927,72 @@ class PlaywrightPDFRenderer:
                     if (imgs.length === 0) { resolve(); return; }
                     let remaining = imgs.length;
                     function done() { if (--remaining <= 0) resolve(); }
+                    function findCompanionCanvas(img) {
+                        if (!img.id) {
+                            return null;
+                        }
+                        return document.getElementById(`${img.id}_canvas`);
+                    }
+                    function companionCanvasReady(img) {
+                        const canvas = findCompanionCanvas(img);
+                        if (!canvas) {
+                            return true;
+                        }
+                        const style = getComputedStyle(canvas);
+                        return style.display !== 'none' && style.visibility !== 'hidden';
+                    }
+                    function isReady(img) {
+                        // Require both a source and decoded image dimensions before fast-passing
+                        // the image. ``img.complete`` alone is too weak because a src-less <img>
+                        // can already report complete even though async product code has not yet
+                        // populated the final image bytes.
+                        //
+                        // ADR slider/deep-image widgets also render into a companion <canvas>
+                        // after the underlying <img> load finishes. Those widgets can keep a
+                        // stale completed <img> source around while a new TIFF or enhanced-image
+                        // decode is still in flight, so do not treat the image as ready until the
+                        // visible companion canvas has been unhidden.
+                        const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));
+                        return hasSource && img.complete && img.naturalWidth > 0 && companionCanvasReady(img);
+                    }
                     imgs.forEach((img) => {
-                        if (img.complete) { done(); return; }
-                        img.addEventListener('load', done, { once: true });
-                        img.addEventListener('error', done, { once: true });
+                        if (isReady(img)) {
+                            done();
+                            return;
+                        }
+                        let observer = null;
+                        function cleanup() {
+                            img.removeEventListener('load', onLoad);
+                            img.removeEventListener('error', onError);
+                            if (observer) {
+                                observer.disconnect();
+                            }
+                        }
+                        function onLoad() {
+                            if (isReady(img)) {
+                                cleanup();
+                                done();
+                            }
+                        }
+                        function onError() {
+                            cleanup();
+                            done();
+                        }
+                        img.addEventListener('load', onLoad, { once: true });
+                        img.addEventListener('error', onError, { once: true });
+                        const companionCanvas = findCompanionCanvas(img);
+                        if (companionCanvas) {
+                            observer = new MutationObserver(() => {
+                                if (isReady(img)) {
+                                    cleanup();
+                                    done();
+                                }
+                            });
+                            observer.observe(companionCanvas, {
+                                attributes: true,
+                                attributeFilter: ['style', 'class', 'hidden'],
+                            });
+                        }
                     });
                 });
             }""",
@@ -847,130 +1019,7 @@ class PlaywrightPDFRenderer:
             }""",
         )
 
-        # 8. DataTables: only wait for tables with evidence of active initialization.
-        #    Browser-PDF exports render tables in print mode for some reports, which keeps the
-        #    DataTables assets on the page but intentionally never binds ``init.dt`` handlers.
-        #    In that case, waiting for every table[id^="table_"] would hang even though the
-        #    markup is already final and printable.
-        self._evaluate_ready_step(
-            page,
-            step_name="DataTables",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    function getDataTableApi() {
-                        if (
-                            typeof DataTable !== 'undefined' &&
-                            typeof DataTable.isDataTable === 'function'
-                        ) {
-                            return DataTable;
-                        }
-                        if (typeof $ === 'undefined' || !$.fn) {
-                            return null;
-                        }
-                        if ($.fn.DataTable && typeof $.fn.DataTable.isDataTable === 'function') {
-                            return $.fn.DataTable;
-                        }
-                        return null;
-                    }
-                    const dataTableApi = getDataTableApi();
-                    if (!dataTableApi) {
-                        resolve(); return;
-                    }
-                    const tables = document.querySelectorAll('table[id^="table_"]');
-                    if (tables.length === 0) { resolve(); return; }
-                    const pendingTables = [];
-                    function isDataTableReady(table) {
-                        try {
-                            return dataTableApi.isDataTable(table);
-                        } catch (e) {
-                            return true;
-                        }
-                    }
-                    function hasDataTableDom(table) {
-                        // Stick to public DataTables signals: initialized tables are reported
-                        // by isDataTable(), and initialized markup carries the documented
-                        // dataTable selector class or DataTables-generated wrapper elements.
-                        return (
-                            table.classList.contains('dataTable') ||
-                            table.closest('.dt-container') !== null
-                        );
-                    }
-                    tables.forEach((table) => {
-                        if (table.hasAttribute('data-dt-skip-init-wait')) {
-                            return;
-                        }
-                        if (isDataTableReady(table)) {
-                            return;
-                        }
-                        if (hasDataTableDom(table)) {
-                            pendingTables.push(table);
-                        }
-                    });
-                    if (pendingTables.length === 0 || typeof $ === 'undefined') {
-                        resolve(); return;
-                    }
-                    let remaining = pendingTables.length;
-                    function done() { if (--remaining <= 0) resolve(); }
-                    pendingTables.forEach((table) => {
-                        let observer = null;
-                        const $table = $(table);
-                        function cleanup() {
-                            if (observer) {
-                                observer.disconnect();
-                                observer = null;
-                            }
-                            $table.off('init.dt', checkComplete);
-                        }
-                        function checkComplete() {
-                            if (isDataTableReady(table)) {
-                                cleanup();
-                                done();
-                            }
-                        }
-                        $table.on('init.dt', checkComplete);
-                        if (typeof MutationObserver !== 'undefined') {
-                            observer = new MutationObserver(checkComplete);
-                            observer.observe(table, {
-                                attributes: true,
-                                attributeFilter: ['class']
-                            });
-                        }
-                        checkComplete();
-                    });
-                });
-            }""",
-        )
-
-        # 9. Active 3D viewers: wait for each ansys-nexus-viewer spinner to hide.
-        #    In the browser render path, viewers have active="true" and load scene
-        #    data asynchronously. The #render-wait spinner hides on load complete.
-        self._evaluate_ready_step(
-            page,
-            step_name="3D viewers",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const viewers = document.querySelectorAll('ansys-nexus-viewer');
-                    if (viewers.length === 0) { resolve(); return; }
-                    let remaining = viewers.length;
-                    function done() { if (--remaining <= 0) resolve(); }
-                    viewers.forEach((viewer) => {
-                        const spinner = viewer.querySelector('#render-wait');
-                        if (!spinner || spinner.style.display !== 'block') { done(); return; }
-                        const observer = new MutationObserver(() => {
-                            if (spinner.style.display !== 'block') {
-                                observer.disconnect();
-                                done();
-                            }
-                        });
-                        observer.observe(spinner, { attributes: true, attributeFilter: ['style'] });
-                    });
-                });
-            }""",
-        )
-
-        # 10. Double requestAnimationFrame waits for an actual composited frame
+        # 8. Double requestAnimationFrame gives the page another repaint opportunity
         #     after all preceding DOM/style work settles.
         self._evaluate_ready_step(
             page,
