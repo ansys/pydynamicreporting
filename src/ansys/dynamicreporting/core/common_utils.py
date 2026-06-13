@@ -234,19 +234,6 @@ def get_install_info(
     return resolution.install_dir, resolution.version
 
 
-def _normalize_ansys_version(ansys_version: int | str | None) -> str | None:
-    """Return the Ansys install version as a plain digit string.
-
-    Returns ``None`` when the version is missing or not purely numeric, so callers
-    never interpolate a malformed value into an ``apex###`` path.
-    """
-    if ansys_version is None:
-        return None
-
-    version_text = str(ansys_version).strip()
-    return version_text if version_text.isdigit() else None
-
-
 def _playwright_machine_arch() -> str | None:
     """Map the current platform to the ADR ``machines/<arch>`` directory name.
 
@@ -409,16 +396,17 @@ def resolve_playwright_browsers_path(
         is shipped.
     """
     machine_arch = _playwright_machine_arch()
-    version = _normalize_ansys_version(ansys_version)
     # The install directory and version are both required to build the machine-scoped
-    # cache path, so bail out instead of guessing when either is missing or the
-    # current platform has no validated ADR packaging layout.
-    if machine_arch is None or ansys_installation is None or version is None:
+    # cache path, so bail out when either is missing or the current platform has no
+    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
+    # resolved and validated it through resolve_install_info, so re-validating it here
+    # would only duplicate that frontloaded work.
+    if machine_arch is None or ansys_installation is None or ansys_version is None:
         return None
 
     browser_dir = (
         Path(ansys_installation).expanduser()
-        / f"apex{version}"
+        / f"apex{ansys_version}"
         / "machines"
         / machine_arch
         / "playwright-browsers"
