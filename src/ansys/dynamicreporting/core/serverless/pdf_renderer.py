@@ -198,6 +198,11 @@ class PlaywrightPDFRenderer:
         value first, but still clear the other process-wide Playwright override
         variables so browser-PDF export does not inherit installer/debug knobs
         from an unrelated shell session.
+
+        This mutates ``os.environ`` for the duration of the render and restores it on
+        exit, so two browser-PDF renders must not run concurrently in the same process.
+        The synchronous Playwright driver renders one report at a time, which keeps that
+        constraint satisfied on this export path.
         """
         restored_override_envs = {
             env_var: os.environ.pop(env_var)
