@@ -374,104 +374,47 @@ def resolve_playwright_browsers_path(
 ) -> Path | None:
     """Return the product-shipped Playwright browser cache directory when available.
 
-    The browser-PDF renderer prefers Playwright's documented shared-cache
-    mechanism over direct executable overrides.  Product builds can therefore
-    ship a complete Playwright cache under the ADR install tree and the client
-    library only needs to point `PLAYWRIGHT_BROWSERS_PATH` at that directory.
+    Product builds can ship a complete Playwright cache inside the install tree so
+    browser-PDF export only needs to point ``PLAYWRIGHT_BROWSERS_PATH`` at it. The
+    serverless caller already resolves the concrete ADR/CEI install directory and
+    install version (``ADR.setup``/``Service.__init__`` go through
+    ``resolve_install_info``), so this derives the machine-scoped cache location
+    from those resolved inputs directly rather than resolving the install again.
 
-    The helper keeps the layout probing bounded and install-aware:
+    Two on-disk layouts are accepted, and each candidate is validated against the
+    packaging metadata before being advertised:
 
-    - resolve the effective ADR/CEI install root when possible,
-    - derive the matching `apex###/machines/<arch>` location,
-    - fall back to direct path probes for copied or partially staged layouts.
+    - full install: ``<install>/apex<ver>/machines/<arch>/playwright-browsers``;
+    - directly-staged tree: ``<install>/machines/<arch>/playwright-browsers``,
+      used by packaging staging that points straight at an ``apex###`` root.
 
     Parameters
     ----------
     ansys_installation : str, optional
-        Ansys installation path, typically the same root already resolved by
-        service or serverless setup.
+        Resolved Ansys install directory, normally the concrete ADR/CEI tree.
     ansys_version : int or str, optional
-        Ansys version used to build the `apex###` directory name.  When omitted,
-        the helper reuses install metadata that is already discoverable from the
-        provided path.
+        Three-digit install version used to build the ``apex###`` directory name.
 
     Returns
     -------
     Path or None
-        Existing directory that contains a product-managed Playwright browser
-        cache, or `None` when no such cache can be found.
+        Validated product-managed Playwright browser cache directory, or ``None``
+        when the platform is unsupported, an input is missing, or no valid cache
+        is shipped.
     """
     machine_arch = _playwright_machine_arch()
-    if machine_arch is None:
+    version = _normalize_ansys_version(ansys_version)
+    # The install directory and version are both required to build a machine-scoped
+    # cache path, so bail out instead of guessing when either is missing or the
+    # current platform has no validated ADR packaging layout.
+    if machine_arch is None or ansys_installation is None or version is None:
         return None
 
-    normalized_version = _normalize_ansys_version(ansys_version)
-    resolved_install_dir: Path | None = None
-    resolved_version = normalized_version
-
-    # Reuse the repo's existing install resolver first so callers that pass a
-    # high-level `v###` root still land on the concrete ADR/CEI directory that
-    # actually owns `apex###/machines/...`.
-    try:
-        install_resolution = resolve_install_info(
-            ansys_installation=ansys_installation,
-            ansys_version=int(normalized_version) if normalized_version is not None else None,
-        )
-    except InvalidAnsysPath:
-        install_resolution = None
-
-    if install_resolution is not None:
-        if install_resolution.install_dir is not None:
-            resolved_install_dir = Path(install_resolution.install_dir)
-        resolved_version = _normalize_ansys_version(install_resolution.version) or resolved_version
-
-    candidate_install_dirs: dict[str, Path] = {}
-    if resolved_install_dir is not None:
-        _append_unique(candidate_install_dirs, resolved_install_dir)
-
-    if ansys_installation is not None:
-        raw_install_dir = Path(ansys_installation).expanduser()
-        _append_unique(candidate_install_dirs, raw_install_dir)
-        # Explicit `v###` roots often sit one level above the resolved ADR/CEI
-        # tree, so probe those conventional child directories directly as well.
-        if raw_install_dir.name not in {"ADR", "CEI"}:
-            _append_unique(candidate_install_dirs, raw_install_dir / "ADR")
-            _append_unique(candidate_install_dirs, raw_install_dir / "CEI")
-
-    if not candidate_install_dirs:
-        return None
-
-    candidate_browser_dirs: dict[str, Path] = {}
-    for install_dir in candidate_install_dirs.values():
-        version_candidates: dict[str, str] = {}
-        for version_text in [
-            resolved_version,
-            normalized_version,
-            _normalize_ansys_version(get_install_version(install_dir)),
-            _normalize_ansys_version(_get_install_version_from_layout(install_dir)),
-        ]:
-            if version_text is not None:
-                version_candidates.setdefault(version_text, version_text)
-
-        for version_text in version_candidates.values():
-            # Product installers typically keep Playwright browsers beside other
-            # machine-scoped runtime payloads under `apex###/machines/<arch>`.
-            _append_unique(
-                candidate_browser_dirs,
-                install_dir
-                / f"apex{version_text}"
-                / "machines"
-                / machine_arch
-                / "playwright-browsers",
-            )
-        # Copied layouts used in tests or packaging staging can point directly
-        # at an `apex###` root, so also support `machines/<arch>` relative probes.
-        _append_unique(
-            candidate_browser_dirs,
-            install_dir / "machines" / machine_arch / "playwright-browsers",
-        )
-
-    for browser_dir in candidate_browser_dirs.values():
+    install_dir = Path(ansys_installation).expanduser()
+    for browser_dir in (
+        install_dir / f"apex{version}" / "machines" / machine_arch / "playwright-browsers",
+        install_dir / "machines" / machine_arch / "playwright-browsers",
+    ):
         if _validate_playwright_browsers_path(browser_dir, machine_arch):
             return browser_dir
     return None
