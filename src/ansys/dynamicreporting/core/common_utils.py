@@ -235,7 +235,11 @@ def get_install_info(
 
 
 def _normalize_ansys_version(ansys_version: int | str | None) -> str | None:
-    """Return a three-digit install-version string when one can be derived safely."""
+    """Return the Ansys install version as a plain digit string.
+
+    Returns ``None`` when the version is missing or not purely numeric, so callers
+    never interpolate a malformed value into an ``apex###`` path.
+    """
     if ansys_version is None:
         return None
 
@@ -244,11 +248,14 @@ def _normalize_ansys_version(ansys_version: int | str | None) -> str | None:
 
 
 def _playwright_machine_arch() -> str | None:
-    """Map the current platform to the ADR machine directory that can host Playwright browsers.
+    """Map the current platform to the ADR ``machines/<arch>`` directory name.
 
-    Browser-PDF support is only advertised for Windows and Linux in this
-    repository, so keep the mapping narrow instead of guessing for other
-    platforms that do not have a validated ADR packaging layout here.
+    ADR product builds ship Playwright browsers only for Windows (``win64``) and
+    Linux (``linux_2.6_64``), so other platforms have no product cache to point at
+    and resolve to ``None``. These are the same ``machines/<arch>`` names
+    ``ADR.setup`` already uses; they are hardcoded here rather than read from
+    ``enve_arch()`` because the serverless client cannot assume ``enve`` is
+    importable in the caller's Python environment.
     """
     system_name = platform.system().lower()
     if system_name.startswith("win"):
@@ -377,10 +384,10 @@ def resolve_playwright_browsers_path(
 
     Product builds can ship a complete Playwright cache inside the install tree so
     browser-PDF export only needs to point ``PLAYWRIGHT_BROWSERS_PATH`` at it. The
-    serverless caller already resolves the concrete ADR/CEI install directory and
-    install version (``ADR.setup``/``Service.__init__`` go through
-    ``resolve_install_info``), so this derives the machine-scoped cache location
-    from those resolved inputs directly rather than resolving the install again.
+    serverless ``ADR`` resolves the concrete ADR/CEI install directory and install
+    version in ``ADR.__init__`` (via ``resolve_install_info``) before constructing
+    the browser-PDF renderer, so this derives the machine-scoped cache location from
+    those resolved inputs directly rather than resolving the install again.
 
     ADR packaging places the cache at a single fixed location per machine
     architecture, ``<install>/apex<ver>/machines/<arch>/playwright-browsers``, with
