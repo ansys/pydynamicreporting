@@ -61,7 +61,9 @@ the final paged layout has enough horizontal space to preserve content that woul
 otherwise overflow or be clipped at the right edge.
 """
 
+from contextlib import contextmanager
 import json
+import os
 import re
 from math import ceil
 from pathlib import Path
@@ -73,6 +75,7 @@ from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ..adr_utils import get_logger
+from ..common_utils import resolve_playwright_browsers_path
 from ..exceptions import ADRException
 
 
@@ -95,6 +98,14 @@ class PlaywrightPDFRenderer:
         has been staged. This shared budget covers browser launch, navigation, readiness waits,
         and other browser-side preparation steps, but not server-side template rendering or
         offline asset export.
+    ansys_installation : Path or str, optional
+        Resolved Ansys installation root used to locate a product-shipped
+        Playwright browser cache before falling back to the user's normal
+        Playwright cache.
+    ansys_version : int or str, optional
+        Ansys version associated with ``ansys_installation``.  This is used
+        only to locate ``apex###/machines/...`` runtime assets when the product
+        ships Playwright browsers inside the installation tree.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -128,6 +139,20 @@ class PlaywrightPDFRenderer:
     # Network requests using these schemes are blocked to keep rendering offline.
     _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
     _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
+    # These process-level Playwright overrides are useful for installs and ad hoc
+    # debugging, but browser-PDF export should not inherit them implicitly from a
+    # developer shell or CI worker.  `PLAYWRIGHT_BROWSERS_PATH` is handled
+    # separately because it is the supported shared-cache override we intentionally
+    # preserve when the caller sets it explicitly.
+    _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
+        "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
+        "PLAYWRIGHT_DOWNLOAD_HOST",
+        "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+        "PLAYWRIGHT_FIREFOX_DOWNLOAD_HOST",
+        "PLAYWRIGHT_WEBKIT_DOWNLOAD_HOST",
+        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD",
+        "PLAYWRIGHT_SKIP_BROWSER_GC",
+    )
 
     def __init__(
         self,
@@ -137,6 +162,8 @@ class PlaywrightPDFRenderer:
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
+        ansys_installation: Path | str | None = None,
+        ansys_version: int | str | None = None,
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""
@@ -145,7 +172,61 @@ class PlaywrightPDFRenderer:
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = self._validate_render_timeout(render_timeout)
+        # Keep the raw install metadata so the renderer can locate a product-managed
+        # Playwright browser cache without changing the public browser-PDF API shape.
+        self._ansys_installation = (
+            None if ansys_installation is None else Path(ansys_installation).expanduser()
+        )
+        self._ansys_version = ansys_version
         self._logger = logger or get_logger()
+
+    def _resolve_playwright_browser_cache(self) -> Path | None:
+        """Return a shipped Playwright browser cache under the Ansys install, if any."""
+        return resolve_playwright_browsers_path(
+            ansys_installation=(
+                None if self._ansys_installation is None else str(self._ansys_installation)
+            ),
+            ansys_version=self._ansys_version,
+        )
+
+    @contextmanager
+    def _playwright_browser_cache_env(self):
+        """Temporarily point Playwright at the product-shipped browser cache.
+
+        Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
+        share browser binaries across environments.  Respect any caller-provided
+        value first, but still clear the other process-wide Playwright override
+        variables so browser-PDF export does not inherit installer/debug knobs
+        from an unrelated shell session.
+
+        This mutates ``os.environ`` for the duration of the render and restores it on
+        exit, so two browser-PDF renders must not run concurrently in the same process.
+        The synchronous Playwright driver renders one report at a time, which keeps that
+        constraint satisfied on this export path.
+        """
+        restored_override_envs = {
+            env_var: os.environ.pop(env_var)
+            for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+            if env_var in os.environ
+        }
+        installed_browser_cache_env = False
+        try:
+            if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
+                browser_cache_dir = self._resolve_playwright_browser_cache()
+                if browser_cache_dir is not None:
+                    self._logger.info(
+                        "Using product-shipped Playwright browser cache: %s",
+                        browser_cache_dir,
+                    )
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache_dir)
+                    installed_browser_cache_env = True
+            yield
+        finally:
+            if installed_browser_cache_env:
+                # Remove only the temporary cache override installed above so
+                # later code sees the same environment the caller started with.
+                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+            os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
         """Render the exported HTML report to PDF bytes.
@@ -165,7 +246,9 @@ class PlaywrightPDFRenderer:
         current_timeout_phase = "browser launch"
 
         try:
-            with sync_playwright() as playwright:
+            # Point Playwright at the product-shipped browser cache (when available and not
+            # already overridden by the caller) before the driver resolves browser binaries.
+            with self._playwright_browser_cache_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
                 browser = playwright.chromium.launch(
                     headless=True,

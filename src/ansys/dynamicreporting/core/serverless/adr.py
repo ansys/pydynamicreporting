@@ -1439,6 +1439,8 @@ class ADR:
                     landscape=landscape,
                     margins=margins,
                     render_timeout=render_timeout,
+                    ansys_installation=self._ansys_installation,
+                    ansys_version=self._ansys_version,
                     logger=self._logger,
                 )
 

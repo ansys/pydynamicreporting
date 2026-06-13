@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 from pathlib import Path
 
 import pytest
@@ -30,10 +31,48 @@ from ansys.dynamicreporting.core.compatibility import (
     DEFAULT_ANSYS_INSTALL_VERSION,
 )
 import ansys.dynamicreporting.core.common_utils as common_utils_module
-from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
+from ansys.dynamicreporting.core.common_utils import (
+    get_install_info,
+    get_install_version,
+    resolve_playwright_browsers_path,
+)
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
+
+
+def _create_packaged_playwright_cache(
+    machine_root: Path,
+    *,
+    machine_arch: str,
+    revision: str = "1223",
+    packaged_cache_dir: str | None = None,
+    write_metadata: bool = True,
+    create_marker: bool = True,
+) -> Path:
+    """Create a minimal packaged Playwright cache that matches the ADR layout contract."""
+    browser_cache_dir = machine_root / "playwright-browsers"
+    packaged_dir_name = packaged_cache_dir or f"chromium_headless_shell-{revision}"
+    packaged_dir = browser_cache_dir / packaged_dir_name
+    packaged_dir.mkdir(parents=True)
+    if create_marker:
+        (packaged_dir / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
+
+    if write_metadata:
+        metadata = {
+            "browser_name": "chromium-headless-shell",
+            "browser_version": "141.0.7390.37",
+            "machine_arch": machine_arch,
+            "packaged_cache_dir": packaged_dir_name,
+            "playwright_version": "1.60.0",
+            "revision": revision,
+        }
+        (machine_root / "playwright-browser-package.json").write_text(
+            json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    return browser_cache_dir
 
 
 # ansys_installation provided, valid using the legacy "CEI" folder.
@@ -377,6 +416,253 @@ def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, c
     assert detected_version is None
     assert "Detected multiple ADR layout versions" in caplog.text
     assert str(sorted([261, 271])) in caplog.text
+
+
+# The serverless renderer always passes an already-resolved concrete ADR/CEI install directory
+# plus an int install version, so these tests feed that same production-shaped input (a directory
+# named ``ADR`` containing ``apex271/machines/<arch>``) rather than a higher-level ``v###`` root.
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_finds_full_install_layout(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    browser_cache_dir = _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path == browser_cache_dir
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_accepts_special_build_name(tmp_path, monkeypatch):
+    # Playwright names some builds with a revisionOverrides "_special" form,
+    # chromium_headless_shell_<host>_special-<revision>, which ADR ships verbatim. The
+    # resolver must accept that directory name, not just the canonical one.
+    install_dir = tmp_path / "v271" / "ADR"
+    browser_cache_dir = _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "linux_2.6_64",
+        machine_arch="linux_2.6_64",
+        packaged_cache_dir="chromium_headless_shell_ubuntu20_04_special-1223",
+        revision="1223",
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Linux")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path == browser_cache_dir
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_uses_linux_machine_layout(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    browser_cache_dir = _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "linux_2.6_64",
+        machine_arch="linux_2.6_64",
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Linux")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path == browser_cache_dir
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_returns_none_on_unsupported_platform(
+    tmp_path, monkeypatch
+):
+    install_dir = tmp_path / "v271" / "ADR"
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Darwin")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_returns_none_without_required_inputs(monkeypatch):
+    # On a supported platform the resolver still needs both a concrete install directory and a
+    # version to build the machine-scoped cache path; neither input is inferred when omitted.
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert resolve_playwright_browsers_path(ansys_installation=None, ansys_version=271) is None
+    assert (
+        resolve_playwright_browsers_path(ansys_installation="C:/v271/ADR", ansys_version=None)
+        is None
+    )
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_returns_none_when_cache_absent(tmp_path, monkeypatch):
+    # A valid install that simply does not ship a Playwright cache must resolve to None rather
+    # than pointing Playwright at a non-existent browser directory. Create the machine directory
+    # but no playwright-browsers child.
+    install_dir = tmp_path / "v271" / "ADR"
+    (install_dir / "apex271" / "machines" / "win64").mkdir(parents=True)
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_requires_metadata_file(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+        write_metadata=False,
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_requires_matching_metadata_revision(
+    tmp_path, monkeypatch
+):
+    install_dir = tmp_path / "v271" / "ADR"
+    _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+        packaged_cache_dir="chromium_headless_shell-9999",
+        revision="1223",
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_requires_installation_complete_marker(
+    tmp_path, monkeypatch
+):
+    install_dir = tmp_path / "v271" / "ADR"
+    _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+        create_marker=False,
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path is None
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_unreadable_metadata(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    machine_root = install_dir / "apex271" / "machines" / "win64"
+    _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
+    # Metadata is present but not valid JSON, so the cache cannot be trusted.
+    (machine_root / "playwright-browser-package.json").write_text(
+        "{ not valid json", encoding="utf-8"
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert (
+        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
+        is None
+    )
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_non_object_metadata(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    machine_root = install_dir / "apex271" / "machines" / "win64"
+    _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
+    # Valid JSON, but a list instead of the expected metadata object.
+    (machine_root / "playwright-browser-package.json").write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert (
+        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
+        is None
+    )
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_machine_arch_mismatch(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    # Cache sits under win64 but its metadata advertises a different machine arch.
+    _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "win64",
+        machine_arch="linux_2.6_64",
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert (
+        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
+        is None
+    )
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_multiple_packaged_dirs(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    browser_cache_dir = _create_packaged_playwright_cache(
+        install_dir / "apex271" / "machines" / "win64",
+        machine_arch="win64",
+    )
+    # A second packaged directory breaks the "exactly one browser directory" contract.
+    (browser_cache_dir / "chromium_headless_shell-0001").mkdir()
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert (
+        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
+        is None
+    )
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_rejects_packaged_dir_name_mismatch(tmp_path, monkeypatch):
+    install_dir = tmp_path / "v271" / "ADR"
+    machine_root = install_dir / "apex271" / "machines" / "win64"
+    _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
+    # Metadata names a packaged directory that does not exist on disk.
+    metadata = {
+        "browser_name": "chromium-headless-shell",
+        "browser_version": "141.0.7390.37",
+        "machine_arch": "win64",
+        "packaged_cache_dir": "chromium_headless_shell-0000",
+        "playwright_version": "1.60.0",
+        "revision": "1223",
+    }
+    (machine_root / "playwright-browser-package.json").write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    assert (
+        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
+        is None
+    )
 
 
 # Test the branch for a valid 'enve' candidate.
