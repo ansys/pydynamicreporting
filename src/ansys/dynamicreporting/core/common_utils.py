@@ -261,10 +261,11 @@ def _playwright_machine_arch() -> str | None:
 def _cache_dir_matches_revision(cache_dir_name: str, revision: str) -> bool:
     """Return whether a packaged cache directory name matches the metadata revision.
 
-    The ADR product helper keeps exactly one browser directory under
-    ``playwright-browsers`` and names it after the Playwright-managed cache root.
-    The normal form is ``chromium_headless_shell-<revision>``, while some
-    platform-specific payloads can include an additional ``_special`` suffix.
+    ADR ships one browser directory under ``playwright-browsers`` named by Playwright
+    itself. The normal form is ``chromium_headless_shell-<revision>``. When a
+    Playwright ``revisionOverrides`` entry applies to the build host, Playwright names
+    it ``chromium_headless_shell_<host>_special-<revision>`` (hyphens replaced with
+    underscores), so the optional ``_..._special`` segment is matched as well.
     """
     revision_pattern = re.compile(
         rf"^{_PLAYWRIGHT_BROWSER_CACHE_PREFIX}(?:_.*_special)?-{re.escape(revision)}$"
@@ -381,12 +382,10 @@ def resolve_playwright_browsers_path(
     ``resolve_install_info``), so this derives the machine-scoped cache location
     from those resolved inputs directly rather than resolving the install again.
 
-    Two on-disk layouts are accepted, and each candidate is validated against the
-    packaging metadata before being advertised:
-
-    - full install: ``<install>/apex<ver>/machines/<arch>/playwright-browsers``;
-    - directly-staged tree: ``<install>/machines/<arch>/playwright-browsers``,
-      used by packaging staging that points straight at an ``apex###`` root.
+    ADR packaging places the cache at a single fixed location per machine
+    architecture, ``<install>/apex<ver>/machines/<arch>/playwright-browsers``, with
+    the metadata file as its sibling. That candidate is validated against the
+    packaging metadata before being advertised.
 
     Parameters
     ----------
@@ -404,20 +403,20 @@ def resolve_playwright_browsers_path(
     """
     machine_arch = _playwright_machine_arch()
     version = _normalize_ansys_version(ansys_version)
-    # The install directory and version are both required to build a machine-scoped
+    # The install directory and version are both required to build the machine-scoped
     # cache path, so bail out instead of guessing when either is missing or the
     # current platform has no validated ADR packaging layout.
     if machine_arch is None or ansys_installation is None or version is None:
         return None
 
-    install_dir = Path(ansys_installation).expanduser()
-    for browser_dir in (
-        install_dir / f"apex{version}" / "machines" / machine_arch / "playwright-browsers",
-        install_dir / "machines" / machine_arch / "playwright-browsers",
-    ):
-        if _validate_playwright_browsers_path(browser_dir, machine_arch):
-            return browser_dir
-    return None
+    browser_dir = (
+        Path(ansys_installation).expanduser()
+        / f"apex{version}"
+        / "machines"
+        / machine_arch
+        / "playwright-browsers"
+    )
+    return browser_dir if _validate_playwright_browsers_path(browser_dir, machine_arch) else None
 
 
 def _check_template_name_convention(template_name):

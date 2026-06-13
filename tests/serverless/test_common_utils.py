@@ -440,15 +440,18 @@ def test_resolve_playwright_browsers_path_finds_full_install_layout(tmp_path, mo
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_supports_direct_apex_layout(tmp_path, monkeypatch):
-    # Packaging staging can point straight at an apex### root, so the cache sits directly under
-    # machines/<arch> with no apex### segment to prepend.
-    install_dir = tmp_path / "staged-install"
+def test_resolve_playwright_browsers_path_accepts_special_build_name(tmp_path, monkeypatch):
+    # Playwright names some builds with a revisionOverrides "_special" form,
+    # chromium_headless_shell_<host>_special-<revision>, which ADR ships verbatim. The
+    # resolver must accept that directory name, not just the canonical one.
+    install_dir = tmp_path / "v271" / "ADR"
     browser_cache_dir = _create_packaged_playwright_cache(
-        install_dir / "machines" / "win64",
-        machine_arch="win64",
+        install_dir / "apex271" / "machines" / "linux_2.6_64",
+        machine_arch="linux_2.6_64",
+        packaged_cache_dir="chromium_headless_shell_ubuntu20_04_special-1223",
+        revision="1223",
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Linux")
 
     browser_path = resolve_playwright_browsers_path(
         ansys_installation=str(install_dir), ansys_version=271
@@ -498,6 +501,22 @@ def test_resolve_playwright_browsers_path_returns_none_without_required_inputs(m
         resolve_playwright_browsers_path(ansys_installation="C:/v271/ADR", ansys_version=None)
         is None
     )
+
+
+@pytest.mark.ado_test
+def test_resolve_playwright_browsers_path_returns_none_when_cache_absent(tmp_path, monkeypatch):
+    # A valid install that simply does not ship a Playwright cache must resolve to None rather
+    # than pointing Playwright at a non-existent browser directory. Create the machine directory
+    # but no playwright-browsers child.
+    install_dir = tmp_path / "v271" / "ADR"
+    (install_dir / "apex271" / "machines" / "win64").mkdir(parents=True)
+    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+
+    browser_path = resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    )
+
+    assert browser_path is None
 
 
 @pytest.mark.ado_test
