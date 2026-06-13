@@ -1298,7 +1298,9 @@ def test_playwright_pdf_uses_product_browser_cache_when_user_env_is_unset(tmp_pa
         lambda ansys_installation=None, ansys_version=None: browser_cache_dir,
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
+    # render_pdf() calls _wait_for_render_ready(page, deadline=...); the stub must accept the
+    # keyword-only deadline or the call raises TypeError and the render is reported as failed.
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
@@ -1354,7 +1356,9 @@ def test_playwright_pdf_preserves_user_browser_cache_env(tmp_path, monkeypatch):
         lambda ansys_installation=None, ansys_version=None: tmp_path / "product-cache",
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page: None)
+    # render_pdf() calls _wait_for_render_ready(page, deadline=...); the stub must accept the
+    # keyword-only deadline or the call raises TypeError and the render is reported as failed.
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
