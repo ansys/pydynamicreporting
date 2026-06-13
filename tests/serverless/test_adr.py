@@ -1689,6 +1689,8 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         # The render helper stages browser-PDF bundles in a dedicated temp child. Once the
@@ -1739,6 +1741,8 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         return None
