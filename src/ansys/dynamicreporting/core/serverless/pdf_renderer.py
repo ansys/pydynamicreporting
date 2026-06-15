@@ -163,7 +163,7 @@ class PlaywrightPDFRenderer:
         margins: dict[str, str] | None = None,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
-        ansys_version: int | str | None = None,
+        ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""

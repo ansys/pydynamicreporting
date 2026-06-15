@@ -365,7 +365,7 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
 
 
 def resolve_playwright_browsers_path(
-    ansys_installation: str | None = None, ansys_version: int | str | None = None
+    ansys_installation: str | None = None, ansys_version: int | None = None
 ) -> Path | None:
     """Return the product-shipped Playwright browser cache directory when available.
 
@@ -385,7 +385,7 @@ def resolve_playwright_browsers_path(
     ----------
     ansys_installation : str, optional
         Resolved Ansys install directory, normally the concrete ADR/CEI tree.
-    ansys_version : int or str, optional
+    ansys_version : int, optional
         Three-digit install version used to build the ``apex###`` directory name.
 
     Returns
