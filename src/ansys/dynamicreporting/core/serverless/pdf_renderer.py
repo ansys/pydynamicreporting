@@ -62,6 +62,7 @@ otherwise overflow or be clipped at the right edge.
 """
 
 from contextlib import contextmanager
+from importlib import metadata as importlib_metadata
 import json
 import os
 import re
@@ -75,7 +76,10 @@ from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ..adr_utils import get_logger
-from ..common_utils import resolve_playwright_browsers_path
+from ..common_utils import PlaywrightBrowserBinaryInfo
+from ..common_utils import resolve_playwright_browser_binary_info
+from ..compatibility import install_version_to_product_release
+from ..compatibility import product_release_to_product_line
 from ..exceptions import ADRException
 
 
@@ -100,9 +104,9 @@ class PlaywrightPDFRenderer:
         offline asset export.
     ansys_installation : Path or str, optional
         Resolved Ansys installation root used to locate a product-shipped
-        Playwright browser cache before falling back to the user's normal
-        Playwright cache.
-    ansys_version : int or str, optional
+        Playwright browser binary before falling back to the user's normal
+        Playwright browser location.
+    ansys_version : int, optional
         Ansys version associated with ``ansys_installation``.  This is used
         only to locate ``apex###/machines/...`` runtime assets when the product
         ships Playwright browsers inside the installation tree.
@@ -142,8 +146,8 @@ class PlaywrightPDFRenderer:
     # These process-level Playwright overrides are useful for installs and ad hoc
     # debugging, but browser-PDF export should not inherit them implicitly from a
     # developer shell or CI worker.  `PLAYWRIGHT_BROWSERS_PATH` is handled
-    # separately because it is the supported shared-cache override we intentionally
-    # preserve when the caller sets it explicitly.
+    # separately because it is the supported shared browser-binary path override
+    # we intentionally preserve when the caller sets it explicitly.
     _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
         "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
         "PLAYWRIGHT_DOWNLOAD_HOST",
@@ -153,6 +157,9 @@ class PlaywrightPDFRenderer:
         "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD",
         "PLAYWRIGHT_SKIP_BROWSER_GC",
     )
+    # Browser-PDF depends on a product-shipped Chromium binary introduced with
+    # product line 27. Older supported lines can still use other export formats.
+    _MIN_BROWSER_PDF_PRODUCT_LINE: int = 27
 
     def __init__(
         self,
@@ -173,25 +180,78 @@ class PlaywrightPDFRenderer:
         self._margins = self._validate_margins(margins)
         self._render_timeout = self._validate_render_timeout(render_timeout)
         # Keep the raw install metadata so the renderer can locate a product-managed
-        # Playwright browser cache without changing the public browser-PDF API shape.
+        # Playwright browser binary without changing the public browser-PDF API shape.
         self._ansys_installation = (
             None if ansys_installation is None else Path(ansys_installation).expanduser()
         )
         self._ansys_version = ansys_version
         self._logger = logger or get_logger()
 
-    def _resolve_playwright_browser_cache(self) -> Path | None:
-        """Return a shipped Playwright browser cache under the Ansys install, if any."""
-        return resolve_playwright_browsers_path(
+    @staticmethod
+    def _installed_playwright_version() -> str:
+        """Return the installed Playwright Python package version from public metadata."""
+        try:
+            return importlib_metadata.version("playwright")
+        except importlib_metadata.PackageNotFoundError as exc:
+            raise ADRException(
+                "Browser PDF export requires the Playwright Python package to be installed."
+            ) from exc
+
+    def _browser_pdf_product_line(self) -> int | None:
+        """Return the annual product line for the resolved install version."""
+        if self._ansys_version is None:
+            return None
+
+        try:
+            product_release = install_version_to_product_release(self._ansys_version)
+        except ValueError:
+            return None
+
+        return int(product_release_to_product_line(product_release))
+
+    def _raise_if_product_line_unsupported(self) -> None:
+        """Reject product lines that predate the shipped browser-PDF binary."""
+        product_line = self._browser_pdf_product_line()
+        if product_line is not None and product_line < self._MIN_BROWSER_PDF_PRODUCT_LINE:
+            raise ADRException(
+                f"Browser PDF export is not supported for Ansys product line {product_line}. "
+                "Use product line 27 or newer, which ships the required Playwright browser binary."
+            )
+
+    def _resolve_playwright_browser_binary(self) -> PlaywrightBrowserBinaryInfo | None:
+        """Return a shipped Playwright browser binary path under the Ansys install, if any."""
+        self._raise_if_product_line_unsupported()
+
+        if self._ansys_installation is None or self._ansys_version is None:
+            return None
+
+        binary_info = resolve_playwright_browser_binary_info(
             ansys_installation=(
                 None if self._ansys_installation is None else str(self._ansys_installation)
             ),
             ansys_version=self._ansys_version,
         )
+        if binary_info is None:
+            raise ADRException(
+                "Browser PDF export requires a valid product-shipped Playwright browser binary, "
+                f"but none was found for Ansys version {self._ansys_version}."
+            )
+
+        product_playwright_version = binary_info.metadata["playwright_version"]
+        client_playwright_version = self._installed_playwright_version()
+        if product_playwright_version != client_playwright_version:
+            raise ADRException(
+                "Browser PDF export is not supported for this product/client Playwright "
+                "combination. The product browser binary was packaged with Playwright "
+                f"{product_playwright_version}, but the active Python environment has "
+                f"Playwright {client_playwright_version}."
+            )
+
+        return binary_info
 
     @contextmanager
-    def _playwright_browser_cache_env(self):
-        """Temporarily point Playwright at the product-shipped browser cache.
+    def _playwright_browser_binary_env(self):
+        """Temporarily point Playwright at the product-shipped browser binary path.
 
         Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
         share browser binaries across environments.  Respect any caller-provided
@@ -209,21 +269,22 @@ class PlaywrightPDFRenderer:
             for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
             if env_var in os.environ
         }
-        installed_browser_cache_env = False
+        installed_browser_binary_env = False
         try:
+            self._raise_if_product_line_unsupported()
             if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
-                browser_cache_dir = self._resolve_playwright_browser_cache()
-                if browser_cache_dir is not None:
+                browser_binary_dir = self._resolve_playwright_browser_binary()
+                if browser_binary_dir is not None:
                     self._logger.info(
-                        "Using product-shipped Playwright browser cache: %s",
-                        browser_cache_dir,
+                        "Using product-shipped Playwright browser binary path: %s",
+                        browser_binary_dir.path,
                     )
-                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache_dir)
-                    installed_browser_cache_env = True
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
+                    installed_browser_binary_env = True
             yield
         finally:
-            if installed_browser_cache_env:
-                # Remove only the temporary cache override installed above so
+            if installed_browser_binary_env:
+                # Remove only the temporary browser path override installed above so
                 # later code sees the same environment the caller started with.
                 os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
             os.environ.update(restored_override_envs)
@@ -246,9 +307,9 @@ class PlaywrightPDFRenderer:
         current_timeout_phase = "browser launch"
 
         try:
-            # Point Playwright at the product-shipped browser cache (when available and not
+            # Point Playwright at the product-shipped browser binary (when available and not
             # already overridden by the caller) before the driver resolves browser binaries.
-            with self._playwright_browser_cache_env(), sync_playwright() as playwright:
+            with self._playwright_browser_binary_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
                 browser = playwright.chromium.launch(
                     headless=True,
