@@ -60,14 +60,10 @@ def _create_packaged_playwright_cache(
 
     if write_metadata:
         metadata = {
-            "browser_name": "chromium-headless-shell",
-            "browser_version": "141.0.7390.37",
             "machine_arch": machine_arch,
             "packaged_cache_dir": packaged_dir_name,
-            "playwright_version": "1.60.0",
-            "revision": revision,
         }
-        (machine_root / "playwright-browser-package.json").write_text(
+        (machine_root / "playwright_browser_metadata.json").write_text(
             json.dumps(metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
@@ -440,10 +436,9 @@ def test_resolve_playwright_browsers_path_finds_full_install_layout(tmp_path, mo
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_accepts_special_build_name(tmp_path, monkeypatch):
-    # Playwright names some builds with a revisionOverrides "_special" form,
-    # chromium_headless_shell_<host>_special-<revision>, which ADR ships verbatim. The
-    # resolver must accept that directory name, not just the canonical one.
+def test_resolve_playwright_browsers_path_uses_metadata_directory_name(tmp_path, monkeypatch):
+    # The shipped metadata names the exact directory that Playwright installed.
+    # The resolver should not duplicate Playwright's private naming rules.
     install_dir = tmp_path / "v271" / "ADR"
     browser_cache_dir = _create_packaged_playwright_cache(
         install_dir / "apex271" / "machines" / "linux_2.6_64",
@@ -537,26 +532,6 @@ def test_resolve_playwright_browsers_path_requires_metadata_file(tmp_path, monke
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_requires_matching_metadata_revision(
-    tmp_path, monkeypatch
-):
-    install_dir = tmp_path / "v271" / "ADR"
-    _create_packaged_playwright_cache(
-        install_dir / "apex271" / "machines" / "win64",
-        machine_arch="win64",
-        packaged_cache_dir="chromium_headless_shell-9999",
-        revision="1223",
-    )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
-
-    browser_path = resolve_playwright_browsers_path(
-        ansys_installation=str(install_dir), ansys_version=271
-    )
-
-    assert browser_path is None
-
-
-@pytest.mark.ado_test
 def test_resolve_playwright_browsers_path_requires_installation_complete_marker(
     tmp_path, monkeypatch
 ):
@@ -581,7 +556,7 @@ def test_resolve_playwright_browsers_path_rejects_unreadable_metadata(tmp_path, 
     machine_root = install_dir / "apex271" / "machines" / "win64"
     _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata is present but not valid JSON, so the cache cannot be trusted.
-    (machine_root / "playwright-browser-package.json").write_text(
+    (machine_root / "playwright_browser_metadata.json").write_text(
         "{ not valid json", encoding="utf-8"
     )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
@@ -598,7 +573,7 @@ def test_resolve_playwright_browsers_path_rejects_non_object_metadata(tmp_path, 
     machine_root = install_dir / "apex271" / "machines" / "win64"
     _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
-    (machine_root / "playwright-browser-package.json").write_text("[]", encoding="utf-8")
+    (machine_root / "playwright_browser_metadata.json").write_text("[]", encoding="utf-8")
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
 
     assert (
@@ -647,14 +622,10 @@ def test_resolve_playwright_browsers_path_rejects_packaged_dir_name_mismatch(tmp
     _create_packaged_playwright_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata names a packaged directory that does not exist on disk.
     metadata = {
-        "browser_name": "chromium-headless-shell",
-        "browser_version": "141.0.7390.37",
         "machine_arch": "win64",
         "packaged_cache_dir": "chromium_headless_shell-0000",
-        "playwright_version": "1.60.0",
-        "revision": "1223",
     }
-    (machine_root / "playwright-browser-package.json").write_text(
+    (machine_root / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")

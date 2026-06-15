@@ -37,8 +37,7 @@ from .utils.exceptions import TemplateEditorJSONLoadingError
 
 logger = logging.getLogger(__name__)
 
-_PLAYWRIGHT_BROWSER_CACHE_PREFIX = "chromium_headless_shell"
-_PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright-browser-package.json"
+_PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -252,21 +251,6 @@ def _playwright_machine_arch() -> str | None:
     return None
 
 
-def _cache_dir_matches_revision(cache_dir_name: str, revision: str) -> bool:
-    """Return whether a packaged cache directory name matches the metadata revision.
-
-    ADR ships one browser directory under ``playwright-browsers`` named by Playwright
-    itself. The normal form is ``chromium_headless_shell-<revision>``. When a
-    Playwright ``revisionOverrides`` entry applies to the build host, Playwright names
-    it ``chromium_headless_shell_<host>_special-<revision>`` (hyphens replaced with
-    underscores), so the optional ``_..._special`` segment is matched as well.
-    """
-    revision_pattern = re.compile(
-        rf"^{_PLAYWRIGHT_BROWSER_CACHE_PREFIX}(?:_.*_special)?-{re.escape(revision)}$"
-    )
-    return revision_pattern.match(cache_dir_name) is not None
-
-
 def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> bool:
     """Validate the product-shipped Playwright cache layout before advertising it.
 
@@ -308,9 +292,8 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
         return False
 
     packaged_cache_dir = str(metadata.get("packaged_cache_dir", "")).strip()
-    revision = str(metadata.get("revision", "")).strip()
     metadata_arch = str(metadata.get("machine_arch", "")).strip()
-    if not packaged_cache_dir or not revision or metadata_arch != machine_arch:
+    if not packaged_cache_dir or metadata_arch != machine_arch:
         logger.warning(
             "Ignoring product Playwright cache at %s because metadata file %s is incomplete or "
             "targets machine arch %r instead of %r.",
@@ -339,16 +322,6 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             browser_dir,
             packaged_dir.name,
             packaged_cache_dir,
-        )
-        return False
-
-    if not _cache_dir_matches_revision(packaged_dir.name, revision):
-        logger.warning(
-            "Ignoring product Playwright cache at %s because packaged directory %s does not "
-            "match metadata revision %s.",
-            browser_dir,
-            packaged_dir.name,
-            revision,
         )
         return False
 
