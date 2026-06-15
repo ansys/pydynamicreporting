@@ -38,6 +38,15 @@ from .utils.exceptions import TemplateEditorJSONLoadingError
 logger = logging.getLogger(__name__)
 
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
+_PLAYWRIGHT_BROWSER_NAME = "chromium-headless-shell"
+
+
+@dataclass(frozen=True)
+class PlaywrightBrowserCacheInfo:
+    """Validated product-shipped Playwright browser cache and its metadata."""
+
+    path: Path
+    metadata: dict[str, str]
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -251,7 +260,10 @@ def _playwright_machine_arch() -> str | None:
     return None
 
 
-def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> bool:
+def _validate_playwright_browsers_path(
+    browser_dir: Path,
+    machine_arch: str,
+) -> PlaywrightBrowserCacheInfo | None:
     """Validate the product-shipped Playwright cache layout before advertising it.
 
     Browser-PDF export should only point Playwright at a product-managed cache
@@ -260,7 +272,7 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
     accepting stale or partially copied browser directories.
     """
     if not browser_dir.is_dir():
-        return False
+        return None
 
     metadata_path = browser_dir.parent / _PLAYWRIGHT_BROWSER_METADATA_NAME
     if not metadata_path.is_file():
@@ -269,7 +281,7 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             browser_dir,
             metadata_path,
         )
-        return False
+        return None
 
     try:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -280,7 +292,7 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             metadata_path,
             exc,
         )
-        return False
+        return None
 
     if not isinstance(metadata, dict):
         logger.warning(
@@ -289,20 +301,37 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             browser_dir,
             metadata_path,
         )
-        return False
+        return None
 
-    packaged_cache_dir = str(metadata.get("packaged_cache_dir", "")).strip()
-    metadata_arch = str(metadata.get("machine_arch", "")).strip()
-    if not packaged_cache_dir or metadata_arch != machine_arch:
+    metadata_values = {
+        key: str(metadata.get(key, "")).strip()
+        for key in (
+            "build_commit",
+            "browser_name",
+            "browser_version",
+            "machine_arch",
+            "packaged_cache_dir",
+            "playwright_version",
+            "revision",
+        )
+    }
+    packaged_cache_dir = metadata_values["packaged_cache_dir"]
+    metadata_arch = metadata_values["machine_arch"]
+    if (
+        not packaged_cache_dir
+        or metadata_values["browser_name"] != _PLAYWRIGHT_BROWSER_NAME
+        or not metadata_values["playwright_version"]
+        or metadata_arch != machine_arch
+    ):
         logger.warning(
             "Ignoring product Playwright cache at %s because metadata file %s is incomplete or "
-            "targets machine arch %r instead of %r.",
+            "does not describe a %s cache for machine arch %r.",
             browser_dir,
             metadata_path,
+            _PLAYWRIGHT_BROWSER_NAME,
             metadata_arch,
-            machine_arch,
         )
-        return False
+        return None
 
     packaged_dirs = sorted(path for path in browser_dir.iterdir() if path.is_dir())
     if len(packaged_dirs) != 1:
@@ -312,7 +341,7 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             browser_dir,
             len(packaged_dirs),
         )
-        return False
+        return None
 
     packaged_dir = packaged_dirs[0]
     if packaged_dir.name != packaged_cache_dir:
@@ -323,7 +352,7 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             packaged_dir.name,
             packaged_cache_dir,
         )
-        return False
+        return None
 
     marker_path = packaged_dir / "INSTALLATION_COMPLETE"
     if not marker_path.is_file():
@@ -332,9 +361,33 @@ def _validate_playwright_browsers_path(browser_dir: Path, machine_arch: str) -> 
             browser_dir,
             marker_path,
         )
-        return False
+        return None
 
-    return True
+    return PlaywrightBrowserCacheInfo(path=browser_dir, metadata=metadata_values)
+
+
+def resolve_playwright_browser_cache_info(
+    ansys_installation: str | None = None,
+    ansys_version: int | None = None,
+) -> PlaywrightBrowserCacheInfo | None:
+    """Return the validated browser cache and metadata when the product ships one."""
+    machine_arch = _playwright_machine_arch()
+    # The install directory and version are both required to build the machine-scoped
+    # cache path, so bail out when either is missing or the current platform has no
+    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
+    # resolved and validated it through resolve_install_info, so re-validating it here
+    # would only duplicate that frontloaded work.
+    if machine_arch is None or ansys_installation is None or ansys_version is None:
+        return None
+
+    browser_dir = (
+        Path(ansys_installation).expanduser()
+        / f"apex{ansys_version}"
+        / "machines"
+        / machine_arch
+        / "playwright-browsers"
+    )
+    return _validate_playwright_browsers_path(browser_dir, machine_arch)
 
 
 def resolve_playwright_browsers_path(
@@ -368,23 +421,11 @@ def resolve_playwright_browsers_path(
         when the platform is unsupported, an input is missing, or no valid cache
         is shipped.
     """
-    machine_arch = _playwright_machine_arch()
-    # The install directory and version are both required to build the machine-scoped
-    # cache path, so bail out when either is missing or the current platform has no
-    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
-    # resolved and validated it through resolve_install_info, so re-validating it here
-    # would only duplicate that frontloaded work.
-    if machine_arch is None or ansys_installation is None or ansys_version is None:
-        return None
-
-    browser_dir = (
-        Path(ansys_installation).expanduser()
-        / f"apex{ansys_version}"
-        / "machines"
-        / machine_arch
-        / "playwright-browsers"
+    cache_info = resolve_playwright_browser_cache_info(
+        ansys_installation=ansys_installation,
+        ansys_version=ansys_version,
     )
-    return browser_dir if _validate_playwright_browsers_path(browser_dir, machine_arch) else None
+    return None if cache_info is None else cache_info.path
 
 
 def _check_template_name_convention(template_name):
