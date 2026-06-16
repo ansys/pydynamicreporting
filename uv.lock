@@ -3472,14 +3472,14 @@ wheels = [
 
 [[package]]
 name = "tzlocal"
-version = "5.4.2"
+version = "5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cf/43/4ca0479315598ce8d8ff3a24a78db8e1b15c35d66d265136aeec32518c00/tzlocal-5.4.2.tar.gz", hash = "sha256:d7e304509eedacfd10c961296d5d9cda9c302d6dee7119c58b38a83ed341814a", size = 30824, upload-time = "2026-06-16T20:15:45.553Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/52/ee2e6d7031687c5bad28363148cb72f2bbf38201d2e220671bd9fb830bc2/tzlocal-5.4.tar.gz", hash = "sha256:41e1293f80d4b5ff38dff222601a8fbd06b4fdcaf25e224704047ad26a39af54", size = 30922, upload-time = "2026-06-15T12:06:56.594Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/5b/60b978372747b5d30ff2d8dd747af8ce4c084737e36680e9111f0157304d/tzlocal-5.4.2-py3-none-any.whl", hash = "sha256:723246d54b2da754d17f45a08dc35b8754d592f1decf5fc70fe97ae59c6dcd8f", size = 4824, upload-time = "2026-06-16T20:15:44.118Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/70/5771c9ecbdb7cc0c3f3bbded7e0fa7911ee8e872ce5b5dc48ce7dce21a11/tzlocal-5.4-py3-none-any.whl", hash = "sha256:024d11221ff83453eae1f608f09b145b9779e1345d08c15404ce8ff7917cf629", size = 28261, upload-time = "2026-06-15T12:06:54.914Z" },
 ]
 
 [[package]]
