@@ -39,6 +39,8 @@ from .utils.exceptions import TemplateEditorJSONLoadingError
 logger = logging.getLogger(__name__)
 
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
+
+
 @dataclass(frozen=True)
 class PlaywrightBrowserBinaryInfo:
     """Validated product-shipped Playwright browser binary path and its metadata."""
@@ -131,12 +133,27 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
     return None
 
 
+def _resolve_install_version(install_dir: Path | None, ansys_version: int | None) -> int:
+    """Resolve install version from path, layout, explicit override, then default."""
+    if install_dir is not None:
+        path_version = get_install_version(install_dir)
+        if path_version is not None:
+            return path_version
+
+    layout_version = _get_install_version_from_layout(install_dir)
+    if layout_version is not None:
+        return layout_version
+    if ansys_version is not None:
+        return ansys_version
+    return int(DEFAULT_ANSYS_INSTALL_VERSION)
+
+
 @dataclass(frozen=True)
 class InstallResolution:
     """Resolved installation directory and version used by service/serverless setup."""
 
     install_dir: str | None
-    version: int | None
+    version: int
 
 
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
@@ -230,15 +247,11 @@ def resolve_install_info(
             install_dir = candidate_dir
             break
 
-    version = get_install_version(install_dir)
-    if version is None:
-        version = _get_install_version_from_layout(install_dir)
-    if version is None:
-        version = ansys_version or int(DEFAULT_ANSYS_INSTALL_VERSION)
+    resolved_version = _resolve_install_version(install_dir, ansys_version)
 
     if ansys_installation and (
         install_dir is None
-        or not (install_dir / f"nexus{version}" / "django" / "manage.py").exists()
+        or not (install_dir / f"nexus{resolved_version}" / "django" / "manage.py").exists()
     ):
         raise InvalidAnsysPath(
             f"Unable to detect an installation in: {[str(d) for d in candidates]}"
@@ -246,7 +259,7 @@ def resolve_install_info(
 
     return InstallResolution(
         install_dir=str(install_dir) if install_dir is not None else None,
-        version=version,
+        version=resolved_version,
     )
 
 
@@ -332,7 +345,9 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    metadata_info = PlaywrightBrowserBinaryInfo.from_metadata_dict(path=browser_dir, metadata=metadata)
+    metadata_info = PlaywrightBrowserBinaryInfo.from_metadata_dict(
+        path=browser_dir, metadata=metadata
+    )
     if (
         not metadata_info.packaged_binary_dir
         or metadata_info.browser_name != PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
