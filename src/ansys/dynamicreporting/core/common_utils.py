@@ -20,13 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import json
 import logging
 import os
 from pathlib import Path
 import platform
 import re
+from typing import ClassVar
 
 import bleach
 
@@ -38,15 +39,42 @@ from .utils.exceptions import TemplateEditorJSONLoadingError
 logger = logging.getLogger(__name__)
 
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
-_PLAYWRIGHT_BROWSER_NAME = "chromium-headless-shell"
-
-
 @dataclass(frozen=True)
 class PlaywrightBrowserBinaryInfo:
     """Validated product-shipped Playwright browser binary path and its metadata."""
 
+    EXPECTED_BROWSER_NAME: ClassVar[str] = "chromium-headless-shell"
+
     path: Path
-    metadata: dict[str, str]
+    build_commit: str
+    browser_name: str
+    browser_version: str
+    machine_arch: str
+    packaged_binary_dir: str
+    playwright_version: str
+    revision: str
+
+    @classmethod
+    def metadata_field_names(cls) -> tuple[str, ...]:
+        """Return the serialized metadata fields, excluding the filesystem path."""
+        return tuple(field.name for field in fields(cls) if field.name != "path")
+
+    @classmethod
+    def from_metadata_dict(
+        cls, *, path: Path, metadata: dict[str, object]
+    ) -> "PlaywrightBrowserBinaryInfo":
+        """Build a metadata record from a raw JSON object using the dataclass schema."""
+        return cls(
+            path=path,
+            **{
+                field_name: str(metadata.get(field_name, "")).strip()
+                for field_name in cls.metadata_field_names()
+            },
+        )
+
+    def to_metadata_dict(self) -> dict[str, str]:
+        """Serialize the metadata fields using the dataclass schema."""
+        return {field_name: getattr(self, field_name) for field_name in self.metadata_field_names()}
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -304,33 +332,20 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    metadata_values = {
-        key: str(metadata.get(key, "")).strip()
-        for key in (
-            "build_commit",
-            "browser_name",
-            "browser_version",
-            "machine_arch",
-            "packaged_binary_dir",
-            "playwright_version",
-            "revision",
-        )
-    }
-    packaged_binary_dir = metadata_values["packaged_binary_dir"]
-    metadata_arch = metadata_values["machine_arch"]
+    metadata_info = PlaywrightBrowserBinaryInfo.from_metadata_dict(path=browser_dir, metadata=metadata)
     if (
-        not packaged_binary_dir
-        or metadata_values["browser_name"] != _PLAYWRIGHT_BROWSER_NAME
-        or not metadata_values["playwright_version"]
-        or metadata_arch != machine_arch
+        not metadata_info.packaged_binary_dir
+        or metadata_info.browser_name != PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
+        or not metadata_info.playwright_version
+        or metadata_info.machine_arch != machine_arch
     ):
         logger.warning(
             "Ignoring product Playwright binary at %s because metadata file %s is incomplete or "
             "does not describe a %s binary for machine arch %r.",
             browser_dir,
             metadata_path,
-            _PLAYWRIGHT_BROWSER_NAME,
-            metadata_arch,
+            PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+            metadata_info.machine_arch,
         )
         return None
 
@@ -345,13 +360,13 @@ def _validate_playwright_browsers_path(
         return None
 
     packaged_dir = packaged_dirs[0]
-    if packaged_dir.name != packaged_binary_dir:
+    if packaged_dir.name != metadata_info.packaged_binary_dir:
         logger.warning(
             "Ignoring product Playwright binary at %s because packaged directory %s does not "
             "match metadata entry %s.",
             browser_dir,
             packaged_dir.name,
-            packaged_binary_dir,
+            metadata_info.packaged_binary_dir,
         )
         return None
 
@@ -364,7 +379,7 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    return PlaywrightBrowserBinaryInfo(path=browser_dir, metadata=metadata_values)
+    return metadata_info
 
 
 def resolve_playwright_browser_binary_info(

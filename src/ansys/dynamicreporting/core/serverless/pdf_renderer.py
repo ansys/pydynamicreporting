@@ -237,7 +237,7 @@ class PlaywrightPDFRenderer:
                 f"but none was found for Ansys version {self._ansys_version}."
             )
 
-        product_playwright_version = binary_info.metadata["playwright_version"]
+        product_playwright_version = binary_info.playwright_version
         client_playwright_version = self._installed_playwright_version()
         if product_playwright_version != client_playwright_version:
             raise ADRException(

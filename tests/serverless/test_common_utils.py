@@ -32,6 +32,7 @@ from ansys.dynamicreporting.core.compatibility import (
 )
 import ansys.dynamicreporting.core.common_utils as common_utils_module
 from ansys.dynamicreporting.core.common_utils import (
+    PlaywrightBrowserBinaryInfo,
     get_install_info,
     get_install_version,
     resolve_playwright_browsers_path,
@@ -39,6 +40,29 @@ from ansys.dynamicreporting.core.common_utils import (
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
+
+
+def _packaged_playwright_metadata(
+    *,
+    machine_arch: str,
+    revision: str = "1223",
+    packaged_binary_dir: str | None = None,
+    playwright_version: str = "1.60.0",
+    browser_name: str | None = None,
+    browser_version: str = "148.0.7778.96",
+    build_commit: str = "",
+) -> dict[str, str]:
+    """Build packaged Playwright metadata from the production dataclass schema."""
+    return PlaywrightBrowserBinaryInfo(
+        path=Path("playwright-browsers"),
+        build_commit=build_commit,
+        browser_name=browser_name or PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+        browser_version=browser_version,
+        machine_arch=machine_arch,
+        packaged_binary_dir=packaged_binary_dir or f"chromium_headless_shell-{revision}",
+        playwright_version=playwright_version,
+        revision=revision,
+    ).to_metadata_dict()
 
 
 def _create_packaged_playwright_binary(
@@ -59,15 +83,11 @@ def _create_packaged_playwright_binary(
         (packaged_dir / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
 
     if write_metadata:
-        metadata = {
-            "build_commit": "",
-            "browser_name": "chromium-headless-shell",
-            "browser_version": "148.0.7778.96",
-            "machine_arch": machine_arch,
-            "packaged_binary_dir": packaged_dir_name,
-            "playwright_version": "1.60.0",
-            "revision": revision,
-        }
+        metadata = _packaged_playwright_metadata(
+            machine_arch=machine_arch,
+            revision=revision,
+            packaged_binary_dir=packaged_dir_name,
+        )
         (browser_binary_dir / "playwright_browser_metadata.json").write_text(
             json.dumps(metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -543,14 +563,7 @@ def test_resolve_playwright_browsers_path_requires_playwright_version_metadata(
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
-    metadata = {
-        "build_commit": "",
-        "browser_name": "chromium-headless-shell",
-        "browser_version": "148.0.7778.96",
-        "machine_arch": "win64",
-        "packaged_binary_dir": "chromium_headless_shell-1223",
-        "revision": "1223",
-    }
+    metadata = _packaged_playwright_metadata(machine_arch="win64", playwright_version="")
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -636,15 +649,10 @@ def test_resolve_playwright_browsers_path_rejects_packaged_dir_name_mismatch(tmp
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata names a packaged directory that does not exist on disk.
-    metadata = {
-        "build_commit": "",
-        "browser_name": "chromium-headless-shell",
-        "browser_version": "148.0.7778.96",
-        "machine_arch": "win64",
-        "packaged_binary_dir": "chromium_headless_shell-0000",
-        "playwright_version": "1.60.0",
-        "revision": "1223",
-    }
+    metadata = _packaged_playwright_metadata(
+        machine_arch="win64",
+        packaged_binary_dir="chromium_headless_shell-0000",
+    )
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
