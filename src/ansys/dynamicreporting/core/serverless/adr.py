@@ -215,6 +215,11 @@ class ADR:
         in_memory: bool = False,
     ) -> None:
         # Basic attributes / configuration.
+        # ADR is a singleton, so repeated ADR(...) calls re-enter __init__ on the
+        # existing instance. Preserve the default session/dataset once setup has
+        # created them instead of clearing them on reconfiguration.
+        existing_session = getattr(self, "_session", None)
+        existing_dataset = getattr(self, "_dataset", None)
         self._db_directory = None
         self._media_directory = None
         self._static_directory = None
@@ -222,8 +227,8 @@ class ADR:
         self._static_url = static_url
         self._debug = debug
         self._request = request  # Used when ADR is embedded in a web server.
-        self._session: Session | None = None
-        self._dataset: Dataset | None = None
+        self._session: Session | None = existing_session
+        self._dataset: Dataset | None = existing_dataset
         self._logger = get_logger(logfile)
         self._tmp_dirs: list[tempfile.TemporaryDirectory] = []
         self._in_memory = in_memory
