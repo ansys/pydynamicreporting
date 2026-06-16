@@ -1337,9 +1337,7 @@ def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_p
 
 
 @pytest.mark.unit
-def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(
-    tmp_path, monkeypatch
-):
+def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>User browser path</p></body></html>")
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
