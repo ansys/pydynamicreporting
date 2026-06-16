@@ -418,7 +418,9 @@ def test_get_install_info_falsy_ansys_version_falls_back_to_default_layout(tmp_p
         nexus_dir.mkdir(parents=True)
         (nexus_dir / "manage.py").write_text("dummy content")
 
-    install, ver = get_install_info(ansys_installation=str(install_dir), ansys_version=falsy_version)
+    install, ver = get_install_info(
+        ansys_installation=str(install_dir), ansys_version=falsy_version
+    )
 
     assert install == str(install_dir)
     assert ver == int(DEFAULT_ANSYS_INSTALL_VERSION)
