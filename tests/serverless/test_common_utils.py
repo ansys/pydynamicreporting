@@ -413,7 +413,8 @@ def test_get_install_info_provided_ansys_version(tmp_path):
 def test_get_install_info_falsy_ansys_version_falls_back_to_default_layout(tmp_path, falsy_version):
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
-    for version in (DEFAULT_ANSYS_INSTALL_VERSION, "271"):
+    alternate_version = "261" if DEFAULT_ANSYS_INSTALL_VERSION != "261" else "252"
+    for version in (DEFAULT_ANSYS_INSTALL_VERSION, alternate_version):
         nexus_dir = install_dir / f"nexus{version}" / "django"
         nexus_dir.mkdir(parents=True)
         (nexus_dir / "manage.py").write_text("dummy content")
