@@ -12,6 +12,7 @@ When you change code in this repo, aim to always:
 - **Add or update tests** for behavior changes (at least: happy path + 1 edge case).
 - **Keep tests separate from production code** in dedicated test files or test folders.
 - **Run focused verification** before concluding and after every commit:
+  - `uv run pre-commit run --all-files` and fix any failures before committing
   - `make check` (lockfile consistency + pre-commit)
   - `make smoketest` (fast import sanity check)
   - focused tests for the changed behavior
@@ -219,6 +220,7 @@ Highlights:
 - Run lint/checks, smoke tests, and focused tests locally after every commit and before finishing:
 
 ```bash
+uv run pre-commit run --all-files
 make check
 make smoketest
 uv run pytest path/to/test_file.py -q
