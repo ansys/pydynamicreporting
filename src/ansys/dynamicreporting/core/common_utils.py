@@ -269,17 +269,18 @@ def _validate_playwright_browsers_path(
     Browser-PDF export should only point Playwright at a product-managed binary
     when the stripped package layout is complete and self-consistent.  This keeps
     the runtime honest to the product packaging contract instead of silently
-    accepting stale or partially copied browser directories.
+    accepting stale or partially copied browser directories. The metadata file
+    lives inside ``playwright-browsers`` itself.
     """
     if not browser_dir.is_dir():
         return None
 
-    metadata_path = browser_dir.parent / _PLAYWRIGHT_BROWSER_METADATA_NAME
+    metadata_path = browser_dir / _PLAYWRIGHT_BROWSER_METADATA_NAME
     if not metadata_path.is_file():
         logger.warning(
-            "Ignoring product Playwright binary at %s because metadata file %s is missing.",
+            "Ignoring product Playwright binary at %s because metadata file %s is missing ",
             browser_dir,
-            metadata_path,
+            _PLAYWRIGHT_BROWSER_METADATA_NAME,
         )
         return None
 
@@ -404,8 +405,7 @@ def resolve_playwright_browsers_path(
 
     ADR packaging places the binary at a single fixed location per machine
     architecture, ``<install>/apex<ver>/machines/<arch>/playwright-browsers``, with
-    the metadata file as its sibling. That candidate is validated against the
-    packaging metadata before being advertised.
+    the metadata file inside that browser root.
 
     Parameters
     ----------

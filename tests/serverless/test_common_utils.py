@@ -68,7 +68,7 @@ def _create_packaged_playwright_binary(
             "playwright_version": "1.60.0",
             "revision": revision,
         }
-        (machine_root / "playwright_browser_metadata.json").write_text(
+        (browser_binary_dir / "playwright_browser_metadata.json").write_text(
             json.dumps(metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
@@ -541,6 +541,7 @@ def test_resolve_playwright_browsers_path_requires_playwright_version_metadata(
 ):
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
+    browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
     metadata = {
         "build_commit": "",
@@ -550,7 +551,7 @@ def test_resolve_playwright_browsers_path_requires_playwright_version_metadata(
         "packaged_binary_dir": "chromium_headless_shell-1223",
         "revision": "1223",
     }
-    (machine_root / "playwright_browser_metadata.json").write_text(
+    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
@@ -565,9 +566,10 @@ def test_resolve_playwright_browsers_path_requires_playwright_version_metadata(
 def test_resolve_playwright_browsers_path_rejects_unreadable_metadata(tmp_path, monkeypatch):
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
+    browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata is present but not valid JSON, so the binary path cannot be trusted.
-    (machine_root / "playwright_browser_metadata.json").write_text(
+    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         "{ not valid json", encoding="utf-8"
     )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
@@ -582,9 +584,10 @@ def test_resolve_playwright_browsers_path_rejects_unreadable_metadata(tmp_path, 
 def test_resolve_playwright_browsers_path_rejects_non_object_metadata(tmp_path, monkeypatch):
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
+    browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
-    (machine_root / "playwright_browser_metadata.json").write_text("[]", encoding="utf-8")
+    (browser_binary_dir / "playwright_browser_metadata.json").write_text("[]", encoding="utf-8")
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
 
     assert (
@@ -630,6 +633,7 @@ def test_resolve_playwright_browsers_path_rejects_multiple_packaged_dirs(tmp_pat
 def test_resolve_playwright_browsers_path_rejects_packaged_dir_name_mismatch(tmp_path, monkeypatch):
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
+    browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata names a packaged directory that does not exist on disk.
     metadata = {
@@ -641,7 +645,7 @@ def test_resolve_playwright_browsers_path_rejects_packaged_dir_name_mismatch(tmp
         "playwright_version": "1.60.0",
         "revision": "1223",
     }
-    (machine_root / "playwright_browser_metadata.json").write_text(
+    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
