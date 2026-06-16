@@ -104,8 +104,9 @@ class PlaywrightPDFRenderer:
         offline asset export.
     ansys_installation : Path or str, optional
         Resolved Ansys installation root used to locate a product-shipped
-        Playwright browser binary before falling back to the user's normal
-        Playwright browser location.
+        Playwright browser binary. When provided with ``ansys_version`` on a
+        supported product line, browser-PDF export uses that shipped browser
+        cache for the render instead of any ambient browser-path override.
     ansys_version : int, optional
         Ansys version associated with ``ansys_installation``.  This is used
         only to locate ``apex###/machines/...`` runtime assets when the product
@@ -146,8 +147,8 @@ class PlaywrightPDFRenderer:
     # These process-level Playwright overrides are useful for installs and ad hoc
     # debugging, but browser-PDF export should not inherit them implicitly from a
     # developer shell or CI worker.  `PLAYWRIGHT_BROWSERS_PATH` is handled
-    # separately because it is the supported shared browser-binary path override
-    # we intentionally preserve when the caller sets it explicitly.
+    # separately because browser-PDF may temporarily replace it with the
+    # product-shipped browser cache for the duration of a render.
     _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
         "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
         "PLAYWRIGHT_DOWNLOAD_HOST",
@@ -254,10 +255,13 @@ class PlaywrightPDFRenderer:
         """Temporarily point Playwright at the product-shipped browser binary path.
 
         Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
-        share browser binaries across environments.  Respect any caller-provided
-        value first, but still clear the other process-wide Playwright override
-        variables so browser-PDF export does not inherit installer/debug knobs
-        from an unrelated shell session.
+        share browser binaries across environments. Product-coupled browser-PDF
+        renders must use the browser shipped inside the resolved Ansys install
+        rather than any ambient machine-level Playwright browser cache, but the
+        caller's original environment must still be restored afterward. The
+        other process-wide Playwright override variables are also cleared so
+        browser-PDF export does not inherit installer/debug knobs from an
+        unrelated shell session.
 
         This mutates ``os.environ`` for the duration of the render and restores it on
         exit, so two browser-PDF renders must not run concurrently in the same process.
@@ -269,24 +273,28 @@ class PlaywrightPDFRenderer:
             for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
             if env_var in os.environ
         }
+        restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
         installed_browser_binary_env = False
         try:
             self._raise_if_product_line_unsupported()
-            if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
-                browser_binary_dir = self._resolve_playwright_browser_binary()
-                if browser_binary_dir is not None:
-                    self._logger.info(
-                        "Using product-shipped Playwright browser binary path: %s",
-                        browser_binary_dir.path,
-                    )
-                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-                    installed_browser_binary_env = True
+            browser_binary_dir = self._resolve_playwright_browser_binary()
+            if browser_binary_dir is not None:
+                self._logger.info(
+                    "Using product-shipped Playwright browser binary path: %s",
+                    browser_binary_dir.path,
+                )
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
+                installed_browser_binary_env = True
             yield
         finally:
             if installed_browser_binary_env:
-                # Remove only the temporary browser path override installed above so
-                # later code sees the same environment the caller started with.
-                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+                # Restore the caller's original browser-path override after the
+                # render so the product-specific choice stays scoped to this
+                # browser-PDF operation.
+                if restored_browser_binaries_path is None:
+                    os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+                else:
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
             os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
@@ -307,8 +315,9 @@ class PlaywrightPDFRenderer:
         current_timeout_phase = "browser launch"
 
         try:
-            # Point Playwright at the product-shipped browser binary (when available and not
-            # already overridden by the caller) before the driver resolves browser binaries.
+            # Point Playwright at the product-shipped browser binary before the
+            # driver resolves browser binaries so browser-PDF never falls back
+            # to an unrelated machine-level Chromium cache.
             with self._playwright_browser_binary_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
                 browser = playwright.chromium.launch(

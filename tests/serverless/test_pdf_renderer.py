@@ -1337,7 +1337,9 @@ def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_p
 
 
 @pytest.mark.unit
-def test_playwright_pdf_preserves_user_browser_path_env(tmp_path, monkeypatch):
+def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(
+    tmp_path, monkeypatch
+):
     html_dir = _write_html(tmp_path, "<html><body><p>User browser path</p></body></html>")
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
@@ -1345,7 +1347,9 @@ def test_playwright_pdf_preserves_user_browser_path_env(tmp_path, monkeypatch):
         ansys_version=271,
     )
     user_browser_path = str(tmp_path / "user-browser-path")
+    browser_binary_dir = tmp_path / "product-browser-path"
     env_seen: dict[str, str | None] = {}
+    resolver_args: dict[str, object] = {}
     page = Mock()
     page.pdf.return_value = b"%PDF-mock"
     context = Mock()
@@ -1361,10 +1365,8 @@ def test_playwright_pdf_preserves_user_browser_path_env(tmp_path, monkeypatch):
     }
 
     def fake_enter():
-        # User configuration wins over any product fallback so shared tooling can
-        # keep using a custom browser path unchanged, while the client
-        # still strips unrelated process-wide Playwright overrides for the
-        # browser-PDF launch itself.
+        # Browser-PDF must force the product-shipped browser cache during the
+        # render even if the ambient environment points somewhere else.
         env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
         env_seen["transient_override_envs"] = {
             env_var: os.environ.get(env_var) for env_var in runtime_override_envs
@@ -1378,9 +1380,18 @@ def test_playwright_pdf_preserves_user_browser_path_env(tmp_path, monkeypatch):
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: pytest.fail(
-            "user PLAYWRIGHT_BROWSERS_PATH should bypass product binary discovery"
-        ),
+        lambda ansys_installation=None, ansys_version=None: resolver_args.update(
+            {
+                "ansys_installation": ansys_installation,
+                "ansys_version": ansys_version,
+            }
+        )
+        or _browser_binary_info(browser_binary_dir),
+    )
+    monkeypatch.setattr(
+        PlaywrightPDFRenderer,
+        "_installed_playwright_version",
+        lambda self=None: "1.60.0",
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
     # render_pdf() calls _wait_for_render_ready(page, deadline=...); the stub must accept the
@@ -1389,8 +1400,12 @@ def test_playwright_pdf_preserves_user_browser_path_env(tmp_path, monkeypatch):
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    assert env_seen["playwright_browsers_path"] == user_browser_path
+    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert all(value is None for value in env_seen["transient_override_envs"].values())
+    assert resolver_args == {
+        "ansys_installation": r"C:\Program Files\ANSYS Inc\v271\ADR",
+        "ansys_version": 271,
+    }
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
     for env_var, env_value in runtime_override_envs.items():
         assert os.environ[env_var] == env_value
