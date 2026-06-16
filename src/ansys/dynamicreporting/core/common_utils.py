@@ -143,9 +143,9 @@ def _resolve_install_version(install_dir: Path | None, ansys_version: int | None
     layout_version = _get_install_version_from_layout(install_dir)
     if layout_version is not None:
         return layout_version
-    if ansys_version is not None:
-        return ansys_version
-    return int(DEFAULT_ANSYS_INSTALL_VERSION)
+    # Preserve the historical fallback contract: falsy explicit values such as
+    # ``0`` behaved the same as omitting ``ansys_version`` entirely.
+    return ansys_version or int(DEFAULT_ANSYS_INSTALL_VERSION)
 
 
 @dataclass(frozen=True)
