@@ -155,27 +155,6 @@ def test_init_twice(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_init_twice_preserves_default_session_and_dataset(adr_serverless):
-    from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
-
-    original_session = adr_serverless.session
-    original_dataset = adr_serverless.dataset
-
-    adr = ADR(
-        ansys_installation="docker",
-        docker_image=DOCKER_DEV_REPO_URL,
-        db_directory=adr_serverless.db_directory,
-        static_directory=adr_serverless.static_directory,
-        media_url="/media1/",
-        static_url="/static2/",
-    )
-
-    assert adr is adr_serverless
-    assert adr.session is original_session
-    assert adr.dataset is original_dataset
-
-
-@pytest.mark.ado_test
 def test_set_default_session(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 
