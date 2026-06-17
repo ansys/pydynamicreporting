@@ -53,7 +53,6 @@ class PlaywrightBrowserBinaryInfo:
     browser_version: str
     machine_arch: str
     packaged_binary_dir: str
-    playwright_version: str
     revision: str
 
     @classmethod

@@ -109,8 +109,6 @@ def _stub_playwright_render(
 
 def _browser_binary_info(
     browser_binary_dir: Path,
-    *,
-    playwright_version: str = "1.60.0",
 ) -> pdf_renderer_module.PlaywrightBrowserBinaryInfo:
     """Create validated product-binary metadata for renderer tests."""
     return pdf_renderer_module.PlaywrightBrowserBinaryInfo(
@@ -120,7 +118,6 @@ def _browser_binary_info(
         browser_version="148.0.7778.96",
         machine_arch="win64",
         packaged_binary_dir="chromium_headless_shell-1223",
-        playwright_version=playwright_version,
         revision="1223",
     )
 
@@ -1445,10 +1442,7 @@ def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_bin
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
-        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
-            browser_binary_dir,
-            playwright_version="",
-        ),
+        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(browser_binary_dir),
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
 

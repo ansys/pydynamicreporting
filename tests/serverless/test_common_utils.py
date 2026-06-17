@@ -47,7 +47,6 @@ def _packaged_playwright_metadata(
     machine_arch: str,
     revision: str = "1223",
     packaged_binary_dir: str | None = None,
-    playwright_version: str = "1.60.0",
     browser_name: str | None = None,
     browser_version: str = "148.0.7778.96",
     build_commit: str = "",
@@ -60,7 +59,6 @@ def _packaged_playwright_metadata(
         browser_version=browser_version,
         machine_arch=machine_arch,
         packaged_binary_dir=packaged_binary_dir or f"chromium_headless_shell-{revision}",
-        playwright_version=playwright_version,
         revision=revision,
     ).to_metadata_dict()
 
@@ -575,17 +573,13 @@ def test_resolve_playwright_browsers_path_requires_installation_complete_marker(
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_allows_missing_playwright_version_metadata(
+def test_resolve_playwright_browsers_path_accepts_metadata_without_client_version_logic(
     tmp_path, monkeypatch
 ):
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
-    metadata = _packaged_playwright_metadata(machine_arch="win64", playwright_version="")
-    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
-        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    _create_packaged_playwright_binary(machine_root, machine_arch="win64")
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
 
     assert resolve_playwright_browsers_path(
