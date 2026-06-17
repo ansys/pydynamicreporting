@@ -1286,6 +1286,7 @@ def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_p
     playwright = Mock()
     playwright.chromium.launch.return_value = browser
     playwright_manager = MagicMock()
+    preserved_download_host = "https://playwright-downloads.example.invalid"
     runtime_override_envs = {
         env_var: f"{env_var.lower()}-value"
         for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
@@ -1298,10 +1299,12 @@ def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_p
         env_seen["transient_override_envs"] = {
             env_var: os.environ.get(env_var) for env_var in runtime_override_envs
         }
+        env_seen["download_host"] = os.environ.get("PLAYWRIGHT_DOWNLOAD_HOST")
         return playwright
 
     playwright_manager.__enter__.side_effect = fake_enter
     monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
+    monkeypatch.setenv("PLAYWRIGHT_DOWNLOAD_HOST", preserved_download_host)
     for env_var, env_value in runtime_override_envs.items():
         monkeypatch.setenv(env_var, env_value)
     monkeypatch.setattr(
@@ -1320,7 +1323,9 @@ def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_p
     assert renderer.render_pdf() == b"%PDF-mock"
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert all(value is None for value in env_seen["transient_override_envs"].values())
+    assert env_seen["download_host"] == preserved_download_host
     assert "PLAYWRIGHT_BROWSERS_PATH" not in os.environ
+    assert os.environ["PLAYWRIGHT_DOWNLOAD_HOST"] == preserved_download_host
     for env_var, env_value in runtime_override_envs.items():
         assert os.environ[env_var] == env_value
 
