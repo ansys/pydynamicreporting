@@ -31,10 +31,13 @@ from ansys.dynamicreporting.core.compatibility import (
     DEFAULT_ANSYS_INSTALL_VERSION,
 )
 import ansys.dynamicreporting.core.common_utils as common_utils_module
+from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core.common_utils import (
-    PlaywrightBrowserBinaryInfo,
     get_install_info,
     get_install_version,
+)
+from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    PlaywrightBrowserBinaryInfo,
     resolve_playwright_browser_binary_info,
 )
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
@@ -467,7 +470,7 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="win64",
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -484,7 +487,7 @@ def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_pa
         install_dir / "apex271" / "machines" / "linux_2.6_64",
         machine_arch="linux_2.6_64",
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Linux")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -499,7 +502,7 @@ def test_resolve_playwright_browser_binary_info_returns_none_on_unsupported_plat
     tmp_path, monkeypatch
 ):
     install_dir = tmp_path / "v271" / "ADR"
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Darwin")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -512,7 +515,7 @@ def test_resolve_playwright_browser_binary_info_returns_none_on_unsupported_plat
 def test_resolve_playwright_browser_binary_info_returns_none_without_required_inputs(monkeypatch):
     # On a supported platform the resolver still needs both a concrete install directory and a
     # version to build the machine-scoped binary path; neither input is inferred when omitted.
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(ansys_installation=None, ansys_version=271) is None
@@ -532,7 +535,7 @@ def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
     # but no playwright-browsers child.
     install_dir = tmp_path / "v271" / "ADR"
     (install_dir / "apex271" / "machines" / "win64").mkdir(parents=True)
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -549,7 +552,7 @@ def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path,
         machine_arch="win64",
         write_metadata=False,
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -568,7 +571,7 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
         machine_arch="win64",
         create_marker=False,
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -583,7 +586,7 @@ def test_resolve_playwright_browser_binary_info_accepts_required_metadata(tmp_pa
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_playwright_binary(machine_root, machine_arch="win64")
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
         ansys_installation=str(install_dir), ansys_version=271
@@ -602,7 +605,7 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         "{ not valid json", encoding="utf-8"
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
@@ -620,7 +623,7 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
     _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
     (browser_binary_dir / "playwright_browser_metadata.json").write_text("[]", encoding="utf-8")
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
@@ -642,7 +645,7 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
@@ -662,7 +665,7 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
@@ -682,7 +685,7 @@ def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="linux_2.6_64",
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
@@ -703,7 +706,7 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
     )
     # A second packaged directory breaks the "exactly one browser directory" contract.
     (browser_binary_dir / "chromium_headless_shell-0001").mkdir()
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
@@ -729,7 +732,7 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismat
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(

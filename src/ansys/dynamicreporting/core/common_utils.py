@@ -20,14 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from dataclasses import dataclass, fields
-import json
+from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
 import platform
 import re
-from typing import ClassVar
 
 import bleach
 
@@ -37,42 +35,6 @@ from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
 logger = logging.getLogger(__name__)
-
-_PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
-
-
-@dataclass(frozen=True)
-class PlaywrightBrowserBinaryInfo:
-    """Validated product-shipped Playwright browser binary path and required metadata."""
-
-    EXPECTED_BROWSER_NAME: ClassVar[str] = "chromium-headless-shell"
-
-    path: Path
-    browser_name: str
-    machine_arch: str
-    packaged_binary_dir: str
-
-    @classmethod
-    def metadata_field_names(cls) -> tuple[str, ...]:
-        """Return the serialized metadata fields, excluding the filesystem path."""
-        return tuple(field.name for field in fields(cls) if field.name != "path")
-
-    @classmethod
-    def from_metadata_dict(
-        cls, *, path: Path, metadata: dict[str, object]
-    ) -> "PlaywrightBrowserBinaryInfo":
-        """Build a metadata record from a raw JSON object using the dataclass schema."""
-        return cls(
-            path=path,
-            **{
-                field_name: str(metadata.get(field_name, "")).strip()
-                for field_name in cls.metadata_field_names()
-            },
-        )
-
-    def to_metadata_dict(self) -> dict[str, str]:
-        """Serialize the metadata fields using the dataclass schema."""
-        return {field_name: getattr(self, field_name) for field_name in self.metadata_field_names()}
 
 
 def get_install_version(install_dir: Path) -> int | None:
@@ -277,143 +239,6 @@ def get_install_info(
     # Preserve the historical tuple return type for external callers while
     # the internal resolver returns a typed record for service/serverless code.
     return resolution.install_dir, resolution.version
-
-
-def _playwright_machine_arch() -> str | None:
-    """Map the current platform to the ADR ``machines/<arch>`` directory name.
-
-    ADR product builds ship Playwright browsers only for Windows (``win64``) and
-    Linux (``linux_2.6_64``), so other platforms have no product binary to point at
-    and resolve to ``None``. These are the same ``machines/<arch>`` names
-    ``ADR.setup`` already uses; they are hardcoded here rather than read from
-    ``enve_arch()`` because the serverless client cannot assume ``enve`` is
-    importable in the caller's Python environment.
-    """
-    system_name = platform.system().lower()
-    if system_name.startswith("win"):
-        return "win64"
-    if system_name.startswith("linux"):
-        return "linux_2.6_64"
-    return None
-
-
-def _validate_playwright_browsers_path(
-    browser_dir: Path,
-    machine_arch: str,
-) -> PlaywrightBrowserBinaryInfo | None:
-    """Validate the product-shipped Playwright binary layout before advertising it.
-
-    Browser-PDF export should only point Playwright at a product-managed binary
-    when the stripped package layout is complete and self-consistent.  This keeps
-    the runtime honest to the product packaging contract instead of silently
-    accepting stale or partially copied browser directories. The metadata file
-    lives inside ``playwright-browsers`` itself.
-    """
-    if not browser_dir.is_dir():
-        return None
-
-    metadata_path = browser_dir / _PLAYWRIGHT_BROWSER_METADATA_NAME
-    if not metadata_path.is_file():
-        logger.warning(
-            "Ignoring product Playwright binary at %s because metadata file %s is missing ",
-            browser_dir,
-            _PLAYWRIGHT_BROWSER_METADATA_NAME,
-        )
-        return None
-
-    try:
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "Ignoring product Playwright binary at %s because metadata file %s is unreadable: %s",
-            browser_dir,
-            metadata_path,
-            exc,
-        )
-        return None
-
-    if not isinstance(metadata, dict):
-        logger.warning(
-            "Ignoring product Playwright binary at %s because metadata file %s does not contain "
-            "a JSON object.",
-            browser_dir,
-            metadata_path,
-        )
-        return None
-
-    metadata_info = PlaywrightBrowserBinaryInfo.from_metadata_dict(
-        path=browser_dir, metadata=metadata
-    )
-    if (
-        not metadata_info.packaged_binary_dir
-        or metadata_info.browser_name != PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
-        or metadata_info.machine_arch != machine_arch
-    ):
-        logger.warning(
-            "Ignoring product Playwright binary at %s because metadata file %s is incomplete or "
-            "does not describe a %s binary for machine arch %r.",
-            browser_dir,
-            metadata_path,
-            PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-            metadata_info.machine_arch,
-        )
-        return None
-
-    packaged_dirs = sorted(path for path in browser_dir.iterdir() if path.is_dir())
-    if len(packaged_dirs) != 1:
-        logger.warning(
-            "Ignoring product Playwright binary at %s because it contains %d packaged browser "
-            "directories instead of exactly one.",
-            browser_dir,
-            len(packaged_dirs),
-        )
-        return None
-
-    packaged_dir = packaged_dirs[0]
-    if packaged_dir.name != metadata_info.packaged_binary_dir:
-        logger.warning(
-            "Ignoring product Playwright binary at %s because packaged directory %s does not "
-            "match metadata entry %s.",
-            browser_dir,
-            packaged_dir.name,
-            metadata_info.packaged_binary_dir,
-        )
-        return None
-
-    marker_path = packaged_dir / "INSTALLATION_COMPLETE"
-    if not marker_path.is_file():
-        logger.warning(
-            "Ignoring product Playwright binary at %s because installation marker %s is missing.",
-            browser_dir,
-            marker_path,
-        )
-        return None
-
-    return metadata_info
-
-
-def resolve_playwright_browser_binary_info(
-    ansys_installation: str | None = None,
-    ansys_version: int | None = None,
-) -> PlaywrightBrowserBinaryInfo | None:
-    """Return the validated browser binary path and metadata when the product ships one."""
-    machine_arch = _playwright_machine_arch()
-    # The install directory and version are both required to build the machine-scoped
-    # binary path, so bail out when either is missing or the current platform has no
-    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
-    # resolved and validated it through resolve_install_info, so re-validating it here
-    # would only duplicate that frontloaded work.
-    if machine_arch is None or ansys_installation is None or ansys_version is None:
-        return None
-
-    browser_dir = (
-        Path(ansys_installation).expanduser()
-        / f"apex{ansys_version}"
-        / "machines"
-        / machine_arch
-        / "playwright-browsers"
-    )
-    return _validate_playwright_browsers_path(browser_dir, machine_arch)
 
 
 def _check_template_name_convention(template_name):
