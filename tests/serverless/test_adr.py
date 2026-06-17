@@ -1472,6 +1472,30 @@ def test_load_templates_from_file_no_such_file(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_import_json_items_delegates_to_serverless_importer(adr_serverless, monkeypatch, tmp_path):
+    from ansys.dynamicreporting.core.serverless import json_importer as json_importer_module
+
+    calls = {}
+
+    class FakeImporter:
+        def __init__(self, adr):
+            calls["adr"] = adr
+
+        def _import_json_items(self, json_file_path):
+            calls["json_file_path"] = json_file_path
+            return {"imported": True}
+
+    monkeypatch.setattr(json_importer_module, "ServerlessReportItemImporter", FakeImporter)
+
+    json_path = tmp_path / "report_items.json"
+    result = adr_serverless.import_json_items(json_path)
+
+    assert result == {"imported": True}
+    assert calls["adr"] is adr_serverless
+    assert calls["json_file_path"] == json_path
+
+
+@pytest.mark.ado_test
 def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless.html_exporter import (
