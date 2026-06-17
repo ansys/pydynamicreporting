@@ -143,19 +143,12 @@ class PlaywrightPDFRenderer:
     # Network requests using these schemes are blocked to keep rendering offline.
     _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
     _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
-    # These process-level Playwright overrides are useful for installs and ad hoc
-    # debugging, but browser-PDF export should not inherit them implicitly from a
-    # developer shell or CI worker.  `PLAYWRIGHT_BROWSERS_PATH` is handled
-    # separately because browser-PDF may temporarily replace it with the
-    # product-shipped browser cache for the duration of a render.
+    # This override changes Playwright's platform-specific browser lookup, while
+    # the ADR resolver has already selected the product machine directory.
+    # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
+    # it with the product-shipped browser cache for the duration of a render.
     _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
         "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
-        "PLAYWRIGHT_DOWNLOAD_HOST",
-        "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
-        "PLAYWRIGHT_FIREFOX_DOWNLOAD_HOST",
-        "PLAYWRIGHT_WEBKIT_DOWNLOAD_HOST",
-        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD",
-        "PLAYWRIGHT_SKIP_BROWSER_GC",
     )
     # Browser-PDF depends on a product-shipped Chromium binary introduced with
     # product line 27. Older supported lines can still use other export formats.
@@ -238,9 +231,8 @@ class PlaywrightPDFRenderer:
         renders must use the browser shipped inside the resolved Ansys install
         rather than any ambient machine-level Playwright browser cache, but the
         caller's original environment must still be restored afterward. The
-        other process-wide Playwright override variables are also cleared so
-        browser-PDF export does not inherit installer/debug knobs from an
-        unrelated shell session.
+        host-platform override is cleared because it can make Playwright look for
+        a different platform layout than the ADR package resolver selected.
 
         This mutates ``os.environ`` for the duration of the render and restores it on
         exit, so two browser-PDF renders must not run concurrently in the same process.
