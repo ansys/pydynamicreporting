@@ -351,7 +351,6 @@ def _validate_playwright_browsers_path(
     if (
         not metadata_info.packaged_binary_dir
         or metadata_info.browser_name != PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
-        or not metadata_info.playwright_version
         or metadata_info.machine_arch != machine_arch
     ):
         logger.warning(

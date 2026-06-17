@@ -1447,7 +1447,7 @@ def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_bin
         "resolve_playwright_browser_binary_info",
         lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
             browser_binary_dir,
-            playwright_version="1.59.0",
+            playwright_version="",
         ),
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)

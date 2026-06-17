@@ -575,7 +575,7 @@ def test_resolve_playwright_browsers_path_requires_installation_complete_marker(
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browsers_path_requires_playwright_version_metadata(
+def test_resolve_playwright_browsers_path_allows_missing_playwright_version_metadata(
     tmp_path, monkeypatch
 ):
     install_dir = tmp_path / "v271" / "ADR"
@@ -588,10 +588,9 @@ def test_resolve_playwright_browsers_path_requires_playwright_version_metadata(
     )
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
 
-    assert (
-        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
-        is None
-    )
+    assert resolve_playwright_browsers_path(
+        ansys_installation=str(install_dir), ansys_version=271
+    ) == browser_binary_dir
 
 
 @pytest.mark.ado_test
