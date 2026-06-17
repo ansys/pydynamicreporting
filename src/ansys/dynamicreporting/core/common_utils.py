@@ -43,17 +43,14 @@ _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 
 @dataclass(frozen=True)
 class PlaywrightBrowserBinaryInfo:
-    """Validated product-shipped Playwright browser binary path and its metadata."""
+    """Validated product-shipped Playwright browser binary path and required metadata."""
 
     EXPECTED_BROWSER_NAME: ClassVar[str] = "chromium-headless-shell"
 
     path: Path
-    build_commit: str
     browser_name: str
-    browser_version: str
     machine_arch: str
     packaged_binary_dir: str
-    revision: str
 
     @classmethod
     def metadata_field_names(cls) -> tuple[str, ...]:
@@ -417,43 +414,6 @@ def resolve_playwright_browser_binary_info(
         / "playwright-browsers"
     )
     return _validate_playwright_browsers_path(browser_dir, machine_arch)
-
-
-def resolve_playwright_browsers_path(
-    ansys_installation: str | None = None, ansys_version: int | None = None
-) -> Path | None:
-    """Return the product-shipped Playwright browser binary directory when available.
-
-    Product builds can ship a complete Playwright browser binary inside the install tree so
-    browser-PDF export only needs to point ``PLAYWRIGHT_BROWSERS_PATH`` at it. The
-    serverless ``ADR`` resolves the concrete ADR/CEI install directory and install
-    version in ``ADR.__init__`` (via ``resolve_install_info``) before constructing
-    the browser-PDF renderer, so this derives the machine-scoped binary location from
-    those resolved inputs directly rather than resolving the install again.
-
-    ADR packaging places the binary at a single fixed location per machine
-    architecture, ``<install>/apex<ver>/machines/<arch>/playwright-browsers``, with
-    the metadata file inside that browser root.
-
-    Parameters
-    ----------
-    ansys_installation : str, optional
-        Resolved Ansys install directory, normally the concrete ADR/CEI tree.
-    ansys_version : int, optional
-        Three-digit install version used to build the ``apex###`` directory name.
-
-    Returns
-    -------
-    Path or None
-        Validated product-managed Playwright browser binary directory, or ``None``
-        when the platform is unsupported, an input is missing, or no valid binary
-        is shipped.
-    """
-    binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=ansys_installation,
-        ansys_version=ansys_version,
-    )
-    return None if binary_info is None else binary_info.path
 
 
 def _check_template_name_convention(template_name):

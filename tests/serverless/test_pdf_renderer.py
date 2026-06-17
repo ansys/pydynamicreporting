@@ -113,12 +113,9 @@ def _browser_binary_info(
     """Create validated product-binary metadata for renderer tests."""
     return pdf_renderer_module.PlaywrightBrowserBinaryInfo(
         path=browser_binary_dir,
-        build_commit="",
         browser_name=pdf_renderer_module.PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
-        browser_version="148.0.7778.96",
         machine_arch="win64",
         packaged_binary_dir="chromium_headless_shell-1223",
-        revision="1223",
     )
 
 
