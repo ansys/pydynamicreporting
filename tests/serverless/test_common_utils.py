@@ -405,7 +405,9 @@ def test_get_install_info_provided_ansys_version(tmp_path):
 
 @pytest.mark.ado_test
 @pytest.mark.parametrize("falsy_version", [0, False])
-def test_get_install_info_falsy_ansys_version_falls_back_to_default_layout(tmp_path, falsy_version):
+def test_get_install_info_falsy_ansys_version_uses_default_after_ambiguous_layout(
+    tmp_path, falsy_version
+):
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
     alternate_version = "261" if DEFAULT_ANSYS_INSTALL_VERSION != "261" else "252"
