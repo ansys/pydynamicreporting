@@ -582,9 +582,10 @@ def test_resolve_playwright_browsers_path_accepts_metadata_without_client_versio
     _create_packaged_playwright_binary(machine_root, machine_arch="win64")
     monkeypatch.setattr(common_utils_module.platform, "system", lambda: "Windows")
 
-    assert resolve_playwright_browsers_path(
-        ansys_installation=str(install_dir), ansys_version=271
-    ) == browser_binary_dir
+    assert (
+        resolve_playwright_browsers_path(ansys_installation=str(install_dir), ansys_version=271)
+        == browser_binary_dir
+    )
 
 
 @pytest.mark.ado_test
