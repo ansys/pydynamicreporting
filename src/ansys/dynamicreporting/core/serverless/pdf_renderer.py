@@ -62,7 +62,6 @@ otherwise overflow or be clipped at the right edge.
 """
 
 from contextlib import contextmanager
-from importlib import metadata as importlib_metadata
 import json
 import os
 import re
@@ -188,16 +187,6 @@ class PlaywrightPDFRenderer:
         self._ansys_version = ansys_version
         self._logger = logger or get_logger()
 
-    @staticmethod
-    def _installed_playwright_version() -> str:
-        """Return the installed Playwright Python package version from public metadata."""
-        try:
-            return importlib_metadata.version("playwright")
-        except importlib_metadata.PackageNotFoundError as exc:
-            raise ADRException(
-                "Browser PDF export requires the Playwright Python package to be installed."
-            ) from exc
-
     def _browser_pdf_product_line(self) -> int | None:
         """Return the annual product line for the resolved install version."""
         if self._ansys_version is None:
@@ -236,16 +225,6 @@ class PlaywrightPDFRenderer:
             raise ADRException(
                 "Browser PDF export requires a valid product-shipped Playwright browser binary, "
                 f"but none was found for Ansys version {self._ansys_version}."
-            )
-
-        product_playwright_version = binary_info.playwright_version
-        client_playwright_version = self._installed_playwright_version()
-        if product_playwright_version != client_playwright_version:
-            raise ADRException(
-                "Browser PDF export is not supported for this product/client Playwright "
-                "combination. The product browser binary was packaged with Playwright "
-                f"{product_playwright_version}, but the active Python environment has "
-                f"Playwright {client_playwright_version}."
             )
 
         return binary_info
