@@ -255,7 +255,6 @@ class PlaywrightPDFRenderer:
         restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
         installed_browser_binary_env = False
         try:
-            self._raise_if_product_line_unsupported()
             browser_binary_dir = self._resolve_playwright_browser_binary()
             if browser_binary_dir is not None:
                 self._logger.info(
