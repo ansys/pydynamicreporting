@@ -1416,6 +1416,41 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
 
 
 @pytest.mark.unit
+def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_start(
+    tmp_path, monkeypatch
+):
+    html_dir = _write_html(tmp_path, "<html><body><p>Missing binary</p></body></html>")
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
+        ansys_version=271,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: None,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "sync_playwright",
+        lambda: pytest.fail("missing product browser binary should not launch Playwright"),
+    )
+
+    with pytest.raises(
+        ADRException,
+        match="requires a valid product-shipped Playwright browser binary",
+    ):
+        renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_browser_pdf_product_line_returns_none_for_invalid_install_version(tmp_path):
+    renderer = PlaywrightPDFRenderer(html_dir=tmp_path, ansys_version=270)
+
+    assert renderer._browser_pdf_product_line() is None
+
+
+@pytest.mark.unit
 def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_binary(
     tmp_path, monkeypatch
 ):
