@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
--
+- Serverless browser-PDF export now uses the Playwright browser package shipped
+  with Ansys 2027 R1 and newer installs.
 
 ### Changed
 
--
+- Serverless browser-PDF export now fails when the expected product-shipped
+  Playwright browser package is missing or invalid instead of silently using an
+  ambient machine Chromium cache.
+- Pinned the Python `playwright` dependency to `1.60.0` to stay aligned with the
+  product-shipped browser package.
 
 ### Deprecated
 
