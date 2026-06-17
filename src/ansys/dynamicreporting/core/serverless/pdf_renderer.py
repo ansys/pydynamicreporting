@@ -78,6 +78,7 @@ from ..adr_utils import get_logger
 from ..common_utils import PlaywrightBrowserBinaryInfo
 from ..common_utils import resolve_playwright_browser_binary_info
 from ..compatibility import install_version_to_product_release
+from ..compatibility import product_release_to_display_string
 from ..compatibility import product_release_to_product_line
 from ..exceptions import ADRException
 
@@ -182,23 +183,36 @@ class PlaywrightPDFRenderer:
 
     def _browser_pdf_product_line(self) -> int | None:
         """Return the annual product line for the resolved install version."""
+        product_release = self._browser_pdf_product_release()
+        if product_release is None:
+            return None
+
+        return int(product_release_to_product_line(product_release))
+
+    def _browser_pdf_product_release(self) -> str | None:
+        """Return the public product release for the resolved install version."""
         if self._ansys_version is None:
             return None
 
         try:
-            product_release = install_version_to_product_release(self._ansys_version)
+            return install_version_to_product_release(self._ansys_version)
         except ValueError:
             return None
-
-        return int(product_release_to_product_line(product_release))
 
     def _raise_if_product_line_unsupported(self) -> None:
         """Reject product lines that predate the shipped browser-PDF binary."""
         product_line = self._browser_pdf_product_line()
         if product_line is not None and product_line < self._MIN_BROWSER_PDF_PRODUCT_LINE:
+            product_release = self._browser_pdf_product_release()
+            assert product_release is not None
+            product_name = product_release_to_display_string(product_release)
+            min_product_name = product_release_to_display_string(
+                f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
+            )
             raise ADRException(
-                f"Browser PDF export is not supported for Ansys product line {product_line}. "
-                "Use product line 27 or newer, which ships the required Playwright browser binary."
+                f"Browser PDF export is not supported for Ansys {product_name}. "
+                f"Use Ansys {min_product_name} or newer, which ships the required "
+                "Playwright browser binary."
             )
 
     def _resolve_playwright_browser_binary(self) -> PlaywrightBrowserBinaryInfo | None:

@@ -1411,7 +1411,10 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
         lambda: pytest.fail("unsupported product line should not launch Playwright"),
     )
 
-    with pytest.raises(ADRException, match="not supported for Ansys product line 26"):
+    with pytest.raises(
+        ADRException,
+        match="not supported for Ansys 2026 R1.*Use Ansys 2027 R1 or newer",
+    ):
         renderer.render_pdf()
 
 
