@@ -204,7 +204,8 @@ class PlaywrightPDFRenderer:
         product_line = self._browser_pdf_product_line()
         if product_line is not None and product_line < self._MIN_BROWSER_PDF_PRODUCT_LINE:
             product_release = self._browser_pdf_product_release()
-            assert product_release is not None
+            if product_release is None:
+                raise ValueError("Product release information could not be determined.")
             product_name = product_release_to_display_string(product_release)
             min_product_name = product_release_to_display_string(
                 f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
