@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import importlib.util
 from pathlib import Path
 from random import random as r
 import uuid
@@ -120,6 +121,84 @@ def test_get_database_config_after_setup(adr_serverless):
 def test_setup_after_setup(adr_serverless):
     with pytest.raises(RuntimeError):
         adr_serverless.setup(collect_static=True)
+
+
+def _adr_with_installation(install_dir: Path) -> ADR:
+    adr = object.__new__(ADR)
+    adr._ansys_installation = install_dir
+    adr._ansys_version = 271
+    return adr
+
+
+def _mock_missing_adr_metadata(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+
+    def fake_find_spec(name, *args, **kwargs):
+        if name == "adr_metadata":
+            return None
+        return original_find_spec(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
+
+
+@pytest.mark.ado_test
+def test_ensure_product_adr_metadata_adds_linux_site_packages(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    site_packages = (
+        tmp_path
+        / "ADR"
+        / "apex271"
+        / "machines"
+        / "linux_2.6_64"
+        / "Python-3.13.11"
+        / "lib"
+        / "python3.13"
+        / "site-packages"
+    )
+    (site_packages / "adr_metadata").mkdir(parents=True)
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(
+        adr_module.sys,
+        "path",
+        [entry for entry in adr_module.sys.path if entry != str(site_packages)],
+    )
+    _mock_missing_adr_metadata(monkeypatch)
+
+    adr = _adr_with_installation(tmp_path / "ADR")
+    adr._ensure_product_adr_metadata_on_path()
+
+    assert str(site_packages) in adr_module.sys.path
+
+
+@pytest.mark.ado_test
+def test_ensure_product_adr_metadata_skips_site_packages_without_module(tmp_path, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    site_packages = (
+        tmp_path
+        / "ADR"
+        / "apex271"
+        / "machines"
+        / "linux_2.6_64"
+        / "Python-3.13.11"
+        / "lib"
+        / "python3.13"
+        / "site-packages"
+    )
+    site_packages.mkdir(parents=True)
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(
+        adr_module.sys,
+        "path",
+        [entry for entry in adr_module.sys.path if entry != str(site_packages)],
+    )
+    _mock_missing_adr_metadata(monkeypatch)
+
+    adr = _adr_with_installation(tmp_path / "ADR")
+    adr._ensure_product_adr_metadata_on_path()
+
+    assert str(site_packages) not in adr_module.sys.path
 
 
 @pytest.mark.ado_test
