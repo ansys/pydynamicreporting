@@ -1461,9 +1461,7 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 
 @pytest.mark.unit
-def test_playwright_pdf_handles_invalid_install_version_before_browser_start(
-    tmp_path, monkeypatch
-):
+def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Invalid install version</p></body></html>")
     ansys_installation = r"C:\Program Files\ANSYS Inc\v270\ADR"
     renderer = PlaywrightPDFRenderer(
