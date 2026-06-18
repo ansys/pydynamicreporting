@@ -1666,7 +1666,7 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
         PlaywrightPDFRenderer,
     )
 
@@ -1719,7 +1719,7 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
         PlaywrightPDFRenderer,
     )
 

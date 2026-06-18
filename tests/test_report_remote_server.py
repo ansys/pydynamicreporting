@@ -535,10 +535,13 @@ def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(mon
 
     server = r.Server()
 
+    def fail_if_called(_server_obj):
+        raise AssertionError("auth helper should not run")
+
     monkeypatch.setattr(
         report_utils,
         "authenticate_web_session",
-        lambda server_obj: (_ for _ in ()).throw(AssertionError("auth helper should not run")),
+        fail_if_called,
     )
 
     assert server._get_browser_auth_cookies() == []

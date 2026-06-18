@@ -25,9 +25,9 @@ from pathlib import Path
 
 import pytest
 
-from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightBrowserBinaryInfo
-from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+from ansys.dynamicreporting.core.utils import pdf_renderer as pdf_renderer_module
+from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightBrowserBinaryInfo
+from ansys.dynamicreporting.core.utils.pdf_renderer import (
     resolve_playwright_browser_binary_info,
 )
 
