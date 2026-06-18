@@ -33,6 +33,8 @@ from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
 
+_EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
+
 
 def _write_html(tmp_path: Path, body: str) -> Path:
     """Write a minimal HTML file for renderer tests and return its directory."""
@@ -1267,6 +1269,16 @@ def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected
 
 
 @pytest.mark.unit
+def test_playwright_pdf_transient_override_env_vars_are_explicit_contract():
+    # The render scope clears only host-platform overrides because browser-PDF replaces
+    # PLAYWRIGHT_BROWSERS_PATH separately and preserves download-host configuration.
+    assert (
+        PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+        == _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+    )
+
+
+@pytest.mark.unit
 def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Shared binary</p></body></html>")
     browser_binary_dir = tmp_path / "playwright-browsers"
@@ -1289,7 +1301,7 @@ def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_p
     preserved_download_host = "https://playwright-downloads.example.invalid"
     runtime_override_envs = {
         env_var: f"{env_var.lower()}-value"
-        for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+        for env_var in _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
     }
 
     def fake_enter():
@@ -1353,7 +1365,7 @@ def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_
     playwright_manager = MagicMock()
     runtime_override_envs = {
         env_var: f"{env_var.lower()}-value"
-        for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+        for env_var in _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
     }
 
     def fake_enter():
