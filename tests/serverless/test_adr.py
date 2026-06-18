@@ -1593,6 +1593,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
@@ -1602,6 +1604,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
+        captured["ansys_installation"] = ansys_installation
+        captured["ansys_version"] = ansys_version
         captured["logger"] = logger
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
@@ -1624,6 +1628,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     assert Path(captured["html_dir"]).parent == db_directory
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 30.0
+    assert captured["ansys_installation"] == adr_serverless._ansys_installation
+    assert captured["ansys_version"] == adr_serverless._ansys_version
 
 
 @pytest.mark.ado_test
@@ -1649,6 +1655,115 @@ def test_browser_pdf_scratch_root_rejects_missing_database_directory(
 
     with pytest.raises(ADRException, match="database directory must exist"):
         adr_serverless._resolve_browser_pdf_scratch_root()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+        PlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanup", parent=None)
+    monkeypatch.setattr(adr_serverless, "_db_directory", None)
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+    captured: dict[str, Path] = {}
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        return "<html><body><h1>Fallback cleanup</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
+        logger=None,
+    ):
+        # The render helper stages browser-PDF bundles in a dedicated temp child. Once the
+        # temporary child is gone, the empty fallback parent should also be removed cleanly.
+        captured["html_dir"] = Path(html_dir)
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanup")
+
+    scratch_root = tmp_path / "adr_browser_pdf_scratch"
+    assert pdf_bytes == b"%PDF-mock"
+    assert captured["html_dir"].parent == scratch_root
+    assert not scratch_root.exists()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
+        PlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanupOSError", parent=None)
+    monkeypatch.setattr(adr_serverless, "_db_directory", None)
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        return "<html><body><h1>Fallback cleanup OSError</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        filename="index.html",
+        *,
+        landscape=False,
+        margins=None,
+        render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
+        logger=None,
+    ):
+        return None
+
+    original_rmdir = Path.rmdir
+
+    def raising_rmdir(path):
+        if path == tmp_path / "adr_browser_pdf_scratch":
+            raise OSError("scratch root busy")
+        return original_rmdir(path)
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(Path, "rmdir", raising_rmdir)
+
+    pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanupOSError")
+
+    assert pdf_bytes == b"%PDF-mock"
+    assert (tmp_path / "adr_browser_pdf_scratch").is_dir()
 
 
 @pytest.mark.ado_test
@@ -1693,6 +1808,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         captured["html_dir"] = html_dir
@@ -1700,6 +1817,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
+        captured["ansys_installation"] = ansys_installation
+        captured["ansys_version"] = ansys_version
         captured["logger"] = logger
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
@@ -1731,6 +1850,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5
+    assert captured["ansys_installation"] == adr_serverless._ansys_installation
+    assert captured["ansys_version"] == adr_serverless._ansys_version
     assert captured["render_context"] == {"custom": "value", "print": "pdf"}
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
     assert captured["embed_scene_data"] is False
@@ -1749,10 +1870,48 @@ def test_export_report_as_browser_pdf_uses_template_guid_default_filename(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         ADR,
-        "_render_report_as_browser_pdf_impl",
-        lambda self, **kwargs: b"%PDF-default-name",
+        "_render_template_as_browser_pdf",
+        lambda self, template, **kwargs: b"%PDF-default-name",
     )
 
     adr_serverless.export_report_as_browser_pdf(name="DefaultBrowserPDF")
 
     assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-default-name"
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_default_filename_reuses_template_lookup(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless.template import Template
+
+    template = adr_serverless.create_template(
+        BasicLayout, name="SingleLookupBrowserPDF", parent=None
+    )
+    captured_calls: list[dict[str, str]] = []
+    rendered_templates: list[Template] = []
+    original_get = Template.get
+
+    def capture_get(**kwargs):
+        # The no-filename export path needs the template GUID after rendering. Capturing the
+        # lookup count here locks in that ADR reuses the same resolved Template object instead
+        # of querying the database a second time just to rebuild the default filename.
+        captured_calls.append(dict(kwargs))
+        return original_get(**kwargs)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Template, "get", staticmethod(capture_get))
+
+    def fake_render_pdf(self, resolved_template, **kwargs):
+        rendered_templates.append(resolved_template)
+        return b"%PDF-single-lookup"
+
+    monkeypatch.setattr(ADR, "_render_template_as_browser_pdf", fake_render_pdf)
+
+    adr_serverless.export_report_as_browser_pdf(name="SingleLookupBrowserPDF")
+
+    assert captured_calls == [{"name": "SingleLookupBrowserPDF"}]
+    assert rendered_templates == [template]
+    assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-single-lookup"

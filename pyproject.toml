@@ -28,7 +28,9 @@ dependencies = [
     "bleach>=6.2.0",
     "django-weasyprint>=2.4.0,<2.5.0",
     "weasyprint>=67.0",
-    "playwright>=1.60.0,<2.0.0",
+    # Browser-PDF uses the Playwright browser package shipped by ADR; keep this pin
+    # aligned with that product packaging source rather than a runtime version check.
+    "playwright==1.60.0",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
@@ -70,7 +72,7 @@ test = [
     "pytest-cov",
     "pyvista==0.48.4",
     "vtk==9.6.2",
-    "ansys-dpf-core==0.16.0"
+    "ansys-dpf-core==0.16.1"
 ]
 doc = [
     "ansys-sphinx-theme",

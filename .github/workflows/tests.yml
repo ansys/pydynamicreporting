@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -66,6 +66,14 @@ jobs:
             libx11-dev \
             libgl1-mesa-dev \
             libxrender1
+
+      - name: Install Playwright Chromium
+        shell: bash
+        # The playwright Python package (installed by make install) provides the CLI but not the
+        # Chromium browser binary itself. This step downloads that binary and, via --with-deps,
+        # also installs any Linux system libraries Chromium requires that are not already present.
+        # Must run after "Set up Python" so the playwright CLI is available in the venv.
+        run: uv run playwright install --with-deps chromium
 
       - name: Install DPF
         id: set-server-path
