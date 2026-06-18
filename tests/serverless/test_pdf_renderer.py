@@ -1461,10 +1461,41 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 
 @pytest.mark.unit
-def test_browser_pdf_product_line_returns_none_for_invalid_install_version(tmp_path):
-    renderer = PlaywrightPDFRenderer(html_dir=tmp_path, ansys_version=270)
+def test_playwright_pdf_handles_invalid_install_version_before_browser_start(
+    tmp_path, monkeypatch
+):
+    html_dir = _write_html(tmp_path, "<html><body><p>Invalid install version</p></body></html>")
+    ansys_installation = r"C:\Program Files\ANSYS Inc\v270\ADR"
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=ansys_installation,
+        ansys_version=270,
+    )
+    resolver_args: dict[str, object] = {}
 
-    assert renderer._browser_pdf_product_line() is None
+    def fake_resolve(ansys_installation=None, ansys_version=None):
+        # Version 270 is not a public YYR release, but render_pdf() should still
+        # convert that into a normal missing-product-browser error before launch.
+        resolver_args["ansys_installation"] = ansys_installation
+        resolver_args["ansys_version"] = ansys_version
+        return None
+
+    monkeypatch.setattr(pdf_renderer_module, "resolve_playwright_browser_binary_info", fake_resolve)
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "sync_playwright",
+        lambda: pytest.fail("invalid install version should not launch Playwright"),
+    )
+
+    with pytest.raises(
+        ADRException,
+        match="requires a valid product-shipped Playwright browser binary",
+    ):
+        renderer.render_pdf()
+    assert resolver_args == {
+        "ansys_installation": ansys_installation,
+        "ansys_version": 270,
+    }
 
 
 @pytest.mark.unit
