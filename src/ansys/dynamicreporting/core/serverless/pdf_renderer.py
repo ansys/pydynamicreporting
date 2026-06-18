@@ -61,19 +61,199 @@ the final paged layout has enough horizontal space to preserve content that woul
 otherwise overflow or be clipped at the right edge.
 """
 
+from contextlib import contextmanager
+from dataclasses import dataclass, fields
 import json
+import os
+import platform
 import re
 from math import ceil
 from pathlib import Path
 from time import monotonic
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ..adr_utils import get_logger
+from ..compatibility import install_version_to_product_release
+from ..compatibility import product_release_to_display_string
+from ..compatibility import product_release_to_product_line
 from ..exceptions import ADRException
+
+_PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
+
+
+@dataclass(frozen=True)
+class PlaywrightBrowserBinaryInfo:
+    """Validated product-shipped Playwright browser binary path and required metadata."""
+
+    EXPECTED_BROWSER_NAME: ClassVar[str] = "chromium-headless-shell"
+
+    path: Path
+    browser_name: str
+    machine_arch: str
+    packaged_binary_dir: str
+
+    @classmethod
+    def metadata_field_names(cls) -> tuple[str, ...]:
+        """Return the serialized metadata fields, excluding the filesystem path."""
+        return tuple(field.name for field in fields(cls) if field.name != "path")
+
+    @classmethod
+    def from_metadata_dict(
+        cls, *, path: Path, metadata: dict[str, object]
+    ) -> "PlaywrightBrowserBinaryInfo":
+        """Build a metadata record from a raw JSON object using the dataclass schema."""
+        return cls(
+            path=path,
+            **{
+                field_name: str(metadata.get(field_name, "")).strip()
+                for field_name in cls.metadata_field_names()
+            },
+        )
+
+    def to_metadata_dict(self) -> dict[str, str]:
+        """Serialize the metadata fields using the dataclass schema."""
+        return {field_name: getattr(self, field_name) for field_name in self.metadata_field_names()}
+
+
+def _playwright_machine_arch() -> str | None:
+    """Map the current platform to the ADR ``machines/<arch>`` directory name.
+
+    ADR product builds ship Playwright browsers only for Windows (``win64``) and
+    Linux (``linux_2.6_64``), so other platforms have no product binary to point at
+    and resolve to ``None``. These are the same ``machines/<arch>`` names
+    ``ADR.setup`` already uses; they are hardcoded here rather than read from
+    ``enve_arch()`` because the serverless browser-PDF path cannot assume ``enve``
+    is importable in the caller's Python environment.
+    """
+    system_name = platform.system().lower()
+    if system_name.startswith("win"):
+        return "win64"
+    if system_name.startswith("linux"):
+        return "linux_2.6_64"
+    return None
+
+
+def _validate_playwright_browsers_path(
+    browser_dir: Path,
+    machine_arch: str,
+) -> PlaywrightBrowserBinaryInfo | None:
+    """Validate the product-shipped Playwright binary layout before advertising it.
+
+    Browser-PDF export should only point Playwright at a product-managed binary
+    when the stripped package layout is complete and self-consistent. This keeps
+    the runtime honest to the product packaging contract instead of silently
+    accepting stale or partially copied browser directories. The metadata file
+    lives inside ``playwright-browsers`` itself.
+    """
+    if not browser_dir.is_dir():
+        return None
+
+    metadata_path = browser_dir / _PLAYWRIGHT_BROWSER_METADATA_NAME
+    if not metadata_path.is_file():
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because metadata file %s is missing ",
+            browser_dir,
+            _PLAYWRIGHT_BROWSER_METADATA_NAME,
+        )
+        return None
+
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because metadata file %s is unreadable: %s",
+            browser_dir,
+            metadata_path,
+            exc,
+        )
+        return None
+
+    if not isinstance(metadata, dict):
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because metadata file %s does not contain "
+            "a JSON object.",
+            browser_dir,
+            metadata_path,
+        )
+        return None
+
+    metadata_info = PlaywrightBrowserBinaryInfo.from_metadata_dict(
+        path=browser_dir, metadata=metadata
+    )
+    if (
+        not metadata_info.packaged_binary_dir
+        or metadata_info.browser_name != PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
+        or metadata_info.machine_arch != machine_arch
+    ):
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because metadata file %s is incomplete or "
+            "does not describe a %s binary for machine arch %r.",
+            browser_dir,
+            metadata_path,
+            PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+            metadata_info.machine_arch,
+        )
+        return None
+
+    packaged_dirs = sorted(path for path in browser_dir.iterdir() if path.is_dir())
+    if len(packaged_dirs) != 1:
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because it contains %d packaged browser "
+            "directories instead of exactly one.",
+            browser_dir,
+            len(packaged_dirs),
+        )
+        return None
+
+    packaged_dir = packaged_dirs[0]
+    if packaged_dir.name != metadata_info.packaged_binary_dir:
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because packaged directory %s does not "
+            "match metadata entry %s.",
+            browser_dir,
+            packaged_dir.name,
+            metadata_info.packaged_binary_dir,
+        )
+        return None
+
+    marker_path = packaged_dir / "INSTALLATION_COMPLETE"
+    if not marker_path.is_file():
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because installation marker %s is missing.",
+            browser_dir,
+            marker_path,
+        )
+        return None
+
+    return metadata_info
+
+
+def resolve_playwright_browser_binary_info(
+    ansys_installation: str | None = None,
+    ansys_version: int | None = None,
+) -> PlaywrightBrowserBinaryInfo | None:
+    """Return the validated browser binary path and metadata when the product ships one."""
+    machine_arch = _playwright_machine_arch()
+    # The install directory and version are both required to build the machine-scoped
+    # binary path, so bail out when either is missing or the current platform has no
+    # validated ADR packaging layout. The version is used as-is: ADR.__init__ already
+    # resolved and validated it through resolve_install_info, so re-validating it here
+    # would only duplicate that frontloaded work.
+    if machine_arch is None or ansys_installation is None or ansys_version is None:
+        return None
+
+    browser_dir = (
+        Path(ansys_installation).expanduser()
+        / f"apex{ansys_version}"
+        / "machines"
+        / machine_arch
+        / "playwright-browsers"
+    )
+    return _validate_playwright_browsers_path(browser_dir, machine_arch)
 
 
 class PlaywrightPDFRenderer:
@@ -95,6 +275,15 @@ class PlaywrightPDFRenderer:
         has been staged. This shared budget covers browser launch, navigation, readiness waits,
         and other browser-side preparation steps, but not server-side template rendering or
         offline asset export.
+    ansys_installation : Path or str, optional
+        Resolved Ansys installation root used to locate a product-shipped
+        Playwright browser binary. When provided with ``ansys_version`` on a
+        supported product line, browser-PDF export uses that shipped browser
+        cache for the render instead of any ambient browser-path override.
+    ansys_version : int, optional
+        Ansys version associated with ``ansys_installation``.  This is used
+        only to locate ``apex###/machines/...`` runtime assets when the product
+        ships Playwright browsers inside the installation tree.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -128,6 +317,16 @@ class PlaywrightPDFRenderer:
     # Network requests using these schemes are blocked to keep rendering offline.
     _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
     _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
+    # This override changes Playwright's platform-specific browser lookup, while
+    # the ADR resolver has already selected the product machine directory.
+    # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
+    # it with the product-shipped browser cache for the duration of a render.
+    _TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS: tuple[str, ...] = (
+        "PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",
+    )
+    # Browser-PDF depends on a product-shipped Chromium binary introduced with
+    # product line 27. Older supported lines can still use other export formats.
+    _MIN_BROWSER_PDF_PRODUCT_LINE: int = 27
 
     def __init__(
         self,
@@ -137,6 +336,8 @@ class PlaywrightPDFRenderer:
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
+        ansys_installation: Path | str | None = None,
+        ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
         """Initialize the renderer with a self-contained HTML export directory."""
@@ -145,7 +346,114 @@ class PlaywrightPDFRenderer:
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = self._validate_render_timeout(render_timeout)
+        # Keep the raw install metadata so the renderer can locate a product-managed
+        # Playwright browser binary without changing the public browser-PDF API shape.
+        self._ansys_installation = (
+            None if ansys_installation is None else Path(ansys_installation).expanduser()
+        )
+        self._ansys_version = ansys_version
         self._logger = logger or get_logger()
+
+    def _browser_pdf_product_line(self) -> int | None:
+        """Return the annual product line for the resolved install version."""
+        product_release = self._browser_pdf_product_release()
+        if product_release is None:
+            return None
+
+        return int(product_release_to_product_line(product_release))
+
+    def _browser_pdf_product_release(self) -> str | None:
+        """Return the public product release for the resolved install version."""
+        if self._ansys_version is None:
+            return None
+
+        try:
+            return install_version_to_product_release(self._ansys_version)
+        except ValueError:
+            return None
+
+    def _raise_if_product_line_unsupported(self) -> None:
+        """Reject product lines that predate the shipped browser-PDF binary."""
+        product_line = self._browser_pdf_product_line()
+        if product_line is not None and product_line < self._MIN_BROWSER_PDF_PRODUCT_LINE:
+            product_release = self._browser_pdf_product_release()
+            if product_release is None:
+                raise ValueError("Product release information could not be determined.")
+            product_name = product_release_to_display_string(product_release)
+            min_product_name = product_release_to_display_string(
+                f"{self._MIN_BROWSER_PDF_PRODUCT_LINE}.1"
+            )
+            raise ADRException(
+                f"Browser PDF export is not supported for Ansys {product_name}. "
+                f"Use Ansys {min_product_name} or newer, which ships the required "
+                "Playwright browser binary."
+            )
+
+    def _resolve_playwright_browser_binary(self) -> PlaywrightBrowserBinaryInfo | None:
+        """Return a shipped Playwright browser binary path under the Ansys install, if any."""
+        self._raise_if_product_line_unsupported()
+
+        if self._ansys_installation is None or self._ansys_version is None:
+            return None
+
+        binary_info = resolve_playwright_browser_binary_info(
+            ansys_installation=(
+                None if self._ansys_installation is None else str(self._ansys_installation)
+            ),
+            ansys_version=self._ansys_version,
+        )
+        if binary_info is None:
+            raise ADRException(
+                "Browser PDF export requires a valid product-shipped Playwright browser binary, "
+                f"but none was found for Ansys version {self._ansys_version}."
+            )
+
+        return binary_info
+
+    @contextmanager
+    def _playwright_browser_binary_env(self):
+        """Temporarily point Playwright at the product-shipped browser binary path.
+
+        Playwright documents `PLAYWRIGHT_BROWSERS_PATH` as the supported way to
+        share browser binaries across environments. Product-coupled browser-PDF
+        renders must use the browser shipped inside the resolved Ansys install
+        rather than any ambient machine-level Playwright browser cache, but the
+        caller's original environment must still be restored afterward. The
+        host-platform override is cleared because it can make Playwright look for
+        a different platform layout than the ADR package resolver selected.
+
+        This mutates ``os.environ`` for the duration of the render and restores it on
+        exit, so two browser-PDF renders must not run concurrently in the same process.
+        The synchronous Playwright driver renders one report at a time, which keeps that
+        constraint satisfied on this export path.
+        """
+        restored_override_envs = {
+            env_var: os.environ.pop(env_var)
+            for env_var in self._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+            if env_var in os.environ
+        }
+        restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        installed_browser_binary_env = False
+        try:
+            browser_binary_dir = self._resolve_playwright_browser_binary()
+            if browser_binary_dir is not None:
+                self._logger.info(
+                    "Using product-shipped Playwright browser binary path: %s",
+                    browser_binary_dir.path,
+                )
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
+                installed_browser_binary_env = True
+            yield
+        finally:
+            if installed_browser_binary_env:
+                # Restore the caller's original browser-path override after the
+                # render so the product-specific choice stays scoped to this
+                # browser-PDF operation.
+                if restored_browser_binaries_path is None:
+                    os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+                else:
+                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
+            os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
         """Render the exported HTML report to PDF bytes.
@@ -165,7 +473,10 @@ class PlaywrightPDFRenderer:
         current_timeout_phase = "browser launch"
 
         try:
-            with sync_playwright() as playwright:
+            # Point Playwright at the product-shipped browser binary before the
+            # driver resolves browser binaries so browser-PDF never falls back
+            # to an unrelated machine-level Chromium cache.
+            with self._playwright_browser_binary_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
                 browser = playwright.chromium.launch(
                     headless=True,

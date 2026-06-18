@@ -1593,6 +1593,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
@@ -1602,6 +1604,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
+        captured["ansys_installation"] = ansys_installation
+        captured["ansys_version"] = ansys_version
         captured["logger"] = logger
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
@@ -1624,6 +1628,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     assert Path(captured["html_dir"]).parent == db_directory
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 30.0
+    assert captured["ansys_installation"] == adr_serverless._ansys_installation
+    assert captured["ansys_version"] == adr_serverless._ansys_version
 
 
 @pytest.mark.ado_test
@@ -1683,6 +1689,8 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         # The render helper stages browser-PDF bundles in a dedicated temp child. Once the
@@ -1733,6 +1741,8 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         return None
@@ -1798,6 +1808,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         landscape=False,
         margins=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         captured["html_dir"] = html_dir
@@ -1805,6 +1817,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
+        captured["ansys_installation"] = ansys_installation
+        captured["ansys_version"] = ansys_version
         captured["logger"] = logger
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
@@ -1836,6 +1850,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5
+    assert captured["ansys_installation"] == adr_serverless._ansys_installation
+    assert captured["ansys_version"] == adr_serverless._ansys_version
     assert captured["render_context"] == {"custom": "value", "print": "pdf"}
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
     assert captured["embed_scene_data"] is False

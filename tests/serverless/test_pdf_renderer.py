@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -104,6 +105,18 @@ def _stub_playwright_render(
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return stack.page
+
+
+def _browser_binary_info(
+    browser_binary_dir: Path,
+) -> pdf_renderer_module.PlaywrightBrowserBinaryInfo:
+    """Create validated product-binary metadata for renderer tests."""
+    return pdf_renderer_module.PlaywrightBrowserBinaryInfo(
+        path=browser_binary_dir,
+        browser_name=pdf_renderer_module.PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+        machine_arch="win64",
+        packaged_binary_dir="chromium_headless_shell-1223",
+    )
 
 
 @pytest.mark.unit
@@ -1251,3 +1264,234 @@ def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected
 
     with pytest.raises(ADRException, match=expected_error):
         PlaywrightPDFRenderer(html_dir=html_dir, **kwargs)
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_product_browser_binary_when_user_env_is_unset(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Shared binary</p></body></html>")
+    browser_binary_dir = tmp_path / "playwright-browsers"
+    browser_binary_dir.mkdir()
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
+        ansys_version=271,
+    )
+    env_seen: dict[str, str | None] = {}
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    preserved_download_host = "https://playwright-downloads.example.invalid"
+    runtime_override_envs = {
+        env_var: f"{env_var.lower()}-value"
+        for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+    }
+
+    def fake_enter():
+        # Playwright resolves the browser registry when the driver starts, so the
+        # environment must already be pointing at the shipped binary by this point.
+        env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        env_seen["transient_override_envs"] = {
+            env_var: os.environ.get(env_var) for env_var in runtime_override_envs
+        }
+        env_seen["download_host"] = os.environ.get("PLAYWRIGHT_DOWNLOAD_HOST")
+        return playwright
+
+    playwright_manager.__enter__.side_effect = fake_enter
+    monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
+    monkeypatch.setenv("PLAYWRIGHT_DOWNLOAD_HOST", preserved_download_host)
+    for env_var, env_value in runtime_override_envs.items():
+        monkeypatch.setenv(env_var, env_value)
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
+            browser_binary_dir
+        ),
+    )
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    # render_pdf() calls _wait_for_render_ready(page, deadline=...); the stub must accept the
+    # keyword-only deadline or the call raises TypeError and the render is reported as failed.
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
+    assert all(value is None for value in env_seen["transient_override_envs"].values())
+    assert env_seen["download_host"] == preserved_download_host
+    assert "PLAYWRIGHT_BROWSERS_PATH" not in os.environ
+    assert os.environ["PLAYWRIGHT_DOWNLOAD_HOST"] == preserved_download_host
+    for env_var, env_value in runtime_override_envs.items():
+        assert os.environ[env_var] == env_value
+
+
+@pytest.mark.unit
+def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>User browser path</p></body></html>")
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
+        ansys_version=271,
+    )
+    user_browser_path = str(tmp_path / "user-browser-path")
+    browser_binary_dir = tmp_path / "product-browser-path"
+    env_seen: dict[str, str | None] = {}
+    resolver_args: dict[str, object] = {}
+    page = Mock()
+    page.pdf.return_value = b"%PDF-mock"
+    context = Mock()
+    context.new_page.return_value = page
+    browser = Mock()
+    browser.new_context.return_value = context
+    playwright = Mock()
+    playwright.chromium.launch.return_value = browser
+    playwright_manager = MagicMock()
+    runtime_override_envs = {
+        env_var: f"{env_var.lower()}-value"
+        for env_var in PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
+    }
+
+    def fake_enter():
+        # Browser-PDF must force the product-shipped browser cache during the
+        # render even if the ambient environment points somewhere else.
+        env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        env_seen["transient_override_envs"] = {
+            env_var: os.environ.get(env_var) for env_var in runtime_override_envs
+        }
+        return playwright
+
+    playwright_manager.__enter__.side_effect = fake_enter
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
+    for env_var, env_value in runtime_override_envs.items():
+        monkeypatch.setenv(env_var, env_value)
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: resolver_args.update(
+            {
+                "ansys_installation": ansys_installation,
+                "ansys_version": ansys_version,
+            }
+        )
+        or _browser_binary_info(browser_binary_dir),
+    )
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+    # render_pdf() calls _wait_for_render_ready(page, deadline=...); the stub must accept the
+    # keyword-only deadline or the call raises TypeError and the render is reported as failed.
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
+
+    assert renderer.render_pdf() == b"%PDF-mock"
+    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
+    assert all(value is None for value in env_seen["transient_override_envs"].values())
+    assert resolver_args == {
+        "ansys_installation": r"C:\Program Files\ANSYS Inc\v271\ADR",
+        "ansys_version": 271,
+    }
+    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
+    for env_var, env_value in runtime_override_envs.items():
+        assert os.environ[env_var] == env_value
+
+
+@pytest.mark.unit
+def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, monkeypatch):
+    html_dir = _write_html(tmp_path, "<html><body><p>Unsupported line</p></body></html>")
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v261\ADR",
+        ansys_version=261,
+    )
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "external-browser-path"))
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "sync_playwright",
+        lambda: pytest.fail("unsupported product line should not launch Playwright"),
+    )
+
+    with pytest.raises(
+        ADRException,
+        match="not supported for Ansys 2026 R1.*Use Ansys 2027 R1 or newer",
+    ):
+        renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_start(
+    tmp_path, monkeypatch
+):
+    html_dir = _write_html(tmp_path, "<html><body><p>Missing binary</p></body></html>")
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
+        ansys_version=271,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: None,
+    )
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "sync_playwright",
+        lambda: pytest.fail("missing product browser binary should not launch Playwright"),
+    )
+
+    with pytest.raises(
+        ADRException,
+        match="requires a valid product-shipped Playwright browser binary",
+    ):
+        renderer.render_pdf()
+
+
+@pytest.mark.unit
+def test_browser_pdf_product_line_returns_none_for_invalid_install_version(tmp_path):
+    renderer = PlaywrightPDFRenderer(html_dir=tmp_path, ansys_version=270)
+
+    assert renderer._browser_pdf_product_line() is None
+
+
+@pytest.mark.unit
+def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_binary(
+    tmp_path, monkeypatch
+):
+    html_dir = _write_html(tmp_path, "<html><body><p>Launch failure</p></body></html>")
+    browser_binary_dir = tmp_path / "playwright-browsers"
+    browser_binary_dir.mkdir()
+    renderer = PlaywrightPDFRenderer(
+        html_dir=html_dir,
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
+        ansys_version=271,
+    )
+    user_browser_path = str(tmp_path / "user-browser-path")
+    env_seen: dict[str, str | None] = {}
+    playwright = Mock()
+    playwright.chromium.launch.side_effect = RuntimeError("missing product browser revision")
+    playwright_manager = MagicMock()
+
+    def fake_enter():
+        env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+        return playwright
+
+    playwright_manager.__enter__.side_effect = fake_enter
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
+            browser_binary_dir
+        ),
+    )
+    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: playwright_manager)
+
+    with pytest.raises(
+        ADRException, match="Browser PDF rendering failed: missing product browser revision"
+    ) as exc_info:
+        renderer.render_pdf()
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
+    assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path

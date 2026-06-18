@@ -30,7 +30,10 @@ from ansys.dynamicreporting.core.compatibility import (
     DEFAULT_ANSYS_INSTALL_VERSION,
 )
 import ansys.dynamicreporting.core.common_utils as common_utils_module
-from ansys.dynamicreporting.core.common_utils import get_install_info, get_install_version
+from ansys.dynamicreporting.core.common_utils import (
+    get_install_info,
+    get_install_version,
+)
 from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
@@ -346,6 +349,27 @@ def test_get_install_info_provided_ansys_version(tmp_path):
     # Expect the base directory is returned and version equals the provided version.
     assert install == str(install_dir)
     assert ver == provided_version
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("falsy_version", [0, False])
+def test_get_install_info_falsy_ansys_version_uses_default_after_ambiguous_layout(
+    tmp_path, falsy_version
+):
+    install_dir = tmp_path / "install_no_version"
+    install_dir.mkdir()
+    alternate_version = "261" if DEFAULT_ANSYS_INSTALL_VERSION != "261" else "252"
+    for version in (DEFAULT_ANSYS_INSTALL_VERSION, alternate_version):
+        nexus_dir = install_dir / f"nexus{version}" / "django"
+        nexus_dir.mkdir(parents=True)
+        (nexus_dir / "manage.py").write_text("dummy content")
+
+    install, ver = get_install_info(
+        ansys_installation=str(install_dir), ansys_version=falsy_version
+    )
+
+    assert install == str(install_dir)
+    assert ver == int(DEFAULT_ANSYS_INSTALL_VERSION)
 
 
 @pytest.mark.ado_test
