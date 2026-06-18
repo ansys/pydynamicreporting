@@ -983,7 +983,9 @@ class Server:
             playwright_cookie["expires"] = float(cookie.expires)
 
         # http.cookiejar exposes non-standard cookie attributes through public accessors.
-        # Use those instead of reaching into the Cookie object's private storage.
+        # Use those instead of reaching into the Cookie object's private storage. The
+        # HttpOnly attribute is presence-based in Set-Cookie headers, so mirroring that
+        # presence check preserves the browser's cookie scoping semantics.
         if cookie.has_nonstandard_attr("HttpOnly") or cookie.has_nonstandard_attr("httponly"):
             playwright_cookie["httpOnly"] = True
 
@@ -1061,6 +1063,9 @@ class Server:
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
+            This remote-service path renders the live report URL in the caller's local
+            Playwright browser, so a compatible Chromium browser must already be installed
+            on the client machine.
         """
         if not file_name:
             raise ADRException("A non-empty file_name must be provided for browser PDF export.")

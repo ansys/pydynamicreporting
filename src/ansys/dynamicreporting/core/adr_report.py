@@ -44,7 +44,6 @@ import json
 import logging
 import os
 import sys
-from typing import Optional
 import warnings
 import webbrowser
 
@@ -804,6 +803,9 @@ class Report:
         render_timeout : float, optional
             Maximum time, in seconds, to spend waiting for browser readiness signals.
             Default: 30.0
+            On remote-service connections, this method also requires a Playwright-managed
+            Chromium browser to be installed on the client machine because the live report
+            page is rendered locally before being printed to PDF.
 
         Returns
         -------
@@ -811,11 +813,11 @@ class Report:
             Success status of the browser PDF export: True if it worked, False otherwise
         """
         success = False
-        if self.service is None:  # pragma: no cover
+        if self.service is None:
             # Match the method's bool contract even on disconnected Report objects.
             LOGGER.error("No connection to any report")
             return False
-        if self.service.serverobj is None:  # pragma: no cover
+        if self.service.serverobj is None:
             self.service.logger.error("No connection to any server")
             return False
         try:
@@ -831,7 +833,7 @@ class Report:
                 render_timeout=render_timeout,
             )
             success = True
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             self.service.logger.error(f"Can not export browser pdf report: {str(e)}")
         return success
 
