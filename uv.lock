@@ -31,7 +31,7 @@ wheels = [
 
 [[package]]
 name = "ansys-dpf-core"
-version = "0.16.0"
+version = "0.16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ansys-tools-common" },
@@ -46,10 +46,10 @@ dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/8a/6a0f03dc482fecfae2d8a9fce14c592c1d6de34c7bdc9dc9b2658bcc283a/ansys_dpf_core-0.16.0-py3-none-any.whl", hash = "sha256:464e6762f5eca8a598267aaeafcaba625e8f9b44da6928a3442a9ea9b9fc9c55", size = 2903008, upload-time = "2026-04-14T17:27:22.713Z" },
-    { url = "https://files.pythonhosted.org/packages/9d/38/ec8ff4e0bb06cdd29ee2df613231b7b70c4903141a32bcdb88a30cbb22cb/ansys_dpf_core-0.16.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:ecfcb7ddbad0914195c109be2ffd566b66d5b0e0d5f18a516d2be5f2cbe54cad", size = 12477260, upload-time = "2026-04-14T17:27:25Z" },
-    { url = "https://files.pythonhosted.org/packages/60/cb/468dfc2c50e093356d6323079c2ce2f2b5b5816fe5750a6efd27b8d148e7/ansys_dpf_core-0.16.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:0416ddf22aca0b40388a6c0482322ea9fb623f58569c0da8a6da5429a8d1400f", size = 12477263, upload-time = "2026-04-14T17:27:27.119Z" },
-    { url = "https://files.pythonhosted.org/packages/ab/49/6237ad0192ec69dcb8aa0268f936a421f45e8dd23bc2d6d1d7f7392b8bbc/ansys_dpf_core-0.16.0-py3-none-win_amd64.whl", hash = "sha256:a9d62f75ad0f40c2952465209895d3f40ccf10138947526abfc55abbd871b527", size = 8526683, upload-time = "2026-04-14T17:27:29.626Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/af/fe45596b334a9bc402b83cd6b10bcf96a36db89ac844834131f5735b7cf0/ansys_dpf_core-0.16.1-py3-none-any.whl", hash = "sha256:610bab3712a94f2ce4b7bd31b5cf92e7691346baef101da73d74323b6c94c324", size = 2954610, upload-time = "2026-06-08T09:25:44.566Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/bf/a394679bc294d51b9392dbc42b91e385950dce581bb07112293c9e26ccf6/ansys_dpf_core-0.16.1-py3-none-manylinux1_x86_64.whl", hash = "sha256:0b3274f609786d986e269b37a56f7a9e1d7ec2b2f5667cdd4837c3313c5dd565", size = 12566968, upload-time = "2026-06-08T09:25:46.87Z" },
+    { url = "https://files.pythonhosted.org/packages/63/7f/a974cbd3cd87cfb30f8e829211626647bdf4de5b1a9dea9b2346aa706664/ansys_dpf_core-0.16.1-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:984488b048d4c7f8a39086d391401474bba978d8aa2158da34f8a7697b2d81c3", size = 12566969, upload-time = "2026-06-08T09:25:49.452Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/71/8f747bb8f09d1a084039da3726e7906940df7ceb44d2af19a0249fc5e1f3/ansys_dpf_core-0.16.1-py3-none-win_amd64.whl", hash = "sha256:18b1d16228f5da89832f507ac719db245577b4e361b065bbf2d38740791da40d", size = 8608117, upload-time = "2026-06-08T09:25:51.703Z" },
 ]
 
 [[package]]
@@ -114,7 +114,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ansys-dpf-core", marker = "extra == 'test'", specifier = "==0.16.0" },
+    { name = "ansys-dpf-core", marker = "extra == 'test'", specifier = "==0.16.1" },
     { name = "ansys-sphinx-theme", marker = "extra == 'doc'" },
     { name = "bleach", specifier = ">=6.2.0" },
     { name = "codespell", marker = "extra == 'dev'" },
