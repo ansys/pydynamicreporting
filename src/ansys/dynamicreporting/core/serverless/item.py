@@ -69,13 +69,13 @@ class Session(BaseModel):
     date: datetime = field(compare=False, kw_only=True, default_factory=timezone.now)
     """Session creation timestamp, defaulting to the current time."""
 
-    hostname: str = field(compare=False, kw_only=True, default=str(platform.node()))
+    hostname: str = field(compare=False, kw_only=True, default_factory=platform.node)
     """Hostname where the session was created."""
 
     platform: str = field(
         compare=False,
         kw_only=True,
-        default=str(report_utils.enve_arch()),
+        default_factory=report_utils.enve_arch,
     )
     """Platform/architecture identifier (for example ``"win64"``)."""
 

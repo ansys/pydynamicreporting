@@ -32,17 +32,16 @@ import io
 import os
 import platform
 import subprocess  # nosec B78 B603 B404
+import sys
 import typing
 import zipfile
 
 from django.conf import settings
 
-try:
-    is_enve = True
-    import enve
-    from reports.engine import TemplateEngine
-except Exception:
-    is_enve = False
+
+def _get_enve_module():
+    """Return the loaded ``enve`` module, if one already exists."""
+    return sys.modules.get("enve")
 
 
 def get_evsn_proxy_image(filename: str) -> bytearray | None:
@@ -216,8 +215,9 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     if csf_ext.lower() != ".avz":  # pragma: no cover
         # convert the udrw file into a .avz file using the cei_apexXXX_udrw2avz command
         app = f"cei_apex{settings.CEI_APEX_SUFFIX}_udrw2avz"
-        if is_enve is True:
-            app = os.path.join(enve.home(), "bin", app)
+        enve_module = _get_enve_module()
+        if enve_module is not None:
+            app = os.path.join(enve_module.home(), "bin", app)
         else:
             if exec_basis:
                 app = os.path.join(exec_basis, "bin", app)

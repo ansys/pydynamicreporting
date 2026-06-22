@@ -38,14 +38,6 @@ from PIL.TiffTags import TAGS
 import requests
 
 try:
-    import ceiversion
-    import enve
-
-    has_enve = True
-except (ImportError, SystemError):
-    has_enve = False
-
-try:
     import numpy
 
     has_numpy = True
@@ -56,6 +48,45 @@ text_type = str
 """@package report_utils
 Methods that serve as a shim to the enve and ceiversion modules that may not be present
 """
+
+
+def _get_optional_module(name):
+    """Return a loaded optional product module without importing it."""
+    module = sys.modules.get(name)
+    if module is not None:
+        return module
+    return None
+
+
+def _get_enve_module():
+    """Return the loaded ``enve`` module, if one already exists."""
+    return _get_optional_module("enve")
+
+
+def _get_ceiversion_module():
+    """Return the loaded ``ceiversion`` module, if one already exists."""
+    return _get_optional_module("ceiversion")
+
+
+def __getattr__(name):
+    """Expose product-module compatibility shims lazily.
+
+    Importing serverless ADR should not opportunistically import product Python
+    extensions because mismatched product binaries can hang under a newer
+    interpreter. These attributes therefore reflect only modules that are
+    already loaded by the host process.
+    """
+    if name == "has_enve":
+        return _get_enve_module() is not None and _get_ceiversion_module() is not None
+    if name == "enve":
+        module = _get_enve_module()
+        if module is not None:
+            return module
+    if name == "ceiversion":
+        module = _get_ceiversion_module()
+        if module is not None:
+            return module
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 def decode_url(s):
@@ -122,8 +153,9 @@ def is_enve_image_or_pil(img):
         True if the image can be opened either by PIL or enve
     """
     is_enve = False
-    if has_enve:  # pragma: no cover
-        is_enve = isinstance(img, enve.image)
+    enve_module = _get_enve_module()
+    if enve_module is not None:  # pragma: no cover
+        is_enve = isinstance(img, enve_module.image)
     is_PIL = check_if_PIL(img)
     return is_enve or is_PIL
 
@@ -285,8 +317,9 @@ def image_to_data(img):
     # 'format' = 'tif' or 'png'
     # 'file_data' = a byte array of the raw image (same content as disk file)
     data = None
-    if has_enve:  # pragma: no cover
-        if isinstance(img, enve.image):
+    enve_module = _get_enve_module()
+    if enve_module is not None:  # pragma: no cover
+        if isinstance(img, enve_module.image):
             data = dict(width=img.dims[0], height=img.dims[1])
             with tempfile.TemporaryDirectory() as temp_dir:
                 if img.enhanced:
@@ -314,21 +347,24 @@ def image_to_data(img):
 
 
 def enve_arch():
-    if has_enve:
-        return enve.arch()
+    enve_module = _get_enve_module()
+    if enve_module is not None:
+        return enve_module.arch()
     return platform.system().lower()
 
 
 def enve_home():
-    if has_enve:
-        return enve.home()
+    enve_module = _get_enve_module()
+    if enve_module is not None:
+        return enve_module.home()
     tmp = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     return tmp
 
 
 def ceiversion_nexus_suffix():
-    if has_enve:
-        return ceiversion.nexus_suffix
+    ceiversion_module = _get_ceiversion_module()
+    if ceiversion_module is not None:
+        return ceiversion_module.nexus_suffix
     # If we are coming from pynexus, get the version from that
     try:
         from ansys.dynamicreporting.core import ansys_version
@@ -342,8 +378,9 @@ def ceiversion_nexus_suffix():
 
 
 def ceiversion_apex_suffix():
-    if has_enve:
-        return ceiversion.apex_suffix
+    ceiversion_module = _get_ceiversion_module()
+    if ceiversion_module is not None:
+        return ceiversion_module.apex_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location
     # of this file) is a reasonable proxy for the apex suffix.
@@ -351,8 +388,9 @@ def ceiversion_apex_suffix():
 
 
 def ceiversion_ensight_suffix():
-    if has_enve:
-        return ceiversion.ensight_suffix
+    ceiversion_module = _get_ceiversion_module()
+    if ceiversion_module is not None:
+        return ceiversion_module.ensight_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location
     # of this file) is a reasonable proxy for the ensight suffix as well.
