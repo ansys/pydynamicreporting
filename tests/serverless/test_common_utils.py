@@ -40,12 +40,15 @@ CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
 def _path_is_never_dir(self) -> bool:
+    """Pretend every probed path is absent during implicit install discovery."""
     # Force implicit install discovery to behave as if the machine has no candidates.
     return False
 
 
 def _missing_default_install_root_factory(tmp_path):
+    """Build a fake default-install resolver that always points at a missing path."""
     def missing_default_install_root(version):
+        """Return a default-install root that is guaranteed not to exist."""
         # Point default probes at a guaranteed-missing path so only the test fixture drives behavior.
         return tmp_path / "nonexistent" / f"v{version}"
 
@@ -53,9 +56,11 @@ def _missing_default_install_root_factory(tmp_path):
 
 
 def _make_fake_enve_module(fake_enve_dir):
+    """Create a tiny ``enve`` stand-in whose ``home()`` returns the requested path."""
     class FakeEnve:
         @staticmethod
         def home():
+            """Return the fake ``enve`` install root for the test."""
             # Mimic ``enve.home()`` without importing the real package.
             return fake_enve_dir
 
@@ -65,6 +70,7 @@ def _make_fake_enve_module(fake_enve_dir):
 # ansys_installation provided, valid using the legacy "CEI" folder.
 @pytest.mark.ado_test
 def test_get_install_info_valid_cei(tmp_path):
+    """Resolve an explicit install root that uses the legacy ``CEI`` layout."""
     # Create a fake installation directory with a legacy "CEI" subfolder.
     install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
@@ -85,6 +91,7 @@ def test_get_install_info_valid_cei(tmp_path):
 # ansys_installation provided, valid using the new "ADR" folder layout.
 @pytest.mark.ado_test
 def test_get_install_info_valid_adr(tmp_path):
+    """Resolve an explicit install root that uses the newer ``ADR`` layout."""
     # Create a fake installation directory with the new "ADR" subfolder.
     install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
@@ -104,6 +111,7 @@ def test_get_install_info_valid_adr(tmp_path):
 # When both "ADR" and "CEI" exist, "ADR" (new layout) takes priority.
 @pytest.mark.ado_test
 def test_get_install_info_adr_takes_priority_over_cei(tmp_path):
+    """Prefer ``ADR`` over ``CEI`` when both layouts exist under the same root."""
     install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
     # Create both ADR and CEI subdirectories with valid nexus structures.
@@ -123,6 +131,7 @@ def test_get_install_info_adr_takes_priority_over_cei(tmp_path):
 # ansys_installation provided, valid using the base directory (when neither ADR nor CEI folder exists).
 @pytest.mark.ado_test
 def test_get_install_info_valid_base(tmp_path):
+    """Accept a bare install root when the nexus layout lives directly under it."""
     # Create a fake installation directory without an "ADR" or "CEI" subfolder.
     install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
@@ -140,6 +149,7 @@ def test_get_install_info_valid_base(tmp_path):
 # ansys_installation provided, but missing required nexus folder structure → raises InvalidAnsysPath.
 @pytest.mark.ado_test
 def test_get_install_info_invalid_missing_manage(tmp_path):
+    """Reject install roots that do not contain the required ``manage.py`` layout."""
     install_dir = tmp_path / f"install_v{CURRENT_VERSION}"
     install_dir.mkdir()
     # Create "ADR" and "CEI" folders but do not create the required nexus folder structure.
@@ -153,6 +163,7 @@ def test_get_install_info_invalid_missing_manage(tmp_path):
 # ansys_installation is None, but PYADR_ANSYS_INSTALLATION is set to a valid installation (ADR layout).
 @pytest.mark.ado_test
 def test_get_install_info_env_pyadr_valid_adr(tmp_path, monkeypatch):
+    """Use ``PYADR_ANSYS_INSTALLATION`` when it points at a valid ``ADR`` tree."""
     env_dir = tmp_path / f"env_install_v{CURRENT_VERSION}"
     env_dir.mkdir()
     # Create a valid ADR structure (new layout) inside the env directory.
@@ -172,6 +183,7 @@ def test_get_install_info_env_pyadr_valid_adr(tmp_path, monkeypatch):
 # ansys_installation is None, but PYADR_ANSYS_INSTALLATION is set to a valid installation (legacy CEI layout).
 @pytest.mark.ado_test
 def test_get_install_info_env_pyadr_valid_cei(tmp_path, monkeypatch):
+    """Use ``PYADR_ANSYS_INSTALLATION`` when it points at a valid ``CEI`` tree."""
     env_dir = tmp_path / f"env_install_v{CURRENT_VERSION}"
     env_dir.mkdir()
     # Create a valid CEI structure (legacy layout) inside the env directory.
@@ -191,6 +203,7 @@ def test_get_install_info_env_pyadr_valid_cei(tmp_path, monkeypatch):
 # ansys_installation is None and AWP_ROOT{CURRENT_VERSION} with ADR layout.
 @pytest.mark.ado_test
 def test_get_install_info_env_awp_valid_adr(tmp_path, monkeypatch):
+    """Use the matching ``AWP_ROOT###`` environment variable for a valid ``ADR`` tree."""
     awp_var = f"AWP_ROOT{CURRENT_VERSION}"
     awp_dir = tmp_path / f"awp_install_v{CURRENT_VERSION}"
     awp_dir.mkdir()
@@ -214,6 +227,7 @@ def test_get_install_info_env_awp_valid_adr(tmp_path, monkeypatch):
 # ansys_installation is None and AWP_ROOT{CURRENT_VERSION} with legacy CEI layout.
 @pytest.mark.ado_test
 def test_get_install_info_env_awp_valid_cei(tmp_path, monkeypatch):
+    """Use the matching ``AWP_ROOT###`` environment variable for a valid ``CEI`` tree."""
     awp_var = f"AWP_ROOT{CURRENT_VERSION}"
     awp_dir = tmp_path / f"awp_install_v{CURRENT_VERSION}"
     awp_dir.mkdir()
@@ -238,6 +252,7 @@ def test_get_install_info_env_awp_valid_cei(tmp_path, monkeypatch):
 # We simulate this by forcing all candidate directories to report they are not directories.
 @pytest.mark.ado_test
 def test_get_install_info_none_no_valid(monkeypatch):
+    """Return ``(None, CURRENT_VERSION)`` when no discovery candidate exists."""
     # Remove relevant environment variables.
     for var in ["PYADR_ANSYS_INSTALLATION", f"AWP_ROOT{CURRENT_VERSION}", "CEIDEVROOTDOS"]:
         monkeypatch.delenv(var, raising=False)
@@ -252,6 +267,7 @@ def test_get_install_info_none_no_valid(monkeypatch):
 
 @pytest.mark.ado_test
 def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(monkeypatch, tmp_path):
+    """Fall back to the older compatible product line when the bundled line is absent."""
     released_dir = tmp_path / "v261" / "ADR"
     released_dir.mkdir(parents=True)
 
@@ -270,6 +286,7 @@ def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(mon
 
 @pytest.mark.ado_test
 def test_get_install_info_implicit_prefers_271_over_261(monkeypatch, tmp_path):
+    """Prefer the bundled product line when both bundled and compatibility installs exist."""
     compatibility_dir = tmp_path / "v261" / "ADR"
     compatibility_dir.mkdir(parents=True)
     bundled_dir = tmp_path / "v271" / "ADR"
@@ -291,6 +308,7 @@ def test_get_install_info_implicit_prefers_271_over_261(monkeypatch, tmp_path):
 
 @pytest.mark.ado_test
 def test_get_install_info_implicit_ignores_unsupported_versions(monkeypatch, tmp_path):
+    """Ignore implicit installs that fall outside the supported auto-detect window."""
     supported_versions = {int(version) for version in AUTO_DETECT_INSTALL_VERSIONS}
     # Pick a version outside the configured implicit probe window so the test
     # continues to validate the support contract as releases advance.
@@ -322,6 +340,7 @@ def test_get_install_info_implicit_ignores_unsupported_versions(monkeypatch, tmp
 
 @pytest.mark.ado_test
 def test_get_install_info_explicit_version_does_not_probe_other_versions(monkeypatch, tmp_path):
+    """Honor an explicit install version instead of scanning sibling version roots."""
     target_dir = tmp_path / "v261" / "ADR"
     target_dir.mkdir(parents=True)
     ignored_dir = tmp_path / "v271" / "ADR"
@@ -340,6 +359,7 @@ def test_get_install_info_explicit_version_does_not_probe_other_versions(monkeyp
 
 @pytest.mark.ado_test
 def test_get_install_info_explicit_271_is_still_supported(monkeypatch, tmp_path):
+    """Keep explicit lookup working for the bundled 271 product line."""
     target_dir = tmp_path / "v271" / "ADR"
     target_dir.mkdir(parents=True)
 
@@ -356,6 +376,7 @@ def test_get_install_info_explicit_271_is_still_supported(monkeypatch, tmp_path)
 # ansys_installation provided with no version in its path but with a provided ansys_version.
 @pytest.mark.ado_test
 def test_get_install_info_provided_ansys_version(tmp_path):
+    """Use the caller-provided version when the install path itself has no ``v###`` marker."""
     provided_version = 300
     # Create a directory without a version pattern in its name.
     install_dir = tmp_path / "install_no_version"
@@ -377,6 +398,7 @@ def test_get_install_info_provided_ansys_version(tmp_path):
 @pytest.mark.ado_test
 @pytest.mark.parametrize("falsy_version", [0, False])
 def test_get_install_info_falsy_ansys_version_uses_default(tmp_path, falsy_version):
+    """Treat falsy explicit versions as missing and fall back to the default install version."""
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
     nexus_dir = install_dir / f"nexus{DEFAULT_ANSYS_INSTALL_VERSION}" / "django"
@@ -393,6 +415,7 @@ def test_get_install_info_falsy_ansys_version_uses_default(tmp_path, falsy_versi
 
 @pytest.mark.ado_test
 def test_get_install_info_detects_version_from_install_layout(tmp_path):
+    """Infer the install version from a single unambiguous ``nexus###`` layout."""
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
     nexus_dir = install_dir / "nexus271" / "django"
@@ -407,6 +430,7 @@ def test_get_install_info_detects_version_from_install_layout(tmp_path):
 
 @pytest.mark.ado_test
 def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, caplog):
+    """Return ``None`` and log a warning when multiple layout versions are present."""
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
     for version in ("261", "271"):
@@ -425,6 +449,7 @@ def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, c
 # Test the branch for a valid 'enve' candidate.
 @pytest.mark.ado_test
 def test_get_install_info_with_enve(monkeypatch, tmp_path):
+    """Use ``enve.home()`` as a discovery candidate when the module is available."""
     # Create a fake candidate directory for enve.home().
     fake_enve_dir = tmp_path / "fake_enve_home" / "v253"
     fake_enve_dir.mkdir(parents=True)
@@ -439,6 +464,7 @@ def test_get_install_info_with_enve(monkeypatch, tmp_path):
 
     # Monkeypatch Path.is_dir so that our fake enve candidate is the only valid directory.
     def fake_is_dir(self):
+        """Return ``True`` only for the fake ``enve`` home path."""
         if str(self) == str(fake_enve_dir):
             return True
         return False
@@ -453,6 +479,7 @@ def test_get_install_info_with_enve(monkeypatch, tmp_path):
 
 @pytest.mark.ado_test
 def test_get_install_info_with_ceidev(monkeypatch, tmp_path):
+    """Use ``CEIDEVROOTDOS`` as a fallback discovery candidate when other env vars are absent."""
     # Create a candidate directory for CEIDEVROOTDOS.
     ceidev_dir = tmp_path / "ceidev_install" / f"v{CURRENT_VERSION}"
     ceidev_dir.mkdir(parents=True)
@@ -468,6 +495,7 @@ def test_get_install_info_with_ceidev(monkeypatch, tmp_path):
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
     def fake_is_dir(self):
+        """Return ``True`` only for the fake ``CEIDEVROOTDOS`` path."""
         if str(self) == str(ceidev_dir):
             return True
         # For all other paths (e.g. the common default), return False.

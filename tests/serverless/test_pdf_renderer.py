@@ -75,6 +75,7 @@ class MockPlaywrightPDFFlow:
     page: Mock
 
     def sync_playwright(self):
+        """Return the mocked context manager used by ``sync_playwright()``."""
         # ``render_pdf()`` calls ``sync_playwright()`` as a factory, so expose the manager directly.
         return self.manager
 
@@ -109,17 +110,21 @@ def _mock_playwright_pdf_flow(
 
 
 def _noop_wait_for_render_ready(page, deadline=None):
+    """Stub the readiness wait as an immediate success."""
     # Most renderer tests exercise setup and teardown only, not the async readiness protocol.
     return None
 
 
 def _return_none_pdf_width(page):
+    """Stub width measurement as unavailable so the renderer uses its default width path."""
     # ``None`` keeps the renderer on its normal default-page-width branch.
     return None
 
 
 def _pdf_width_factory(pdf_width: str | None):
+    """Build a width callback that returns a fixed renderer width for a test."""
     def compute_pdf_width(page):
+        """Return the preconfigured PDF width for the current test."""
         # Capture a per-test width value without reintroducing inline lambdas.
         return pdf_width
 
@@ -127,7 +132,9 @@ def _pdf_width_factory(pdf_width: str | None):
 
 
 def _monotonic_factory(monotonic_values):
+    """Build a deterministic monotonic clock backed by an iterator of sample values."""
     def monotonic():
+        """Return the next synthetic monotonic timestamp for the test."""
         # The renderer samples time several times; the iterator makes each sample deterministic.
         return next(monotonic_values)
 
@@ -135,7 +142,9 @@ def _monotonic_factory(monotonic_values):
 
 
 def _append_call_order_factory(call_order: list[str], label: str):
+    """Build a callback that records a named phase in a shared call-order list."""
     def record_call(observed_page, deadline=None):
+        """Append the configured label to the shared call-order list."""
         # Record the observable phase order without coupling to real Playwright behavior.
         call_order.append(label)
 
@@ -143,7 +152,9 @@ def _append_call_order_factory(call_order: list[str], label: str):
 
 
 def _fixed_measurement_factory(value: float):
+    """Build a measurement callback that always returns the supplied numeric value."""
     def measure(page):
+        """Return the preconfigured numeric measurement for the test."""
         # Width-measurement tests only care about the numeric result, not DOM inspection details.
         return value
 
@@ -151,7 +162,9 @@ def _fixed_measurement_factory(value: float):
 
 
 def _raise_if_called_factory(message: str):
+    """Build a guard callback that fails the test if an unexpected path is executed."""
     def raise_if_called():
+        """Fail immediately if the guarded code path is reached."""
         # Use an explicit helper so tests fail immediately if Playwright launch leaks into a guard path.
         pytest.fail(message)
 
@@ -176,6 +189,7 @@ class _ProductBrowserRendererHarness:
     resolver_args: dict[str, object]
 
     def resolve_browser_binary_info(self, ansys_installation=None, ansys_version=None):
+        """Capture resolver inputs and return the prebuilt fake product browser metadata."""
         # Preserve the resolver inputs for assertions while still returning a valid product binary.
         self.resolver_args.update(
             {
@@ -231,6 +245,7 @@ def _arrange_product_browser_renderer(
 def _set_transient_override_envs(
     monkeypatch: pytest.MonkeyPatch, runtime_override_envs: dict[str, str]
 ) -> None:
+    """Seed the transient Playwright override environment variables for a render test."""
     for env_var, env_value in runtime_override_envs.items():
         # Apply each override individually so tests can later assert exact restoration behavior.
         monkeypatch.setenv(env_var, env_value)
@@ -239,7 +254,9 @@ def _set_transient_override_envs(
 def _capture_render_start_env(
     flow: MockPlaywrightPDFFlow, env_seen: dict[str, object]
 ) -> None:
+    """Capture the effective render-scope environment at Playwright startup time."""
     def fake_enter():
+        """Snapshot render-scope env vars when the mocked Playwright context starts."""
         # Playwright resolves its browser registry on context-manager entry, so capture env state here.
         env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
         env_seen["transient_override_envs"] = {
@@ -279,6 +296,7 @@ def _browser_binary_info(
 
 @pytest.mark.unit
 def test_playwright_pdf_from_simple_html(tmp_path):
+    """Render a minimal HTML page to a PDF byte stream."""
     renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
@@ -286,6 +304,7 @@ def test_playwright_pdf_from_simple_html(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_landscape(tmp_path):
+    """Propagate the landscape option through a basic HTML-to-PDF render."""
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Landscape content</p></body></html>",
@@ -297,6 +316,7 @@ def test_playwright_pdf_landscape(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_path):
+    """Fail before browser startup when the HTML entrypoint is missing."""
     renderer = PlaywrightPDFRenderer(html_dir=tmp_path)
 
     with pytest.raises(ADRException, match="entry-point file does not exist"):
@@ -307,6 +327,7 @@ def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_pa
 def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     tmp_path, monkeypatch
 ):
+    """Apply the configured render timeout to browser launch and page navigation."""
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
     stack = _stub_playwright_stack(monkeypatch)
@@ -327,6 +348,7 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 
 @pytest.mark.unit
 def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
+    """Share one deadline across navigation and readiness waits instead of resetting the timeout."""
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=10.0)
     _stub_playwright_stack(monkeypatch)
@@ -336,6 +358,7 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
     monkeypatch.setattr(pdf_renderer_module, "monotonic", _monotonic_factory(monotonic_values))
 
     def capture_ready(page, deadline=None):
+        """Capture the readiness deadline that render_pdf passes into the wait helper."""
         captured_deadline["value"] = deadline
 
     monkeypatch.setattr(renderer, "_wait_for_render_ready", capture_ready)
@@ -350,6 +373,7 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 
 @pytest.mark.unit
 def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
+    """Convert Playwright navigation timeout text into the renderer's stable ADRException wording."""
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
     stack = _stub_playwright_stack(monkeypatch)
@@ -370,6 +394,7 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
 
 @pytest.mark.unit
 def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
+    """Close the launched browser if context creation fails after startup."""
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir)
     stack = _stub_playwright_stack(monkeypatch)
@@ -383,6 +408,7 @@ def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path,
 
 @pytest.mark.unit
 def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
+    """Fall back to the default A4-sized width when content measurement returns no width."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
     page = _stub_playwright_render(monkeypatch, renderer)
 
@@ -396,6 +422,7 @@ def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path
 
 @pytest.mark.unit
 def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_path, monkeypatch):
+    """Prefer the measured content width when the page reports one."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Measured width</p></body></html>")
     page = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
 
@@ -409,6 +436,7 @@ def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_
 
 @pytest.mark.unit
 def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_path, monkeypatch):
+    """Apply capture CSS before readiness waits and width measurement run."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
     page = _stub_playwright_render(monkeypatch, renderer, pdf_width="420.00px")
     call_order: list[str] = []
@@ -427,6 +455,7 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
     )
 
     def capture_width(observed_page):
+        """Record width computation ordering while returning a stable measured width."""
         call_order.append("width")
         return "420.00px"
 
@@ -440,6 +469,7 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
 
 @pytest.mark.unit
 def test_playwright_pdf_with_mathjax_content(tmp_path):
+    """Render MathJax content successfully when a startup promise is present."""
     # The inline MathJax stub gives the readiness check a real startup promise to await.
     html = """
     <html>
@@ -462,6 +492,7 @@ def test_playwright_pdf_with_mathjax_content(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(tmp_path):
+    """Prefer the MathJax document ``whenReady()`` API when it exists."""
     # MathJax 4.1 exposes MathDocument.whenReady() for pending typesetting work. The
     # never-resolving startup promise proves that the renderer prefers that documented path.
     html = """
@@ -493,6 +524,7 @@ def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
+    """Support the legacy MathJax 2 ``Hub.Queue()`` readiness API."""
     # MathJax 2 exports still use Hub.Queue() to synchronize with the legacy renderer.
     html = """
     <html>
@@ -517,6 +549,7 @@ def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
 
 @pytest.mark.unit
 def test_playwright_pdf_signal_timeout(tmp_path):
+    """Normalize timeout reporting when readiness never completes."""
     # This mock Plotly container never gets class 'loaded', so the readiness MutationObserver
     # never fires and the promise times out.
     html = """
@@ -549,6 +582,7 @@ def test_playwright_pdf_signal_timeout(tmp_path):
 
 @pytest.mark.unit
 def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
+    """Inject capture CSS rules for the renderer's known plot, media, and layout containers."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>CSS injection</p></body></html>")
     page = Mock()
 
@@ -579,6 +613,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
 @pytest.mark.unit
 def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
+    """Verify the injected capture styles affect the live DOM under screen media, not print media."""
     html = """
     <html>
     <head>
@@ -822,6 +857,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
 
 @pytest.mark.unit
 def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
+    """Convert the documented PDF length units to pixel widths."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
 
     assert renderer._pdf_length_to_px("25.4mm") == pytest.approx(96.0)
@@ -839,6 +875,7 @@ def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
     ],
 )
 def test_pdf_length_to_px_rejects_undocumented_or_malformed_units(tmp_path, value, expected_error):
+    """Reject unsupported or malformed PDF length values."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Invalid units</p></body></html>")
 
     with pytest.raises(ADRException, match=expected_error):
@@ -847,6 +884,7 @@ def test_pdf_length_to_px_rejects_undocumented_or_malformed_units(tmp_path, valu
 
 @pytest.mark.unit
 def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_path):
+    """Fail fast when the readiness deadline has already expired before browser evaluation."""
     logger = Mock()
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body><p>Deadline</p></body></html>"),
@@ -871,6 +909,7 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 
 @pytest.mark.unit
 def test_evaluate_ready_step_logs_duration_on_success(tmp_path, monkeypatch):
+    """Log readiness-step duration when an in-page readiness probe succeeds."""
     logger = Mock()
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"), logger=logger
@@ -894,6 +933,7 @@ def test_evaluate_ready_step_logs_duration_on_success(tmp_path, monkeypatch):
 
 @pytest.mark.unit
 def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
+    """Log readiness-step duration even when the in-page readiness probe fails."""
     logger = Mock()
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
@@ -919,6 +959,7 @@ def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
 
 @pytest.mark.unit
 def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
+    """Normalize in-page timeout text into the public ADRException timeout wording."""
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
         render_timeout=5.0,
@@ -940,11 +981,12 @@ def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
 
 @pytest.mark.unit
 def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch):
-    """Verify all readiness steps are executed in the expected order."""
+    """Keep the browser-PDF readiness step set aligned with the production print pipeline."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
     step_names = []
 
     def capture_ready_step(page, step_name, wait_script, deadline):
+        """Record each readiness-step name instead of executing the step."""
         step_names.append(step_name)
 
     monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
@@ -966,10 +1008,11 @@ def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch)
 def _capture_ready_step_scripts(
     monkeypatch: pytest.MonkeyPatch, renderer: PlaywrightPDFRenderer
 ) -> dict[str, str]:
-    """Capture the JavaScript readiness script for each named step."""
+    """Capture the JavaScript snippets used for each readiness step."""
     wait_scripts: dict[str, str] = {}
 
     def capture_ready_step(page, step_name, wait_script, deadline):
+        """Collect each readiness-step script instead of executing it."""
         wait_scripts[step_name] = wait_script
 
     monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
@@ -978,7 +1021,7 @@ def _capture_ready_step_scripts(
 
 
 def _start_wait_script(page, wait_script: str) -> None:
-    """Run one readiness step script on the page and expose its eventual result."""
+    """Start a captured readiness script inside a live Playwright page."""
     page.evaluate(
         f"""() => {{
             window.waitReadyDone = false;
@@ -997,6 +1040,7 @@ def _start_wait_script(page, wait_script: str) -> None:
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
+    """Skip the FOUC gate quickly when the report root does not exist."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-no-root-report"
@@ -1019,6 +1063,7 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_pat
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, monkeypatch):
+    """Wait for the body ``loaded`` class before clearing the FOUC gate."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC gate</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-loaded-report"
@@ -1047,6 +1092,7 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, m
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_path, monkeypatch):
+    """Wait for the report-root opacity transition before continuing readiness checks."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-transition-report"
@@ -1085,6 +1131,7 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_
 def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loader(
     tmp_path, monkeypatch
 ):
+    """Wait for Plotly containers to report both loaded content and hidden loaders."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "plotly-ready-report"
@@ -1120,6 +1167,7 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 @pytest.mark.unit
 def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp_path, monkeypatch):
+    """Treat images without a real source as pending instead of already loaded."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -1158,6 +1206,7 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
 def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
     tmp_path, monkeypatch
 ):
+    """Wait for companion canvases used by rendered images before completing readiness."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -1205,6 +1254,7 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkeypatch):
+    """Wait for videos to reach ``loadeddata`` before treating the page as ready."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "video-ready-report"
@@ -1247,6 +1297,7 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkey
 
 @pytest.mark.unit
 def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path, monkeypatch):
+    """Allow the final double-requestAnimationFrame stabilization step to complete."""
     renderer = _simple_renderer(tmp_path, "<html><body><p>Animation frame</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "double-raf-report"
@@ -1272,6 +1323,7 @@ def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path,
 
 @pytest.mark.unit
 def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
+    """Resolve a relative HTML directory to an absolute normalized renderer path."""
     report_dir = tmp_path / "relative-report"
     report_dir.mkdir()
     html_dir = _write_html(report_dir, "<html><body>Relative</body></html>")
@@ -1285,6 +1337,7 @@ def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
 
 @pytest.mark.unit
 def test_resolve_entrypoint_path_rejects_parent_traversal(tmp_path):
+    """Reject entrypoint filenames that escape the exported HTML directory."""
     html_dir = _write_html(tmp_path, "<html><body>Traversal</body></html>")
     renderer = PlaywrightPDFRenderer(html_dir=html_dir, filename="../../etc/passwd")
 
@@ -1295,6 +1348,7 @@ def test_resolve_entrypoint_path_rejects_parent_traversal(tmp_path):
 
 @pytest.mark.unit
 def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
+    """Include configured left and right margins in the computed PDF width."""
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
         margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
@@ -1320,6 +1374,7 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     ],
 )
 def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, should_block):
+    """Block external network requests while still allowing local file/data/blob URLs."""
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Requests</body></html>")
     )
@@ -1344,6 +1399,7 @@ def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, sho
 
 @pytest.mark.unit
 def test_block_file_urls_with_authority_component():
+    """Reject ``file://host/...`` URLs while allowing local ``file:///...`` paths."""
     renderer = PlaywrightPDFRenderer(html_dir=Path("."))
     context = Mock()
     renderer._block_external_requests(context)
@@ -1365,6 +1421,7 @@ def test_block_file_urls_with_authority_component():
 
 @pytest.mark.unit
 def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
+    """Block external websocket traffic during offline browser export."""
     renderer = PlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>WebSockets</body></html>")
     )
@@ -1418,6 +1475,7 @@ def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
     ],
 )
 def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected_error):
+    """Reject invalid renderer constructor options before any browser work starts."""
     html_dir = _write_html(tmp_path, "<html><body>Invalid options</body></html>")
 
     with pytest.raises(ADRException, match=expected_error):
@@ -1426,6 +1484,7 @@ def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected
 
 @pytest.mark.unit
 def test_playwright_pdf_transient_override_env_vars_are_explicit_contract():
+    """Lock in the exact transient override env vars that browser-PDF render scope clears."""
     # The render scope clears only host-platform overrides because browser-PDF replaces
     # PLAYWRIGHT_BROWSERS_PATH separately and preserves download-host configuration.
     assert (
@@ -1438,6 +1497,7 @@ def test_playwright_pdf_transient_override_env_vars_are_explicit_contract():
 def test_playwright_pdf_sets_product_browser_path_during_startup_when_user_env_is_unset(
     tmp_path, monkeypatch
 ):
+    """Set ``PLAYWRIGHT_BROWSERS_PATH`` to the product browser directory during startup."""
     harness = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     env_seen: dict[str, str | None] = {}
 
@@ -1453,6 +1513,7 @@ def test_playwright_pdf_sets_product_browser_path_during_startup_when_user_env_i
 def test_playwright_pdf_removes_product_browser_path_after_render_when_user_env_is_unset(
     tmp_path, monkeypatch
 ):
+    """Remove the temporary product browser path after render when no user path existed."""
     harness = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
 
@@ -1465,6 +1526,7 @@ def test_playwright_pdf_removes_product_browser_path_after_render_when_user_env_
 def test_playwright_pdf_scrubs_transient_override_env_vars_during_startup_and_restores_after_render(
     tmp_path, monkeypatch
 ):
+    """Clear transient Playwright override env vars during startup and restore them afterward."""
     harness = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     env_seen: dict[str, object] = {}
 
@@ -1481,6 +1543,7 @@ def test_playwright_pdf_scrubs_transient_override_env_vars_during_startup_and_re
 
 @pytest.mark.unit
 def test_playwright_pdf_preserves_download_host_during_and_after_render(tmp_path, monkeypatch):
+    """Preserve ``PLAYWRIGHT_DOWNLOAD_HOST`` throughout the render lifecycle."""
     harness = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     env_seen: dict[str, object] = {}
     preserved_download_host = "https://playwright-downloads.example.invalid"
@@ -1498,6 +1561,7 @@ def test_playwright_pdf_preserves_download_host_during_and_after_render(tmp_path
 
 @pytest.mark.unit
 def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_path, monkeypatch):
+    """Override a user-supplied browser path during render but restore it afterward."""
     harness = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     user_browser_path = str(tmp_path / "user-browser-path")
     env_seen: dict[str, str | None] = {}
@@ -1520,6 +1584,7 @@ def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_
 
 @pytest.mark.unit
 def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, monkeypatch):
+    """Reject unsupported 26.x product lines before Playwright startup begins."""
     html_dir = _write_html(tmp_path, "<html><body><p>Unsupported line</p></body></html>")
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
@@ -1544,6 +1609,7 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
 def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_start(
     tmp_path, monkeypatch
 ):
+    """Reject browser-PDF export when product browser metadata resolves to no binary."""
     html_dir = _write_html(tmp_path, "<html><body><p>Missing binary</p></body></html>")
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
@@ -1551,6 +1617,7 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
         ansys_version=271,
     )
     def resolve_missing_browser_binary_info(ansys_installation=None, ansys_version=None):
+        """Return no browser metadata so the test can assert the pre-launch failure path."""
         return None
 
     monkeypatch.setattr(
@@ -1573,6 +1640,7 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 @pytest.mark.unit
 def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp_path, monkeypatch):
+    """Treat invalid install versions as missing product browser metadata before launch."""
     html_dir = _write_html(tmp_path, "<html><body><p>Invalid install version</p></body></html>")
     ansys_installation = r"C:\Program Files\ANSYS Inc\v270\ADR"
     renderer = PlaywrightPDFRenderer(
@@ -1583,6 +1651,7 @@ def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp
     resolver_args: dict[str, object] = {}
 
     def fake_resolve(ansys_installation=None, ansys_version=None):
+        """Capture invalid-version resolver inputs while forcing the missing-binary path."""
         # Version 270 is not a public YYR release, but render_pdf() should still
         # convert that into a normal missing-product-browser error before launch.
         resolver_args["ansys_installation"] = ansys_installation
@@ -1611,6 +1680,7 @@ def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp
 def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_binary(
     tmp_path, monkeypatch
 ):
+    """Surface the underlying Playwright launch error when product browser startup fails."""
     harness = _arrange_product_browser_renderer(
         tmp_path,
         monkeypatch,
