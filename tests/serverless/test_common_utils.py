@@ -39,6 +39,26 @@ from ansys.dynamicreporting.core.exceptions import InvalidAnsysPath
 CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
+def _path_is_never_dir(self) -> bool:
+    return False
+
+
+def _missing_default_install_root_factory(tmp_path):
+    def missing_default_install_root(version):
+        return tmp_path / "nonexistent" / f"v{version}"
+
+    return missing_default_install_root
+
+
+def _make_fake_enve_module(fake_enve_dir):
+    class FakeEnve:
+        @staticmethod
+        def home():
+            return fake_enve_dir
+
+    return FakeEnve
+
+
 # ansys_installation provided, valid using the legacy "CEI" folder.
 @pytest.mark.ado_test
 def test_get_install_info_valid_cei(tmp_path):
@@ -219,7 +239,7 @@ def test_get_install_info_none_no_valid(monkeypatch):
     for var in ["PYADR_ANSYS_INSTALLATION", f"AWP_ROOT{CURRENT_VERSION}", "CEIDEVROOTDOS"]:
         monkeypatch.delenv(var, raising=False)
     # Override is_dir to always return False.
-    monkeypatch.setattr(Path, "is_dir", lambda self: False)
+    monkeypatch.setattr(Path, "is_dir", _path_is_never_dir)
 
     install, ver = get_install_info()
     # No directory found; installation should be None and version defaults to CURRENT_VERSION.
@@ -287,7 +307,7 @@ def test_get_install_info_implicit_ignores_unsupported_versions(monkeypatch, tmp
     monkeypatch.setattr(
         common_utils_module,
         "_default_install_root",
-        lambda version: tmp_path / "nonexistent" / f"v{version}",
+        _missing_default_install_root_factory(tmp_path),
     )
 
     # When only an unsupported install root is present, implicit discovery
@@ -407,7 +427,7 @@ def test_get_install_info_with_enve(monkeypatch, tmp_path):
     fake_enve_dir.mkdir(parents=True)
 
     # Create a fake enve module with a home() function returning our candidate.
-    fake_enve = type("FakeEnve", (), {"home": lambda: fake_enve_dir})
+    fake_enve = _make_fake_enve_module(fake_enve_dir)
     monkeypatch.setitem(__import__("sys").modules, "enve", fake_enve)
 
     # Remove interfering environment variables.
