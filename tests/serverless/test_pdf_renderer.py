@@ -131,46 +131,6 @@ def _pdf_width_factory(pdf_width: str | None):
     return compute_pdf_width
 
 
-def _monotonic_factory(monotonic_values):
-    """Build a deterministic monotonic clock backed by an iterator of sample values."""
-    def monotonic():
-        """Return the next synthetic monotonic timestamp for the test."""
-        # The renderer samples time several times; the iterator makes each sample deterministic.
-        return next(monotonic_values)
-
-    return monotonic
-
-
-def _append_call_order_factory(call_order: list[str], label: str):
-    """Build a callback that records a named phase in a shared call-order list."""
-    def record_call(observed_page, deadline=None):
-        """Append the configured label to the shared call-order list."""
-        # Record the observable phase order without coupling to real Playwright behavior.
-        call_order.append(label)
-
-    return record_call
-
-
-def _fixed_measurement_factory(value: float):
-    """Build a measurement callback that always returns the supplied numeric value."""
-    def measure(page):
-        """Return the preconfigured numeric measurement for the test."""
-        # Width-measurement tests only care about the numeric result, not DOM inspection details.
-        return value
-
-    return measure
-
-
-def _raise_if_called_factory(message: str):
-    """Build a guard callback that fails the test if an unexpected path is executed."""
-    def raise_if_called():
-        """Fail immediately if the guarded code path is reached."""
-        # Use an explicit helper so tests fail immediately if Playwright launch leaks into a guard path.
-        pytest.fail(message)
-
-    return raise_if_called
-
-
 def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDFFlow:
     """Build a fake Chromium stack and route ``sync_playwright`` to it without launching a browser."""
     flow = _mock_playwright_pdf_flow()
@@ -311,7 +271,7 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     stack = _stub_playwright_stack(monkeypatch)
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", _monotonic_factory(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", _noop_wait_for_render_ready)
     monkeypatch.setattr(renderer, "_compute_pdf_width", _return_none_pdf_width)
 
@@ -333,7 +293,7 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
     captured_deadline: dict[str, float] = {}
     monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", _monotonic_factory(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     def capture_ready(page, deadline=None):
         """Capture the readiness deadline that render_pdf passes into the wait helper."""
@@ -358,7 +318,7 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
     stack.page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", _monotonic_factory(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     with pytest.raises(
         ADRException,
@@ -424,12 +384,12 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
     monkeypatch.setattr(
         renderer,
         "_apply_pdf_capture_styles",
-        _append_call_order_factory(call_order, "styles"),
+        lambda observed_page: call_order.append("styles"),
     )
     monkeypatch.setattr(
         renderer,
         "_wait_for_render_ready",
-        _append_call_order_factory(call_order, "ready"),
+        lambda observed_page, deadline=None: call_order.append("ready"),
     )
 
     def capture_width(observed_page):
@@ -894,7 +854,7 @@ def test_evaluate_ready_step_logs_duration_on_success(tmp_path, monkeypatch):
     )
     page = Mock()
     monotonic_values = iter([100.0, 100.1, 100.35])
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", _monotonic_factory(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     renderer._evaluate_ready_step(
         page,
@@ -920,7 +880,7 @@ def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
     page = Mock()
     page.evaluate.side_effect = RuntimeError("step boom")
     monotonic_values = iter([200.0, 200.2, 200.45])
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", _monotonic_factory(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
     with pytest.raises(RuntimeError, match="step boom"):
         renderer._evaluate_ready_step(
@@ -1331,8 +1291,8 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
         margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
     )
-    monkeypatch.setattr(renderer, "_measure_content_width_px", _fixed_measurement_factory(100.0))
-    monkeypatch.setattr(renderer, "_measure_layout_width_px", _fixed_measurement_factory(200.0))
+    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 100.0)
+    monkeypatch.setattr(renderer, "_measure_layout_width_px", lambda page: 200.0)
 
     # The width uses the larger layout width plus the caller-provided left/right margins.
     assert renderer._compute_pdf_width(Mock()) == "488.00px"
@@ -1594,7 +1554,7 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
     monkeypatch.setattr(
         pdf_renderer_module,
         "sync_playwright",
-        _raise_if_called_factory("unsupported product line should not launch Playwright"),
+        lambda: pytest.fail("unsupported product line should not launch Playwright"),
     )
 
     with pytest.raises(
@@ -1628,7 +1588,7 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
     monkeypatch.setattr(
         pdf_renderer_module,
         "sync_playwright",
-        _raise_if_called_factory("missing product browser binary should not launch Playwright"),
+        lambda: pytest.fail("missing product browser binary should not launch Playwright"),
     )
 
     with pytest.raises(
@@ -1662,7 +1622,7 @@ def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp
     monkeypatch.setattr(
         pdf_renderer_module,
         "sync_playwright",
-        _raise_if_called_factory("invalid install version should not launch Playwright"),
+        lambda: pytest.fail("invalid install version should not launch Playwright"),
     )
 
     with pytest.raises(
