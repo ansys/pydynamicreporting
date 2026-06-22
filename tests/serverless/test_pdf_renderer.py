@@ -89,33 +89,25 @@ class _ProductPlaywrightContext:
 @pytest.fixture(scope="module")
 def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightContext:
     """Return a product browser path that matches the host platform running this test module."""
-    install_candidates: list[tuple[str, int]] = []
 
+    # Priority 1: explicit install path when --use-local-launcher is active.
     if pytestconfig.getoption("use_local_launcher"):
         explicit_resolution = resolve_install_info(
             ansys_installation=pytestconfig.getoption("install_path")
         )
         if explicit_resolution.install_dir is not None:
-            install_candidates.append(
-                (explicit_resolution.install_dir, explicit_resolution.version)
+            binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
+                ansys_installation=explicit_resolution.install_dir,
+                ansys_version=explicit_resolution.version,
             )
-    else:
-        local_resolution = resolve_install_info()
-        if local_resolution.install_dir is not None:
-            install_candidates.append((local_resolution.install_dir, local_resolution.version))
+            if binary_info is not None:
+                return _ProductPlaywrightContext(
+                    ansys_installation=explicit_resolution.install_dir,
+                    ansys_version=explicit_resolution.version,
+                    playwright_browsers_path=str(binary_info.path),
+                )
 
-    for ansys_installation, ansys_version in install_candidates:
-        binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
-            ansys_installation=ansys_installation,
-            ansys_version=ansys_version,
-        )
-        if binary_info is not None:
-            return _ProductPlaywrightContext(
-                ansys_installation=ansys_installation,
-                ansys_version=ansys_version,
-                playwright_browsers_path=str(binary_info.path),
-            )
-
+    # Priority 2: live ADR server fixture.
     adr_init = request.getfixturevalue("adr_init")
     binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
         ansys_installation=adr_init.ansys_installation,
@@ -127,6 +119,20 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
             ansys_version=adr_init.ansys_version,
             playwright_browsers_path=str(binary_info.path),
         )
+
+    # Priority 3: auto-detected local product install.
+    local_resolution = resolve_install_info()
+    if local_resolution.install_dir is not None:
+        binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
+            ansys_installation=local_resolution.install_dir,
+            ansys_version=local_resolution.version,
+        )
+        if binary_info is not None:
+            return _ProductPlaywrightContext(
+                ansys_installation=local_resolution.install_dir,
+                ansys_version=local_resolution.version,
+                playwright_browsers_path=str(binary_info.path),
+            )
 
     pytest.fail(
         "Expected either the resolved ADR installation or the local product install to provide "
