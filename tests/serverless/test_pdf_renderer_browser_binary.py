@@ -34,13 +34,13 @@ from ansys.dynamicreporting.core.serverless.pdf_renderer import (
 _PACKAGED_BROWSER_DIR_NAME = "chromium_headless_shell-1223"
 
 
-def _packaged_playwright_metadata(
+def _packaged_browser_metadata(
     *,
     machine_arch: str,
     packaged_binary_dir: str | None = None,
     browser_name: str | None = None,
 ) -> dict[str, str]:
-    """Build the required packaged Playwright metadata keys from the production schema."""
+    """Build the product metadata JSON that points at one packaged browser directory."""
     return PlaywrightBrowserBinaryInfo(
         path=Path("playwright-browsers"),
         browser_name=browser_name or PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
@@ -51,7 +51,7 @@ def _packaged_playwright_metadata(
     ).to_metadata_dict()
 
 
-def _create_packaged_playwright_binary(
+def _create_packaged_browser_cache(
     machine_root: Path,
     *,
     machine_arch: str,
@@ -59,7 +59,7 @@ def _create_packaged_playwright_binary(
     write_metadata: bool = True,
     create_marker: bool = True,
 ) -> Path:
-    """Create a minimal packaged Playwright binary that matches the ADR layout contract."""
+    """Create ``playwright-browsers/<packaged dir>`` with optional metadata and marker."""
     browser_binary_dir = machine_root / "playwright-browsers"
     packaged_dir_name = (
         _PACKAGED_BROWSER_DIR_NAME if packaged_binary_dir is None else packaged_binary_dir
@@ -67,10 +67,14 @@ def _create_packaged_playwright_binary(
     packaged_dir = browser_binary_dir / packaged_dir_name
     packaged_dir.mkdir(parents=True)
     if create_marker:
+        # Playwright writes this marker after a complete browser install; the resolver treats
+        # its absence as an incomplete product package even when the directory exists.
         (packaged_dir / "INSTALLATION_COMPLETE").write_text("", encoding="utf-8")
 
     if write_metadata:
-        metadata = _packaged_playwright_metadata(
+        # The JSON lives next to the packaged directories and must describe the exact directory
+        # that should be passed to Playwright through PLAYWRIGHT_BROWSERS_PATH.
+        metadata = _packaged_browser_metadata(
             machine_arch=machine_arch,
             packaged_binary_dir=packaged_dir_name,
         )
@@ -90,7 +94,7 @@ def _create_packaged_playwright_binary(
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_path, monkeypatch):
     install_dir = tmp_path / "v271" / "ADR"
-    browser_binary_dir = _create_packaged_playwright_binary(
+    browser_binary_dir = _create_packaged_browser_cache(
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="win64",
     )
@@ -107,7 +111,7 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_path, monkeypatch):
     install_dir = tmp_path / "v271" / "ADR"
-    browser_binary_dir = _create_packaged_playwright_binary(
+    browser_binary_dir = _create_packaged_browser_cache(
         install_dir / "apex271" / "machines" / "linux_2.6_64",
         machine_arch="linux_2.6_64",
     )
@@ -171,7 +175,7 @@ def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path, monkeypatch):
     install_dir = tmp_path / "v271" / "ADR"
-    _create_packaged_playwright_binary(
+    _create_packaged_browser_cache(
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="win64",
         write_metadata=False,
@@ -190,7 +194,7 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
     tmp_path, monkeypatch
 ):
     install_dir = tmp_path / "v271" / "ADR"
-    _create_packaged_playwright_binary(
+    _create_packaged_browser_cache(
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="win64",
         create_marker=False,
@@ -205,11 +209,13 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
 
 
 @pytest.mark.ado_test
-def test_resolve_playwright_browser_binary_info_accepts_required_metadata(tmp_path, monkeypatch):
+def test_resolve_playwright_browser_binary_info_accepts_metadata_matching_packaged_dir(
+    tmp_path, monkeypatch
+):
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64")
+    _create_packaged_browser_cache(machine_root, machine_arch="win64")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
@@ -217,6 +223,9 @@ def test_resolve_playwright_browser_binary_info_accepts_required_metadata(tmp_pa
     )
     assert binary_info is not None
     assert binary_info.path == browser_binary_dir
+    assert binary_info.browser_name == PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
+    assert binary_info.machine_arch == "win64"
+    assert binary_info.packaged_binary_dir == _PACKAGED_BROWSER_DIR_NAME
 
 
 @pytest.mark.ado_test
@@ -224,7 +233,7 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata is present but not valid JSON, so the binary path cannot be trusted.
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         "{ not valid json", encoding="utf-8"
@@ -244,7 +253,7 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
     (browser_binary_dir / "playwright_browser_metadata.json").write_text("[]", encoding="utf-8")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
@@ -264,8 +273,8 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
-    metadata = _packaged_playwright_metadata(machine_arch="win64", browser_name="chromium")
+    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    metadata = _packaged_browser_metadata(machine_arch="win64", browser_name="chromium")
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -284,8 +293,8 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
-    metadata = _packaged_playwright_metadata(machine_arch="win64", packaged_binary_dir="")
+    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    metadata = _packaged_browser_metadata(machine_arch="win64", packaged_binary_dir="")
     (browser_binary_dir / "playwright_browser_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -305,7 +314,7 @@ def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
 ):
     install_dir = tmp_path / "v271" / "ADR"
     # Binary sits under win64 but its metadata advertises a different machine arch.
-    _create_packaged_playwright_binary(
+    _create_packaged_browser_cache(
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="linux_2.6_64",
     )
@@ -324,7 +333,7 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
     tmp_path, monkeypatch
 ):
     install_dir = tmp_path / "v271" / "ADR"
-    browser_binary_dir = _create_packaged_playwright_binary(
+    browser_binary_dir = _create_packaged_browser_cache(
         install_dir / "apex271" / "machines" / "win64",
         machine_arch="win64",
     )
@@ -347,9 +356,9 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismat
     install_dir = tmp_path / "v271" / "ADR"
     machine_root = install_dir / "apex271" / "machines" / "win64"
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_playwright_binary(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata names a packaged directory that does not exist on disk.
-    metadata = _packaged_playwright_metadata(
+    metadata = _packaged_browser_metadata(
         machine_arch="win64",
         packaged_binary_dir="chromium_headless_shell-0000",
     )
