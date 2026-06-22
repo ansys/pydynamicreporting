@@ -75,6 +75,7 @@ class MockPlaywrightPDFFlow:
     page: Mock
 
     def sync_playwright(self):
+        # ``render_pdf()`` calls ``sync_playwright()`` as a factory, so expose the manager directly.
         return self.manager
 
 
@@ -108,15 +109,18 @@ def _mock_playwright_pdf_flow(
 
 
 def _noop_wait_for_render_ready(page, deadline=None):
+    # Most renderer tests exercise setup and teardown only, not the async readiness protocol.
     return None
 
 
 def _return_none_pdf_width(page):
+    # ``None`` keeps the renderer on its normal default-page-width branch.
     return None
 
 
 def _pdf_width_factory(pdf_width: str | None):
     def compute_pdf_width(page):
+        # Capture a per-test width value without reintroducing inline lambdas.
         return pdf_width
 
     return compute_pdf_width
@@ -124,6 +128,7 @@ def _pdf_width_factory(pdf_width: str | None):
 
 def _monotonic_factory(monotonic_values):
     def monotonic():
+        # The renderer samples time several times; the iterator makes each sample deterministic.
         return next(monotonic_values)
 
     return monotonic
@@ -131,6 +136,7 @@ def _monotonic_factory(monotonic_values):
 
 def _append_call_order_factory(call_order: list[str], label: str):
     def record_call(observed_page, deadline=None):
+        # Record the observable phase order without coupling to real Playwright behavior.
         call_order.append(label)
 
     return record_call
@@ -138,6 +144,7 @@ def _append_call_order_factory(call_order: list[str], label: str):
 
 def _fixed_measurement_factory(value: float):
     def measure(page):
+        # Width-measurement tests only care about the numeric result, not DOM inspection details.
         return value
 
     return measure
@@ -145,6 +152,7 @@ def _fixed_measurement_factory(value: float):
 
 def _raise_if_called_factory(message: str):
     def raise_if_called():
+        # Use an explicit helper so tests fail immediately if Playwright launch leaks into a guard path.
         pytest.fail(message)
 
     return raise_if_called
@@ -168,6 +176,7 @@ class _ProductBrowserRendererHarness:
     resolver_args: dict[str, object]
 
     def resolve_browser_binary_info(self, ansys_installation=None, ansys_version=None):
+        # Preserve the resolver inputs for assertions while still returning a valid product binary.
         self.resolver_args.update(
             {
                 "ansys_installation": ansys_installation,
@@ -194,6 +203,7 @@ def _arrange_product_browser_renderer(
     )
     flow = _mock_playwright_pdf_flow(launch_side_effect=launch_side_effect)
     runtime_override_envs = {
+        # Tests seed only the env vars that renderer code treats as transient Playwright overrides.
         env_var: f"{env_var.lower()}-value"
         for env_var in _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
     }
@@ -222,6 +232,7 @@ def _set_transient_override_envs(
     monkeypatch: pytest.MonkeyPatch, runtime_override_envs: dict[str, str]
 ) -> None:
     for env_var, env_value in runtime_override_envs.items():
+        # Apply each override individually so tests can later assert exact restoration behavior.
         monkeypatch.setenv(env_var, env_value)
 
 
@@ -229,6 +240,7 @@ def _capture_render_start_env(
     flow: MockPlaywrightPDFFlow, env_seen: dict[str, object]
 ) -> None:
     def fake_enter():
+        # Playwright resolves its browser registry on context-manager entry, so capture env state here.
         env_seen["playwright_browsers_path"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
         env_seen["transient_override_envs"] = {
             env_var: os.environ.get(env_var)

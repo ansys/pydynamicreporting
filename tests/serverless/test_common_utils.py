@@ -40,11 +40,13 @@ CURRENT_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
 def _path_is_never_dir(self) -> bool:
+    # Force implicit install discovery to behave as if the machine has no candidates.
     return False
 
 
 def _missing_default_install_root_factory(tmp_path):
     def missing_default_install_root(version):
+        # Point default probes at a guaranteed-missing path so only the test fixture drives behavior.
         return tmp_path / "nonexistent" / f"v{version}"
 
     return missing_default_install_root
@@ -54,6 +56,7 @@ def _make_fake_enve_module(fake_enve_dir):
     class FakeEnve:
         @staticmethod
         def home():
+            # Mimic ``enve.home()`` without importing the real package.
             return fake_enve_dir
 
     return FakeEnve
