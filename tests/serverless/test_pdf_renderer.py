@@ -128,6 +128,7 @@ def _return_none_pdf_width(page):
 
 def _pdf_width_factory(pdf_width: str | None):
     """Build a width callback that returns a fixed renderer width for a test."""
+
     def compute_pdf_width(page):
         """Return the preconfigured PDF width for the current test."""
         return pdf_width
@@ -252,10 +253,9 @@ def _arrange_product_browser_renderer(
     return renderer, flow, browser_binary_dir
 
 
-def _capture_render_start_env(
-    flow: MockPlaywrightPDFFlow, env_seen: dict[str, object]
-) -> None:
+def _capture_render_start_env(flow: MockPlaywrightPDFFlow, env_seen: dict[str, object]) -> None:
     """Capture the effective render-scope environment at Playwright startup time."""
+
     def fake_enter():
         """Snapshot render-scope env vars when the mocked Playwright context starts."""
         # Playwright resolves its browser registry on context-manager entry, so capture env state here.
