@@ -43,6 +43,7 @@ templates, and report exports.
 """
 
 import copy
+import importlib.util
 import json
 import os
 import platform
@@ -498,6 +499,45 @@ class ADR:
         if cls._instance is None or not cls._is_setup:
             raise RuntimeError("ADR has not been set up. Instantiate ADR first and call setup().")
 
+    def _iter_product_python_site_packages(self) -> Iterable[Path]:
+        """Yield product-bundled Python ``site-packages`` paths for this install."""
+        machine_root = self._ansys_installation / f"apex{self._ansys_version}" / "machines"
+        machine_name = "win64" if platform.system().lower().startswith("win") else "linux_2.6_64"
+        machine_dir = machine_root / machine_name
+        if not machine_dir.is_dir():
+            return
+
+        for python_root in sorted(machine_dir.glob("Python-*")):
+            candidates = [python_root / "Lib" / "site-packages"]
+            lib_dir = python_root / "lib"
+            if lib_dir.is_dir():
+                candidates.extend(sorted(lib_dir.glob("python*/site-packages")))
+
+            for candidate in candidates:
+                if candidate.is_dir():
+                    yield candidate
+
+    @staticmethod
+    def _contains_adr_metadata(site_packages: Path) -> bool:
+        """Return whether a ``site-packages`` directory exposes ``adr_metadata``."""
+        return (site_packages / "adr_metadata").is_dir() or (
+            site_packages / "adr_metadata.py"
+        ).is_file()
+
+    def _ensure_product_adr_metadata_on_path(self) -> None:
+        """Make product-bundled ``adr_metadata`` importable when ADR needs it."""
+        if importlib.util.find_spec("adr_metadata") is not None:
+            return
+
+        for site_packages in self._iter_product_python_site_packages():
+            if not self._contains_adr_metadata(site_packages):
+                continue
+
+            site_packages_path = str(site_packages)
+            if site_packages_path not in sys.path:
+                sys.path.append(site_packages_path)
+            return
+
     def setup(self, collect_static: bool = False) -> None:
         """Configure Django and perform ADR initialization.
 
@@ -612,6 +652,7 @@ class ADR:
                 self._ansys_installation / f"nexus{self._ansys_version}" / "django"
             ).resolve(strict=True)
             sys.path.append(str(adr_path))
+            self._ensure_product_adr_metadata_on_path()
             from ceireports import settings_serverless
         except (ImportError, OSError) as e:
             raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
