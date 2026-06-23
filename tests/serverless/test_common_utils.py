@@ -47,6 +47,7 @@ def _path_is_never_dir(self) -> bool:
 
 def _missing_default_install_root_factory(tmp_path):
     """Build a fake default-install resolver that always points at a missing path."""
+
     def missing_default_install_root(version):
         """Return a default-install root that is guaranteed not to exist."""
         # Point default probes at a guaranteed-missing path so only the test fixture drives behavior.
@@ -57,6 +58,7 @@ def _missing_default_install_root_factory(tmp_path):
 
 def _make_fake_enve_module(fake_enve_dir):
     """Create a tiny ``enve`` stand-in whose ``home()`` returns the requested path."""
+
     class FakeEnve:
         @staticmethod
         def home():
