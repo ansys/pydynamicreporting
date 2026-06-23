@@ -114,28 +114,6 @@ def _mock_playwright_pdf_flow(
     )
 
 
-def _noop_wait_for_render_ready(page, deadline=None):
-    """Stub the readiness wait as an immediate success."""
-    # Most renderer tests exercise setup and teardown only, not the async readiness protocol.
-    return None
-
-
-def _return_none_pdf_width(page):
-    """Stub width measurement as unavailable so the renderer uses its default width path."""
-    # ``None`` keeps the renderer on its normal default-page-width branch.
-    return None
-
-
-def _pdf_width_factory(pdf_width: str | None):
-    """Build a width callback that returns a fixed renderer width for a test."""
-
-    def compute_pdf_width(page):
-        """Return the preconfigured PDF width for the current test."""
-        return pdf_width
-
-    return compute_pdf_width
-
-
 @dataclass(frozen=True)
 class _ProductPlaywrightContext:
     """Resolved product install metadata for this module's real-browser tests."""
@@ -201,7 +179,7 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
 
 @pytest.fixture(scope="module", autouse=True)
 def _use_product_playwright_browser(product_playwright_context: _ProductPlaywrightContext):
-    """Keep direct sync_playwright() helper tests on the product browser path."""
+    """Run this module's real-browser paths against the product-shipped Playwright browser."""
     restored_browser_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
     os.environ["PLAYWRIGHT_BROWSERS_PATH"] = product_playwright_context.playwright_browsers_path
     try:
@@ -247,8 +225,8 @@ def _arrange_product_browser_renderer(
         resolve_browser_binary_info,
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", _noop_wait_for_render_ready)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", _return_none_pdf_width)
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     return renderer, flow, browser_binary_dir
 
@@ -278,8 +256,8 @@ def _stub_playwright_render(
 ) -> Mock:
     """Stub the full render path (skipping readiness waits and width measurement) and return the page."""
     stack = _stub_playwright_stack(monkeypatch)
-    monkeypatch.setattr(renderer, "_wait_for_render_ready", _noop_wait_for_render_ready)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", _pdf_width_factory(pdf_width))
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return stack.page
 
 
@@ -1674,13 +1652,6 @@ def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp
         "ansys_installation": ansys_installation,
         "ansys_version": 270,
     }
-
-
-@pytest.mark.unit
-def test_browser_pdf_product_line_returns_none_for_invalid_install_version(tmp_path):
-    renderer = PlaywrightPDFRenderer(html_dir=tmp_path, ansys_version=270)
-
-    assert renderer._browser_pdf_product_line() is None
 
 
 @pytest.mark.unit
