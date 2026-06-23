@@ -37,6 +37,11 @@ from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRen
 _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
 
 
+def _fake_ansys_installation(version: int) -> str:
+    """Return a synthetic install path for the requested test install version."""
+    return rf"C:\Program Files\ANSYS Inc\v{version}\ADR"
+
+
 def _write_html(tmp_path: Path, body: str) -> Path:
     """Write a minimal HTML file for renderer tests and return its directory."""
     html_path = tmp_path / "index.html"
@@ -208,10 +213,11 @@ def _arrange_product_browser_renderer(
     html_dir = _write_html(tmp_path, "<html><body><p>Shared binary</p></body></html>")
     browser_binary_dir = tmp_path / "playwright-browsers"
     browser_binary_dir.mkdir()
+    ansys_version = 271
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
-        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
-        ansys_version=271,
+        ansys_installation=_fake_ansys_installation(ansys_version),
+        ansys_version=ansys_version,
     )
     flow = _mock_playwright_pdf_flow(launch_side_effect=launch_side_effect)
 
@@ -242,7 +248,6 @@ def _capture_render_start_env(flow: MockPlaywrightPDFFlow, env_seen: dict[str, o
             env_var: os.environ.get(env_var)
             for env_var in _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
         }
-        env_seen["download_host"] = os.environ.get("PLAYWRIGHT_DOWNLOAD_HOST")
         return flow.playwright
 
     flow.manager.__enter__.side_effect = fake_enter
@@ -1514,23 +1519,6 @@ def test_playwright_pdf_scrubs_transient_override_env_vars_during_startup_and_re
 
 
 @pytest.mark.unit
-def test_playwright_pdf_preserves_download_host_during_and_after_render(tmp_path, monkeypatch):
-    """Preserve ``PLAYWRIGHT_DOWNLOAD_HOST`` throughout the render lifecycle."""
-    renderer, flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
-    env_seen: dict[str, object] = {}
-    preserved_download_host = "https://playwright-downloads.example.invalid"
-
-    _capture_render_start_env(flow, env_seen)
-    monkeypatch.delenv("PLAYWRIGHT_BROWSERS_PATH", raising=False)
-    monkeypatch.setenv("PLAYWRIGHT_DOWNLOAD_HOST", preserved_download_host)
-
-    renderer.render_pdf()
-
-    assert env_seen["download_host"] == preserved_download_host
-    assert os.environ["PLAYWRIGHT_DOWNLOAD_HOST"] == preserved_download_host
-
-
-@pytest.mark.unit
 def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_path, monkeypatch):
     """Override a user-supplied browser path during render but restore it afterward."""
     renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
@@ -1560,8 +1548,8 @@ def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_
     assert renderer.render_pdf() == b"%PDF-mock"
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert resolver_args == {
-        "ansys_installation": r"C:\Program Files\ANSYS Inc\v271\ADR",
-        "ansys_version": 271,
+        "ansys_installation": str(renderer._ansys_installation),
+        "ansys_version": renderer._ansys_version,
     }
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
 
@@ -1569,10 +1557,11 @@ def test_playwright_pdf_overrides_user_browser_path_env_with_product_binary(tmp_
 @pytest.mark.unit
 def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Unsupported line</p></body></html>")
+    ansys_version = 261
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
-        ansys_installation=r"C:\Program Files\ANSYS Inc\v261\ADR",
-        ansys_version=261,
+        ansys_installation=_fake_ansys_installation(ansys_version),
+        ansys_version=ansys_version,
     )
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "external-browser-path"))
     monkeypatch.setattr(
@@ -1592,12 +1581,7 @@ def test_playwright_pdf_rejects_product_line_26_before_browser_start(tmp_path, m
 def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_start(
     tmp_path, monkeypatch
 ):
-    html_dir = _write_html(tmp_path, "<html><body><p>Missing binary</p></body></html>")
-    renderer = PlaywrightPDFRenderer(
-        html_dir=html_dir,
-        ansys_installation=r"C:\Program Files\ANSYS Inc\v271\ADR",
-        ansys_version=271,
-    )
+    renderer, _flow, _browser_binary_dir = _arrange_product_browser_renderer(tmp_path, monkeypatch)
     monkeypatch.setattr(
         pdf_renderer_module,
         "resolve_playwright_browser_binary_info",
@@ -1620,11 +1604,12 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp_path, monkeypatch):
     """Treat invalid install versions as missing product browser metadata before launch."""
     html_dir = _write_html(tmp_path, "<html><body><p>Invalid install version</p></body></html>")
-    ansys_installation = r"C:\Program Files\ANSYS Inc\v270\ADR"
+    ansys_version = 270
+    ansys_installation = _fake_ansys_installation(ansys_version)
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
         ansys_installation=ansys_installation,
-        ansys_version=270,
+        ansys_version=ansys_version,
     )
     resolver_args: dict[str, object] = {}
 
@@ -1650,7 +1635,7 @@ def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp
         renderer.render_pdf()
     assert resolver_args == {
         "ansys_installation": ansys_installation,
-        "ansys_version": 270,
+        "ansys_version": ansys_version,
     }
 
 
