@@ -19,7 +19,7 @@ jobs:
       attestations: write     # REQUIRED by attest-build-provenance v2
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
         with:
           fetch-depth: '0'
           fetch-tags: true
