@@ -387,7 +387,7 @@ def test_download_creates_only_4x_mathjax_dirs_when_version_is_4(tmp_path) -> No
             f"{ansys_root}/nexus/images",
             f"{ansys_root}/nexus/utils",
             f"{ansys_root}/nexus/threejs/libs/draco/gltf",
-            f"{ansys_root}/nexus/novnc/vendor/jQuery-contextMenu",
+            f"{ansys_root}/nexus/vendor/jQuery-contextMenu",
         ),
     )
     _assert_paths_missing(
@@ -430,7 +430,7 @@ def test_download_creates_only_2x_mathjax_dirs_when_version_is_2(tmp_path) -> No
             f"{ansys_root}/nexus/images",
             f"{ansys_root}/nexus/utils",
             f"{ansys_root}/nexus/threejs/libs/draco/gltf",
-            f"{ansys_root}/nexus/novnc/vendor/jQuery-contextMenu",
+            f"{ansys_root}/nexus/vendor/jQuery-contextMenu",
         ),
     )
     _assert_paths_missing(
@@ -463,7 +463,7 @@ def test_download_unknown_version_skips_all_version_specific_mathjax_dirs(tmp_pa
             f"{ansys_root}/nexus/images",
             f"{ansys_root}/nexus/utils",
             f"{ansys_root}/nexus/threejs/libs/draco/gltf",
-            f"{ansys_root}/nexus/novnc/vendor/jQuery-contextMenu",
+            f"{ansys_root}/nexus/vendor/jQuery-contextMenu",
         ),
     )
     _assert_paths_missing(

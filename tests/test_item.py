@@ -77,7 +77,7 @@ def test_create_text(adr_service_create, request) -> None:
 
 def test_create_file(adr_service_create, request) -> None:
     my_file = adr_service_create.create_item(obj_name="testfile", source="testing")
-    my_file.item_file = join(join(request.fspath.dirname, "test_data"), "dam_break.ens")
+    my_file.item_file = join(join(request.fspath.dirname, "test_data"), "sample.json")
     assert my_file.type == "file"
 
 
