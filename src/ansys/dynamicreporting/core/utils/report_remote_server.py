@@ -1488,8 +1488,6 @@ def launch_local_database_server(
     :param int instance_count: Number of Nexus server instances [1-10] to launch
     :param str server_hostname: Hostname to run the server on (external hostname)
     :param int internal_base_port: Port number base to allocate server instances, etc.  0=select dynamically
-    :param bool remote_session: Enable/disable remote sessions Default: False.
-    :param int local_sessions_ensight: Number of simultaneous local EnSight sessions to allow. Default: 0.
     :param str server_name: Human readable name to use for the database.
     :param str postgresql_url: URL to the PostgreSQL database to use: "postgresql://user:password@host:port/database"
     :param bool acls: Enable/disable per-item ACL functionality (default: False).
