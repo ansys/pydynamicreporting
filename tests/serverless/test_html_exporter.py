@@ -448,7 +448,7 @@ def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/vendor/jQuery-contextMenu",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(
@@ -490,7 +490,7 @@ def test_make_output_dirs_creates_only_2x_mathjax_tree(tmp_path: Path):
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/vendor/jQuery-contextMenu",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(
@@ -519,7 +519,7 @@ def test_make_output_dirs_unknown_version_skips_version_specific_dirs(tmp_path: 
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/vendor/jQuery-contextMenu",
+            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(

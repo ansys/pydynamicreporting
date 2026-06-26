@@ -1508,8 +1508,6 @@ def launch_local_database_server(
         "instance_count",
         "server_hostname",
         "internal_base_port",
-        "remote_session",
-        "local_sessions_ensight",
         "server_name",
         "postgresql_url",
         "acls",
