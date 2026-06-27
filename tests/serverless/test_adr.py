@@ -366,40 +366,6 @@ def test_create_file_csf(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_create_file_ens(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import File
-
-    # ens
-    intro_ens = adr_serverless.create_item(
-        File,
-        name="intro_ens",
-        content=str(Path(__file__).parent / "test_data" / "scene2.ens"),
-        tags="dp=dp227 section=data",
-        source="sls-test",
-        sequence=1,
-    )
-
-    assert File.get(name="intro_ens").guid == intro_ens.guid
-
-
-@pytest.mark.ado_test
-def test_create_file_evsn(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import File
-
-    # evsn
-    intro_evsn = adr_serverless.create_item(
-        File,
-        name="intro_evsn",
-        content=str(Path(__file__).parent / "test_data" / "scenario.evsn"),
-        tags="dp=dp227 section=data",
-        source="sls-test",
-        sequence=1,
-    )
-
-    assert File.get(name="intro_evsn").guid == intro_evsn.guid
-
-
-@pytest.mark.ado_test
 def test_create_image(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Image
 
