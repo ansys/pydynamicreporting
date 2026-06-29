@@ -811,6 +811,16 @@ class Report:
         -------
         bool
             Success status of the browser PDF export: True if it worked, False otherwise
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v271')
+            ret = adr_service.connect(url = "http://localhost:8000", username = "nexus", password = "cei")
+            my_report = adr_service.get_report(report_name = "My Top Report")
+            succ = my_report.export_browser_pdf(file_name = r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"}, landscape = True)
         """
         success = False
         if self.service is None:
