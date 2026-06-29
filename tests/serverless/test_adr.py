@@ -1444,7 +1444,7 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
         ServerlessReportExporter,
     )
     from ansys.dynamicreporting.core.utils.pdf_renderer import (
-        PlaywrightPDFRenderer,
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDF", parent=None)
@@ -1458,7 +1458,7 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="TestBrowserPDF")
     assert pdf_bytes == b"%PDF-mock"
@@ -1505,7 +1505,7 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
         ServerlessReportExporter,
     )
     from ansys.dynamicreporting.core.utils.pdf_renderer import (
-        PlaywrightPDFRenderer,
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFRenderer", parent=None)
@@ -1521,7 +1521,7 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
 
     with pytest.raises(ADRException, match="Browser PDF rendering failed"):
         adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFRenderer")
@@ -1536,7 +1536,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         ServerlessReportExporter,
     )
     from ansys.dynamicreporting.core.utils.pdf_renderer import (
-        PlaywrightPDFRenderer,
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFExport", parent=None)
@@ -1576,8 +1576,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     output_dir = tmp_path / "exports"
     output_dir.mkdir()
@@ -1633,7 +1633,7 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
         ServerlessReportExporter,
     )
     from ansys.dynamicreporting.core.utils.pdf_renderer import (
-        PlaywrightPDFRenderer,
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanup", parent=None)
@@ -1665,8 +1665,8 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanup")
 
@@ -1686,7 +1686,7 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
         ServerlessReportExporter,
     )
     from ansys.dynamicreporting.core.utils.pdf_renderer import (
-        PlaywrightPDFRenderer,
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanupOSError", parent=None)
@@ -1722,8 +1722,8 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
     monkeypatch.setattr(Path, "rmdir", raising_rmdir)
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanupOSError")
@@ -1745,7 +1745,7 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         ServerlessReportExporter,
     )
     from ansys.dynamicreporting.core.utils.pdf_renderer import (
-        PlaywrightPDFRenderer,
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFOptions", parent=None)
@@ -1790,8 +1790,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "__init__", fake_exporter_init)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(

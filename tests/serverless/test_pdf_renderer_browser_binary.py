@@ -27,7 +27,7 @@ import pytest
 
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
 from ansys.dynamicreporting.core.utils import pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightBrowserBinaryInfo
+from ansys.dynamicreporting.core.utils.pdf_renderer import _PlaywrightBrowserBinaryInfo
 from ansys.dynamicreporting.core.utils.pdf_renderer import (
     resolve_playwright_browser_binary_info,
 )
@@ -61,9 +61,9 @@ def _packaged_browser_metadata(
     browser_name: str | None = None,
 ) -> dict[str, str]:
     """Build the product metadata JSON that points at one packaged browser directory."""
-    return PlaywrightBrowserBinaryInfo(
+    return _PlaywrightBrowserBinaryInfo(
         path=Path("playwright-browsers"),
-        browser_name=browser_name or PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+        browser_name=browser_name or _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
         machine_arch=machine_arch,
         packaged_binary_dir=(
             _PACKAGED_BROWSER_DIR_NAME if packaged_binary_dir is None else packaged_binary_dir
@@ -253,7 +253,7 @@ def test_resolve_playwright_browser_binary_info_accepts_metadata_matching_packag
     )
     assert binary_info is not None
     assert binary_info.path == browser_binary_dir
-    assert binary_info.browser_name == PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
+    assert binary_info.browser_name == _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
     assert binary_info.machine_arch == "win64"
     assert binary_info.packaged_binary_dir == _PACKAGED_BROWSER_DIR_NAME
 

@@ -1303,7 +1303,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
 
     def __init__(
         self,
-        html_dir: Path | str,
+        html_dir: Path | str | None,
         filename: str = "index.html",
         *,
         landscape: bool = False,
@@ -1313,7 +1313,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
-        self._html_dir = Path(html_dir).expanduser().resolve()
+        self._html_dir = None if html_dir is None else Path(html_dir).expanduser().resolve()
         self._filename = filename
         super().__init__(
             landscape=landscape,
@@ -1351,6 +1351,8 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
 
     def _resolve_entrypoint_path(self) -> Path:
         """Return the validated HTML entry-point path that Chromium can open."""
+        if self._html_dir is None:
+            raise ADRException("Browser PDF HTML directory is not configured for this renderer.")
         entrypoint_path = (self._html_dir / self._filename).resolve()
         if not entrypoint_path.is_relative_to(self._html_dir):
             raise ADRException(
@@ -1421,10 +1423,3 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         if not parsed_url.scheme or not parsed_url.netloc:
             raise ADRException(f"Browser PDF report URL is not valid: {url!r}")
         return url
-
-
-# Keep the pre-split class names temporarily so the hierarchy change lands in
-# one focused commit before internal callers switch to the new private names.
-PlaywrightBrowserBinaryInfo = _PlaywrightBrowserBinaryInfo
-PlaywrightPDFRenderer = _OfflinePlaywrightPDFRenderer
-_PlaywrightReportURLPDFRenderer = _ReportURLPlaywrightPDFRenderer

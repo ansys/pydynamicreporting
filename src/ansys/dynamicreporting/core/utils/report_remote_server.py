@@ -1079,12 +1079,12 @@ class Server:
         try:
             # Import lazily so regular server workflows do not pay the Playwright import cost
             # unless they actually request browser-fidelity PDF output.
-            from .pdf_renderer import _PlaywrightReportURLPDFRenderer
+            from .pdf_renderer import _ReportURLPlaywrightPDFRenderer
 
             report_url = self.build_url_with_query(report_guid, browser_query, item_filter)
             browser_auth_cookies = self._get_browser_auth_cookies()
 
-            renderer = _PlaywrightReportURLPDFRenderer(
+            renderer = _ReportURLPlaywrightPDFRenderer(
                 url=report_url,
                 auth_cookies=browser_auth_cookies,
                 landscape=landscape,

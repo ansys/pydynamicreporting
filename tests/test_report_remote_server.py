@@ -402,7 +402,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
     monkeypatch.setattr(server, "_download_report_as_html_bundle", fail_if_html_downloaded)
     monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: fake_session)
-    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+    monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
     output_file = tmp_path / "browser-report.pdf"
     query = {"colormode": "dark"}
@@ -490,7 +490,7 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
     monkeypatch.setattr(
         report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
     )
-    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+    monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
     with pytest.raises(ADRException, match="Browser PDF export failed"):
         server.export_report_as_browser_pdf(
@@ -587,7 +587,7 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
     monkeypatch.setattr(
         report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
     )
-    monkeypatch.setattr(pdf_renderer, "_PlaywrightReportURLPDFRenderer", FakeRenderer)
+    monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
     output_directory = tmp_path / "browser-report.pdf"
     output_directory.mkdir()

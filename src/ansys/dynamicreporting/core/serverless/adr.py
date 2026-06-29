@@ -1425,7 +1425,7 @@ class ADR:
 
         try:
             # Import lazily so browser startup and Chromium use happen only on this export path.
-            from ..utils.pdf_renderer import PlaywrightPDFRenderer
+            from ..utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
             with tempfile.TemporaryDirectory(
                 prefix="adr-browser-pdf-",
@@ -1434,7 +1434,7 @@ class ADR:
                 tmp_path = Path(tmp_dir)
                 # Build the renderer first so invalid PDF options fail before the report render
                 # and asset export pipeline does any meaningful work.
-                renderer = PlaywrightPDFRenderer(
+                renderer = _OfflinePlaywrightPDFRenderer(
                     html_dir=tmp_path,
                     landscape=landscape,
                     margins=margins,
