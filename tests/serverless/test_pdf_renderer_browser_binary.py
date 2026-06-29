@@ -32,6 +32,22 @@ from ansys.dynamicreporting.core.serverless.pdf_renderer import (
 )
 
 _PACKAGED_BROWSER_DIR_NAME = "chromium_headless_shell-1223"
+_DEFAULT_INSTALL_VERSION = 271
+
+
+def _fake_install_dir(tmp_path: Path, version: int = _DEFAULT_INSTALL_VERSION) -> Path:
+    """Return a synthetic ADR install directory for one install version."""
+    return tmp_path / f"v{version}" / "ADR"
+
+
+def _machine_root(
+    tmp_path: Path,
+    machine_arch: str,
+    *,
+    version: int = _DEFAULT_INSTALL_VERSION,
+) -> Path:
+    """Return the machine-scoped packaged-browser root for one fake install."""
+    return _fake_install_dir(tmp_path, version) / f"apex{version}" / "machines" / machine_arch
 
 
 def _packaged_browser_metadata(
@@ -93,15 +109,15 @@ def _create_packaged_browser_cache(
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_path, monkeypatch):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     browser_binary_dir = _create_packaged_browser_cache(
-        install_dir / "apex271" / "machines" / "win64",
+        _machine_root(tmp_path, "win64"),
         machine_arch="win64",
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
     assert binary_info is not None
@@ -110,15 +126,15 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_path, monkeypatch):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     browser_binary_dir = _create_packaged_browser_cache(
-        install_dir / "apex271" / "machines" / "linux_2.6_64",
+        _machine_root(tmp_path, "linux_2.6_64"),
         machine_arch="linux_2.6_64",
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Linux")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
     assert binary_info is not None
@@ -129,11 +145,11 @@ def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_pa
 def test_resolve_playwright_browser_binary_info_returns_none_on_unsupported_platform(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Darwin")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
     assert binary_info is None
@@ -146,10 +162,15 @@ def test_resolve_playwright_browser_binary_info_returns_none_without_required_in
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
-        resolve_playwright_browser_binary_info(ansys_installation=None, ansys_version=271) is None
+        resolve_playwright_browser_binary_info(
+            ansys_installation=None, ansys_version=_DEFAULT_INSTALL_VERSION
+        )
+        is None
     )
     assert (
-        resolve_playwright_browser_binary_info(ansys_installation="C:/v271/ADR", ansys_version=None)
+        resolve_playwright_browser_binary_info(
+            ansys_installation=str(_fake_install_dir(Path("C:/"))), ansys_version=None
+        )
         is None
     )
 
@@ -161,12 +182,12 @@ def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
     # A valid install that simply does not ship a Playwright binary must resolve to None rather
     # than pointing Playwright at a non-existent browser directory. Create the machine directory
     # but no playwright-browsers child.
-    install_dir = tmp_path / "v271" / "ADR"
-    (install_dir / "apex271" / "machines" / "win64").mkdir(parents=True)
+    install_dir = _fake_install_dir(tmp_path)
+    _machine_root(tmp_path, "win64").mkdir(parents=True)
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
     assert binary_info is None
@@ -174,16 +195,16 @@ def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path, monkeypatch):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     _create_packaged_browser_cache(
-        install_dir / "apex271" / "machines" / "win64",
+        _machine_root(tmp_path, "win64"),
         machine_arch="win64",
         write_metadata=False,
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
     assert binary_info is None
@@ -193,16 +214,16 @@ def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path,
 def test_resolve_playwright_browser_binary_info_requires_installation_complete_marker(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     _create_packaged_browser_cache(
-        install_dir / "apex271" / "machines" / "win64",
+        _machine_root(tmp_path, "win64"),
         machine_arch="win64",
         create_marker=False,
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
 
     assert binary_info is None
@@ -212,14 +233,14 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
 def test_resolve_playwright_browser_binary_info_accepts_metadata_matching_packaged_dir(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
-    machine_root = install_dir / "apex271" / "machines" / "win64"
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
-        ansys_installation=str(install_dir), ansys_version=271
+        ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
     )
     assert binary_info is not None
     assert binary_info.path == browser_binary_dir
@@ -230,8 +251,8 @@ def test_resolve_playwright_browser_binary_info_accepts_metadata_matching_packag
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_path, monkeypatch):
-    install_dir = tmp_path / "v271" / "ADR"
-    machine_root = install_dir / "apex271" / "machines" / "win64"
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata is present but not valid JSON, so the binary path cannot be trusted.
@@ -242,7 +263,7 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
@@ -250,8 +271,8 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_path, monkeypatch):
-    install_dir = tmp_path / "v271" / "ADR"
-    machine_root = install_dir / "apex271" / "machines" / "win64"
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
@@ -260,7 +281,7 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
@@ -270,8 +291,8 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
 def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
-    machine_root = install_dir / "apex271" / "machines" / "win64"
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     metadata = _packaged_browser_metadata(machine_arch="win64", browser_name="chromium")
@@ -282,7 +303,7 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
@@ -290,8 +311,8 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
 
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_path, monkeypatch):
-    install_dir = tmp_path / "v271" / "ADR"
-    machine_root = install_dir / "apex271" / "machines" / "win64"
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     metadata = _packaged_browser_metadata(machine_arch="win64", packaged_binary_dir="")
@@ -302,7 +323,7 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
@@ -312,17 +333,17 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
 def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     # Binary sits under win64 but its metadata advertises a different machine arch.
     _create_packaged_browser_cache(
-        install_dir / "apex271" / "machines" / "win64",
+        _machine_root(tmp_path, "win64"),
         machine_arch="linux_2.6_64",
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
@@ -332,9 +353,9 @@ def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
 def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
+    install_dir = _fake_install_dir(tmp_path)
     browser_binary_dir = _create_packaged_browser_cache(
-        install_dir / "apex271" / "machines" / "win64",
+        _machine_root(tmp_path, "win64"),
         machine_arch="win64",
     )
     # A second packaged directory breaks the "exactly one browser directory" contract.
@@ -343,7 +364,7 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
@@ -353,8 +374,8 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
 def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismatch(
     tmp_path, monkeypatch
 ):
-    install_dir = tmp_path / "v271" / "ADR"
-    machine_root = install_dir / "apex271" / "machines" / "win64"
+    install_dir = _fake_install_dir(tmp_path)
+    machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata names a packaged directory that does not exist on disk.
@@ -369,7 +390,7 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismat
 
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=271
+            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
         )
         is None
     )
