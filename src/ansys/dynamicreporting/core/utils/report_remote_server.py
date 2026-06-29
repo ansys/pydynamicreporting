@@ -962,7 +962,9 @@ class Server:
         """Convert one requests cookie into Playwright's cookie dictionary shape."""
         playwright_cookie: dict[str, object] = {
             "name": cookie.name,
-            "value": cookie.value,
+            # http.cookiejar allows a value-less cookie (value is None), but Playwright's cookie
+            # schema requires a string value, so normalize a missing value to an empty string.
+            "value": cookie.value if cookie.value is not None else "",
             "secure": bool(cookie.secure),
         }
 
