@@ -29,6 +29,7 @@ from unittest.mock import Mock
 import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
 from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
@@ -213,7 +214,7 @@ def _arrange_product_browser_renderer(
     html_dir = _write_html(tmp_path, "<html><body><p>Shared binary</p></body></html>")
     browser_binary_dir = tmp_path / "playwright-browsers"
     browser_binary_dir.mkdir()
-    ansys_version = 271
+    ansys_version = int(DEFAULT_ANSYS_VERSION)
     renderer = PlaywrightPDFRenderer(
         html_dir=html_dir,
         ansys_installation=_fake_ansys_installation(ansys_version),

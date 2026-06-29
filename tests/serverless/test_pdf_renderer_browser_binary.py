@@ -25,6 +25,7 @@ from pathlib import Path
 
 import pytest
 
+from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
 from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightBrowserBinaryInfo
 from ansys.dynamicreporting.core.serverless.pdf_renderer import (
@@ -32,7 +33,7 @@ from ansys.dynamicreporting.core.serverless.pdf_renderer import (
 )
 
 _PACKAGED_BROWSER_DIR_NAME = "chromium_headless_shell-1223"
-_DEFAULT_INSTALL_VERSION = 271
+_DEFAULT_INSTALL_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
 def _fake_install_dir(tmp_path: Path, version: int = _DEFAULT_INSTALL_VERSION) -> Path:
@@ -104,7 +105,7 @@ def _create_packaged_browser_cache(
 
 # The serverless renderer always passes an already-resolved concrete ADR/CEI install directory
 # plus an int install version, so these tests feed that same production-shaped input (a directory
-# named ``ADR`` containing ``apex271/machines/<arch>``) rather than a higher-level ``v###`` root.
+# named ``ADR`` containing ``apex<version>/machines/<arch>``) rather than a higher-level ``v###`` root.
 
 
 @pytest.mark.ado_test
@@ -169,7 +170,7 @@ def test_resolve_playwright_browser_binary_info_returns_none_without_required_in
     )
     assert (
         resolve_playwright_browser_binary_info(
-            ansys_installation=str(_fake_install_dir(Path("C:/"))), ansys_version=None
+            ansys_installation="unused-install-dir", ansys_version=None
         )
         is None
     )
