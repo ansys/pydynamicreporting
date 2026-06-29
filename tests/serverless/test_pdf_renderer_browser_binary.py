@@ -71,7 +71,7 @@ def _packaged_browser_metadata(
     ).to_metadata_dict()
 
 
-def _create_packaged_browser_cache(
+def _create_packaged_browser_binary(
     machine_root: Path,
     *,
     machine_arch: str,
@@ -107,7 +107,7 @@ def _create_packaged_browser_cache(
 
 
 def _metadata_path(browser_binary_dir: Path) -> Path:
-    """Return the metadata file path inside one packaged browser cache."""
+    """Return the metadata file path inside one packaged browser binary directory."""
     return browser_binary_dir / _BROWSER_METADATA_FILENAME
 
 
@@ -119,7 +119,7 @@ def _metadata_path(browser_binary_dir: Path) -> Path:
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_path, monkeypatch):
     install_dir = _fake_install_dir(tmp_path)
-    browser_binary_dir = _create_packaged_browser_cache(
+    browser_binary_dir = _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
         machine_arch="win64",
     )
@@ -136,7 +136,7 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_path, monkeypatch):
     install_dir = _fake_install_dir(tmp_path)
-    browser_binary_dir = _create_packaged_browser_cache(
+    browser_binary_dir = _create_packaged_browser_binary(
         _machine_root(tmp_path, "linux_2.6_64"),
         machine_arch="linux_2.6_64",
     )
@@ -205,7 +205,7 @@ def test_resolve_playwright_browser_binary_info_returns_none_when_binary_absent(
 @pytest.mark.ado_test
 def test_resolve_playwright_browser_binary_info_requires_metadata_file(tmp_path, monkeypatch):
     install_dir = _fake_install_dir(tmp_path)
-    _create_packaged_browser_cache(
+    _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
         machine_arch="win64",
         write_metadata=False,
@@ -224,7 +224,7 @@ def test_resolve_playwright_browser_binary_info_requires_installation_complete_m
     tmp_path, monkeypatch
 ):
     install_dir = _fake_install_dir(tmp_path)
-    _create_packaged_browser_cache(
+    _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
         machine_arch="win64",
         create_marker=False,
@@ -245,7 +245,7 @@ def test_resolve_playwright_browser_binary_info_accepts_metadata_matching_packag
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_cache(machine_root, machine_arch="win64")
+    _create_packaged_browser_binary(machine_root, machine_arch="win64")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     binary_info = resolve_playwright_browser_binary_info(
@@ -263,7 +263,7 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata is present but not valid JSON, so the binary path cannot be trusted.
     _metadata_path(browser_binary_dir).write_text("{ not valid json", encoding="utf-8")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
@@ -281,7 +281,7 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
     _metadata_path(browser_binary_dir).write_text("[]", encoding="utf-8")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
@@ -301,7 +301,7 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_binary(machine_root, machine_arch="win64", write_metadata=False)
     metadata = _packaged_browser_metadata(machine_arch="win64", browser_name="chromium")
     _metadata_path(browser_binary_dir).write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -321,7 +321,7 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_binary(machine_root, machine_arch="win64", write_metadata=False)
     metadata = _packaged_browser_metadata(machine_arch="win64", packaged_binary_dir="")
     _metadata_path(browser_binary_dir).write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -342,7 +342,7 @@ def test_resolve_playwright_browser_binary_info_rejects_machine_arch_mismatch(
 ):
     install_dir = _fake_install_dir(tmp_path)
     # Binary sits under win64 but its metadata advertises a different machine arch.
-    _create_packaged_browser_cache(
+    _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
         machine_arch="linux_2.6_64",
     )
@@ -361,7 +361,7 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
     tmp_path, monkeypatch
 ):
     install_dir = _fake_install_dir(tmp_path)
-    browser_binary_dir = _create_packaged_browser_cache(
+    browser_binary_dir = _create_packaged_browser_binary(
         _machine_root(tmp_path, "win64"),
         machine_arch="win64",
     )
@@ -384,7 +384,7 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismat
     install_dir = _fake_install_dir(tmp_path)
     machine_root = _machine_root(tmp_path, "win64")
     browser_binary_dir = machine_root / "playwright-browsers"
-    _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
+    _create_packaged_browser_binary(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata names a packaged directory that does not exist on disk.
     metadata = _packaged_browser_metadata(
         machine_arch="win64",
