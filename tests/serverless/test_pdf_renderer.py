@@ -36,6 +36,7 @@ from ansys.dynamicreporting.core.serverless import pdf_renderer as pdf_renderer_
 from ansys.dynamicreporting.core.serverless.pdf_renderer import PlaywrightPDFRenderer
 
 _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
+_PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
 
 
 def _fake_ansys_installation(version: int) -> str:
@@ -275,7 +276,7 @@ def _browser_binary_info(
         path=browser_binary_dir,
         browser_name=pdf_renderer_module.PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
         machine_arch="win64",
-        packaged_binary_dir="chromium_headless_shell-1223",
+        packaged_binary_dir=_PACKAGED_BROWSER_DIR_NAME,
     )
 
 

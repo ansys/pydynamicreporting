@@ -32,7 +32,10 @@ from ansys.dynamicreporting.core.serverless.pdf_renderer import (
     resolve_playwright_browser_binary_info,
 )
 
-_PACKAGED_BROWSER_DIR_NAME = "chromium_headless_shell-1223"
+_BROWSER_METADATA_FILENAME = "playwright_browser_metadata.json"
+_PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
+_SECOND_PACKAGED_BROWSER_DIR_NAME = "second-packaged-browser-dir"
+_MISMATCHED_PACKAGED_BROWSER_DIR_NAME = "mismatched-packaged-browser-dir"
 _DEFAULT_INSTALL_VERSION = int(DEFAULT_ANSYS_VERSION)
 
 
@@ -95,12 +98,17 @@ def _create_packaged_browser_cache(
             machine_arch=machine_arch,
             packaged_binary_dir=packaged_dir_name,
         )
-        (browser_binary_dir / "playwright_browser_metadata.json").write_text(
+        _metadata_path(browser_binary_dir).write_text(
             json.dumps(metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
     return browser_binary_dir
+
+
+def _metadata_path(browser_binary_dir: Path) -> Path:
+    """Return the metadata file path inside one packaged browser cache."""
+    return browser_binary_dir / _BROWSER_METADATA_FILENAME
 
 
 # The serverless renderer always passes an already-resolved concrete ADR/CEI install directory
@@ -257,9 +265,7 @@ def test_resolve_playwright_browser_binary_info_rejects_unreadable_metadata(tmp_
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Metadata is present but not valid JSON, so the binary path cannot be trusted.
-    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
-        "{ not valid json", encoding="utf-8"
-    )
+    _metadata_path(browser_binary_dir).write_text("{ not valid json", encoding="utf-8")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
@@ -277,7 +283,7 @@ def test_resolve_playwright_browser_binary_info_rejects_non_object_metadata(tmp_
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     # Valid JSON, but a list instead of the expected metadata object.
-    (browser_binary_dir / "playwright_browser_metadata.json").write_text("[]", encoding="utf-8")
+    _metadata_path(browser_binary_dir).write_text("[]", encoding="utf-8")
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
@@ -297,7 +303,7 @@ def test_resolve_playwright_browser_binary_info_rejects_browser_name_mismatch(
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     metadata = _packaged_browser_metadata(machine_arch="win64", browser_name="chromium")
-    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
+    _metadata_path(browser_binary_dir).write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
@@ -317,7 +323,7 @@ def test_resolve_playwright_browser_binary_info_rejects_empty_packaged_dir(tmp_p
     browser_binary_dir = machine_root / "playwright-browsers"
     _create_packaged_browser_cache(machine_root, machine_arch="win64", write_metadata=False)
     metadata = _packaged_browser_metadata(machine_arch="win64", packaged_binary_dir="")
-    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
+    _metadata_path(browser_binary_dir).write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
@@ -360,7 +366,7 @@ def test_resolve_playwright_browser_binary_info_rejects_multiple_packaged_dirs(
         machine_arch="win64",
     )
     # A second packaged directory breaks the "exactly one browser directory" contract.
-    (browser_binary_dir / "chromium_headless_shell-0001").mkdir()
+    (browser_binary_dir / _SECOND_PACKAGED_BROWSER_DIR_NAME).mkdir()
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
 
     assert (
@@ -382,9 +388,9 @@ def test_resolve_playwright_browser_binary_info_rejects_packaged_dir_name_mismat
     # Metadata names a packaged directory that does not exist on disk.
     metadata = _packaged_browser_metadata(
         machine_arch="win64",
-        packaged_binary_dir="chromium_headless_shell-0000",
+        packaged_binary_dir=_MISMATCHED_PACKAGED_BROWSER_DIR_NAME,
     )
-    (browser_binary_dir / "playwright_browser_metadata.json").write_text(
+    _metadata_path(browser_binary_dir).write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
