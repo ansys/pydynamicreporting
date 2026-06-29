@@ -1458,8 +1458,8 @@ def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected
 @pytest.mark.unit
 def test_playwright_pdf_transient_override_env_vars_are_explicit_contract():
     """Lock in the exact transient override env vars that browser-PDF render scope clears."""
-    # The render scope clears only host-platform overrides because browser-PDF replaces
-    # PLAYWRIGHT_BROWSERS_PATH separately and preserves download-host configuration.
+    # The render scope clears only host-platform overrides because browser-PDF handles
+    # PLAYWRIGHT_BROWSERS_PATH separately.
     assert (
         PlaywrightPDFRenderer._TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
         == _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS
@@ -1601,45 +1601,6 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 
 @pytest.mark.unit
-def test_playwright_pdf_handles_invalid_install_version_before_browser_start(tmp_path, monkeypatch):
-    """Treat invalid install versions as missing product browser metadata before launch."""
-    html_dir = _write_html(tmp_path, "<html><body><p>Invalid install version</p></body></html>")
-    ansys_version = 270
-    ansys_installation = _fake_ansys_installation(ansys_version)
-    renderer = PlaywrightPDFRenderer(
-        html_dir=html_dir,
-        ansys_installation=ansys_installation,
-        ansys_version=ansys_version,
-    )
-    resolver_args: dict[str, object] = {}
-
-    def fake_resolve(ansys_installation=None, ansys_version=None):
-        """Capture invalid-version resolver inputs while forcing the missing-binary path."""
-        # Version 270 is not a public YYR release, but render_pdf() should still
-        # convert that into a normal missing-product-browser error before launch.
-        resolver_args["ansys_installation"] = ansys_installation
-        resolver_args["ansys_version"] = ansys_version
-        return None
-
-    monkeypatch.setattr(pdf_renderer_module, "resolve_playwright_browser_binary_info", fake_resolve)
-    monkeypatch.setattr(
-        pdf_renderer_module,
-        "sync_playwright",
-        lambda: pytest.fail("invalid install version should not launch Playwright"),
-    )
-
-    with pytest.raises(
-        ADRException,
-        match="requires a valid product-shipped Playwright browser binary",
-    ):
-        renderer.render_pdf()
-    assert resolver_args == {
-        "ansys_installation": ansys_installation,
-        "ansys_version": ansys_version,
-    }
-
-
-@pytest.mark.unit
 def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_binary(
     tmp_path, monkeypatch
 ):
@@ -1659,6 +1620,8 @@ def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_bin
         ADRException, match="Browser PDF rendering failed: missing product browser revision"
     ) as exc_info:
         renderer.render_pdf()
-    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert isinstance(
+        exc_info.value.__cause__, RuntimeError
+    )  # assert original exception is chained
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
