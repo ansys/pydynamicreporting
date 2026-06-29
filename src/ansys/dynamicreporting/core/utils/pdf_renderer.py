@@ -1415,7 +1415,9 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
 
         Unlike the offline HTML renderer, the live report path must keep network
         access enabled so Chromium can fetch the report HTML and its assets from
-        the already-running ADR service.
+        the already-running ADR service. This also permits network egress to any
+        host the report references; the seeded auth cookies stay domain-scoped by
+        the browser, so they are only sent back to the originating ADR service.
         """
         return browser.new_context(
             viewport={
