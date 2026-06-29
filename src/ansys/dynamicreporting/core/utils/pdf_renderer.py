@@ -80,6 +80,7 @@ from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -480,12 +481,26 @@ class _BasePlaywrightPDFRenderer(ABC):
             # to an unrelated machine-level Chromium cache.
             with self._playwright_browser_binary_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                browser = playwright.chromium.launch(
-                    headless=True,
-                    timeout=self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "browser launch"
-                    ),
-                )
+                try:
+                    browser = playwright.chromium.launch(
+                        headless=True,
+                        timeout=self._remaining_browser_phase_timeout_ms(
+                            browser_phase_deadline, "browser launch"
+                        ),
+                    )
+                except PlaywrightTimeoutError:
+                    # Re-raise so the shared timeout handler reports launch timeouts; the install
+                    # hint below is only meaningful for a genuinely missing or broken binary.
+                    raise
+                except PlaywrightError as exc:
+                    # A launch failure almost always means the Chromium binary is missing or
+                    # incompatible, so point the caller at the documented install command instead
+                    # of surfacing the raw Playwright driver error.
+                    raise ADRException(
+                        "Failed to launch headless Chromium for browser PDF export. If the "
+                        "Playwright browser is not installed, run 'playwright install chromium' "
+                        "on the client machine."
+                    ) from exc
                 context = None
 
                 try:
