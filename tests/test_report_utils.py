@@ -35,11 +35,9 @@ def return_file_paths(request) -> list:
     test_path = join(request.fspath.dirname, "test_data")
     image_file = join(test_path, "aa_00_0_alpha1.png")
     scene_file = join(join(test_path, "scenes"), "scene.avz")
-    ens_file = join(test_path, "dam_break.ens")
-    evsn_file = join(test_path, "ami.evsn")
     scdoc_file = join(test_path, "viewer_test.scdoc")
     csf_file = join(test_path, "flow2d.csf")
-    return [image_file, scene_file, ens_file, evsn_file, scdoc_file, csf_file]
+    return [image_file, scene_file, scdoc_file, csf_file]
 
 
 @pytest.mark.ado_test

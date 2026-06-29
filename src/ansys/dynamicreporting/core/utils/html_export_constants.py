@@ -191,7 +191,7 @@ VIEWER_UTILS = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
 # Core JavaScript files for the modern viewer.
 VIEWER_JS = ["ANSYSViewer_min.js", "viewer-loader.js"]
 
-# Files for the context menu used in the viewer.
+# Files for the context menu used in the 3D viewer.
 CONTEXT_MENU_JS = [
     "jquery.contextMenu.min.css",
     "jquery.contextMenu.min.js",

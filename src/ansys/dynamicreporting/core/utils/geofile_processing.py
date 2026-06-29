@@ -25,10 +25,9 @@ Methods that implement core processing of the various geometry files.
 
 These are generally applied when a file is uploaded or the Nexus version number changes.
 These functions will convert files supported by the UDRW interface into AVZ files and
-extract proxy data from AVZ and EVSN files to simplify their display.
+extract proxy data from AVZ files to simplify their display.
 """
 
-import io
 import os
 import platform
 import subprocess  # nosec B78 B603 B404
@@ -43,60 +42,6 @@ try:
     from reports.engine import TemplateEngine
 except Exception:
     is_enve = False
-
-
-def get_evsn_proxy_image(filename: str) -> bytearray | None:
-    """Extract and return any PNG proxy image that could be found in the input EVSN
-    file."""
-    # From liben/proxy_image.cpp
-    proxyimage_header = bytearray([0x66, 0x36, 0xBB, 0x82, 0x87, 0x8E, 0x11, 0xEC, 0xAE, 0x6D])
-    proxyimage_trailer = bytearray([0x67, 0x5F, 0x81, 0x9C, 0x87, 0x8E, 0x11, 0xEC, 0x9D, 0x6C])
-    # Look for the trailer.  It will be in the last 1k of the file and will look like this
-    #   proxyimage_header (10bytes)
-    #   size_of_png_data (4bytes)
-    #   png_data (size_of_png_data bytes)
-    #   size_of_png_data (4bytes)
-    #   proxyimage_trailer (10bytes)
-    with open(filename, "rb") as fp:
-        # read the last 1024 bytes of the file
-        fp.seek(-1024, io.SEEK_END)
-        data = fp.read(1024)
-        file_length = fp.tell()  # because we read last 1k bytes, filepos should be at the end
-        # find the trailer
-        try:
-            offset = data.index(proxyimage_trailer)
-        except ValueError:
-            return None
-        # get the length of the PNG block (4 bytes before the trailer)
-        offset -= 4
-        if offset < 0:
-            return None
-        # read little endian 32bit length
-        png_length = (
-            data[offset]
-            + 256 * data[offset + 1]
-            + 256 * 256 * data[offset + 2]
-            + 256 * 256 * 256 * data[offset + 3]
-        )
-        # offset is the location of the trailer 32bit length value in the last 1k bytes, so
-        file_pos = file_length - 1024 + offset
-        # back up in the file by the header size, png payload size and the header 32bit length value
-        file_pos -= png_length + len(proxyimage_header) + 4
-        # Position for the read
-        fp.seek(file_pos)
-        # Verify the header
-        hdr = fp.read(len(proxyimage_header))
-        if hdr != proxyimage_header:
-            return None
-        # (re)verify the png block size
-        data = fp.read(4)
-        png_length2 = data[0] + 256 * data[1] + 256 * 256 * data[2] + 256 * 256 * 256 * data[3]
-        if png_length != png_length2:
-            return None
-        # ok, we should have the png data now
-        data = fp.read(png_length)
-        return data
-    return None
 
 
 # The basic idea of the 3D geometry pipeline is that files in .csf, .ply, .scdoc, .scdocx,
@@ -116,21 +61,19 @@ def file_can_have_proxy(filename: str) -> bool:
     """For a given filename, return True if the file format could include a proxy
     image."""
     _, extension = os.path.splitext(filename)
-    return extension in (".csf", ".avz", ".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
+    return extension in (".csf", ".avz", ".scdoc", ".scdocx", ".dsco")
 
 
 def file_is_3d_geometry(filename: str, file_item_only: bool = True) -> bool:
     """For a given filename, return True if the file format contains 3D geometry."""
     _, extension = os.path.splitext(filename)
     if file_item_only:
-        return extension in (".evsn", ".ens", ".scdoc", ".scdocx", ".dsco")
+        return extension in (".scdoc", ".scdocx", ".dsco")
     return extension in (
         ".csf",
         ".stl",
         ".ply",
         ".avz",
-        ".evsn",
-        ".ens",
         ".scdoc",
         ".scdocx",
         ".dsco",
@@ -143,8 +86,8 @@ def get_avz_directory(csf_file: str) -> str:
 
 
 def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = None):
-    """Rebuild the media directory representation of the file (udrw format, avz, scdoc
-    or evsn)"""
+    """Rebuild the media directory representation of the file (udrw format, avz or
+    scdoc)"""
     # We are looking to convert the .csf or other udrw file to .avz with this command:
     # {dir} = item.get_payload_server_pathname() with the extension removed
     # cei_apex{ver}_udrw2avz{.bat} item.get_payload_server_pathname() {dir}/scene.avz
@@ -158,7 +101,6 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     # '.scdocx' -> extract thumbnail image (if any)
     # ".dsco" -> extract thumbnail image (if any)
     # '.avz' -> just extract the proxy image (if any)
-    # '.evsn' -> extract the proxy image (if any)
     # No file conversions needed in these cases, but the proxy image (if any) is extracted as:
     # {media}/2342412421_scene/proxy.png
     avz_dir, csf_ext = os.path.splitext(csf_file)
@@ -183,33 +125,6 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                         except OSError as e:
                             print(f"Warning: unable to extract SCDOC proxy image: {str(e)}")
         # SCDOC processing is complete
-        return
-    # Easy case, handle EVSN
-    elif csf_ext.lower() == ".evsn":
-        # EVSN handling is entirely different, so handle it all here
-        png = get_evsn_proxy_image(avz_filename)
-        if png is not None:
-            try:
-                with open(os.path.join(avz_dir, "proxy.png"), "wb") as output_file:
-                    output_file.write(png)
-            except OSError as e:
-                print(f"Warning: unable to extract EVSN proxy image: {str(e)}")
-        # EVSN processing is complete
-        return
-    # Handle the ENS (EnSight session file) case
-    elif csf_ext.lower() == ".ens":
-        # this is a zip formatted file with a file named "preview.png" which is the proxy
-        with zipfile.ZipFile(avz_filename) as archive:
-            for name in archive.namelist():
-                if name.lower() == "preview.png":
-                    with archive.open(name) as proxy_file:
-                        data = proxy_file.read()
-                        try:
-                            with open(os.path.join(avz_dir, "proxy.png"), "wb") as output_file:
-                                output_file.write(data)
-                        except OSError as e:
-                            print(f"Warning: unable to extract ENS proxy image: {str(e)}")
-        # ENS processing is complete
         return
     # A little sneaky here as the udrw2avz conversion can create an AVZ file with
     # a proxy image in it.  So we pass UDRW files through the pipeline first.

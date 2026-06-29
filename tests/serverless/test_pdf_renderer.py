@@ -30,6 +30,7 @@ import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
+from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils.pdf_renderer import _PlaywrightReportURLPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import PlaywrightPDFRenderer
@@ -48,6 +49,8 @@ def _simple_renderer(
     *,
     landscape: bool = False,
     render_timeout: float | None = None,
+    ansys_installation: str | None = None,
+    ansys_version: int | None = None,
 ) -> PlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
     html_dir = _write_html(tmp_path, body)
@@ -59,6 +62,8 @@ def _simple_renderer(
             if render_timeout is None
             else render_timeout
         ),
+        ansys_installation=ansys_installation,
+        ansys_version=ansys_version,
     )
     return renderer
 
@@ -71,6 +76,83 @@ class _FakePlaywrightStack:
     browser: Mock
     context: Mock
     page: Mock
+
+
+@dataclass(frozen=True)
+class _ProductPlaywrightContext:
+    """Resolved product install metadata for this module's real-browser tests."""
+
+    ansys_installation: str
+    ansys_version: int
+    playwright_browsers_path: str
+
+
+@pytest.fixture(scope="module")
+def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightContext:
+    """Return a product browser path that matches the host platform running this test module."""
+
+    # Priority 1: explicit install path when --use-local-launcher is active.
+    if pytestconfig.getoption("use_local_launcher"):
+        explicit_resolution = resolve_install_info(
+            ansys_installation=pytestconfig.getoption("install_path")
+        )
+        if explicit_resolution.install_dir is not None:
+            binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
+                ansys_installation=explicit_resolution.install_dir,
+                ansys_version=explicit_resolution.version,
+            )
+            if binary_info is not None:
+                return _ProductPlaywrightContext(
+                    ansys_installation=explicit_resolution.install_dir,
+                    ansys_version=explicit_resolution.version,
+                    playwright_browsers_path=str(binary_info.path),
+                )
+
+    # Priority 2: live ADR server fixture.
+    adr_init = request.getfixturevalue("adr_init")
+    binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
+        ansys_installation=adr_init.ansys_installation,
+        ansys_version=adr_init.ansys_version,
+    )
+    if binary_info is not None:
+        return _ProductPlaywrightContext(
+            ansys_installation=adr_init.ansys_installation,
+            ansys_version=adr_init.ansys_version,
+            playwright_browsers_path=str(binary_info.path),
+        )
+
+    # Priority 3: auto-detected local product install.
+    local_resolution = resolve_install_info()
+    if local_resolution.install_dir is not None:
+        binary_info = pdf_renderer_module.resolve_playwright_browser_binary_info(
+            ansys_installation=local_resolution.install_dir,
+            ansys_version=local_resolution.version,
+        )
+        if binary_info is not None:
+            return _ProductPlaywrightContext(
+                ansys_installation=local_resolution.install_dir,
+                ansys_version=local_resolution.version,
+                playwright_browsers_path=str(binary_info.path),
+            )
+
+    pytest.fail(
+        "Expected either the resolved ADR installation or the local product install to provide "
+        "a product-shipped Playwright browser."
+    )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _use_product_playwright_browser(product_playwright_context: _ProductPlaywrightContext):
+    """Keep direct sync_playwright() helper tests on the product browser path."""
+    restored_browser_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = product_playwright_context.playwright_browsers_path
+    try:
+        yield
+    finally:
+        if restored_browser_path is None:
+            os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+        else:
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_path
 
 
 def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> _FakePlaywrightStack:
@@ -121,18 +203,25 @@ def _browser_binary_info(
 
 
 @pytest.mark.unit
-def test_playwright_pdf_from_simple_html(tmp_path):
-    renderer = _simple_renderer(tmp_path, "<html><body><h1>Hello</h1></body></html>")
+def test_playwright_pdf_from_simple_html(tmp_path, product_playwright_context):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><h1>Hello</h1></body></html>",
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
 @pytest.mark.unit
-def test_playwright_pdf_landscape(tmp_path):
+def test_playwright_pdf_landscape(tmp_path, product_playwright_context):
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Landscape content</p></body></html>",
         landscape=True,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
     )
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
@@ -363,7 +452,7 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
 
 
 @pytest.mark.unit
-def test_playwright_pdf_with_mathjax_content(tmp_path):
+def test_playwright_pdf_with_mathjax_content(tmp_path, product_playwright_context):
     # The inline MathJax stub gives the readiness check a real startup promise to await.
     html = """
     <html>
@@ -379,13 +468,20 @@ def test_playwright_pdf_with_mathjax_content(tmp_path):
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html)
+    renderer = _simple_renderer(
+        tmp_path,
+        html,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
 @pytest.mark.unit
-def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(tmp_path):
+def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(
+    tmp_path, product_playwright_context
+):
     # MathJax 4.1 exposes MathDocument.whenReady() for pending typesetting work. The
     # never-resolving startup promise proves that the renderer prefers that documented path.
     html = """
@@ -410,13 +506,18 @@ def test_playwright_pdf_waits_for_mathjax_document_when_ready_api(tmp_path):
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html)
+    renderer = _simple_renderer(
+        tmp_path,
+        html,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
 @pytest.mark.unit
-def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
+def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path, product_playwright_context):
     # MathJax 2 exports still use Hub.Queue() to synchronize with the legacy renderer.
     html = """
     <html>
@@ -434,13 +535,18 @@ def test_playwright_pdf_waits_for_mathjax_hub_queue_api(tmp_path):
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html)
+    renderer = _simple_renderer(
+        tmp_path,
+        html,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
 
 
 @pytest.mark.unit
-def test_playwright_pdf_signal_timeout(tmp_path):
+def test_playwright_pdf_signal_timeout(tmp_path, product_playwright_context):
     # This mock Plotly container never gets class 'loaded', so the readiness MutationObserver
     # never fires and the promise times out.
     html = """
@@ -452,7 +558,13 @@ def test_playwright_pdf_signal_timeout(tmp_path):
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html, render_timeout=0.5)
+    renderer = _simple_renderer(
+        tmp_path,
+        html,
+        render_timeout=0.5,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
 
     # pytest.raises() can only capture the exception; it cannot assert two independent
     # message fragments and explicitly fail when no exception is raised. The try/except/else

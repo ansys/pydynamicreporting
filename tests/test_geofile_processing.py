@@ -31,27 +31,10 @@ def return_file_paths(request):
     test_path = join(request.fspath.dirname, "test_data")
     image_file = join(test_path, "aa_00_0_alpha1.png")
     scene_file = join(join(test_path, "scenes"), "scene.avz")
-    ens_file = join(test_path, "dam_break.ens")
-    evsn_file = join(test_path, "ami.evsn")
     scdoc_file = join(test_path, "viewer_test.scdoc")
     csf_file = join(test_path, "flow2d.csf")
     img_proxy = join(join(test_path, "scenes"), "proxy.png")
-    return [image_file, scene_file, ens_file, evsn_file, scdoc_file, csf_file, img_proxy]
-
-
-@pytest.mark.ado_test
-def test_get_evsn_proxy_image(request) -> None:
-    try:
-        result = gp.get_evsn_proxy_image(filename=return_file_paths(request)[6])
-        assert result is None
-    except Exception as e:
-        pytest.fail(f"get_evsn_proxy_image raised an unexpected exception: {e}")
-
-
-@pytest.mark.ado_test
-def test_get_evsn_proxy_error(request) -> None:
-    succ = gp.get_evsn_proxy_image(filename=return_file_paths(request)[5]) is None
-    assert succ
+    return [image_file, scene_file, scdoc_file, csf_file, img_proxy]
 
 
 @pytest.mark.ado_test
@@ -85,29 +68,9 @@ def test_rebuild_3d_geom_avz(request) -> None:
 
 
 @pytest.mark.ado_test
-def test_rebuild_3d_geom_ens(request) -> None:
-    _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
-    )
-    test_path = join(request.fspath.dirname, "test_data")
-    new_dir = join(test_path, "dam_break")
-    assert isdir(new_dir)
-
-
-@pytest.mark.ado_test
-def test_rebuild_3d_geom_evsn(request) -> None:
-    _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[3], unique_id="abc", exec_basis="avz"
-    )
-    test_path = join(request.fspath.dirname, "test_data")
-    new_dir = join(test_path, "ami")
-    assert isdir(new_dir)
-
-
-@pytest.mark.ado_test
 def test_rebuild_3d_geom_scdoc(request) -> None:
     _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[4], unique_id="abc", exec_basis="avz"
+        csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
     )
     test_path = join(request.fspath.dirname, "test_data")
     new_dir = join(test_path, "viewer_test")
@@ -116,7 +79,7 @@ def test_rebuild_3d_geom_scdoc(request) -> None:
 
 def test_rebuild_3d_geom_scdoc_second(request) -> None:
     _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[4], unique_id="abc", exec_basis="avz"
+        csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
     )
     test_path = join(request.fspath.dirname, "test_data")
     new_dir = join(test_path, "viewer_test")
@@ -127,7 +90,7 @@ def test_rebuild_3d_geom_csf(request, get_exec) -> None:
     exec_basis = get_exec
     if exec_basis:
         _ = gp.rebuild_3d_geometry(
-            csf_file=return_file_paths(request)[5], unique_id="abc", exec_basis=exec_basis
+            csf_file=return_file_paths(request)[3], unique_id="abc", exec_basis=exec_basis
         )
         test_path = join(request.fspath.dirname, "test_data")
         new_dir = join(test_path, "flow2d")
