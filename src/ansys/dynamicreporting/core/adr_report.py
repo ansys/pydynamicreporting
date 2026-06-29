@@ -774,6 +774,8 @@ class Report:
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
+        # Report does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout: float = 30.0,
     ) -> bool:
         """

@@ -1033,6 +1033,8 @@ class Server:
         *,
         landscape=False,
         margins=None,
+        # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
+        # this module does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout=30.0,
     ):
         """
