@@ -268,8 +268,10 @@ def test_get_install_info_none_no_valid(monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(monkeypatch, tmp_path):
-    """Fall back to the older compatible product line when the bundled line is absent."""
+def test_get_install_info_implicit_falls_back_to_261_when_default_version_is_unavailable(
+    monkeypatch, tmp_path
+):
+    """Fall back to the older compatible product line when the default bundled line is absent."""
     released_dir = tmp_path / "v261" / "ADR"
     released_dir.mkdir(parents=True)
 
@@ -287,25 +289,25 @@ def test_get_install_info_implicit_falls_back_to_261_when_271_is_unavailable(mon
 
 
 @pytest.mark.ado_test
-def test_get_install_info_implicit_prefers_271_over_261(monkeypatch, tmp_path):
-    """Prefer the bundled product line when both bundled and compatibility installs exist."""
+def test_get_install_info_implicit_prefers_default_version_over_261(monkeypatch, tmp_path):
+    """Prefer the bundled default product line when both bundled and compatibility installs exist."""
     compatibility_dir = tmp_path / "v261" / "ADR"
     compatibility_dir.mkdir(parents=True)
-    bundled_dir = tmp_path / "v271" / "ADR"
+    bundled_dir = tmp_path / f"v{CURRENT_VERSION}" / "ADR"
     bundled_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
     monkeypatch.setenv("AWP_ROOT261", str(compatibility_dir.parent))
-    monkeypatch.setenv("AWP_ROOT271", str(bundled_dir.parent))
+    monkeypatch.setenv(f"AWP_ROOT{CURRENT_VERSION}", str(bundled_dir.parent))
     monkeypatch.delenv("AWP_ROOT251", raising=False)
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
-    # Keep the default constructors aligned with the historical bundled-line
+    # Keep the default constructors aligned with the current bundled-line
     # behavior from ``main`` whenever both installs are present.
     install, ver = get_install_info()
     assert install == str(bundled_dir)
-    assert ver == 271
+    assert ver == CURRENT_VERSION
 
 
 @pytest.mark.ado_test
@@ -345,12 +347,12 @@ def test_get_install_info_explicit_version_does_not_probe_other_versions(monkeyp
     """Honor an explicit install version instead of scanning sibling version roots."""
     target_dir = tmp_path / "v261" / "ADR"
     target_dir.mkdir(parents=True)
-    ignored_dir = tmp_path / "v271" / "ADR"
+    ignored_dir = tmp_path / f"v{CURRENT_VERSION}" / "ADR"
     ignored_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
     monkeypatch.setenv("AWP_ROOT261", str(target_dir.parent))
-    monkeypatch.setenv("AWP_ROOT271", str(ignored_dir.parent))
+    monkeypatch.setenv(f"AWP_ROOT{CURRENT_VERSION}", str(ignored_dir.parent))
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
@@ -360,19 +362,19 @@ def test_get_install_info_explicit_version_does_not_probe_other_versions(monkeyp
 
 
 @pytest.mark.ado_test
-def test_get_install_info_explicit_271_is_still_supported(monkeypatch, tmp_path):
-    """Keep explicit lookup working for the bundled 271 product line."""
-    target_dir = tmp_path / "v271" / "ADR"
+def test_get_install_info_explicit_default_version_is_still_supported(monkeypatch, tmp_path):
+    """Keep explicit lookup working for the bundled default product line."""
+    target_dir = tmp_path / f"v{CURRENT_VERSION}" / "ADR"
     target_dir.mkdir(parents=True)
 
     monkeypatch.delenv("PYADR_ANSYS_INSTALLATION", raising=False)
-    monkeypatch.setenv("AWP_ROOT271", str(target_dir.parent))
+    monkeypatch.setenv(f"AWP_ROOT{CURRENT_VERSION}", str(target_dir.parent))
     monkeypatch.delenv("CEIDEVROOTDOS", raising=False)
     monkeypatch.setitem(__import__("sys").modules, "enve", None)
 
-    install, ver = get_install_info(ansys_version=271)
+    install, ver = get_install_info(ansys_version=CURRENT_VERSION)
     assert install == str(target_dir)
-    assert ver == 271
+    assert ver == CURRENT_VERSION
 
 
 # ansys_installation provided with no version in its path but with a provided ansys_version.
@@ -420,14 +422,14 @@ def test_get_install_info_detects_version_from_install_layout(tmp_path):
     """Infer the install version from a single unambiguous ``nexus###`` layout."""
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
-    nexus_dir = install_dir / "nexus271" / "django"
+    nexus_dir = install_dir / f"nexus{CURRENT_VERSION}" / "django"
     nexus_dir.mkdir(parents=True)
     (nexus_dir / "manage.py").write_text("dummy content")
 
     install, ver = get_install_info(ansys_installation=str(install_dir))
 
     assert install == str(install_dir)
-    assert ver == 271
+    assert ver == CURRENT_VERSION
 
 
 @pytest.mark.ado_test
@@ -435,7 +437,8 @@ def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, c
     """Return ``None`` and log a warning when multiple layout versions are present."""
     install_dir = tmp_path / "install_no_version"
     install_dir.mkdir()
-    for version in ("261", "271"):
+    expected_versions = [261, CURRENT_VERSION]
+    for version in map(str, expected_versions):
         nexus_dir = install_dir / f"nexus{version}" / "django"
         nexus_dir.mkdir(parents=True)
         (nexus_dir / "manage.py").write_text("dummy content")
@@ -445,7 +448,7 @@ def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, c
 
     assert detected_version is None
     assert "Detected multiple ADR layout versions" in caplog.text
-    assert str(sorted([261, 271])) in caplog.text
+    assert str(sorted(expected_versions)) in caplog.text
 
 
 # Test the branch for a valid 'enve' candidate.
