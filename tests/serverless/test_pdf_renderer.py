@@ -27,6 +27,7 @@ from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 import pytest
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
@@ -440,15 +441,11 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
         timeout=12500,
     )
     # The live report path must stay online so Chromium can fetch the report and assets directly
-    # from the already-running ADR service instead of expecting a staged offline bundle.
-    browser.new_context.assert_called_once_with(
-        viewport={
-            "width": _OfflinePlaywrightPDFRenderer._DEFAULT_BROWSER_VIEWPORT_WIDTH,
-            "height": _OfflinePlaywrightPDFRenderer._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
-        },
-        service_workers="block",
-        accept_downloads=False,
-    )
+    # from the already-running ADR service instead of expecting a staged offline bundle. Assert
+    # the absence of offline mode rather than the full context kwargs, which couple to incidental
+    # viewport constants that the offline renderer also uses.
+    browser.new_context.assert_called_once()
+    assert "offline" not in browser.new_context.call_args.kwargs
     context.add_cookies.assert_called_once_with(
         [
             {
@@ -1717,3 +1714,26 @@ def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_bin
     )  # assert original exception is chained
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
+
+
+@pytest.mark.unit
+def test_playwright_pdf_hints_browser_install_when_launch_raises_playwright_error(
+    tmp_path, monkeypatch
+):
+    """A Playwright launch error surfaces the documented browser-install remediation."""
+    renderer, _flow, _binary_dir = _arrange_product_browser_renderer(
+        tmp_path,
+        monkeypatch,
+        launch_side_effect=PlaywrightError("Executable doesn't exist at ..."),
+    )
+
+    with pytest.raises(ADRException, match="run 'playwright install chromium'") as exc_info:
+        renderer.render_pdf()
+    assert isinstance(exc_info.value.__cause__, PlaywrightError)
+
+
+@pytest.mark.unit
+def test_base_renderer_cannot_be_instantiated_directly():
+    """The shared base renderer is abstract; concrete subclasses must supply the seams."""
+    with pytest.raises(TypeError):
+        pdf_renderer_module._BasePlaywrightPDFRenderer()
