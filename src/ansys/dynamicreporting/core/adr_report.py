@@ -805,9 +805,9 @@ class Report:
         render_timeout : float, optional
             Maximum time, in seconds, to spend waiting for browser readiness signals.
             Default: 30.0
-            On remote-service connections, this method also requires a Playwright-managed
-            Chromium browser to be installed on the client machine because the live report
-            page is rendered locally before being printed to PDF.
+            On remote-service connections, the live report page is rendered locally before
+            being printed to PDF, using the product-shipped Playwright browser from the
+            connected service's Ansys installation.
 
         Returns
         -------
@@ -843,6 +843,10 @@ class Report:
                 landscape=landscape,
                 margins=margins,
                 render_timeout=render_timeout,
+                # Forward the connected service's local install so the remote browser-PDF render
+                # uses the product-shipped Playwright binary, mirroring export_pdf.
+                exec_basis=self.service._ansys_installation,
+                ansys_version=self.service._ansys_version,
             )
             success = True
         except Exception as e:

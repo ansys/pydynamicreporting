@@ -1377,6 +1377,8 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
     it can render the live report page directly instead of first staging an
     offline HTML bundle.  This class reuses the shared browser readiness and
     PDF sizing flow while keeping network access enabled for same-page assets.
+    Like the offline renderer, it renders with the product-shipped Playwright
+    browser binary resolved from ``ansys_installation`` and ``ansys_version``.
     """
 
     def __init__(
@@ -1387,6 +1389,8 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
+        ansys_installation: Path | str | None = None,
+        ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
         self._url = self._validate_url(url)
@@ -1395,6 +1399,8 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
             landscape=landscape,
             margins=margins,
             render_timeout=render_timeout,
+            ansys_installation=ansys_installation,
+            ansys_version=ansys_version,
             logger=logger,
         )
 

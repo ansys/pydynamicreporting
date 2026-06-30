@@ -1036,6 +1036,8 @@ class Server:
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
         # this module does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout=30.0,
+        exec_basis=None,
+        ansys_version=None,
     ):
         """
         Export a report as a browser-fidelity PDF.
@@ -1067,9 +1069,13 @@ class Server:
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
-            This remote-service path renders the live report URL in the caller's local
-            Playwright browser, so a compatible Chromium browser must already be installed
-            on the client machine.
+        exec_basis : str, optional
+            Local Ansys installation root, forwarded from the connected service, used to locate the
+            product-shipped Playwright browser binary for the local render.
+        ansys_version : int, optional
+            Ansys version paired with ``exec_basis`` to locate the product-shipped browser binary.
+            This remote-service path renders the live report URL in a local headless browser using
+            that product-shipped Playwright binary, so it does not rely on a separately installed one.
         """
         if not file_name:
             raise ADRException("A non-empty file_name must be provided for browser PDF export.")
@@ -1094,6 +1100,8 @@ class Server:
                 landscape=landscape,
                 margins=margins,
                 render_timeout=render_timeout,
+                ansys_installation=exec_basis,
+                ansys_version=ansys_version,
                 logger=logger,
             )
             pdf_bytes = renderer.render_pdf()
