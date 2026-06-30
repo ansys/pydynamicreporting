@@ -62,6 +62,7 @@ from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
+from . import _dep_check
 from .base import ObjectSet
 from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
@@ -611,6 +612,10 @@ class ADR:
             adr_path = (
                 self._ansys_installation / f"nexus{self._ansys_version}" / "django"
             ).resolve(strict=True)
+            # Validate the active Python environment before importing product
+            # settings so older 261 installs fail with a targeted compatibility
+            # error instead of a deeper Django import/configuration traceback.
+            _dep_check.enforce_runtime_dependencies(self._ansys_version)
             sys.path.append(str(adr_path))
             from ceireports import settings_serverless
         except (ImportError, OSError) as e:
@@ -709,10 +714,15 @@ class ADR:
         # Work around Linux timezone issues when needed.
         report_utils.apply_timezone_workaround()
 
-        # === Settings compatibility shim ===
-        from ._compat import sanitize_settings
+        # === Settings compatibility plan ===
+        from ._compat import (
+            build_compatibility_plan,
+            run_post_configure_hooks,
+            run_pre_setup_hooks,
+        )
 
-        overrides = sanitize_settings(overrides)
+        compat_plan = build_compatibility_plan(overrides)
+        overrides = compat_plan.overrides
 
         # Django settings + setup.
         try:
@@ -722,6 +732,10 @@ class ADR:
                 import django
 
                 settings.configure(**overrides)
+                # Deferred compatibility hooks stay centralized in _compat.py.
+                # ADR.setup() only orchestrates the documented hook phases.
+                run_post_configure_hooks(compat_plan, settings)
+                run_pre_setup_hooks(compat_plan)
                 django.setup()
         except ImproperlyConfigured as e:
             raise ImproperlyConfiguredError(extra_detail=str(e))
