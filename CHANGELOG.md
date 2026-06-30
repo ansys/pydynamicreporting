@@ -26,10 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- `Report.export_pdf()` and `Report.export_html()` now return `False` (matching their
-  documented `bool` contract) instead of an empty string when called on a disconnected
-  `Report`, and log through a module-level logger so the no-service guard path no longer
-  raises `AttributeError` from logging through the missing service.
+-
 
 ## [0.10.7] - 2026-03-12
 
