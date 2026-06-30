@@ -22,7 +22,6 @@
 
 import array
 import base64
-from contextlib import suppress
 from html.parser import HTMLParser as BaseHTMLParser
 import io
 import json
@@ -104,8 +103,7 @@ def check_if_PIL(img):
         return False
     finally:
         if imghandle:
-            with suppress(OSError):
-                imghandle.close()
+            imghandle.close()
 
 
 def is_enve_image_or_pil(img):
@@ -229,8 +227,7 @@ def save_tif_stripped(pil_image, data, metadata):
     buff.seek(0)
     data["file_data"] = buff.read()
     data["format"] = "tif"
-    with suppress(OSError):
-        buff.close()
+    buff.close()
     return data
 
 
@@ -276,8 +273,7 @@ def PIL_image_to_data(img, guid=None):
         buff.seek(0)
         data["file_data"] = buff.read()
     if imghandle:
-        with suppress(OSError):
-            imghandle.close()
+        imghandle.close()
     return data
 
 
@@ -292,7 +288,7 @@ def image_to_data(img):
     if has_enve:  # pragma: no cover
         if isinstance(img, enve.image):
             data = dict(width=img.dims[0], height=img.dims[1])
-            with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+            with tempfile.TemporaryDirectory() as temp_dir:
                 if img.enhanced:
                     path = os.path.join(temp_dir, "enhanced_image.tif")
                     # Save the image as a tiff file (enhanced)
@@ -880,13 +876,11 @@ def find_unused_ports(
             continue
         # is anyone listening?
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            result = sock.connect_ex(("127.0.0.1", port))
-        finally:
-            with suppress(OSError):
-                sock.close()
+        result = sock.connect_ex(("127.0.0.1", port))
         if result != 0:
             ports.append(port)
+        else:
+            sock.close()
         if len(ports) >= count:
             return ports
     # in case we failed...
@@ -932,11 +926,7 @@ def is_port_in_use(port: int, admin_check: bool = False) -> bool:
         if not is_user_admin():
             return True
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        result = sock.connect_ex(("127.0.0.1", port))
-    finally:
-        with suppress(OSError):
-            sock.close()
+    result = sock.connect_ex(("127.0.0.1", port))
     return result == 0
 
 

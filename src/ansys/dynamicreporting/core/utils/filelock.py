@@ -336,10 +336,7 @@ class BaseFileLock:
         return None
 
     def __del__(self):
-        try:
-            self.release(force=True)
-        except Exception:
-            logger.debug("Failed to release file lock during object finalization.", exc_info=True)
+        self.release(force=True)
         return None
 
 

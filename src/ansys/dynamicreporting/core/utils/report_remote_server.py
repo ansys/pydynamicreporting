@@ -22,7 +22,6 @@
 
 import collections
 import configparser
-from contextlib import suppress
 import functools
 import hashlib
 import inspect
@@ -750,7 +749,6 @@ class Server:
             progress.setMaximum(nobjs)
 
         for obj in copy_list:
-            fileobj = None
             try:
                 if progress:
                     progress.setValue(n)
@@ -761,22 +759,20 @@ class Server:
                 file_url = getattr(obj, "fileurl", None)
                 if file_url:
                     # need to pull the file from this url...
-                    fileobj = tempfile.NamedTemporaryFile()
-                    obj.fileobj = fileobj
-                    if source.get_file(obj, fileobj) != requests.codes.ok:
+                    obj.fileobj = tempfile.NamedTemporaryFile()
+                    if source.get_file(obj, obj.fileobj) != requests.codes.ok:
                         obj.fileobj = None
                 self.put_objects([obj])
+                # clean up temp file
+                fileobj = getattr(obj, "fileobj", None)
+                if fileobj:
+                    fileobj.close()
                 if type(obj) not in skip_count_types:
                     n += 1
             except Exception as e:
                 if print_allowed():
                     print(f"Failure while copying {obj}: {e}")
                 return False
-            finally:
-                # Temp payload cleanup should not report a failed copy after put_objects succeeds.
-                if fileobj:
-                    with suppress(OSError):
-                        fileobj.close()
         if progress:
             progress.setValue(nobjs)
         return True
@@ -1840,10 +1836,8 @@ def launch_local_database_server(
             pass
 
     # detach from stdout, stderr to avoid buffer blocking
-    for stream in (monitor_process.stderr, monitor_process.stdout):
-        if stream is not None:
-            with suppress(OSError):
-                stream.close()
+    monitor_process.stderr.close()
+    monitor_process.stdout.close()
 
     # Allow another API launch to continue
     if local_lock:

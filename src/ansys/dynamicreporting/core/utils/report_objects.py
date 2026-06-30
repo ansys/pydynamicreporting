@@ -24,7 +24,6 @@ from __future__ import annotations
 
 from ast import literal_eval
 import base64
-from contextlib import suppress
 import copy
 import datetime
 import functools
@@ -1359,8 +1358,7 @@ class ItemREST(BaseRESTObject):
             buf = QtCore.QBuffer(be)
             buf.open(QtCore.QIODevice.WriteOnly)
             tmpimg.save(buf, "png")
-            with suppress(Exception):
-                buf.close()
+            buf.close()
             # s is an in-memory representation of a .png file
             # width and height are its size
             s = bytes(be)
