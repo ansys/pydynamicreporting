@@ -1036,7 +1036,7 @@ class Server:
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
         # this module does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout=30.0,
-        exec_basis=None,
+        ansys_installation=None,
         ansys_version=None,
     ):
         """
@@ -1045,8 +1045,8 @@ class Server:
         This method uses a headless browser to open the live ADR report page and
         print it to PDF.  That keeps the browser-PDF path simple on the remote
         server side: unlike the serverless path, there is already a running web
-        server, so Chromium can render the report directly instead of staging an
-        offline HTML export first.
+        server, so the browser can render the report directly instead of staging
+        an offline HTML export first.
 
         Parameters
         ----------
@@ -1064,18 +1064,18 @@ class Server:
         landscape : bool, optional
             Whether to render the PDF in landscape orientation. Default is False (portrait).
         margins : dict, optional
-            A dictionary specifying PDF margin lengths accepted by Playwright.
+            PDF margin lengths as CSS length strings (for example ``"10mm"``).
             Keys can include ``top``, ``right``, ``bottom``, and ``left``.
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
-        exec_basis : str, optional
+        ansys_installation : str, optional
             Local Ansys installation root, forwarded from the connected service, used to locate the
-            product-shipped Playwright browser binary for the local render.
+            product-shipped browser binary for the local render.
         ansys_version : int, optional
-            Ansys version paired with ``exec_basis`` to locate the product-shipped browser binary.
-            This remote-service path renders the live report URL in a local headless browser using
-            that product-shipped Playwright binary, so it does not rely on a separately installed one.
+            Ansys version paired with ``ansys_installation`` to locate the product-shipped browser
+            binary. This remote-service path renders the live report URL in a local headless browser
+            using that product-shipped browser binary, so it does not rely on a separately installed one.
         """
         if not file_name:
             raise ADRException("A non-empty file_name must be provided for browser PDF export.")
@@ -1100,7 +1100,7 @@ class Server:
                 landscape=landscape,
                 margins=margins,
                 render_timeout=render_timeout,
-                ansys_installation=exec_basis,
+                ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
                 logger=logger,
             )

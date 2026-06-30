@@ -782,7 +782,7 @@ class Report:
         Export report as a browser-fidelity PDF.
 
         Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
-        asks headless Chromium to render the report through ADR's browser-facing output and
+        asks a headless browser to render the report through ADR's browser-facing output and
         then print that browser view to PDF. That preserves browser-rendered behavior such
         as JavaScript layout, Plotly charts, and MathJax output.
 
@@ -800,14 +800,14 @@ class Report:
         landscape : bool, optional
             Whether to export the PDF in landscape orientation. Default: False
         margins : dict[str, str], optional
-            Page margins with ``top``, ``right``, ``bottom``, and ``left`` lengths accepted by
-            Playwright's PDF API. Default: None, which uses the renderer defaults.
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS length strings
+            (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer defaults.
         render_timeout : float, optional
             Maximum time, in seconds, to spend waiting for browser readiness signals.
             Default: 30.0
             On remote-service connections, the live report page is rendered locally before
-            being printed to PDF, using the product-shipped Playwright browser from the
-            connected service's Ansys installation.
+            being printed to PDF, using the product-shipped browser from the connected
+            service's Ansys installation.
 
         Returns
         -------
@@ -843,9 +843,9 @@ class Report:
                 landscape=landscape,
                 margins=margins,
                 render_timeout=render_timeout,
-                # Forward the connected service's local install so the remote browser-PDF render
-                # uses the product-shipped Playwright binary, mirroring export_pdf.
-                exec_basis=self.service._ansys_installation,
+                # Forward the connected service's local Ansys install so the remote render
+                # uses the product-shipped browser binary.
+                ansys_installation=self.service._ansys_installation,
                 ansys_version=self.service._ansys_version,
             )
             success = True

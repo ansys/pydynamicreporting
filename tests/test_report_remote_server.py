@@ -419,7 +419,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         landscape=True,
         margins=margins,
         render_timeout=12.5,
-        exec_basis="/opt/ansys/v271",
+        ansys_installation="/opt/ansys/v271",
         ansys_version=271,
     )
 
