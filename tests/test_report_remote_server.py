@@ -421,25 +421,11 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     assert captured["renderer_url"] == (
         "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
     )
-    assert captured["renderer_auth_cookies"] == [
-        {
-            "name": "csrftoken",
-            "value": "csrf-token",
-            "domain": "127.0.0.1",
-            "path": "/",
-            "secure": False,
-            "expires": 1234567890.0,
-            "sameSite": "Lax",
-        },
-        {
-            "name": "sessionid",
-            "value": "session-token",
-            "domain": "127.0.0.1",
-            "path": "/",
-            "secure": False,
-            "httpOnly": True,
-            "sameSite": "Lax",
-        },
+    # The exact Playwright cookie shape is pinned by the dedicated _build_playwright_cookie tests;
+    # here only assert the authenticated session's cookies are forwarded to the renderer, in order.
+    assert [cookie["name"] for cookie in captured["renderer_auth_cookies"]] == [
+        "csrftoken",
+        "sessionid",
     ]
     assert captured["renderer_landscape"] is True
     assert captured["renderer_margins"] == margins
@@ -528,6 +514,18 @@ def test_build_playwright_cookie_requires_domain_or_base_url() -> None:
 
     with pytest.raises(ADRException, match="missing a domain and base URL"):
         r.Server._build_playwright_cookie(cookie)
+
+
+def test_build_playwright_cookie_normalizes_value_less_cookie_to_empty_string() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value=None,
+        domain="127.0.0.1",
+        path="/",
+        secure=False,
+    )
+
+    assert r.Server._build_playwright_cookie(cookie)["value"] == ""
 
 
 def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
