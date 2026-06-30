@@ -41,14 +41,16 @@ Examples
 """
 
 import json
+import logging
 import os
 import sys
-from typing import Optional
 import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
 from ansys.dynamicreporting.core.utils import report_objects
+
+LOGGER = logging.getLogger(__name__)
 
 try:
     from IPython.display import IFrame
@@ -242,7 +244,8 @@ class Report:
         """
         guid = ""
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
+            # Detached Report objects cannot forward errors through a Service logger yet.
+            LOGGER.error("No connection to any report")
             return guid
         if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
@@ -671,11 +674,12 @@ class Report:
         """
         success = False  # pragma: no cover
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            # Detached Report objects cannot forward errors through a Service logger yet.
+            LOGGER.error("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:  # pragma: no cover
             if query_params is None:
                 query_params = {}
@@ -739,11 +743,12 @@ class Report:
         """
         success = False
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            # Detached Report objects cannot forward errors through a Service logger yet.
+            LOGGER.error("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
             self.service.logger.error("No connection to any server")
-            return ""
+            return False
         try:
             if query_params is None:
                 query_params = {}
@@ -759,6 +764,93 @@ class Report:
             success = True
         except Exception as e:  # pragma: no cover
             self.service.logger.error(f"Can not export static HTML report: {str(e)}")
+        return success
+
+    def export_browser_pdf(
+        self,
+        file_name: str = "",
+        query_params: dict | None = None,
+        item_filter: str | None = None,
+        *,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
+        # Report does not eagerly import the Playwright renderer module (and Playwright with it).
+        render_timeout: float = 30.0,
+    ) -> bool:
+        """
+        Export report as a browser-fidelity PDF.
+
+        Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
+        asks a headless browser to render the report through ADR's browser-facing output and
+        then print that browser view to PDF. That preserves browser-rendered behavior such
+        as JavaScript layout, Plotly charts, and MathJax output.
+
+        Parameters
+        ----------
+        file_name : str
+            Path and filename for the PDF file to export.
+        query_params : dict, optional
+            Dictionary for parameters to apply to the report template. On the
+            remote-service path these values are forwarded as report-generation
+            query parameters. Default: None
+        item_filter : str, optional
+            String corresponding to query to run on the database items before rendering the report.
+            Default: None
+        landscape : bool, optional
+            Whether to export the PDF in landscape orientation. Default: False
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS length strings
+            (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer defaults.
+        render_timeout : float, optional
+            Maximum time, in seconds, to spend waiting for browser readiness signals.
+            Default: 30.0
+            On remote-service connections, the live report page is rendered locally before
+            being printed to PDF, using the product-shipped browser from the connected
+            service's Ansys installation.
+
+        Returns
+        -------
+        bool
+            Success status of the browser PDF export: True if it worked, False otherwise
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v271')
+            ret = adr_service.connect(url = "http://localhost:8000", username = "nexus", password = "cei")
+            my_report = adr_service.get_report(report_name = "My Top Report")
+            succ = my_report.export_browser_pdf(file_name = r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"}, landscape = True)
+        """
+        success = False
+        if self.service is None:
+            # Match the method's bool contract even on disconnected Report objects.
+            LOGGER.error("No connection to any report")
+            return False
+        if self.service.serverobj is None:
+            self.service.logger.error("No connection to any server")
+            return False
+        try:
+            if query_params is None:
+                query_params = {}
+            self.service.serverobj.export_report_as_browser_pdf(
+                report_guid=self.report.guid,
+                file_name=file_name,
+                query=query_params,
+                item_filter=item_filter,
+                landscape=landscape,
+                margins=margins,
+                render_timeout=render_timeout,
+                # Forward the connected service's local Ansys install so the remote render
+                # uses the product-shipped browser binary.
+                ansys_installation=self.service._ansys_installation,
+                ansys_version=self.service._ansys_version,
+            )
+            success = True
+        except Exception as e:
+            self.service.logger.error(f"Can not export browser pdf report: {str(e)}")
         return success
 
     def export_json(self, json_file_path: str) -> None:

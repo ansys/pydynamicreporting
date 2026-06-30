@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
--
+- Added `Report.export_browser_pdf()` for browser-fidelity PDF export through a local
+  Playwright Chromium render pass when working with a remote ADR service.
 
 ### Changed
 
