@@ -569,10 +569,19 @@ class PlaywrightPDFRenderer:
                 finally:
                     # Playwright recommends explicitly closing contexts created via
                     # browser.new_context() before browser.close() so their resources flush
-                    # gracefully. Guard the call because context creation itself can fail.
+                    # gracefully. Cleanup failures should not mask successful PDF bytes or the
+                    # original render failure.
                     if context is not None:
-                        context.close()
-                    browser.close()
+                        try:
+                            context.close()
+                        except Exception:
+                            self._logger.debug(
+                                "Failed to close Playwright browser context.", exc_info=True
+                            )
+                    try:
+                        browser.close()
+                    except Exception:
+                        self._logger.debug("Failed to close Playwright browser.", exc_info=True)
         except ADRException:
             raise
         except PlaywrightTimeoutError as exc:
