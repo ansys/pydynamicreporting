@@ -1103,8 +1103,11 @@ class Server:
 
         except ADRException:
             raise
-        except Exception as exc:
-            raise ADRException(f"Browser PDF export failed: {exc}") from exc
+        except Exception:
+            # Never surface Playwright/driver or write-path internals to the caller. Log the
+            # trace for debugging and raise a clean ADR error with no chained cause.
+            logger.debug("Browser PDF export failed.", exc_info=True)
+            raise ADRException("Browser PDF export failed.")
 
     def export_report_as_pdf(
         self,

@@ -1479,8 +1479,11 @@ class ADR:
                 return renderer.render_pdf()
         except ADRException:
             raise
-        except Exception as e:
-            raise ADRException(f"Browser PDF rendering failed: {e}") from e
+        except Exception:
+            # Never surface Playwright/driver internals to the caller. Log the trace for
+            # debugging and raise a clean ADR error with no chained cause.
+            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
+            raise ADRException("Browser PDF rendering failed.")
         finally:
             self._cleanup_browser_pdf_scratch_root(scratch_root)
 

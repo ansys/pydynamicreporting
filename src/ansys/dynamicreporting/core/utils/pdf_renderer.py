@@ -80,7 +80,6 @@ from time import monotonic
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
-from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -481,26 +480,12 @@ class _BasePlaywrightPDFRenderer(ABC):
             # to an unrelated machine-level Chromium cache.
             with self._playwright_browser_binary_env(), sync_playwright() as playwright:
                 self._logger.info("Launching headless Chromium for browser PDF export.")
-                try:
-                    browser = playwright.chromium.launch(
-                        headless=True,
-                        timeout=self._remaining_browser_phase_timeout_ms(
-                            browser_phase_deadline, "browser launch"
-                        ),
-                    )
-                except PlaywrightTimeoutError:
-                    # Re-raise so the shared timeout handler reports launch timeouts; the install
-                    # hint below is only meaningful for a genuinely missing or broken binary.
-                    raise
-                except PlaywrightError as exc:
-                    # A launch failure almost always means the Chromium binary is missing or
-                    # incompatible, so point the caller at the documented install command instead
-                    # of surfacing the raw Playwright driver error.
-                    raise ADRException(
-                        "Failed to launch headless Chromium for browser PDF export. If the "
-                        "Playwright browser is not installed, run 'playwright install chromium' "
-                        "on the client machine."
-                    ) from exc
+                browser = playwright.chromium.launch(
+                    headless=True,
+                    timeout=self._remaining_browser_phase_timeout_ms(
+                        browser_phase_deadline, "browser launch"
+                    ),
+                )
                 context = None
 
                 try:
@@ -583,15 +568,22 @@ class _BasePlaywrightPDFRenderer(ABC):
                     browser.close()
         except ADRException:
             raise
-        except PlaywrightTimeoutError as exc:
-            # Normalize Playwright's operation-specific timeout wording into the renderer's
-            # public ADRException contract so callers see one consistent timeout shape.
+        except PlaywrightTimeoutError:
+            # Keep Playwright's own timeout wording out of the caller-facing error. Log the full
+            # trace for debugging, then raise a clean, ADR-owned timeout message without chaining
+            # the Playwright exception so callers never see browser-engine internals.
+            self._logger.debug(
+                "Browser PDF render timed out during %s.", current_timeout_phase, exc_info=True
+            )
             raise ADRException(
                 f"Browser PDF rendering failed: {current_timeout_phase} timed out after "
                 f"{self._render_timeout:.1f}s"
-            ) from exc
-        except Exception as exc:
-            raise ADRException(f"Browser PDF rendering failed: {exc}") from exc
+            )
+        except Exception:
+            # Never surface Playwright/driver internals to the caller. Log the trace for
+            # debugging and raise a generic ADR error with no chained Playwright cause.
+            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
+            raise ADRException("Browser PDF rendering failed.")
 
     @abstractmethod
     def _get_navigation_target(self) -> str:
