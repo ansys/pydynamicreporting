@@ -153,7 +153,8 @@ def test_authenticate_web_session_logs_in_shared_session() -> None:
     session.get.return_value = init_response
     session.post.return_value = login_response
     server = SimpleNamespace(
-        get_auth=lambda: ("nexus", "cei"),
+        # Server.get_auth() returns utf-8-encoded bytes, so mirror that here instead of str.
+        get_auth=lambda: (b"nexus", b"cei"),
         build_request_url=lambda relative_url: f"http://127.0.0.1:8000{relative_url}",
         _http_session=session,
     )
@@ -163,8 +164,8 @@ def test_authenticate_web_session_logs_in_shared_session() -> None:
     session.post.assert_called_once_with(
         "http://127.0.0.1:8000/login/",
         data={
-            "username": "nexus",
-            "password": "cei",
+            "username": b"nexus",
+            "password": b"cei",
             "csrfmiddlewaretoken": "csrf-token",
             "next": "/",
         },
