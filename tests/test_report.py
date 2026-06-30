@@ -168,7 +168,6 @@ def _make_report_for_browser_pdf_tests(export_impl) -> Report:
     service = SimpleNamespace(
         serverobj=SimpleNamespace(export_report_as_browser_pdf=export_impl),
         logger=logging.getLogger("test-report-browser-pdf"),
-        _ansys_version=252,
     )
     return Report(
         service=service,
@@ -182,7 +181,6 @@ def _make_report_for_export_guard_tests(*, serverobj) -> Report:
     service = SimpleNamespace(
         serverobj=serverobj,
         logger=logging.getLogger("test-report-export-guards"),
-        _ansys_version=252,
     )
     return Report(
         service=service,
