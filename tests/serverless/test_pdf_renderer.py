@@ -396,9 +396,11 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
     with pytest.raises(
         ADRException,
         match=r"Browser PDF rendering failed: page navigation timed out after 12\.5s",
-    ):
+    ) as exc_info:
         renderer.render_pdf()
 
+    # The clean timeout message must not chain the underlying Playwright timeout.
+    assert exc_info.value.__cause__ is None
     stack.context.close.assert_called_once_with()
     stack.browser.close.assert_called_once_with()
 
@@ -410,9 +412,11 @@ def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path,
     stack = _stub_playwright_stack(monkeypatch)
     stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
-    with pytest.raises(ADRException, match="Browser PDF rendering failed: new context boom"):
+    # The underlying failure detail must not leak into the caller-facing message or be chained.
+    with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
         renderer.render_pdf()
 
+    assert exc_info.value.__cause__ is None
     stack.browser.close.assert_called_once_with()
 
 
@@ -468,6 +472,19 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
 def test_live_report_url_renderer_validates_absolute_urls():
     with pytest.raises(ADRException, match="report URL is not valid"):
         _ReportURLPlaywrightPDFRenderer(url="/reports/report_display/?view=report-guid")
+
+
+@pytest.mark.unit
+def test_live_report_url_renderer_forwards_product_browser_install_metadata():
+    """The live-URL renderer forwards the Ansys install metadata used to locate the packed browser."""
+    renderer = _ReportURLPlaywrightPDFRenderer(
+        url="http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
+        ansys_installation="/opt/ansys/v271",
+        ansys_version=271,
+    )
+
+    assert renderer._ansys_installation == Path("/opt/ansys/v271").expanduser()
+    assert renderer._ansys_version == 271
 
 
 @pytest.mark.unit
@@ -1690,14 +1707,14 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
 
 @pytest.mark.unit
-def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_binary(
+def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwright(
     tmp_path, monkeypatch
 ):
-    """Surface the underlying Playwright launch error when product browser startup fails."""
+    """A Playwright launch failure surfaces a clean ADR error and still restores env."""
     renderer, flow, browser_binary_dir = _arrange_product_browser_renderer(
         tmp_path,
         monkeypatch,
-        launch_side_effect=RuntimeError("missing product browser revision"),
+        launch_side_effect=PlaywrightError("Executable doesn't exist; run playwright install"),
     )
     user_browser_path = str(tmp_path / "user-browser-path")
     env_seen: dict[str, str | None] = {}
@@ -1705,31 +1722,15 @@ def test_playwright_pdf_surfaces_playwright_launch_error_for_product_browser_bin
     _capture_render_start_env(flow, env_seen)
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", user_browser_path)
 
-    with pytest.raises(
-        ADRException, match="Browser PDF rendering failed: missing product browser revision"
-    ) as exc_info:
+    with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
         renderer.render_pdf()
-    assert isinstance(
-        exc_info.value.__cause__, RuntimeError
-    )  # assert original exception is chained
+    # The caller must never see Playwright internals: a generic message, no chained cause,
+    # and no "playwright" text anywhere in the surfaced error.
+    assert exc_info.value.__cause__ is None
+    assert "playwright" not in str(exc_info.value).lower()
+    # The product browser path is still selected for the render and the env restored afterward.
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)
     assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == user_browser_path
-
-
-@pytest.mark.unit
-def test_playwright_pdf_hints_browser_install_when_launch_raises_playwright_error(
-    tmp_path, monkeypatch
-):
-    """A Playwright launch error surfaces the documented browser-install remediation."""
-    renderer, _flow, _binary_dir = _arrange_product_browser_renderer(
-        tmp_path,
-        monkeypatch,
-        launch_side_effect=PlaywrightError("Executable doesn't exist at ..."),
-    )
-
-    with pytest.raises(ADRException, match="run 'playwright install chromium'") as exc_info:
-        renderer.render_pdf()
-    assert isinstance(exc_info.value.__cause__, PlaywrightError)
 
 
 @pytest.mark.unit

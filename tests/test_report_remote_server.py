@@ -385,6 +385,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             landscape=False,
             margins=None,
             render_timeout=30.0,
+            ansys_installation=None,
+            ansys_version=None,
             logger=None,
         ):
             captured["renderer_url"] = url
@@ -392,6 +394,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             captured["renderer_landscape"] = landscape
             captured["renderer_margins"] = margins
             captured["renderer_render_timeout"] = render_timeout
+            captured["renderer_ansys_installation"] = ansys_installation
+            captured["renderer_ansys_version"] = ansys_version
             captured["renderer_logger"] = logger
 
         def render_pdf(
@@ -415,6 +419,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         landscape=True,
         margins=margins,
         render_timeout=12.5,
+        exec_basis="/opt/ansys/v271",
+        ansys_version=271,
     )
 
     assert output_file.read_bytes() == b"%PDF-browser"
@@ -430,6 +436,9 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     assert captured["renderer_landscape"] is True
     assert captured["renderer_margins"] == margins
     assert captured["renderer_render_timeout"] == 12.5
+    # The connected service's local install is forwarded so the renderer uses the packed browser.
+    assert captured["renderer_ansys_installation"] == "/opt/ansys/v271"
+    assert captured["renderer_ansys_version"] == 271
     assert captured["report_guid"] == "report-guid"
     assert captured["query"] == {"colormode": "dark", "print": "pdf"}
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
@@ -465,6 +474,8 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
             landscape=False,
             margins=None,
             render_timeout=30.0,
+            ansys_installation=None,
+            ansys_version=None,
             logger=None,
         ):
             return None
@@ -478,11 +489,13 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
     )
     monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
-    with pytest.raises(ADRException, match="Browser PDF export failed"):
+    # The underlying failure must be wrapped in a clean ADR error with no chained cause.
+    with pytest.raises(ADRException, match=r"Browser PDF export failed\.$") as exc_info:
         server.export_report_as_browser_pdf(
             report_guid="report-guid",
             file_name=str(tmp_path / "browser-report.pdf"),
         )
+    assert exc_info.value.__cause__ is None
 
 
 def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
@@ -590,11 +603,13 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
     output_directory = tmp_path / "browser-report.pdf"
     output_directory.mkdir()
 
-    with pytest.raises(ADRException, match="Browser PDF export failed"):
+    # A write-path failure is wrapped in the same clean ADR error, with no chained cause.
+    with pytest.raises(ADRException, match=r"Browser PDF export failed\.$") as exc_info:
         server.export_report_as_browser_pdf(
             report_guid="report-guid",
             file_name=str(output_directory),
         )
+    assert exc_info.value.__cause__ is None
 
 
 @pytest.mark.ado_test

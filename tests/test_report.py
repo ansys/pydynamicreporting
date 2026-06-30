@@ -168,6 +168,9 @@ def _make_report_for_browser_pdf_tests(export_impl) -> Report:
     service = SimpleNamespace(
         serverobj=SimpleNamespace(export_report_as_browser_pdf=export_impl),
         logger=logging.getLogger("test-report-browser-pdf"),
+        # Forwarded as exec_basis/ansys_version so the remote render uses the packed browser.
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
     )
     return Report(
         service=service,
@@ -250,6 +253,8 @@ def test_export_browser_pdf_forwards_options(tmp_path) -> None:
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5
+    assert captured["exec_basis"] == "/opt/ansys/v271"
+    assert captured["ansys_version"] == 271
 
 
 def test_export_browser_pdf_returns_false_on_failure(tmp_path) -> None:
