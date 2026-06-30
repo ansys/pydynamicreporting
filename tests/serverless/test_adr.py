@@ -1599,6 +1599,97 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
 
 
 @pytest.mark.ado_test
+def test_render_report_as_browser_pdf_ignores_temporary_directory_cleanup_error(
+    tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
+    )
+
+    db_directory = tmp_path / "db"
+    media_directory = tmp_path / "media"
+    static_directory = tmp_path / "static"
+    db_directory.mkdir()
+    media_directory.mkdir()
+    static_directory.mkdir()
+    captured: dict[str, object] = {}
+
+    class CleanupFailingTemporaryDirectory:
+        def __init__(self, *, prefix, dir, ignore_cleanup_errors=False):
+            captured["ignore_cleanup_errors"] = ignore_cleanup_errors
+            self._ignore_cleanup_errors = ignore_cleanup_errors
+            self.name = str(Path(dir) / f"{prefix}cleanup-error")
+
+        def __enter__(self):
+            Path(self.name).mkdir()
+            return self.name
+
+        def __exit__(self, exc_type, exc, traceback):
+            (Path(self.name) / "media").mkdir()
+            if not self._ignore_cleanup_errors:
+                raise OSError(39, "Directory not empty", str(Path(self.name) / "media"))
+            return False
+
+    class FakeTemplate:
+        def render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+            return "<html><body><h1>Browser PDF cleanup error</h1></body></html>"
+
+    monkeypatch.setattr(adr_module.tempfile, "TemporaryDirectory", CleanupFailingTemporaryDirectory)
+    monkeypatch.setattr(
+        _OfflinePlaywrightPDFRenderer, "__init__", lambda self, *args, **kwargs: None
+    )
+    monkeypatch.setattr(ServerlessReportExporter, "export", lambda self: None)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    adr = object.__new__(ADR)
+    adr._db_directory = db_directory
+    adr._media_directory = media_directory
+    adr._static_directory = static_directory
+    adr._media_url = "/media/"
+    adr._static_url = "/static/"
+    adr._ansys_installation = tmp_path / "install"
+    adr._ansys_version = 271
+    adr._debug = False
+    adr._request = None
+    adr._logger = None
+
+    pdf_bytes = adr._render_template_as_browser_pdf(FakeTemplate())
+
+    assert pdf_bytes == b"%PDF-mock"
+    assert captured["ignore_cleanup_errors"] is True
+
+
+def test_close_ignores_temporary_directory_cleanup_error(monkeypatch):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+
+    cleanup_calls = []
+
+    class FakeTemporaryDirectory:
+        def cleanup(self):
+            cleanup_calls.append(self)
+            raise OSError("cleanup failed")
+
+    class FakeLogger:
+        def debug(self, *args, **kwargs):
+            return None
+
+    adr = object.__new__(ADR)
+    adr._tmp_dirs = [FakeTemporaryDirectory()]
+    adr._logger = FakeLogger()
+    monkeypatch.setattr(adr_module.connections, "close_all", lambda: None)
+
+    adr.close()
+
+    assert len(cleanup_calls) == 1
+
+
+@pytest.mark.ado_test
 def test_browser_pdf_scratch_root_falls_back_for_external_database(
     adr_serverless, tmp_path, monkeypatch
 ):

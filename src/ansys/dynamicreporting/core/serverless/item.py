@@ -37,6 +37,7 @@ the serverless ADR API:
 
 from dataclasses import field
 from datetime import datetime
+from contextlib import suppress
 from html.parser import HTMLParser as BaseHTMLParser
 import io
 from pathlib import Path
@@ -299,7 +300,8 @@ class ImageContent(FileValidator):
                 raise ADRException("The enhanced image is empty")
             obj._enhanced = True
         obj._width, obj._height = image.size
-        image.close()
+        with suppress(OSError):
+            image.close()
         return file_str
 
 
@@ -888,7 +890,8 @@ class Image(FilePayloadMixin, Item):
                 raise ADRException(f"Error converting image to {self._file_ext}: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
             self._save_file(self.file_path, img_bytes)
-        image.close()
+        with suppress(OSError):
+            image.close()
         super().save(**kwargs)
 
 

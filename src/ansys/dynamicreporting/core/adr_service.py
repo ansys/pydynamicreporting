@@ -440,7 +440,12 @@ class Service:
                     try:
                         create_output = self._docker_launcher.create_nexus_db()
                     except Exception as e:  # pragma: no cover
-                        self._docker_launcher.cleanup()
+                        try:
+                            self._docker_launcher.cleanup()
+                        except Exception as cleanup_error:
+                            self.logger.warning(
+                                f"Failed to clean up Docker launcher: {cleanup_error}"
+                            )
                         self.logger.error(
                             "Error creating the database at the path {self._db_directory} in the "
                             f"Docker container.\nError: {str(e)}"
@@ -449,7 +454,12 @@ class Service:
                     for f in ["db.sqlite3", "view_report.nexdb"]:
                         db_file = os.path.join(self._db_directory, f)
                         if not os.path.isfile(db_file):
-                            self._docker_launcher.cleanup()
+                            try:
+                                self._docker_launcher.cleanup()
+                            except Exception as cleanup_error:
+                                self.logger.warning(
+                                    f"Failed to clean up Docker launcher: {cleanup_error}"
+                                )
                             self.logger.error(
                                 "Error creating the database using Docker at the path "
                                 + f"{self._db_directory}.\n"
