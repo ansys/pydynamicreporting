@@ -1481,9 +1481,10 @@ class ADR:
             raise
         except Exception:
             # Never surface Playwright/driver internals to the caller. Log the trace for
-            # debugging and raise a clean ADR error with no chained cause.
+            # debugging and raise a clean ADR error. ``from None`` suppresses exception chaining
+            # so the underlying error never appears in the caller's traceback.
             self._logger.debug("Browser PDF rendering failed.", exc_info=True)
-            raise ADRException("Browser PDF rendering failed.")
+            raise ADRException("Browser PDF rendering failed.") from None
         finally:
             self._cleanup_browser_pdf_scratch_root(scratch_root)
 

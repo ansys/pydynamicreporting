@@ -496,6 +496,7 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
             file_name=str(tmp_path / "browser-report.pdf"),
         )
     assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
 
 
 def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
@@ -610,6 +611,7 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
             file_name=str(output_directory),
         )
     assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
 
 
 @pytest.mark.ado_test

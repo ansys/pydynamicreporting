@@ -401,6 +401,7 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
 
     # The clean timeout message must not chain the underlying Playwright timeout.
     assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
     stack.context.close.assert_called_once_with()
     stack.browser.close.assert_called_once_with()
 
@@ -417,6 +418,7 @@ def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path,
         renderer.render_pdf()
 
     assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
     stack.browser.close.assert_called_once_with()
 
 
@@ -1727,6 +1729,7 @@ def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwr
     # The caller must never see Playwright internals: a generic message, no chained cause,
     # and no "playwright" text anywhere in the surfaced error.
     assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
     assert "playwright" not in str(exc_info.value).lower()
     # The product browser path is still selected for the render and the env restored afterward.
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)

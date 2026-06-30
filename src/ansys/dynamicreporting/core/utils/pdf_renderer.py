@@ -570,20 +570,21 @@ class _BasePlaywrightPDFRenderer(ABC):
             raise
         except PlaywrightTimeoutError:
             # Keep Playwright's own timeout wording out of the caller-facing error. Log the full
-            # trace for debugging, then raise a clean, ADR-owned timeout message without chaining
-            # the Playwright exception so callers never see browser-engine internals.
+            # trace for debugging, then raise a clean, ADR-owned timeout message. ``from None``
+            # suppresses exception chaining so the Playwright timeout never appears in tracebacks.
             self._logger.debug(
                 "Browser PDF render timed out during %s.", current_timeout_phase, exc_info=True
             )
             raise ADRException(
                 f"Browser PDF rendering failed: {current_timeout_phase} timed out after "
                 f"{self._render_timeout:.1f}s"
-            )
+            ) from None
         except Exception:
             # Never surface Playwright/driver internals to the caller. Log the trace for
-            # debugging and raise a generic ADR error with no chained Playwright cause.
+            # debugging and raise a generic ADR error. ``from None`` suppresses chaining so the
+            # underlying Playwright/driver exception never appears in tracebacks.
             self._logger.debug("Browser PDF rendering failed.", exc_info=True)
-            raise ADRException("Browser PDF rendering failed.")
+            raise ADRException("Browser PDF rendering failed.") from None
 
     @abstractmethod
     def _get_navigation_target(self) -> str:
@@ -901,8 +902,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         error_message = "Browser PDF render_timeout must be a positive number."
         try:
             timeout = float(render_timeout)
-        except (TypeError, ValueError) as exc:
-            raise ADRException(error_message) from exc
+        except (TypeError, ValueError):
+            # ``from None`` keeps the underlying numeric-conversion error out of the traceback.
+            raise ADRException(error_message) from None
 
         if timeout <= 0:
             raise ADRException(error_message)
