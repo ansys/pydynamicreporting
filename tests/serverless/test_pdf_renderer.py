@@ -1701,7 +1701,7 @@ def test_playwright_pdf_rejects_missing_product_browser_binary_before_browser_st
 
     with pytest.raises(
         ADRException,
-        match="requires a valid product-shipped Playwright browser binary",
+        match="requires a valid product-shipped browser binary",
     ):
         renderer.render_pdf()
 

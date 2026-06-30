@@ -388,7 +388,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             raise ADRException(
                 f"Browser PDF export is not supported for Ansys {product_name}. "
                 f"Use Ansys {min_product_name} or newer, which ships the required "
-                "Playwright browser binary."
+                "browser binary."
             )
 
     def _resolve_playwright_browser_binary(self) -> _PlaywrightBrowserBinaryInfo | None:
@@ -406,7 +406,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         )
         if binary_info is None:
             raise ADRException(
-                "Browser PDF export requires a valid product-shipped Playwright browser binary, "
+                "Browser PDF export requires a valid product-shipped browser binary, "
                 f"but none was found for Ansys version {self._ansys_version}."
             )
 
