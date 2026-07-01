@@ -45,38 +45,22 @@ ansys_version = product_release_to_short_label(DEFAULT_ANSYS_INSTALL_RELEASE)
 __ansys_version__ = DEFAULT_ANSYS_VERSION
 __ansys_version_str__ = product_release_to_display_string(DEFAULT_ANSYS_INSTALL_RELEASE)
 
-_LAZY_IMPORTS = {
-    "Item": ("ansys.dynamicreporting.core.adr_item", "Item"),
-    "Report": ("ansys.dynamicreporting.core.adr_report", "Report"),
-    "Service": ("ansys.dynamicreporting.core.adr_service", "Service"),
-}
-
-__all__ = [
-    "__version__",
-    "VERSION",
-    "DEFAULT_ANSYS_VERSION",
-    "BUNDLED_PRODUCT_RELEASE",
-    "DEFAULT_ANSYS_INSTALL_RELEASE",
-    "DEFAULT_ANSYS_INSTALL_VERSION",
-    "SUPPORTED_PRODUCT_LINES",
-    "SUPPORTED_PRODUCT_RELEASE_POLICY",
-    "ProductCompatibility",
-    "get_compatibility_info",
-    "product_release_to_display_string",
-    "product_release_to_short_label",
-    "Item",
-    "Report",
-    "Service",
-]
-
 
 def __getattr__(name):
-    """Load legacy top-level service-mode objects only when requested."""
-    if name in _LAZY_IMPORTS:
-        from importlib import import_module
+    """Load legacy top-level service-mode objects only when callers request them."""
+    if name == "Item":
+        from ansys.dynamicreporting.core.adr_item import Item
 
-        module_name, attr_name = _LAZY_IMPORTS[name]
-        attr = getattr(import_module(module_name), attr_name)
-        globals()[name] = attr
-        return attr
+        globals()[name] = Item
+        return Item
+    if name == "Report":
+        from ansys.dynamicreporting.core.adr_report import Report
+
+        globals()[name] = Report
+        return Report
+    if name == "Service":
+        from ansys.dynamicreporting.core.adr_service import Service
+
+        globals()[name] = Service
+        return Service
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

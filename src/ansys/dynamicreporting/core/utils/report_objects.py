@@ -27,7 +27,6 @@ import base64
 import copy
 import datetime
 import functools
-import importlib.util
 import io
 import json
 import logging
@@ -49,27 +48,12 @@ from ..common_utils import check_dictionary_for_html
 from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
-has_qt = importlib.util.find_spec("qtpy") is not None
-
-
-def _get_qt_modules():
-    """Import Qt bindings only when an actual Qt image payload is handled."""
+try:
     from qtpy import QtCore, QtGui
 
-    return QtCore, QtGui
-
-
-def _looks_like_qt_image(img) -> bool:
-    """Identify Qt image instances without importing Qt bindings."""
-    img_class = img.__class__
-    module_root = img_class.__module__.split(".", 1)[0]
-    return img_class.__name__ == "QImage" and module_root in {
-        "PyQt5",
-        "PyQt6",
-        "PySide2",
-        "PySide6",
-    }
-
+    has_qt = True
+except ImportError:
+    has_qt = False
 
 try:
     import numpy
@@ -1345,25 +1329,22 @@ class ItemREST(BaseRESTObject):
         return value
 
     def set_payload_image(self, img):
-        is_qt_image = _looks_like_qt_image(img)
-        if not is_qt_image and report_utils.is_enve_image_or_pil(img):
-            image_data = report_utils.image_to_data(img)
-            if image_data is not None:
-                self.width = image_data["width"]
-                self.height = image_data["height"]
-                self.type = ItemREST.type_img
-                # set up the parameters for get_url_file(): self.fileurl and self.fileobj
-                self.image_data = image_data["file_data"]
-                self.fileobj = io.BytesIO(self.image_data)
-                # The format might be png or tif, make sure the name the URL properly
-                # or Nexus will generate the incorrect display code.
-                self.fileurl = "image." + image_data["format"]
-            return
-
         if has_qt:  # pragma: no cover
-            QtCore, QtGui = _get_qt_modules()
-            if is_qt_image and isinstance(img, QtGui.QImage):
+            if isinstance(img, QtGui.QImage):
                 tmpimg = img
+            elif report_utils.is_enve_image_or_pil(img):
+                image_data = report_utils.image_to_data(img)
+                if image_data is not None:
+                    self.width = image_data["width"]
+                    self.height = image_data["height"]
+                    self.type = ItemREST.type_img
+                    # set up the parameters for get_url_file(): self.fileurl and self.fileobj
+                    self.image_data = image_data["file_data"]
+                    self.fileobj = io.BytesIO(self.image_data)
+                    # The format might be png or tif, make sure the name the URL properly
+                    # or Nexus will generate the incorrect display code.
+                    self.fileurl = "image." + image_data["format"]
+                return
             else:
                 import imghdr
 
