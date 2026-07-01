@@ -20,8 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ansys.dynamicreporting.core.utils import (
-    geofile_processing,
-    report_objects,
-    report_remote_server,
-)
+# Keep utility submodules opt-in. Importing this package should not pull in
+# service-mode helpers such as ``report_objects`` and their optional Qt stack.

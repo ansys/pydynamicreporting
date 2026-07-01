@@ -45,7 +45,22 @@ ansys_version = product_release_to_short_label(DEFAULT_ANSYS_INSTALL_RELEASE)
 __ansys_version__ = DEFAULT_ANSYS_VERSION
 __ansys_version_str__ = product_release_to_display_string(DEFAULT_ANSYS_INSTALL_RELEASE)
 
-# Ease imports
-from ansys.dynamicreporting.core.adr_item import Item
-from ansys.dynamicreporting.core.adr_report import Report
-from ansys.dynamicreporting.core.adr_service import Service
+
+def __getattr__(name):
+    """Load legacy top-level service-mode objects only when callers request them."""
+    if name == "Item":
+        from ansys.dynamicreporting.core.adr_item import Item
+
+        globals()[name] = Item
+        return Item
+    if name == "Report":
+        from ansys.dynamicreporting.core.adr_report import Report
+
+        globals()[name] = Report
+        return Report
+    if name == "Service":
+        from ansys.dynamicreporting.core.adr_service import Service
+
+        globals()[name] = Service
+        return Service
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
