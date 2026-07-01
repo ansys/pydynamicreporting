@@ -45,6 +45,27 @@ ansys_version = product_release_to_short_label(DEFAULT_ANSYS_INSTALL_RELEASE)
 __ansys_version__ = DEFAULT_ANSYS_VERSION
 __ansys_version_str__ = product_release_to_display_string(DEFAULT_ANSYS_INSTALL_RELEASE)
 
+__all__ = [
+    "BUNDLED_PRODUCT_RELEASE",
+    "DEFAULT_ANSYS_INSTALL_RELEASE",
+    "DEFAULT_ANSYS_INSTALL_VERSION",
+    "DEFAULT_ANSYS_VERSION",
+    "Item",
+    "ProductCompatibility",
+    "Report",
+    "SUPPORTED_PRODUCT_LINES",
+    "SUPPORTED_PRODUCT_RELEASE_POLICY",
+    "Service",
+    "VERSION",
+    "__ansys_version__",
+    "__ansys_version_str__",
+    "__version__",
+    "ansys_version",
+    "get_compatibility_info",
+    "product_release_to_display_string",
+    "product_release_to_short_label",
+]
+
 
 def __getattr__(name):
     """Load legacy top-level service-mode objects only when callers request them."""
