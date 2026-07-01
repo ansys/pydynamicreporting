@@ -24,6 +24,7 @@ import collections
 import configparser
 import functools
 import hashlib
+import importlib.util
 import inspect
 import json
 import logging
@@ -46,18 +47,40 @@ from requests import JSONDecodeError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-try:
-    from qtpy import QtCore, QtGui, QtWidgets
-
-    has_qt = True
-except ImportError:
-    has_qt = False
-
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
 from .encoders import BaseEncoder
+
+has_qt = importlib.util.find_spec("qtpy") is not None
+
+
+class _LazyQtModule:
+    """Proxy a qtpy module so importing this module does not import Qt."""
+
+    def __init__(self, module_name: str) -> None:
+        self._module_name = module_name
+        self._module = None
+
+    def _load(self):
+        if self._module is None:
+            from qtpy import QtCore, QtGui, QtWidgets
+
+            self._module = {
+                "QtCore": QtCore,
+                "QtGui": QtGui,
+                "QtWidgets": QtWidgets,
+            }[self._module_name]
+        return self._module
+
+    def __getattr__(self, name):
+        return getattr(self._load(), name)
+
+
+QtCore = _LazyQtModule("QtCore")
+QtGui = _LazyQtModule("QtGui")
+QtWidgets = _LazyQtModule("QtWidgets")
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)

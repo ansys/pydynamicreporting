@@ -21,22 +21,23 @@
 # SOFTWARE.
 
 from functools import partial
+import importlib.util
 import os
 
-try:
+has_qt = importlib.util.find_spec("qtpy") is not None
+_PDF_CLASSES = None
+
+
+def _get_pdf_classes():  # pragma: no cover
+    global _PDF_CLASSES
+    if _PDF_CLASSES is not None:
+        return _PDF_CLASSES
+
     from qtpy import QtCore, QtGui, QtWebEngineWidgets
+    from qtpy.QtCore import QTimer
 
     # Classes for saving PDF representation
     # pagedef = {width}X{height}X{0=port|1=land}X{left}X{right}X{top}X{bottom} all in mm
-    from qtpy.QtCore import QTimer
-
-    has_qt = True
-except Exception:
-    has_qt = False
-
-
-if has_qt:  # pragma: no cover
-
     class NexusPDFPage(QtWebEngineWidgets.QWebEnginePage):
         def __init__(self):
             super().__init__()
@@ -144,3 +145,18 @@ if has_qt:  # pragma: no cover
             else:
                 self._result = "failure"
             self._pdf_filename = None
+
+    _PDF_CLASSES = {
+        "NexusPDFPage": NexusPDFPage,
+        "NexusPDFSave": NexusPDFSave,
+    }
+    return _PDF_CLASSES
+
+
+def __getattr__(name):  # pragma: no cover
+    if name in {"NexusPDFPage", "NexusPDFSave"}:
+        pdf_classes = _get_pdf_classes()
+        value = pdf_classes[name]
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
