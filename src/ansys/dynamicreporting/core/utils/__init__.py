@@ -22,20 +22,3 @@
 
 # Keep utility submodules opt-in. Importing this package should not pull in
 # service-mode helpers such as ``report_objects`` and their optional Qt stack.
-
-
-def __getattr__(name):
-    """Load utility submodules on demand without maintaining a module list."""
-    if name.startswith("_"):
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-    from importlib import import_module
-    from importlib.util import find_spec
-
-    module_name = f"{__name__}.{name}"
-    if find_spec(module_name) is None:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-    module = import_module(module_name)
-    globals()[name] = module
-    return module
