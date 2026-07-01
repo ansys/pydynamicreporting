@@ -1,0 +1,6 @@
+xaxis
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.xaxis

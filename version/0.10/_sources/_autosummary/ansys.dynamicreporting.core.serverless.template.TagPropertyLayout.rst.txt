@@ -1,0 +1,189 @@
+﻿TagPropertyLayout
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TagPropertyLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TagPropertyLayout.add_filter
+      
+      
+      TagPropertyLayout.add_params
+      
+      
+      TagPropertyLayout.add_properties
+      
+      
+      TagPropertyLayout.add_property
+      
+      
+      TagPropertyLayout.add_sort_fields
+      
+      
+      TagPropertyLayout.add_tag
+      
+      
+      TagPropertyLayout.as_dict
+      
+      
+      TagPropertyLayout.create
+      
+      
+      TagPropertyLayout.delete
+      
+      
+      TagPropertyLayout.filter
+      
+      
+      TagPropertyLayout.find
+      
+      
+      TagPropertyLayout.get
+      
+      
+      TagPropertyLayout.get_column_count
+      
+      
+      TagPropertyLayout.get_column_widths
+      
+      
+      TagPropertyLayout.get_comments
+      
+      
+      TagPropertyLayout.get_filter
+      
+      
+      TagPropertyLayout.get_filter_mode
+      
+      
+      TagPropertyLayout.get_html
+      
+      
+      TagPropertyLayout.get_params
+      
+      
+      TagPropertyLayout.get_property
+      
+      
+      TagPropertyLayout.get_skip
+      
+      
+      TagPropertyLayout.get_sort_fields
+      
+      
+      TagPropertyLayout.get_sort_selection
+      
+      
+      TagPropertyLayout.get_tags
+      
+      
+      TagPropertyLayout.get_transpose
+      
+      
+      TagPropertyLayout.reinit
+      
+      
+      TagPropertyLayout.rem_tag
+      
+      
+      TagPropertyLayout.remove_tag
+      
+      
+      TagPropertyLayout.render
+      
+      
+      TagPropertyLayout.render_pdf
+      
+      
+      TagPropertyLayout.reorder_child
+      
+      
+      TagPropertyLayout.reorder_children
+      
+      
+      TagPropertyLayout.save
+      
+      
+      TagPropertyLayout.set_column_count
+      
+      
+      TagPropertyLayout.set_column_widths
+      
+      
+      TagPropertyLayout.set_comments
+      
+      
+      TagPropertyLayout.set_filter
+      
+      
+      TagPropertyLayout.set_filter_mode
+      
+      
+      TagPropertyLayout.set_html
+      
+      
+      TagPropertyLayout.set_params
+      
+      
+      TagPropertyLayout.set_property
+      
+      
+      TagPropertyLayout.set_skip
+      
+      
+      TagPropertyLayout.set_sort_fields
+      
+      
+      TagPropertyLayout.set_sort_selection
+      
+      
+      TagPropertyLayout.set_tags
+      
+      
+      TagPropertyLayout.set_transpose
+      
+      
+      TagPropertyLayout.to_dict
+      
+      
+      TagPropertyLayout.to_json
+      
+      
+      TagPropertyLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TagPropertyLayout.children_order
+      TagPropertyLayout.db
+      TagPropertyLayout.item_filter
+      TagPropertyLayout.master
+      TagPropertyLayout.name
+      TagPropertyLayout.params
+      TagPropertyLayout.parent
+      TagPropertyLayout.report_type
+      TagPropertyLayout.saved
+      TagPropertyLayout.tags
+      TagPropertyLayout.type
+      TagPropertyLayout.date
+      TagPropertyLayout.children
+      TagPropertyLayout.guid
+   
+   

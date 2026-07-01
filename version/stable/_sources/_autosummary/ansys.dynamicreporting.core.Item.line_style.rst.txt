@@ -1,0 +1,6 @@
+line\_style
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.line_style

@@ -1,0 +1,6 @@
+input\_pptx
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: PPTXLayout.input_pptx

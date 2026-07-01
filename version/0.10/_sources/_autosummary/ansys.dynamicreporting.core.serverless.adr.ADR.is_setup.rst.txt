@@ -1,0 +1,6 @@
+is\_setup
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.is_setup

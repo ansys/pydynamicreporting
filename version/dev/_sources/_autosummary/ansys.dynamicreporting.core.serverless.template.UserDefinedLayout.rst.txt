@@ -1,0 +1,192 @@
+﻿UserDefinedLayout
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: UserDefinedLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      UserDefinedLayout.add_filter
+      
+      
+      UserDefinedLayout.add_params
+      
+      
+      UserDefinedLayout.add_properties
+      
+      
+      UserDefinedLayout.add_property
+      
+      
+      UserDefinedLayout.add_sort_fields
+      
+      
+      UserDefinedLayout.add_tag
+      
+      
+      UserDefinedLayout.as_dict
+      
+      
+      UserDefinedLayout.create
+      
+      
+      UserDefinedLayout.delete
+      
+      
+      UserDefinedLayout.filter
+      
+      
+      UserDefinedLayout.find
+      
+      
+      UserDefinedLayout.get
+      
+      
+      UserDefinedLayout.get_column_count
+      
+      
+      UserDefinedLayout.get_column_widths
+      
+      
+      UserDefinedLayout.get_comments
+      
+      
+      UserDefinedLayout.get_filter
+      
+      
+      UserDefinedLayout.get_filter_mode
+      
+      
+      UserDefinedLayout.get_html
+      
+      
+      UserDefinedLayout.get_params
+      
+      
+      UserDefinedLayout.get_property
+      
+      
+      UserDefinedLayout.get_skip
+      
+      
+      UserDefinedLayout.get_sort_fields
+      
+      
+      UserDefinedLayout.get_sort_selection
+      
+      
+      UserDefinedLayout.get_tags
+      
+      
+      UserDefinedLayout.get_transpose
+      
+      
+      UserDefinedLayout.reinit
+      
+      
+      UserDefinedLayout.rem_tag
+      
+      
+      UserDefinedLayout.remove_tag
+      
+      
+      UserDefinedLayout.render
+      
+      
+      UserDefinedLayout.render_pdf
+      
+      
+      UserDefinedLayout.reorder_child
+      
+      
+      UserDefinedLayout.reorder_children
+      
+      
+      UserDefinedLayout.save
+      
+      
+      UserDefinedLayout.set_column_count
+      
+      
+      UserDefinedLayout.set_column_widths
+      
+      
+      UserDefinedLayout.set_comments
+      
+      
+      UserDefinedLayout.set_filter
+      
+      
+      UserDefinedLayout.set_filter_mode
+      
+      
+      UserDefinedLayout.set_html
+      
+      
+      UserDefinedLayout.set_params
+      
+      
+      UserDefinedLayout.set_property
+      
+      
+      UserDefinedLayout.set_skip
+      
+      
+      UserDefinedLayout.set_sort_fields
+      
+      
+      UserDefinedLayout.set_sort_selection
+      
+      
+      UserDefinedLayout.set_tags
+      
+      
+      UserDefinedLayout.set_transpose
+      
+      
+      UserDefinedLayout.to_dict
+      
+      
+      UserDefinedLayout.to_json
+      
+      
+      UserDefinedLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      UserDefinedLayout.before_children
+      UserDefinedLayout.children_order
+      UserDefinedLayout.db
+      UserDefinedLayout.interactive_only
+      UserDefinedLayout.item_filter
+      UserDefinedLayout.master
+      UserDefinedLayout.name
+      UserDefinedLayout.params
+      UserDefinedLayout.parent
+      UserDefinedLayout.report_type
+      UserDefinedLayout.saved
+      UserDefinedLayout.tags
+      UserDefinedLayout.type
+      UserDefinedLayout.userdef_name
+      UserDefinedLayout.date
+      UserDefinedLayout.children
+      UserDefinedLayout.guid
+   
+   

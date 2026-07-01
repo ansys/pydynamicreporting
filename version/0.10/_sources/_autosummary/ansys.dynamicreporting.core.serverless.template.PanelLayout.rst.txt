@@ -1,0 +1,201 @@
+﻿PanelLayout
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: PanelLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      PanelLayout.add_filter
+      
+      
+      PanelLayout.add_params
+      
+      
+      PanelLayout.add_properties
+      
+      
+      PanelLayout.add_property
+      
+      
+      PanelLayout.add_sort_fields
+      
+      
+      PanelLayout.add_tag
+      
+      
+      PanelLayout.as_dict
+      
+      
+      PanelLayout.create
+      
+      
+      PanelLayout.delete
+      
+      
+      PanelLayout.filter
+      
+      
+      PanelLayout.find
+      
+      
+      PanelLayout.get
+      
+      
+      PanelLayout.get_column_count
+      
+      
+      PanelLayout.get_column_widths
+      
+      
+      PanelLayout.get_comments
+      
+      
+      PanelLayout.get_filter
+      
+      
+      PanelLayout.get_filter_mode
+      
+      
+      PanelLayout.get_html
+      
+      
+      PanelLayout.get_items_as_link
+      
+      
+      PanelLayout.get_panel_style
+      
+      
+      PanelLayout.get_params
+      
+      
+      PanelLayout.get_property
+      
+      
+      PanelLayout.get_skip
+      
+      
+      PanelLayout.get_sort_fields
+      
+      
+      PanelLayout.get_sort_selection
+      
+      
+      PanelLayout.get_tags
+      
+      
+      PanelLayout.get_transpose
+      
+      
+      PanelLayout.reinit
+      
+      
+      PanelLayout.rem_tag
+      
+      
+      PanelLayout.remove_tag
+      
+      
+      PanelLayout.render
+      
+      
+      PanelLayout.render_pdf
+      
+      
+      PanelLayout.reorder_child
+      
+      
+      PanelLayout.reorder_children
+      
+      
+      PanelLayout.save
+      
+      
+      PanelLayout.set_column_count
+      
+      
+      PanelLayout.set_column_widths
+      
+      
+      PanelLayout.set_comments
+      
+      
+      PanelLayout.set_filter
+      
+      
+      PanelLayout.set_filter_mode
+      
+      
+      PanelLayout.set_html
+      
+      
+      PanelLayout.set_items_as_link
+      
+      
+      PanelLayout.set_panel_style
+      
+      
+      PanelLayout.set_params
+      
+      
+      PanelLayout.set_property
+      
+      
+      PanelLayout.set_skip
+      
+      
+      PanelLayout.set_sort_fields
+      
+      
+      PanelLayout.set_sort_selection
+      
+      
+      PanelLayout.set_tags
+      
+      
+      PanelLayout.set_transpose
+      
+      
+      PanelLayout.to_dict
+      
+      
+      PanelLayout.to_json
+      
+      
+      PanelLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      PanelLayout.children_order
+      PanelLayout.db
+      PanelLayout.item_filter
+      PanelLayout.master
+      PanelLayout.name
+      PanelLayout.params
+      PanelLayout.parent
+      PanelLayout.report_type
+      PanelLayout.saved
+      PanelLayout.tags
+      PanelLayout.type
+      PanelLayout.date
+      PanelLayout.children
+      PanelLayout.guid
+   
+   

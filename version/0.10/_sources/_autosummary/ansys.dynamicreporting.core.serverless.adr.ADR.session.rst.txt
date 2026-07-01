@@ -1,0 +1,6 @@
+session
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.session

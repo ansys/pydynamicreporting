@@ -1,0 +1,6 @@
+static\_directory
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.static_directory
