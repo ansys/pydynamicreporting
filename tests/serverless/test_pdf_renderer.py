@@ -441,11 +441,15 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
     page, context, browser = _stub_playwright_render(monkeypatch, renderer)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    page.goto.assert_called_once_with(
+    page.goto.assert_called_once()
+    goto_args, goto_kwargs = page.goto.call_args
+    assert goto_args == (
         "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf",
-        wait_until="load",
-        timeout=12500,
     )
+    assert goto_kwargs["wait_until"] == "load"
+    # Navigation spends from the shared browser-phase deadline, so setup work can consume a small
+    # slice of the raw budget before Playwright receives the timeout value.
+    assert 0 < goto_kwargs["timeout"] <= int(renderer._render_timeout * 1000)
     # The live report path must stay online so Chromium can fetch the report and assets directly
     # from the already-running ADR service instead of expecting a staged offline bundle. Assert
     # the absence of offline mode rather than the full context kwargs, which couple to incidental
