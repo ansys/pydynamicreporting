@@ -489,14 +489,14 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
     )
     monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
-    # The underlying failure must be wrapped in a clean ADR error with no chained cause.
+    # The surfaced error stays ADR-owned while preserving the renderer failure as the cause.
     with pytest.raises(ADRException, match=r"Browser PDF export failed\.$") as exc_info:
         server.export_report_as_browser_pdf(
             report_guid="report-guid",
             file_name=str(tmp_path / "browser-report.pdf"),
         )
-    assert exc_info.value.__cause__ is None
-    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "Simulated renderer failure"
 
 
 def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
@@ -604,14 +604,14 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
     output_directory = tmp_path / "browser-report.pdf"
     output_directory.mkdir()
 
-    # A write-path failure is wrapped in the same clean ADR error, with no chained cause.
+    # A write-path failure is wrapped in the same clean ADR error while preserving the filesystem
+    # error as the chained cause.
     with pytest.raises(ADRException, match=r"Browser PDF export failed\.$") as exc_info:
         server.export_report_as_browser_pdf(
             report_guid="report-guid",
             file_name=str(output_directory),
         )
-    assert exc_info.value.__cause__ is None
-    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
+    assert isinstance(exc_info.value.__cause__, OSError)
 
 
 @pytest.mark.ado_test

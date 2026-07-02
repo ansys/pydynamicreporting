@@ -399,9 +399,9 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
     ) as exc_info:
         renderer.render_pdf()
 
-    # The clean timeout message must not chain the underlying Playwright timeout.
-    assert exc_info.value.__cause__ is None
-    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
+    # The surfaced error stays ADR-owned while preserving the underlying Playwright timeout.
+    assert isinstance(exc_info.value.__cause__, PlaywrightTimeoutError)
+    assert "12500ms exceeded" in str(exc_info.value.__cause__)
     stack.context.close.assert_called_once_with()
     stack.browser.close.assert_called_once_with()
 
@@ -413,12 +413,12 @@ def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path,
     stack = _stub_playwright_stack(monkeypatch)
     stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
-    # The underlying failure detail must not leak into the caller-facing message or be chained.
+    # The caller-facing message stays generic while preserving the underlying browser failure.
     with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
         renderer.render_pdf()
 
-    assert exc_info.value.__cause__ is None
-    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "new context boom"
     stack.browser.close.assert_called_once_with()
 
 
@@ -1568,6 +1568,25 @@ def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "render_timeout, expected_cause_type",
+    [
+        ("abc", ValueError),
+        (None, TypeError),
+    ],
+)
+def test_renderer_constructor_chains_render_timeout_conversion_errors(
+    tmp_path, render_timeout, expected_cause_type
+):
+    html_dir = _write_html(tmp_path, "<html><body>Invalid timeout</body></html>")
+
+    with pytest.raises(ADRException, match="render_timeout must be a positive number") as exc_info:
+        _OfflinePlaywrightPDFRenderer(html_dir=html_dir, render_timeout=render_timeout)
+
+    assert isinstance(exc_info.value.__cause__, expected_cause_type)
+
+
+@pytest.mark.unit
 def test_playwright_pdf_transient_override_env_vars_are_explicit_contract():
     """Lock in the exact transient override env vars that browser-PDF render scope clears."""
     # The render scope clears only host-platform overrides because browser-PDF handles
@@ -1730,10 +1749,10 @@ def test_playwright_pdf_launch_failure_raises_clean_error_without_leaking_playwr
 
     with pytest.raises(ADRException, match=r"Browser PDF rendering failed\.$") as exc_info:
         renderer.render_pdf()
-    # The caller must never see Playwright internals: a generic message, no chained cause,
-    # and no "playwright" text anywhere in the surfaced error.
-    assert exc_info.value.__cause__ is None
-    assert exc_info.value.__suppress_context__ is True  # `from None`: no context in traceback
+    # The caller must never have to catch Playwright errors directly: the surfaced message stays
+    # ADR-owned, while the original Playwright failure remains available as the chained cause.
+    assert isinstance(exc_info.value.__cause__, PlaywrightError)
+    assert "Executable doesn't exist" in str(exc_info.value.__cause__)
     assert "playwright" not in str(exc_info.value).lower()
     # The product browser path is still selected for the render and the env restored afterward.
     assert env_seen["playwright_browsers_path"] == str(browser_binary_dir)

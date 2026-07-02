@@ -26,6 +26,7 @@ import uuid
 
 import numpy as np
 import pytest
+from django.core.exceptions import ImproperlyConfigured as DjangoImproperlyConfigured
 
 from ansys.dynamicreporting.core.exceptions import (
     ADRException,
@@ -86,8 +87,10 @@ def test_get_database_config_before_setup():
 
 @pytest.mark.ado_test
 def test_get_database_config_before_setup_raise():
-    with pytest.raises(ImproperlyConfiguredError):
+    with pytest.raises(ImproperlyConfiguredError) as exc_info:
         ADR.get_database_config(raise_exception=True)
+
+    assert isinstance(exc_info.value.__cause__, DjangoImproperlyConfigured)
 
 
 @pytest.mark.ado_test
@@ -1523,8 +1526,31 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
     monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
 
-    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
+    with pytest.raises(ADRException, match="Browser PDF rendering failed") as exc_info:
         adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFRenderer")
+
+    assert type(exc_info.value.__cause__) is Exception
+    assert str(exc_info.value.__cause__) == "Simulated browser PDF renderer failure"
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_template_render_failure_chains_cause(
+    adr_serverless, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFTemplate", parent=None)
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        raise RuntimeError("Simulated template render failure")
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
+        adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFTemplate")
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "Simulated template render failure"
 
 
 @pytest.mark.ado_test

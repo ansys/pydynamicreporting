@@ -1111,12 +1111,11 @@ class Server:
 
         except ADRException:
             raise
-        except Exception:
-            # Never surface Playwright/driver or write-path internals to the caller. Log the
-            # trace for debugging and raise a clean ADR error. ``from None`` suppresses exception
-            # chaining so the underlying error never appears in the caller's traceback.
+        except Exception as exc:
+            # Keep the caller-facing error ADR-owned while preserving the underlying setup,
+            # renderer, or write-path failure as the chained cause for debugging.
             logger.error("Browser PDF export failed.", exc_info=True)
-            raise ADRException("Browser PDF export failed.") from None
+            raise ADRException("Browser PDF export failed.") from exc
 
     def export_report_as_pdf(
         self,
