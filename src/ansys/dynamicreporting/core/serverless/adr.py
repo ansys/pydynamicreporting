@@ -446,11 +446,12 @@ class ADR:
             from django.conf import settings
 
             return settings.DATABASES
-        except ImproperlyConfigured as e:
+        except ImproperlyConfigured:
             if raise_exception:
+                # Keep the setup error user-facing and drop the Django exception chain.
                 raise ImproperlyConfiguredError(
                     "The ADR instance has not been set up. Call setup() first."
-                ) from e
+                ) from None
             return None
 
     def _is_sqlite(self, database: str) -> bool:
@@ -1461,8 +1462,10 @@ class ADR:
                         item_filter=item_filter,
                         request=self._request,
                     )
-                except Exception as e:
-                    raise ADRException(f"Report rendering failed: {e}") from e
+                except Exception:
+                    # Log the template-render traceback, but keep the caller-facing error generic.
+                    self._logger.debug("Browser PDF template rendering failed.", exc_info=True)
+                    raise ADRException("Report rendering failed.") from None
 
                 exporter = ServerlessReportExporter(
                     html_content=html_content,
