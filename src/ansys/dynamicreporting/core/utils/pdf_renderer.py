@@ -581,7 +581,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             # Keep Playwright's own timeout wording out of the caller-facing error. Log the full
             # trace for debugging, then raise a clean, ADR-owned timeout message. ``from None``
             # suppresses exception chaining so the Playwright timeout never appears in tracebacks.
-            self._logger.debug(
+            self._logger.error(
                 "Browser PDF render timed out during %s.", current_timeout_phase, exc_info=True
             )
             raise ADRException(
@@ -592,7 +592,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             # Never surface Playwright/driver internals to the caller. Log the trace for
             # debugging and raise a generic ADR error. ``from None`` suppresses chaining so the
             # underlying Playwright/driver exception never appears in tracebacks.
-            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
+            self._logger.error("Browser PDF rendering failed.", exc_info=True)
             raise ADRException("Browser PDF rendering failed.") from None
 
     @abstractmethod

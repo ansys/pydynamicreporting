@@ -448,7 +448,13 @@ class ADR:
             return settings.DATABASES
         except ImproperlyConfigured:
             if raise_exception:
-                # Keep the setup error user-facing and drop the Django exception chain.
+                # Surface a clean ADR setup error and keep Django's exception out of the
+                # caller's traceback (``from None``), but log the Django detail for debugging.
+                # This is a classmethod, so use the module logger accessor, not ``self._logger``.
+                get_logger().error(
+                    "Django settings are not configured; ADR setup() has not run.",
+                    exc_info=True,
+                )
                 raise ImproperlyConfiguredError(
                     "The ADR instance has not been set up. Call setup() first."
                 ) from None
@@ -1464,7 +1470,7 @@ class ADR:
                     )
                 except Exception:
                     # Log the template-render traceback, but keep the caller-facing error generic.
-                    self._logger.debug("Browser PDF template rendering failed.", exc_info=True)
+                    self._logger.error("Browser PDF template rendering failed.", exc_info=True)
                     raise ADRException("Report rendering failed.") from None
 
                 exporter = ServerlessReportExporter(
@@ -1490,7 +1496,7 @@ class ADR:
             # Never surface Playwright/driver internals to the caller. Log the trace for
             # debugging and raise a clean ADR error. ``from None`` suppresses exception chaining
             # so the underlying error never appears in the caller's traceback.
-            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
+            self._logger.error("Browser PDF rendering failed.", exc_info=True)
             raise ADRException("Browser PDF rendering failed.") from None
         finally:
             self._cleanup_browser_pdf_scratch_root(scratch_root)
