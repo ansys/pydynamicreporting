@@ -243,9 +243,9 @@ class ADR:
                 }
             }
             # Ephemeral media/static directories.
-            tmp_media_dir = tempfile.TemporaryDirectory()
+            tmp_media_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             self._media_directory = self._check_dir(Path(tmp_media_dir.name))
-            tmp_static_dir = tempfile.TemporaryDirectory()
+            tmp_static_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             self._static_directory = self._check_dir(Path(tmp_static_dir.name))
             self._tmp_dirs.extend([tmp_media_dir, tmp_static_dir])
         else:
@@ -335,7 +335,7 @@ class ADR:
             # Copy installation from container to a local temp directory.
             # New Docker images use /Nexus/ADR, legacy images use /Nexus/CEI.
             # Try the new path first, then fall back to the legacy path.
-            tmp_install_dir = tempfile.TemporaryDirectory()
+            tmp_install_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             self._tmp_dirs.append(tmp_install_dir)
             try:
                 docker_launcher.copy_to_host("/Nexus/ADR", dest=tmp_install_dir.name)
@@ -774,7 +774,10 @@ class ADR:
 
         # Clean up any TemporaryDirectory objects we created.
         for tmp_dir in self._tmp_dirs:
-            tmp_dir.cleanup()
+            try:
+                tmp_dir.cleanup()
+            except OSError:
+                self._logger.debug("Failed to clean up temporary ADR directory.", exc_info=True)
 
     def backup_database(
         self,
@@ -1430,6 +1433,7 @@ class ADR:
             with tempfile.TemporaryDirectory(
                 prefix="adr-browser-pdf-",
                 dir=scratch_root,
+                ignore_cleanup_errors=True,
             ) as tmp_dir:
                 tmp_path = Path(tmp_dir)
                 # Build the renderer first so invalid PDF options fail before the report render
