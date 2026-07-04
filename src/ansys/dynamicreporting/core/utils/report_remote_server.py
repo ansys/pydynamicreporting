@@ -1114,7 +1114,7 @@ class Server:
         except Exception as exc:
             # Keep the caller-facing error ADR-owned while preserving the underlying setup,
             # renderer, or write-path failure as the chained cause for debugging.
-            logger.error("Browser PDF export failed.", exc_info=True)
+            logger.debug("Browser PDF export failed.", exc_info=True)
             raise ADRException("Browser PDF export failed.") from exc
 
     def export_report_as_pdf(

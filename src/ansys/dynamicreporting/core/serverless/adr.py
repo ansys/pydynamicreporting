@@ -451,7 +451,7 @@ class ADR:
                 # Surface a clean ADR setup error while preserving Django's exception as the
                 # chained cause for debugging.
                 # This is a classmethod, so use the module logger accessor, not ``self._logger``.
-                get_logger().error(
+                get_logger().debug(
                     "Django settings are not configured; ADR setup() has not run.",
                     exc_info=True,
                 )
@@ -1471,7 +1471,7 @@ class ADR:
                 except Exception as exc:
                     # Keep the caller-facing error ADR-owned while preserving the template-render
                     # failure as the chained cause for debugging.
-                    self._logger.error("Browser PDF template rendering failed.", exc_info=True)
+                    self._logger.debug("Browser PDF template rendering failed.", exc_info=True)
                     raise ADRException("Report rendering failed.") from exc
 
                 exporter = ServerlessReportExporter(
@@ -1496,7 +1496,7 @@ class ADR:
         except Exception as exc:
             # Keep the caller-facing error ADR-owned while preserving the underlying browser or
             # staging failure as the chained cause for debugging.
-            self._logger.error("Browser PDF rendering failed.", exc_info=True)
+            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
             raise ADRException("Browser PDF rendering failed.") from exc
         finally:
             self._cleanup_browser_pdf_scratch_root(scratch_root)

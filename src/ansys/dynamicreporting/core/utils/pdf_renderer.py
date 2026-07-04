@@ -580,7 +580,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         except PlaywrightTimeoutError as exc:
             # Keep Playwright's own timeout wording out of the caller-facing error while preserving
             # the original timeout as the chained cause for debugging.
-            self._logger.error(
+            self._logger.debug(
                 "Browser PDF render timed out during %s.", current_timeout_phase, exc_info=True
             )
             raise ADRException(
@@ -590,7 +590,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         except Exception as exc:
             # Keep the caller-facing error ADR-owned while preserving the original browser/driver
             # failure as the chained cause for debugging.
-            self._logger.error("Browser PDF rendering failed.", exc_info=True)
+            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
             raise ADRException("Browser PDF rendering failed.") from exc
 
     @abstractmethod
