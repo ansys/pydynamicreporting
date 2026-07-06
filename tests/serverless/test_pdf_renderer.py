@@ -828,7 +828,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         page = browser.new_page()
-        page.goto((renderer._html_dir / renderer._filename).as_uri(), wait_until="load")
+        page.goto(
+            (renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(),
+            wait_until="load",
+        )
         # The PDF renderer uses screen media so the captured PDF matches the browser layout.
         # The anti-splitting rules must still apply in that media mode or Plotly figures can
         # break across pages during PDF pagination.
@@ -1423,16 +1426,6 @@ def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
     renderer = _OfflinePlaywrightPDFRenderer(html_dir=None)
 
     with pytest.raises(ADRException, match="HTML directory is not configured"):
-        renderer._resolve_entrypoint_path()
-
-
-@pytest.mark.unit
-def test_resolve_entrypoint_path_rejects_parent_traversal(tmp_path):
-    html_dir = _write_html(tmp_path, "<html><body>Traversal</body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, filename="../../etc/passwd")
-
-    # Entry-point validation must reject filenames that escape the exported HTML bundle.
-    with pytest.raises(ADRException, match="entry-point file must be inside"):
         renderer._resolve_entrypoint_path()
 
 

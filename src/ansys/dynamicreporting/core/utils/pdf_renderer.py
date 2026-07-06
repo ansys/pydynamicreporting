@@ -1291,8 +1291,6 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
     ----------
     html_dir : Path or str
         Directory containing the exported offline HTML report and its assets.
-    filename : str, default: "index.html"
-        HTML entry-point filename inside ``html_dir``.
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
     margins : dict[str, str], optional
@@ -1316,10 +1314,11 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Logger used for renderer lifecycle messages.
     """
 
+    _ENTRYPOINT_FILENAME: ClassVar[str] = "index.html"
+
     def __init__(
         self,
         html_dir: Path | str | None,
-        filename: str = "index.html",
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
@@ -1329,7 +1328,6 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         logger: Any = None,
     ) -> None:
         self._html_dir = None if html_dir is None else Path(html_dir).expanduser().resolve()
-        self._filename = filename
         super().__init__(
             landscape=landscape,
             margins=margins,
@@ -1368,7 +1366,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         """Return the validated HTML entry-point path that Chromium can open."""
         if self._html_dir is None:
             raise ADRException("Browser PDF HTML directory is not configured for this renderer.")
-        entrypoint_path = (self._html_dir / self._filename).resolve()
+        entrypoint_path = (self._html_dir / self._ENTRYPOINT_FILENAME).resolve()
         if not entrypoint_path.is_relative_to(self._html_dir):
             raise ADRException(
                 "Browser PDF entry-point file must be inside the exported HTML directory."

@@ -1580,7 +1580,6 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1592,7 +1591,6 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
         # both entry points avoid the slow global temp directory without changing the public API.
         captured["html_dir"] = html_dir
-        captured["filename"] = filename
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
@@ -1676,7 +1674,6 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1728,7 +1725,6 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1795,7 +1791,6 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1805,7 +1800,6 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         logger=None,
     ):
         captured["html_dir"] = html_dir
-        captured["filename"] = filename
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
@@ -1838,7 +1832,6 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert exporter_kwargs["no_inline_files"] is True
     assert exporter_kwargs["dark_mode"] is True
     assert isinstance(captured["html_dir"], Path)
-    assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5
