@@ -985,19 +985,15 @@ class Server:
             playwright_cookie["expires"] = float(cookie.expires)
 
         # http.cookiejar exposes non-standard cookie attributes through public accessors.
-        # Use those instead of reaching into the Cookie object's private storage. The
-        # HttpOnly attribute is presence-based in Set-Cookie headers, so mirroring that
-        # presence check preserves the browser's cookie scoping semantics.
-        if cookie.has_nonstandard_attr("HttpOnly") or cookie.has_nonstandard_attr("httponly"):
-            playwright_cookie["httpOnly"] = True
-
-        same_site = None
+        # Use those instead of reaching into the Cookie object's private storage.
+        for attr_name in ("HttpOnly", "httponly"):
+            if cookie.has_nonstandard_attr(attr_name):
+                playwright_cookie["httpOnly"] = True
+                break
         for attr_name in ("SameSite", "samesite"):
             if cookie.has_nonstandard_attr(attr_name):
-                same_site = cookie.get_nonstandard_attr(attr_name)
+                playwright_cookie["sameSite"] = cookie.get_nonstandard_attr(attr_name)
                 break
-        if same_site in {"Strict", "Lax", "None"}:
-            playwright_cookie["sameSite"] = same_site
 
         return playwright_cookie
 

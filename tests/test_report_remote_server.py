@@ -565,6 +565,22 @@ def test_build_playwright_cookie_normalizes_value_less_cookie_to_empty_string() 
     assert r.Server._build_playwright_cookie(cookie)["value"] == ""
 
 
+def test_build_playwright_cookie_passes_through_present_same_site_value() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="127.0.0.1",
+        path="/",
+        secure=False,
+        rest={"httponly": None, "samesite": "Experimental"},
+    )
+
+    playwright_cookie = r.Server._build_playwright_cookie(cookie)
+
+    assert playwright_cookie["httpOnly"] is True
+    assert playwright_cookie["sameSite"] == "Experimental"
+
+
 def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
     from ansys.dynamicreporting.core.utils import report_utils
 
