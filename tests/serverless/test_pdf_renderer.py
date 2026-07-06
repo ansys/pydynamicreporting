@@ -46,6 +46,15 @@ def _fake_ansys_installation(version: int) -> str:
     return rf"C:\Program Files\ANSYS Inc\v{version}\ADR"
 
 
+def _browser_metadata_kwargs(ansys_version: int | None = None) -> dict[str, object]:
+    """Return synthetic product-browser metadata for renderer tests."""
+    resolved_version = int(DEFAULT_ANSYS_VERSION) if ansys_version is None else ansys_version
+    return {
+        "ansys_installation": _fake_ansys_installation(resolved_version),
+        "ansys_version": resolved_version,
+    }
+
+
 def _write_html(tmp_path: Path, body: str) -> Path:
     """Write a minimal HTML file for renderer tests and return its directory."""
     html_path = tmp_path / "index.html"
@@ -64,6 +73,12 @@ def _simple_renderer(
 ) -> _OfflinePlaywrightPDFRenderer:
     """Create a renderer for a temporary HTML document with test-controlled options."""
     html_dir = _write_html(tmp_path, body)
+    resolved_version = int(DEFAULT_ANSYS_VERSION) if ansys_version is None else ansys_version
+    resolved_installation = (
+        _fake_ansys_installation(resolved_version)
+        if ansys_installation is None
+        else ansys_installation
+    )
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
@@ -72,8 +87,8 @@ def _simple_renderer(
             if render_timeout is None
             else render_timeout
         ),
-        ansys_installation=ansys_installation,
-        ansys_version=ansys_version,
+        ansys_installation=resolved_installation,
+        ansys_version=resolved_version,
     )
     return renderer
 
@@ -309,7 +324,7 @@ def test_playwright_pdf_landscape(tmp_path, product_playwright_context):
 
 @pytest.mark.unit
 def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_path):
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=tmp_path)
+    renderer = _OfflinePlaywrightPDFRenderer(html_dir=tmp_path, **_browser_metadata_kwargs())
 
     with pytest.raises(ADRException, match="entry-point file does not exist"):
         renderer.render_pdf()
@@ -320,7 +335,11 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     tmp_path, monkeypatch
 ):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=html_dir,
+        render_timeout=12.5,
+        **_browser_metadata_kwargs(),
+    )
     stack = _stub_playwright_stack(monkeypatch)
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
@@ -340,7 +359,11 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 @pytest.mark.unit
 def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Small timeout</p></body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, render_timeout=0.0001)
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=html_dir,
+        render_timeout=0.0001,
+        **_browser_metadata_kwargs(),
+    )
     stack = _stub_playwright_stack(monkeypatch)
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
 
@@ -363,7 +386,11 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
 @pytest.mark.unit
 def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Shared deadline</p></body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, render_timeout=10.0)
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=html_dir,
+        render_timeout=10.0,
+        **_browser_metadata_kwargs(),
+    )
     _stub_playwright_stack(monkeypatch)
     captured_deadline: dict[str, float] = {}
     monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
@@ -386,7 +413,11 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
 @pytest.mark.unit
 def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Navigation timeout</p></body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, render_timeout=12.5)
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=html_dir,
+        render_timeout=12.5,
+        **_browser_metadata_kwargs(),
+    )
     stack = _stub_playwright_stack(monkeypatch)
     stack.page.goto.side_effect = PlaywrightTimeoutError("Timeout 12500ms exceeded")
     monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
@@ -409,7 +440,7 @@ def test_playwright_pdf_normalizes_playwright_navigation_timeout(tmp_path, monke
 @pytest.mark.unit
 def test_playwright_pdf_closes_browser_when_new_context_creation_fails(tmp_path, monkeypatch):
     html_dir = _write_html(tmp_path, "<html><body><p>Context failure</p></body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir)
+    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir, **_browser_metadata_kwargs())
     stack = _stub_playwright_stack(monkeypatch)
     stack.browser.new_context.side_effect = RuntimeError("new context boom")
 
@@ -437,6 +468,7 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
             }
         ],
         render_timeout=12.5,
+        **_browser_metadata_kwargs(),
     )
     page, context, browser = _stub_playwright_render(monkeypatch, renderer)
 
@@ -989,6 +1021,7 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body><p>Deadline</p></body></html>"),
         logger=logger,
+        **_browser_metadata_kwargs(),
     )
     page = Mock()
 
@@ -1011,7 +1044,9 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
 def test_evaluate_ready_step_logs_duration_on_success(tmp_path, monkeypatch):
     logger = Mock()
     renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"), logger=logger
+        html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
+        logger=logger,
+        **_browser_metadata_kwargs(),
     )
     page = Mock()
     monotonic_values = iter([100.0, 100.1, 100.35])
@@ -1036,6 +1071,7 @@ def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
         logger=logger,
+        **_browser_metadata_kwargs(),
     )
     page = Mock()
     page.evaluate.side_effect = RuntimeError("step boom")
@@ -1060,6 +1096,7 @@ def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Ready</body></html>"),
         render_timeout=5.0,
+        **_browser_metadata_kwargs(),
     )
     page = Mock()
     page.evaluate.return_value = {"__adrTimedOut": True}
@@ -1415,7 +1452,7 @@ def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
     html_dir = _write_html(report_dir, "<html><body>Relative</body></html>")
     monkeypatch.chdir(tmp_path)
 
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir.name)
+    renderer = _OfflinePlaywrightPDFRenderer(html_dir=html_dir.name, **_browser_metadata_kwargs())
 
     assert renderer._html_dir == html_dir.resolve()
     assert renderer._resolve_entrypoint_path() == (html_dir / "index.html").resolve()
@@ -1423,7 +1460,7 @@ def test_renderer_normalizes_relative_html_dir(tmp_path, monkeypatch):
 
 @pytest.mark.unit
 def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=None)
+    renderer = _OfflinePlaywrightPDFRenderer(html_dir=None, **_browser_metadata_kwargs())
 
     with pytest.raises(ADRException, match="HTML directory is not configured"):
         renderer._resolve_entrypoint_path()
@@ -1434,6 +1471,7 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
         margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
+        **_browser_metadata_kwargs(),
     )
     monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 100.0)
     monkeypatch.setattr(renderer, "_measure_layout_width_px", lambda page: 200.0)
@@ -1457,7 +1495,8 @@ def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
 )
 def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, should_block):
     renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Requests</body></html>")
+        html_dir=_write_html(tmp_path, "<html><body>Requests</body></html>"),
+        **_browser_metadata_kwargs(),
     )
     context = Mock()
 
@@ -1480,7 +1519,7 @@ def test_block_external_requests_keeps_browser_export_offline(tmp_path, url, sho
 
 @pytest.mark.unit
 def test_block_file_urls_with_authority_component():
-    renderer = _OfflinePlaywrightPDFRenderer(html_dir=Path("."))
+    renderer = _OfflinePlaywrightPDFRenderer(html_dir=Path("."), **_browser_metadata_kwargs())
     context = Mock()
     renderer._block_external_requests(context)
     _, route_handler = context.route.call_args.args
@@ -1502,7 +1541,8 @@ def test_block_file_urls_with_authority_component():
 @pytest.mark.unit
 def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
     renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>WebSockets</body></html>")
+        html_dir=_write_html(tmp_path, "<html><body>WebSockets</body></html>"),
+        **_browser_metadata_kwargs(),
     )
     context = Mock()
 
@@ -1557,7 +1597,36 @@ def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected
     html_dir = _write_html(tmp_path, "<html><body>Invalid options</body></html>")
 
     with pytest.raises(ADRException, match=expected_error):
-        _OfflinePlaywrightPDFRenderer(html_dir=html_dir, **kwargs)
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=html_dir,
+            **_browser_metadata_kwargs(),
+            **kwargs,
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "ansys_installation, ansys_version",
+    [
+        (None, int(DEFAULT_ANSYS_VERSION)),
+        (_fake_ansys_installation(int(DEFAULT_ANSYS_VERSION)), None),
+        (None, None),
+    ],
+)
+def test_renderer_constructor_requires_product_browser_metadata(
+    tmp_path, ansys_installation, ansys_version
+):
+    html_dir = _write_html(tmp_path, "<html><body>Missing metadata</body></html>")
+
+    with pytest.raises(
+        ADRException,
+        match="requires ansys_installation and ansys_version",
+    ):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=html_dir,
+            ansys_installation=ansys_installation,
+            ansys_version=ansys_version,
+        )
 
 
 @pytest.mark.unit
@@ -1574,7 +1643,11 @@ def test_renderer_constructor_chains_render_timeout_conversion_errors(
     html_dir = _write_html(tmp_path, "<html><body>Invalid timeout</body></html>")
 
     with pytest.raises(ADRException, match="render_timeout must be a positive number") as exc_info:
-        _OfflinePlaywrightPDFRenderer(html_dir=html_dir, render_timeout=render_timeout)
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=html_dir,
+            render_timeout=render_timeout,
+            **_browser_metadata_kwargs(),
+        )
 
     assert isinstance(exc_info.value.__cause__, expected_cause_type)
 

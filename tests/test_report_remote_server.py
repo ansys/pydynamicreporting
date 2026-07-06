@@ -453,6 +453,27 @@ def test_export_browser_pdf_requires_file_name() -> None:
         server.export_report_as_browser_pdf(report_guid="report-guid", file_name="")
 
 
+def test_export_browser_pdf_requires_install_metadata(tmp_path, monkeypatch) -> None:
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    monkeypatch.setattr(
+        server,
+        "build_url_with_query",
+        lambda report_guid, query, item_filter=None, rest_api=False: (
+            "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+        ),
+    )
+
+    with pytest.raises(
+        ADRException,
+        match="requires ansys_installation and ansys_version",
+    ):
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(tmp_path / "browser-report.pdf"),
+        )
+
+
 def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> None:
     from ansys.dynamicreporting.core.utils import pdf_renderer
     from ansys.dynamicreporting.core.utils import report_utils
@@ -494,6 +515,8 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
         server.export_report_as_browser_pdf(
             report_guid="report-guid",
             file_name=str(tmp_path / "browser-report.pdf"),
+            ansys_installation="/opt/ansys/v271",
+            ansys_version=271,
         )
     assert isinstance(exc_info.value.__cause__, RuntimeError)
     assert str(exc_info.value.__cause__) == "Simulated renderer failure"
@@ -610,6 +633,8 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
         server.export_report_as_browser_pdf(
             report_guid="report-guid",
             file_name=str(output_directory),
+            ansys_installation="/opt/ansys/v271",
+            ansys_version=271,
         )
     assert isinstance(exc_info.value.__cause__, OSError)
 

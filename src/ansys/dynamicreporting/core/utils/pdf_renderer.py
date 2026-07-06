@@ -283,15 +283,15 @@ class _BasePlaywrightPDFRenderer(ABC):
         navigation, readiness waits, and other browser-side preparation steps, but not
         caller-side template rendering or offline-bundle export completed before the
         renderer is invoked.
-    ansys_installation : Path or str, optional
+    ansys_installation : Path or str
         Resolved Ansys installation root used to locate a product-shipped
-        Playwright browser binary. When provided with ``ansys_version`` on a
-        supported product line, browser-PDF export uses that shipped browser
-        cache for the render instead of any ambient browser-path override.
-    ansys_version : int, optional
-        Ansys version associated with ``ansys_installation``.  This is used
-        only to locate ``apex###/machines/...`` runtime assets when the product
-        ships Playwright browsers inside the installation tree.
+        Playwright browser binary. Browser-PDF rendering requires this value
+        together with ``ansys_version`` and uses the shipped browser cache for
+        the render instead of any ambient browser-path override.
+    ansys_version : int
+        Ansys version associated with ``ansys_installation``. This is used to
+        locate ``apex###/machines/...`` runtime assets when the product ships
+        Playwright browsers inside the installation tree.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -347,11 +347,12 @@ class _BasePlaywrightPDFRenderer(ABC):
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = self._validate_render_timeout(render_timeout)
-        # Keep the raw install metadata so the renderer can locate a product-managed
-        # Playwright browser binary without changing the public browser-PDF API shape.
-        self._ansys_installation = (
-            None if ansys_installation is None else Path(ansys_installation).expanduser()
-        )
+        if ansys_installation is None or ansys_version is None:
+            raise ADRException(
+                "Browser PDF rendering requires ansys_installation and ansys_version "
+                "to locate the product-shipped browser binary."
+            )
+        self._ansys_installation = Path(ansys_installation).expanduser()
         self._ansys_version = ansys_version
         self._logger = logger or get_logger()
 
@@ -390,17 +391,12 @@ class _BasePlaywrightPDFRenderer(ABC):
                 "browser binary."
             )
 
-    def _resolve_playwright_browser_binary(self) -> _PlaywrightBrowserBinaryInfo | None:
-        """Return a shipped Playwright browser binary path under the Ansys install, if any."""
+    def _resolve_playwright_browser_binary(self) -> _PlaywrightBrowserBinaryInfo:
+        """Return the shipped Playwright browser binary path under the resolved install."""
         self._raise_if_product_line_unsupported()
 
-        if self._ansys_installation is None or self._ansys_version is None:
-            return None
-
         binary_info = resolve_playwright_browser_binary_info(
-            ansys_installation=(
-                None if self._ansys_installation is None else str(self._ansys_installation)
-            ),
+            ansys_installation=str(self._ansys_installation),
             ansys_version=self._ansys_version,
         )
         if binary_info is None:
@@ -434,26 +430,22 @@ class _BasePlaywrightPDFRenderer(ABC):
             if env_var in os.environ
         }
         restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-        installed_browser_binary_env = False
         try:
             browser_binary_dir = self._resolve_playwright_browser_binary()
-            if browser_binary_dir is not None:
-                self._logger.info(
-                    "Using product-shipped Playwright browser binary path: %s",
-                    browser_binary_dir.path,
-                )
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-                installed_browser_binary_env = True
+            self._logger.info(
+                "Using product-shipped Playwright browser binary path: %s",
+                browser_binary_dir.path,
+            )
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
             yield
         finally:
-            if installed_browser_binary_env:
-                # Restore the caller's original browser-path override after the
-                # render so the product-specific choice stays scoped to this
-                # browser-PDF operation.
-                if restored_browser_binaries_path is None:
-                    os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-                else:
-                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
+            # Restore the caller's original browser-path override after the
+            # render so the product-specific choice stays scoped to this
+            # browser-PDF operation.
+            if restored_browser_binaries_path is None:
+                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+            else:
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
             os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
@@ -1271,14 +1263,14 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         launch, navigation, readiness waits, and other browser-side preparation
         steps, but not the earlier server-side export work that produced the
         offline bundle.
-    ansys_installation : Path or str, optional
+    ansys_installation : Path or str
         Resolved Ansys installation root used to locate a product-shipped
-        Playwright browser binary. When provided with ``ansys_version`` on a
-        supported product line, browser-PDF export uses that shipped browser
-        cache for the render instead of any ambient browser-path override.
-    ansys_version : int, optional
-        Ansys version associated with ``ansys_installation``. This is used only
-        to locate ``apex###/machines/...`` runtime assets when the product ships
+        Playwright browser binary. Browser-PDF rendering requires this value
+        together with ``ansys_version`` and uses the shipped browser cache for
+        the render instead of any ambient browser-path override.
+    ansys_version : int
+        Ansys version associated with ``ansys_installation``. This is used to
+        locate ``apex###/machines/...`` runtime assets when the product ships
         Playwright browsers inside the installation tree.
     logger : Any, optional
         Logger used for renderer lifecycle messages.

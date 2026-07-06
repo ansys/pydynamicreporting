@@ -1064,14 +1064,16 @@ class Server:
         landscape : bool, optional
             Whether to render the PDF in landscape orientation. Default is False (portrait).
         margins : dict, optional
-            PDF margin lengths as CSS length strings (for example ``"10mm"``).
+            PDF margin lengths expressed as strings using unitless pixels or the ``px``,
+            ``in``, ``cm``, or ``mm`` units (for example ``"10mm"`` or ``"0.5in"``).
             Keys can include ``top``, ``right``, ``bottom``, and ``left``.
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
         ansys_installation : str, optional
             Local Ansys installation root, forwarded from the connected service, used to locate the
-            product-shipped browser binary for the local render.
+            product-shipped browser binary for the local render. The underlying renderer requires
+            this value together with ``ansys_version`` instead of falling back to an ambient browser.
         ansys_version : int, optional
             Ansys version paired with ``ansys_installation`` to locate the product-shipped browser
             binary. This remote-service path renders the live report URL in a local headless browser
