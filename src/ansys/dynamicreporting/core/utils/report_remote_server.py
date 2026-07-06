@@ -1051,9 +1051,9 @@ class Server:
         self,
         report_guid,
         file_name,
+        *,
         query=None,
         item_filter=None,
-        *,
         landscape=False,
         margins=None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing

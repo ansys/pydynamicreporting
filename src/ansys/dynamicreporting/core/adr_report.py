@@ -774,10 +774,10 @@ class Report:
 
     def export_browser_pdf(
         self,
-        file_name: str = "",
+        file_name: str,
+        *,
         query_params: dict | None = None,
         item_filter: str | None = None,
-        *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
@@ -839,8 +839,8 @@ class Report:
             if query_params is None:
                 query_params = {}
             self.service.serverobj.export_report_as_browser_pdf(
-                report_guid=self.report.guid,
-                file_name=file_name,
+                self.report.guid,
+                file_name,
                 query=query_params,
                 item_filter=item_filter,
                 landscape=landscape,
