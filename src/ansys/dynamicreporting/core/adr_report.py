@@ -791,8 +791,8 @@ class Report:
         file_name : str
             Path and filename for the PDF file to export.
         query_params : dict, optional
-            Dictionary for parameters to apply to the report template. On the
-            remote-service path these values are forwarded as report-generation
+            Dictionary for parameters to apply to the report template. 
+            These values are forwarded as report-generation URL
             query parameters. Default: None
         item_filter : str, optional
             String corresponding to query to run on the database items before rendering the report.
@@ -805,9 +805,6 @@ class Report:
         render_timeout : float, optional
             Maximum time, in seconds, to spend waiting for browser readiness signals.
             Default: 30.0
-            On remote-service connections, the live report page is rendered locally before
-            being printed to PDF, using the product-shipped browser from the connected
-            service's Ansys installation.
 
         Returns
         -------
