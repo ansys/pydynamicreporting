@@ -82,6 +82,12 @@ class Report:
         else:
             self.report = report_obj
 
+    def _get_report_logger(self):
+        """Return the most specific logger available for this report."""
+        if self.service is not None and hasattr(self.service, "logger"):
+            return self.service.logger
+        return LOGGER
+
     def __find_report_obj__(self) -> bool:
         """
         Find the TemplateREST object corresponding to the Report object and set
@@ -243,12 +249,12 @@ class Report:
             report_url = my_report.get_guid()
         """
         guid = ""
+        report_logger = self._get_report_logger()
         if self.service is None:  # pragma: no cover
-            # Detached Report objects cannot forward errors through a Service logger yet.
-            LOGGER.error("No connection to any report")
+            report_logger.error("No connection to any report")
             return guid
         if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
+            report_logger.error("No connection to any server")
             return guid
         if self.report:
             guid = self.report.guid
@@ -257,7 +263,7 @@ class Report:
             if success:
                 guid = self.report.guid
             else:
-                self.service.logger.error("Error: can not obtain the report guid")
+                report_logger.error("Error: can not obtain the report guid")
 
         return guid
 
@@ -673,12 +679,12 @@ class Report:
             succ2 = my_report.export_pdf(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False  # pragma: no cover
+        report_logger = self._get_report_logger()
         if self.service is None:  # pragma: no cover
-            # Detached Report objects cannot forward errors through a Service logger yet.
-            LOGGER.error("No connection to any report")
+            report_logger.error("No connection to any report")
             return False
         if self.service.serverobj is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
+            report_logger.error("No connection to any server")
             return False
         try:  # pragma: no cover
             if query_params is None:
@@ -696,7 +702,7 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error(f"Can not export pdf report: {str(e)}")
+            report_logger.error(f"Can not export pdf report: {str(e)}")
         return success
 
     def export_html(
@@ -742,12 +748,12 @@ class Report:
             succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False
+        report_logger = self._get_report_logger()
         if self.service is None:  # pragma: no cover
-            # Detached Report objects cannot forward errors through a Service logger yet.
-            LOGGER.error("No connection to any report")
+            report_logger.error("No connection to any report")
             return False
         if self.service.serverobj is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
+            report_logger.error("No connection to any server")
             return False
         try:
             if query_params is None:
@@ -763,7 +769,7 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error(f"Can not export static HTML report: {str(e)}")
+            report_logger.error(f"Can not export static HTML report: {str(e)}")
         return success
 
     def export_browser_pdf(
@@ -822,12 +828,13 @@ class Report:
             succ = my_report.export_browser_pdf(file_name = r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"}, landscape = True)
         """
         success = False
+        report_logger = self._get_report_logger()
         if self.service is None:
             # Match the method's bool contract even on disconnected Report objects.
-            LOGGER.error("No connection to any report")
+            report_logger.error("No connection to any report")
             return False
         if self.service.serverobj is None:
-            self.service.logger.error("No connection to any server")
+            report_logger.error("No connection to any server")
             return False
         try:
             if query_params is None:
@@ -847,7 +854,7 @@ class Report:
             )
             success = True
         except Exception as e:
-            self.service.logger.error(f"Can not export browser pdf report: {str(e)}")
+            report_logger.error(f"Can not export browser pdf report: {str(e)}")
         return success
 
     def export_json(self, json_file_path: str) -> None:
