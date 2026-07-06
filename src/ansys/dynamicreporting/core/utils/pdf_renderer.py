@@ -278,10 +278,11 @@ class _BasePlaywrightPDFRenderer(ABC):
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
-        Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
-        has been staged. This shared budget covers browser launch, navigation, readiness waits,
-        and other browser-side preparation steps, but not server-side template rendering or
-        offline asset export.
+        Maximum time, in seconds, for the shared browser render phase once the prepared
+        report source is ready to open. This shared budget covers browser launch,
+        navigation, readiness waits, and other browser-side preparation steps, but not
+        caller-side template rendering or offline-bundle export completed before the
+        renderer is invoked.
     ansys_installation : Path or str, optional
         Resolved Ansys installation root used to locate a product-shipped
         Playwright browser binary. When provided with ``ansys_version`` on a
@@ -321,9 +322,6 @@ class _BasePlaywrightPDFRenderer(ABC):
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
-    # Network requests using these schemes are blocked to keep rendering offline.
-    _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
-    _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
     # This override changes Playwright's platform-specific browser lookup, while
     # the ADR resolver has already selected the product machine directory.
     # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
@@ -853,37 +851,6 @@ class _BasePlaywrightPDFRenderer(ABC):
             raise ADRException(f"Unsupported PDF length unit for browser PDF rendering: {value!r}")
         return number * self._PDF_UNIT_TO_PX[unit]
 
-    def _block_external_requests(self, context: Any) -> None:
-        """Keep browser-PDF rendering offline while still allowing local export assets."""
-
-        def route_request(route: Any) -> None:
-            request_url = route.request.url
-            parsed_url = urlsplit(request_url)
-            scheme = parsed_url.scheme.lower()
-            # Block both known-external schemes (http, https, ws, wss) and any URL with an
-            # authority component (netloc). The netloc check catches protocol-relative URLs
-            # like //example.com/file and file:// URLs with hostnames like file://example.com/file
-            # that the scheme check alone would miss.
-            if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
-                route.abort()
-                return
-            route.continue_()
-
-        def is_external_websocket(url: str) -> bool:
-            return urlsplit(url).scheme.lower() in self._BLOCKED_WEBSOCKET_SCHEMES
-
-        def route_websocket(websocket_route: Any) -> None:
-            websocket_route.close()
-
-        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking known network
-        # schemes plus any authority-bearing URL prevents report HTML from calling back to
-        # arbitrary hosts during PDF generation while still allowing local file:, data:, and
-        # blob: resources that are part of the offline export.
-        # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
-        # connections through the dedicated route_web_socket API.
-        context.route("**/*", route_request)
-        context.route_web_socket(is_external_websocket, route_websocket)
-
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
         """Validate browser-PDF margins and return a private copy."""
         if margins is None:
@@ -1001,7 +968,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         self._logger.info("Waiting for browser render readiness signals.")
 
         # The readiness pipeline intentionally waits only on product-owned signals that ADR
-        # emits during its staged print-mode browser render. HTML items and layout ``HTML``
+        # emits during browser-PDF rendering. HTML items and layout ``HTML``
         # fragments are rendered from raw macro-expanded HTML, so arbitrary custom JavaScript
         # inside those fragments does not have a separate readiness contract here. Supported
         # browser-PDF reports therefore assume such HTML is static or settles itself through
@@ -1299,10 +1266,11 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
-        Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
-        has been staged. This shared budget covers browser launch, navigation, readiness waits,
-        and other browser-side preparation steps, but not server-side template rendering or
-        offline asset export.
+        Maximum time, in seconds, for the shared browser render phase once the
+        exported HTML bundle is ready to open. This shared budget covers browser
+        launch, navigation, readiness waits, and other browser-side preparation
+        steps, but not the earlier server-side export work that produced the
+        offline bundle.
     ansys_installation : Path or str, optional
         Resolved Ansys installation root used to locate a product-shipped
         Playwright browser binary. When provided with ``ansys_version`` on a
@@ -1317,6 +1285,8 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
     """
 
     _ENTRYPOINT_FILENAME: ClassVar[str] = "index.html"
+    _BLOCKED_REQUEST_SCHEMES: ClassVar[set[str]] = {"http", "https"}
+    _BLOCKED_WEBSOCKET_SCHEMES: ClassVar[set[str]] = {"ws", "wss"}
 
     def __init__(
         self,
@@ -1363,6 +1333,36 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
     def _prepare_context(self, context: Any) -> None:
         """Configure the offline browser context before opening the staged bundle."""
         self._block_external_requests(context)
+
+    def _block_external_requests(self, context: Any) -> None:
+        """Keep the offline ``file://`` export self-contained during browser rendering."""
+
+        def route_request(route: Any) -> None:
+            request_url = route.request.url
+            parsed_url = urlsplit(request_url)
+            scheme = parsed_url.scheme.lower()
+            # Block both known network schemes and any authority-bearing URL. The netloc check
+            # catches protocol-relative URLs like //example.com/file and file:// URLs with
+            # hostnames like file://example.com/file that the scheme check alone would miss.
+            if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
+                route.abort()
+                return
+            route.continue_()
+
+        def is_external_websocket(url: str) -> bool:
+            return urlsplit(url).scheme.lower() in self._BLOCKED_WEBSOCKET_SCHEMES
+
+        def route_websocket(websocket_route: Any) -> None:
+            websocket_route.close()
+
+        # ADR's offline HTML exporter writes a self-contained file:// bundle. Blocking known
+        # network schemes plus any authority-bearing URL prevents staged report HTML from
+        # calling back to arbitrary hosts during PDF generation while still allowing local
+        # file:, data:, and blob: resources that are part of the offline export.
+        # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
+        # connections through the dedicated route_web_socket API.
+        context.route("**/*", route_request)
+        context.route_web_socket(is_external_websocket, route_websocket)
 
     def _resolve_entrypoint_path(self) -> Path:
         """Return the validated HTML entry-point path that Chromium can open."""
