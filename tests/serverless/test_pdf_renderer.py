@@ -331,6 +331,21 @@ def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_pa
 
 
 @pytest.mark.unit
+def test_offline_renderer_adds_offline_context_delta(tmp_path):
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body><p>Offline context</p></body></html>"),
+        **_browser_metadata_kwargs(),
+    )
+    browser = Mock()
+
+    renderer._new_browser_context(browser)
+
+    expected_context_kwargs = renderer._shared_browser_context_kwargs()
+    expected_context_kwargs["offline"] = True
+    browser.new_context.assert_called_once_with(**expected_context_kwargs)
+
+
+@pytest.mark.unit
 def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     tmp_path, monkeypatch
 ):
@@ -482,12 +497,8 @@ def test_live_report_url_renderer_navigates_to_report_url(monkeypatch):
     # Navigation spends from the shared browser-phase deadline, so setup work can consume a small
     # slice of the raw budget before Playwright receives the timeout value.
     assert 0 < goto_kwargs["timeout"] <= int(renderer._render_timeout * 1000)
-    # The live report path must stay online so Chromium can fetch the report and assets directly
-    # from the already-running ADR service instead of expecting a staged offline bundle. Assert
-    # the absence of offline mode rather than the full context kwargs, which couple to incidental
-    # viewport constants that the offline renderer also uses.
-    browser.new_context.assert_called_once()
-    assert "offline" not in browser.new_context.call_args.kwargs
+    expected_context_kwargs = renderer._shared_browser_context_kwargs()
+    browser.new_context.assert_called_once_with(**expected_context_kwargs)
     context.add_cookies.assert_called_once_with(
         [
             {

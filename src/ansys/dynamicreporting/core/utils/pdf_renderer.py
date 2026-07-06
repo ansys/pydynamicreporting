@@ -584,6 +584,17 @@ class _BasePlaywrightPDFRenderer(ABC):
             self._logger.debug("Browser PDF rendering failed.", exc_info=True)
             raise ADRException("Browser PDF rendering failed.") from exc
 
+    def _shared_browser_context_kwargs(self) -> dict[str, Any]:
+        """Return browser-context options shared by both offline and live renders."""
+        return {
+            "viewport": {
+                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
+            },
+            "service_workers": "block",
+            "accept_downloads": False,
+        }
+
     @abstractmethod
     def _get_navigation_target(self) -> str:
         """Return the URL Chromium should open for the browser-PDF render pass."""
@@ -1312,15 +1323,9 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         context is explicitly offline and blocks service workers to keep the
         browser phase deterministic and self-contained.
         """
-        return browser.new_context(
-            viewport={
-                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
-                "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
-            },
-            service_workers="block",
-            accept_downloads=False,
-            offline=True,
-        )
+        context_kwargs = self._shared_browser_context_kwargs()
+        context_kwargs["offline"] = True
+        return browser.new_context(**context_kwargs)
 
     def _prepare_context(self, context: Any) -> None:
         """Configure the offline browser context before opening the staged bundle."""
@@ -1417,14 +1422,7 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         host the report references; the seeded auth cookies stay domain-scoped by
         the browser, so they are only sent back to the originating ADR service.
         """
-        return browser.new_context(
-            viewport={
-                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
-                "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
-            },
-            service_workers="block",
-            accept_downloads=False,
-        )
+        return browser.new_context(**self._shared_browser_context_kwargs())
 
     def _prepare_context(self, context: Any) -> None:
         """Seed the live report context with any authenticated ADR web-session cookies."""
