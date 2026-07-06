@@ -39,6 +39,7 @@ from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDF
 
 _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
 _PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
+_STUBBED_BROWSER_DIR = Path("mock-product-browser")
 
 
 def _fake_ansys_installation(version: int) -> str:
@@ -218,6 +219,15 @@ def _use_product_playwright_browser(product_playwright_context: _ProductPlaywrig
 def _stub_playwright_stack(monkeypatch: pytest.MonkeyPatch) -> MockPlaywrightPDFFlow:
     """Build a fake Chromium stack and route ``sync_playwright`` to it without launching a browser."""
     flow = _mock_playwright_pdf_flow()
+    # Most mocked unit tests do not exercise the product-browser discovery path directly, so
+    # keep their setup focused on downstream render behavior by stubbing the resolver as well.
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "resolve_playwright_browser_binary_info",
+        lambda ansys_installation=None, ansys_version=None: _browser_binary_info(
+            _STUBBED_BROWSER_DIR
+        ),
+    )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     return flow
 
