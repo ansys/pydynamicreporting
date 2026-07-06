@@ -806,8 +806,10 @@ class Report:
         landscape : bool, optional
             Whether to export the PDF in landscape orientation. Default: False
         margins : dict[str, str], optional
-            Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS length strings
-            (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer defaults.
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+            strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
+            (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer
+            defaults.
         render_timeout : float, optional
             Maximum time, in seconds, to spend waiting for browser readiness signals.
             Default: 30.0

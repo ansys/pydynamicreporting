@@ -1533,8 +1533,10 @@ class ADR:
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
         margins : dict[str, str], optional
-            Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS length strings
-            (for example ``"10mm"``). If omitted, 10 mm margins are used on every side.
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+            strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
+            (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
+            every side.
         render_timeout : float, optional
             Maximum time, in seconds, for the browser render phase after the offline HTML
             bundle has been staged. This shared browser-side budget covers launch, navigation,
@@ -1862,8 +1864,10 @@ class ADR:
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
         margins : dict[str, str], optional
-            Page margins with ``top``, ``right``, ``bottom``, and ``left`` CSS length strings
-            (for example ``"10mm"``). If omitted, 10 mm margins are used on every side.
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+            strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
+            (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
+            every side.
         render_timeout : float, optional
             Maximum time, in seconds, for the browser render phase after the offline HTML
             bundle has been staged. This shared browser-side budget covers launch, navigation,

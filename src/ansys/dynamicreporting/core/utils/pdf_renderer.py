@@ -274,7 +274,8 @@ class _BasePlaywrightPDFRenderer(ABC):
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
     margins : dict[str, str], optional
-        Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+        strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
@@ -884,7 +885,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         context.route_web_socket(is_external_websocket, route_websocket)
 
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
-        """Validate Playwright PDF margins and return a private copy."""
+        """Validate browser-PDF margins and return a private copy."""
         if margins is None:
             return dict(self._DEFAULT_MARGINS)
 
@@ -1294,7 +1295,8 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
     margins : dict[str, str], optional
-        Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+        strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
