@@ -145,21 +145,25 @@ def test_run_web_request(adr_service_query) -> None:
     assert resp.ok is True
 
 
-def test_authenticate_web_session_logs_in_shared_session() -> None:
+def test_run_web_request_authenticates_shared_session() -> None:
     session = Mock()
     init_response = Mock()
     init_response.cookies.get.return_value = "csrf-token"
     login_response = Mock(status_code=requests.codes.ok)
+    response = Mock()
+    prepared_request = object()
     session.get.return_value = init_response
     session.post.return_value = login_response
+    session.prepare_request.return_value = prepared_request
+    session.send.return_value = response
     server = SimpleNamespace(
         # Server.get_auth() returns utf-8-encoded bytes, so mirror that here instead of str.
         get_auth=lambda: (b"nexus", b"cei"),
-        build_request_url=lambda relative_url: f"http://127.0.0.1:8000{relative_url}",
+        build_request_url=lambda relative_url: f"http://127.0.0.1:8000/{relative_url.lstrip('/')}",
         _http_session=session,
     )
 
-    assert ru.authenticate_web_session(server) is session
+    assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is response
     session.get.assert_called_once_with("http://127.0.0.1:8000/login/")
     session.post.assert_called_once_with(
         "http://127.0.0.1:8000/login/",
@@ -170,37 +174,25 @@ def test_authenticate_web_session_logs_in_shared_session() -> None:
             "next": "/",
         },
     )
-
-
-def test_authenticate_web_session_returns_none_without_configured_auth() -> None:
-    server = SimpleNamespace(get_auth=lambda: None)
-
-    assert ru.authenticate_web_session(server) is None
-
-
-def test_run_web_request_uses_authenticated_session(monkeypatch) -> None:
-    session = Mock()
-    response = Mock()
-    prepared_request = object()
-    session.prepare_request.return_value = prepared_request
-    session.send.return_value = response
-    server = SimpleNamespace(
-        build_request_url=lambda relative_url: f"http://127.0.0.1:8000/{relative_url.lstrip('/')}"
-    )
-
-    monkeypatch.setattr(ru, "authenticate_web_session", lambda server_obj: session)
-
-    assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is response
     session.prepare_request.assert_called_once()
     session.send.assert_called_once_with(prepared_request, stream=False)
 
 
-def test_run_web_request_returns_none_without_authenticated_session(monkeypatch) -> None:
-    server = SimpleNamespace()
-
-    monkeypatch.setattr(ru, "authenticate_web_session", lambda server_obj: None)
+def test_run_web_request_returns_none_when_web_login_fails() -> None:
+    session = Mock()
+    init_response = Mock()
+    init_response.cookies.get.return_value = "csrf-token"
+    login_response = Mock(status_code=requests.codes.forbidden)
+    session.get.return_value = init_response
+    session.post.return_value = login_response
+    server = SimpleNamespace(
+        get_auth=lambda: (b"nexus", b"cei"),
+        build_request_url=lambda relative_url: f"http://127.0.0.1:8000/{relative_url.lstrip('/')}",
+        _http_session=session,
+    )
 
     assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is None
+    session.send.assert_not_called()
 
 
 @pytest.mark.ado_test

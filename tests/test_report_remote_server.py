@@ -337,7 +337,6 @@ def test_export_html_sets_html_print_query(monkeypatch) -> None:
 
 def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> None:
     from ansys.dynamicreporting.core.utils import pdf_renderer
-    from ansys.dynamicreporting.core.utils import report_utils
 
     server = r.Server()
     server.set_URL("http://127.0.0.1:8000")
@@ -405,7 +404,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
 
     monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
     monkeypatch.setattr(server, "_download_report_as_html_bundle", fail_if_html_downloaded)
-    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: fake_session)
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: fake_session)
     monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
     output_file = tmp_path / "browser-report.pdf"
@@ -476,7 +475,6 @@ def test_export_browser_pdf_requires_install_metadata(tmp_path, monkeypatch) -> 
 
 def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> None:
     from ansys.dynamicreporting.core.utils import pdf_renderer
-    from ansys.dynamicreporting.core.utils import report_utils
 
     server = r.Server()
     server.set_URL("http://127.0.0.1:8000")
@@ -505,9 +503,7 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
             raise RuntimeError("Simulated renderer failure")
 
     monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
-    monkeypatch.setattr(
-        report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
-    )
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: requests.Session())
     monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
     # The surfaced error stays ADR-owned while preserving the renderer failure as the cause.
@@ -582,31 +578,23 @@ def test_build_playwright_cookie_passes_through_present_same_site_value() -> Non
 
 
 def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
-    from ansys.dynamicreporting.core.utils import report_utils
-
     server = r.Server()
 
-    def fail_if_called(_server_obj):
+    def fail_if_called():
         raise AssertionError("auth helper should not run")
 
-    monkeypatch.setattr(
-        report_utils,
-        "authenticate_web_session",
-        fail_if_called,
-    )
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", fail_if_called)
 
     assert server._get_browser_auth_cookies() == []
 
 
 def test_get_browser_auth_cookies_requires_authenticated_session(monkeypatch) -> None:
-    from ansys.dynamicreporting.core.utils import report_utils
-
     server = r.Server()
     server.set_URL("http://127.0.0.1:8000")
     server.set_username("nexus")
     server.set_password("cei")
 
-    monkeypatch.setattr(report_utils, "authenticate_web_session", lambda server_obj: None)
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: None)
 
     with pytest.raises(ADRException, match="Unable to authenticate the browser PDF web session"):
         server._get_browser_auth_cookies()
@@ -614,7 +602,6 @@ def test_get_browser_auth_cookies_requires_authenticated_session(monkeypatch) ->
 
 def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -> None:
     from ansys.dynamicreporting.core.utils import pdf_renderer
-    from ansys.dynamicreporting.core.utils import report_utils
 
     server = r.Server()
     server.set_URL("http://127.0.0.1:8000")
@@ -635,9 +622,7 @@ def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -
             "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
         ),
     )
-    monkeypatch.setattr(
-        report_utils, "authenticate_web_session", lambda server_obj: requests.Session()
-    )
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: requests.Session())
     monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
 
     output_directory = tmp_path / "browser-report.pdf"

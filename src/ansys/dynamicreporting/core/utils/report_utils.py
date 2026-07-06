@@ -467,36 +467,9 @@ def run_web_request(method, server, relative_url, data=None, headers=None, strea
     interaction with the server MUST use session authentication, first login, and reuse
     that session to perform further requests.
     """
-    session = authenticate_web_session(server)
-    response = None
-
-    if session is not None:
-        resource_url = server.build_request_url(relative_url)
-        req = requests.Request(method, resource_url, data=data, headers=headers)
-        prepped_req = session.prepare_request(req)
-        # session.send can take many more kwargs as needed
-        response = session.send(prepped_req, stream=stream)
-
-    return response
-
-
-def authenticate_web_session(server):
-    """Authenticate the server's shared requests session for browser-facing pages.
-
-    REST requests can use HTTP basic authentication directly, but browser-facing
-    ADR endpoints such as ``/reports/report_display/`` require a logged-in Django
-    session. This helper performs the repo's established login flow and returns
-    the authenticated shared ``requests.Session`` so callers can reuse the same
-    cookie jar for subsequent non-REST work.
-    """
-    credentials = server.get_auth()
-    # Browser-facing downloads can be attempted before username/password auth is configured.
-    # Treat that as an unauthenticated session instead of crashing during tuple unpacking.
-    if credentials is None:
-        return None
-
-    username, passwd = credentials
+    username, passwd = server.get_auth()
     login_url = server.build_request_url("/login/")
+    response = None
 
     session = server._http_session
 
@@ -517,9 +490,14 @@ def authenticate_web_session(server):
             },
         )
         if login_response.status_code == requests.codes.ok:
-            return session
+            # once logged in, non-REST requests can be done using SessionAuth
+            resource_url = server.build_request_url(relative_url)
+            req = requests.Request(method, resource_url, data=data, headers=headers)
+            prepped_req = session.prepare_request(req)
+            # session.send can take many more kwargs as needed
+            response = session.send(prepped_req, stream=stream)
 
-    return None
+    return response
 
 
 def isSQLite3(filename):
