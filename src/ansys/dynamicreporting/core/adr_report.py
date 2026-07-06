@@ -789,15 +789,15 @@ class Report:
 
         Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
         asks a headless browser to render the report through ADR's browser-facing output and
-        then print that browser view to PDF. That preserves browser-rendered behavior such
-        as JavaScript layout, Plotly charts, and MathJax output.
+        then print that browser view to PDF. That preserves the browser-rendered report
+        layout, Plotly charts, and MathJax output.
 
         Parameters
         ----------
         file_name : str
             Path and filename for the PDF file to export.
         query_params : dict, optional
-            Dictionary for parameters to apply to the report template. 
+            Dictionary for parameters to apply to the report template.
             These values are forwarded as report-generation URL
             query parameters. Default: None
         item_filter : str, optional
@@ -827,10 +827,8 @@ class Report:
             my_report = adr_service.get_report(report_name = "My Top Report")
             succ = my_report.export_browser_pdf(file_name = r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"}, landscape = True)
         """
-        success = False
         report_logger = self._get_report_logger()
         if self.service is None:
-            # Match the method's bool contract even on disconnected Report objects.
             report_logger.error("No connection to any report")
             return False
         if self.service.serverobj is None:
@@ -852,10 +850,10 @@ class Report:
                 ansys_installation=self.service._ansys_installation,
                 ansys_version=self.service._ansys_version,
             )
-            success = True
+            return True
         except Exception as e:
             report_logger.error(f"Can not export browser pdf report: {str(e)}")
-        return success
+            return False
 
     def export_json(self, json_file_path: str) -> None:
         """
