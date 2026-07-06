@@ -364,11 +364,6 @@ class ServerlessReportExporter:
             VIEWER_JS, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
         )
         self._copy_static_files(
-            CONTEXT_MENU_JS,
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-        )
-        self._copy_static_files(
             THREE_JS,
             f"ansys{self._ansys_version}/nexus/threejs/",
             f"ansys{self._ansys_version}/nexus/threejs/",
@@ -679,6 +674,5 @@ class ServerlessReportExporter:
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
         ]:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)
