@@ -332,7 +332,7 @@ def test_export_html_sets_html_print_query(monkeypatch) -> None:
     assert captured["filename"] == "report.html"
     assert captured["no_inline_files"] is True
     assert captured["ansys_version"] == 252
-    assert query == {"colormode": "dark", "print": "html"}
+    assert query == {"colormode": "dark"}
 
 
 def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> None:

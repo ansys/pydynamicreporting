@@ -913,7 +913,7 @@ class Server:
         directory_path = os.path.abspath(directory_name)
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
-        url = self.build_url_with_query(report_guid, query or {}, item_filter)
+        url = self.build_url_with_query(report_guid, query, item_filter)
         # Ask the server for the Ansys version number when possible so the downloader rewrites
         # static asset paths against the same product namespace the report was generated with.
         resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
@@ -1011,13 +1011,12 @@ class Server:
         no_inline_files=False,
         ansys_version=None,
     ):
-        if query is None:
-            query = {}
-        query["print"] = "html"
+        html_query = dict(query or {})
+        html_query["print"] = "html"
         self._download_report_as_html_bundle(
             report_guid=report_guid,
             directory_name=directory_name,
-            query=query,
+            query=html_query,
             item_filter=item_filter,
             filename=filename,
             no_inline_files=no_inline_files,
