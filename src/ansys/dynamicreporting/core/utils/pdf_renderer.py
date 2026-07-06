@@ -1380,10 +1380,38 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
 
     The remote-server browser-PDF path already has a running report server, so
     it can render the live report page directly instead of first staging an
-    offline HTML bundle.  This class reuses the shared browser readiness and
-    PDF sizing flow while keeping network access enabled for same-page assets.
-    Like the offline renderer, it renders with the product-shipped Playwright
-    browser binary resolved from ``ansys_installation`` and ``ansys_version``.
+    offline HTML bundle. This class reuses the shared browser readiness and PDF
+    sizing flow while keeping network access enabled for same-page assets.
+
+    Parameters
+    ----------
+    url : str
+        Absolute ADR report URL to open in the headless browser.
+    auth_cookies : list[dict[str, object]], optional
+        Browser-session cookies to seed into the Playwright context before the
+        page is opened.
+    landscape : bool, default: False
+        Whether to render the PDF in landscape orientation.
+    margins : dict[str, str], optional
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+        strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
+        If omitted, 10 mm margins are used on every side.
+    render_timeout : float, default: 30.0
+        Maximum time, in seconds, for the shared browser render phase once the
+        live report URL is ready to open. This shared budget covers browser
+        launch, navigation, readiness waits, and other browser-side preparation
+        steps, but not the earlier server-side report generation work.
+    ansys_installation : Path or str
+        Resolved Ansys installation root used to locate a product-shipped
+        Playwright browser binary. Browser-PDF rendering requires this value
+        together with ``ansys_version`` and uses the shipped browser cache for
+        the render instead of any ambient browser-path override.
+    ansys_version : int
+        Ansys version associated with ``ansys_installation``. This is used to
+        locate ``apex###/machines/...`` runtime assets when the product ships
+        Playwright browsers inside the installation tree.
+    logger : Any, optional
+        Logger used for renderer lifecycle messages.
     """
 
     def __init__(
