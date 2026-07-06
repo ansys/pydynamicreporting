@@ -789,8 +789,7 @@ class Report:
 
         Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
         asks a headless browser to render the report through ADR's browser-facing output and
-        then print that browser view to PDF. That preserves the browser-rendered report
-        layout, Plotly charts, and MathJax output.
+        then print that browser view to PDF.
 
         Parameters
         ----------

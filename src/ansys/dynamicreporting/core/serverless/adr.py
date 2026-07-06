@@ -88,7 +88,7 @@ class ADR:
     Ansys Dynamic Reporting (ADR) class.
 
     This class provides a high-level API for interacting with ADR without
-    running the full web server. It encapsulates Django setup,
+    running the full web server. It encapsulates setup,
     database configuration, media/static configuration, and report
     rendering/export.
 
@@ -106,7 +106,7 @@ class ADR:
         Directory for a local SQLite database (and media subdirectory).
         Either this or ``databases`` is required unless ``in_memory=True``.
     databases : dict, optional
-        Full Django ``DATABASES`` configuration. If provided, it replaces
+        Full ``DATABASES`` configuration. If provided, it replaces
         the default SQLite configuration. Must include a ``"default"`` key.
     media_directory : str, optional
         Directory where uploaded media files are stored. If omitted, ADR
@@ -120,13 +120,13 @@ class ADR:
     static_url : str, default: "/static/"
         Base URL (relative) for serving static files.
     debug : bool, optional
-        Explicit Django DEBUG flag. If omitted, the value from the ADR
+        Explicit DEBUG flag. If omitted, the value from the ADR
         settings module is used.
     opts : dict, optional
         Extra environment variables to inject into :mod:`os.environ`
         before setup.
     request : HttpRequest, optional
-        Django request object, useful when ADR is used in a web context.
+        Request object, useful when ADR is used in a web context.
     logfile : str, optional
         Path to the log file. If omitted, logging typically goes to stderr.
     docker_image : str, optional
@@ -396,7 +396,7 @@ class ADR:
 
     @staticmethod
     def _migrate_db(db: str) -> None:
-        """Run Django migrations for the given database alias.
+        """Run db migrations for the given database alias.
 
         For the ``"default"`` database, a ``nexus`` superuser and group
         (with all permissions) is created if none exists.
@@ -422,7 +422,7 @@ class ADR:
 
     @classmethod
     def get_database_config(cls: type["ADR"], raise_exception: bool = False) -> dict | None:
-        """Return the Django ``DATABASES`` configuration, if available.
+        """Return the multi database configuration, if available.
 
         Parameters
         ----------
@@ -433,13 +433,13 @@ class ADR:
         Returns
         -------
         dict or None
-            The ``DATABASES`` mapping, or ``None`` if settings are not
+            The database configuration mapping, or ``None`` if settings are not
             configured and ``raise_exception`` is ``False``.
 
         Raises
         ------
         ImproperlyConfiguredError
-            If Django settings are not configured and
+            If settings are not configured and
             ``raise_exception=True``.
         """
         try:
@@ -452,7 +452,7 @@ class ADR:
                 # chained cause for debugging.
                 # This is a classmethod, so use the module logger accessor, not ``self._logger``.
                 get_logger().debug(
-                    "Django settings are not configured; ADR setup() has not run.",
+                    "Settings are not configured; ADR setup() has not run.",
                     exc_info=True,
                 )
                 raise ImproperlyConfiguredError(
@@ -506,15 +506,15 @@ class ADR:
             raise RuntimeError("ADR has not been set up. Instantiate ADR first and call setup().")
 
     def setup(self, collect_static: bool = False) -> None:
-        """Configure Django and perform ADR initialization.
+        """Configure perform ADR initialization.
 
         This method:
 
         * Optionally locates and imports the ``enve`` module for geometry.
-        * Adds the Nexus Django directory to ``sys.path`` and imports
+        * Adds the Nexus directory to ``sys.path`` and imports
           the serverless settings module.
-        * Builds an overrides dict and calls :func:`django.conf.settings.configure`.
-        * Runs Django migrations for all configured databases.
+        * Runs configuration
+        * Runs database migrations for all configured databases.
         * Runs geometry migration/update checks.
         * Optionally collects static files to :attr:`_static_directory`.
         * Creates a default :class:`Session` and :class:`Dataset`.
@@ -527,7 +527,7 @@ class ADR:
         Raises
         ------
         ImportError
-            If the Nexus Django settings could not be imported.
+            If the Nexus settings could not be imported.
         DatabaseMigrationError
             If migrations fail on any database.
         GeometryMigrationError
@@ -732,7 +732,7 @@ class ADR:
                 django.setup()
         except ImproperlyConfigured as e:
             self._logger.debug(
-                "Django settings could not be configured during ADR setup.",
+                "Settings could not be configured during ADR setup.",
                 exc_info=True,
             )
             raise ImproperlyConfiguredError(extra_detail=str(e)) from e
@@ -856,7 +856,7 @@ class ADR:
         input_file : str or Path
             Path to the dump file.
         database : str, default: "default"
-            Django database alias to restore into.
+            Database alias to restore into.
 
         Raises
         ------
@@ -2073,7 +2073,7 @@ class ADR:
             One of :class:`Session`, :class:`Dataset`, :class:`Item`
             subclass, or :class:`Template`.
         target_database : str
-            Django database alias to copy into.
+            Target database alias to copy into.
         query : str, default: ""
             ADR query string used to select objects from the source DB.
         target_media_dir : str or Path, default: ""

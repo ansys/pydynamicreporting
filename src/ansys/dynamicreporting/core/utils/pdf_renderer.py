@@ -1272,8 +1272,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Maximum time, in seconds, for the shared browser render phase once the
         exported HTML bundle is ready to open. This shared budget covers browser
         launch, navigation, readiness waits, and other browser-side preparation
-        steps, but not the earlier server-side export work that produced the
-        offline bundle.
+        steps, but not the earlier ADR report render.
     ansys_installation : Path or str
         Resolved Ansys installation root used to locate a product-shipped
         Playwright browser binary. Browser-PDF rendering requires this value
