@@ -731,6 +731,10 @@ class ADR:
                 settings.configure(**overrides)
                 django.setup()
         except ImproperlyConfigured as e:
+            self._logger.debug(
+                "Django settings could not be configured during ADR setup.",
+                exc_info=True,
+            )
             raise ImproperlyConfiguredError(extra_detail=str(e)) from e
 
         # Run migrations.
