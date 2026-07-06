@@ -21,12 +21,9 @@
 # SOFTWARE.
 
 from os.path import join
-from types import SimpleNamespace
-from unittest.mock import Mock
 
 import numpy as np
 import pytest
-import requests
 
 from ansys.dynamicreporting.core.utils import report_utils as ru
 
@@ -143,56 +140,6 @@ def test_from_local_8bit() -> None:
 def test_run_web_request(adr_service_query) -> None:
     resp = ru.run_web_request(method="GET", server=adr_service_query.serverobj, relative_url="")
     assert resp.ok is True
-
-
-def test_run_web_request_authenticates_shared_session() -> None:
-    session = Mock()
-    init_response = Mock()
-    init_response.cookies.get.return_value = "csrf-token"
-    login_response = Mock(status_code=requests.codes.ok)
-    response = Mock()
-    prepared_request = object()
-    session.get.return_value = init_response
-    session.post.return_value = login_response
-    session.prepare_request.return_value = prepared_request
-    session.send.return_value = response
-    server = SimpleNamespace(
-        # Server.get_auth() returns utf-8-encoded bytes, so mirror that here instead of str.
-        get_auth=lambda: (b"nexus", b"cei"),
-        build_request_url=lambda relative_url: f"http://127.0.0.1:8000/{relative_url.lstrip('/')}",
-        _http_session=session,
-    )
-
-    assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is response
-    session.get.assert_called_once_with("http://127.0.0.1:8000/login/")
-    session.post.assert_called_once_with(
-        "http://127.0.0.1:8000/login/",
-        data={
-            "username": b"nexus",
-            "password": b"cei",
-            "csrfmiddlewaretoken": "csrf-token",
-            "next": "/",
-        },
-    )
-    session.prepare_request.assert_called_once()
-    session.send.assert_called_once_with(prepared_request, stream=False)
-
-
-def test_run_web_request_returns_none_when_web_login_fails() -> None:
-    session = Mock()
-    init_response = Mock()
-    init_response.cookies.get.return_value = "csrf-token"
-    login_response = Mock(status_code=requests.codes.forbidden)
-    session.get.return_value = init_response
-    session.post.return_value = login_response
-    server = SimpleNamespace(
-        get_auth=lambda: (b"nexus", b"cei"),
-        build_request_url=lambda relative_url: f"http://127.0.0.1:8000/{relative_url.lstrip('/')}",
-        _http_session=session,
-    )
-
-    assert ru.run_web_request("GET", server, "reports/report_display/?view=report-guid") is None
-    session.send.assert_not_called()
 
 
 @pytest.mark.ado_test

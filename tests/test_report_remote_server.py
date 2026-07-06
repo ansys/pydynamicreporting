@@ -26,6 +26,7 @@ from pathlib import Path
 from random import randint
 import re
 import uuid
+from unittest.mock import Mock
 
 import pytest
 import requests
@@ -575,6 +576,44 @@ def test_build_playwright_cookie_passes_through_present_same_site_value() -> Non
 
     assert playwright_cookie["httpOnly"] is True
     assert playwright_cookie["sameSite"] == "Experimental"
+
+
+def test_authenticate_browser_pdf_web_session_reuses_shared_session() -> None:
+    session = Mock()
+    init_response = Mock()
+    init_response.cookies.get.return_value = "csrf-token"
+    login_response = Mock(status_code=requests.codes.ok)
+    session.get.return_value = init_response
+    session.post.return_value = login_response
+    server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
+    server._http_session = session
+
+    assert server._authenticate_browser_pdf_web_session() is session
+    session.get.assert_called_once_with("http://127.0.0.1:8000/login/")
+    session.post.assert_called_once_with(
+        "http://127.0.0.1:8000/login/",
+        data={
+            # Server.get_auth() returns encoded bytes, so the Django login helper must continue
+            # forwarding the same credentials shape into the shared session login POST.
+            "username": b"nexus",
+            "password": b"cei",
+            "csrfmiddlewaretoken": "csrf-token",
+            "next": "/",
+        },
+    )
+
+
+def test_authenticate_browser_pdf_web_session_returns_none_when_web_login_fails() -> None:
+    session = Mock()
+    init_response = Mock()
+    init_response.cookies.get.return_value = "csrf-token"
+    login_response = Mock(status_code=requests.codes.forbidden)
+    session.get.return_value = init_response
+    session.post.return_value = login_response
+    server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
+    server._http_session = session
+
+    assert server._authenticate_browser_pdf_web_session() is None
 
 
 def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
