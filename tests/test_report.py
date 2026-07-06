@@ -163,35 +163,6 @@ def test_unit_no_url(request) -> None:
     assert err_msg
 
 
-def _make_report_for_browser_pdf_tests(export_impl) -> Report:
-    """Build a minimal Report instance that exercises only browser-PDF forwarding logic."""
-    service = SimpleNamespace(
-        serverobj=SimpleNamespace(export_report_as_browser_pdf=export_impl),
-        logger=logging.getLogger("test-report-browser-pdf"),
-        # Forwarded as ansys_installation/ansys_version so the remote render uses the packed browser.
-        _ansys_installation="/opt/ansys/v271",
-        _ansys_version=271,
-    )
-    return Report(
-        service=service,
-        report_name="My Top Report",
-        report_obj=SimpleNamespace(guid="report-guid"),
-    )
-
-
-def _make_report_for_export_guard_tests(*, serverobj) -> Report:
-    """Build a minimal Report instance for disconnected or partially connected export paths."""
-    service = SimpleNamespace(
-        serverobj=serverobj,
-        logger=logging.getLogger("test-report-export-guards"),
-    )
-    return Report(
-        service=service,
-        report_name="My Top Report",
-        report_obj=SimpleNamespace(guid="report-guid"),
-    )
-
-
 @pytest.mark.ado_test
 def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
     exec_basis = get_exec
@@ -226,13 +197,26 @@ def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
     assert success is True
 
 
-def test_export_browser_pdf_forwards_options(tmp_path) -> None:
+def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
     captured: dict[str, object] = {}
 
     def fake_export_report_as_browser_pdf(**kwargs):
         captured.update(kwargs)
 
-    my_report = _make_report_for_browser_pdf_tests(fake_export_report_as_browser_pdf)
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_browser_pdf", fake_export_report_as_browser_pdf, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        # Forwarded as ansys_installation/ansys_version so the remote render uses the packed browser.
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
 
     output_file = tmp_path / "browser-report.pdf"
     margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
@@ -257,11 +241,23 @@ def test_export_browser_pdf_forwards_options(tmp_path) -> None:
     assert captured["ansys_version"] == 271
 
 
-def test_export_browser_pdf_returns_false_on_failure(tmp_path) -> None:
+def test_export_browser_pdf_returns_false_on_failure(tmp_path, monkeypatch) -> None:
     def fake_export_report_as_browser_pdf(**kwargs):
         raise RuntimeError("Simulated browser export failure")
 
-    my_report = _make_report_for_browser_pdf_tests(fake_export_report_as_browser_pdf)
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_browser_pdf", fake_export_report_as_browser_pdf, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
 
     success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
 
@@ -279,7 +275,10 @@ def test_export_browser_pdf_returns_false_without_service(tmp_path) -> None:
 
 
 def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
-    my_report = _make_report_for_export_guard_tests(serverobj=None)
+    service = SimpleNamespace(serverobj=None, logger=logging.getLogger("test-report-export-guards"))
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
 
     success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
 
