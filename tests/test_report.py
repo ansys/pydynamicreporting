@@ -200,7 +200,9 @@ def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
 def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
     captured: dict[str, object] = {}
 
-    def fake_export_report_as_browser_pdf(**kwargs):
+    def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
+        captured["report_guid"] = report_guid
+        captured["file_name"] = file_name
         captured.update(kwargs)
 
     serverobj = SimpleNamespace()
@@ -242,7 +244,7 @@ def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
 
 
 def test_export_browser_pdf_returns_false_on_failure(tmp_path, monkeypatch) -> None:
-    def fake_export_report_as_browser_pdf(**kwargs):
+    def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
         raise RuntimeError("Simulated browser export failure")
 
     serverobj = SimpleNamespace()
