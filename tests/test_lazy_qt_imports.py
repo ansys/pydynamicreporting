@@ -66,6 +66,35 @@ def test_report_remote_server_import_stays_headless():
     }
 
 
+def test_report_download_pdf_module_import_stays_headless():
+    probe = _run_import_probe(
+        """
+        import json
+        import sys
+
+        import ansys.dynamicreporting.core.utils.report_download_pdf as report_download_pdf
+
+        print(
+            json.dumps(
+                {
+                    "module": report_download_pdf.__name__,
+                    "qtpy": "qtpy" in sys.modules,
+                    "PySide6": "PySide6" in sys.modules,
+                    "shiboken6": "shiboken6" in sys.modules,
+                }
+            )
+        )
+        """
+    )
+
+    assert probe == {
+        "module": "ansys.dynamicreporting.core.utils.report_download_pdf",
+        "qtpy": False,
+        "PySide6": False,
+        "shiboken6": False,
+    }
+
+
 def test_service_import_stays_headless_while_loading_service_modules():
     probe = _run_import_probe(
         """
