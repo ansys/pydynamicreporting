@@ -32,8 +32,9 @@ import socket
 import sys
 import tempfile
 from typing import List, Optional
+import zlib
 
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from PIL.TiffTags import TAGS
 import requests
 
@@ -84,6 +85,8 @@ def check_if_PIL(img):
     bool:
         True if the image can be opened by PIL
     """
+    if isinstance(img, Image.Image):
+        return True
     # Assume you are getting bytes.
     # If string, open it
     imghandle = None
@@ -92,6 +95,8 @@ def check_if_PIL(img):
         imghandle = open(img, "rb")
     elif isinstance(img, bytes):
         imgbytes = img
+    else:
+        return False
     try:
         # Check PIL can handle the img opening
         if imghandle:
@@ -231,6 +236,43 @@ def save_tif_stripped(pil_image, data, metadata):
     return data
 
 
+def add_png_text_chunk(png_bytes, key, value):
+    """Add a PNG ``tEXt`` chunk to an existing PNG byte stream."""
+    png_signature = b"\x89PNG\r\n\x1a\n"
+    if not png_bytes.startswith(png_signature):
+        return png_bytes
+
+    text_chunk_type = b"tEXt"
+    text_chunk_data = key.encode("latin-1") + b"\x00" + value.encode("latin-1")
+    text_chunk_crc = zlib.crc32(text_chunk_type + text_chunk_data) & 0xFFFFFFFF
+    text_chunk = (
+        len(text_chunk_data).to_bytes(4, "big")
+        + text_chunk_type
+        + text_chunk_data
+        + text_chunk_crc.to_bytes(4, "big")
+    )
+
+    rebuilt_png = bytearray(png_signature)
+    offset = len(png_signature)
+    inserted_text = False
+    while offset < len(png_bytes):
+        if offset + 8 > len(png_bytes):
+            return png_bytes
+        chunk_length = int.from_bytes(png_bytes[offset : offset + 4], "big")
+        chunk_end = offset + 12 + chunk_length
+        if chunk_end > len(png_bytes):
+            return png_bytes
+
+        chunk_type = png_bytes[offset + 4 : offset + 8]
+        if not inserted_text and chunk_type == b"IEND":
+            rebuilt_png.extend(text_chunk)
+            inserted_text = True
+        rebuilt_png.extend(png_bytes[offset:chunk_end])
+        offset = chunk_end
+
+    return bytes(rebuilt_png) if inserted_text else png_bytes
+
+
 def PIL_image_to_data(img, guid=None):
     """
     Convert the input image to a dictionary holding the data for the payload.
@@ -249,17 +291,23 @@ def PIL_image_to_data(img, guid=None):
     """
     imgbytes = None
     imghandle = None
-    if isinstance(img, str):
+    if isinstance(img, Image.Image):
+        image = img
+    elif isinstance(img, str):
         imghandle = open(img, "rb")
     elif isinstance(img, bytes):
         imgbytes = img
+    else:
+        raise TypeError(
+            "Image payloads must be bytes, a file path, a Pillow image, or an enve.image."
+        )
     data = {}
-    image = None
     if imghandle:
         image = Image.open(imghandle)
     elif imgbytes:
         image = Image.open(io.BytesIO(imgbytes))
-    data["format"] = image.format.lower()
+    image_format = (image.format or "PNG").lower()
+    data["format"] = image_format
     if data["format"] == "tiff":
         data["format"] = "tif"
     data["width"] = image.width
@@ -269,15 +317,23 @@ def PIL_image_to_data(img, guid=None):
         data = save_tif_stripped(image, data, metadata)
     else:
         buff = io.BytesIO()
-        image.save(buff, "PNG")
+        png_metadata = None
+        if guid is not None:
+            png_metadata = PngImagePlugin.PngInfo()
+            png_metadata.add_text("CEI_NEXUS_GUID", str(guid))
+        if png_metadata is not None:
+            image.save(buff, "PNG", pnginfo=png_metadata)
+        else:
+            image.save(buff, "PNG")
         buff.seek(0)
+        data["format"] = "png"
         data["file_data"] = buff.read()
     if imghandle:
         imghandle.close()
     return data
 
 
-def image_to_data(img):
+def image_to_data(img, guid=None):
     # Convert enve image object into a dictionary of image data or None
     # The dictionary has the keys:
     # 'width' = x pixel count
@@ -306,11 +362,11 @@ def image_to_data(img):
                     if img.save(path) == 0:
                         try:
                             with open(path, "rb") as img_file:
-                                return PIL_image_to_data(img_file.read())
+                                return PIL_image_to_data(img_file.read(), guid=guid)
                         except OSError:
                             return None
     if not data:
-        return PIL_image_to_data(img)
+        return PIL_image_to_data(img, guid=guid)
 
 
 def enve_arch():

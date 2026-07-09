@@ -669,7 +669,7 @@ class Server:
             n = 0
             if progress:
                 text = "Scanning datasets..."
-                if progress_qt:
+                if progress_qt and _load_qt():
                     text = QtWidgets.QApplication.translate("nexus", "Scanning datasets...")
                 progress.setLabelText(text)
                 progress.setMaximum(nobjs)
@@ -684,7 +684,7 @@ class Server:
             # now the associated sessions
             if progress:
                 text = "Scanning sessions..."
-                if progress_qt:
+                if progress_qt and _load_qt():
                     text = QtWidgets.QApplication.translate("nexus", "Scanning sessions...")
                 progress.setLabelText(text)
             for guid in session_set:
@@ -698,7 +698,7 @@ class Server:
             # get the selected templates
             if progress:
                 text = "Scanning templates..."
-                if progress_qt:
+                if progress_qt and _load_qt():
                     text = QtWidgets.QApplication.translate("nexus", "Scanning templates...")
                 progress.setLabelText(text)
             objs = source.get_objects(objtype=report_objects.TemplateREST, query=query)
@@ -1188,7 +1188,8 @@ class Server:
         # ok, there is a bug in the 3.7 implementation of subprocess where
         # args are not properly encoded under Windows.  To pass a URL, you
         # cannot use '?' and '&' chars.  So, we support base64 encodes
-        # of the URLs here...
+        # of the URLs here.  Headless callers use this subprocess path so they do not
+        # pull Qt into the current process.
         url = report_utils.encode_url(url)
         cmd = ["report_save_pdf", url, file_path]
         if page is not None:

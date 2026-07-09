@@ -41,7 +41,7 @@ def _load_qt():
         from qtpy import QtGui as imported_qtgui
         from qtpy import QtWebEngineWidgets as imported_qtwebenginewidgets
         from qtpy.QtCore import QTimer as imported_qtimer
-    except Exception:
+    except ImportError:
         has_qt = False
         return False
 
@@ -54,10 +54,10 @@ def _load_qt():
 
 
 @functools.lru_cache(maxsize=1)
-def _load_qt_pdf_classes():
-    """Create Qt-backed PDF helper classes only when callers request them."""
+def _load_nexus_pdf_page():
+    """Create the Qt-backed PDF page helper only when callers request it."""
     if not _load_qt():
-        raise AttributeError("Qt PDF helpers are unavailable because Qt could not be imported.")
+        raise AttributeError("NexusPDFPage is unavailable because Qt could not be imported.")
 
     class NexusPDFPage(QtWebEngineWidgets.QWebEnginePage):  # pragma: no cover
         def __init__(self):
@@ -65,6 +65,16 @@ def _load_qt_pdf_classes():
 
         def javaScriptConsoleMessage(self, level, message, line_number, source_id):
             pass
+
+    return NexusPDFPage
+
+
+@functools.lru_cache(maxsize=1)
+def _load_nexus_pdf_save():
+    """Create the Qt-backed PDF save helper only when callers request it."""
+    if not _load_qt():
+        raise AttributeError("NexusPDFSave is unavailable because Qt could not be imported.")
+    nexus_pdf_page = _load_nexus_pdf_page()
 
     class NexusPDFSave:  # pragma: no cover
         def __init__(self, app, parent=None):
@@ -103,7 +113,7 @@ def _load_qt_pdf_classes():
                 dpi = screen.logicalDotsPerInch()
                 in_per_mm = 0.0393701
                 self._web_engine_view = QtWebEngineWidgets.QWebEngineView(self._parent)
-                self._web_page = NexusPDFPage()
+                self._web_page = nexus_pdf_page()
                 self._web_engine_view.setPage(self._web_page)
                 self._web_page.loadFinished.connect(self.load_finished)
                 dx = self._page[0] * in_per_mm * dpi
@@ -167,14 +177,15 @@ def _load_qt_pdf_classes():
                 self._result = "failure"
             self._pdf_filename = None
 
-    return NexusPDFPage, NexusPDFSave
+    return NexusPDFSave
 
 
 def __getattr__(name):
     """Resolve Qt PDF helper classes only when a caller explicitly requests them."""
-    if name in {"NexusPDFPage", "NexusPDFSave"}:
-        nexus_pdf_page, nexus_pdf_save = _load_qt_pdf_classes()
-        globals()["NexusPDFPage"] = nexus_pdf_page
-        globals()["NexusPDFSave"] = nexus_pdf_save
+    if name == "NexusPDFPage":
+        globals()[name] = _load_nexus_pdf_page()
         return globals()[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    if name == "NexusPDFSave":
+        globals()[name] = _load_nexus_pdf_save()
+        return globals()[name]
+    raise AttributeError(name)
