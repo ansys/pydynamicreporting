@@ -57,7 +57,7 @@ def _load_qt():
 def _load_nexus_pdf_page():
     """Create the Qt-backed PDF page helper only when callers request it."""
     if not _load_qt():
-        raise AttributeError("NexusPDFPage")
+        raise AttributeError("NexusPDFPage is unavailable because Qt could not be imported.")
 
     class NexusPDFPage(QtWebEngineWidgets.QWebEnginePage):  # pragma: no cover
         def __init__(self):
@@ -73,7 +73,7 @@ def _load_nexus_pdf_page():
 def _load_nexus_pdf_save():
     """Create the Qt-backed PDF save helper only when callers request it."""
     if not _load_qt():
-        raise AttributeError("NexusPDFSave")
+        raise AttributeError("NexusPDFSave is unavailable because Qt could not be imported.")
     nexus_pdf_page = _load_nexus_pdf_page()
 
     class NexusPDFSave:  # pragma: no cover

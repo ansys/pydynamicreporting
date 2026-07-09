@@ -82,7 +82,7 @@ def _load_qt():
 
 def _is_qimage_input(img):
     """Detect Qt QImage instances without importing Qt just for an isinstance check."""
-    qt_roots = {"PyQt5", "PyQt6", "PySide2", "PySide6", "qtpy"}
+    qt_roots = {"PyQt4", "PyQt5", "PyQt6", "PySide2", "PySide6", "qtpy"}
     return any(
         base.__name__ == "QImage" and base.__module__.split(".")[0] in qt_roots
         for base in type(img).__mro__
@@ -1379,7 +1379,50 @@ class ItemREST(BaseRESTObject):
             self.fileurl = "image.png"
             return
 
-        # Prefer the shared Pillow/enve conversion path so byte inputs stay headless.
+        # Preserve the longstanding pure-Python PNG-bytes path before falling back to
+        # broader Pillow handling, so common byte payloads stay headless without changing
+        # their legacy conversion flow.
+        if isinstance(img, bytes):
+            try:
+                from . import png
+            except Exception as e:
+                logger.debug(f"Warning: {str(e)}.\n")
+                import png
+            try:
+                # we can only read png images as string content (not filename)
+                reader = png.Reader(io.BytesIO(img))
+                # parse the input file
+                pngobj = reader.read()
+                width = pngobj[3]["size"][0]
+                height = pngobj[3]["size"][1]
+                imgdata = list(pngobj[2])
+                # tag the data and write it back out...
+                writer = png.Writer(
+                    width=width,
+                    height=height,
+                    bitdepth=pngobj[3].get("bitdepth", 8),
+                    greyscale=pngobj[3].get("greyscale", False),
+                    alpha=pngobj[3].get("alpha", False),
+                    planes=pngobj[3].get("planes", None),
+                    palette=pngobj[3].get("palette", None),
+                )
+                io_in = io.BytesIO()
+                writer.write(io_in, imgdata)
+                s = report_utils.add_png_text_chunk(
+                    io_in.getvalue(), "CEI_NEXUS_GUID", str(self.guid)
+                )
+                self.width = width
+                self.height = height
+                self.type = ItemREST.type_img
+                self.image_data = s
+                self.fileobj = io.BytesIO(self.image_data)
+                self.fileurl = "image.png"
+                return
+            except Exception as e:
+                logger.debug(f"Warning: {str(e)}.\n")
+
+        # Prefer the shared Pillow/enve conversion path once the PNG-specific byte path
+        # has had a chance to handle legacy PNG uploads.
         if report_utils.is_enve_image_or_pil(img):
             image_data = report_utils.image_to_data(img, guid=self.guid)
             if image_data is not None:
@@ -1394,43 +1437,10 @@ class ItemREST(BaseRESTObject):
                 self.fileurl = "image." + image_data["format"]
                 return
 
-        try:
-            from . import png
-        except Exception as e:
-            logger.debug(f"Warning: {str(e)}.\n")
-            import png
-        try:
-            # we can only read png images as string content (not filename)
-            reader = png.Reader(io.BytesIO(img))
-            # parse the input file
-            pngobj = reader.read()
-            width = pngobj[3]["size"][0]
-            height = pngobj[3]["size"][1]
-            imgdata = list(pngobj[2])
-            # tag the data and write it back out...
-            writer = png.Writer(
-                width=width,
-                height=height,
-                bitdepth=pngobj[3].get("bitdepth", 8),
-                greyscale=pngobj[3].get("greyscale", False),
-                alpha=pngobj[3].get("alpha", False),
-                planes=pngobj[3].get("planes", None),
-                palette=pngobj[3].get("palette", None),
-            )
-            # TODO: current version does not support set_text()?
-            # writer.set_text(dict(CEI_NEXUS_GUID=str(self.guid)))
-            io_in = io.BytesIO()
-            writer.write(io_in, imgdata)
-            s = io_in.getvalue()
-        except Exception as e:
-            logger.debug(f"Warning: {str(e)}.\n")
-            if _load_qt():  # pragma: no cover
-                import imghdr
-
-                fmt = imghdr.what("/dummy", img)
-                tmpimg = QtGui.QImage.fromData(img, fmt)
-            else:
-                raise
+        if _load_qt():  # pragma: no cover
+            tmpimg = QtGui.QImage.fromData(img)
+            if tmpimg.isNull():
+                raise ValueError("Qt could not decode the provided image payload.")
 
             # record the GUID in the image (watermark it)
             # note: the Qt PNG format supports text keys
@@ -1446,14 +1456,19 @@ class ItemREST(BaseRESTObject):
             s = bytes(be)
             width = tmpimg.width()
             height = tmpimg.height()
-        # common options
-        self.width = width
-        self.height = height
-        self.type = ItemREST.type_img
-        # set up the parameters for get_url_file(): self.fileurl and self.fileobj
-        self.image_data = s
-        self.fileobj = io.BytesIO(self.image_data)
-        self.fileurl = "image.png"
+            # common options
+            self.width = width
+            self.height = height
+            self.type = ItemREST.type_img
+            # set up the parameters for get_url_file(): self.fileurl and self.fileobj
+            self.image_data = s
+            self.fileobj = io.BytesIO(self.image_data)
+            self.fileurl = "image.png"
+            return
+
+        raise TypeError(
+            "Image payloads must be bytes, a file path, a Pillow image, a QImage, or an enve.image."
+        )
 
     def validate_file(self, input_path, description, allowed_extensions=None):
         if not isinstance(input_path, str):

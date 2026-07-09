@@ -1177,12 +1177,19 @@ class Server:
         query["print"] = "pdf"
         url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
+        if parent is not None and _load_qt():
+            from .report_download_pdf import NexusPDFSave
+
+            app = QtGui.QGuiApplication.instance()
+            worker = NexusPDFSave(app)
+            _ = worker.save_page_pdf(url, filename=file_path, page=page, delay=delay)
+            return
 
         # ok, there is a bug in the 3.7 implementation of subprocess where
         # args are not properly encoded under Windows.  To pass a URL, you
         # cannot use '?' and '&' chars.  So, we support base64 encodes
-        # of the URLs here.  This keeps PDF export out of the caller process, so
-        # report generation does not pull in Qt just because a GUI parent was supplied.
+        # of the URLs here.  Headless callers use this subprocess path so they do not
+        # pull Qt into the current process.
         url = report_utils.encode_url(url)
         cmd = ["report_save_pdf", url, file_path]
         if page is not None:

@@ -32,6 +32,7 @@ import socket
 import sys
 import tempfile
 from typing import List, Optional
+import zlib
 
 from PIL import Image, PngImagePlugin
 from PIL.TiffTags import TAGS
@@ -235,6 +236,43 @@ def save_tif_stripped(pil_image, data, metadata):
     return data
 
 
+def add_png_text_chunk(png_bytes, key, value):
+    """Add a PNG ``tEXt`` chunk to an existing PNG byte stream."""
+    png_signature = b"\x89PNG\r\n\x1a\n"
+    if not png_bytes.startswith(png_signature):
+        return png_bytes
+
+    text_chunk_type = b"tEXt"
+    text_chunk_data = key.encode("latin-1") + b"\x00" + value.encode("latin-1")
+    text_chunk_crc = zlib.crc32(text_chunk_type + text_chunk_data) & 0xFFFFFFFF
+    text_chunk = (
+        len(text_chunk_data).to_bytes(4, "big")
+        + text_chunk_type
+        + text_chunk_data
+        + text_chunk_crc.to_bytes(4, "big")
+    )
+
+    rebuilt_png = bytearray(png_signature)
+    offset = len(png_signature)
+    inserted_text = False
+    while offset < len(png_bytes):
+        if offset + 8 > len(png_bytes):
+            return png_bytes
+        chunk_length = int.from_bytes(png_bytes[offset : offset + 4], "big")
+        chunk_end = offset + 12 + chunk_length
+        if chunk_end > len(png_bytes):
+            return png_bytes
+
+        chunk_type = png_bytes[offset + 4 : offset + 8]
+        if not inserted_text and chunk_type == b"IEND":
+            rebuilt_png.extend(text_chunk)
+            inserted_text = True
+        rebuilt_png.extend(png_bytes[offset:chunk_end])
+        offset = chunk_end
+
+    return bytes(rebuilt_png) if inserted_text else png_bytes
+
+
 def PIL_image_to_data(img, guid=None):
     """
     Convert the input image to a dictionary holding the data for the payload.
@@ -259,6 +297,10 @@ def PIL_image_to_data(img, guid=None):
         imghandle = open(img, "rb")
     elif isinstance(img, bytes):
         imgbytes = img
+    else:
+        raise TypeError(
+            "Image payloads must be bytes, a file path, a Pillow image, or an enve.image."
+        )
     data = {}
     if imghandle:
         image = Image.open(imghandle)
