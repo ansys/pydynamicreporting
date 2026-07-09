@@ -27,7 +27,12 @@ import textwrap
 
 
 def _run_import_probe(source: str) -> dict[str, object]:
-    """Execute a small import probe in a fresh interpreter."""
+    """
+    Execute a small import probe in a fresh interpreter (must use a subprocess to start free from previous runs).
+    sys.executable uses the same Python interpreter as the test runner.
+    "-c" tells Python to execute the following source string
+    textwrap.dedent(source) removes indentation from the triple-quoted embedded script before execution.
+    """
     result = subprocess.run(
         [sys.executable, "-c", textwrap.dedent(source)],
         capture_output=True,
