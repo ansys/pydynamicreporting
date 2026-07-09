@@ -48,12 +48,9 @@ from ..common_utils import check_dictionary_for_html
 from ..exceptions import TemplateDoesNotExist, TemplateReorderOutOfBounds
 from .encoders import PayloaddataEncoder
 
-try:
-    from qtpy import QtCore, QtGui
-
-    has_qt = True
-except ImportError:
-    has_qt = False
+QtCore = None
+QtGui = None
+has_qt = False
 
 try:
     import numpy
@@ -63,6 +60,24 @@ except ImportError:
     has_numpy = False
 
 logger = logging.getLogger(__name__)
+
+
+@functools.lru_cache(maxsize=1)
+def _load_qt():
+    """Load Qt image helpers only when callers actually need them."""
+    global QtCore, QtGui, has_qt
+
+    try:
+        from qtpy import QtCore as imported_qtcore
+        from qtpy import QtGui as imported_qtgui
+    except ImportError:
+        has_qt = False
+        return False
+
+    QtCore = imported_qtcore
+    QtGui = imported_qtgui
+    has_qt = True
+    return True
 
 
 def disable_warn_logging(func):
@@ -1329,7 +1344,7 @@ class ItemREST(BaseRESTObject):
         return value
 
     def set_payload_image(self, img):
-        if has_qt:  # pragma: no cover
+        if _load_qt():  # pragma: no cover
             if isinstance(img, QtGui.QImage):
                 tmpimg = img
             elif report_utils.is_enve_image_or_pil(img):
