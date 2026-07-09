@@ -38,12 +38,18 @@ from PIL.TiffTags import TAGS
 import requests
 
 try:
-    import ceiversion
     import enve
 
     has_enve = True
 except (ImportError, SystemError):
     has_enve = False
+
+# Some CEI runtimes register ``ceiversion`` as a side effect of importing
+# ``enve``, so load ``enve`` first and then treat ``ceiversion`` as optional.
+try:
+    import ceiversion
+except (ImportError, SystemError):
+    ceiversion = None
 
 try:
     import numpy
@@ -327,7 +333,7 @@ def enve_home():
 
 
 def ceiversion_nexus_suffix():
-    if has_enve:
+    if has_enve and ceiversion is not None:
         return ceiversion.nexus_suffix
     # If we are coming from pynexus, get the version from that
     try:
@@ -342,7 +348,7 @@ def ceiversion_nexus_suffix():
 
 
 def ceiversion_apex_suffix():
-    if has_enve:
+    if has_enve and ceiversion is not None:
         return ceiversion.apex_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location
@@ -351,7 +357,7 @@ def ceiversion_apex_suffix():
 
 
 def ceiversion_ensight_suffix():
-    if has_enve:
+    if has_enve and ceiversion is not None:
         return ceiversion.ensight_suffix
     # Note: at present the suffix strings are in lockstep and are expected
     # to stay that way.  So the Nexus suffix (easily found by the location
