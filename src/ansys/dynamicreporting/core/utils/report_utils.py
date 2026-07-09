@@ -33,7 +33,7 @@ import sys
 import tempfile
 from typing import List, Optional
 
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from PIL.TiffTags import TAGS
 import requests
 
@@ -84,6 +84,8 @@ def check_if_PIL(img):
     bool:
         True if the image can be opened by PIL
     """
+    if isinstance(img, Image.Image):
+        return True
     # Assume you are getting bytes.
     # If string, open it
     imghandle = None
@@ -92,6 +94,8 @@ def check_if_PIL(img):
         imghandle = open(img, "rb")
     elif isinstance(img, bytes):
         imgbytes = img
+    else:
+        return False
     try:
         # Check PIL can handle the img opening
         if imghandle:
@@ -249,17 +253,19 @@ def PIL_image_to_data(img, guid=None):
     """
     imgbytes = None
     imghandle = None
-    if isinstance(img, str):
+    if isinstance(img, Image.Image):
+        image = img
+    elif isinstance(img, str):
         imghandle = open(img, "rb")
     elif isinstance(img, bytes):
         imgbytes = img
     data = {}
-    image = None
     if imghandle:
         image = Image.open(imghandle)
     elif imgbytes:
         image = Image.open(io.BytesIO(imgbytes))
-    data["format"] = image.format.lower()
+    image_format = (image.format or "PNG").lower()
+    data["format"] = image_format
     if data["format"] == "tiff":
         data["format"] = "tif"
     data["width"] = image.width
@@ -269,15 +275,23 @@ def PIL_image_to_data(img, guid=None):
         data = save_tif_stripped(image, data, metadata)
     else:
         buff = io.BytesIO()
-        image.save(buff, "PNG")
+        png_metadata = None
+        if guid is not None:
+            png_metadata = PngImagePlugin.PngInfo()
+            png_metadata.add_text("CEI_NEXUS_GUID", str(guid))
+        if png_metadata is not None:
+            image.save(buff, "PNG", pnginfo=png_metadata)
+        else:
+            image.save(buff, "PNG")
         buff.seek(0)
+        data["format"] = "png"
         data["file_data"] = buff.read()
     if imghandle:
         imghandle.close()
     return data
 
 
-def image_to_data(img):
+def image_to_data(img, guid=None):
     # Convert enve image object into a dictionary of image data or None
     # The dictionary has the keys:
     # 'width' = x pixel count
@@ -306,11 +320,11 @@ def image_to_data(img):
                     if img.save(path) == 0:
                         try:
                             with open(path, "rb") as img_file:
-                                return PIL_image_to_data(img_file.read())
+                                return PIL_image_to_data(img_file.read(), guid=guid)
                         except OSError:
                             return None
     if not data:
-        return PIL_image_to_data(img)
+        return PIL_image_to_data(img, guid=guid)
 
 
 def enve_arch():

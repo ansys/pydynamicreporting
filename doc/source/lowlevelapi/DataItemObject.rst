@@ -125,13 +125,12 @@ Image Item
 **item.set_payload_image(image)**
 
 This method sets the item payload to an image. The argument can be one
-of three things: the binary representation of a .png file on disk as a
-string, a QImage object or an enve.image object. Examples are shown
-below:
+of several things: a file path, image bytes, a Pillow image object, an
+optional Qt ``QImage`` object, or an ``enve.image`` object. The headless
+paths (file path, bytes, and Pillow image) are preferred when you do not
+need Qt-specific behavior. Examples are shown below:
 
--  A string which is the binary data representation of the image. Note:
-   this is the only format supported in a Python interpreter that lacks
-   the PyQt and enve modules.
+-  The binary data representation of the image.
 
    .. code-block:: python
 
@@ -140,11 +139,21 @@ below:
       item.set_payload_image(img)
 
 
--  A Qt QImage object instance
+-  A Pillow image object.
 
    .. code-block:: python
 
-      from PyQt4 import QtGui
+      from PIL import Image
+
+      img = Image.open("example.png")
+      item.set_payload_image(img)
+
+
+-  A Qt ``QImage`` object instance when Qt is available.
+
+   .. code-block:: python
+
+      from qtpy import QtGui
 
       img = QtGui.QImage("example.png")
       item.set_payload_image(img)

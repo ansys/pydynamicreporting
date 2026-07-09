@@ -80,6 +80,15 @@ def _load_qt():
     return True
 
 
+def _is_qimage_input(img):
+    """Detect Qt QImage instances without importing Qt just for an isinstance check."""
+    qt_roots = {"PyQt5", "PyQt6", "PySide2", "PySide6", "qtpy"}
+    return any(
+        base.__name__ == "QImage" and base.__module__.split(".")[0] in qt_roots
+        for base in type(img).__mro__
+    )
+
+
 def disable_warn_logging(func):
     # Decorator to suppress harmless warning messages
     @functools.wraps(func)
@@ -1344,27 +1353,10 @@ class ItemREST(BaseRESTObject):
         return value
 
     def set_payload_image(self, img):
-        if _load_qt():  # pragma: no cover
-            if isinstance(img, QtGui.QImage):
-                tmpimg = img
-            elif report_utils.is_enve_image_or_pil(img):
-                image_data = report_utils.image_to_data(img)
-                if image_data is not None:
-                    self.width = image_data["width"]
-                    self.height = image_data["height"]
-                    self.type = ItemREST.type_img
-                    # set up the parameters for get_url_file(): self.fileurl and self.fileobj
-                    self.image_data = image_data["file_data"]
-                    self.fileobj = io.BytesIO(self.image_data)
-                    # The format might be png or tif, make sure the name the URL properly
-                    # or Nexus will generate the incorrect display code.
-                    self.fileurl = "image." + image_data["format"]
-                return
-            else:
-                import imghdr
-
-                fmt = imghdr.what("/dummy", img)
-                tmpimg = QtGui.QImage.fromData(img, fmt)
+        if _is_qimage_input(img):  # pragma: no cover
+            if not _load_qt():
+                raise TypeError("QImage payloads require Qt image support to be available.")
+            tmpimg = img
             # record the GUID in the image (watermark it)
             # note: the Qt PNG format supports text keys
             tmpimg.setText("CEI_NEXUS_GUID", str(self.guid))
@@ -1379,51 +1371,81 @@ class ItemREST(BaseRESTObject):
             s = bytes(be)
             width = tmpimg.width()
             height = tmpimg.height()
-        else:
-            try:
-                from . import png
-            except Exception as e:
-                logger.debug(f"Warning: {str(e)}.\n")
-                import png
-            try:
-                # we can only read png images as string content (not filename)
-                reader = png.Reader(io.BytesIO(img))
-                # parse the input file
-                pngobj = reader.read()
-                width = pngobj[3]["size"][0]
-                height = pngobj[3]["size"][1]
-                imgdata = list(pngobj[2])
-                # tag the data and write it back out...
-                writer = png.Writer(
-                    width=width,
-                    height=height,
-                    bitdepth=pngobj[3].get("bitdepth", 8),
-                    greyscale=pngobj[3].get("greyscale", False),
-                    alpha=pngobj[3].get("alpha", False),
-                    planes=pngobj[3].get("planes", None),
-                    palette=pngobj[3].get("palette", None),
-                )
-            except Exception as e:
-                logger.debug(f"Warning: {str(e)}.\n")
-                # enhanced images will fall into this case
-                data = report_utils.PIL_image_to_data(img)
-                self.width = data["width"]
-                self.height = data["height"]
-                writer = png.Writer(
-                    width=self.width,
-                    height=self.height,
-                )
-                imgdata = data["file_data"]
+            self.width = width
+            self.height = height
+            self.type = ItemREST.type_img
+            self.image_data = s
+            self.fileobj = io.BytesIO(self.image_data)
+            self.fileurl = "image.png"
+            return
+
+        # Prefer the shared Pillow/enve conversion path so byte inputs stay headless.
+        if report_utils.is_enve_image_or_pil(img):
+            image_data = report_utils.image_to_data(img, guid=self.guid)
+            if image_data is not None:
+                self.width = image_data["width"]
+                self.height = image_data["height"]
                 self.type = ItemREST.type_img
-                self.image_data = data["file_data"]
+                # set up the parameters for get_url_file(): self.fileurl and self.fileobj
+                self.image_data = image_data["file_data"]
                 self.fileobj = io.BytesIO(self.image_data)
-                self.fileurl = "image." + data["format"]
+                # The format might be png or tif, make sure the name the URL properly
+                # or Nexus will generate the incorrect display code.
+                self.fileurl = "image." + image_data["format"]
                 return
+
+        try:
+            from . import png
+        except Exception as e:
+            logger.debug(f"Warning: {str(e)}.\n")
+            import png
+        try:
+            # we can only read png images as string content (not filename)
+            reader = png.Reader(io.BytesIO(img))
+            # parse the input file
+            pngobj = reader.read()
+            width = pngobj[3]["size"][0]
+            height = pngobj[3]["size"][1]
+            imgdata = list(pngobj[2])
+            # tag the data and write it back out...
+            writer = png.Writer(
+                width=width,
+                height=height,
+                bitdepth=pngobj[3].get("bitdepth", 8),
+                greyscale=pngobj[3].get("greyscale", False),
+                alpha=pngobj[3].get("alpha", False),
+                planes=pngobj[3].get("planes", None),
+                palette=pngobj[3].get("palette", None),
+            )
             # TODO: current version does not support set_text()?
             # writer.set_text(dict(CEI_NEXUS_GUID=str(self.guid)))
             io_in = io.BytesIO()
             writer.write(io_in, imgdata)
             s = io_in.getvalue()
+        except Exception as e:
+            logger.debug(f"Warning: {str(e)}.\n")
+            if _load_qt():  # pragma: no cover
+                import imghdr
+
+                fmt = imghdr.what("/dummy", img)
+                tmpimg = QtGui.QImage.fromData(img, fmt)
+            else:
+                raise
+
+            # record the GUID in the image (watermark it)
+            # note: the Qt PNG format supports text keys
+            tmpimg.setText("CEI_NEXUS_GUID", str(self.guid))
+            # save it in PNG format in memory
+            be = QtCore.QByteArray()
+            buf = QtCore.QBuffer(be)
+            buf.open(QtCore.QIODevice.WriteOnly)
+            tmpimg.save(buf, "png")
+            buf.close()
+            # s is an in-memory representation of a .png file
+            # width and height are its size
+            s = bytes(be)
+            width = tmpimg.width()
+            height = tmpimg.height()
         # common options
         self.width = width
         self.height = height
