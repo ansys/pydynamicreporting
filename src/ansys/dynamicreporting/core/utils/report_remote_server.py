@@ -1416,9 +1416,7 @@ def create_new_local_database(
     ):
         if parent and _load_qt():
             msg = "The selected directory already appears to have a database in it."
-            QtWidgets.QMessageBox.critical(
-                parent, "Invalid database location", msg
-            )
+            QtWidgets.QMessageBox.critical(parent, "Invalid database location", msg)
 
         if raise_exception:
             raise exceptions.DBExistsError(
@@ -1832,9 +1830,7 @@ def launch_local_database_server(
         # we expect to see: 'manage.py' and 'media' in this folder
         if not validate_local_db(db_dir):
             msg = "The selected database file does not appear to be a valid database."
-            QtWidgets.QMessageBox.critical(
-                parent, "Invalid database", msg
-            )
+            QtWidgets.QMessageBox.critical(parent, "Invalid database", msg)
             if local_lock:
                 local_lock.release()
             if raise_exception:
@@ -1847,9 +1843,7 @@ def launch_local_database_server(
         if not validate_local_db_version(db_dir):
             msg = "The selected database is newer than the version supported by this version of Nexus."
             msg += "\nPlease use a more recent version of the software to start this server."
-            QtWidgets.QMessageBox.critical(
-                parent, "Newer database detected", msg
-            )
+            QtWidgets.QMessageBox.critical(parent, "Newer database detected", msg)
             if local_lock:
                 local_lock.release()
             return False
@@ -1898,9 +1892,7 @@ def launch_local_database_server(
         # if we have a valid version number, then do not start a server!!!
         if parent and _load_qt():
             msg = "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port."
-            QtWidgets.QMessageBox.critical(
-                parent, "Server already running", msg
-            )
+            QtWidgets.QMessageBox.critical(parent, "Server already running", msg)
         if local_lock:
             local_lock.release()
         if raise_exception:
@@ -1987,9 +1979,7 @@ def launch_local_database_server(
         if parent and _load_qt():
             QtWidgets.QApplication.restoreOverrideCursor()
             msg = "Launching a server for the selected local database failed. Error:"
-            QtWidgets.QMessageBox.critical(
-                parent, "Unable to launch", msg + str(e)
-            )
+            QtWidgets.QMessageBox.critical(parent, "Unable to launch", msg + str(e))
         if local_lock:
             local_lock.release()
         if raise_exception:
@@ -2007,9 +1997,7 @@ def launch_local_database_server(
             if parent and _load_qt():
                 QtWidgets.QApplication.restoreOverrideCursor()
                 msg = "Unable to connect to the launched local Nexus server."
-                QtWidgets.QMessageBox.critical(
-                    parent, "Unable to launch", msg
-                )
+                QtWidgets.QMessageBox.critical(parent, "Unable to launch", msg)
             # If it is still alive, try to tell the monitor to shut down
             if monitor_alive:
                 stop_background_local_server(db_dir, reason="python API")
@@ -2060,9 +2048,7 @@ def launch_local_database_server(
             hostname = settings.get("server_hostname", "127.0.0.1")
             msg = "A new server has been launched at"
             msg += f" <a href='http://{hostname}:{port}'>http://{hostname}:{port}</a>"
-            QtWidgets.QMessageBox.information(
-                parent, "Nexus server launched", msg
-            )
+            QtWidgets.QMessageBox.information(parent, "Nexus server launched", msg)
     # go ahead and assign the connection to any server we were passed
     if connect is not None:
         connect.set_URL(tmp_server.get_URL())
