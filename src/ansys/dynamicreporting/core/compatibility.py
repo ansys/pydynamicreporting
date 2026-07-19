@@ -22,8 +22,8 @@
 
 """Public client-to-product compatibility metadata."""
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 from ._version import __version__
 
@@ -40,16 +40,6 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # real installation by default. Unreleased lines can still be
 # probed explicitly or as lower-priority fallbacks.
 DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
-DEFAULT_ANSYS_INSTALL_VERSION = "271"
-# Preserve the historical no-argument constructor behavior by probing the
-# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
-# callers on the same default install they used on ``main`` while still
-# allowing a released install as a lower-priority fallback.
-#
-# We intentionally do not probe older releases implicitly anymore.  Selecting an
-# older unsupported line without an explicit user request changes the meaning
-# of the default constructors too aggressively for a compatibility fix.
-AUTO_DETECT_INSTALL_VERSIONS = ("271", "261")
 
 
 @dataclass(frozen=True)
@@ -97,8 +87,12 @@ def supported_product_lines_for_client_major(client_major: int) -> tuple[str, st
 _CURRENT_CLIENT_MAJOR_EPOCH = get_client_major_epoch()
 # Public compatibility metadata follows the installed client major line.
 # Major ``0`` is permanently anchored to the shipped 2026 product epoch.
-BUNDLED_PRODUCT_RELEASE = bundled_product_release_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
-SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
+BUNDLED_PRODUCT_RELEASE = bundled_product_release_for_client_major(
+    _CURRENT_CLIENT_MAJOR_EPOCH
+)
+SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(
+    _CURRENT_CLIENT_MAJOR_EPOCH
+)
 
 
 def parse_product_release(product_release: str) -> tuple[str, int]:
@@ -126,7 +120,9 @@ def product_release_to_install_version(product_release: str) -> int:
 # namespace when they could not discover a server-specific version.  Keep that
 # behavior separate from install probing so direct ``ReportDownloadHTML`` usage
 # stays backwards compatible without forcing constructor defaults back to 271.
-DEFAULT_STATIC_ASSET_VERSION = str(product_release_to_install_version(BUNDLED_PRODUCT_RELEASE))
+DEFAULT_STATIC_ASSET_VERSION = str(
+    product_release_to_install_version(BUNDLED_PRODUCT_RELEASE)
+)
 
 
 def install_version_to_product_release(install_version: int | str) -> str:
@@ -168,8 +164,34 @@ def product_release_to_product_line(product_release: str) -> str:
     return year_line
 
 
+# Derived from the single hand-edited install default above, so a client
+# release bump only requires editing DEFAULT_ANSYS_INSTALL_RELEASE.
+DEFAULT_ANSYS_INSTALL_VERSION = str(
+    product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
+)
+
+
+# Preserve the historical no-argument constructor behavior by probing the
+# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
+# callers on the same default install they used on ``main`` while still
+# allowing a released install as a lower-priority fallback.
+#
+# We intentionally do not probe older releases implicitly anymore.  Selecting an
+# older unsupported line without an explicit user request changes the meaning
+# of the default constructors too aggressively for a compatibility fix.
+def _auto_detect_install_versions() -> tuple[str, ...]:
+    bundled_line = int(product_release_to_product_line(DEFAULT_ANSYS_INSTALL_RELEASE))
+    _, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
+    previous_install_version = f"{bundled_line - 1}{release_index}"
+    return (DEFAULT_ANSYS_INSTALL_VERSION, previous_install_version)
+
+
+AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
+
+
 def is_supported_product_release(
-    product_release: str, supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES
+    product_release: str,
+    supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES,
 ) -> bool:
     """Return ``True`` if the release belongs to one of the supported annual lines."""
     return product_release_to_product_line(product_release) in supported_product_lines
@@ -183,8 +205,12 @@ def get_compatibility_info(client_version: str = __version__) -> ProductCompatib
     return ProductCompatibility(
         client_version=client_version,
         client_major_epoch=client_major_epoch,
-        bundled_product_release=bundled_product_release_for_client_major(client_major_epoch),
-        supported_product_lines=supported_product_lines_for_client_major(client_major_epoch),
+        bundled_product_release=bundled_product_release_for_client_major(
+            client_major_epoch
+        ),
+        supported_product_lines=supported_product_lines_for_client_major(
+            client_major_epoch
+        ),
         support_policy=SUPPORTED_PRODUCT_RELEASE_POLICY,
     )
 

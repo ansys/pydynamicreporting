@@ -155,7 +155,7 @@ def test_fail_newdb(tmp_path, get_exec) -> None:
             run_local=True,
         )
     except DBCreationFailedError as e:
-        succ = "Unable to generate a new database by migration" in str(e)
+        succ = "The creation of a new, local database failed" in str(e)
     assert succ
 
 

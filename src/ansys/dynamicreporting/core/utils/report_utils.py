@@ -22,7 +22,6 @@
 
 import array
 import base64
-from html.parser import HTMLParser as BaseHTMLParser
 import io
 import json
 import os
@@ -31,11 +30,12 @@ import platform
 import socket
 import sys
 import tempfile
+from html.parser import HTMLParser as BaseHTMLParser
 from typing import List, Optional
 
+import requests
 from PIL import Image
 from PIL.TiffTags import TAGS
-import requests
 
 try:
     import enve
@@ -43,13 +43,6 @@ try:
     has_enve = True
 except (ImportError, SystemError):
     has_enve = False
-
-# Some CEI runtimes register ``ceiversion`` as a side effect of importing
-# ``enve``, so load ``enve`` first and then treat ``ceiversion`` as optional.
-try:
-    import ceiversion
-except (ImportError, SystemError):
-    ceiversion = None
 
 try:
     import numpy
@@ -60,7 +53,7 @@ except ImportError:
 TIFFTAG_IMAGEDESCRIPTION: int = 0x010E
 text_type = str
 """@package report_utils
-Methods that serve as a shim to the enve and ceiversion modules that may not be present
+Methods that serve as a shim to the enve module that may not be present
 """
 
 
@@ -332,39 +325,6 @@ def enve_home():
     return tmp
 
 
-def ceiversion_nexus_suffix():
-    if has_enve and ceiversion is not None:
-        return ceiversion.nexus_suffix
-    # If we are coming from pynexus, get the version from that
-    try:
-        from ansys.dynamicreporting.core import ansys_version
-
-        tmp = ansys_version.replace("R", "")[-3:]
-        return str(tmp)
-    except Exception:  # nosec
-        # get "nexus###" folder name and then strip off the "nexus" bit
-        tmp = os.path.basename(os.path.dirname(os.path.dirname(__file__)))
-    return tmp[5:]
-
-
-def ceiversion_apex_suffix():
-    if has_enve and ceiversion is not None:
-        return ceiversion.apex_suffix
-    # Note: at present the suffix strings are in lockstep and are expected
-    # to stay that way.  So the Nexus suffix (easily found by the location
-    # of this file) is a reasonable proxy for the apex suffix.
-    return ceiversion_nexus_suffix()
-
-
-def ceiversion_ensight_suffix():
-    if has_enve and ceiversion is not None:
-        return ceiversion.ensight_suffix
-    # Note: at present the suffix strings are in lockstep and are expected
-    # to stay that way.  So the Nexus suffix (easily found by the location
-    # of this file) is a reasonable proxy for the ensight suffix as well.
-    return ceiversion_nexus_suffix()
-
-
 def platform_encoding():
     if sys.platform.startswith("win"):
         return "mbcs"
@@ -464,7 +424,9 @@ def convert_windows_pathname(path, long=True):
     return path
 
 
-def run_web_request(method, server, relative_url, data=None, headers=None, stream=False):
+def run_web_request(
+    method, server, relative_url, data=None, headers=None, stream=False
+):
     """
     When a request is made to REST, HTTP basic auth is used by default through requests
     when you pass (username, password) as auth.

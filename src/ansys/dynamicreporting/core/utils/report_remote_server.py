@@ -24,13 +24,11 @@ import collections
 import configparser
 import functools
 import hashlib
-from http.cookiejar import Cookie
 import inspect
 import json
 import logging
 import os
 import os.path
-from pathlib import Path
 import pickle  # nosec B403
 import platform
 import shutil
@@ -39,19 +37,24 @@ import sys
 import tempfile
 import time
 import urllib
-from urllib.parse import urlparse
 import uuid
+from http.cookiejar import Cookie
+from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from requests import JSONDecodeError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from . import exceptions, filelock, report_objects, report_utils
+from ansys.dynamicreporting.core import common_utils
+from ansys.dynamicreporting.core.compatibility import DEFAULT_ANSYS_INSTALL_VERSION
+
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException
+from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
 QtCore = None
@@ -96,19 +99,19 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     is_windows = report_utils.enve_arch().startswith("win")
     # is_linux = report_utils.enve_arch().startswith("lin")
     # Start the work by getting the pathname to the django directory
-    if ansys_version:
-        report_ver = str(ansys_version)
-    else:
-        report_ver = report_utils.ceiversion_nexus_suffix()
-    if exec_basis is None:
-        exec_basis = report_utils.enve_home()
+    if exec_basis is None or not ansys_version:
+        paths = common_utils.resolve_install_paths(
+            ansys_installation=exec_basis, ansys_version=ansys_version
+        )
+        if exec_basis is None:
+            exec_basis = paths.install_dir
+        if not ansys_version:
+            ansys_version = paths.version
+    report_ver = str(ansys_version)
     rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
     nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
     # run any DB migrations using Python 3...
-    if ansys_version:
-        app_file = "cpython" + str(ansys_version)
-    else:
-        app_file = "cpython" + report_utils.ceiversion_apex_suffix()
+    app_file = "cpython" + str(ansys_version)
     app = os.path.join(exec_basis, "bin", app_file)
     if is_windows:
         app += ".bat"
@@ -117,7 +120,10 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
         app = app_file
     # run nexus_utility.py
     params = dict(
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, cwd=rptdir
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+        cwd=rptdir,
     )
     # Build the command line
     cmd = [app]
@@ -208,7 +214,9 @@ class Server:
             raise Exception("No server URL selected")
         url += "/api/auth/magic-token/verify/"
         headers = {"Content-type": "application/json", "Accept": "application/json"}
-        r = self._http_session.post(url, data=json.dumps({"token": token}), headers=headers)
+        r = self._http_session.post(
+            url, data=json.dumps({"token": token}), headers=headers
+        )
         if r.status_code == requests.codes.ok:
             return True
         elif r.status_code == requests.codes.bad_request:
@@ -220,7 +228,9 @@ class Server:
     def magic_token(self):
         # if token is None or token has expired
         # verify and regen automatically so the user does not need to worry about this.
-        if self._magic_token is None or not self._validate_magic_token(self._magic_token):
+        if self._magic_token is None or not self._validate_magic_token(
+            self._magic_token
+        ):
             self._magic_token = self.generate_magic_token()
         return self._magic_token
 
@@ -289,7 +299,9 @@ class Server:
         if r.status_code == requests.codes.ok:
             return r.json()
         elif r.status_code == requests.codes.forbidden:
-            raise exceptions.PermissionDenied("Invalid credentials to access the report server")
+            raise exceptions.PermissionDenied(
+                "Invalid credentials to access the report server"
+            )
         else:
             raise Exception("Unable to access the remote report server")
 
@@ -346,7 +358,10 @@ class Server:
 
     def get_auth(self):
         if self.cur_username and self.cur_password and (len(self.cur_username) > 0):
-            return (self.cur_username.encode("utf-8"), self.cur_password.encode("utf-8"))
+            return (
+                self.cur_username.encode("utf-8"),
+                self.cur_password.encode("utf-8"),
+            )
         return None
 
     def get_user_groups(self):
@@ -377,7 +392,12 @@ class Server:
         # treat None and "" as having no query specified
         if query:
             # translate raw queries into URL savvy text
-            tmp = query.strip("\"'").replace("|", "%7C").replace(";", "%3B").replace("#", "%23")
+            tmp = (
+                query.strip("\"'")
+                .replace("|", "%7C")
+                .replace(";", "%3B")
+                .replace("#", "%23")
+            )
             uri = self.add_query_to_url(uri, f"query={tmp}")
         auth = self.get_auth()
         r = self._http_session.get(uri, auth=auth)
@@ -406,7 +426,12 @@ class Server:
         # treat None and "" as having no query specified
         if query:
             # translate raw queries into URL savvy text
-            tmp = query.strip("\"'").replace("|", "%7C").replace(";", "%3B").replace("#", "%23")
+            tmp = (
+                query.strip("\"'")
+                .replace("|", "%7C")
+                .replace(";", "%3B")
+                .replace("#", "%23")
+            )
             uri = self.add_query_to_url(uri, f"query={tmp}")
 
         auth = self.get_auth()
@@ -440,7 +465,9 @@ class Server:
         if r.status_code != requests.codes.ok:
             if r.status_code == requests.codes.forbidden:
                 raise exceptions.PermissionDenied(
-                    r.json().get("detail", "You do not have permission to perform this action.")
+                    r.json().get(
+                        "detail", "You do not have permission to perform this action."
+                    )
                 )
 
             return None
@@ -470,7 +497,9 @@ class Server:
         if hasattr(obj, "server_api_version"):
             # if the object server version and the current server version do
             # not match, convert them (if possible)
-            if (obj.server_api_version is not None) and (obj.server_api_version < self.api_version):
+            if (obj.server_api_version is not None) and (
+                obj.server_api_version < self.api_version
+            ):
                 obj.update_api_version(self.api_version)
 
         obj_uri, obj_data = obj.get_url_data()
@@ -536,7 +565,10 @@ class Server:
             else:
                 # we need this because we now push complex structures.
                 data = json.dumps(obj_data, cls=BaseEncoder)
-                headers = {"Content-type": "application/json", "Accept": "application/json"}
+                headers = {
+                    "Content-type": "application/json",
+                    "Accept": "application/json",
+                }
             # Push the object
             try:
                 r = request_method(uri, auth=auth, data=data, headers=headers)
@@ -569,7 +601,9 @@ class Server:
                     exceptions.raise_bad_request_error(r)
             elif r.status_code == requests.codes.forbidden:
                 raise exceptions.PermissionDenied(
-                    r.json().get("detail", "You do not have permission to perform this action.")
+                    r.json().get(
+                        "detail", "You do not have permission to perform this action."
+                    )
                 )
 
             # do we need to push a file?
@@ -594,7 +628,10 @@ class Server:
             if ret != requests.codes.ok:
                 if ret == requests.codes.forbidden:
                     raise exceptions.PermissionDenied(
-                        r.json().get("detail", "You do not have permission to perform this action.")
+                        r.json().get(
+                            "detail",
+                            "You do not have permission to perform this action.",
+                        )
                     )
 
                 self._last_error = r.text
@@ -621,7 +658,10 @@ class Server:
                     exceptions.raise_bad_request_error(r)
                 if ret == requests.codes.forbidden:
                     raise exceptions.PermissionDenied(
-                        r.json().get("detail", "You do not have permission to perform this action.")
+                        r.json().get(
+                            "detail",
+                            "You do not have permission to perform this action.",
+                        )
                     )
                 success = ret
         return success
@@ -648,7 +688,13 @@ class Server:
     # if progress_qt is True, text strings will be translated, etc.  Otherwise,
     # the same method are called, but w/o Qt use.
     def copy_items(
-        self, source, obj_type="item", query=None, progress=None, categories=None, progress_qt=True
+        self,
+        source,
+        obj_type="item",
+        query=None,
+        progress=None,
+        categories=None,
+        progress_qt=True,
     ):
         copy_list = []
         # get the items to copy...
@@ -675,7 +721,9 @@ class Server:
                 progress.setMaximum(nobjs)
                 progress.setValue(n)
             for guid in dataset_set:
-                obj = source.get_object_from_guid(guid, objtype=report_objects.DatasetREST)
+                obj = source.get_object_from_guid(
+                    guid, objtype=report_objects.DatasetREST
+                )
                 if obj:
                     copy_list.insert(0, obj)
                 n += 1
@@ -688,7 +736,9 @@ class Server:
                     text = "Scanning sessions..."
                 progress.setLabelText(text)
             for guid in session_set:
-                obj = source.get_object_from_guid(guid, objtype=report_objects.SessionREST)
+                obj = source.get_object_from_guid(
+                    guid, objtype=report_objects.SessionREST
+                )
                 if obj:
                     copy_list.insert(0, obj)
                 n += 1
@@ -722,7 +772,9 @@ class Server:
                 if len(add_set) == 0:
                     break
                 for guid in add_set:
-                    obj = source.get_object_from_guid(guid, objtype=report_objects.TemplateREST)
+                    obj = source.get_object_from_guid(
+                        guid, objtype=report_objects.TemplateREST
+                    )
                     if obj:
                         copy_list.append(obj)
                     copy_set.add(guid)  # we at least tried, so avoid infinite loop...
@@ -814,7 +866,9 @@ class Server:
 
     def set_default_session(self, session, validate_digest=False):
         if not isinstance(session, report_objects.SessionREST):
-            raise ValueError("Session must be an instance of report_objects.SessionREST")
+            raise ValueError(
+                "Session must be an instance of report_objects.SessionREST"
+            )
         self._default_session = session
         self._default_session_digest = ""
         if validate_digest:
@@ -830,7 +884,9 @@ class Server:
 
     def set_default_dataset(self, dataset, validate_digest=False):
         if not isinstance(dataset, report_objects.DatasetREST):
-            raise ValueError("Dataset must be an instance of report_objects.DatasetREST")
+            raise ValueError(
+                "Dataset must be an instance of report_objects.DatasetREST"
+            )
         self._default_dataset = dataset
         self._default_dataset_digest = ""
         if validate_digest:
@@ -858,7 +914,9 @@ class Server:
             item.sequence = sequence
         return item
 
-    def create_template(self, name="New Template", parent=None, report_type="Layout:basic"):
+    def create_template(
+        self, name="New Template", parent=None, report_type="Layout:basic"
+    ):
         """
         Method to create a new template Input parameters:
 
@@ -876,7 +934,9 @@ class Server:
         return templ
 
     def _download_report(self, url, file_name, directory_name=None):
-        resp = self._http_session.get(url, allow_redirects=True, stream=True, timeout=300)
+        resp = self._http_session.get(
+            url, allow_redirects=True, stream=True, timeout=300
+        )
         if resp.status_code != requests.codes.ok:
             try:
                 detail = resp.json()["detail"]
@@ -894,7 +954,9 @@ class Server:
                 if chunk:
                     report.write(chunk)
 
-    def build_url_with_query(self, report_guid, query, item_filter=None, rest_api=False):
+    def build_url_with_query(
+        self, report_guid, query, item_filter=None, rest_api=False
+    ):
         url = self.get_URL()
         if rest_api:
             url += f"/api/generate-report/?view={str(report_guid)}"
@@ -929,12 +991,16 @@ class Server:
         delegating here.
         """
         directory_path = os.path.abspath(directory_name)
-        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
+        from ansys.dynamicreporting.core.utils.report_download_html import (
+            ReportDownloadHTML,
+        )
 
         url = self.build_url_with_query(report_guid, query, item_filter)
         # Ask the server for the Ansys version number when possible so the downloader rewrites
         # static asset paths against the same product namespace the report was generated with.
-        resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
+        resolved_ansys_version = self.get_api_version().get(
+            "ansys_version", self._ansys_version
+        )
         if ansys_version:
             resolved_ansys_version = ansys_version
 
@@ -1121,7 +1187,9 @@ class Server:
             using that product-shipped browser binary, so it does not rely on a separately installed one.
         """
         if not file_name:
-            raise ADRException("A non-empty file_name must be provided for browser PDF export.")
+            raise ADRException(
+                "A non-empty file_name must be provided for browser PDF export."
+            )
 
         # Copy the caller's query dictionary so the browser-specific ``print='pdf'`` flag does
         # not leak back into the caller's reusable request configuration.
@@ -1134,7 +1202,9 @@ class Server:
             # unless they actually request browser-fidelity PDF output.
             from .pdf_renderer import _ReportURLPlaywrightPDFRenderer
 
-            report_url = self.build_url_with_query(report_guid, browser_query, item_filter)
+            report_url = self.build_url_with_query(
+                report_guid, browser_query, item_filter
+            )
             browser_auth_cookies = self._get_browser_auth_cookies()
 
             renderer = _ReportURLPlaywrightPDFRenderer(
@@ -1197,7 +1267,10 @@ class Server:
         if delay is not None:
             cmd.append(str(delay))
         run_nexus_utility(
-            cmd, use_software_gl=True, exec_basis=exec_basis, ansys_version=ansys_version
+            cmd,
+            use_software_gl=True,
+            exec_basis=exec_basis,
+            ansys_version=ansys_version,
         )
 
     def export_report_as_pptx(self, report_guid, file_name, query=None):
@@ -1220,7 +1293,9 @@ class Server:
         if query is None:
             query = {}
         url = self.build_url_with_query(report_guid, query)
-        resp = self._http_session.get(url, allow_redirects=True, stream=True, timeout=300)
+        resp = self._http_session.get(
+            url, allow_redirects=True, stream=True, timeout=300
+        )
         if resp.status_code == requests.codes.ok:
             try:
                 # Read response with streaming to avoid zip bomb attacks
@@ -1232,7 +1307,9 @@ class Server:
                     file_format = q_params.get("format")
                     if file_format != "pptx":
                         continue
-                    self._download_report(link, q_params["filename"], directory_name=directory_name)
+                    self._download_report(
+                        link, q_params["filename"], directory_name=directory_name
+                    )
             except Exception as e:
                 if print_allowed():
                     print(f"Unable to get pptx from report '{report_guid}': {e}")
@@ -1256,7 +1333,9 @@ class Server:
         templates_data = {}
         templates = self.get_objects(objtype=report_objects.TemplateREST)
         template_guid_id_map = {root_guid: 0}
-        self._build_template_data(root_guid, templates_data, templates, template_guid_id_map)
+        self._build_template_data(
+            root_guid, templates_data, templates, template_guid_id_map
+        )
         return templates_data
 
     def store_json(self, root_guid, filename):
@@ -1312,7 +1391,9 @@ class Server:
         self._build_templates_from_parent(root_id_str, root_template, templates, logger)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
-        return populate_template(id_str, attr, parent_template, self.create_template, logger)
+        return populate_template(
+            id_str, attr, parent_template, self.create_template, logger
+        )
 
     def _build_templates_from_parent(
         self, parent_id_str, parent_template, templates_json, logger=None
@@ -1332,9 +1413,13 @@ class Server:
         self.put_objects(child_templates)
 
         for child_id_str in children_id_strs:
-            self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
+            self._build_templates_from_parent(
+                child_id_str, child_template, templates_json, logger
+            )
 
-    def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
+    def _build_template_data(
+        self, guid, templates_data, templates, template_guid_id_map
+    ):
         curr_template = None
         for template in templates:
             if template.guid == guid:
@@ -1349,25 +1434,31 @@ class Server:
             templates_data[curr_template_key][field] = value
 
         templates_data[curr_template_key]["params"] = curr_template.get_params()
-        templates_data[curr_template_key]["sort_selection"] = curr_template.get_sort_selection()
+        templates_data[curr_template_key][
+            "sort_selection"
+        ] = curr_template.get_sort_selection()
         if curr_template.parent is None:
             templates_data[curr_template_key]["parent"] = None
             templates_data[curr_template_key]["guid"] = str(uuid.uuid4())
         else:
-            templates_data[curr_template_key]["parent"] = (
-                f"Template_{template_guid_id_map[curr_template.parent]}"
-            )
+            templates_data[curr_template_key][
+                "parent"
+            ] = f"Template_{template_guid_id_map[curr_template.parent]}"
 
         templates_data[curr_template_key]["children"] = []
         children_guids = curr_template.children
         for child_guid in children_guids:
             curr_size = len(template_guid_id_map)
             template_guid_id_map[child_guid] = curr_size
-            templates_data[curr_template_key]["children"].append(f"Template_{curr_size}")
+            templates_data[curr_template_key]["children"].append(
+                f"Template_{curr_size}"
+            )
 
         # Don't combine these 2 for loops, as we want to have consecutive IDs for children
         for child_guid in children_guids:
-            self._build_template_data(child_guid, templates_data, templates, template_guid_id_map)
+            self._build_template_data(
+                child_guid, templates_data, templates, template_guid_id_map
+            )
 
 
 def create_new_local_database(
@@ -1439,9 +1530,14 @@ def create_new_local_database(
             if len(secret_key):
                 f.write(secret_key)
             f.close()
-            srcdir = os.path.join(
-                report_utils.enve_home(), "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
-            )
+            if exec_basis and ansys_version:
+                srcdir = os.path.join(
+                    exec_basis, f"nexus{int(ansys_version)}", "django"
+                )
+            else:
+                srcdir = common_utils.resolve_install_paths(
+                    ansys_installation=exec_basis, ansys_version=ansys_version
+                ).django_dir
             # In Python 3, we use the migration command to build the new database file and add the 'nexus'
             # superuser programmatically.  We Also stamp the current csf version into the media directory.
             os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
@@ -1455,7 +1551,9 @@ def create_new_local_database(
                 sys.path.append(srcdir)
             error = False
             if parent and _load_qt():
-                QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                QtWidgets.QApplication.setOverrideCursor(
+                    QtGui.QCursor(QtCore.Qt.WaitCursor)
+                )
             try:
                 import django
 
@@ -1501,7 +1599,9 @@ def create_new_local_database(
             if ansys_version:
                 report_ver = int(ansys_version)
             else:
-                report_ver = int(report_utils.ceiversion_nexus_suffix())
+                report_ver = common_utils.resolve_install_info(
+                    ansys_installation=exec_basis, ansys_version=ansys_version
+                ).version
             if report_ver > 240:
                 db_dir_encoded = report_utils.encode_url(db_dir)
             else:
@@ -1543,7 +1643,9 @@ def create_new_local_database(
 
 
 # Utility method for killing a local server at Python exit...
-def stop_background_local_server(server_dirname: str, reason: str = "pythonserverapi_atexit"):
+def stop_background_local_server(
+    server_dirname: str, reason: str = "pythonserverapi_atexit"
+):
     # write a shutdown file into the directory and let the core handle it...
     pathname = os.path.join(server_dirname, "shutdown")
     try:
@@ -1573,7 +1675,9 @@ def delete_database(db_dir: str):
     if not validate_local_db(db_dir):
         # Validate the directory database before deleting it
         if print_allowed():
-            print(f"Error: Unable to delete the database: {db_dir} is not a database dir")
+            print(
+                f"Error: Unable to delete the database: {db_dir} is not a database dir"
+            )
     else:
         try:
             # Check if there is a nexus.status file. If yes, it means there is a Nexus service running on that
@@ -1616,8 +1720,10 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
     if version_min is None:
         version_min = -1.0
     if version_max is None:
-        version_max = float(report_utils.ceiversion_nexus_suffix()) / 10.0  # 201 -> 20.1
-    version_file = os.path.join(os.path.abspath(db_dir), "media", "csf_conversion_version")
+        version_max = float(DEFAULT_ANSYS_INSTALL_VERSION) / 10.0  # 201 -> 20.1
+    version_file = os.path.join(
+        os.path.abspath(db_dir), "media", "csf_conversion_version"
+    )
     if not os.path.isfile(version_file):
         return True
     try:
@@ -1853,7 +1959,9 @@ def launch_local_database_server(
             # Pick a port number
             title = "Select local Nexus server port"
             msg = "Select the port where the local Nexus server will be launched"
-            port, ok = QtWidgets.QInputDialog.getInt(parent, title, msg, port, 1024, 65534)
+            port, ok = QtWidgets.QInputDialog.getInt(
+                parent, title, msg, port, 1024, 65534
+            )
             if not ok:
                 if local_lock:
                     local_lock.release()
@@ -1921,11 +2029,8 @@ def launch_local_database_server(
     if exec_basis:
         exename = os.path.join(exec_basis, "bin", "nexus_launcher" + str(ansys_version))
     else:
-        exename = os.path.join(
-            report_utils.enve_home(),
-            "bin",
-            "nexus_launcher" + report_utils.ceiversion_nexus_suffix(),
-        )
+        paths = common_utils.resolve_install_paths()
+        exename = os.path.join(paths.bin_dir, f"nexus_launcher{paths.version}")
     is_windows = report_utils.enve_arch().startswith("win")
     if is_windows:
         exename += ".bat"
@@ -1962,7 +2067,10 @@ def launch_local_database_server(
     # Capture stderr to leverage nexus_launcher CLI error checking.  Grabbing stdout as well, but not
     # used at the moment
     params = dict(
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, cwd=db_dir
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        cwd=db_dir,
     )
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW

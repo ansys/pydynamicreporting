@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from dataclasses import dataclass
 import logging
 import os
-from pathlib import Path
 import platform
 import re
+from dataclasses import dataclass
+from pathlib import Path
 
 import bleach
 
@@ -91,7 +91,9 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
     return None
 
 
-def _resolve_install_version(install_dir: Path | None, ansys_version: int | None) -> int:
+def _resolve_install_version(
+    install_dir: Path | None, ansys_version: int | None
+) -> int:
     """Resolve install version from path, layout, explicit override, then default."""
     if install_dir is not None:
         path_version = get_install_version(install_dir)
@@ -112,6 +114,18 @@ class InstallResolution:
 
     install_dir: str | None
     version: int
+
+
+@dataclass(frozen=True)
+class ResolvedInstallPaths:
+    """Validated ADR install layout used to launch product processes."""
+
+    install_dir: str
+    version: int
+    nexus_dir: str
+    django_dir: str
+    nexus_utility_path: str
+    bin_dir: str
 
 
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
@@ -169,7 +183,9 @@ def _build_install_candidates(
     # Otherwise use the ordered fallback list to keep implicit discovery broad
     # without resorting to repeated brute-force filesystem scans.
     versions_to_probe = (
-        (str(ansys_version),) if ansys_version is not None else AUTO_DETECT_INSTALL_VERSIONS
+        (str(ansys_version),)
+        if ansys_version is not None
+        else AUTO_DETECT_INSTALL_VERSIONS
     )
 
     for version in versions_to_probe:
@@ -209,7 +225,9 @@ def resolve_install_info(
 
     if ansys_installation and (
         install_dir is None
-        or not (install_dir / f"nexus{resolved_version}" / "django" / "manage.py").exists()
+        or not (
+            install_dir / f"nexus{resolved_version}" / "django" / "manage.py"
+        ).exists()
     ):
         raise InvalidAnsysPath(
             f"Unable to detect an installation in: {[str(d) for d in candidates]}"
@@ -218,6 +236,45 @@ def resolve_install_info(
     return InstallResolution(
         install_dir=str(install_dir) if install_dir is not None else None,
         version=resolved_version,
+    )
+
+
+def resolve_install_paths(
+    ansys_installation: str | None = None, ansys_version: int | None = None
+) -> ResolvedInstallPaths:
+    """Resolve and validate the ADR install layout for launcher use.
+
+    Never returns a site-packages-derived path. Raises InvalidAnsysPath when a
+    real install root with the required structural files cannot be validated.
+    """
+    resolution = resolve_install_info(
+        ansys_installation=ansys_installation, ansys_version=ansys_version
+    )
+    if resolution.install_dir is None:
+        raise InvalidAnsysPath(
+            "Could not locate a valid ADR installation. No candidate install "
+            "directory was found. Provide 'ansys_installation' or set a supported "
+            "install environment variable."
+        )
+    install_dir = Path(resolution.install_dir)
+    version = resolution.version
+    nexus_dir = install_dir / f"nexus{version}"
+    django_dir = nexus_dir / "django"
+    manage_py = django_dir / "manage.py"
+    nexus_utility_path = nexus_dir / "nexus_utility.py"
+    for required in (manage_py, nexus_utility_path):
+        if not required.exists():
+            raise InvalidAnsysPath(
+                f"Could not validate an ADR installation under '{install_dir}'. "
+                f"Missing required file: '{required}'."
+            )
+    return ResolvedInstallPaths(
+        install_dir=str(install_dir),
+        version=version,
+        nexus_dir=str(nexus_dir),
+        django_dir=str(django_dir),
+        nexus_utility_path=str(nexus_utility_path),
+        bin_dir=str(install_dir / "bin"),
     )
 
 
@@ -287,7 +344,9 @@ def _check_template(template_id_str, template_attr, logger=None):
             if key not in JSON_TEMPLATE_KEYS:
                 extra_keys.append(key)
         if extra_keys:
-            logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
+            logger.warning(
+                f"There are some extra keys under '{template_id_str}': {extra_keys}"
+            )
 
     # Check report_type
     if template_attr["report_type"] not in REPORT_TYPES:
@@ -296,7 +355,9 @@ def _check_template(template_id_str, template_attr, logger=None):
         )
 
     # Check item_filter
-    common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
+    common_error_str = (
+        "The loaded JSON file does not follow the correct item_filter convention!\n"
+    )
     for query_stanza in template_attr["item_filter"].split(";"):
         if len(query_stanza) > 0:
             parts = query_stanza.split("|")
@@ -319,10 +380,15 @@ def _check_template(template_id_str, template_attr, logger=None):
     # TODO: check 'sort_selection' and 'params'
 
 
-def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):
+def populate_template(
+    id_str, attr, parent_template, create_template_func, logger=None, *args
+):
     _check_template(id_str, attr, logger)
     template = create_template_func(
-        *args, name=attr["name"], parent=parent_template, report_type=attr["report_type"]
+        *args,
+        name=attr["name"],
+        parent=parent_template,
+        report_type=attr["report_type"],
     )
     template.set_params(attr["params"] if "params" in attr else {})
     if "sort_selection" in attr and attr["sort_selection"] != "":
