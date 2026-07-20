@@ -96,26 +96,37 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     # are we on windows
     is_windows = report_utils.enve_arch().startswith("win")
     # is_linux = report_utils.enve_arch().startswith("lin")
-    # Start the work by getting the pathname to the django directory
+    # Start the work by getting the pathname to the django directory.  Use the
+    # non-raising resolver here (not resolve_install_paths): when no install is
+    # found we fall back to the bare launcher name below and let subprocess.call
+    # surface the failure as OSError.  Callers such as export_report_as_pdf rely
+    # on that "no local installation -> OSError" contract.
     if exec_basis is None or not ansys_version:
-        paths = common_utils.resolve_install_paths(
+        resolution = common_utils.resolve_install_info(
             ansys_installation=exec_basis, ansys_version=ansys_version
         )
         if exec_basis is None:
-            exec_basis = paths.install_dir
+            exec_basis = resolution.install_dir
         if not ansys_version:
-            ansys_version = paths.version
+            ansys_version = resolution.version
     report_ver = str(ansys_version)
-    rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
-    nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
     # run any DB migrations using Python 3...
-    app_file = "cpython" + str(ansys_version)
-    app = os.path.join(exec_basis, "bin", app_file)
-    if is_windows:
-        app += ".bat"
-    # try the absolute name and if failing, assume it is in the PATH
-    if not os.path.exists(app):
+    app_file = "cpython" + report_ver
+    if exec_basis is None:
+        # No installation could be located.  Use the bare launcher name so that
+        # subprocess.call raises OSError instead of building a bogus path.
+        rptdir = None
+        nexus_utility = "nexus_utility.py"
         app = app_file
+    else:
+        rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
+        nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
+        app = os.path.join(exec_basis, "bin", app_file)
+        if is_windows:
+            app += ".bat"
+        # try the absolute name and if failing, assume it is in the PATH
+        if not os.path.exists(app):
+            app = app_file
     # run nexus_utility.py
     params = dict(
         stdout=subprocess.DEVNULL,
