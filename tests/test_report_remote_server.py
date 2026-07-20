@@ -31,7 +31,8 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from ansys.dynamicreporting.core import Service
+from ansys.dynamicreporting.core import Service, common_utils
+from ansys.dynamicreporting.core.compatibility import DEFAULT_ANSYS_INSTALL_VERSION
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
@@ -747,6 +748,83 @@ def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
         except OSError:
             success = True
     assert success is True
+
+
+# --- Regression tests: launcher paths must never surface InvalidAnsysPath -----
+# The install-resolution hardening routed launcher paths through a strict resolver
+# that raises InvalidAnsysPath when no local install is found. These tests lock the
+# backward-compatible failure modes: run_nexus_utility must fail as OSError (the
+# export_report_as_pdf contract), and launch_local_database_server must return False
+# or raise ServerLaunchError per raise_exception -- never InvalidAnsysPath.
+
+
+def _no_local_install(*args, **kwargs):
+    # Simulate "no local ADR installation found": install_dir is None. Version
+    # defaults to the client default so no version literal is hardcoded here.
+    return common_utils.InstallResolution(
+        install_dir=None, version=int(DEFAULT_ANSYS_INSTALL_VERSION)
+    )
+
+
+def _raise_no_running_server(self, *args, **kwargs):
+    # Force the "is a server already running?" probe to conclude "no".
+    raise ConnectionError("no server running")
+
+
+def _raise_missing_launcher(*args, **kwargs):
+    # Simulate the launcher executable being absent, as it is with no install.
+    raise FileNotFoundError(2, "No such file or directory")
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_no_install_raises_oserror(monkeypatch) -> None:
+    # With no install, the bare launcher name is used and subprocess.call raises
+    # OSError. Before the fix this raised InvalidAnsysPath (not an OSError), which
+    # broke export_report_as_pdf's documented "no local install -> OSError" contract.
+    # subprocess.call is stubbed to fail like a missing launcher so the test never
+    # spawns a real process.
+    monkeypatch.setattr(common_utils, "resolve_install_info", _no_local_install)
+    monkeypatch.setattr(r.subprocess, "call", _raise_missing_launcher)
+    with pytest.raises(OSError):
+        r.run_nexus_utility(["report_save_pdf", "http://127.0.0.1:0", "out.pdf"])
+
+
+@pytest.mark.ado_test
+def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
+    # No install + raise_exception=False: the launcher command fails inside the
+    # existing try/except and the function returns False (its documented contract)
+    # rather than raising InvalidAnsysPath out of the function.
+    monkeypatch.setattr(common_utils, "resolve_install_info", _no_local_install)
+    # Isolate the launcher-resolution behavior from DB-layout and network details.
+    monkeypatch.setattr(r, "validate_local_db", lambda *a, **k: True)
+    monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    monkeypatch.setattr(r.subprocess, "Popen", _raise_missing_launcher)
+    result = r.launch_local_database_server(
+        parent=None,
+        directory=str(tmp_path),
+        port=8000 + randint(0, 3999),
+        raise_exception=False,
+        verbose=False,
+    )
+    assert result is False
+
+
+@pytest.mark.ado_test
+def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> None:
+    # Same no-install scenario with raise_exception=True: the failure surfaces as the
+    # documented ServerLaunchError, never InvalidAnsysPath.
+    monkeypatch.setattr(common_utils, "resolve_install_info", _no_local_install)
+    monkeypatch.setattr(r, "validate_local_db", lambda *a, **k: True)
+    monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    monkeypatch.setattr(r.subprocess, "Popen", _raise_missing_launcher)
+    with pytest.raises(e.ServerLaunchError):
+        r.launch_local_database_server(
+            parent=None,
+            directory=str(tmp_path),
+            port=8000 + randint(0, 3999),
+            raise_exception=True,
+            verbose=False,
+        )
 
 
 @pytest.mark.ado_test
