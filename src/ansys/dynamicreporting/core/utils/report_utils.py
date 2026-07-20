@@ -22,6 +22,7 @@
 
 import array
 import base64
+from html.parser import HTMLParser as BaseHTMLParser
 import io
 import json
 import os
@@ -30,12 +31,11 @@ import platform
 import socket
 import sys
 import tempfile
-from html.parser import HTMLParser as BaseHTMLParser
 from typing import List, Optional
 
-import requests
 from PIL import Image
 from PIL.TiffTags import TAGS
+import requests
 
 try:
     import enve
@@ -424,9 +424,7 @@ def convert_windows_pathname(path, long=True):
     return path
 
 
-def run_web_request(
-    method, server, relative_url, data=None, headers=None, stream=False
-):
+def run_web_request(method, server, relative_url, data=None, headers=None, stream=False):
     """
     When a request is made to REST, HTTP basic auth is used by default through requests
     when you pass (username, password) as auth.

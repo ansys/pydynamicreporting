@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from dataclasses import dataclass
 import logging
 import os
+from pathlib import Path
 import platform
 import re
-from dataclasses import dataclass
-from pathlib import Path
 
 import bleach
 
@@ -91,9 +91,7 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
     return None
 
 
-def _resolve_install_version(
-    install_dir: Path | None, ansys_version: int | None
-) -> int:
+def _resolve_install_version(install_dir: Path | None, ansys_version: int | None) -> int:
     """Resolve install version from path, layout, explicit override, then default."""
     if install_dir is not None:
         path_version = get_install_version(install_dir)
@@ -183,9 +181,7 @@ def _build_install_candidates(
     # Otherwise use the ordered fallback list to keep implicit discovery broad
     # without resorting to repeated brute-force filesystem scans.
     versions_to_probe = (
-        (str(ansys_version),)
-        if ansys_version is not None
-        else AUTO_DETECT_INSTALL_VERSIONS
+        (str(ansys_version),) if ansys_version is not None else AUTO_DETECT_INSTALL_VERSIONS
     )
 
     for version in versions_to_probe:
@@ -225,9 +221,7 @@ def resolve_install_info(
 
     if ansys_installation and (
         install_dir is None
-        or not (
-            install_dir / f"nexus{resolved_version}" / "django" / "manage.py"
-        ).exists()
+        or not (install_dir / f"nexus{resolved_version}" / "django" / "manage.py").exists()
     ):
         raise InvalidAnsysPath(
             f"Unable to detect an installation in: {[str(d) for d in candidates]}"
@@ -344,9 +338,7 @@ def _check_template(template_id_str, template_attr, logger=None):
             if key not in JSON_TEMPLATE_KEYS:
                 extra_keys.append(key)
         if extra_keys:
-            logger.warning(
-                f"There are some extra keys under '{template_id_str}': {extra_keys}"
-            )
+            logger.warning(f"There are some extra keys under '{template_id_str}': {extra_keys}")
 
     # Check report_type
     if template_attr["report_type"] not in REPORT_TYPES:
@@ -355,9 +347,7 @@ def _check_template(template_id_str, template_attr, logger=None):
         )
 
     # Check item_filter
-    common_error_str = (
-        "The loaded JSON file does not follow the correct item_filter convention!\n"
-    )
+    common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
     for query_stanza in template_attr["item_filter"].split(";"):
         if len(query_stanza) > 0:
             parts = query_stanza.split("|")
@@ -380,9 +370,7 @@ def _check_template(template_id_str, template_attr, logger=None):
     # TODO: check 'sort_selection' and 'params'
 
 
-def populate_template(
-    id_str, attr, parent_template, create_template_func, logger=None, *args
-):
+def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):
     _check_template(id_str, attr, logger)
     template = create_template_func(
         *args,

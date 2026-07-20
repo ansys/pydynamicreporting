@@ -50,8 +50,9 @@ assume that version constants, install defaults, or dependency floors should
 come across unchanged. Recheck the following items explicitly:
 
 - `src/ansys/dynamicreporting/core/compatibility.py`:
-  `DEFAULT_ANSYS_INSTALL_RELEASE`, `DEFAULT_ANSYS_INSTALL_VERSION`, and
-  `AUTO_DETECT_INSTALL_VERSIONS`
+  `DEFAULT_ANSYS_INSTALL_RELEASE`; `DEFAULT_ANSYS_INSTALL_VERSION` and
+  `AUTO_DETECT_INSTALL_VERSIONS` are derived from it and should be rechecked
+  after changing the release default
 - `src/ansys/dynamicreporting/core/__init__.py`:
   `DEFAULT_ANSYS_VERSION`, `ansys_version`, `__ansys_version__`, and
   `__ansys_version_str__`

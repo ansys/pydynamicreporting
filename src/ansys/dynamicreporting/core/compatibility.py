@@ -22,8 +22,8 @@
 
 """Public client-to-product compatibility metadata."""
 
-import re
 from dataclasses import dataclass
+import re
 
 from ._version import __version__
 
@@ -87,12 +87,8 @@ def supported_product_lines_for_client_major(client_major: int) -> tuple[str, st
 _CURRENT_CLIENT_MAJOR_EPOCH = get_client_major_epoch()
 # Public compatibility metadata follows the installed client major line.
 # Major ``0`` is permanently anchored to the shipped 2026 product epoch.
-BUNDLED_PRODUCT_RELEASE = bundled_product_release_for_client_major(
-    _CURRENT_CLIENT_MAJOR_EPOCH
-)
-SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(
-    _CURRENT_CLIENT_MAJOR_EPOCH
-)
+BUNDLED_PRODUCT_RELEASE = bundled_product_release_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
+SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
 
 
 def parse_product_release(product_release: str) -> tuple[str, int]:
@@ -120,9 +116,7 @@ def product_release_to_install_version(product_release: str) -> int:
 # namespace when they could not discover a server-specific version.  Keep that
 # behavior separate from install probing so direct ``ReportDownloadHTML`` usage
 # stays backwards compatible without forcing constructor defaults back to 271.
-DEFAULT_STATIC_ASSET_VERSION = str(
-    product_release_to_install_version(BUNDLED_PRODUCT_RELEASE)
-)
+DEFAULT_STATIC_ASSET_VERSION = str(product_release_to_install_version(BUNDLED_PRODUCT_RELEASE))
 
 
 def install_version_to_product_release(install_version: int | str) -> str:
@@ -205,12 +199,8 @@ def get_compatibility_info(client_version: str = __version__) -> ProductCompatib
     return ProductCompatibility(
         client_version=client_version,
         client_major_epoch=client_major_epoch,
-        bundled_product_release=bundled_product_release_for_client_major(
-            client_major_epoch
-        ),
-        supported_product_lines=supported_product_lines_for_client_major(
-            client_major_epoch
-        ),
+        bundled_product_release=bundled_product_release_for_client_major(client_major_epoch),
+        supported_product_lines=supported_product_lines_for_client_major(client_major_epoch),
         support_policy=SUPPORTED_PRODUCT_RELEASE_POLICY,
     )
 
