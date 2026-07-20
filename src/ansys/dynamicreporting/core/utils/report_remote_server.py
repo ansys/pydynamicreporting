@@ -51,7 +51,7 @@ from .. import common_utils
 from ..adr_utils import build_query_url
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION
 from ..constants import JSON_ATTR_KEYS
-from ..exceptions import ADRException
+from ..exceptions import ADRException, InvalidAnsysPath
 from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
@@ -102,13 +102,23 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     # surface the failure as OSError.  Callers such as export_report_as_pdf rely
     # on that "no local installation -> OSError" contract.
     if exec_basis is None or not ansys_version:
-        resolution = common_utils.resolve_install_info(
-            ansys_installation=exec_basis, ansys_version=ansys_version
-        )
-        if exec_basis is None:
-            exec_basis = resolution.install_dir
-        if not ansys_version:
-            ansys_version = resolution.version
+        # Resolve the install dir/version without failing hard.  An explicit but
+        # invalid exec_basis makes resolve_install_info raise InvalidAnsysPath, but
+        # this launcher path must preserve its historical "no local install ->
+        # OSError" contract (callers such as export_report_as_pdf depend on it).
+        # On any resolution failure, keep whatever the caller supplied, default the
+        # version, and let subprocess.call raise OSError below.
+        try:
+            resolution = common_utils.resolve_install_info(
+                ansys_installation=exec_basis, ansys_version=ansys_version
+            )
+            if exec_basis is None:
+                exec_basis = resolution.install_dir
+            if not ansys_version:
+                ansys_version = resolution.version
+        except InvalidAnsysPath:
+            if not ansys_version:
+                ansys_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
     report_ver = str(ansys_version)
     # run any DB migrations using Python 3...
     app_file = "cpython" + report_ver
@@ -1966,8 +1976,20 @@ def launch_local_database_server(
     if exec_basis:
         exename = os.path.join(exec_basis, "bin", "nexus_launcher" + str(ansys_version))
     else:
-        paths = common_utils.resolve_install_paths()
-        exename = os.path.join(paths.bin_dir, f"nexus_launcher{paths.version}")
+        # Use the non-raising resolver so a missing installation flows into the
+        # launch failure handling below (ServerLaunchError when raise_exception,
+        # otherwise return False) instead of raising InvalidAnsysPath out of this
+        # function -- which would bypass the raise_exception contract and skip
+        # releasing the acquired file lock.
+        resolution = common_utils.resolve_install_info()
+        if resolution.install_dir is None:
+            # No install located: use the bare launcher name so the subprocess
+            # launch below fails and is handled like any other launch error.
+            exename = f"nexus_launcher{resolution.version}"
+        else:
+            exename = os.path.join(
+                resolution.install_dir, "bin", f"nexus_launcher{resolution.version}"
+            )
     is_windows = report_utils.enve_arch().startswith("win")
     if is_windows:
         exename += ".bat"
