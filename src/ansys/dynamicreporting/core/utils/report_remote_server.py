@@ -2038,6 +2038,14 @@ def launch_local_database_server(
     monitor_process.stderr.close()
     monitor_process.stdout.close()
 
+    # On Windows, if terminate_on_python_exit is True, we take care of cleaning up in the atexit handler.
+    # If it is False, a race condition can appear as the garbage collector cleans up in random order.
+    # To prevent a spurious WinError 6 message from the race condition, set the monitor_process.returncode to 0.
+    # This prevents Popen.__del__ from calling _WaitForSingleObject on a potentially-closed handle
+    # during garbage collection finalization. The process still gets cleaned up correctly.
+    if not terminate_on_python_exit:
+        monitor_process.returncode = 0
+
     # Allow another API launch to continue
     if local_lock:
         local_lock.release()
