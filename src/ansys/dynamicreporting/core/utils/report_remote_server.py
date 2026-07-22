@@ -139,10 +139,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
             app = app_file
     # run nexus_utility.py
     params = dict(
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        stdin=subprocess.DEVNULL,
-        cwd=rptdir,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, cwd=rptdir
     )
     # Build the command line
     cmd = [app]
@@ -371,10 +368,7 @@ class Server:
 
     def get_auth(self):
         if self.cur_username and self.cur_password and (len(self.cur_username) > 0):
-            return (
-                self.cur_username.encode("utf-8"),
-                self.cur_password.encode("utf-8"),
-            )
+            return (self.cur_username.encode("utf-8"), self.cur_password.encode("utf-8"))
         return None
 
     def get_user_groups(self):
@@ -564,10 +558,7 @@ class Server:
             else:
                 # we need this because we now push complex structures.
                 data = json.dumps(obj_data, cls=BaseEncoder)
-                headers = {
-                    "Content-type": "application/json",
-                    "Accept": "application/json",
-                }
+                headers = {"Content-type": "application/json", "Accept": "application/json"}
             # Push the object
             try:
                 r = request_method(uri, auth=auth, data=data, headers=headers)
@@ -625,10 +616,7 @@ class Server:
             if ret != requests.codes.ok:
                 if ret == requests.codes.forbidden:
                     raise exceptions.PermissionDenied(
-                        r.json().get(
-                            "detail",
-                            "You do not have permission to perform this action.",
-                        )
+                        r.json().get("detail", "You do not have permission to perform this action.")
                     )
 
                 self._last_error = r.text
@@ -655,10 +643,7 @@ class Server:
                     exceptions.raise_bad_request_error(r)
                 if ret == requests.codes.forbidden:
                     raise exceptions.PermissionDenied(
-                        r.json().get(
-                            "detail",
-                            "You do not have permission to perform this action.",
-                        )
+                        r.json().get("detail", "You do not have permission to perform this action.")
                     )
                 success = ret
         return success
@@ -685,13 +670,7 @@ class Server:
     # if progress_qt is True, text strings will be translated, etc.  Otherwise,
     # the same method are called, but w/o Qt use.
     def copy_items(
-        self,
-        source,
-        obj_type="item",
-        query=None,
-        progress=None,
-        categories=None,
-        progress_qt=True,
+        self, source, obj_type="item", query=None, progress=None, categories=None, progress_qt=True
     ):
         copy_list = []
         # get the items to copy...
@@ -972,9 +951,7 @@ class Server:
         delegating here.
         """
         directory_path = os.path.abspath(directory_name)
-        from ansys.dynamicreporting.core.utils.report_download_html import (
-            ReportDownloadHTML,
-        )
+        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query, item_filter)
         # Ask the server for the Ansys version number when possible so the downloader rewrites
@@ -1242,10 +1219,7 @@ class Server:
         if delay is not None:
             cmd.append(str(delay))
         run_nexus_utility(
-            cmd,
-            use_software_gl=True,
-            exec_basis=exec_basis,
-            ansys_version=ansys_version,
+            cmd, use_software_gl=True, exec_basis=exec_basis, ansys_version=ansys_version
         )
 
     def export_report_as_pptx(self, report_guid, file_name, query=None):
@@ -2026,10 +2000,7 @@ def launch_local_database_server(
     # Capture stderr to leverage nexus_launcher CLI error checking.  Grabbing stdout as well, but not
     # used at the moment
     params = dict(
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.DEVNULL,
-        cwd=db_dir,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, cwd=db_dir
     )
     if is_windows:
         params["creationflags"] = subprocess.CREATE_NO_WINDOW

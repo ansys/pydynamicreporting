@@ -373,10 +373,7 @@ def _check_template(template_id_str, template_attr, logger=None):
 def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):
     _check_template(id_str, attr, logger)
     template = create_template_func(
-        *args,
-        name=attr["name"],
-        parent=parent_template,
-        report_type=attr["report_type"],
+        *args, name=attr["name"], parent=parent_template, report_type=attr["report_type"]
     )
     template.set_params(attr["params"] if "params" in attr else {})
     if "sort_selection" in attr and attr["sort_selection"] != "":

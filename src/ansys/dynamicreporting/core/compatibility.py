@@ -184,8 +184,7 @@ AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
 
 
 def is_supported_product_release(
-    product_release: str,
-    supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES,
+    product_release: str, supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES
 ) -> bool:
     """Return ``True`` if the release belongs to one of the supported annual lines."""
     return product_release_to_product_line(product_release) in supported_product_lines
