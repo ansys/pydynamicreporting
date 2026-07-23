@@ -1,0 +1,6 @@
+get\_sort\_selection
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMapGenerator.get_sort_selection

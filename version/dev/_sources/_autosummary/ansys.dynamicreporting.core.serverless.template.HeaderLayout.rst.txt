@@ -1,0 +1,189 @@
+﻿HeaderLayout
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: HeaderLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      HeaderLayout.add_filter
+      
+      
+      HeaderLayout.add_params
+      
+      
+      HeaderLayout.add_properties
+      
+      
+      HeaderLayout.add_property
+      
+      
+      HeaderLayout.add_sort_fields
+      
+      
+      HeaderLayout.add_tag
+      
+      
+      HeaderLayout.as_dict
+      
+      
+      HeaderLayout.create
+      
+      
+      HeaderLayout.delete
+      
+      
+      HeaderLayout.filter
+      
+      
+      HeaderLayout.find
+      
+      
+      HeaderLayout.get
+      
+      
+      HeaderLayout.get_column_count
+      
+      
+      HeaderLayout.get_column_widths
+      
+      
+      HeaderLayout.get_comments
+      
+      
+      HeaderLayout.get_filter
+      
+      
+      HeaderLayout.get_filter_mode
+      
+      
+      HeaderLayout.get_html
+      
+      
+      HeaderLayout.get_params
+      
+      
+      HeaderLayout.get_property
+      
+      
+      HeaderLayout.get_skip
+      
+      
+      HeaderLayout.get_sort_fields
+      
+      
+      HeaderLayout.get_sort_selection
+      
+      
+      HeaderLayout.get_tags
+      
+      
+      HeaderLayout.get_transpose
+      
+      
+      HeaderLayout.reinit
+      
+      
+      HeaderLayout.rem_tag
+      
+      
+      HeaderLayout.remove_tag
+      
+      
+      HeaderLayout.render
+      
+      
+      HeaderLayout.render_pdf
+      
+      
+      HeaderLayout.reorder_child
+      
+      
+      HeaderLayout.reorder_children
+      
+      
+      HeaderLayout.save
+      
+      
+      HeaderLayout.set_column_count
+      
+      
+      HeaderLayout.set_column_widths
+      
+      
+      HeaderLayout.set_comments
+      
+      
+      HeaderLayout.set_filter
+      
+      
+      HeaderLayout.set_filter_mode
+      
+      
+      HeaderLayout.set_html
+      
+      
+      HeaderLayout.set_params
+      
+      
+      HeaderLayout.set_property
+      
+      
+      HeaderLayout.set_skip
+      
+      
+      HeaderLayout.set_sort_fields
+      
+      
+      HeaderLayout.set_sort_selection
+      
+      
+      HeaderLayout.set_tags
+      
+      
+      HeaderLayout.set_transpose
+      
+      
+      HeaderLayout.to_dict
+      
+      
+      HeaderLayout.to_json
+      
+      
+      HeaderLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      HeaderLayout.children_order
+      HeaderLayout.db
+      HeaderLayout.item_filter
+      HeaderLayout.master
+      HeaderLayout.name
+      HeaderLayout.params
+      HeaderLayout.parent
+      HeaderLayout.report_type
+      HeaderLayout.saved
+      HeaderLayout.tags
+      HeaderLayout.type
+      HeaderLayout.date
+      HeaderLayout.children
+      HeaderLayout.guid
+   
+   

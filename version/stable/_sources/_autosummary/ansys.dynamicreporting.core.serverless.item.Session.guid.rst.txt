@@ -1,0 +1,6 @@
+guid
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Session.guid

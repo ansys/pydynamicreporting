@@ -1,0 +1,6 @@
+set\_generated\_items
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: ItemsComparisonGenerator.set_generated_items

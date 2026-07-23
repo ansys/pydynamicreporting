@@ -1,0 +1,6 @@
+plot
+====
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.plot

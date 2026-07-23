@@ -1,0 +1,6 @@
+use\_all\_slides
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: PPTXLayout.use_all_slides
