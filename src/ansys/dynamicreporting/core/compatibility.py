@@ -165,16 +165,12 @@ DEFAULT_ANSYS_INSTALL_VERSION = str(
 )
 
 
-# Preserve the historical no-argument constructor behavior by probing the
-# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
-# callers on the same default install they used on ``main`` while still
-# allowing a released install as a lower-priority fallback.
-#
-# We intentionally do not probe older releases implicitly anymore.  Selecting an
-# older unsupported line without an explicit user request changes the meaning
-# of the default constructors too aggressively for a compatibility fix.
-def _auto_detect_install_versions() -> tuple[str, ...]:
-    """Return the default install version followed by the previous annual line."""
+def _auto_detect_install_versions() -> tuple[str, str]:
+    """Return the implicit ADR install probe order.
+
+    Probe the default install line first to preserve the historical
+    no-argument constructor behavior, then stop after the previous annual line.
+    """
     year_line, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
     previous_release = f"{int(year_line) - 1:02d}.{release_index}"
     return (

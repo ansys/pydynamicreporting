@@ -110,8 +110,7 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
                 ansys_version = resolution.version
         except InvalidAnsysPath:
             resolution_failed = True
-            if not ansys_version:
-                ansys_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
+            ansys_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
     report_ver = str(ansys_version)
     # run any DB migrations using Python 3...
     app_file = "cpython" + report_ver
@@ -1521,7 +1520,7 @@ def create_new_local_database(
                 report_ver = int(ansys_version)
             else:
                 report_ver = common_utils.resolve_install_info(
-                    ansys_installation=exec_basis, ansys_version=ansys_version
+                    ansys_installation=exec_basis
                 ).version
             if report_ver > 240:
                 db_dir_encoded = report_utils.encode_url(db_dir)
@@ -1637,7 +1636,7 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
     if version_min is None:
         version_min = -1.0
     if version_max is None:
-        version_max = common_utils.resolve_install_info().version / 10.0
+        version_max = int(DEFAULT_ANSYS_INSTALL_VERSION) / 10.0
     version_file = os.path.join(os.path.abspath(db_dir), "media", "csf_conversion_version")
     if not os.path.isfile(version_file):
         return True

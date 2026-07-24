@@ -121,6 +121,11 @@ class ResolvedInstallPaths:
     django_dir: str
 
 
+def _django_dir_for(install_dir: Path, version: int) -> Path:
+    """Return the Django directory for a resolved ADR install and version."""
+    return install_dir / f"nexus{version}" / "django"
+
+
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
     """Build candidate directories for both the new ADR and legacy CEI layouts."""
     return [install_root / "ADR", install_root / "CEI"]
@@ -216,7 +221,7 @@ def resolve_install_info(
 
     if ansys_installation and (
         install_dir is None
-        or not (install_dir / f"nexus{resolved_version}" / "django" / "manage.py").exists()
+        or not (_django_dir_for(install_dir, resolved_version) / "manage.py").exists()
     ):
         raise InvalidAnsysPath(
             f"Unable to detect an installation in: {[str(d) for d in candidates]}"
@@ -231,10 +236,25 @@ def resolve_install_info(
 def resolve_install_paths(
     ansys_installation: str | None = None, ansys_version: int | None = None
 ) -> ResolvedInstallPaths:
-    """Resolve and validate the ADR install layout for launcher use.
+    """Resolve and validate the ADR install layout for product process launchers.
 
-    Never returns a site-packages-derived path. Raises InvalidAnsysPath when a
-    real install root with the required Django entry point cannot be validated.
+    Parameters
+    ----------
+    ansys_installation : str, optional
+        Path to an ADR installation.
+    ansys_version : int, optional
+        ADR installation version to resolve.
+
+    Returns
+    -------
+    ResolvedInstallPaths
+        The validated Django directory for the resolved installation.
+
+    Raises
+    ------
+    InvalidAnsysPath
+        Raised when no real install root with the required Django entry point
+        can be validated.
     """
     resolution = resolve_install_info(
         ansys_installation=ansys_installation, ansys_version=ansys_version
@@ -247,8 +267,7 @@ def resolve_install_paths(
         )
     install_dir = Path(resolution.install_dir)
     version = resolution.version
-    nexus_dir = install_dir / f"nexus{version}"
-    django_dir = nexus_dir / "django"
+    django_dir = _django_dir_for(install_dir, version)
     manage_py = django_dir / "manage.py"
     # Explicit paths were already checked by resolve_install_info. Implicit
     # discovery is tolerant, so validate its Django entry point before returning.
