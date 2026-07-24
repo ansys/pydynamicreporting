@@ -139,7 +139,10 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
                 "Warning: unable to convert 3D geometry: neither the ADR_VERSION nor the "
                 "CEI_APEX_SUFFIX Django setting is configured."
             )
-            os.rmdir(avz_dir)
+            try:
+                os.rmdir(avz_dir)
+            except OSError as e:
+                print(f"Warning: unable to remove empty 3D geometry directory: {e}")
             return
         app = f"cei_apex{version}_udrw2avz"
         if is_enve is True:
