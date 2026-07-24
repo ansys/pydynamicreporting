@@ -131,7 +131,15 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     if csf_ext.lower() != ".avz":  # pragma: no cover
         # convert the udrw file into a .avz file using the cei_apexXXX_udrw2avz command
         # Accept either ADR_VERSION (current) or CEI_APEX_SUFFIX (pre-rename install).
-        version = getattr(settings, "ADR_VERSION", None) or getattr(settings, "CEI_APEX_SUFFIX", "")
+        version = getattr(settings, "ADR_VERSION", None) or getattr(
+            settings, "CEI_APEX_SUFFIX", None
+        )
+        if not version:
+            print(
+                "Warning: unable to convert 3D geometry: neither the ADR_VERSION nor the "
+                "CEI_APEX_SUFFIX Django setting is configured."
+            )
+            return
         app = f"cei_apex{version}_udrw2avz"
         if is_enve is True:
             app = os.path.join(enve.home(), "bin", app)
