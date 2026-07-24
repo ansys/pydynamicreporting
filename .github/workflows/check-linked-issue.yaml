@@ -16,10 +16,10 @@ jobs:
         with:
           script: |
             const prBody = context.payload.pull_request.body;
-            const issueRegex = /(close[sd]?|fix(e[sd])?|resolve[sd]?|address(e[sd])?)\s+https:\/\/tfs\.ansys\.com:8443\b(?:\/\S*)?/i;
+            const issueRegex = /(close[sd]?|fix(e[sd])?|resolve[sd]?|address(e[sd])?)\s+https:\/\/(tfs\.ansys\.com:8443|ado\.internal\.synopsys\.com)\b(?:\/\S*)?/i;
 
             if (!prBody || !issueRegex.test(prBody)) {
-              core.setFailed("❌ Pull request must reference a TFS work item using a closing keyword and a TFS URL, for example: 'Fixes https://tfs.ansys.com:8443/tfs/...'. Supported keywords: close, closes, closed, fix, fixes, fixed, resolve, resolves, resolved, address, addresses, addressed.");
+              core.setFailed("❌ Pull request must reference a TFS work item using a closing keyword and a TFS URL, for example: 'Fixes https://tfs.ansys.com:8443/tfs/...' or 'Fixes https://ado.internal.synopsys.com/tfs/...'. Supported keywords: close, closes, closed, fix, fixes, fixed, resolve, resolves, resolved, address, addresses, addressed.");
             } else {
               console.log("✅ Pull request is correctly linked to an issue.");
             }
