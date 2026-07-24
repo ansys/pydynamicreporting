@@ -1939,6 +1939,7 @@ def launch_local_database_server(
     # Note: for the time being, we force the django instance count to be one.  This is in line with the older
     # implementation of the API and is needed for things like coverage tests.  We can consider relaxing this
     # in the future.
+    install_missing = False
     if exec_basis:
         exename = os.path.join(exec_basis, "bin", "nexus_launcher" + str(ansys_version))
     else:
@@ -1949,9 +1950,10 @@ def launch_local_database_server(
         # releasing the acquired file lock.
         resolution = common_utils.resolve_install_info(ansys_version=ansys_version)
         if resolution.install_dir is None:
-            # No install located: use the bare launcher name so the subprocess
-            # launch below fails and is handled like any other launch error.
+            # Keep the expected launcher name for the error message, but never
+            # pass an unqualified executable to the operating system.
             exename = f"nexus_launcher{resolution.version}"
+            install_missing = True
         else:
             exename = os.path.join(
                 resolution.install_dir, "bin", f"nexus_launcher{resolution.version}"
@@ -2001,6 +2003,10 @@ def launch_local_database_server(
 
     # Actually try to launch the server
     try:  # nosec
+        if install_missing:
+            raise FileNotFoundError(
+                f"Unable to run '{exename}': no local ADR installation was found."
+            )
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
         monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
