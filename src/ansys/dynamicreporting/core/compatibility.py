@@ -40,16 +40,6 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # real installation by default. Unreleased lines can still be
 # probed explicitly or as lower-priority fallbacks.
 DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
-DEFAULT_ANSYS_INSTALL_VERSION = "271"
-# Preserve the historical no-argument constructor behavior by probing the
-# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
-# callers on the same default install they used on ``main`` while still
-# allowing a released install as a lower-priority fallback.
-#
-# We intentionally do not probe older releases implicitly anymore.  Selecting an
-# older unsupported line without an explicit user request changes the meaning
-# of the default constructors too aggressively for a compatibility fix.
-AUTO_DETECT_INSTALL_VERSIONS = ("271", "261")
 
 
 @dataclass(frozen=True)
@@ -166,6 +156,31 @@ def product_release_to_product_line(product_release: str) -> str:
     """Return the annual product line, for example ``27`` for ``27.2``."""
     year_line, _ = parse_product_release(product_release)
     return year_line
+
+
+# Derived from the single hand-edited install default above, so a client
+# release bump only requires editing DEFAULT_ANSYS_INSTALL_RELEASE.
+DEFAULT_ANSYS_INSTALL_VERSION = str(
+    product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
+)
+
+
+# Preserve the historical no-argument constructor behavior by probing the
+# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
+# callers on the same default install they used on ``main`` while still
+# allowing a released install as a lower-priority fallback.
+#
+# We intentionally do not probe older releases implicitly anymore.  Selecting an
+# older unsupported line without an explicit user request changes the meaning
+# of the default constructors too aggressively for a compatibility fix.
+def _auto_detect_install_versions() -> tuple[str, ...]:
+    bundled_line = int(product_release_to_product_line(DEFAULT_ANSYS_INSTALL_RELEASE))
+    _, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
+    previous_install_version = f"{bundled_line - 1}{release_index}"
+    return (DEFAULT_ANSYS_INSTALL_VERSION, previous_install_version)
+
+
+AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
 
 
 def is_supported_product_release(

@@ -114,6 +114,18 @@ class InstallResolution:
     version: int
 
 
+@dataclass(frozen=True)
+class ResolvedInstallPaths:
+    """Validated ADR install layout used to launch product processes."""
+
+    install_dir: str
+    version: int
+    nexus_dir: str
+    django_dir: str
+    nexus_utility_path: str
+    bin_dir: str
+
+
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
     """Build candidate directories for both the new ADR and legacy CEI layouts."""
     return [install_root / "ADR", install_root / "CEI"]
@@ -218,6 +230,45 @@ def resolve_install_info(
     return InstallResolution(
         install_dir=str(install_dir) if install_dir is not None else None,
         version=resolved_version,
+    )
+
+
+def resolve_install_paths(
+    ansys_installation: str | None = None, ansys_version: int | None = None
+) -> ResolvedInstallPaths:
+    """Resolve and validate the ADR install layout for launcher use.
+
+    Never returns a site-packages-derived path. Raises InvalidAnsysPath when a
+    real install root with the required structural files cannot be validated.
+    """
+    resolution = resolve_install_info(
+        ansys_installation=ansys_installation, ansys_version=ansys_version
+    )
+    if resolution.install_dir is None:
+        raise InvalidAnsysPath(
+            "Could not locate a valid ADR installation. No candidate install "
+            "directory was found. Provide 'ansys_installation' or set a supported "
+            "install environment variable."
+        )
+    install_dir = Path(resolution.install_dir)
+    version = resolution.version
+    nexus_dir = install_dir / f"nexus{version}"
+    django_dir = nexus_dir / "django"
+    manage_py = django_dir / "manage.py"
+    nexus_utility_path = nexus_dir / "nexus_utility.py"
+    for required in (manage_py, nexus_utility_path):
+        if not required.exists():
+            raise InvalidAnsysPath(
+                f"Could not validate an ADR installation under '{install_dir}'. "
+                f"Missing required file: '{required}'."
+            )
+    return ResolvedInstallPaths(
+        install_dir=str(install_dir),
+        version=version,
+        nexus_dir=str(nexus_dir),
+        django_dir=str(django_dir),
+        nexus_utility_path=str(nexus_utility_path),
+        bin_dir=str(install_dir / "bin"),
     )
 
 

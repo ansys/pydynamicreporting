@@ -130,7 +130,9 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     # a proxy image in it.  So we pass UDRW files through the pipeline first.
     if csf_ext.lower() != ".avz":  # pragma: no cover
         # convert the udrw file into a .avz file using the cei_apexXXX_udrw2avz command
-        app = f"cei_apex{settings.CEI_APEX_SUFFIX}_udrw2avz"
+        # Accept either ADR_VERSION (current) or CEI_APEX_SUFFIX (pre-rename install).
+        version = getattr(settings, "ADR_VERSION", None) or getattr(settings, "CEI_APEX_SUFFIX", "")
+        app = f"cei_apex{version}_udrw2avz"
         if is_enve is True:
             app = os.path.join(enve.home(), "bin", app)
         else:
