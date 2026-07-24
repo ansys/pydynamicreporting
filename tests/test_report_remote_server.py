@@ -156,7 +156,12 @@ def test_fail_newdb(tmp_path, get_exec) -> None:
             run_local=True,
         )
     except DBCreationFailedError as e:
-        succ = "The creation of a new, local database failed" in str(e)
+        expected_error = (
+            "Unable to generate a new database by migration"
+            if get_exec
+            else "Unable to detect an installation in"
+        )
+        succ = expected_error in str(e)
     assert succ
 
 
@@ -757,11 +762,9 @@ def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
 # export_report_as_pdf contract), and launch_local_database_server must return False
 # or raise ServerLaunchError per raise_exception -- never InvalidAnsysPath.
 #
-# Design note: the functions under test run their real code. Only resolve_install_info
-# is stubbed, and only to force the "no local install" case deterministically on a
-# machine that may have a real install. The asserted OSError / ServerLaunchError /
-# False outcomes are produced by the real subprocess launch failing on a bare launcher
-# name that is not on PATH -- they are never injected by a subprocess stub.
+# Design note: the functions under test run their real error paths. Only
+# resolve_install_info is stubbed to force the no-install case deterministically;
+# the asserted outcomes are never injected by a subprocess stub.
 
 
 def _no_local_install(*args, **kwargs):
@@ -780,13 +783,12 @@ def _raise_no_running_server(self, *args, **kwargs):
 
 @pytest.mark.ado_test
 def test_run_nexus_utility_no_install_raises_oserror(monkeypatch) -> None:
-    # With no install, run_nexus_utility builds a bare launcher name ("cpython271")
-    # and runs it via subprocess.call. That name is not on PATH, so the real
-    # subprocess.call raises FileNotFoundError (an OSError). Before the fix the
-    # function raised InvalidAnsysPath at the resolver step -- never reaching
-    # subprocess -- which broke export_report_as_pdf's "no local install -> OSError"
-    # contract. Only resolve_install_info is stubbed, and only to force the
-    # no-install case on machines that may have a real install.
+    # With no install, run_nexus_utility raises FileNotFoundError (an OSError)
+    # directly, before calling subprocess.call. Before the fix the function
+    # raised InvalidAnsysPath at the resolver step, which broke
+    # export_report_as_pdf's "no local install -> OSError" contract. Only
+    # resolve_install_info is stubbed to force the no-install case on machines
+    # that may have a real install.
     monkeypatch.setattr(common_utils, "resolve_install_info", _no_local_install)
     with pytest.raises(OSError):
         r.run_nexus_utility(["report_save_pdf", "http://127.0.0.1:0", "out.pdf"])
@@ -805,7 +807,7 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
     result = r.launch_local_database_server(
         parent=None,
         directory=str(tmp_path),
-        port=8000 + randint(0, 3999),
+        port=8000,
         raise_exception=False,
         verbose=False,
     )
@@ -823,7 +825,7 @@ def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> 
         r.launch_local_database_server(
             parent=None,
             directory=str(tmp_path),
-            port=8000 + randint(0, 3999),
+            port=8000,
             raise_exception=True,
             verbose=False,
         )
