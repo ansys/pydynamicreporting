@@ -106,6 +106,19 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
     # No file conversions needed in these cases, but the proxy image (if any) is extracted as:
     # {media}/2342412421_scene/proxy.png
     avz_dir, csf_ext = os.path.splitext(csf_file)
+    csf_ext_lower = csf_ext.lower()
+    version = None
+    if csf_ext_lower not in {".avz", ".scdoc", ".scdocx", ".dsco"}:
+        # Accept either ADR_VERSION (current) or CEI_APEX_SUFFIX (pre-rename install).
+        version = getattr(settings, "ADR_VERSION", None) or getattr(
+            settings, "CEI_APEX_SUFFIX", None
+        )
+        if not version:
+            raise ImproperlyConfiguredError(
+                extra_detail=(
+                    "Neither the ADR_VERSION nor the CEI_APEX_SUFFIX Django setting is configured."
+                )
+            )
     # make the associated directory in all cases
     try:
         os.mkdir(avz_dir)
@@ -114,7 +127,7 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
         return
     avz_filename = csf_file
     # Easiest case, handle SCDOC, SCDOCX and DSCO files
-    if csf_ext.lower() in {".scdoc", ".scdocx", ".dsco"}:
+    if csf_ext_lower in {".scdoc", ".scdocx", ".dsco"}:
         # SCDOC / SCDOCX / DSCO files can have a thumbnail as: docProps/thumbnail.png
         with zipfile.ZipFile(avz_filename) as archive:
             for name in archive.namelist():
@@ -130,27 +143,8 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
         return
     # A little sneaky here as the udrw2avz conversion can create an AVZ file with
     # a proxy image in it.  So we pass UDRW files through the pipeline first.
-    if csf_ext.lower() != ".avz":  # pragma: no cover
+    if csf_ext_lower != ".avz":  # pragma: no cover
         # convert the udrw file into a .avz file using the cei_apexXXX_udrw2avz command
-        # Accept either ADR_VERSION (current) or CEI_APEX_SUFFIX (pre-rename install).
-        version = getattr(settings, "ADR_VERSION", None) or getattr(
-            settings, "CEI_APEX_SUFFIX", None
-        )
-        if not version:
-            try:
-                os.rmdir(avz_dir)
-            except OSError as e:
-                raise ImproperlyConfiguredError(
-                    extra_detail=(
-                        "Neither the ADR_VERSION nor the CEI_APEX_SUFFIX Django setting is "
-                        f"configured, and the empty geometry directory could not be removed: {e}"
-                    )
-                ) from e
-            raise ImproperlyConfiguredError(
-                extra_detail=(
-                    "Neither the ADR_VERSION nor the CEI_APEX_SUFFIX Django setting is configured."
-                )
-            )
         app = f"cei_apex{version}_udrw2avz"
         if is_enve is True:
             app = os.path.join(enve.home(), "bin", app)
