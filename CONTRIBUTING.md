@@ -45,9 +45,12 @@ encourage the use of the following branch naming convention:
 
 ## Public API Boundaries
 
-Modules under `ansys.dynamicreporting.core.utils` are internal implementation
-details, not supported user-facing APIs. User code should use the documented
-public interfaces instead; names in `utils` may change or be removed without a
+Documented low-level interfaces in
+`ansys.dynamicreporting.core.utils.report_remote_server`,
+`ansys.dynamicreporting.core.utils.report_objects`, and
+`ansys.dynamicreporting.core.utils.report_utils` are supported user-facing APIs.
+Other modules and undocumented names under `ansys.dynamicreporting.core.utils`
+are internal implementation details and may change or be removed without a
 deprecation cycle.
 
 ## Forward-Porting Compatibility Changes
