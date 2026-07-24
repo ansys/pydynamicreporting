@@ -96,47 +96,37 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     # are we on windows
     is_windows = report_utils.enve_arch().startswith("win")
     # is_linux = report_utils.enve_arch().startswith("lin")
-    # Start the work by getting the pathname to the django directory.  Use the
-    # non-raising resolver here (not resolve_install_paths): when no install is
-    # found we fall back to the bare launcher name below and let subprocess.call
-    # surface the failure as OSError.  Callers such as export_report_as_pdf rely
-    # on that "no local installation -> OSError" contract.
+    # Use the non-raising resolver so callers such as export_report_as_pdf keep
+    # receiving OSError when no local installation is available.
+    resolution_failed = False
     if exec_basis is None or not ansys_version:
-        # Resolve the install dir/version without failing hard.  An explicit but
-        # invalid exec_basis makes resolve_install_info raise InvalidAnsysPath, but
-        # this launcher path must preserve its historical "no local install ->
-        # OSError" contract (callers such as export_report_as_pdf depend on it).
-        # On any resolution failure, keep whatever the caller supplied, default the
-        # version, and let subprocess.call raise OSError below.
         try:
             resolution = common_utils.resolve_install_info(
                 ansys_installation=exec_basis, ansys_version=ansys_version
             )
-            if exec_basis is None:
+            if resolution.install_dir is not None:
                 exec_basis = resolution.install_dir
             if not ansys_version:
                 ansys_version = resolution.version
         except InvalidAnsysPath:
+            resolution_failed = True
             if not ansys_version:
                 ansys_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
     report_ver = str(ansys_version)
     # run any DB migrations using Python 3...
     app_file = "cpython" + report_ver
-    if exec_basis is None:
-        # No installation could be located.  Use the bare launcher name so that
-        # subprocess.call raises OSError instead of building a bogus path.
-        rptdir = None
-        nexus_utility = "nexus_utility.py"
+    if exec_basis is None or resolution_failed:
+        # Do not search PATH when resolution proves that no install is available.
+        # A direct FileNotFoundError preserves the historical OSError contract.
+        raise FileNotFoundError(f"Unable to run '{app_file}': no local ADR installation was found.")
+    rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
+    nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
+    app = os.path.join(exec_basis, "bin", app_file)
+    if is_windows:
+        app += ".bat"
+    # try the absolute name and if failing, assume it is in the PATH
+    if not os.path.exists(app):
         app = app_file
-    else:
-        rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
-        nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
-        app = os.path.join(exec_basis, "bin", app_file)
-        if is_windows:
-            app += ".bat"
-        # try the absolute name and if failing, assume it is in the PATH
-        if not os.path.exists(app):
-            app = app_file
     # run nexus_utility.py
     params = dict(
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, cwd=rptdir
@@ -1464,6 +1454,8 @@ def create_new_local_database(
                 f.write(secret_key)
             f.close()
             if exec_basis and ansys_version:
+                # A complete explicit pair is the caller's selected layout, so
+                # preserve the historical direct-path behavior without re-probing.
                 srcdir = os.path.join(exec_basis, f"nexus{int(ansys_version)}", "django")
             else:
                 srcdir = common_utils.resolve_install_paths(
@@ -1955,7 +1947,7 @@ def launch_local_database_server(
         # otherwise return False) instead of raising InvalidAnsysPath out of this
         # function -- which would bypass the raise_exception contract and skip
         # releasing the acquired file lock.
-        resolution = common_utils.resolve_install_info()
+        resolution = common_utils.resolve_install_info(ansys_version=ansys_version)
         if resolution.install_dir is None:
             # No install located: use the bare launcher name so the subprocess
             # launch below fails and is handled like any other launch error.

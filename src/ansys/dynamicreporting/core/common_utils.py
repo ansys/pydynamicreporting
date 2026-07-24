@@ -118,12 +118,7 @@ class InstallResolution:
 class ResolvedInstallPaths:
     """Validated ADR install layout used to launch product processes."""
 
-    install_dir: str
-    version: int
-    nexus_dir: str
     django_dir: str
-    nexus_utility_path: str
-    bin_dir: str
 
 
 def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
@@ -239,7 +234,7 @@ def resolve_install_paths(
     """Resolve and validate the ADR install layout for launcher use.
 
     Never returns a site-packages-derived path. Raises InvalidAnsysPath when a
-    real install root with the required structural files cannot be validated.
+    real install root with the required Django entry point cannot be validated.
     """
     resolution = resolve_install_info(
         ansys_installation=ansys_installation, ansys_version=ansys_version
@@ -255,21 +250,14 @@ def resolve_install_paths(
     nexus_dir = install_dir / f"nexus{version}"
     django_dir = nexus_dir / "django"
     manage_py = django_dir / "manage.py"
-    nexus_utility_path = nexus_dir / "nexus_utility.py"
-    for required in (manage_py, nexus_utility_path):
-        if not required.exists():
-            raise InvalidAnsysPath(
-                f"Could not validate an ADR installation under '{install_dir}'. "
-                f"Missing required file: '{required}'."
-            )
-    return ResolvedInstallPaths(
-        install_dir=str(install_dir),
-        version=version,
-        nexus_dir=str(nexus_dir),
-        django_dir=str(django_dir),
-        nexus_utility_path=str(nexus_utility_path),
-        bin_dir=str(install_dir / "bin"),
-    )
+    # Explicit paths were already checked by resolve_install_info. Implicit
+    # discovery is tolerant, so validate its Django entry point before returning.
+    if not ansys_installation and not manage_py.exists():
+        raise InvalidAnsysPath(
+            f"Could not validate an ADR installation under '{install_dir}'. "
+            f"Missing required file: '{manage_py}'."
+        )
+    return ResolvedInstallPaths(django_dir=str(django_dir))
 
 
 def get_install_info(
