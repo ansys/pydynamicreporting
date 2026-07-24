@@ -776,8 +776,8 @@ def _no_local_install(*args, **kwargs):
 
 
 def _raise_no_running_server(self, *args, **kwargs):
-    # Make the "is a server already running?" probe conclude "no" so the launch
-    # proceeds to the real launcher step without a network call.
+    # Make the "is a server already running?" probe conclude "no" so execution
+    # reaches the explicit missing-install guard without a network call.
     raise ConnectionError("no server running")
 
 
@@ -796,12 +796,12 @@ def test_run_nexus_utility_no_install_raises_oserror(monkeypatch) -> None:
 
 @pytest.mark.ado_test
 def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
-    # No install + raise_exception=False: launch builds a bare launcher name whose
-    # real subprocess.Popen fails (not on PATH); the existing except handler returns
-    # False (its documented contract) rather than raising InvalidAnsysPath.
+    # No install + raise_exception=False: the explicit pre-launch FileNotFoundError
+    # reaches the existing handler, which returns False rather than raising
+    # InvalidAnsysPath.
     monkeypatch.setattr(common_utils, "resolve_install_info", _no_local_install)
-    # Stub only enough to reach the real launcher step: skip the DB-layout check and
-    # the "already running?" probe. The launch failure itself is real.
+    # Stub only enough to reach the missing-install guard: skip the DB-layout check
+    # and the "already running?" probe. subprocess.Popen is never called.
     monkeypatch.setattr(r, "validate_local_db", lambda *a, **k: True)
     monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
     result = r.launch_local_database_server(
@@ -816,8 +816,8 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
 
 @pytest.mark.ado_test
 def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> None:
-    # Same no-install scenario with raise_exception=True: the real launch failure
-    # surfaces as the documented ServerLaunchError, never InvalidAnsysPath.
+    # With raise_exception=True, the same pre-launch failure is wrapped in the
+    # documented ServerLaunchError, never InvalidAnsysPath.
     monkeypatch.setattr(common_utils, "resolve_install_info", _no_local_install)
     monkeypatch.setattr(r, "validate_local_db", lambda *a, **k: True)
     monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
