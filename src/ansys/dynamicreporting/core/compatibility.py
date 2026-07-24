@@ -174,10 +174,13 @@ DEFAULT_ANSYS_INSTALL_VERSION = str(
 # older unsupported line without an explicit user request changes the meaning
 # of the default constructors too aggressively for a compatibility fix.
 def _auto_detect_install_versions() -> tuple[str, ...]:
-    bundled_line = int(product_release_to_product_line(DEFAULT_ANSYS_INSTALL_RELEASE))
-    _, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
-    previous_install_version = f"{bundled_line - 1}{release_index}"
-    return (DEFAULT_ANSYS_INSTALL_VERSION, previous_install_version)
+    """Return the default install version followed by the previous annual line."""
+    year_line, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
+    previous_release = f"{int(year_line) - 1:02d}.{release_index}"
+    return (
+        DEFAULT_ANSYS_INSTALL_VERSION,
+        str(product_release_to_install_version(previous_release)),
+    )
 
 
 AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
