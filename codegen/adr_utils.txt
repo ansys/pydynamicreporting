@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import logging
+import os
 import sys
 
 # Dictionary to match:
@@ -69,31 +70,71 @@ def in_ipynb():
 
 def get_logger(logfile=None):
     """
-    Create a logger for ``pydynamicreporting`` if it does not exist already.
+    Return the ``ansys.dynamicreporting.core`` package logger.
+
+    The library uses its own named logger and never reconfigures the root logger
+    or forces a logging level, so it cannot silence or hijack the host
+    application's logging. By default the logger is quiet: a ``NullHandler`` is
+    attached and the level is left unset, so nothing is emitted until the
+    application configures logging (for example via ``logging.basicConfig`` or by
+    raising the ``"ansys.dynamicreporting.core"`` logger's level). Pass ``logfile``
+    to additionally stream the library's full log to a file or to stdout.
 
     Parameters
     ----------
-        logfile: str
-            Name of the file for the log. If none, then use default stream
+    logfile : str or os.PathLike, optional
+        Destination for the library log. ``None`` (the default) leaves logging
+        disabled by default. ``"stdout"`` streams to standard output; any other
+        value is treated as a file path.
 
-    Return
-    ------
-        logger: logging.logger
-            The logger object.
+    Returns
+    -------
+    logging.Logger
+        The ``ansys.dynamicreporting.core`` package logger.
     """
-    logger = logging.getLogger()
-    logger.setLevel(logging.ERROR)
+    # Use the package's named logger, never the root logger. Configuring or
+    # clamping the root logger (as this function used to, forcing it to ERROR on
+    # every call) silences or hijacks the host application's own logging and drops
+    # every DEBUG/INFO/WARNING record the library emits. Leaving the level unset
+    # keeps the application in control of verbosity; the library only attaches
+    # handlers, and only once each.
+    logger = logging.getLogger("ansys.dynamicreporting.core")
+
     if logfile is None:
-        # Logging for Python APIs should be disabled by default
-        ch = logging.NullHandler()
-    elif logfile=='stdout':
-        ch = logging.StreamHandler(sys.stdout)
+        # Logging for the Python API is disabled by default: a NullHandler keeps
+        # the library quiet (and avoids "No handlers could be found" warnings)
+        # until the caller opts in. Attach it only once.
+        if not any(isinstance(handler, logging.NullHandler) for handler in logger.handlers):
+            logger.addHandler(logging.NullHandler())
+        return logger
+
+    # The caller explicitly opted into logging to a concrete sink, so emit
+    # everything the library logs there. Attach the sink only once so repeated
+    # calls do not stack duplicate handlers and duplicate every log line.
+    logger.setLevel(logging.DEBUG)
+    if logfile == "stdout":
+        already_present = any(
+            isinstance(handler, logging.StreamHandler)
+            and not isinstance(handler, logging.FileHandler)
+            and getattr(handler, "stream", None) is sys.stdout
+            for handler in logger.handlers
+        )
+        if already_present:
+            return logger
+        handler = logging.StreamHandler(sys.stdout)
     else:
-        ch = logging.FileHandler(logfile)
-    ch.setLevel(logging.ERROR)
+        target = os.path.abspath(os.fspath(logfile))
+        already_present = any(
+            isinstance(handler, logging.FileHandler)
+            and getattr(handler, "baseFilename", None) == target
+            for handler in logger.handlers
+        )
+        if already_present:
+            return logger
+        handler = logging.FileHandler(logfile)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
     return logger
 
 
