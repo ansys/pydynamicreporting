@@ -36,6 +36,8 @@ import zipfile
 
 from django.conf import settings
 
+from ..exceptions import ImproperlyConfiguredError
+
 try:
     is_enve = True
     import enve
@@ -135,15 +137,20 @@ def rebuild_3d_geometry(csf_file: str, unique_id: str = "", exec_basis: str = No
             settings, "CEI_APEX_SUFFIX", None
         )
         if not version:
-            print(
-                "Warning: unable to convert 3D geometry: neither the ADR_VERSION nor the "
-                "CEI_APEX_SUFFIX Django setting is configured."
-            )
             try:
                 os.rmdir(avz_dir)
             except OSError as e:
-                print(f"Warning: unable to remove empty 3D geometry directory: {e}")
-            return
+                raise ImproperlyConfiguredError(
+                    extra_detail=(
+                        "Neither the ADR_VERSION nor the CEI_APEX_SUFFIX Django setting is "
+                        f"configured, and the empty geometry directory could not be removed: {e}"
+                    )
+                ) from e
+            raise ImproperlyConfiguredError(
+                extra_detail=(
+                    "Neither the ADR_VERSION nor the CEI_APEX_SUFFIX Django setting is configured."
+                )
+            )
         app = f"cei_apex{version}_udrw2avz"
         if is_enve is True:
             app = os.path.join(enve.home(), "bin", app)
