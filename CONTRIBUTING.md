@@ -43,13 +43,6 @@ encourage the use of the following branch naming convention:
 - **`testing`** - improvements or changes to testing
 - **`release`** - releases
 
-## Public API Boundaries
-
-Modules under `ansys.dynamicreporting.core.utils` are internal implementation
-details, not supported user-facing APIs. User code should use the documented
-public interfaces instead; names in `utils` may change or be removed without a
-deprecation cycle.
-
 ## Forward-Porting Compatibility Changes
 
 When forward-porting maintenance-line compatibility work into `main`, do not
