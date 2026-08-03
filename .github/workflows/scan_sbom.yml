@@ -55,6 +55,8 @@ jobs:
   vulnerabilities:
     name: Vulnerabilities
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/codegen
 
     steps:
       - name: Checkout repository
@@ -69,8 +71,6 @@ jobs:
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
         uses: ansys/actions/check-vulnerabilities@v10.3.2
-        env:
-          PYTHONSAFEPATH: "1"
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
@@ -82,8 +82,6 @@ jobs:
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
         uses: ansys/actions/check-vulnerabilities@v10.3.2
-        env:
-          PYTHONSAFEPATH: "1"
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
