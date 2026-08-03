@@ -29,6 +29,21 @@ The main query methods are available on each model class:
   by specifying the type explicitly (`Item`, `Template`, `Session`, or `Dataset`).
   Returns an ``ObjectSet`` of matching objects.
 
+Counting Items and Reports
+--------------------------
+
+When you only need totals, use the direct count helpers instead of loading all
+matching objects:
+
+.. code-block:: python
+
+    item_count = adr.get_item_count()
+    report_count = adr.get_report_count()
+
+``get_item_count()`` counts all persisted items. ``get_report_count()`` counts
+only top-level templates whose parent is ``None``; child templates within a
+report are excluded.
+
 Examples
 --------
 

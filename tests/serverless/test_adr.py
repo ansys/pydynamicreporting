@@ -98,6 +98,34 @@ def test_is_setup_before_setup():
     assert not ADR.get_instance().is_setup
 
 
+@pytest.mark.unit
+def test_get_counts_use_database_level_queries(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from ansys.dynamicreporting.core.serverless import Item, Template
+
+    item_manager = Mock()
+    item_manager.count.return_value = 12
+    template_manager = Mock()
+    template_manager.filter.return_value.count.return_value = 4
+    monkeypatch.setitem(
+        Item._model_cls_registry,
+        "Item",
+        SimpleNamespace(objects=item_manager),
+    )
+    monkeypatch.setitem(
+        Template._model_cls_registry,
+        "Template",
+        SimpleNamespace(objects=template_manager),
+    )
+
+    assert ADR.get_item_count() == 12
+    assert ADR.get_report_count() == 4
+    item_manager.count.assert_called_once_with()
+    template_manager.filter.assert_called_once_with(parent=None)
+
+
 @pytest.mark.ado_test
 def test_get_instance(adr_serverless):
     assert ADR.get_instance() is adr_serverless
@@ -250,6 +278,23 @@ def test_create_item_empty_kwarg_failure(adr_serverless):
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.create_item(HTML)
+
+
+@pytest.mark.ado_test
+def test_get_item_count(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import String
+
+    initial_count = adr_serverless.get_item_count()
+    item = adr_serverless.create_item(
+        String,
+        name=f"test_get_item_count_{uuid.uuid4()}",
+        content="Count this item.",
+    )
+
+    try:
+        assert adr_serverless.get_item_count() == initial_count + 1
+    finally:
+        item.delete()
 
 
 @pytest.mark.ado_test
@@ -672,6 +717,29 @@ def test_create_template_kwarg_empty_failure(adr_serverless):
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.create_template(TOCLayout)
+
+
+@pytest.mark.ado_test
+def test_get_report_count_counts_only_top_level_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    initial_count = adr_serverless.get_report_count()
+    report = adr_serverless.create_template(
+        BasicLayout,
+        name=f"test_get_report_count_{uuid.uuid4()}",
+        parent=None,
+    )
+    child = adr_serverless.create_template(
+        PanelLayout,
+        name=f"test_get_report_count_child_{uuid.uuid4()}",
+        parent=report,
+    )
+
+    try:
+        assert adr_serverless.get_report_count() == initial_count + 1
+    finally:
+        child.delete()
+        report.delete()
 
 
 @pytest.mark.ado_test
