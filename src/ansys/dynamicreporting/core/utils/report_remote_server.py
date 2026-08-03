@@ -1379,8 +1379,20 @@ def create_new_local_database(
     exec_basis=None,
     ansys_version=None,
 ):
-    """Create a new, empty sqlite database  If parent is not None, a QtGui will be
-    used."""
+    """
+    Create a new, empty sqlite database  If parent is not None, a QtGui will be
+    used.
+
+    :param parent:  If using Qt, this is the parent to all Qt dialogs.  In non-Qt cases, None should be passed.
+    :param str directory: The database directory to create.
+    :param dict return_info: If set to a dictionary, will return the 'directory' of the created database.
+    :param bool run_local: If True, create the database directly in-process by running Django migrations and seeding the default user/group. If False, invoke ``nexus_utility create_new_database`` in a separate process.
+    :param bool raise_exception: If True, the function will raise exceptions on errors instead of returning False
+    :param str exec_basis: path to the ADR installation to use.
+    :param ansys_version int: version corresponding to the installation.
+
+    :return bool: True on success and False on failure.
+    """
     if parent and _load_qt():  # pragma: no cover
         title = "Select an empty folder to create the database in"
         fn = QtWidgets.QFileDialog.getExistingDirectory(parent, title, directory)
