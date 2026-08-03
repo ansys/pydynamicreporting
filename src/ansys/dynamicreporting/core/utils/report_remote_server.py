@@ -1439,9 +1439,16 @@ def create_new_local_database(
             if len(secret_key):
                 f.write(secret_key)
             f.close()
-            srcdir = os.path.join(
-                report_utils.enve_home(), "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
-            )
+            if exec_basis:
+                srcdir = os.path.join(
+                    exec_basis, "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
+                )
+            else:
+                srcdir = os.path.join(
+                    report_utils.enve_home(),
+                    "nexus" + report_utils.ceiversion_nexus_suffix(),
+                    "django",
+                )
             # In Python 3, we use the migration command to build the new database file and add the 'nexus'
             # superuser programmatically.  We Also stamp the current csf version into the media directory.
             os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
