@@ -1000,6 +1000,17 @@ class ADR:
         )
 
     @staticmethod
+    def get_item_count() -> int:
+        """Return the total number of items in the default database.
+
+        Returns
+        -------
+        int
+            Number of persisted :class:`Item` objects.
+        """
+        return Item._orm_model_cls.objects.count()
+
+    @staticmethod
     def _create_template_with_parent(template_type: type[Template], **kwargs: Any) -> Template:
         """Internal helper to create a template and attach it to its parent."""
         template = template_type.create(**kwargs)
@@ -1039,6 +1050,20 @@ class ADR:
                 "At least one keyword argument must be provided to create the template."
             )
         return ADR._create_template_with_parent(template_type, **kwargs)
+
+    @staticmethod
+    def get_report_count() -> int:
+        """Return the number of top-level reports in the default database.
+
+        A report is a root :class:`Template` with no parent. Child templates
+        are not included in the count.
+
+        Returns
+        -------
+        int
+            Number of persisted root templates.
+        """
+        return Template._orm_model_cls.objects.filter(parent=None).count()
 
     def _populate_template(self, id_str, attr, parent_template) -> Template:
         """Internal helper to create a :class:`Template` from JSON attributes.
