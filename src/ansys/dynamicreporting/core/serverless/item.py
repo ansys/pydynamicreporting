@@ -182,18 +182,38 @@ class HTMLContent(StringContent):
 
 
 class TableContent(ItemContent):
-    """Validator for 2D table payloads backed by NumPy arrays."""
+    """Validator that normalizes supported table input to a 2D NumPy array."""
+
+    DEFAULT_DTYPE = "f8"
 
     def process(self, value, obj):
-        """Validate a 2D :class:`numpy.ndarray` table."""
+        """Convert nested data when needed, then validate its dtype and shape."""
         value = super().process(value, obj)
-        if not isinstance(value, numpy.ndarray):
-            raise TypeError("Expected content to be a numpy array")
-        if value.dtype.kind not in ("S", "f"):
+
+        if isinstance(value, dict):
+            if "array" not in value:
+                raise ValueError("Expected table content dictionary to contain an 'array' key.")
+            array = value["array"]
+            dtype = value.get("dtype") or self.DEFAULT_DTYPE
+        else:
+            array = value
+            dtype = self.DEFAULT_DTYPE
+
+        if not isinstance(array, numpy.ndarray):
+            # Plain Python and JSON values do not carry a NumPy dtype.
+            # Use the same float default as the older PyDR table API.
+            try:
+                array = numpy.asarray(array, dtype=dtype)
+            except (TypeError, ValueError) as error:
+                raise TypeError(
+                    f"Could not convert table content to dtype {dtype!r}: {error}"
+                ) from None
+
+        if array.dtype.kind not in ("S", "f"):
             raise TypeError("Expected content to be a numpy array of bytes or float type.")
-        if len(value.shape) != 2:
+        if len(array.shape) != 2:
             raise ValueError("Expected content to be a 2 dimensional numpy array.")
-        return value
+        return array
 
 
 class TreeContent(ItemContent):
@@ -745,14 +765,16 @@ class HTML(String):
 
 
 class Table(Item):
-    """Item representing a 2D table backed by a NumPy array.
+    """Item representing a 2D table stored as a NumPy array.
 
-    The array is stored in the ORM ``payloaddata`` field together with
-    additional payload properties such as row and column labels.
+    ``content`` accepts an existing NumPy array, a nested sequence that is
+    converted to ``float64``, or a dictionary containing ``array`` and
+    ``dtype``. The normalized array is stored in the ORM ``payloaddata``
+    field with the table's other payload properties.
     """
 
     content: TableContent = TableContent()
-    """Validated 2D NumPy array content for this table item."""
+    """Validated table input normalized to a 2D NumPy array."""
 
     type: str = ItemType.TABLE
     """Item type identifier for table items."""

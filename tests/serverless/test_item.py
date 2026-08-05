@@ -738,13 +738,72 @@ def test_string_content_empty(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_table_content_not_numpy(adr_serverless):
+def test_table_content_nested_list(adr_serverless):
+    import numpy as np
+
     from ansys.dynamicreporting.core.serverless import Table
 
-    with pytest.raises(TypeError):
+    table = Table(
+        name="test_table_content_nested_list",
+        content=[[1, 2], [3, 4]],
+        tags="dp=dp227",
+        source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+
+    assert table.content.dtype == np.dtype("f8")
+    np.testing.assert_array_equal(table.content, [[1.0, 2.0], [3.0, 4.0]])
+
+
+@pytest.mark.ado_test
+def test_table_content_dictionary(adr_serverless):
+    import numpy as np
+
+    from ansys.dynamicreporting.core.serverless import Table
+
+    table = Table(
+        name="test_table_content_dictionary",
+        content={
+            "array": [["alpha", "beta"]],
+            "dtype": "|S5",
+        },
+        tags="dp=dp227",
+        source="sls-test",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+    )
+
+    assert table.content.dtype == np.dtype("|S5")
+    assert table.content.tolist() == [[b"alpha", b"beta"]]
+
+
+@pytest.mark.ado_test
+def test_table_content_invalid_type(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Table
+
+    with pytest.raises(TypeError, match="Could not convert table content"):
         Table(
-            name="test_table_content_not_numpy",
+            name="test_table_content_invalid_type",
             content="",
+            tags="dp=dp227",
+            source="sls-test",
+            session=adr_serverless.session,
+            dataset=adr_serverless.dataset,
+        )
+
+
+@pytest.mark.ado_test
+def test_table_content_dictionary_missing_array(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Table
+
+    with pytest.raises(
+        ValueError,
+        match="Expected table content dictionary to contain an 'array' key",
+    ):
+        Table(
+            name="test_table_content_dictionary_missing_array",
+            content={"dtype": "f8"},
             tags="dp=dp227",
             source="sls-test",
             session=adr_serverless.session,
