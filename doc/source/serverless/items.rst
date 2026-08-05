@@ -32,6 +32,7 @@ Items automatically link to the current default session and dataset unless speci
 .. code-block:: python
 
     from ansys.dynamicreporting.core.serverless import String, Table
+    import numpy as np
 
     # Create a string item
     string_item = adr.create_item(
@@ -42,11 +43,14 @@ Items automatically link to the current default session and dataset unless speci
     )
 
     # Create a table item with data
-    data = [
-        [0.0, 10.0, 101325.0],
-        [0.5, 12.5, 101300.0],
-        [1.0, 15.0, 101280.0],
-    ]
+    data = np.array(
+        [
+            [0.0, 10.0, 101325.0],
+            [0.5, 12.5, 101300.0],
+            [1.0, 15.0, 101280.0],
+        ],
+        dtype="float",
+    )
 
     table_item = adr.create_item(
         Table,
@@ -61,8 +65,24 @@ Items automatically link to the current default session and dataset unless speci
     table_item.yaxis = ["Velocity (m/s)", "Pressure (Pa)"]
     table_item.save()
 
-Nested sequences are converted to a ``float64`` NumPy array. To create a text table or
-select another supported dtype, pass the values and dtype together:
+A NumPy array remains supported. For a simpler numeric table, pass a nested sequence and
+let PyDR convert it to a ``float64`` array:
+
+.. code-block:: python
+
+    list_table = adr.create_item(
+        Table,
+        name="pressure_data_from_list",
+        content=[
+            [0.0, 10.0, 101325.0],
+            [0.5, 12.5, 101300.0],
+            [1.0, 15.0, 101280.0],
+        ],
+        tags="section=data project=wing_sim",
+    )
+
+To create a text table or select another supported dtype, pass the values and dtype
+together:
 
 .. code-block:: python
 
