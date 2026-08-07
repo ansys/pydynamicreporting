@@ -743,6 +743,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     renderer._apply_pdf_capture_styles(page)
 
     css = page.add_style_tag.call_args.kwargs["content"]
+    shadow_root_injection = page.evaluate.call_args.args[0]
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
     assert ".avz-viewer" in css
@@ -763,6 +764,8 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "display: block !important;" in css
     assert "@media print" not in css
     assert "[nexus_template]" not in css
+    assert "injectIntoShadowRoot" in shadow_root_injection
+    assert page.evaluate.call_args.args[1] == css
 
 
 @pytest.mark.unit
@@ -1009,6 +1012,81 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["tableCell"]["borderRightColor"] == "rgb(173, 181, 189)"
     assert computed_styles["collapsedHead"]["display"] == "none"
     assert computed_styles["collapsedHead"]["visibility"] == "hidden"
+
+
+@pytest.mark.unit
+def test_apply_pdf_capture_styles_take_effect_inside_shadow_roots(tmp_path):
+    html = """
+    <html>
+    <body>
+        <section id="report_root">
+            <div id="panel-host"></div>
+            <script>
+                const host = document.getElementById('panel-host');
+                const shadow = host.attachShadow({mode: 'open'});
+                shadow.innerHTML = `
+                    <section class="adr-panel" id="panel">
+                        <header class="adr-panel-header" id="panel-heading">
+                            <h2>System Information</h2>
+                        </header>
+                        <section class="adr-panel-body" id="panel-body">
+                            <img
+                                id="image"
+                                class="img img-fluid"
+                                alt="preview"
+                                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                            />
+                        </section>
+                    </section>
+                `;
+            </script>
+        </section>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto(
+            (renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(),
+            wait_until="load",
+        )
+        page.emulate_media(media="screen")
+        renderer._apply_pdf_capture_styles(page)
+        computed_styles = page.evaluate(
+            """() => {
+                    const host = document.getElementById('panel-host');
+                    const shadowRoot = host.shadowRoot;
+                    const injectedStyle = shadowRoot.querySelector(
+                        'style[data-adr-pdf-capture-style="1"]'
+                    );
+                    const panelHeading = shadowRoot.getElementById('panel-heading');
+                    const image = shadowRoot.getElementById('image');
+                    const panelHeadingStyle = getComputedStyle(panelHeading);
+                    const imageStyle = getComputedStyle(image);
+                    return {
+                        hasInjectedStyle: injectedStyle !== null,
+                        panelHeading: {
+                            breakAfter: panelHeadingStyle.breakAfter,
+                            pageBreakAfter: panelHeadingStyle.pageBreakAfter,
+                        },
+                        image: {
+                            breakInside: imageStyle.breakInside,
+                            pageBreakInside: imageStyle.pageBreakInside,
+                        },
+                    };
+                }"""
+        )
+        browser.close()
+
+    assert computed_styles["hasInjectedStyle"] is True
+    assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
+    assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
+    assert computed_styles["image"]["breakInside"] == "avoid"
+    assert computed_styles["image"]["pageBreakInside"] == "avoid"
 
 
 @pytest.mark.unit

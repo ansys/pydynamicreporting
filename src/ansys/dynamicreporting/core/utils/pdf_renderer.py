@@ -630,8 +630,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
         # PDF table layout still reserves space for those hidden header groups, which paints a
         # blank top row even though the browser view looks correct.
-        page.add_style_tag(
-            content="""
+        capture_css = """
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
@@ -707,7 +706,39 @@ class _BasePlaywrightPDFRenderer(ABC):
                     visibility: hidden !important;
                     height: 0 !important;
                 }
-            """,
+            """
+        page.add_style_tag(content=capture_css)
+        # ADR frequently renders panel markup inside open shadow roots. Mirror the same
+        # capture stylesheet there so host-document pagination rules also apply to panel
+        # headings, body containers, and browser-rendered items nested below them.
+        page.evaluate(
+            """(cssText) => {
+                const styleAttribute = "data-adr-pdf-capture-style";
+
+                const injectIntoShadowRoot = (shadowRoot) => {
+                    if (!(shadowRoot instanceof ShadowRoot)) {
+                        return;
+                    }
+                    if (!shadowRoot.querySelector(`style[${styleAttribute}="1"]`)) {
+                        const style = document.createElement("style");
+                        style.setAttribute(styleAttribute, "1");
+                        style.textContent = cssText;
+                        shadowRoot.prepend(style);
+                    }
+                    for (const element of shadowRoot.querySelectorAll("*")) {
+                        if (element.shadowRoot) {
+                            injectIntoShadowRoot(element.shadowRoot);
+                        }
+                    }
+                };
+
+                for (const element of document.querySelectorAll("*")) {
+                    if (element.shadowRoot) {
+                        injectIntoShadowRoot(element.shadowRoot);
+                    }
+                }
+            }""",
+            capture_css,
         )
 
     def _compute_pdf_width(self, page: Any) -> str | None:
