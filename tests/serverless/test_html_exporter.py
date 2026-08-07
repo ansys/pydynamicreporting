@@ -359,7 +359,7 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
 @pytest.mark.ado_test
 def test_script_src_blocks_are_not_reprocessed_after_relative_rewrite(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
-):
+) -> None:
     """Skip the generic script pass once a src-only tag is already export-safe."""
     static_dir = tmp_path / "static-src"
     media_dir = tmp_path / "media-src"
