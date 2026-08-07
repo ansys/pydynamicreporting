@@ -757,11 +757,12 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "h2:has(+ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
     assert "header + section.adr-panel-body" in css
-    assert 'adr-panel > adr-data-item[data-item-type="image"] img.img-fluid' in css
-    assert 'adr-panel > adr-data-item[data-item-type="anim"] video.img-fluid' in css
-    assert 'adr-panel > adr-data-item[data-item-type="scene"] .avz-viewer' in css
-    assert 'adr-panel > adr-data-item[data-item-type="scene"] ansys-nexus-viewer' in css
-    assert "max-height: calc(100vh - 160px) !important;" in css
+    assert "adr-data-item img.img-fluid" in css
+    assert "adr-data-item video.img-fluid" in css
+    assert "adr-data-item .avz-viewer" in css
+    assert "adr-data-item ansys-nexus-viewer" in css
+    assert "max-height: var(--adr-pdf-media-max-height, 100vh) !important;" in css
+    assert "calc(100vh - 160px)" not in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "--adr-border-color: #adb5bd !important;" in css
     assert "--adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;" in css
@@ -823,7 +824,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             }
         </style>
     </head>
-    <body>
+    <body class="loaded">
         <section id="report_root">
         <a id="TOC_item_tgt_1"></a>
         <br />
@@ -916,6 +917,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
         # break across pages during PDF pagination.
         page.emulate_media(media="screen")
         renderer._apply_pdf_capture_styles(page)
+        renderer._apply_pdf_media_viewport_fit(page, deadline=10**12)
         computed_styles = page.evaluate(
             """() => {
                     const sectionHeading = document.getElementById('section-heading');
@@ -923,6 +925,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const plot = document.getElementById('plot');
                     const viewer = document.getElementById('viewer');
                     const image = document.getElementById('image');
+                    const titledSceneItem = document.getElementById('scene-panel-item');
+                    const titledImageItem = document.getElementById('image-panel-item');
                     const root = document.getElementById('report_root');
                     const panel = document.getElementById('panel');
                     const panelHeading = document.getElementById('panel-heading');
@@ -967,6 +971,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         viewer: {
                             display: viewerStyle.display,
                             breakInside: viewerStyle.breakInside,
+                            maxHeight: viewerStyle.maxHeight,
                         },
                         image: {
                             breakInside: imageStyle.breakInside,
@@ -1000,6 +1005,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         titledSceneWrap: {
                             display: titledSceneWrapStyle.display,
                             maxHeight: titledSceneWrapStyle.maxHeight,
+                            mediaBudget:
+                                titledSceneItem.style
+                                    .getPropertyValue('--adr-pdf-media-max-height')
+                                    .trim(),
                         },
                         titledSceneViewer: {
                             display: titledSceneViewerStyle.display,
@@ -1008,6 +1017,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         titledImage: {
                             display: titledImageStyle.display,
                             maxHeight: titledImageStyle.maxHeight,
+                            mediaBudget:
+                                titledImageItem.style
+                                    .getPropertyValue('--adr-pdf-media-max-height')
+                                    .trim(),
                         },
                         sliderContainer: {
                             breakInside: sliderContainerStyle.breakInside,
@@ -1040,11 +1053,12 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["plot"]["display"] == "block"
     assert computed_styles["plot"]["breakInside"] == "avoid"
     assert computed_styles["plot"]["pageBreakInside"] == "avoid"
-    assert computed_styles["viewer"]["display"] == "block"
+    assert computed_styles["viewer"]["display"] == "inline-block"
     assert computed_styles["viewer"]["breakInside"] == "avoid"
+    assert computed_styles["viewer"]["maxHeight"] == "900px"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
-    assert computed_styles["image"]["maxHeight"] == "none"
+    assert computed_styles["image"]["maxHeight"] == "900px"
     assert computed_styles["root"]["borderColorToken"] == "#adb5bd"
     assert computed_styles["root"]["translucentBorderColorToken"] == "rgba(0, 0, 0, 0.28)"
     assert computed_styles["root"]["printColorAdjust"] == "exact"
@@ -1056,11 +1070,13 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["panelBody"]["breakInside"] == "avoid"
     assert computed_styles["panelBody"]["pageBreakInside"] == "avoid"
     assert computed_styles["titledSceneWrap"]["display"] == "inline-block"
-    assert computed_styles["titledSceneWrap"]["maxHeight"] == "740px"
+    assert computed_styles["titledSceneWrap"]["mediaBudget"].endswith("px")
+    assert computed_styles["titledSceneWrap"]["maxHeight"] == computed_styles["titledSceneWrap"]["mediaBudget"]
     assert computed_styles["titledSceneViewer"]["display"] == "inline-block"
-    assert computed_styles["titledSceneViewer"]["maxHeight"] == "740px"
+    assert computed_styles["titledSceneViewer"]["maxHeight"] == computed_styles["titledSceneWrap"]["mediaBudget"]
     assert computed_styles["titledImage"]["display"] == "inline-block"
-    assert computed_styles["titledImage"]["maxHeight"] == "740px"
+    assert computed_styles["titledImage"]["mediaBudget"].endswith("px")
+    assert computed_styles["titledImage"]["maxHeight"] == computed_styles["titledImage"]["mediaBudget"]
     assert computed_styles["sliderContainer"]["breakInside"] == "avoid"
     assert computed_styles["sliderContainer"]["pageBreakInside"] == "avoid"
     assert computed_styles["sliderRow"]["breakInside"] == "avoid"

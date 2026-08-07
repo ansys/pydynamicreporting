@@ -627,9 +627,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         # leave a section title at the bottom of one page while pushing the table/plot to the next.
         # Panel bodies often host slotted browser-rendered items, so the body itself also needs an
         # anti-split rule or the proxy/viewer can still jump to the next page without its title.
-        # Large titled media panels also need a PDF-only height cap. Otherwise Chromium preserves
-        # the media's full browser height, which can force the title onto one page and spill the
-        # image or scene proxy onto the next.
+        # Media items also receive a per-item viewport-height budget later in the render pipeline.
+        # The CSS below consumes that budget via a custom property so PDF capture can fit titled
+        # and untitled media without relying on hardcoded pixel offsets in the stylesheet itself.
         #
         # TODO: Remove the collapsed-header workaround once ADR stops emitting empty
         # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
@@ -641,9 +641,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .nexus-plot > .plot-container,
                 .js-plotly-plot,
                 .plot-container,
-                .svg-container,
-                .avz-viewer,
-                ansys-nexus-viewer {
+                .svg-container {
                     display: block !important;
                 }
 
@@ -673,11 +671,14 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .plot-container,
                 .svg-container,
                 .main-svg,
-                .table-responsive,
+                .table-responsive {
+                    overflow: visible !important;
+                    max-height: none !important;
+                }
+
                 .avz-viewer,
                 ansys-nexus-viewer {
                     overflow: visible !important;
-                    max-height: none !important;
                 }
 
                 .adr-spinner-loader-container,
@@ -711,30 +712,30 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page-break-inside: avoid !important;
                 }
 
-                adr-panel > adr-data-item[data-item-type="image"] img.img-fluid,
-                adr-panel > adr-data-item[data-item-type="anim"] video.img-fluid,
+                adr-data-item img.img-fluid,
+                adr-data-item video.img-fluid,
                 .ansys-nexus-proxy {
                     display: inline-block !important;
                     width: auto !important;
                     max-width: 100% !important;
-                    max-height: calc(100vh - 160px) !important;
+                    max-height: var(--adr-pdf-media-max-height, 100vh) !important;
                     margin: 0 auto !important;
                     object-fit: contain !important;
                 }
 
-                adr-panel > adr-data-item[data-item-type="scene"] .avz-viewer {
+                adr-data-item .avz-viewer {
                     display: inline-block !important;
                     width: auto !important;
                     max-width: 100% !important;
-                    max-height: calc(100vh - 160px) !important;
+                    max-height: var(--adr-pdf-media-max-height, 100vh) !important;
                     margin: 0 auto !important;
                 }
 
-                adr-panel > adr-data-item[data-item-type="scene"] ansys-nexus-viewer {
+                adr-data-item ansys-nexus-viewer {
                     display: inline-block !important;
                     width: auto !important;
                     max-width: 100% !important;
-                    max-height: calc(100vh - 160px) !important;
+                    max-height: var(--adr-pdf-media-max-height, 100vh) !important;
                 }
 
                 table.table-fit-head > thead[style*="visibility: collapse"] {
@@ -1319,7 +1320,83 @@ class _BasePlaywrightPDFRenderer(ABC):
             }""",
         )
 
+        self._apply_pdf_media_viewport_fit(page, deadline=deadline)
+
         self._logger.info("Browser render readiness checks completed.")
+
+    def _apply_pdf_media_viewport_fit(self, page: Any, *, deadline: float) -> None:
+        """Measure media-item chrome and assign a per-item viewport-height budget."""
+        self._evaluate_ready_step(
+            page,
+            step_name="Media viewport fit",
+            deadline=deadline,
+            wait_script="""() => {
+                const mediaItemTypes = new Set(['image', 'anim', 'scene']);
+                const headingSelector = 'h1, h2, h3, h4, h5, h6';
+
+                const setBudget = (element, budgetPx) => {
+                    if (!(element instanceof HTMLElement)) {
+                        return;
+                    }
+                    element.style.setProperty(
+                        '--adr-pdf-media-max-height',
+                        `${Math.max(1, Math.floor(budgetPx))}px`
+                    );
+                };
+
+                const getItemBudget = (item) => {
+                    const viewportHeight = window.innerHeight || 0;
+                    if (!(item instanceof HTMLElement) || viewportHeight <= 0) {
+                        return viewportHeight;
+                    }
+                    const itemRect = item.getBoundingClientRect();
+                    if (itemRect.width === 0 && itemRect.height === 0) {
+                        return viewportHeight;
+                    }
+
+                    const panel = item.closest('adr-panel');
+                    if (panel instanceof HTMLElement) {
+                        const panelRect = panel.getBoundingClientRect();
+                        const topChrome = Math.max(0, itemRect.top - panelRect.top);
+                        const bottomChrome = Math.max(0, panelRect.bottom - itemRect.bottom);
+                        return viewportHeight - topChrome - bottomChrome;
+                    }
+
+                    const container = item.closest('section.adr-container');
+                    if (container instanceof HTMLElement) {
+                        const containerRect = container.getBoundingClientRect();
+                        const previous = container.previousElementSibling;
+                        const titleTop = (
+                            previous instanceof HTMLElement && previous.matches(headingSelector)
+                        )
+                            ? previous.getBoundingClientRect().top
+                            : containerRect.top;
+                        const topChrome = Math.max(0, itemRect.top - titleTop);
+                        const bottomChrome = Math.max(0, containerRect.bottom - itemRect.bottom);
+                        return viewportHeight - topChrome - bottomChrome;
+                    }
+
+                    return viewportHeight;
+                };
+
+                for (const item of document.querySelectorAll('adr-data-item[data-item-type]')) {
+                    const itemType = item.getAttribute('data-item-type');
+                    if (!mediaItemTypes.has(itemType || '')) {
+                        continue;
+                    }
+
+                    const budgetPx = getItemBudget(item);
+                    setBudget(item, budgetPx);
+                    for (const node of item.querySelectorAll(
+                        'img.img-fluid, video.img-fluid, .avz-viewer, ansys-nexus-viewer'
+                    )) {
+                        setBudget(node, budgetPx);
+                    }
+                }
+
+                return Promise.resolve();
+            }""",
+        )
 
 
 class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
