@@ -756,6 +756,12 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert ".ansys-nexus-proxy" in css
     assert "h2:has(+ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
+    assert "header + section.adr-panel-body" in css
+    assert 'adr-panel > adr-data-item[data-item-type="image"] img.img-fluid' in css
+    assert 'adr-panel > adr-data-item[data-item-type="anim"] video.img-fluid' in css
+    assert 'adr-panel > adr-data-item[data-item-type="scene"] .avz-viewer' in css
+    assert 'adr-panel > adr-data-item[data-item-type="scene"] ansys-nexus-viewer' in css
+    assert "max-height: calc(100vh - 160px) !important;" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
     assert "--adr-border-color: #adb5bd !important;" in css
     assert "--adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;" in css
@@ -872,6 +878,23 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                 <p>Panel content</p>
             </section>
         </section>
+        <adr-panel id="scene-panel">
+            <adr-data-item id="scene-panel-item" data-item-type="scene">
+                <div class="avz-viewer" id="titled-scene-wrap">
+                    <ansys-nexus-viewer id="titled-scene-viewer"></ansys-nexus-viewer>
+                </div>
+            </adr-data-item>
+        </adr-panel>
+        <adr-panel id="image-panel">
+            <adr-data-item id="image-panel-item" data-item-type="image">
+                <img
+                    id="titled-image"
+                    class="img img-fluid"
+                    alt="panel preview"
+                    src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                />
+            </adr-data-item>
+        </adr-panel>
         </section>
     </body>
     </html>
@@ -883,7 +906,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        page = browser.new_page()
+        page = browser.new_page(viewport={"width": 1600, "height": 900})
         page.goto(
             (renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(),
             wait_until="load",
@@ -903,6 +926,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const root = document.getElementById('report_root');
                     const panel = document.getElementById('panel');
                     const panelHeading = document.getElementById('panel-heading');
+                    const panelBody = document.getElementById('panel-body');
+                    const titledSceneWrap = document.getElementById('titled-scene-wrap');
+                    const titledSceneViewer = document.getElementById('titled-scene-viewer');
+                    const titledImage = document.getElementById('titled-image');
                     const sliderContainer = document.getElementById('slider_container_test');
                     const sliderRow = document.getElementById('slider_row');
                     const tableCell = document.getElementById('table-cell');
@@ -915,6 +942,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const rootStyle = getComputedStyle(root);
                     const panelStyle = getComputedStyle(panel);
                     const panelHeadingStyle = getComputedStyle(panelHeading);
+                    const panelBodyStyle = getComputedStyle(panelBody);
+                    const titledSceneWrapStyle = getComputedStyle(titledSceneWrap);
+                    const titledSceneViewerStyle = getComputedStyle(titledSceneViewer);
+                    const titledImageStyle = getComputedStyle(titledImage);
                     const sliderContainerStyle = getComputedStyle(sliderContainer);
                     const sliderRowStyle = getComputedStyle(sliderRow);
                     const tableCellStyle = getComputedStyle(tableCell);
@@ -940,6 +971,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         image: {
                             breakInside: imageStyle.breakInside,
                             pageBreakInside: imageStyle.pageBreakInside,
+                            maxHeight: imageStyle.maxHeight,
                         },
                         root: {
                             borderColorToken:
@@ -960,6 +992,22 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                             breakAfter: panelHeadingStyle.breakAfter,
                             pageBreakAfter: panelHeadingStyle.pageBreakAfter,
                             borderBottomColor: panelHeadingStyle.borderBottomColor,
+                        },
+                        panelBody: {
+                            breakInside: panelBodyStyle.breakInside,
+                            pageBreakInside: panelBodyStyle.pageBreakInside,
+                        },
+                        titledSceneWrap: {
+                            display: titledSceneWrapStyle.display,
+                            maxHeight: titledSceneWrapStyle.maxHeight,
+                        },
+                        titledSceneViewer: {
+                            display: titledSceneViewerStyle.display,
+                            maxHeight: titledSceneViewerStyle.maxHeight,
+                        },
+                        titledImage: {
+                            display: titledImageStyle.display,
+                            maxHeight: titledImageStyle.maxHeight,
                         },
                         sliderContainer: {
                             breakInside: sliderContainerStyle.breakInside,
@@ -996,6 +1044,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["viewer"]["breakInside"] == "avoid"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
+    assert computed_styles["image"]["maxHeight"] == "none"
     assert computed_styles["root"]["borderColorToken"] == "#adb5bd"
     assert computed_styles["root"]["translucentBorderColorToken"] == "rgba(0, 0, 0, 0.28)"
     assert computed_styles["root"]["printColorAdjust"] == "exact"
@@ -1004,6 +1053,14 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
     assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["panelHeading"]["borderBottomColor"] == "rgba(0, 0, 0, 0.28)"
+    assert computed_styles["panelBody"]["breakInside"] == "avoid"
+    assert computed_styles["panelBody"]["pageBreakInside"] == "avoid"
+    assert computed_styles["titledSceneWrap"]["display"] == "inline-block"
+    assert computed_styles["titledSceneWrap"]["maxHeight"] == "740px"
+    assert computed_styles["titledSceneViewer"]["display"] == "inline-block"
+    assert computed_styles["titledSceneViewer"]["maxHeight"] == "740px"
+    assert computed_styles["titledImage"]["display"] == "inline-block"
+    assert computed_styles["titledImage"]["maxHeight"] == "740px"
     assert computed_styles["sliderContainer"]["breakInside"] == "avoid"
     assert computed_styles["sliderContainer"]["pageBreakInside"] == "avoid"
     assert computed_styles["sliderRow"]["breakInside"] == "avoid"
@@ -1064,14 +1121,20 @@ def test_apply_pdf_capture_styles_take_effect_inside_shadow_roots(tmp_path):
                         'style[data-adr-pdf-capture-style="1"]'
                     );
                     const panelHeading = shadowRoot.getElementById('panel-heading');
+                    const panelBody = shadowRoot.getElementById('panel-body');
                     const image = shadowRoot.getElementById('image');
                     const panelHeadingStyle = getComputedStyle(panelHeading);
+                    const panelBodyStyle = getComputedStyle(panelBody);
                     const imageStyle = getComputedStyle(image);
                     return {
                         hasInjectedStyle: injectedStyle !== null,
                         panelHeading: {
                             breakAfter: panelHeadingStyle.breakAfter,
                             pageBreakAfter: panelHeadingStyle.pageBreakAfter,
+                        },
+                        panelBody: {
+                            breakInside: panelBodyStyle.breakInside,
+                            pageBreakInside: panelBodyStyle.pageBreakInside,
                         },
                         image: {
                             breakInside: imageStyle.breakInside,
@@ -1085,6 +1148,8 @@ def test_apply_pdf_capture_styles_take_effect_inside_shadow_roots(tmp_path):
     assert computed_styles["hasInjectedStyle"] is True
     assert computed_styles["panelHeading"]["breakAfter"] == "avoid"
     assert computed_styles["panelHeading"]["pageBreakAfter"] == "avoid"
+    assert computed_styles["panelBody"]["breakInside"] == "avoid"
+    assert computed_styles["panelBody"]["pageBreakInside"] == "avoid"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
 

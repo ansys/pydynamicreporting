@@ -625,6 +625,11 @@ class _BasePlaywrightPDFRenderer(ABC):
         # ADR exports section titles and panel headers as sibling blocks before the actual content.
         # Keep those heading blocks with the first chunk of following content so Chromium does not
         # leave a section title at the bottom of one page while pushing the table/plot to the next.
+        # Panel bodies often host slotted browser-rendered items, so the body itself also needs an
+        # anti-split rule or the proxy/viewer can still jump to the next page without its title.
+        # Large titled media panels also need a PDF-only height cap. Otherwise Chromium preserves
+        # the media's full browser height, which can force the title onto one page and spill the
+        # image or scene proxy onto the next.
         #
         # TODO: Remove the collapsed-header workaround once ADR stops emitting empty
         # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
@@ -699,6 +704,37 @@ class _BasePlaywrightPDFRenderer(ABC):
                 header:has(+ section.adr-panel-body) {
                     break-after: avoid !important;
                     page-break-after: avoid !important;
+                }
+
+                header + section.adr-panel-body {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                }
+
+                adr-panel > adr-data-item[data-item-type="image"] img.img-fluid,
+                adr-panel > adr-data-item[data-item-type="anim"] video.img-fluid,
+                .ansys-nexus-proxy {
+                    display: inline-block !important;
+                    width: auto !important;
+                    max-width: 100% !important;
+                    max-height: calc(100vh - 160px) !important;
+                    margin: 0 auto !important;
+                    object-fit: contain !important;
+                }
+
+                adr-panel > adr-data-item[data-item-type="scene"] .avz-viewer {
+                    display: inline-block !important;
+                    width: auto !important;
+                    max-width: 100% !important;
+                    max-height: calc(100vh - 160px) !important;
+                    margin: 0 auto !important;
+                }
+
+                adr-panel > adr-data-item[data-item-type="scene"] ansys-nexus-viewer {
+                    display: inline-block !important;
+                    width: auto !important;
+                    max-width: 100% !important;
+                    max-height: calc(100vh - 160px) !important;
                 }
 
                 table.table-fit-head > thead[style*="visibility: collapse"] {
