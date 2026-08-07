@@ -209,13 +209,25 @@ class ServerlessReportExporter:
         while True:
             # Find the next match using the legacy priority order
             idx1 = -1
+            matched_pattern = ""
             for pat in patterns:
                 pos = text.find(pat, current)
                 if pos != -1:
                     idx1 = pos
+                    matched_pattern = pat
                     break
             if idx1 == -1:
                 return text  # nothing more to replace
+
+            # The generic ``<script ...>`` pass runs after the dedicated
+            # ``<script src=...>`` pass, so already-rewritten relative paths can
+            # appear here as ``./media/...`` or ``./ansys...``. Those are
+            # already export-safe and should not be re-processed with the legacy
+            # quote heuristic, which mainly causes a fake missing-file warning.
+            # Visible truncation only happens if the shortened token is a real file.
+            if idx1 > 0 and text[idx1 - 1] == ".":
+                current = idx1 + len(matched_pattern)
+                continue
 
             # Legacy heuristic: assume we're inside an attribute quoted by the char before the path
             quote = text[idx1 - 1]
