@@ -126,6 +126,149 @@ def test_storage_migration_is_noop_when_old_key_absent():
     assert result == {"SOME_OTHER_KEY": True}
 
 
+def test_filter_installed_apps_preserves_order_and_container_type():
+    overrides = {
+        "INSTALLED_APPS": (
+            "django.contrib.admin",
+            "guardian",
+            "rest_framework",
+            "ceireports",
+        )
+    }
+
+    filtered = compat_module._filter_installed_apps(overrides, {"guardian", "ceireports"})
+
+    assert filtered["INSTALLED_APPS"] == ("django.contrib.admin", "rest_framework")
+    assert isinstance(filtered["INSTALLED_APPS"], tuple)
+
+
+def test_build_compatibility_plan_collects_hooks_by_phase(monkeypatch):
+    observed_calls = []
+
+    def always_enabled(overrides, pkg_versions):
+        return True
+
+    def apply_pre_configure(overrides):
+        observed_calls.append("pre-configure")
+        overrides["COMPAT_PREPARED"] = True
+        return overrides
+
+    def build_post_configure_hook(overrides, pkg_versions):
+        return compat_module.PostConfigureHook(
+            description="test post-configure hook",
+            apply=lambda settings_obj: observed_calls.append(f"post-configure:{settings_obj.marker}"),
+        )
+
+    def build_pre_setup_hook(overrides, pkg_versions):
+        return compat_module.PreSetupHook(
+            description="test pre-setup hook",
+            apply=lambda: observed_calls.append("pre-setup"),
+        )
+
+    class DummySettings:
+        marker = "configured"
+
+    monkeypatch.setattr(compat_module, "_get_installed_versions", lambda: {"django": (5, 2, 0)})
+    monkeypatch.setattr(
+        compat_module,
+        "PRE_CONFIGURE_RULES",
+        [
+            compat_module.PreConfigureRule(
+                description="test pre-configure rule",
+                condition=always_enabled,
+                transform=apply_pre_configure,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        compat_module,
+        "POST_CONFIGURE_RULES",
+        [
+            compat_module.PostConfigureRule(
+                description="test post-configure rule",
+                condition=always_enabled,
+                build_hook=build_post_configure_hook,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        compat_module,
+        "PRE_SETUP_RULES",
+        [
+            compat_module.PreSetupRule(
+                description="test pre-setup rule",
+                condition=always_enabled,
+                build_hook=build_pre_setup_hook,
+            )
+        ],
+    )
+
+    plan = compat_module.build_compatibility_plan({"INSTALLED_APPS": ["ceireports"]})
+
+    assert plan.overrides["COMPAT_PREPARED"] is True
+    assert plan.applied_pre_configure_rules == ("test pre-configure rule",)
+    assert plan.scheduled_post_configure_hooks == ("test post-configure rule",)
+    assert plan.scheduled_pre_setup_hooks == ("test pre-setup rule",)
+
+    compat_module.run_post_configure_hooks(plan, DummySettings())
+    compat_module.run_pre_setup_hooks(plan)
+
+    assert observed_calls == [
+        "pre-configure",
+        "post-configure:configured",
+        "pre-setup",
+    ]
+
+
+def test_sanitize_settings_keeps_deferred_hooks_deferred(monkeypatch):
+    observed_calls = []
+
+    def always_enabled(overrides, pkg_versions):
+        return True
+
+    def build_post_configure_hook(overrides, pkg_versions):
+        return compat_module.PostConfigureHook(
+            description="test post-configure hook",
+            apply=lambda settings_obj: observed_calls.append("post-configure"),
+        )
+
+    def build_pre_setup_hook(overrides, pkg_versions):
+        return compat_module.PreSetupHook(
+            description="test pre-setup hook",
+            apply=lambda: observed_calls.append("pre-setup"),
+        )
+
+    monkeypatch.setattr(compat_module, "_get_installed_versions", lambda: {"django": (5, 2, 0)})
+    monkeypatch.setattr(compat_module, "PRE_CONFIGURE_RULES", [])
+    monkeypatch.setattr(
+        compat_module,
+        "POST_CONFIGURE_RULES",
+        [
+            compat_module.PostConfigureRule(
+                description="test post-configure rule",
+                condition=always_enabled,
+                build_hook=build_post_configure_hook,
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        compat_module,
+        "PRE_SETUP_RULES",
+        [
+            compat_module.PreSetupRule(
+                description="test pre-setup rule",
+                condition=always_enabled,
+                build_hook=build_pre_setup_hook,
+            )
+        ],
+    )
+
+    sanitized = compat_module.sanitize_settings({"DEBUG": False})
+
+    assert sanitized == {"DEBUG": False}
+    assert observed_calls == []
+
+
 def test_get_installed_versions_returns_real_packages():
     # Integration test: call _get_installed_versions without mocking to
     # cover the real importlib.metadata path.  Django is a declared
