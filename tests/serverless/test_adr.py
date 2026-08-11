@@ -26,6 +26,7 @@ import uuid
 
 import numpy as np
 import pytest
+from django.core.exceptions import ImproperlyConfigured as DjangoImproperlyConfigured
 
 from ansys.dynamicreporting.core.exceptions import (
     ADRException,
@@ -86,13 +87,43 @@ def test_get_database_config_before_setup():
 
 @pytest.mark.ado_test
 def test_get_database_config_before_setup_raise():
-    with pytest.raises(ImproperlyConfiguredError):
+    with pytest.raises(ImproperlyConfiguredError) as exc_info:
         ADR.get_database_config(raise_exception=True)
+
+    assert isinstance(exc_info.value.__cause__, DjangoImproperlyConfigured)
 
 
 @pytest.mark.ado_test
 def test_is_setup_before_setup():
     assert not ADR.get_instance().is_setup
+
+
+@pytest.mark.unit
+def test_get_counts_use_database_level_queries(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from ansys.dynamicreporting.core.serverless import Item, Template
+
+    item_manager = Mock()
+    item_manager.count.return_value = 12
+    template_manager = Mock()
+    template_manager.filter.return_value.count.return_value = 4
+    monkeypatch.setitem(
+        Item._model_cls_registry,
+        "Item",
+        SimpleNamespace(objects=item_manager),
+    )
+    monkeypatch.setitem(
+        Template._model_cls_registry,
+        "Template",
+        SimpleNamespace(objects=template_manager),
+    )
+
+    assert ADR.get_item_count() == 12
+    assert ADR.get_report_count() == 4
+    item_manager.count.assert_called_once_with()
+    template_manager.filter.assert_called_once_with(parent=None)
 
 
 @pytest.mark.ado_test
@@ -247,6 +278,23 @@ def test_create_item_empty_kwarg_failure(adr_serverless):
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.create_item(HTML)
+
+
+@pytest.mark.ado_test
+def test_get_item_count(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import String
+
+    initial_count = adr_serverless.get_item_count()
+    item = adr_serverless.create_item(
+        String,
+        name=f"test_get_item_count_{uuid.uuid4()}",
+        content="Count this item.",
+    )
+
+    try:
+        assert adr_serverless.get_item_count() == initial_count + 1
+    finally:
+        item.delete()
 
 
 @pytest.mark.ado_test
@@ -669,6 +717,29 @@ def test_create_template_kwarg_empty_failure(adr_serverless):
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.create_template(TOCLayout)
+
+
+@pytest.mark.ado_test
+def test_get_report_count_counts_only_top_level_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    initial_count = adr_serverless.get_report_count()
+    report = adr_serverless.create_template(
+        BasicLayout,
+        name=f"test_get_report_count_{uuid.uuid4()}",
+        parent=None,
+    )
+    child = adr_serverless.create_template(
+        PanelLayout,
+        name=f"test_get_report_count_child_{uuid.uuid4()}",
+        parent=report,
+    )
+
+    try:
+        assert adr_serverless.get_report_count() == initial_count + 1
+    finally:
+        child.delete()
+        report.delete()
 
 
 @pytest.mark.ado_test
@@ -1443,8 +1514,8 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDF", parent=None)
@@ -1458,7 +1529,7 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="TestBrowserPDF")
     assert pdf_bytes == b"%PDF-mock"
@@ -1504,8 +1575,8 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFRenderer", parent=None)
@@ -1521,10 +1592,33 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
 
-    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
+    with pytest.raises(ADRException, match="Browser PDF rendering failed") as exc_info:
         adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFRenderer")
+
+    assert type(exc_info.value.__cause__) is Exception
+    assert str(exc_info.value.__cause__) == "Simulated browser PDF renderer failure"
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_template_render_failure_chains_cause(
+    adr_serverless, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFTemplate", parent=None)
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        raise RuntimeError("Simulated template render failure")
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
+        adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFTemplate")
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "Simulated template render failure"
 
 
 @pytest.mark.ado_test
@@ -1535,8 +1629,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFExport", parent=None)
@@ -1554,7 +1648,6 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1566,7 +1659,6 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
         # both entry points avoid the slow global temp directory without changing the public API.
         captured["html_dir"] = html_dir
-        captured["filename"] = filename
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
@@ -1576,8 +1668,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     output_dir = tmp_path / "exports"
     output_dir.mkdir()
@@ -1632,8 +1724,8 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanup", parent=None)
@@ -1650,7 +1742,6 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1665,8 +1756,8 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanup")
 
@@ -1685,8 +1776,8 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanupOSError", parent=None)
@@ -1702,7 +1793,6 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1722,8 +1812,8 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
     monkeypatch.setattr(Path, "rmdir", raising_rmdir)
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanupOSError")
@@ -1744,8 +1834,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFOptions", parent=None)
@@ -1769,7 +1859,6 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
@@ -1779,7 +1868,6 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         logger=None,
     ):
         captured["html_dir"] = html_dir
-        captured["filename"] = filename
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["render_timeout"] = render_timeout
@@ -1790,8 +1878,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "__init__", fake_exporter_init)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(
@@ -1812,7 +1900,6 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert exporter_kwargs["no_inline_files"] is True
     assert exporter_kwargs["dark_mode"] is True
     assert isinstance(captured["html_dir"], Path)
-    assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["render_timeout"] == 12.5

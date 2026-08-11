@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import textwrap
 from unittest.mock import patch
@@ -355,6 +356,53 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
     assert missing_href in out
 
 
+@pytest.mark.ado_test
+def test_script_src_blocks_are_not_reprocessed_after_relative_rewrite(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    """Skip the generic script pass once a src-only tag is already export-safe."""
+    static_dir = tmp_path / "static-src"
+    media_dir = tmp_path / "media-src"
+    ver = "252"
+    static_url = "/static/"
+    media_url = "/media/"
+
+    _write(static_dir / "website/images/favicon.png", b"P")
+    _write(static_dir / "website/scripts/jquery.min.js", "window.jqueryLoaded = true;")
+    _write(static_dir / f"ansys{ver}/nexus/utils/js-unzip.js", "window.unzipLoaded = true;")
+
+    html = textwrap.dedent(
+        f"""
+        <div>
+          <script src="{static_url}website/scripts/jquery.min.js"></script>
+          <script src="{static_url}ansys{ver}/nexus/utils/js-unzip.js"></script>
+        </div>
+        """
+    )
+
+    logger = logging.getLogger("test_html_exporter_script_rewrite")
+    caplog.set_level(logging.WARNING, logger=logger.name)
+
+    exporter = ServerlessReportExporter(
+        html_content=html,
+        output_dir=tmp_path / "export10",
+        static_dir=static_dir,
+        media_dir=media_dir,
+        static_url=static_url,
+        media_url=media_url,
+        ansys_version=ver,
+        logger=logger,
+    )
+    exporter.export()
+
+    warning_messages = [record.getMessage() for record in caplog.records]
+    assert not any("Unable to find local file for path" in message for message in warning_messages)
+
+    out = (tmp_path / "export10" / "index.html").read_text(encoding="utf-8")
+    assert 'src="./media/jquery.min.js"' in out
+    assert f'src="./ansys{ver}/nexus/utils/js-unzip.js"' in out
+
+
 def test_detect_mathjax_version_4x_from_static_tree(tmp_path: Path):
     """A 4.x sentinel on disk should be reported without probing the 2.x tree."""
     exporter = _make_exporter_for_mathjax_detection(tmp_path)
@@ -448,7 +496,6 @@ def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(
@@ -490,7 +537,6 @@ def test_make_output_dirs_creates_only_2x_mathjax_tree(tmp_path: Path):
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(
@@ -519,7 +565,6 @@ def test_make_output_dirs_unknown_version_skips_version_specific_dirs(tmp_path: 
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(

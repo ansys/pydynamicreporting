@@ -20,14 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Browser-fidelity HTML-to-PDF rendering for serverless ADR exports.
+"""
+Browser-fidelity HTML-to-PDF rendering for ADR exports.
+
+This module holds the shared Playwright renderers used by both:
+
+- the serverless ADR export path, which stages HTML from Django-rendered content
+- the remote-server export path, which opens the live report page directly
 
 Architecture
 ------------
 This renderer intentionally relies on two linked Chromium layout phases instead of
 treating PDF export as a screenshot of already-painted viewport pixels:
 
-    offline file:// HTML export
+    browser-loadable report source
               |
               v
     +-----------------------------------------------+
@@ -61,6 +67,7 @@ the final paged layout has enough horizontal space to preserve content that woul
 otherwise overflow or be clipped at the right edge.
 """
 
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
 import json
@@ -86,7 +93,7 @@ _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
 
 
 @dataclass(frozen=True)
-class PlaywrightBrowserBinaryInfo:
+class _PlaywrightBrowserBinaryInfo:
     """Validated product-shipped Playwright browser binary path and required metadata."""
 
     EXPECTED_BROWSER_NAME: ClassVar[str] = "chromium-headless-shell"
@@ -104,7 +111,7 @@ class PlaywrightBrowserBinaryInfo:
     @classmethod
     def from_metadata_dict(
         cls, *, path: Path, metadata: dict[str, object]
-    ) -> "PlaywrightBrowserBinaryInfo":
+    ) -> "_PlaywrightBrowserBinaryInfo":
         """Build a metadata record from a raw JSON object using the dataclass schema."""
         return cls(
             path=path,
@@ -140,7 +147,7 @@ def _playwright_machine_arch() -> str | None:
 def _validate_playwright_browsers_path(
     browser_dir: Path,
     machine_arch: str,
-) -> PlaywrightBrowserBinaryInfo | None:
+) -> _PlaywrightBrowserBinaryInfo | None:
     """Validate the product-shipped Playwright binary layout before advertising it.
 
     Browser-PDF export should only point Playwright at a product-managed binary
@@ -181,12 +188,12 @@ def _validate_playwright_browsers_path(
         )
         return None
 
-    metadata_info = PlaywrightBrowserBinaryInfo.from_metadata_dict(
+    metadata_info = _PlaywrightBrowserBinaryInfo.from_metadata_dict(
         path=browser_dir, metadata=metadata
     )
     if (
         not metadata_info.packaged_binary_dir
-        or metadata_info.browser_name != PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
+        or metadata_info.browser_name != _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME
         or metadata_info.machine_arch != machine_arch
     ):
         get_logger().warning(
@@ -194,7 +201,7 @@ def _validate_playwright_browsers_path(
             "does not describe a %s binary for machine arch %r.",
             browser_dir,
             metadata_path,
-            PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
+            _PlaywrightBrowserBinaryInfo.EXPECTED_BROWSER_NAME,
             metadata_info.machine_arch,
         )
         return None
@@ -235,7 +242,7 @@ def _validate_playwright_browsers_path(
 def resolve_playwright_browser_binary_info(
     ansys_installation: str | None = None,
     ansys_version: int | None = None,
-) -> PlaywrightBrowserBinaryInfo | None:
+) -> _PlaywrightBrowserBinaryInfo | None:
     """Return the validated browser binary path and metadata when the product ships one."""
     machine_arch = _playwright_machine_arch()
     # The install directory and version are both required to build the machine-scoped
@@ -256,34 +263,35 @@ def resolve_playwright_browser_binary_info(
     return _validate_playwright_browsers_path(browser_dir, machine_arch)
 
 
-class PlaywrightPDFRenderer:
-    """Render an exported ADR HTML directory to PDF via headless Chromium.
+class _BasePlaywrightPDFRenderer(ABC):
+    """Shared Playwright browser-to-PDF render pipeline for ADR reports.
+
+    Subclasses supply the navigation target and browser-context setup for either
+    a staged offline HTML bundle or a live ADR report URL.
 
     Parameters
     ----------
-    html_dir : Path or str
-        Directory containing the exported offline HTML report and its assets.
-    filename : str, default: "index.html"
-        HTML entry-point filename inside ``html_dir``.
     landscape : bool, default: False
         Whether to render the PDF in landscape orientation.
     margins : dict[str, str], optional
-        Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+        strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
     render_timeout : float, default: 30.0
-        Maximum time, in seconds, for the Chromium render phase after the offline HTML bundle
-        has been staged. This shared budget covers browser launch, navigation, readiness waits,
-        and other browser-side preparation steps, but not server-side template rendering or
-        offline asset export.
-    ansys_installation : Path or str, optional
+        Maximum time, in seconds, for the shared browser render phase once the prepared
+        report source is ready to open. This shared budget covers browser launch,
+        navigation, readiness waits, and other browser-side preparation steps, but not
+        caller-side template rendering or offline-bundle export completed before the
+        renderer is invoked.
+    ansys_installation : Path or str
         Resolved Ansys installation root used to locate a product-shipped
-        Playwright browser binary. When provided with ``ansys_version`` on a
-        supported product line, browser-PDF export uses that shipped browser
-        cache for the render instead of any ambient browser-path override.
-    ansys_version : int, optional
-        Ansys version associated with ``ansys_installation``.  This is used
-        only to locate ``apex###/machines/...`` runtime assets when the product
-        ships Playwright browsers inside the installation tree.
+        Playwright browser binary. Browser-PDF rendering requires this value
+        together with ``ansys_version`` and uses the shipped browser cache for
+        the render instead of any ambient browser-path override.
+    ansys_version : int
+        Ansys version associated with ``ansys_installation``. This is used to
+        locate ``apex###/machines/...`` runtime assets when the product ships
+        Playwright browsers inside the installation tree.
     logger : Any, optional
         Logger used for renderer lifecycle messages.
     """
@@ -314,9 +322,6 @@ class PlaywrightPDFRenderer:
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
-    # Network requests using these schemes are blocked to keep rendering offline.
-    _BLOCKED_REQUEST_SCHEMES: set[str] = {"http", "https"}
-    _BLOCKED_WEBSOCKET_SCHEMES: set[str] = {"ws", "wss"}
     # This override changes Playwright's platform-specific browser lookup, while
     # the ADR resolver has already selected the product machine directory.
     # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
@@ -330,8 +335,6 @@ class PlaywrightPDFRenderer:
 
     def __init__(
         self,
-        html_dir: Path | str,
-        filename: str = "index.html",
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
@@ -340,17 +343,16 @@ class PlaywrightPDFRenderer:
         ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
-        """Initialize the renderer with a self-contained HTML export directory."""
-        self._html_dir = Path(html_dir).expanduser().resolve()
-        self._filename = filename
+        """Initialize the renderer with shared browser-PDF configuration."""
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
         self._render_timeout = self._validate_render_timeout(render_timeout)
-        # Keep the raw install metadata so the renderer can locate a product-managed
-        # Playwright browser binary without changing the public browser-PDF API shape.
-        self._ansys_installation = (
-            None if ansys_installation is None else Path(ansys_installation).expanduser()
-        )
+        if ansys_installation is None or ansys_version is None:
+            raise ADRException(
+                "Browser PDF rendering requires ansys_installation and ansys_version "
+                "to locate the product-shipped browser binary."
+            )
+        self._ansys_installation = Path(ansys_installation).expanduser()
         self._ansys_version = ansys_version
         self._logger = logger or get_logger()
 
@@ -386,25 +388,20 @@ class PlaywrightPDFRenderer:
             raise ADRException(
                 f"Browser PDF export is not supported for Ansys {product_name}. "
                 f"Use Ansys {min_product_name} or newer, which ships the required "
-                "Playwright browser binary."
+                "browser binary."
             )
 
-    def _resolve_playwright_browser_binary(self) -> PlaywrightBrowserBinaryInfo | None:
-        """Return a shipped Playwright browser binary path under the Ansys install, if any."""
+    def _resolve_playwright_browser_binary(self) -> _PlaywrightBrowserBinaryInfo:
+        """Return the shipped Playwright browser binary path under the resolved install."""
         self._raise_if_product_line_unsupported()
 
-        if self._ansys_installation is None or self._ansys_version is None:
-            return None
-
         binary_info = resolve_playwright_browser_binary_info(
-            ansys_installation=(
-                None if self._ansys_installation is None else str(self._ansys_installation)
-            ),
+            ansys_installation=str(self._ansys_installation),
             ansys_version=self._ansys_version,
         )
         if binary_info is None:
             raise ADRException(
-                "Browser PDF export requires a valid product-shipped Playwright browser binary, "
+                "Browser PDF export requires a valid product-shipped browser binary, "
                 f"but none was found for Ansys version {self._ansys_version}."
             )
 
@@ -433,30 +430,26 @@ class PlaywrightPDFRenderer:
             if env_var in os.environ
         }
         restored_browser_binaries_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-        installed_browser_binary_env = False
         try:
             browser_binary_dir = self._resolve_playwright_browser_binary()
-            if browser_binary_dir is not None:
-                self._logger.info(
-                    "Using product-shipped Playwright browser binary path: %s",
-                    browser_binary_dir.path,
-                )
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-                installed_browser_binary_env = True
+            self._logger.info(
+                "Using product-shipped Playwright browser binary path: %s",
+                browser_binary_dir.path,
+            )
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
             yield
         finally:
-            if installed_browser_binary_env:
-                # Restore the caller's original browser-path override after the
-                # render so the product-specific choice stays scoped to this
-                # browser-PDF operation.
-                if restored_browser_binaries_path is None:
-                    os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-                else:
-                    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
+            # Restore the caller's original browser-path override after the
+            # render so the product-specific choice stays scoped to this
+            # browser-PDF operation.
+            if restored_browser_binaries_path is None:
+                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+            else:
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = restored_browser_binaries_path
             os.environ.update(restored_override_envs)
 
     def render_pdf(self) -> bytes:
-        """Render the exported HTML report to PDF bytes.
+        """Render the configured browser-PDF source to PDF bytes.
 
         Returns
         -------
@@ -468,7 +461,7 @@ class PlaywrightPDFRenderer:
         ADRException
             If the browser render/export flow fails.
         """
-        entrypoint_path = self._resolve_entrypoint_path()
+        navigation_target = self._get_navigation_target()
         browser_phase_deadline = monotonic() + self._render_timeout
         current_timeout_phase = "browser launch"
 
@@ -492,24 +485,15 @@ class PlaywrightPDFRenderer:
                     )
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
                     # items lay themselves out deterministically before the PDF width is computed.
-                    context = browser.new_context(
-                        viewport={
-                            "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
-                            "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
-                        },
-                        service_workers="block",
-                        accept_downloads=False,
-                        offline=True,
-                    )
-                    self._block_external_requests(context)
+                    context = self._new_browser_context(browser)
+                    self._prepare_context(context)
                     self._remaining_browser_phase_timeout_ms(
                         browser_phase_deadline, "page creation"
                     )
                     page = context.new_page()
-                    file_url = entrypoint_path.as_uri()
 
-                    # Load the exported offline report exactly as Chromium would see it from disk.
-                    self._logger.info(f"Loading exported HTML for browser PDF export: {file_url}")
+                    # Load the source page exactly as Chromium will render it for the PDF pass.
+                    self._logger.info(f"Loading browser PDF source: {navigation_target}")
                     # Keep navigation inside the same shared browser-phase budget used by the
                     # later readiness checks. Playwright documents ``page.goto(timeout=...)`` in
                     # milliseconds, so convert the remaining budget just before navigation.
@@ -518,7 +502,7 @@ class PlaywrightPDFRenderer:
                         browser_phase_deadline, current_timeout_phase
                     )
                     page.goto(
-                        file_url,
+                        navigation_target,
                         wait_until="load",
                         timeout=navigation_timeout_ms,
                     )
@@ -585,14 +569,46 @@ class PlaywrightPDFRenderer:
         except ADRException:
             raise
         except PlaywrightTimeoutError as exc:
-            # Normalize Playwright's operation-specific timeout wording into the renderer's
-            # public ADRException contract so callers see one consistent timeout shape.
+            # Keep Playwright's own timeout wording out of the caller-facing error while preserving
+            # the original timeout as the chained cause for debugging.
+            self._logger.debug(
+                "Browser PDF render timed out during %s.", current_timeout_phase, exc_info=True
+            )
             raise ADRException(
                 f"Browser PDF rendering failed: {current_timeout_phase} timed out after "
                 f"{self._render_timeout:.1f}s"
             ) from exc
         except Exception as exc:
-            raise ADRException(f"Browser PDF rendering failed: {exc}") from exc
+            # Keep the caller-facing error ADR-owned while preserving the original browser/driver
+            # failure as the chained cause for debugging.
+            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
+            raise ADRException("Browser PDF rendering failed.") from exc
+
+    def _shared_browser_context_kwargs(self) -> dict[str, Any]:
+        """Return browser-context options shared by both offline and live renders."""
+        return {
+            "viewport": {
+                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
+            },
+            "service_workers": "block",
+            "accept_downloads": False,
+        }
+
+    @abstractmethod
+    def _get_navigation_target(self) -> str:
+        """Return the URL Chromium should open for the browser-PDF render pass."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _new_browser_context(self, browser: Any) -> Any:
+        """Create the browser context used by this renderer."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _prepare_context(self, context: Any) -> None:
+        """Configure the browser context before opening the source page."""
+        raise NotImplementedError
 
     def _apply_pdf_capture_styles(self, page: Any) -> None:
         """Inject PDF-only overrides that keep browser-rendered content fully visible on pages."""
@@ -838,50 +854,8 @@ class PlaywrightPDFRenderer:
             raise ADRException(f"Unsupported PDF length unit for browser PDF rendering: {value!r}")
         return number * self._PDF_UNIT_TO_PX[unit]
 
-    def _resolve_entrypoint_path(self) -> Path:
-        """Return the validated HTML entry-point path that Chromium can open."""
-        entrypoint_path = (self._html_dir / self._filename).resolve()
-        if not entrypoint_path.is_relative_to(self._html_dir):
-            raise ADRException(
-                "Browser PDF entry-point file must be inside the exported HTML directory."
-            )
-        if not entrypoint_path.is_file():
-            raise ADRException(f"Browser PDF entry-point file does not exist: {entrypoint_path}")
-        return entrypoint_path
-
-    def _block_external_requests(self, context: Any) -> None:
-        """Keep browser-PDF rendering offline while still allowing local export assets."""
-
-        def route_request(route: Any) -> None:
-            request_url = route.request.url
-            parsed_url = urlsplit(request_url)
-            scheme = parsed_url.scheme.lower()
-            # Block both known-external schemes (http, https, ws, wss) and any URL with an
-            # authority component (netloc). The netloc check catches protocol-relative URLs
-            # like //example.com/file and file:// URLs with hostnames like file://example.com/file
-            # that the scheme check alone would miss.
-            if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
-                route.abort()
-                return
-            route.continue_()
-
-        def is_external_websocket(url: str) -> bool:
-            return urlsplit(url).scheme.lower() in self._BLOCKED_WEBSOCKET_SCHEMES
-
-        def route_websocket(websocket_route: Any) -> None:
-            websocket_route.close()
-
-        # ADR's HTML exporter writes a self-contained file:// bundle. Blocking known network
-        # schemes plus any authority-bearing URL prevents report HTML from calling back to
-        # arbitrary hosts during PDF generation while still allowing local file:, data:, and
-        # blob: resources that are part of the offline export.
-        # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
-        # connections through the dedicated route_web_socket API.
-        context.route("**/*", route_request)
-        context.route_web_socket(is_external_websocket, route_websocket)
-
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
-        """Validate Playwright PDF margins and return a private copy."""
+        """Validate browser-PDF margins and return a private copy."""
         if margins is None:
             return dict(self._DEFAULT_MARGINS)
 
@@ -997,7 +971,7 @@ class PlaywrightPDFRenderer:
         self._logger.info("Waiting for browser render readiness signals.")
 
         # The readiness pipeline intentionally waits only on product-owned signals that ADR
-        # emits during its staged print-mode browser render. HTML items and layout ``HTML``
+        # emits during browser-PDF rendering. HTML items and layout ``HTML``
         # fragments are rendered from raw macro-expanded HTML, so arbitrary custom JavaScript
         # inside those fragments does not have a separate readiness contract here. Supported
         # browser-PDF reports therefore assume such HTML is static or settles itself through
@@ -1279,3 +1253,213 @@ class PlaywrightPDFRenderer:
         )
 
         self._logger.info("Browser render readiness checks completed.")
+
+
+class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
+    """Render an exported ADR HTML directory to PDF via headless Chromium.
+
+    Parameters
+    ----------
+    html_dir : Path or str
+        Directory containing the exported offline HTML report and its assets.
+    landscape : bool, default: False
+        Whether to render the PDF in landscape orientation.
+    margins : dict[str, str], optional
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+        strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
+        If omitted, 10 mm margins are used on every side.
+    render_timeout : float, default: 30.0
+        Maximum time, in seconds, for the shared browser render phase once the
+        exported HTML bundle is ready to open. This shared budget covers browser
+        launch, navigation, readiness waits, and other browser-side preparation
+        steps, but not the earlier ADR report render.
+    ansys_installation : Path or str
+        Resolved Ansys installation root used to locate a product-shipped
+        Playwright browser binary. Browser-PDF rendering requires this value
+        together with ``ansys_version`` and uses the shipped browser cache for
+        the render instead of any ambient browser-path override.
+    ansys_version : int
+        Ansys version associated with ``ansys_installation``. This is used to
+        locate ``apex###/machines/...`` runtime assets when the product ships
+        Playwright browsers inside the installation tree.
+    logger : Any, optional
+        Logger used for renderer lifecycle messages.
+    """
+
+    _ENTRYPOINT_FILENAME: ClassVar[str] = "index.html"
+    _BLOCKED_REQUEST_SCHEMES: ClassVar[set[str]] = {"http", "https"}
+    _BLOCKED_WEBSOCKET_SCHEMES: ClassVar[set[str]] = {"ws", "wss"}
+
+    def __init__(
+        self,
+        html_dir: Path | str | None,
+        *,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
+        ansys_installation: Path | str | None = None,
+        ansys_version: int | None = None,
+        logger: Any = None,
+    ) -> None:
+        self._html_dir = None if html_dir is None else Path(html_dir).expanduser().resolve()
+        super().__init__(
+            landscape=landscape,
+            margins=margins,
+            render_timeout=render_timeout,
+            ansys_installation=ansys_installation,
+            ansys_version=ansys_version,
+            logger=logger,
+        )
+
+    def _get_navigation_target(self) -> str:
+        """Return the staged HTML bundle entry point for the browser-PDF render pass."""
+        return self._resolve_entrypoint_path().as_uri()
+
+    def _new_browser_context(self, browser: Any) -> Any:
+        """Create the browser context used by the offline HTML renderer.
+
+        The serverless path renders a fully staged ``file://`` bundle, so the
+        context is explicitly offline and blocks service workers to keep the
+        browser phase deterministic and self-contained.
+        """
+        context_kwargs = self._shared_browser_context_kwargs()
+        context_kwargs["offline"] = True
+        return browser.new_context(**context_kwargs)
+
+    def _prepare_context(self, context: Any) -> None:
+        """Configure the offline browser context before opening the staged bundle."""
+        self._block_external_requests(context)
+
+    def _block_external_requests(self, context: Any) -> None:
+        """Keep the offline ``file://`` export self-contained during browser rendering."""
+
+        def route_request(route: Any) -> None:
+            request_url = route.request.url
+            parsed_url = urlsplit(request_url)
+            scheme = parsed_url.scheme.lower()
+            # Block both known network schemes and any authority-bearing URL. The netloc check
+            # catches protocol-relative URLs like //example.com/file and file:// URLs with
+            # hostnames like file://example.com/file that the scheme check alone would miss.
+            if scheme in self._BLOCKED_REQUEST_SCHEMES or parsed_url.netloc:
+                route.abort()
+                return
+            route.continue_()
+
+        def is_external_websocket(url: str) -> bool:
+            return urlsplit(url).scheme.lower() in self._BLOCKED_WEBSOCKET_SCHEMES
+
+        def route_websocket(websocket_route: Any) -> None:
+            websocket_route.close()
+
+        # ADR's offline HTML exporter writes a self-contained file:// bundle. Blocking known
+        # network schemes plus any authority-bearing URL prevents staged report HTML from
+        # calling back to arbitrary hosts during PDF generation while still allowing local
+        # file:, data:, and blob: resources that are part of the offline export.
+        # Playwright documents WebSocket routing separately from request routing, so handle ws/wss
+        # connections through the dedicated route_web_socket API.
+        context.route("**/*", route_request)
+        context.route_web_socket(is_external_websocket, route_websocket)
+
+    def _resolve_entrypoint_path(self) -> Path:
+        """Return the validated HTML entry-point path that Chromium can open."""
+        if self._html_dir is None:
+            raise ADRException("Browser PDF HTML directory is not configured for this renderer.")
+        entrypoint_path = (self._html_dir / self._ENTRYPOINT_FILENAME).resolve()
+        if not entrypoint_path.is_relative_to(self._html_dir):
+            raise ADRException(
+                "Browser PDF entry-point file must be inside the exported HTML directory."
+            )
+        if not entrypoint_path.is_file():
+            raise ADRException(f"Browser PDF entry-point file does not exist: {entrypoint_path}")
+        return entrypoint_path
+
+
+class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
+    """Render a live ADR report URL to PDF via headless Chromium.
+
+    The remote-server browser-PDF path already has a running report server, so
+    it can render the live report page directly instead of first staging an
+    offline HTML bundle. This class reuses the shared browser readiness and PDF
+    sizing flow while keeping network access enabled for same-page assets.
+
+    Parameters
+    ----------
+    url : str
+        Absolute ADR report URL to open in the headless browser.
+    auth_cookies : list[dict[str, object]], optional
+        Browser-session cookies to seed into the Playwright context before the
+        page is opened.
+    landscape : bool, default: False
+        Whether to render the PDF in landscape orientation.
+    margins : dict[str, str], optional
+        Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+        strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
+        If omitted, 10 mm margins are used on every side.
+    render_timeout : float, default: 30.0
+        Maximum time, in seconds, for the shared browser render phase once the
+        live report URL is ready to open. This shared budget covers browser
+        launch, navigation, readiness waits, and other browser-side preparation
+        steps, but not the earlier server-side report generation work.
+    ansys_installation : Path or str
+        Resolved Ansys installation root used to locate a product-shipped
+        Playwright browser binary. Browser-PDF rendering requires this value
+        together with ``ansys_version`` and uses the shipped browser cache for
+        the render instead of any ambient browser-path override.
+    ansys_version : int
+        Ansys version associated with ``ansys_installation``. This is used to
+        locate ``apex###/machines/...`` runtime assets when the product ships
+        Playwright browsers inside the installation tree.
+    logger : Any, optional
+        Logger used for renderer lifecycle messages.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        *,
+        auth_cookies: list[dict[str, object]] | None = None,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
+        ansys_installation: Path | str | None = None,
+        ansys_version: int | None = None,
+        logger: Any = None,
+    ) -> None:
+        self._url = self._validate_url(url)
+        self._auth_cookies = [] if auth_cookies is None else list(auth_cookies)
+        super().__init__(
+            landscape=landscape,
+            margins=margins,
+            render_timeout=render_timeout,
+            ansys_installation=ansys_installation,
+            ansys_version=ansys_version,
+            logger=logger,
+        )
+
+    def _get_navigation_target(self) -> str:
+        """Return the live report URL for the browser-PDF render pass."""
+        return self._url
+
+    def _new_browser_context(self, browser: Any) -> Any:
+        """Create the browser context used by the live remote-report renderer.
+
+        Unlike the offline HTML renderer, the live report path must keep network
+        access enabled so Chromium can fetch the report HTML and its assets from
+        the already-running ADR service. This also permits network egress to any
+        host the report references; the seeded auth cookies stay domain-scoped by
+        the browser, so they are only sent back to the originating ADR service.
+        """
+        return browser.new_context(**self._shared_browser_context_kwargs())
+
+    def _prepare_context(self, context: Any) -> None:
+        """Seed the live report context with any authenticated ADR web-session cookies."""
+        if self._auth_cookies:
+            context.add_cookies(self._auth_cookies)
+
+    @staticmethod
+    def _validate_url(url: str) -> str:
+        """Validate that the live report renderer received an absolute URL."""
+        parsed_url = urlsplit(url)
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise ADRException(f"Browser PDF report URL is not valid: {url!r}")
+        return url

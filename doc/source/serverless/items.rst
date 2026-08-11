@@ -16,7 +16,7 @@ Core Concepts
 
   - `String`: Plain text content.
   - `HTML`: Valid HTML content, validated for proper structure.
-  - `Table`: Two-dimensional numpy arrays representing tabular data, with additional metadata like labels and plot settings.
+  - `Table`: Nested lists or two-dimensional NumPy arrays representing tabular data, with additional metadata like labels and plot settings.
   - `Tree`: Hierarchical data represented as nested dictionaries with keys `key`, `name`, `value`, and optional `children`.
   - `Image`: Images in PNG, JPG, and enhanced TIFF formats, supporting embedded metadata.
   - `Animation`: Video files, typically MP4 format.
@@ -64,6 +64,37 @@ Items automatically link to the current default session and dataset unless speci
     table_item.xaxis = "Time (s)"
     table_item.yaxis = ["Velocity (m/s)", "Pressure (Pa)"]
     table_item.save()
+
+A NumPy array remains supported. For a simpler numeric table, pass a nested sequence and
+let PyDR convert it to a ``float64`` array:
+
+.. code-block:: python
+
+    list_table = adr.create_item(
+        Table,
+        name="pressure_data_from_list",
+        content=[
+            [0.0, 10.0, 101325.0],
+            [0.5, 12.5, 101300.0],
+            [1.0, 15.0, 101280.0],
+        ],
+        tags="section=data project=wing_sim",
+    )
+
+To create a text table or select another supported dtype, pass the values and dtype
+together:
+
+.. code-block:: python
+
+    text_table = adr.create_item(
+        Table,
+        name="status_table",
+        content={
+            "array": [["Run", "Status"], ["1", "Complete"]],
+            "dtype": "|S8",
+        },
+        tags="section=data project=wing_sim",
+    )
 
 Item Properties and Metadata
 ----------------------------

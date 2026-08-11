@@ -81,3 +81,4 @@ local_docs/
 /.claude
 # Workspace files are user-specific
 *.code-workspace
+/.codex

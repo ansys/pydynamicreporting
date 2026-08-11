@@ -228,18 +228,6 @@ class ReportDownloadHTML:
             f"ansys{self._ansys_version}/nexus/",
             "ansys-nexus-viewer js",
         )
-        images = [
-            "jquery.contextMenu.min.css",
-            "jquery.contextMenu.min.js",
-            "jquery.ui.position.min.js",
-        ]
-        self._download_static_files(
-            images,
-            f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
-            "ansys-nexus-viewer vnc js",
-        )
-
         image = [
             "ArcballControls.js",
             "DRACOLoader.js",
@@ -698,16 +686,6 @@ class ReportDownloadHTML:
                 "libs",
                 "draco",
                 "gltf",
-            ]
-        )
-        self._make_dir(
-            [
-                self._directory,
-                f"ansys{self._ansys_version}",
-                "nexus",
-                "novnc",
-                "vendor",
-                "jQuery-contextMenu",
             ]
         )
 

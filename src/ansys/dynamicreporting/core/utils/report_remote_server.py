@@ -24,6 +24,7 @@ import collections
 import configparser
 import functools
 import hashlib
+from http.cookiejar import Cookie
 import inspect
 import json
 import logging
@@ -46,21 +47,40 @@ from requests import JSONDecodeError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-try:
-    from qtpy import QtCore, QtGui, QtWidgets
-
-    has_qt = True
-except ImportError:
-    has_qt = False
-
 from . import exceptions, filelock, report_objects, report_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
 from ..constants import JSON_ATTR_KEYS
+from ..exceptions import ADRException
 from .encoders import BaseEncoder
+
+QtCore = None
+QtGui = None
+QtWidgets = None
+has_qt = False
 
 logger = logging.getLogger("ansys.dynamicreporting.core")
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
+
+
+@functools.lru_cache(maxsize=1)
+def _load_qt():
+    """Load the optional Qt stack only when a GUI-specific path needs it."""
+    global QtCore, QtGui, QtWidgets, has_qt
+
+    try:
+        from qtpy import QtCore as imported_qtcore
+        from qtpy import QtGui as imported_qtgui
+        from qtpy import QtWidgets as imported_qtwidgets
+    except ImportError:
+        has_qt = False
+        return False
+
+    QtCore = imported_qtcore
+    QtGui = imported_qtgui
+    QtWidgets = imported_qtwidgets
+    has_qt = True
+    return True
 
 
 def print_allowed():
@@ -650,7 +670,7 @@ class Server:
             if progress:
                 text = "Scanning datasets..."
                 if progress_qt:
-                    text = QtWidgets.QApplication.translate("nexus", "Scanning datasets...")
+                    text = "Scanning datasets..."
                 progress.setLabelText(text)
                 progress.setMaximum(nobjs)
                 progress.setValue(n)
@@ -665,7 +685,7 @@ class Server:
             if progress:
                 text = "Scanning sessions..."
                 if progress_qt:
-                    text = QtWidgets.QApplication.translate("nexus", "Scanning sessions...")
+                    text = "Scanning sessions..."
                 progress.setLabelText(text)
             for guid in session_set:
                 obj = source.get_object_from_guid(guid, objtype=report_objects.SessionREST)
@@ -679,7 +699,7 @@ class Server:
             if progress:
                 text = "Scanning templates..."
                 if progress_qt:
-                    text = QtWidgets.QApplication.translate("nexus", "Scanning templates...")
+                    text = "Scanning templates..."
                 progress.setLabelText(text)
             objs = source.get_objects(objtype=report_objects.TemplateREST, query=query)
             # record all of the GUIDs we currently have...
@@ -740,8 +760,8 @@ class Server:
                 nobjs += 1
         n = 0
         if progress:
-            if progress_qt and has_qt:
-                s = QtWidgets.QApplication.translate("nexus", "Importing:")
+            if progress_qt and _load_qt():
+                s = "Importing:"
                 s += report_utils.from_local_8bit(obj_type)
             else:
                 s = f"Importing: {obj_type}"
@@ -891,6 +911,138 @@ class Server:
             url += query_str
         return url
 
+    def _download_report_as_html_bundle(
+        self,
+        report_guid,
+        directory_name,
+        query=None,
+        item_filter=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
+    ):
+        """Download a standalone HTML bundle for a report-generation request.
+
+        This private helper centralizes the remote HTML-download flow used by
+        standalone HTML export. Callers are responsible for preparing the final
+        query dictionary, including the desired ``print`` target, before
+        delegating here.
+        """
+        directory_path = os.path.abspath(directory_name)
+        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
+
+        url = self.build_url_with_query(report_guid, query, item_filter)
+        # Ask the server for the Ansys version number when possible so the downloader rewrites
+        # static asset paths against the same product namespace the report was generated with.
+        resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
+        if ansys_version:
+            resolved_ansys_version = ansys_version
+
+        worker = ReportDownloadHTML(
+            url=url,
+            directory=directory_path,
+            filename=filename,
+            no_inline_files=no_inline_files,
+            ansys_version=resolved_ansys_version,
+        )
+        worker.download()
+
+    def _authenticate_browser_pdf_web_session(self) -> requests.Session | None:
+        """Authenticate the shared requests session for browser-facing report pages."""
+        credentials = self.get_auth()
+        if credentials is None:
+            return None
+
+        username, passwd = credentials
+        login_url = self.build_request_url("/login/")
+        session = self._http_session
+
+        # Browser-facing report pages require a Django session login rather than REST auth.
+        init_response = session.get(login_url)
+        csrf_token = init_response.cookies.get("csrftoken")
+        if csrf_token:
+            login_response = session.post(
+                login_url,
+                data={
+                    "username": username,
+                    "password": passwd,
+                    "csrfmiddlewaretoken": csrf_token,
+                    "next": "/",
+                },
+            )
+            if login_response.status_code == requests.codes.ok:
+                return session
+
+        return None
+
+    def _get_browser_auth_cookies(self) -> list[dict[str, object]]:
+        """Return Playwright cookie objects for authenticated browser-report access.
+
+        ADR's report-display pages are browser-facing Django views, not REST API
+        endpoints. This helper logs the shared ``requests.Session`` into that web
+        experience and converts the resulting cookies into Playwright's cookie
+        format so the live browser-PDF path reuses the same authenticated web
+        session without changing the older shared request helper contracts.
+        """
+        # Anonymous server objects have no login state to mirror into Chromium, so the
+        # remote renderer should open the report without seeded browser cookies.
+        if self.get_auth() is None:
+            return []
+
+        session = self._authenticate_browser_pdf_web_session()
+        if session is None:
+            raise ADRException(
+                "Unable to authenticate the browser PDF web session for report export."
+            )
+
+        base_url = self.get_URL()
+        cookies: list[dict[str, object]] = []
+        for cookie in session.cookies:
+            cookies.append(self._build_playwright_cookie(cookie, base_url=base_url))
+        return cookies
+
+    @staticmethod
+    def _build_playwright_cookie(
+        cookie: Cookie, *, base_url: str | None = None
+    ) -> dict[str, object]:
+        """Convert one requests cookie into Playwright's cookie dictionary shape."""
+        playwright_cookie: dict[str, object] = {
+            "name": cookie.name,
+            # http.cookiejar allows a value-less cookie (value is None), but Playwright's cookie
+            # schema requires a string value, so normalize a missing value to an empty string.
+            "value": cookie.value if cookie.value is not None else "",
+            "secure": bool(cookie.secure),
+        }
+
+        # Playwright requires either ``url`` or both ``domain`` and ``path``.
+        # Preserve the server-issued domain/path pair when available so the
+        # browser context sees the same scoping rules as requests.
+        if cookie.domain:
+            playwright_cookie["domain"] = cookie.domain
+            playwright_cookie["path"] = cookie.path or "/"
+        elif base_url:
+            playwright_cookie["url"] = base_url
+        else:
+            raise ADRException(
+                f"Browser PDF authentication cookie is missing a domain and base URL: {cookie.name!r}"
+            )
+
+        if cookie.expires is not None:
+            playwright_cookie["expires"] = float(cookie.expires)
+
+        # http.cookiejar exposes non-standard cookie attributes through public accessors.
+        # Use those instead of reaching into the Cookie object's private storage.
+        for attr_name in ("HttpOnly", "httponly"):
+            if cookie.has_nonstandard_attr(attr_name):
+                playwright_cookie["httpOnly"] = True
+                break
+        for attr_name in ("SameSite", "samesite"):
+            if cookie.has_nonstandard_attr(attr_name):
+                playwright_cookie["sameSite"] = cookie.get_nonstandard_attr(attr_name)
+                break
+
+        return playwright_cookie
+
     def export_report_as_html(
         self,
         report_guid,
@@ -901,26 +1053,112 @@ class Server:
         no_inline_files=False,
         ansys_version=None,
     ):
-        if query is None:
-            query = {}
-        query["print"] = "html"
-        directory_path = os.path.abspath(directory_name)
-        from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
-
-        url = self.build_url_with_query(report_guid, query, item_filter)
-        # ask the server for the Ansys version number. It will generally know it.
-        _ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
-        if ansys_version:
-            _ansys_version = ansys_version
-
-        worker = ReportDownloadHTML(
-            url=url,
-            directory=directory_path,
+        html_query = dict(query or {})
+        html_query["print"] = "html"
+        self._download_report_as_html_bundle(
+            report_guid=report_guid,
+            directory_name=directory_name,
+            query=html_query,
+            item_filter=item_filter,
             filename=filename,
             no_inline_files=no_inline_files,
-            ansys_version=_ansys_version,
+            ansys_version=ansys_version,
         )
-        worker.download()
+
+    def export_report_as_browser_pdf(
+        self,
+        report_guid,
+        file_name,
+        *,
+        query=None,
+        item_filter=None,
+        landscape=False,
+        margins=None,
+        # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
+        # this module does not eagerly import the Playwright renderer module (and Playwright with it).
+        render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
+    ):
+        """
+        Export a report as a browser-fidelity PDF.
+
+        This method uses a headless browser to open the live ADR report page and
+        print it to PDF.  That keeps the browser-PDF path simple on the remote
+        server side: unlike the serverless path, there is already a running web
+        server, so the browser can render the report directly instead of staging
+        an offline HTML export first.
+
+        Parameters
+        ----------
+        report_guid : str
+            The GUID of the report to export.
+        file_name : str
+            The name of the output PDF file.
+        query : dict, optional
+            A dictionary of query parameters to include in the report generation request.
+            These play the same role on the remote-service side that ``context`` does
+            for serverless rendering. This method merges them with ``print='pdf'`` for
+            the live browser-render request without mutating the caller's dictionary.
+        item_filter : str, optional
+            ADR filter string to include in the report generation request.
+        landscape : bool, optional
+            Whether to render the PDF in landscape orientation. Default is False (portrait).
+        margins : dict, optional
+            PDF margin lengths expressed as strings using unitless pixels or the ``px``,
+            ``in``, ``cm``, or ``mm`` units (for example ``"10mm"`` or ``"0.5in"``).
+            Keys can include ``top``, ``right``, ``bottom``, and ``left``.
+        render_timeout : float, optional
+            The maximum time in seconds to wait for the report to render in the headless browser before
+            timing out. Default is 30 seconds.
+        ansys_installation : str, optional
+            Local Ansys installation root, forwarded from the connected service, used to locate the
+            product-shipped browser binary for the local render. The underlying renderer requires
+            this value together with ``ansys_version`` instead of falling back to an ambient browser.
+        ansys_version : int, optional
+            Ansys version paired with ``ansys_installation`` to locate the product-shipped browser
+            binary. This remote-service path renders the live report URL in a local headless browser
+            using that product-shipped browser binary, so it does not rely on a separately installed one.
+        """
+        if not file_name:
+            raise ADRException("A non-empty file_name must be provided for browser PDF export.")
+
+        # Copy the caller's query dictionary so the browser-specific ``print='pdf'`` flag does
+        # not leak back into the caller's reusable request configuration.
+        browser_query = dict(query or {})
+        browser_query["print"] = "pdf"
+        output_path = Path(os.path.abspath(file_name))
+
+        try:
+            # Import lazily so regular server workflows do not pay the Playwright import cost
+            # unless they actually request browser-fidelity PDF output.
+            from .pdf_renderer import _ReportURLPlaywrightPDFRenderer
+
+            report_url = self.build_url_with_query(report_guid, browser_query, item_filter)
+            browser_auth_cookies = self._get_browser_auth_cookies()
+
+            renderer = _ReportURLPlaywrightPDFRenderer(
+                url=report_url,
+                auth_cookies=browser_auth_cookies,
+                landscape=landscape,
+                margins=margins,
+                render_timeout=render_timeout,
+                ansys_installation=ansys_installation,
+                ansys_version=ansys_version,
+                logger=logger,
+            )
+            pdf_bytes = renderer.render_pdf()
+            # Keep filesystem failures under the same ADRException contract as the render flow
+            # so callers do not have to distinguish between browser and write-path failures.
+            output_path.write_bytes(pdf_bytes)
+
+        except ADRException:
+            raise
+        except Exception as exc:
+            # Keep the caller-facing error ADR-owned while preserving the underlying setup,
+            # renderer, or write-path failure as the chained cause for debugging.
+            logger.debug("Browser PDF export failed.", exc_info=True)
+            raise ADRException("Browser PDF export failed.") from exc
 
     def export_report_as_pdf(
         self,
@@ -939,7 +1177,7 @@ class Server:
         query["print"] = "pdf"
         url = self.build_url_with_query(report_guid, query, item_filter)
         file_path = os.path.abspath(file_name)
-        if has_qt and (parent is not None):
+        if parent is not None and _load_qt():
             from .report_download_pdf import NexusPDFSave
 
             app = QtGui.QGuiApplication.instance()
@@ -1141,12 +1379,22 @@ def create_new_local_database(
     exec_basis=None,
     ansys_version=None,
 ):
-    """Create a new, empty sqlite database  If parent is not None, a QtGui will be
-    used."""
-    if parent and has_qt:  # pragma: no cover
-        title = QtWidgets.QApplication.translate(
-            "nexus", "Select an empty folder to create the database in"
-        )
+    """
+    Create a new, empty sqlite database  If parent is not None, a QtGui will be
+    used.
+
+    :param parent:  If using Qt, this is the parent to all Qt dialogs.  In non-Qt cases, None should be passed.
+    :param str directory: The database directory to create.
+    :param dict return_info: If set to a dictionary, will return the 'directory' of the created database.
+    :param bool run_local: If True, create the database directly in-process by running Django migrations and seeding the default user/group. If False, invoke ``nexus_utility create_new_database`` in a separate process.
+    :param bool raise_exception: If True, the function will raise exceptions on errors instead of returning False
+    :param str exec_basis: path to the ADR installation to use.
+    :param ansys_version int: version corresponding to the installation.
+
+    :return bool: True on success and False on failure.
+    """
+    if parent and _load_qt():  # pragma: no cover
+        title = "Select an empty folder to create the database in"
         fn = QtWidgets.QFileDialog.getExistingDirectory(parent, title, directory)
         if len(fn) == 0:
             return False
@@ -1160,14 +1408,11 @@ def create_new_local_database(
         os.makedirs(db_dir)
     except OSError as e:
         if not os.path.isdir(db_dir):
-            if parent and has_qt:  # pragma: no cover
-                msg = QtWidgets.QApplication.translate(
-                    "nexus", "The selected directory could not be accessed."
-                )
+            if parent and _load_qt():  # pragma: no cover
                 QtWidgets.QMessageBox.critical(
                     parent,
-                    QtWidgets.QApplication.translate("nexus", "Invalid database location"),
-                    msg,
+                    "Invalid database location",
+                    "The selected directory could not be accessed.",
                 )
 
             if raise_exception:
@@ -1181,13 +1426,9 @@ def create_new_local_database(
     if os.path.isdir(os.path.join(db_dir, "media")) or os.path.isfile(
         os.path.join(db_dir, "db.sqlite3")
     ):
-        if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The selected directory already appears to have a database in it."
-            )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Invalid database location"), msg
-            )
+        if parent and _load_qt():
+            msg = "The selected directory already appears to have a database in it."
+            QtWidgets.QMessageBox.critical(parent, "Invalid database location", msg)
 
         if raise_exception:
             raise exceptions.DBExistsError(
@@ -1210,9 +1451,16 @@ def create_new_local_database(
             if len(secret_key):
                 f.write(secret_key)
             f.close()
-            srcdir = os.path.join(
-                report_utils.enve_home(), "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
-            )
+            if exec_basis:
+                srcdir = os.path.join(
+                    exec_basis, "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
+                )
+            else:
+                srcdir = os.path.join(
+                    report_utils.enve_home(),
+                    "nexus" + report_utils.ceiversion_nexus_suffix(),
+                    "django",
+                )
             # In Python 3, we use the migration command to build the new database file and add the 'nexus'
             # superuser programmatically.  We Also stamp the current csf version into the media directory.
             os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
@@ -1225,7 +1473,7 @@ def create_new_local_database(
             if srcdir not in sys.path:
                 sys.path.append(srcdir)
             error = False
-            if parent and has_qt:
+            if parent and _load_qt():
                 QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             try:
                 import django
@@ -1250,7 +1498,7 @@ def create_new_local_database(
             except Exception as e:
                 logger.debug(f"Warning: {str(e)}")
                 error = True
-            if parent and has_qt:
+            if parent and _load_qt():
                 QtWidgets.QApplication.restoreOverrideCursor()
             # Unset the environmental vars...
             os.environ.pop("CEI_NEXUS_SECRET_KEY")
@@ -1284,13 +1532,11 @@ def create_new_local_database(
             )
 
     except Exception as e:
-        if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The creation of a new, local database failed with the error:"
-            )
+        if parent and _load_qt():
+            msg = "The creation of a new, local database failed with the error:"
             QtWidgets.QMessageBox.critical(
                 parent,
-                QtWidgets.QApplication.translate("nexus", "Database creation failed"),
+                "Database creation failed",
                 msg + str(e),
             )
 
@@ -1305,13 +1551,11 @@ def create_new_local_database(
         return_info["directory"] = db_dir
         return True
 
-    if parent and has_qt:
-        msg = QtWidgets.QApplication.translate(
-            "nexus", "A new Nexus database has been created in the folder:"
-        )
+    if parent and _load_qt():
+        msg = "A new Nexus database has been created in the folder:"
         QtWidgets.QMessageBox.information(
             parent,
-            QtWidgets.QApplication.translate("nexus", "Database creation successful"),
+            "Database creation successful",
             msg + str(db_dir),
         )
     return True
@@ -1582,15 +1826,15 @@ def launch_local_database_server(
             return False
 
     # Handle the directory
-    if parent and has_qt:  # pragma: no cover
+    if parent and _load_qt():  # pragma: no cover
         # skip the directory prompt if directory is valid
         if no_directory_prompt:
             db_dir = os.path.abspath(directory)
         else:
-            f = QtWidgets.QApplication.translate("nexus", "Nexus database (db.sqlite3)")
+            f = "Nexus database (db.sqlite3)"
             fn = QtWidgets.QFileDialog.getOpenFileName(
                 parent,
-                QtWidgets.QApplication.translate("nexus", "Select the database file"),
+                "Select the database file",
                 directory,
                 f,
                 f,
@@ -1604,12 +1848,8 @@ def launch_local_database_server(
 
         # we expect to see: 'manage.py' and 'media' in this folder
         if not validate_local_db(db_dir):
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "The selected database file does not appear to be a valid database."
-            )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Invalid database"), msg
-            )
+            msg = "The selected database file does not appear to be a valid database."
+            QtWidgets.QMessageBox.critical(parent, "Invalid database", msg)
             if local_lock:
                 local_lock.release()
             if raise_exception:
@@ -1620,16 +1860,9 @@ def launch_local_database_server(
 
         # Check the version number of the database
         if not validate_local_db_version(db_dir):
-            msg = QtWidgets.QApplication.translate(
-                "nexus",
-                "The selected database is newer than the version supported by this version of Nexus.",
-            )
-            msg += QtWidgets.QApplication.translate(
-                "nexus", "\nPlease use a more recent version of the software to start this server."
-            )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Newer database detected"), msg
-            )
+            msg = "The selected database is newer than the version supported by this version of Nexus."
+            msg += "\nPlease use a more recent version of the software to start this server."
+            QtWidgets.QMessageBox.critical(parent, "Newer database detected", msg)
             if local_lock:
                 local_lock.release()
             return False
@@ -1637,10 +1870,8 @@ def launch_local_database_server(
         # if in verbose mode, let the user adjust the port number
         if verbose:
             # Pick a port number
-            title = QtWidgets.QApplication.translate("nexus", "Select local Nexus server port")
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "Select the port where the local Nexus server will be launched"
-            )
+            title = "Select local Nexus server port"
+            msg = "Select the port where the local Nexus server will be launched"
             port, ok = QtWidgets.QInputDialog.getInt(parent, title, msg, port, 1024, 65534)
             if not ok:
                 if local_lock:
@@ -1678,14 +1909,9 @@ def launch_local_database_server(
         # validate will throw exceptions or return a float.
         _ = tmp_server.validate()
         # if we have a valid version number, then do not start a server!!!
-        if parent and has_qt:
-            msg = QtWidgets.QApplication.translate(
-                "nexus",
-                "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port.",
-            )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Server already running"), msg
-            )
+        if parent and _load_qt():
+            msg = "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port."
+            QtWidgets.QMessageBox.critical(parent, "Server already running", msg)
         if local_lock:
             local_lock.release()
         if raise_exception:
@@ -1700,7 +1926,7 @@ def launch_local_database_server(
         pass
 
     # Start the busy cursor
-    if parent and has_qt:
+    if parent and _load_qt():
         QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
 
     # Here we run nexus_launcher with the following command line:
@@ -1749,7 +1975,7 @@ def launch_local_database_server(
     local_use_tray = not terminate_on_python_exit
     if use_system_tray is not None:
         local_use_tray = use_system_tray
-    if local_use_tray and parent and has_qt:
+    if local_use_tray and parent and _load_qt():
         command.extend(["--tray", "1"])
 
     # Capture stderr to leverage nexus_launcher CLI error checking.  Grabbing stdout as well, but not
@@ -1769,14 +1995,10 @@ def launch_local_database_server(
         monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603
     except Exception as e:
         logger.debug(f"Warning: {str(e)}")
-        if parent and has_qt:
+        if parent and _load_qt():
             QtWidgets.QApplication.restoreOverrideCursor()
-            msg = QtWidgets.QApplication.translate(
-                "nexus", "Launching a server for the selected local database failed. Error:"
-            )
-            QtWidgets.QMessageBox.critical(
-                parent, QtWidgets.QApplication.translate("nexus", "Unable to launch"), msg + str(e)
-            )
+            msg = "Launching a server for the selected local database failed. Error:"
+            QtWidgets.QMessageBox.critical(parent, "Unable to launch", msg + str(e))
         if local_lock:
             local_lock.release()
         if raise_exception:
@@ -1791,14 +2013,10 @@ def launch_local_database_server(
         monitor_alive = monitor_process.poll() is None
         # if we ran out of patience or the monitor process is dead, we have an error
         if ((time.time() - t0) > server_timeout) or (not monitor_alive):
-            if parent and has_qt:
+            if parent and _load_qt():
                 QtWidgets.QApplication.restoreOverrideCursor()
-                msg = QtWidgets.QApplication.translate(
-                    "nexus", "Unable to connect to the launched local Nexus server."
-                )
-                QtWidgets.QMessageBox.critical(
-                    parent, QtWidgets.QApplication.translate("nexus", "Unable to launch"), msg
-                )
+                msg = "Unable to connect to the launched local Nexus server."
+                QtWidgets.QMessageBox.critical(parent, "Unable to launch", msg)
             # If it is still alive, try to tell the monitor to shut down
             if monitor_alive:
                 stop_background_local_server(db_dir, reason="python API")
@@ -1839,19 +2057,25 @@ def launch_local_database_server(
     monitor_process.stderr.close()
     monitor_process.stdout.close()
 
+    # On Windows, if terminate_on_python_exit is True, we take care of cleaning up in the atexit handler.
+    # If it is False, a race condition can appear as the garbage collector cleans up in random order.
+    # To prevent a spurious WinError 6 message from the race condition, set the monitor_process.returncode to 0.
+    # This prevents Popen.__del__ from calling _WaitForSingleObject on a potentially-closed handle
+    # during garbage collection finalization. The process still gets cleaned up correctly.
+    if not terminate_on_python_exit:
+        monitor_process.returncode = 0
+
     # Allow another API launch to continue
     if local_lock:
         local_lock.release()
 
-    if parent and has_qt:
+    if parent and _load_qt():
         QtWidgets.QApplication.restoreOverrideCursor()
         if verbose:
             hostname = settings.get("server_hostname", "127.0.0.1")
-            msg = QtWidgets.QApplication.translate("nexus", "A new server has been launched at")
+            msg = "A new server has been launched at"
             msg += f" <a href='http://{hostname}:{port}'>http://{hostname}:{port}</a>"
-            QtWidgets.QMessageBox.information(
-                parent, QtWidgets.QApplication.translate("nexus", "Nexus server launched"), msg
-            )
+            QtWidgets.QMessageBox.information(parent, "Nexus server launched", msg)
     # go ahead and assign the connection to any server we were passed
     if connect is not None:
         connect.set_URL(tmp_server.get_URL())

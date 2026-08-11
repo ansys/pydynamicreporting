@@ -63,4 +63,5 @@ def __getattr__(name):
 
         globals()[name] = Service
         return Service
+    # without this, module.some_typo returns None instead of failing
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

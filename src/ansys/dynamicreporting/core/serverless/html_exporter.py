@@ -209,13 +209,25 @@ class ServerlessReportExporter:
         while True:
             # Find the next match using the legacy priority order
             idx1 = -1
+            matched_pattern = ""
             for pat in patterns:
                 pos = text.find(pat, current)
                 if pos != -1:
                     idx1 = pos
+                    matched_pattern = pat
                     break
             if idx1 == -1:
                 return text  # nothing more to replace
+
+            # The generic ``<script ...>`` pass runs after the dedicated
+            # ``<script src=...>`` pass, so already-rewritten relative paths can
+            # appear here as ``./media/...`` or ``./ansys...``.  Those are
+            # already export-safe and should not be re-processed with the legacy
+            # quote heuristic, which would otherwise truncate them at the next
+            # ``.`` (for example ``./media/jquery.min.js`` -> ``/media/jquery``).
+            if idx1 > 0 and text[idx1 - 1] == ".":
+                current = idx1 + len(matched_pattern)
+                continue
 
             # Legacy heuristic: assume we're inside an attribute quoted by the char before the path
             quote = text[idx1 - 1]
@@ -362,11 +374,6 @@ class ServerlessReportExporter:
         )
         self._copy_static_files(
             VIEWER_JS, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
-        )
-        self._copy_static_files(
-            CONTEXT_MENU_JS,
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
         )
         self._copy_static_files(
             THREE_JS,
@@ -679,6 +686,5 @@ class ServerlessReportExporter:
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
         ]:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)
