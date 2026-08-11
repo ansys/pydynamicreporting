@@ -158,8 +158,8 @@ def product_release_to_product_line(product_release: str) -> str:
     return year_line
 
 
-# Derived from the single hand-edited install default above, so a client
-# release bump only requires editing DEFAULT_ANSYS_INSTALL_RELEASE.
+# Derived from DEFAULT_ANSYS_INSTALL_RELEASE.
+# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.1" produces "271".
 DEFAULT_ANSYS_INSTALL_VERSION = str(
     product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
 )
@@ -168,17 +168,20 @@ DEFAULT_ANSYS_INSTALL_VERSION = str(
 def _auto_detect_install_versions() -> tuple[str, str]:
     """Return the implicit ADR install probe order.
 
-    Probe the default install line first to preserve the historical
-    no-argument constructor behavior, then stop after the previous annual line.
+    Probe the default install line first, then the previous annual line.
     """
+    # Example: "27.1" produces year_line="27" and release_index=1.
     year_line, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
+    # Example: year_line="27" and release_index=1 produce previous_release="26.1".
     previous_release = f"{int(year_line) - 1:02d}.{release_index}"
+    # Example output: ("271", "261").
     return (
         DEFAULT_ANSYS_INSTALL_VERSION,
         str(product_release_to_install_version(previous_release)),
     )
 
 
+# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.1" produces ("271", "261").
 AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
 
 

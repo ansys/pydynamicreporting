@@ -49,6 +49,7 @@ from urllib3.util.retry import Retry
 
 from .. import common_utils
 from ..adr_utils import build_query_url
+from ..common_utils import populate_template
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException, InvalidAnsysPath
@@ -96,31 +97,32 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     # are we on windows
     is_windows = report_utils.enve_arch().startswith("win")
     # is_linux = report_utils.enve_arch().startswith("lin")
-    # Use the non-raising resolver so callers such as export_report_as_pdf keep
-    # receiving OSError when no local installation is available.
-    resolution_failed = False
-    if exec_basis is None or not ansys_version:
+    product_root = exec_basis
+    install_version = ansys_version
+    # export_report_as_pdf reports a missing local installation as OSError.
+    if product_root is None or not install_version:
         try:
-            resolution = common_utils.resolve_install_info(
-                ansys_installation=exec_basis, ansys_version=ansys_version
+            resolved_install = common_utils.resolve_install_info(
+                ansys_installation=product_root, ansys_version=install_version
             )
-            if resolution.install_dir is not None:
-                exec_basis = resolution.install_dir
-            if not ansys_version:
-                ansys_version = resolution.version
+            if resolved_install.install_dir is not None:
+                product_root = resolved_install.install_dir
+            if not install_version:
+                install_version = resolved_install.version
         except InvalidAnsysPath:
-            resolution_failed = True
-            ansys_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
-    report_ver = str(ansys_version)
+            product_root = None
+            if not install_version:
+                install_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
+    install_version_str = str(install_version)
     # run any DB migrations using Python 3...
-    app_file = "cpython" + report_ver
-    if exec_basis is None or resolution_failed:
+    app_file = "cpython" + install_version_str
+    if product_root is None:
         # Do not search PATH when resolution proves that no install is available.
-        # A direct FileNotFoundError preserves the historical OSError contract.
+        # FileNotFoundError satisfies the OSError contract.
         raise FileNotFoundError(f"Unable to run '{app_file}': no local ADR installation was found.")
-    rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
-    nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
-    app = os.path.join(exec_basis, "bin", app_file)
+    django_dir = os.path.join(product_root, "nexus" + install_version_str, "django")
+    nexus_utility = os.path.join(product_root, "nexus" + install_version_str, "nexus_utility.py")
+    app = os.path.join(product_root, "bin", app_file)
     if is_windows:
         app += ".bat"
     # try the absolute name and if failing, assume it is in the PATH
@@ -128,7 +130,10 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
         app = app_file
     # run nexus_utility.py
     params = dict(
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, cwd=rptdir
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+        cwd=django_dir,
     )
     # Build the command line
     cmd = [app]
@@ -1323,9 +1328,7 @@ class Server:
         self._build_templates_from_parent(root_id_str, root_template, templates, logger)
 
     def _populate_template(self, id_str, attr, parent_template, logger=None):
-        return common_utils.populate_template(
-            id_str, attr, parent_template, self.create_template, logger
-        )
+        return populate_template(id_str, attr, parent_template, self.create_template, logger)
 
     def _build_templates_from_parent(
         self, parent_id_str, parent_template, templates_json, logger=None
@@ -1465,13 +1468,14 @@ def create_new_local_database(
                 f.write(secret_key)
             f.close()
             if exec_basis and ansys_version:
-                # A complete explicit pair is the caller's selected layout, so
-                # preserve the historical direct-path behavior without re-probing.
-                srcdir = os.path.join(exec_basis, f"nexus{int(ansys_version)}", "django")
+                # A complete explicit pair fully specifies the Django layout.
+                django_dir = os.path.join(exec_basis, f"nexus{int(ansys_version)}", "django")
             else:
-                srcdir = common_utils.resolve_install_paths(
-                    ansys_installation=exec_basis, ansys_version=ansys_version
-                ).django_dir
+                django_dir = str(
+                    common_utils._resolve_validated_django_dir(
+                        ansys_installation=exec_basis, ansys_version=ansys_version
+                    )
+                )
             # In Python 3, we use the migration command to build the new database file and add the 'nexus'
             # superuser programmatically.  We Also stamp the current csf version into the media directory.
             os.environ["CEI_NEXUS_SECRET_KEY"] = secret_key
@@ -1481,8 +1485,8 @@ def create_new_local_database(
             os.environ["CEI_NEXUS_SERVE_STATIC_FILES"] = "1"
             os.environ["DJANGO_SETTINGS_MODULE"] = "ceireports.settings"
             # make it possible to import ceireports.settings
-            if srcdir not in sys.path:
-                sys.path.append(srcdir)
+            if django_dir not in sys.path:
+                sys.path.append(django_dir)
             error = False
             if parent and _load_qt():
                 QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -1529,12 +1533,11 @@ def create_new_local_database(
             # as normal. From 241 on, the database path is expected to be encoded. So
             # a version check is needed to decide if we should encode db_dir or not.
             if ansys_version:
-                report_ver = int(ansys_version)
+                install_version = int(ansys_version)
             else:
-                report_ver = common_utils.resolve_install_info(
-                    ansys_installation=exec_basis
-                ).version
-            if report_ver > 240:
+                resolved_install = common_utils.resolve_install_info(ansys_installation=exec_basis)
+                install_version = resolved_install.version
+            if install_version > 240:
                 db_dir_encoded = report_utils.encode_url(db_dir)
             else:
                 db_dir_encoded = db_dir
@@ -1648,7 +1651,7 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
     if version_min is None:
         version_min = -1.0
     if version_max is None:
-        version_max = int(DEFAULT_ANSYS_INSTALL_VERSION) / 10.0
+        version_max = common_utils.resolve_install_info().version / 10.0
     version_file = os.path.join(os.path.abspath(db_dir), "media", "csf_conversion_version")
     if not os.path.isfile(version_file):
         return True
@@ -1950,25 +1953,23 @@ def launch_local_database_server(
     # Note: for the time being, we force the django instance count to be one.  This is in line with the older
     # implementation of the API and is needed for things like coverage tests.  We can consider relaxing this
     # in the future.
+    product_root = exec_basis
+    install_version = ansys_version
     install_missing = False
-    if exec_basis:
-        exename = os.path.join(exec_basis, "bin", "nexus_launcher" + str(ansys_version))
+    if product_root:
+        exename = os.path.join(product_root, "bin", f"nexus_launcher{install_version}")
     else:
-        # Use the non-raising resolver so a missing installation flows into the
-        # launch failure handling below (ServerLaunchError when raise_exception,
-        # otherwise return False) instead of raising InvalidAnsysPath out of this
-        # function -- which would bypass the raise_exception contract and skip
-        # releasing the acquired file lock.
-        resolution = common_utils.resolve_install_info(ansys_version=ansys_version)
-        if resolution.install_dir is None:
-            # Keep the expected launcher name for the error message, but never
-            # pass an unqualified executable to the operating system.
-            exename = f"nexus_launcher{resolution.version}"
+        # Missing installations must reach the launch error handler so it can
+        # release the file lock and honor raise_exception.
+        resolved_install = common_utils.resolve_install_info(ansys_version=install_version)
+        product_root = resolved_install.install_dir
+        install_version = resolved_install.version
+        if product_root is None:
+            # Use the expected launcher name only in the error message.
+            exename = f"nexus_launcher{install_version}"
             install_missing = True
         else:
-            exename = os.path.join(
-                resolution.install_dir, "bin", f"nexus_launcher{resolution.version}"
-            )
+            exename = os.path.join(product_root, "bin", f"nexus_launcher{install_version}")
     is_windows = report_utils.enve_arch().startswith("win")
     if is_windows:
         exename += ".bat"
