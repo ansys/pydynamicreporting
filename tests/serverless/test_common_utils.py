@@ -165,6 +165,20 @@ def test_resolve_validated_django_dir_for_explicit_release_root(tmp_path):
 
 
 @pytest.mark.ado_test
+def test_resolve_validated_django_dir_for_implicit_release_root(tmp_path, monkeypatch):
+    """Validate the Django directory selected through implicit discovery."""
+    release_root = tmp_path / f"v{CURRENT_VERSION}"
+    django_dir = release_root / "ADR" / f"nexus{CURRENT_VERSION}" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").write_text("dummy content")
+    monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(release_root))
+
+    resolved_django_dir = common_utils_module._resolve_validated_django_dir()
+
+    assert resolved_django_dir == django_dir
+
+
+@pytest.mark.ado_test
 def test_resolve_validated_django_dir_raises_when_no_install_is_found(tmp_path, monkeypatch):
     """Reject the tolerant resolver's no-install result."""
     for variable in [

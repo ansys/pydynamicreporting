@@ -834,6 +834,51 @@ def test_run_nexus_utility_no_install_uses_explicit_version(monkeypatch, tmp_pat
 
 
 @pytest.mark.ado_test
+def test_run_nexus_utility_invalid_explicit_root_raises_oserror(tmp_path) -> None:
+    """Translate strict resolution failure into the historical OSError contract."""
+    invalid_release_root = tmp_path / "missing_release_root"
+
+    with pytest.raises(OSError, match="no local ADR installation"):
+        r.run_nexus_utility(
+            ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"],
+            exec_basis=str(invalid_release_root),
+        )
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_path) -> None:
+    """Use a complete caller-supplied product root and version without inference."""
+    product_root = tmp_path / "v261" / "ADR"
+    explicit_version = 252
+    django_dir = product_root / f"nexus{explicit_version}" / "django"
+    django_dir.mkdir(parents=True)
+    nexus_utility = product_root / f"nexus{explicit_version}" / "nexus_utility.py"
+    nexus_utility.touch()
+    app = product_root / "bin" / f"cpython{explicit_version}"
+    app.parent.mkdir()
+    app.touch()
+    captured = {}
+
+    def capture_call(*, args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return 0
+
+    monkeypatch.setattr(r.report_utils, "enve_arch", lambda: "linux")
+    monkeypatch.setattr(r.subprocess, "call", capture_call)
+
+    utility_args = ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"]
+    r.run_nexus_utility(
+        utility_args,
+        exec_basis=str(product_root),
+        ansys_version=explicit_version,
+    )
+
+    assert captured["args"] == [str(app), str(nexus_utility), *utility_args]
+    assert captured["kwargs"]["cwd"] == str(django_dir)
+
+
+@pytest.mark.ado_test
 def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tmp_path) -> None:
     release_root = tmp_path / "v261"
     django_dir = release_root / "ADR" / "nexus261" / "django"
