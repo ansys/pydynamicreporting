@@ -45,15 +45,15 @@ def _path_is_never_dir(self) -> bool:
     return False
 
 
-def _missing_default_install_root_factory(tmp_path):
-    """Build a fake default-install resolver that always points at a missing path."""
+def _missing_default_release_root_factory(tmp_path):
+    """Build a default release-root resolver that always points at a missing path."""
 
-    def missing_default_install_root(version):
-        """Return a default-install root that is guaranteed not to exist."""
+    def missing_default_release_root(install_version):
+        """Return a default release root that is guaranteed not to exist."""
         # Point default probes at a guaranteed-missing path so only the test fixture drives behavior.
-        return tmp_path / "nonexistent" / f"v{version}"
+        return tmp_path / "nonexistent" / f"v{install_version}"
 
-    return missing_default_install_root
+    return missing_default_release_root
 
 
 def _make_fake_enve_module(fake_enve_dir):
@@ -146,6 +146,59 @@ def test_get_install_info_valid_base(tmp_path):
     # Since neither 'install_dir/ADR' nor 'install_dir/CEI' exist, pick install_dir.
     assert install == str(install_dir)
     assert ver == CURRENT_VERSION
+
+
+@pytest.mark.ado_test
+def test_resolve_validated_django_dir_for_explicit_release_root(tmp_path):
+    """Return a ``Path`` to Django beneath the selected ADR product root."""
+    release_root = tmp_path / f"v{CURRENT_VERSION}"
+    django_dir = release_root / "ADR" / f"nexus{CURRENT_VERSION}" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").write_text("dummy content")
+
+    resolved_django_dir = common_utils_module._resolve_validated_django_dir(
+        ansys_installation=str(release_root)
+    )
+
+    assert resolved_django_dir == django_dir
+    assert isinstance(resolved_django_dir, Path)
+
+
+@pytest.mark.ado_test
+def test_resolve_validated_django_dir_raises_when_no_install_is_found(tmp_path, monkeypatch):
+    """Reject the tolerant resolver's no-install result."""
+    for variable in [
+        "PYADR_ANSYS_INSTALLATION",
+        "CEIDEVROOTDOS",
+        *(f"AWP_ROOT{version}" for version in AUTO_DETECT_INSTALL_VERSIONS),
+    ]:
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setitem(__import__("sys").modules, "enve", None)
+    monkeypatch.setattr(
+        common_utils_module,
+        "_default_release_root",
+        _missing_default_release_root_factory(tmp_path),
+    )
+
+    with pytest.raises(InvalidAnsysPath, match="Could not locate a valid ADR installation"):
+        common_utils_module._resolve_validated_django_dir()
+
+
+@pytest.mark.ado_test
+def test_resolve_validated_django_dir_rejects_incomplete_implicit_product_root(
+    tmp_path, monkeypatch
+):
+    """Validate ``manage.py`` even when product-root discovery was implicit."""
+    release_root = tmp_path / f"v{CURRENT_VERSION}"
+    product_root = release_root / "ADR"
+    product_root.mkdir(parents=True)
+    missing_manage_py = product_root / f"nexus{CURRENT_VERSION}" / "django" / "manage.py"
+    monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(release_root))
+
+    with pytest.raises(InvalidAnsysPath) as exc_info:
+        common_utils_module._resolve_validated_django_dir()
+
+    assert str(missing_manage_py) in str(exc_info.value)
 
 
 # ansys_installation provided, but missing required nexus folder structure → raises InvalidAnsysPath.
@@ -331,8 +384,8 @@ def test_get_install_info_implicit_ignores_unsupported_versions(monkeypatch, tmp
     # machine-wide Ansys installation does not interfere with this test.
     monkeypatch.setattr(
         common_utils_module,
-        "_default_install_root",
-        _missing_default_install_root_factory(tmp_path),
+        "_default_release_root",
+        _missing_default_release_root_factory(tmp_path),
     )
 
     # When only an unsupported install root is present, implicit discovery
@@ -433,18 +486,45 @@ def test_get_install_info_detects_version_from_install_layout(tmp_path):
 
 
 @pytest.mark.ado_test
-def test_get_install_version_from_layout_returns_none_when_ambiguous(tmp_path, caplog):
+@pytest.mark.parametrize("version_source", ["path", "layout"])
+def test_inferred_install_version_precedes_conflicting_requested_version(tmp_path, version_source):
+    """Path and layout inference precede the requested-version fallback."""
+    if version_source == "path":
+        supplied_root = tmp_path / f"v{CURRENT_VERSION}"
+        product_root = supplied_root / "ADR"
+    else:
+        supplied_root = tmp_path / "copied_product"
+        product_root = supplied_root
+
+    django_dir = product_root / f"nexus{CURRENT_VERSION}" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").write_text("dummy content")
+    conflicting_version = CURRENT_VERSION + 10
+
+    install, install_version = get_install_info(
+        ansys_installation=str(supplied_root),
+        ansys_version=conflicting_version,
+    )
+
+    assert install == str(product_root)
+    assert install_version == CURRENT_VERSION
+
+
+@pytest.mark.ado_test
+def test_infer_install_version_from_product_root_returns_none_when_ambiguous(tmp_path, caplog):
     """Return ``None`` and log a warning when multiple layout versions are present."""
-    install_dir = tmp_path / "install_no_version"
-    install_dir.mkdir()
+    product_root = tmp_path / "install_no_version"
+    product_root.mkdir()
     expected_versions = [261, CURRENT_VERSION]
     for version in map(str, expected_versions):
-        nexus_dir = install_dir / f"nexus{version}" / "django"
+        nexus_dir = product_root / f"nexus{version}" / "django"
         nexus_dir.mkdir(parents=True)
         (nexus_dir / "manage.py").write_text("dummy content")
 
     with caplog.at_level("WARNING"):
-        detected_version = common_utils_module._get_install_version_from_layout(install_dir)
+        detected_version = common_utils_module._infer_install_version_from_product_root(
+            product_root
+        )
 
     assert detected_version is None
     assert "Detected multiple ADR layout versions" in caplog.text
