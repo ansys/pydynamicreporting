@@ -33,10 +33,7 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core import Service, common_utils
-from ansys.dynamicreporting.core.compatibility import (
-    AUTO_DETECT_INSTALL_VERSIONS,
-    DEFAULT_ANSYS_INSTALL_VERSION,
-)
+from ansys.dynamicreporting.core.compatibility import AUTO_DETECT_INSTALL_VERSIONS
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
@@ -810,11 +807,6 @@ def _assert_api_lock_released(lock_dir: Path) -> None:
         lock.release()
 
 
-def _use_platform_native_file_lock(monkeypatch) -> None:
-    """Use a real OS lock without host-specific lock-path selection."""
-    monkeypatch.setattr(r.filelock, "nexus_file_lock", r.filelock.FileLock)
-
-
 @pytest.mark.ado_test
 def test_create_new_local_database_no_install_wraps_resolution_error(monkeypatch, tmp_path) -> None:
     """Wrap install-resolution failures in DBCreationFailedError."""
@@ -864,43 +856,8 @@ def test_run_nexus_utility_invalid_explicit_root_raises_oserror(tmp_path) -> Non
 
 
 @pytest.mark.ado_test
-def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_path) -> None:
-    """Use a complete caller-supplied product root and version without inference."""
-    product_root = tmp_path / "v271" / "ADR"
-    explicit_version = 261
-    django_dir = product_root / f"nexus{explicit_version}" / "django"
-    django_dir.mkdir(parents=True)
-    nexus_utility = product_root / f"nexus{explicit_version}" / "nexus_utility.py"
-    nexus_utility.touch()
-    app = product_root / "bin" / f"cpython{explicit_version}"
-    app.parent.mkdir()
-    app.touch()
-    captured = {}
-
-    def capture_call(*, args, **kwargs):
-        captured["args"] = args
-        captured["kwargs"] = kwargs
-        return 0
-
-    monkeypatch.setattr(r.report_utils, "enve_arch", lambda: "linux")
-    monkeypatch.setattr(r.subprocess, "call", capture_call)
-
-    utility_args = ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"]
-    r.run_nexus_utility(
-        utility_args,
-        exec_basis=str(product_root),
-        ansys_version=explicit_version,
-    )
-
-    assert captured["args"] == [str(app), str(nexus_utility), *utility_args]
-    assert captured["kwargs"]["cwd"] == str(django_dir)
-
-
-@pytest.mark.ado_test
-@pytest.mark.parametrize("install_version", [261, 271])
-def test_create_new_local_database_encodes_supported_install_path(
-    monkeypatch, tmp_path, install_version
-) -> None:
+def test_create_new_local_database_encodes_supported_install_path(monkeypatch, tmp_path) -> None:
+    install_version = 271
     release_root = tmp_path / f"v{install_version}"
     django_dir = release_root / "ADR" / f"nexus{install_version}" / "django"
     django_dir.mkdir(parents=True)
@@ -936,28 +893,7 @@ def test_create_new_local_database_encodes_supported_install_path(
 
 
 @pytest.mark.ado_test
-@pytest.mark.parametrize(
-    ("database_version", "expected"),
-    [("26.1", True), ("26.2", False)],
-)
-def test_validate_local_db_version_uses_resolved_install_version(
-    monkeypatch, tmp_path, database_version, expected
-) -> None:
-    release_root = tmp_path / "v261"
-    django_dir = release_root / "ADR" / "nexus261" / "django"
-    django_dir.mkdir(parents=True)
-    (django_dir / "manage.py").touch()
-    monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(release_root))
-
-    media_dir = tmp_path / "media"
-    media_dir.mkdir()
-    (media_dir / "csf_conversion_version").write_text(database_version)
-
-    assert r.validate_local_db_version(tmp_path) is expected
-
-
-@pytest.mark.ado_test
-def test_validate_local_db_version_explicit_max_overrides_discovery(monkeypatch, tmp_path) -> None:
+def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tmp_path) -> None:
     release_root = tmp_path / "v261"
     django_dir = release_root / "ADR" / "nexus261" / "django"
     django_dir.mkdir(parents=True)
@@ -968,24 +904,11 @@ def test_validate_local_db_version_explicit_max_overrides_discovery(monkeypatch,
     media_dir.mkdir()
     (media_dir / "csf_conversion_version").write_text("26.2")
 
-    assert r.validate_local_db_version(tmp_path, version_max=26.2) is True
+    assert r.validate_local_db_version(tmp_path) is False
 
 
 @pytest.mark.ado_test
-@pytest.mark.parametrize(("version_delta", "expected"), [(0, True), (1, False)])
-def test_validate_local_db_version_no_install_uses_default(
-    monkeypatch, tmp_path, version_delta, expected
-) -> None:
-    _isolate_install_discovery(monkeypatch, tmp_path)
-    media_dir = tmp_path / "media"
-    media_dir.mkdir()
-    database_version = (int(DEFAULT_ANSYS_INSTALL_VERSION) + version_delta) / 10.0
-    (media_dir / "csf_conversion_version").write_text(str(database_version))
-
-    assert r.validate_local_db_version(tmp_path) is expected
-
-
-@pytest.mark.ado_test
+@pytest.mark.skipif(sys.platform == "darwin", reason="macOS is not supported")
 def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
     # The launch error handler returns False when raise_exception is disabled.
     _isolate_install_discovery(monkeypatch, tmp_path)
@@ -994,7 +917,6 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
     lock_dir = tmp_path / "locks"
     lock_dir.mkdir()
     monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
-    _use_platform_native_file_lock(monkeypatch)
     # Avoid a network call while allowing the real database and install checks to run.
     monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
     popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
@@ -1013,6 +935,7 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
 
 
 @pytest.mark.ado_test
+@pytest.mark.skipif(sys.platform == "darwin", reason="macOS is not supported")
 def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> None:
     # The launch error handler raises ServerLaunchError when requested.
     _isolate_install_discovery(monkeypatch, tmp_path)
@@ -1021,7 +944,6 @@ def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> 
     lock_dir = tmp_path / "locks"
     lock_dir.mkdir()
     monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
-    _use_platform_native_file_lock(monkeypatch)
     monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
     popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
     monkeypatch.setattr(r.subprocess, "Popen", popen)

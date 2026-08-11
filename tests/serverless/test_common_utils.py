@@ -513,7 +513,7 @@ def test_inferred_install_version_precedes_conflicting_requested_version(tmp_pat
     django_dir = product_root / f"nexus{CURRENT_VERSION}" / "django"
     django_dir.mkdir(parents=True)
     (django_dir / "manage.py").write_text("dummy content")
-    conflicting_version = CURRENT_VERSION + 10
+    conflicting_version = int(AUTO_DETECT_INSTALL_VERSIONS[1])
 
     install, install_version = get_install_info(
         ansys_installation=str(supplied_root),
