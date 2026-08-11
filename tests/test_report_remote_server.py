@@ -908,7 +908,6 @@ def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tm
 
 
 @pytest.mark.ado_test
-@pytest.mark.skipif(sys.platform == "darwin", reason="macOS is not supported")
 def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
     # The launch error handler returns False when raise_exception is disabled.
     _isolate_install_discovery(monkeypatch, tmp_path)
@@ -935,7 +934,6 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
 
 
 @pytest.mark.ado_test
-@pytest.mark.skipif(sys.platform == "darwin", reason="macOS is not supported")
 def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> None:
     # The launch error handler raises ServerLaunchError when requested.
     _isolate_install_discovery(monkeypatch, tmp_path)
