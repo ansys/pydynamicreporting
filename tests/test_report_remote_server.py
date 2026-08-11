@@ -842,12 +842,12 @@ def test_run_nexus_utility_no_install_raises_oserror(monkeypatch, tmp_path) -> N
 
 @pytest.mark.ado_test
 def test_run_nexus_utility_no_install_uses_explicit_version(monkeypatch, tmp_path) -> None:
-    _isolate_install_discovery(monkeypatch, tmp_path, 252)
+    _isolate_install_discovery(monkeypatch, tmp_path)
 
-    with pytest.raises(FileNotFoundError, match="cpython252"):
+    with pytest.raises(FileNotFoundError, match="cpython261"):
         r.run_nexus_utility(
             ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"],
-            ansys_version=252,
+            ansys_version=261,
         )
 
 
@@ -866,8 +866,8 @@ def test_run_nexus_utility_invalid_explicit_root_raises_oserror(tmp_path) -> Non
 @pytest.mark.ado_test
 def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_path) -> None:
     """Use a complete caller-supplied product root and version without inference."""
-    product_root = tmp_path / "v261" / "ADR"
-    explicit_version = 252
+    product_root = tmp_path / "v271" / "ADR"
+    explicit_version = 261
     django_dir = product_root / f"nexus{explicit_version}" / "django"
     django_dir.mkdir(parents=True)
     nexus_utility = product_root / f"nexus{explicit_version}" / "nexus_utility.py"
@@ -897,12 +897,9 @@ def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_pat
 
 
 @pytest.mark.ado_test
-@pytest.mark.parametrize(
-    ("install_version", "encode_database_path"),
-    [(240, False), (241, True)],
-)
-def test_create_new_local_database_respects_encoding_boundary(
-    monkeypatch, tmp_path, install_version, encode_database_path
+@pytest.mark.parametrize("install_version", [261, 271])
+def test_create_new_local_database_encodes_supported_install_path(
+    monkeypatch, tmp_path, install_version
 ) -> None:
     release_root = tmp_path / f"v{install_version}"
     django_dir = release_root / "ADR" / f"nexus{install_version}" / "django"
@@ -930,11 +927,8 @@ def test_create_new_local_database_respects_encoding_boundary(
     )
 
     database_path = str(database_dir.resolve())
-    expected_path = (
-        r.report_utils.encode_url(database_path) if encode_database_path else database_path
-    )
     assert captured == {
-        "args": ["create_new_database", expected_path],
+        "args": ["create_new_database", r.report_utils.encode_url(database_path)],
         "use_software_gl": False,
         "exec_basis": str(release_root),
         "ansys_version": None,
