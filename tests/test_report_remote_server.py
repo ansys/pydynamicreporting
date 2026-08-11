@@ -33,7 +33,10 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core import Service, common_utils
-from ansys.dynamicreporting.core.compatibility import AUTO_DETECT_INSTALL_VERSIONS
+from ansys.dynamicreporting.core.compatibility import (
+    AUTO_DETECT_INSTALL_VERSIONS,
+    DEFAULT_ANSYS_INSTALL_VERSION,
+)
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
@@ -894,7 +897,73 @@ def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_pat
 
 
 @pytest.mark.ado_test
-def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("install_version", "encode_database_path"),
+    [(240, False), (241, True)],
+)
+def test_create_new_local_database_respects_encoding_boundary(
+    monkeypatch, tmp_path, install_version, encode_database_path
+) -> None:
+    release_root = tmp_path / f"v{install_version}"
+    django_dir = release_root / "ADR" / f"nexus{install_version}" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").touch()
+    captured = {}
+
+    def capture_run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_version=None):
+        captured["args"] = args
+        captured["use_software_gl"] = use_software_gl
+        captured["exec_basis"] = exec_basis
+        captured["ansys_version"] = ansys_version
+
+    monkeypatch.setattr(r, "run_nexus_utility", capture_run_nexus_utility)
+    database_dir = tmp_path / f"database {install_version}"
+
+    assert (
+        r.create_new_local_database(
+            parent=None,
+            directory=database_dir,
+            exec_basis=str(release_root),
+            raise_exception=True,
+        )
+        is True
+    )
+
+    database_path = str(database_dir.resolve())
+    expected_path = (
+        r.report_utils.encode_url(database_path) if encode_database_path else database_path
+    )
+    assert captured == {
+        "args": ["create_new_database", expected_path],
+        "use_software_gl": False,
+        "exec_basis": str(release_root),
+        "ansys_version": None,
+    }
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(
+    ("database_version", "expected"),
+    [("26.1", True), ("26.2", False)],
+)
+def test_validate_local_db_version_uses_resolved_install_version(
+    monkeypatch, tmp_path, database_version, expected
+) -> None:
+    release_root = tmp_path / "v261"
+    django_dir = release_root / "ADR" / "nexus261" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").touch()
+    monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(release_root))
+
+    media_dir = tmp_path / "media"
+    media_dir.mkdir()
+    (media_dir / "csf_conversion_version").write_text(database_version)
+
+    assert r.validate_local_db_version(tmp_path) is expected
+
+
+@pytest.mark.ado_test
+def test_validate_local_db_version_explicit_max_overrides_discovery(monkeypatch, tmp_path) -> None:
     release_root = tmp_path / "v261"
     django_dir = release_root / "ADR" / "nexus261" / "django"
     django_dir.mkdir(parents=True)
@@ -905,7 +974,21 @@ def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tm
     media_dir.mkdir()
     (media_dir / "csf_conversion_version").write_text("26.2")
 
-    assert r.validate_local_db_version(tmp_path) is False
+    assert r.validate_local_db_version(tmp_path, version_max=26.2) is True
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(("version_delta", "expected"), [(0, True), (1, False)])
+def test_validate_local_db_version_no_install_uses_default(
+    monkeypatch, tmp_path, version_delta, expected
+) -> None:
+    _isolate_install_discovery(monkeypatch, tmp_path)
+    media_dir = tmp_path / "media"
+    media_dir.mkdir()
+    database_version = (int(DEFAULT_ANSYS_INSTALL_VERSION) + version_delta) / 10.0
+    (media_dir / "csf_conversion_version").write_text(str(database_version))
+
+    assert r.validate_local_db_version(tmp_path) is expected
 
 
 @pytest.mark.ado_test
