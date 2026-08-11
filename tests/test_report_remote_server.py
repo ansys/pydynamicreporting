@@ -797,6 +797,21 @@ def _raise_no_running_server(self, *args, **kwargs):
     raise ConnectionError("no server running")
 
 
+def _assert_api_lock_released(lock_dir: Path) -> None:
+    """Prove that the launcher released its real API lock."""
+    lock = r.filelock.nexus_file_lock(str(lock_dir / ".nexus_api.lock"))
+    lock.acquire(timeout=0.1)
+    try:
+        assert lock.is_locked
+    finally:
+        lock.release()
+
+
+def _use_platform_native_file_lock(monkeypatch) -> None:
+    """Use a real OS lock without host-specific lock-path selection."""
+    monkeypatch.setattr(r.filelock, "nexus_file_lock", r.filelock.FileLock)
+
+
 @pytest.mark.ado_test
 def test_create_new_local_database_no_install_wraps_resolution_error(monkeypatch, tmp_path) -> None:
     """Wrap install-resolution failures in DBCreationFailedError."""
@@ -902,8 +917,11 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
     lock_dir = tmp_path / "locks"
     lock_dir.mkdir()
     monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    _use_platform_native_file_lock(monkeypatch)
     # Avoid a network call while allowing the real database and install checks to run.
     monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
 
     result = r.launch_local_database_server(
         parent=None,
@@ -913,6 +931,8 @@ def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
         verbose=False,
     )
     assert result is False
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
 
 
 @pytest.mark.ado_test
@@ -924,7 +944,10 @@ def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> 
     lock_dir = tmp_path / "locks"
     lock_dir.mkdir()
     monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    _use_platform_native_file_lock(monkeypatch)
     monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
 
     with pytest.raises(e.ServerLaunchError):
         r.launch_local_database_server(
@@ -934,6 +957,9 @@ def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> 
             raise_exception=True,
             verbose=False,
         )
+
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
 
 
 @pytest.mark.ado_test
