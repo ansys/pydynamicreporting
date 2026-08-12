@@ -120,6 +120,7 @@ def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
                 "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
             }
             logger.info("Compat shim: Seeded STORAGES['staticfiles'] with StaticFilesStorage")
+        overrides["STORAGES"] = storages
     return overrides
 
 
