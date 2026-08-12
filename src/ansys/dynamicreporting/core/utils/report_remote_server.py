@@ -180,11 +180,27 @@ class Server:
         self._magic_token = None
 
         # Keep an http session around for caching and retries
-        self._http_session = requests.Session()
+        self._http_session = self._create_http_session()
+
+    @staticmethod
+    def _create_http_session() -> requests.Session:
+        """Create a requests session configured with ADR's retry policy."""
+        session = requests.Session()
         retry_strategy = Retry(connect=3, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry_strategy)
-        self._http_session.mount("http://", adapter)
-        self._http_session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        return session
+
+    def _create_cookie_isolated_http_session(self) -> requests.Session:
+        """Clone transport settings from the shared session without reusing cookies."""
+        session = self._create_http_session()
+        session.headers.update(self._http_session.headers)
+        session.proxies = self._http_session.proxies.copy()
+        session.verify = self._http_session.verify
+        session.cert = self._http_session.cert
+        session.trust_env = self._http_session.trust_env
+        return session
 
     @property
     def api_version(self):
@@ -964,14 +980,14 @@ class Server:
         worker.download()
 
     def _authenticate_browser_pdf_web_session(self) -> requests.Session | None:
-        """Authenticate the shared requests session for browser-facing report pages."""
+        """Authenticate a cookie-isolated session for browser-facing report pages."""
         credentials = self.get_auth()
         if credentials is None:
             return None
 
         username, passwd = credentials
         login_url = self.build_request_url("/login/")
-        session = self._http_session
+        session = self._create_cookie_isolated_http_session()
 
         # Browser-facing report pages require a Django session login rather than REST auth.
         init_response = session.get(login_url)
@@ -995,10 +1011,10 @@ class Server:
         """Return Playwright cookie objects for authenticated browser-report access.
 
         ADR's report-display pages are browser-facing Django views, not REST API
-        endpoints. This helper logs the shared ``requests.Session`` into that web
+        endpoints. This helper logs an isolated ``requests.Session`` into that web
         experience and converts the resulting cookies into Playwright's cookie
         format so the live browser-PDF path reuses the same authenticated web
-        session without changing the older shared request helper contracts.
+        session without polluting the shared REST session's cookie jar.
         """
         # Anonymous server objects have no login state to mirror into Chromium, so the
         # remote renderer should open the report without seeded browser cookies.

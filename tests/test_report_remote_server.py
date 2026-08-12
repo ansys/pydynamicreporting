@@ -585,7 +585,36 @@ def test_build_playwright_cookie_passes_through_present_same_site_value() -> Non
     assert playwright_cookie["sameSite"] == "Experimental"
 
 
-def test_authenticate_browser_pdf_web_session_reuses_shared_session() -> None:
+def test_create_cookie_isolated_http_session_preserves_transport_settings_without_cookies() -> None:
+    server = r.Server()
+    server._http_session.headers["X-Test-Header"] = "browser-pdf"
+    server._http_session.proxies = {"https": "http://proxy.example:3128"}
+    server._http_session.verify = False
+    server._http_session.cert = "client-cert.pem"
+    server._http_session.trust_env = False
+    server._http_session.cookies.set_cookie(
+        requests.cookies.create_cookie(
+            name="sessionid",
+            value="rest-session",
+            domain="127.0.0.1",
+            path="/",
+        )
+    )
+
+    isolated_session = server._create_cookie_isolated_http_session()
+
+    assert isolated_session is not server._http_session
+    assert isolated_session.headers["X-Test-Header"] == "browser-pdf"
+    assert isolated_session.proxies == {"https": "http://proxy.example:3128"}
+    assert isolated_session.verify is False
+    assert isolated_session.cert == "client-cert.pem"
+    assert isolated_session.trust_env is False
+    assert isolated_session.cookies.get("sessionid") is None
+
+
+def test_authenticate_browser_pdf_web_session_uses_cookie_isolated_session(monkeypatch) -> None:
+    shared_session = Mock()
+    shared_session.cookies = requests.cookies.RequestsCookieJar()
     session = Mock()
     init_response = Mock()
     init_response.cookies.get.return_value = "csrf-token"
@@ -593,15 +622,20 @@ def test_authenticate_browser_pdf_web_session_reuses_shared_session() -> None:
     session.get.return_value = init_response
     session.post.return_value = login_response
     server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
-    server._http_session = session
+    server._http_session = shared_session
+
+    monkeypatch.setattr(server, "_create_cookie_isolated_http_session", lambda: session)
 
     assert server._authenticate_browser_pdf_web_session() is session
+    shared_session.get.assert_not_called()
+    shared_session.post.assert_not_called()
+    assert shared_session.cookies.get("sessionid") is None
     session.get.assert_called_once_with("http://127.0.0.1:8000/login/")
     session.post.assert_called_once_with(
         "http://127.0.0.1:8000/login/",
         data={
             # Server.get_auth() returns encoded bytes, so the Django login helper must continue
-            # forwarding the same credentials shape into the shared session login POST.
+            # forwarding the same credentials shape into the browser login POST.
             "username": b"nexus",
             "password": b"cei",
             "csrfmiddlewaretoken": "csrf-token",
@@ -610,7 +644,9 @@ def test_authenticate_browser_pdf_web_session_reuses_shared_session() -> None:
     )
 
 
-def test_authenticate_browser_pdf_web_session_returns_none_when_web_login_fails() -> None:
+def test_authenticate_browser_pdf_web_session_returns_none_when_web_login_fails(
+    monkeypatch,
+) -> None:
     session = Mock()
     init_response = Mock()
     init_response.cookies.get.return_value = "csrf-token"
@@ -618,9 +654,10 @@ def test_authenticate_browser_pdf_web_session_returns_none_when_web_login_fails(
     session.get.return_value = init_response
     session.post.return_value = login_response
     server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
-    server._http_session = session
+    monkeypatch.setattr(server, "_create_cookie_isolated_http_session", lambda: session)
 
     assert server._authenticate_browser_pdf_web_session() is None
+    assert server._http_session.cookies.get("sessionid") is None
 
 
 def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
