@@ -68,7 +68,7 @@ def in_ipynb():
         return False
 
 
-def get_logger(logfile=None):
+def get_logger(logfile: str | os.PathLike[str] | None = None) -> logging.Logger:
     """
     Return the ``ansys.dynamicreporting.core`` package logger.
 
@@ -78,26 +78,28 @@ def get_logger(logfile=None):
     attached and the level is left unset, so nothing is emitted until the
     application configures logging (for example via ``logging.basicConfig`` or by
     raising the ``"ansys.dynamicreporting.core"`` logger's level). Pass ``logfile``
-    to additionally stream the library's full log to a file or to stdout.
+    to additionally stream the library's full log to a file or to stdout. That
+    opt-in sink raises the shared package logger to ``DEBUG``, so ADR records can
+    also reach any application-configured ancestor handlers.
 
     Parameters
     ----------
     logfile : str or os.PathLike, optional
         Destination for the library log. ``None`` (the default) leaves logging
         disabled by default. ``"stdout"`` streams to standard output; any other
-        value is treated as a file path.
+        value is treated as a file path. Passing ``"stdout"`` or a path also
+        raises the shared ADR package logger to ``DEBUG`` for the process.
 
     Returns
     -------
     logging.Logger
         The ``ansys.dynamicreporting.core`` package logger.
     """
-    # Use the package's named logger, never the root logger. Configuring or
-    # clamping the root logger (as this function used to, forcing it to ERROR on
-    # every call) silences or hijacks the host application's own logging and drops
-    # every DEBUG/INFO/WARNING record the library emits. Leaving the level unset
-    # keeps the application in control of verbosity; the library only attaches
-    # handlers, and only once each.
+    # Use the package's named logger, never the root logger. Root logger changes
+    # silence or hijack the host application's own logging and drop the library's
+    # DEBUG/INFO/WARNING records. Leaving the level unset keeps the application
+    # in control of verbosity; the library only attaches handlers, and only once
+    # each.
     logger = logging.getLogger("ansys.dynamicreporting.core")
 
     if logfile is None:
@@ -123,10 +125,12 @@ def get_logger(logfile=None):
             return logger
         handler = logging.StreamHandler(sys.stdout)
     else:
-        target = os.path.abspath(os.fspath(logfile))
+        # Normalize the dedup key before comparing file sinks.
+        # "out.log" -> "C:\\cwd\\out.log" (Windows) / "/cwd/out.log" (POSIX)
+        target = os.path.normcase(os.path.abspath(os.fspath(logfile)))
         already_present = any(
             isinstance(handler, logging.FileHandler)
-            and getattr(handler, "baseFilename", None) == target
+            and os.path.normcase(getattr(handler, "baseFilename", "")) == target
             for handler in logger.handlers
         )
         if already_present:

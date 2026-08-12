@@ -128,7 +128,10 @@ class ADR:
     request : HttpRequest, optional
         Request object, useful when ADR is used in a web context.
     logfile : str, optional
-        Path to the log file. If omitted, logging typically goes to stderr.
+        File path or ``"stdout"`` for the ADR log sink. If omitted, ADR logging
+        stays quiet by default. Passing a path or ``"stdout"`` streams the full
+        ADR log there and raises the shared ADR package logger to ``DEBUG``, so
+        ADR records can also reach any application-configured ancestor handlers.
     docker_image : str, optional
         Docker image URL to use when ``ansys_installation="docker"``.
         Defaults to :data:`DOCKER_REPO_URL`.
