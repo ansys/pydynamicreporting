@@ -96,22 +96,30 @@ def _guardian_needs_rename(overrides: dict, pkg_versions: dict[str, VersionKey])
 
 
 def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
-    """Translate ``DEFAULT_FILE_STORAGE`` into ``STORAGES['default']``.
+    """Translate ``DEFAULT_FILE_STORAGE`` into ``STORAGES`` entries.
 
     Django 4.2 introduced ``STORAGES`` and later releases expect callers to
     define the default backend there instead of through
-    ``DEFAULT_FILE_STORAGE``.
+    ``DEFAULT_FILE_STORAGE``. Once ``STORAGES`` is defined explicitly,
+    ``settings.configure()`` no longer injects Django's default
+    ``"staticfiles"`` alias, so collectstatic needs that alias to be seeded.
     """
     old_key = "DEFAULT_FILE_STORAGE"
     if old_key in overrides:
         backend = overrides.pop(old_key)
-        storages = overrides.get("STORAGES", {})
+        storages = overrides.setdefault("STORAGES", {})
         if "default" not in storages:
             storages["default"] = {"BACKEND": backend}
-            overrides["STORAGES"] = storages
             logger.info(
                 f"Compat shim: Translated '{old_key}' -> STORAGES['default'] (backend={backend})"
             )
+        if "staticfiles" not in storages:
+            # Explicit STORAGES overrides Django's built-in aliases, so keep
+            # collectstatic working after the default-storage migration.
+            storages["staticfiles"] = {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            }
+            logger.info("Compat shim: Seeded STORAGES['staticfiles'] with StaticFilesStorage")
     return overrides
 
 
