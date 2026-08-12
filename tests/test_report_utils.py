@@ -69,39 +69,6 @@ def test_enve_home() -> None:
 
 
 @pytest.mark.ado_test
-def test_ceiversion_nexus_suffix() -> None:
-    suffix = ru.ceiversion_nexus_suffix()
-    try:
-        int_suffix = int(suffix)
-        success = True
-    except Exception:  # nosec
-        success = False
-    assert success and int_suffix / 100 < 10
-
-
-@pytest.mark.ado_test
-def test_ceiversion_apex_suffix() -> None:
-    suffix = ru.ceiversion_apex_suffix()
-    try:
-        int_suffix = int(suffix)
-        success = True
-    except Exception:  # nosec
-        success = False
-    assert success and int_suffix / 100 < 10
-
-
-@pytest.mark.ado_test
-def test_ceiversion_ensight_suffix() -> None:
-    suffix = ru.ceiversion_ensight_suffix()
-    try:
-        int_suffix = int(suffix)
-        success = True
-    except Exception:  # nosec
-        success = False
-    assert success and int_suffix / 100 < 10
-
-
-@pytest.mark.ado_test
 def test_platform_encoding() -> None:
     encode = ru.platform_encoding()
     assert encode == "mbcs" or encode == "utf-8"

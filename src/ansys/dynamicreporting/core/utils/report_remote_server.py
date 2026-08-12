@@ -47,11 +47,13 @@ from requests import JSONDecodeError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from . import exceptions, filelock, report_objects, report_utils
+from .. import common_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
+from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION
 from ..constants import JSON_ATTR_KEYS
-from ..exceptions import ADRException
+from ..exceptions import ADRException, InvalidAnsysPath
+from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
 QtCore = None
@@ -95,21 +97,32 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
     # are we on windows
     is_windows = report_utils.enve_arch().startswith("win")
     # is_linux = report_utils.enve_arch().startswith("lin")
-    # Start the work by getting the pathname to the django directory
-    if ansys_version:
-        report_ver = str(ansys_version)
-    else:
-        report_ver = report_utils.ceiversion_nexus_suffix()
-    if exec_basis is None:
-        exec_basis = report_utils.enve_home()
-    rptdir = os.path.join(exec_basis, "nexus" + report_ver, "django")
-    nexus_utility = os.path.join(exec_basis, "nexus" + report_ver, "nexus_utility.py")
+    product_root = exec_basis
+    install_version = ansys_version
+    # export_report_as_pdf reports a missing local installation as OSError.
+    if product_root is None or not install_version:
+        try:
+            resolved_install = common_utils.resolve_install_info(
+                ansys_installation=product_root, ansys_version=install_version
+            )
+            if resolved_install.install_dir is not None:
+                product_root = resolved_install.install_dir
+            if not install_version:
+                install_version = resolved_install.version
+        except InvalidAnsysPath:
+            product_root = None
+            if not install_version:
+                install_version = int(DEFAULT_ANSYS_INSTALL_VERSION)
+    install_version_str = str(install_version)
     # run any DB migrations using Python 3...
-    if ansys_version:
-        app_file = "cpython" + str(ansys_version)
-    else:
-        app_file = "cpython" + report_utils.ceiversion_apex_suffix()
-    app = os.path.join(exec_basis, "bin", app_file)
+    app_file = "cpython" + install_version_str
+    if product_root is None:
+        # Do not search PATH when resolution proves that no install is available.
+        # FileNotFoundError satisfies the OSError contract.
+        raise FileNotFoundError(f"Unable to run '{app_file}': no local ADR installation was found.")
+    django_dir = os.path.join(product_root, "nexus" + install_version_str, "django")
+    nexus_utility = os.path.join(product_root, "nexus" + install_version_str, "nexus_utility.py")
+    app = os.path.join(product_root, "bin", app_file)
     if is_windows:
         app += ".bat"
     # try the absolute name and if failing, assume it is in the PATH
@@ -117,7 +130,10 @@ def run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_versio
         app = app_file
     # run nexus_utility.py
     params = dict(
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, cwd=rptdir
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+        cwd=django_dir,
     )
     # Build the command line
     cmd = [app]
@@ -1451,15 +1467,14 @@ def create_new_local_database(
             if len(secret_key):
                 f.write(secret_key)
             f.close()
-            if exec_basis:
-                srcdir = os.path.join(
-                    exec_basis, "nexus" + report_utils.ceiversion_nexus_suffix(), "django"
-                )
+            if exec_basis and ansys_version:
+                # A complete explicit pair fully specifies the Django layout.
+                django_dir = os.path.join(exec_basis, f"nexus{int(ansys_version)}", "django")
             else:
-                srcdir = os.path.join(
-                    report_utils.enve_home(),
-                    "nexus" + report_utils.ceiversion_nexus_suffix(),
-                    "django",
+                django_dir = str(
+                    common_utils._resolve_validated_django_dir(
+                        ansys_installation=exec_basis, ansys_version=ansys_version
+                    )
                 )
             # In Python 3, we use the migration command to build the new database file and add the 'nexus'
             # superuser programmatically.  We Also stamp the current csf version into the media directory.
@@ -1470,8 +1485,8 @@ def create_new_local_database(
             os.environ["CEI_NEXUS_SERVE_STATIC_FILES"] = "1"
             os.environ["DJANGO_SETTINGS_MODULE"] = "ceireports.settings"
             # make it possible to import ceireports.settings
-            if srcdir not in sys.path:
-                sys.path.append(srcdir)
+            if django_dir not in sys.path:
+                sys.path.append(django_dir)
             error = False
             if parent and _load_qt():
                 QtWidgets.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -1518,10 +1533,11 @@ def create_new_local_database(
             # as normal. From 241 on, the database path is expected to be encoded. So
             # a version check is needed to decide if we should encode db_dir or not.
             if ansys_version:
-                report_ver = int(ansys_version)
+                install_version = int(ansys_version)
             else:
-                report_ver = int(report_utils.ceiversion_nexus_suffix())
-            if report_ver > 240:
+                resolved_install = common_utils.resolve_install_info(ansys_installation=exec_basis)
+                install_version = resolved_install.version
+            if install_version > 240:
                 db_dir_encoded = report_utils.encode_url(db_dir)
             else:
                 db_dir_encoded = db_dir
@@ -1635,7 +1651,7 @@ def validate_local_db_version(db_dir, version_max=None, version_min=None):
     if version_min is None:
         version_min = -1.0
     if version_max is None:
-        version_max = float(report_utils.ceiversion_nexus_suffix()) / 10.0  # 201 -> 20.1
+        version_max = common_utils.resolve_install_info().version / 10.0
     version_file = os.path.join(os.path.abspath(db_dir), "media", "csf_conversion_version")
     if not os.path.isfile(version_file):
         return True
@@ -1937,14 +1953,23 @@ def launch_local_database_server(
     # Note: for the time being, we force the django instance count to be one.  This is in line with the older
     # implementation of the API and is needed for things like coverage tests.  We can consider relaxing this
     # in the future.
-    if exec_basis:
-        exename = os.path.join(exec_basis, "bin", "nexus_launcher" + str(ansys_version))
+    product_root = exec_basis
+    install_version = ansys_version
+    install_missing = False
+    if product_root:
+        exename = os.path.join(product_root, "bin", f"nexus_launcher{install_version}")
     else:
-        exename = os.path.join(
-            report_utils.enve_home(),
-            "bin",
-            "nexus_launcher" + report_utils.ceiversion_nexus_suffix(),
-        )
+        # Missing installations must reach the launch error handler so it can
+        # release the file lock and honor raise_exception.
+        resolved_install = common_utils.resolve_install_info(ansys_version=install_version)
+        product_root = resolved_install.install_dir
+        install_version = resolved_install.version
+        if product_root is None:
+            # Use the expected launcher name only in the error message.
+            exename = f"nexus_launcher{install_version}"
+            install_missing = True
+        else:
+            exename = os.path.join(product_root, "bin", f"nexus_launcher{install_version}")
     is_windows = report_utils.enve_arch().startswith("win")
     if is_windows:
         exename += ".bat"
@@ -1990,6 +2015,10 @@ def launch_local_database_server(
 
     # Actually try to launch the server
     try:  # nosec
+        if install_missing:
+            raise FileNotFoundError(
+                f"Unable to run '{exename}': no local ADR installation was found."
+            )
         # Run the launcher to start the server
         # Note: this process only returns if the server is shutdown or there is an error
         monitor_process = subprocess.Popen(command, **params)  # nosec B78 B603

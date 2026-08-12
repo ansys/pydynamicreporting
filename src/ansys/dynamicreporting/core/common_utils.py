@@ -20,6 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""Shared utility helpers.
+
+Install resolution uses four distinct path and version concepts:
+
+- A *release root* is a version-level Ansys directory such as ``/ansys_inc/v271``.
+- A *product root* is the resolved ``ADR`` or legacy ``CEI`` directory, or a
+  copied product tree with the same contents directly at its root.
+- A *Django directory* is ``<product_root>/nexus<install_version>/django``.
+- An *install version* is the three-digit ``YYR`` code, such as ``271``. It is
+  distinct from a dotted product release such as ``27.1`` and from the Python
+  package version.
+"""
+
 from dataclasses import dataclass
 import logging
 import os
@@ -38,28 +51,34 @@ logger = logging.getLogger(__name__)
 
 
 def get_install_version(install_dir: Path) -> int | None:
-    """
-    Extracts the version number from an installation directory path.
+    """Extract an install version from a ``v###`` path segment.
 
-        - Matches `v###` or `V###` anywhere in the path.
-        - Ensures `v###` is a full segment, not inside another word.
+    The marker may use a lowercase or uppercase ``v`` and must occupy a complete
+    path segment rather than appearing inside another directory name.
 
-    Expected formats:
-    - Windows: C:\\Program Files\\ANSYS Inc\\v252
-    - Linux: /ansys_inc/v252
+    Parameters
+    ----------
+    install_dir : Path
+        Path that may contain a complete ``v###`` or ``V###`` segment.
 
-    Args:
-        install_dir (Path): Path to the installation directory.
+    Returns
+    -------
+    int or None
+        Three-digit install version, or ``None`` when the path has no matching
+        segment.
 
-    Returns:
-        str: Extracted version number or an empty string if not found.
+    Examples
+    --------
+    Windows paths can use a marker such as
+    ``C:\\Program Files\\ANSYS Inc\\v252``. Linux paths can use a marker such as
+    ``/ansys_inc/v252``. Both yield ``252``.
     """
     matches = re.search(r"[\\/][vV]([0-9]{3})([\\/]|$)", str(install_dir))
     return int(matches.group(1)) if matches else None
 
 
-def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
-    """Infer the install version from ``nexus###`` directories when needed.
+def _infer_install_version_from_product_root(product_root: Path | None) -> int | None:
+    """Infer the install version from a product root's ``nexus###`` layout.
 
     Some explicit installation paths, such as copied Docker layouts or temp
     directories created during tests, do not include a ``v###`` segment in the
@@ -67,11 +86,11 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
     through its ``nexus###/django/manage.py`` layout, which is stable across
     the supported installation formats.
     """
-    if install_dir is None or not install_dir.is_dir():
+    if product_root is None or not product_root.is_dir():
         return None
 
     detected_versions: list[int] = []
-    for child in install_dir.iterdir():
+    for child in product_root.iterdir():
         match = re.fullmatch(r"nexus(\d{3})", child.name)
         if match and (child / "django" / "manage.py").exists():
             detected_versions.append(int(match.group(1)))
@@ -85,160 +104,248 @@ def _get_install_version_from_layout(install_dir: Path | None) -> int | None:
         logger.warning(
             "Detected multiple ADR layout versions under %s: %s. "
             "Falling back to the configured default install version.",
-            install_dir,
+            product_root,
             sorted(detected_versions),
         )
     return None
 
 
-def _resolve_install_version(install_dir: Path | None, ansys_version: int | None) -> int:
-    """Resolve install version from path, layout, explicit override, then default."""
-    if install_dir is not None:
-        path_version = get_install_version(install_dir)
-        if path_version is not None:
-            return path_version
+def _resolve_install_version(
+    product_root: Path | None, requested_install_version: int | None
+) -> int:
+    """Resolve the install version from path, layout, request, then default."""
+    if product_root is not None:
+        path_install_version = get_install_version(product_root)
+        if path_install_version is not None:
+            return path_install_version
 
-    layout_version = _get_install_version_from_layout(install_dir)
-    if layout_version is not None:
-        return layout_version
-    # Preserve the historical fallback contract: falsy explicit values such as
-    # ``0`` behaved the same as omitting ``ansys_version`` entirely.
-    return ansys_version or int(DEFAULT_ANSYS_INSTALL_VERSION)
+    layout_install_version = _infer_install_version_from_product_root(product_root)
+    if layout_install_version is not None:
+        return layout_install_version
+    # Falsy requested values such as ``0`` are treated as omitted.
+    return requested_install_version or int(DEFAULT_ANSYS_INSTALL_VERSION)
 
 
 @dataclass(frozen=True)
 class InstallResolution:
-    """Resolved installation directory and version used by service/serverless setup."""
+    """Resolved ADR product root and install version.
+
+    Attributes
+    ----------
+    install_dir : str or None
+        Resolved product root, or ``None`` when implicit discovery finds no
+        candidate.
+    version : int
+        Three-digit install version in ``YYR`` form, such as ``271``.
+    """
 
     install_dir: str | None
     version: int
 
 
-def _candidate_dirs_for_install_root(install_root: Path) -> list[Path]:
-    """Build candidate directories for both the new ADR and legacy CEI layouts."""
-    return [install_root / "ADR", install_root / "CEI"]
+def _django_dir_for_product_root(product_root: Path, install_version: int) -> Path:
+    """Return the Django directory for a product root and install version."""
+    return product_root / f"nexus{install_version}" / "django"
 
 
-def _default_install_root(version: str) -> Path:
-    """Return the conventional install root for a three-digit Ansys version."""
+def _product_roots_for_release_root(release_root: Path) -> list[Path]:
+    """Return the ADR and CEI product roots under a release root."""
+    return [release_root / "ADR", release_root / "CEI"]
+
+
+def _default_release_root(install_version: str) -> Path:
+    """Return the conventional release root for a three-digit install version."""
     if platform.system().startswith("Wind"):  # pragma: no cover
-        return Path(rf"C:\Program Files\ANSYS Inc\v{version}")
-    return Path(f"/ansys_inc/v{version}")
+        return Path(rf"C:\Program Files\ANSYS Inc\v{install_version}")
+    return Path(f"/ansys_inc/v{install_version}")
 
 
-def _append_unique(candidates_by_path: dict[str, Path], path: Path) -> None:
+def _append_unique_candidate(candidates_by_path: dict[str, Path], candidate: Path) -> None:
     """Preserve candidate order while avoiding duplicate filesystem probes.
 
     A dict preserves insertion order, so using the string path as the key keeps
     uniqueness checks constant-time without coordinating separate list/set
     state.
     """
-    candidates_by_path.setdefault(str(path), path)
+    candidates_by_path.setdefault(str(candidate), candidate)
 
 
-def _build_install_candidates(
+def _build_product_root_candidates(
     ansys_installation: str | None = None, ansys_version: int | None = None
 ) -> list[Path]:
-    """Return candidate installation directories in probe order."""
-    candidates_by_path: dict[str, Path] = {}
+    """Return candidate ADR product roots in probe order."""
+    product_roots_by_path: dict[str, Path] = {}
 
     if ansys_installation:
-        # An explicit path always wins. Preserve the historical ADR -> CEI ->
-        # base-directory order so callers see the same layout preference.
-        for path in [
-            Path(ansys_installation) / "ADR",
-            Path(ansys_installation) / "CEI",
-            Path(ansys_installation),
+        # Explicit paths are checked as ADR, CEI, and then the supplied directory.
+        supplied_root = Path(ansys_installation)
+        for product_root in [
+            *_product_roots_for_release_root(supplied_root),
+            supplied_root,
         ]:
-            _append_unique(candidates_by_path, path)
-        return list(candidates_by_path.values())
+            _append_unique_candidate(product_roots_by_path, product_root)
+        return list(product_roots_by_path.values())
 
     if "PYADR_ANSYS_INSTALLATION" in os.environ:
-        env_inst = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
-        for path in [env_inst / "ADR", env_inst / "CEI", env_inst]:
-            _append_unique(candidates_by_path, path)
+        configured_root = Path(os.environ["PYADR_ANSYS_INSTALLATION"])
+        for product_root in [
+            *_product_roots_for_release_root(configured_root),
+            configured_root,
+        ]:
+            _append_unique_candidate(product_roots_by_path, product_root)
 
     try:
-        import enve
+        import enve  # ty:ignore[unresolved-import]
 
-        _append_unique(candidates_by_path, Path(enve.home()))
+        _append_unique_candidate(product_roots_by_path, Path(enve.home()))
     except ModuleNotFoundError:
         pass
 
     # When callers pin ``ansys_version``, probe only that version family.
     # Otherwise use the ordered fallback list to keep implicit discovery broad
     # without resorting to repeated brute-force filesystem scans.
-    versions_to_probe = (
+    install_versions_to_probe = (
         (str(ansys_version),) if ansys_version is not None else AUTO_DETECT_INSTALL_VERSIONS
     )
 
-    for version in versions_to_probe:
-        awp_root_key = f"AWP_ROOT{version}"
+    for install_version in install_versions_to_probe:
+        awp_root_key = f"AWP_ROOT{install_version}"
         if awp_root_key in os.environ:
-            awp_root = Path(os.environ[awp_root_key])
-            for path in _candidate_dirs_for_install_root(awp_root):
-                _append_unique(candidates_by_path, path)
+            release_root = Path(os.environ[awp_root_key])
+            for product_root in _product_roots_for_release_root(release_root):
+                _append_unique_candidate(product_roots_by_path, product_root)
 
     if "CEIDEVROOTDOS" in os.environ:
-        _append_unique(candidates_by_path, Path(os.environ["CEIDEVROOTDOS"]))
+        _append_unique_candidate(product_roots_by_path, Path(os.environ["CEIDEVROOTDOS"]))
 
-    for version in versions_to_probe:
-        # Default install roots are the last probe source because env-based
+    for install_version in install_versions_to_probe:
+        # Default release roots are the last probe source because env-based
         # overrides should remain higher precedence than machine-wide installs.
-        for path in _candidate_dirs_for_install_root(_default_install_root(version)):
-            _append_unique(candidates_by_path, path)
+        release_root = _default_release_root(install_version)
+        for product_root in _product_roots_for_release_root(release_root):
+            _append_unique_candidate(product_roots_by_path, product_root)
 
-    return list(candidates_by_path.values())
+    return list(product_roots_by_path.values())
 
 
 def resolve_install_info(
     ansys_installation: str | None = None, ansys_version: int | None = None
 ) -> InstallResolution:
-    """Resolve installation details while preserving ``get_install_info()`` semantics."""
-    candidates = _build_install_candidates(
+    """Resolve an ADR product root and three-digit install version.
+
+    Parameters
+    ----------
+    ansys_installation : str, optional
+        Explicit release root, product root, or copied product tree. An explicit
+        path is checked before all implicit discovery sources.
+    ansys_version : int, optional
+        Requested three-digit install version. It restricts implicit versioned
+        probes and is used as a fallback after path and layout inference.
+
+    Returns
+    -------
+    InstallResolution
+        Existing product-root candidate, if found, and the resolved install
+        version. Implicit discovery remains tolerant and can return
+        ``install_dir=None``.
+
+    Raises
+    ------
+    InvalidAnsysPath
+        Raised when an explicit installation cannot be resolved to the required
+        ``nexus###/django/manage.py`` layout.
+    """
+    candidate_product_roots = _build_product_root_candidates(
         ansys_installation=ansys_installation, ansys_version=ansys_version
     )
 
-    install_dir: Path | None = None
-    for candidate_dir in candidates:
-        if candidate_dir.is_dir():
-            install_dir = candidate_dir
+    product_root: Path | None = None
+    for candidate_product_root in candidate_product_roots:
+        if candidate_product_root.is_dir():
+            product_root = candidate_product_root
             break
 
-    resolved_version = _resolve_install_version(install_dir, ansys_version)
+    install_version = _resolve_install_version(product_root, ansys_version)
 
     if ansys_installation and (
-        install_dir is None
-        or not (install_dir / f"nexus{resolved_version}" / "django" / "manage.py").exists()
+        product_root is None
+        or not (_django_dir_for_product_root(product_root, install_version) / "manage.py").exists()
     ):
         raise InvalidAnsysPath(
-            f"Unable to detect an installation in: {[str(d) for d in candidates]}"
+            "Unable to detect an installation in: "
+            f"{[str(product_root) for product_root in candidate_product_roots]}"
         )
 
     return InstallResolution(
-        install_dir=str(install_dir) if install_dir is not None else None,
-        version=resolved_version,
+        install_dir=str(product_root) if product_root is not None else None,
+        version=install_version,
     )
+
+
+def _resolve_validated_django_dir(
+    ansys_installation: str | None = None, ansys_version: int | None = None
+) -> Path:
+    """Resolve and validate the Django directory for an ADR product root.
+
+    Parameters
+    ----------
+    ansys_installation : str, optional
+        Explicit release root, product root, or copied product tree.
+    ansys_version : int, optional
+        Requested three-digit install version.
+
+    Returns
+    -------
+    Path
+        Validated ``nexus###/django`` directory.
+
+    Raises
+    ------
+    InvalidAnsysPath
+        Raised when no real install root with the required Django entry point
+        can be validated.
+    """
+    resolved_install = resolve_install_info(
+        ansys_installation=ansys_installation, ansys_version=ansys_version
+    )
+    if resolved_install.install_dir is None:
+        raise InvalidAnsysPath(
+            "Could not locate a valid ADR installation. No candidate install "
+            "directory was found. Provide 'ansys_installation' or set a supported "
+            "install environment variable."
+        )
+    product_root = Path(resolved_install.install_dir)
+    django_dir = _django_dir_for_product_root(product_root, resolved_install.version)
+    manage_py = django_dir / "manage.py"
+    if not manage_py.exists():
+        raise InvalidAnsysPath(
+            f"Could not validate an ADR installation under '{product_root}'. "
+            f"Missing required file: '{manage_py}'."
+        )
+    return django_dir
 
 
 def get_install_info(
     ansys_installation: str | None = None, ansys_version: int | None = None
 ) -> tuple[str | None, int]:
-    """Attempts to detect the Ansys installation directory and version number.
+    """Return the resolved product root and install version as a tuple.
 
-    Args:
-        ansys_installation (str, optional): Path to the Ansys installation directory. Defaults to None.
-        ansys_version (int, optional): Version number to use. Defaults to None.
+    Parameters
+    ----------
+    ansys_installation : str, optional
+        Explicit release root, product root, or copied product tree.
+    ansys_version : int, optional
+        Requested three-digit install version.
 
-    Returns:
-        tuple[str, int]: Installation directory and version number.
+    Returns
+    -------
+    tuple[str or None, int]
+        Resolved product root and install version.
     """
-    resolution = resolve_install_info(
+    resolved_install = resolve_install_info(
         ansys_installation=ansys_installation, ansys_version=ansys_version
     )
-    # Preserve the historical tuple return type for external callers while
-    # the internal resolver returns a typed record for service/serverless code.
-    return resolution.install_dir, resolution.version
+    return resolved_install.install_dir, resolved_install.version
 
 
 def _check_template_name_convention(template_name):
