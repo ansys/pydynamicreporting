@@ -52,10 +52,10 @@ The primary configuration options for the ``ADR`` class constructor are:
   Dictionary of environment variables to inject into the process environment.
 
 - ``logfile`` (str, optional):
-  File path or ``"stdout"`` for the ADR log sink. If omitted, ADR logging stays
-  quiet by default. Passing a path or ``"stdout"`` streams the full ADR log there
-  and raises the shared ADR package logger to ``DEBUG``, so ADR records can also
-  reach application-configured ancestor handlers.
+  File path or ``"stdout"`` for ADR logs. If omitted, ADR stays quiet. Passing
+  a path or ``"stdout"`` sends the full ADR log there and sets ADR's shared
+  logger to ``DEBUG``, so the same messages can also show up in the
+  application's other log handlers.
 
 - ``docker_image`` (str, optional):
   Docker image URL to use when ``ansys_installation="docker"``. Defaults to official Nexus image.

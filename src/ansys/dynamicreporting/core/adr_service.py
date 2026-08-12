@@ -97,10 +97,10 @@ class Service:
     port : int, optional
         Port to run the Ansys Dynamic Reporting service on. The default is ``8000``.
     logfile : str, optional
-        File path or ``"stdout"`` for the ADR log sink. If omitted, ADR logging
-        stays quiet by default. Passing a path or ``"stdout"`` streams the full
-        ADR log there and raises the shared ADR package logger to ``DEBUG``, so
-        ADR records can also reach any application-configured ancestor handlers.
+        File path or ``"stdout"`` for ADR logs. If omitted, ADR stays quiet.
+        Passing a path or ``"stdout"`` sends the full ADR log there and sets
+        ADR's shared logger to ``DEBUG``, so the same messages can also show up
+        in the application's other log handlers.
     ansys_installation : str, optional
         Path to the directory where Ansys is installed locally. If Ansys is not
         installed locally but is to be run in a Docker image, set the
@@ -170,11 +170,11 @@ class Service:
             Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
             case ``8000`` is used.
         logfile: str, optional
-            File path or ``"stdout"`` for the ADR log sink. The default is
-            ``None``, which keeps ADR logging quiet. Passing a path or
-            ``"stdout"`` streams the full ADR log there and raises the shared
-            ADR package logger to ``DEBUG``, so ADR records can also reach
-            application-configured ancestor handlers.
+            File path or ``"stdout"`` for ADR logs. The default is ``None``,
+            which keeps ADR quiet. Passing a path or ``"stdout"`` sends the
+            full ADR log there and sets ADR's shared logger to ``DEBUG``, so
+            the same messages can also show up in the application's other log
+            handlers.
         """
         self.serverobj = None
         self._session_guid = ""
