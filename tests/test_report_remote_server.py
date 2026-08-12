@@ -856,40 +856,38 @@ def test_run_nexus_utility_invalid_explicit_root_raises_oserror(tmp_path) -> Non
 
 
 @pytest.mark.ado_test
-def test_create_new_local_database_encodes_supported_install_path(monkeypatch, tmp_path) -> None:
-    install_version = 271
-    release_root = tmp_path / f"v{install_version}"
-    django_dir = release_root / "ADR" / f"nexus{install_version}" / "django"
+def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_path) -> None:
+    """Use a complete supported product-root/version pair without inference."""
+    install_version = 261
+    product_root = tmp_path / f"v{install_version}" / "ADR"
+    django_dir = product_root / f"nexus{install_version}" / "django"
     django_dir.mkdir(parents=True)
-    (django_dir / "manage.py").touch()
-    captured = {}
+    nexus_utility = product_root / f"nexus{install_version}" / "nexus_utility.py"
+    nexus_utility.touch()
+    app = product_root / "bin" / f"cpython{install_version}"
+    app.parent.mkdir()
+    app.touch()
+    resolver = Mock(side_effect=AssertionError("complete explicit pairs must not be resolved"))
+    utility_call = Mock(return_value=0)
+    monkeypatch.setattr(common_utils, "resolve_install_info", resolver)
+    monkeypatch.setattr(r.report_utils, "enve_arch", lambda: "linux")
+    monkeypatch.setattr(r.subprocess, "call", utility_call)
 
-    def capture_run_nexus_utility(args, use_software_gl=False, exec_basis=None, ansys_version=None):
-        captured["args"] = args
-        captured["use_software_gl"] = use_software_gl
-        captured["exec_basis"] = exec_basis
-        captured["ansys_version"] = ansys_version
-
-    monkeypatch.setattr(r, "run_nexus_utility", capture_run_nexus_utility)
-    database_dir = tmp_path / f"database {install_version}"
-
-    assert (
-        r.create_new_local_database(
-            parent=None,
-            directory=database_dir,
-            exec_basis=str(release_root),
-            raise_exception=True,
-        )
-        is True
+    utility_args = ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"]
+    r.run_nexus_utility(
+        utility_args,
+        exec_basis=str(product_root),
+        ansys_version=install_version,
     )
 
-    database_path = str(database_dir.resolve())
-    assert captured == {
-        "args": ["create_new_database", r.report_utils.encode_url(database_path)],
-        "use_software_gl": False,
-        "exec_basis": str(release_root),
-        "ansys_version": None,
-    }
+    resolver.assert_not_called()
+    utility_call.assert_called_once_with(
+        args=[str(app), str(nexus_utility), *utility_args],
+        stdout=r.subprocess.DEVNULL,
+        stderr=r.subprocess.DEVNULL,
+        stdin=r.subprocess.DEVNULL,
+        cwd=str(django_dir),
+    )
 
 
 @pytest.mark.ado_test
@@ -902,7 +900,7 @@ def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tm
 
     media_dir = tmp_path / "media"
     media_dir.mkdir()
-    (media_dir / "csf_conversion_version").write_text("26.2")
+    (media_dir / "csf_conversion_version").write_text("27.1")
 
     assert r.validate_local_db_version(tmp_path) is False
 
