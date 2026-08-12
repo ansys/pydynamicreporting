@@ -192,16 +192,6 @@ class Server:
         session.mount("https://", adapter)
         return session
 
-    def _create_cookie_isolated_http_session(self) -> requests.Session:
-        """Clone transport settings from the shared session without reusing cookies."""
-        session = self._create_http_session()
-        session.headers.update(self._http_session.headers)
-        session.proxies = self._http_session.proxies.copy()
-        session.verify = self._http_session.verify
-        session.cert = self._http_session.cert
-        session.trust_env = self._http_session.trust_env
-        return session
-
     @property
     def api_version(self):
         """Read only version var."""
@@ -987,7 +977,7 @@ class Server:
 
         username, passwd = credentials
         login_url = self.build_request_url("/login/")
-        session = self._create_cookie_isolated_http_session()
+        session = self._create_http_session()
 
         # Browser-facing report pages require a Django session login rather than REST auth.
         init_response = session.get(login_url)
