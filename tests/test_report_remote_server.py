@@ -25,13 +25,15 @@ from os import environ
 from pathlib import Path
 from random import randint
 import re
+import sys
 import uuid
 from unittest.mock import Mock
 
 import pytest
 import requests
 
-from ansys.dynamicreporting.core import Service
+from ansys.dynamicreporting.core import Service, common_utils
+from ansys.dynamicreporting.core.compatibility import AUTO_DETECT_INSTALL_VERSIONS
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
@@ -155,7 +157,12 @@ def test_fail_newdb(tmp_path, get_exec) -> None:
             run_local=True,
         )
     except DBCreationFailedError as e:
-        succ = "Unable to generate a new database by migration" in str(e)
+        expected_error = (
+            "Unable to generate a new database by migration"
+            if get_exec
+            else "Unable to detect an installation in"
+        )
+        succ = expected_error in str(e)
     assert succ
 
 
@@ -747,6 +754,207 @@ def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
         except OSError:
             success = True
     assert success is True
+
+
+# --- Regression tests: launcher paths must never surface InvalidAnsysPath -----
+# The install-resolution hardening routed launcher paths through a strict resolver
+# that raises InvalidAnsysPath when no local install is found. These tests lock the
+# backward-compatible failure modes: run_nexus_utility must fail as OSError (the
+# export_report_as_pdf contract), and launch_local_database_server must return False
+# or raise ServerLaunchError per raise_exception -- never InvalidAnsysPath.
+#
+# The functions under test run the real resolver and error paths. Only external
+# discovery inputs and the unrelated network probe are isolated from the host.
+
+
+def _isolate_install_discovery(monkeypatch, tmp_path, *additional_versions) -> None:
+    """Keep implicit install discovery independent of the host machine."""
+    install_versions = (*AUTO_DETECT_INSTALL_VERSIONS, *additional_versions)
+    for variable in [
+        "PYADR_ANSYS_INSTALLATION",
+        "CEIDEVROOTDOS",
+        *(f"AWP_ROOT{version}" for version in install_versions),
+    ]:
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setitem(sys.modules, "enve", None)
+
+    def missing_default_release_root(install_version):
+        return tmp_path / "missing_installs" / f"v{install_version}"
+
+    monkeypatch.setattr(common_utils, "_default_release_root", missing_default_release_root)
+
+
+def _create_minimal_local_database(database_dir: Path) -> None:
+    """Create the files required by ``validate_local_db()``."""
+    database_dir.mkdir()
+    (database_dir / "db.sqlite3").touch()
+    (database_dir / "media").mkdir()
+
+
+def _raise_no_running_server(self, *args, **kwargs):
+    # Make the "is a server already running?" probe conclude "no" so execution
+    # reaches the explicit missing-install guard without a network call.
+    raise ConnectionError("no server running")
+
+
+def _assert_api_lock_released(lock_dir: Path) -> None:
+    """Prove that the launcher released its real API lock."""
+    lock = r.filelock.nexus_file_lock(str(lock_dir / ".nexus_api.lock"))
+    lock.acquire(timeout=0.1)
+    try:
+        assert lock.is_locked
+    finally:
+        lock.release()
+
+
+@pytest.mark.ado_test
+def test_create_new_local_database_no_install_wraps_resolution_error(monkeypatch, tmp_path) -> None:
+    """Wrap install-resolution failures in DBCreationFailedError."""
+    _isolate_install_discovery(monkeypatch, tmp_path)
+
+    with pytest.raises(DBCreationFailedError) as exc_info:
+        r.create_new_local_database(
+            parent=None,
+            directory=tmp_path / "no_install_database",
+            run_local=True,
+            raise_exception=True,
+        )
+
+    assert "Could not locate a valid ADR installation" in str(exc_info.value)
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_no_install_raises_oserror(monkeypatch, tmp_path) -> None:
+    # export_report_as_pdf reports a missing local installation as OSError.
+    _isolate_install_discovery(monkeypatch, tmp_path)
+
+    with pytest.raises(OSError):
+        r.run_nexus_utility(["report_save_pdf", "http://127.0.0.1:0", "out.pdf"])
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_no_install_uses_explicit_version(monkeypatch, tmp_path) -> None:
+    _isolate_install_discovery(monkeypatch, tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="cpython261"):
+        r.run_nexus_utility(
+            ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"],
+            ansys_version=261,
+        )
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_invalid_explicit_root_raises_oserror(tmp_path) -> None:
+    """Translate strict resolution failure into the historical OSError contract."""
+    invalid_release_root = tmp_path / "missing_release_root"
+
+    with pytest.raises(OSError, match="no local ADR installation"):
+        r.run_nexus_utility(
+            ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"],
+            exec_basis=str(invalid_release_root),
+        )
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_path) -> None:
+    """Use a complete supported product-root/version pair without inference."""
+    install_version = 261
+    product_root = tmp_path / f"v{install_version}" / "ADR"
+    django_dir = product_root / f"nexus{install_version}" / "django"
+    django_dir.mkdir(parents=True)
+    nexus_utility = product_root / f"nexus{install_version}" / "nexus_utility.py"
+    nexus_utility.touch()
+    app = product_root / "bin" / f"cpython{install_version}"
+    app.parent.mkdir()
+    app.touch()
+    resolver = Mock(side_effect=AssertionError("complete explicit pairs must not be resolved"))
+    utility_call = Mock(return_value=0)
+    monkeypatch.setattr(common_utils, "resolve_install_info", resolver)
+    monkeypatch.setattr(r.report_utils, "enve_arch", lambda: "linux")
+    monkeypatch.setattr(r.subprocess, "call", utility_call)
+
+    utility_args = ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"]
+    r.run_nexus_utility(
+        utility_args,
+        exec_basis=str(product_root),
+        ansys_version=install_version,
+    )
+
+    resolver.assert_not_called()
+    utility_call.assert_called_once_with(
+        args=[str(app), str(nexus_utility), *utility_args],
+        stdout=r.subprocess.DEVNULL,
+        stderr=r.subprocess.DEVNULL,
+        stdin=r.subprocess.DEVNULL,
+        cwd=str(django_dir),
+    )
+
+
+@pytest.mark.ado_test
+def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tmp_path) -> None:
+    release_root = tmp_path / "v261"
+    django_dir = release_root / "ADR" / "nexus261" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").touch()
+    monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(release_root))
+
+    media_dir = tmp_path / "media"
+    media_dir.mkdir()
+    (media_dir / "csf_conversion_version").write_text("27.1")
+
+    assert r.validate_local_db_version(tmp_path) is False
+
+
+@pytest.mark.ado_test
+def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
+    # The launch error handler returns False when raise_exception is disabled.
+    _isolate_install_discovery(monkeypatch, tmp_path)
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    # Avoid a network call while allowing the real database and install checks to run.
+    monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+
+    result = r.launch_local_database_server(
+        parent=None,
+        directory=str(database_dir),
+        port=8000,
+        raise_exception=False,
+        verbose=False,
+    )
+    assert result is False
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> None:
+    # The launch error handler raises ServerLaunchError when requested.
+    _isolate_install_discovery(monkeypatch, tmp_path)
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+
+    with pytest.raises(e.ServerLaunchError):
+        r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=True,
+            verbose=False,
+        )
+
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
 
 
 @pytest.mark.ado_test

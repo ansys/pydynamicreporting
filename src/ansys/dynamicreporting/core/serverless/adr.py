@@ -354,28 +354,28 @@ class ADR:
             except Exception as e:
                 self._logger.warning(f"Problem shutting down container/service: {str(e)}")
 
-            install_resolution = resolve_install_info(
+            resolved_install = resolve_install_info(
                 ansys_installation=tmp_install_dir.name,
                 ansys_version=ansys_version,
             )
-            install_dir, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+            product_root, self._ansys_version = (
+                resolved_install.install_dir,
+                resolved_install.version,
             )
         else:
-            # Local installation.
-            install_resolution = resolve_install_info(
+            # Local ADR product root.
+            resolved_install = resolve_install_info(
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
             )
-            install_dir, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+            product_root, self._ansys_version = (
+                resolved_install.install_dir,
+                resolved_install.version,
             )
 
-        if install_dir is None:
+        if product_root is None:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
-        self._ansys_installation = Path(install_dir)
+        self._ansys_installation = Path(product_root)
         # Mirror the service-mode check: warn after resolving the install
         # version, but do not block setup for an otherwise valid installation.
         #
