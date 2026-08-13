@@ -68,6 +68,9 @@ def test_sanitize_settings_migrates_default_file_storage(monkeypatch):
     assert sanitized["STORAGES"]["default"]["BACKEND"] == (
         "django.core.files.storage.FileSystemStorage"
     )
+    assert sanitized["STORAGES"]["staticfiles"]["BACKEND"] == (
+        "django.contrib.staticfiles.storage.StaticFilesStorage"
+    )
 
 
 def test_sanitize_settings_keeps_existing_default_storage_config(monkeypatch):
@@ -85,6 +88,29 @@ def test_sanitize_settings_keeps_existing_default_storage_config(monkeypatch):
 
     assert "DEFAULT_FILE_STORAGE" not in sanitized
     assert sanitized["STORAGES"]["default"]["BACKEND"] == "custom.backend.Storage"
+    assert sanitized["STORAGES"]["staticfiles"]["BACKEND"] == (
+        "django.contrib.staticfiles.storage.StaticFilesStorage"
+    )
+
+
+def test_sanitize_settings_preserves_explicit_staticfiles_storage_config(monkeypatch):
+    overrides = {
+        "DEFAULT_FILE_STORAGE": "django.core.files.storage.FileSystemStorage",
+        "STORAGES": {"staticfiles": {"BACKEND": "custom.backend.StaticFilesStorage"}},
+    }
+    monkeypatch.setattr(
+        compat_module,
+        "_get_installed_versions",
+        lambda: {"django": (5, 2, 0)},
+    )
+
+    sanitized = compat_module.sanitize_settings(overrides)
+
+    assert "DEFAULT_FILE_STORAGE" not in sanitized
+    assert sanitized["STORAGES"]["default"]["BACKEND"] == (
+        "django.core.files.storage.FileSystemStorage"
+    )
+    assert sanitized["STORAGES"]["staticfiles"]["BACKEND"] == "custom.backend.StaticFilesStorage"
 
 
 def test_sanitize_settings_is_noop_below_version_thresholds(monkeypatch):
