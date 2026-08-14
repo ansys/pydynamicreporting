@@ -121,6 +121,18 @@ def test_get_logger_preserves_caller_level_with_log_output(
 
 
 @pytest.mark.ado_test
+def test_get_logger_preserves_default_level_with_log_output(
+    tmp_path: Path,
+    package_logger: logging.Logger,
+) -> None:
+    """Adding an output handler must leave an untouched logger at ``NOTSET``."""
+    logger = get_logger(log_output=tmp_path / "adr.log")
+
+    assert logger is package_logger
+    assert logger.level == logging.NOTSET
+
+
+@pytest.mark.ado_test
 def test_get_logger_preserves_inherited_application_level(
     tmp_path: Path,
     package_logger: logging.Logger,
@@ -171,6 +183,28 @@ def test_get_logger_adds_stdout_once(
     logger.info("stdout-message")
 
     assert capsys.readouterr().out.count("stdout-message") == 1
+
+
+@pytest.mark.ado_test
+def test_get_logger_adds_file_output_once(
+    tmp_path: Path,
+    package_logger: logging.Logger,
+) -> None:
+    """Repeated file setup must not duplicate handlers or log lines."""
+    log_path = tmp_path / "adr.log"
+    get_logger(log_output=log_path, log_level=logging.INFO)
+    logger = get_logger(log_output=log_path, log_level=logging.INFO)
+
+    logger.info("file-message")
+
+    matching_handlers = [
+        handler
+        for handler in logger.handlers
+        if isinstance(handler, logging.FileHandler)
+        and Path(handler.baseFilename) == log_path.resolve()
+    ]
+    assert len(matching_handlers) == 1
+    assert log_path.read_text().count("file-message") == 1
 
 
 @pytest.mark.ado_test
