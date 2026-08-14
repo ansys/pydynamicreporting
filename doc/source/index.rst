@@ -108,9 +108,12 @@ contract.
 
 - The install-facing default search order is independent from the public
   compatibility contract.
-- Implicit install discovery probes the bundled install first to preserve the
-  historical default behavior, then falls back to the released compatibility
-  install when the bundled line is unavailable.
+- ``DEFAULT_ANSYS_INSTALL_RELEASE`` is the single hand-maintained
+  install-default policy constant. ``DEFAULT_ANSYS_INSTALL_VERSION`` and
+  ``AUTO_DETECT_INSTALL_VERSIONS`` are derived from it, while the client-major
+  compatibility window remains unchanged.
+- Implicit install discovery probes the default install line first, then the
+  previous annual line when the default line is unavailable.
 - Older layouts remain available when you request them explicitly, but they
   are not part of the implicit default search path.
 

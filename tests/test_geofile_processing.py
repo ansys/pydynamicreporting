@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 from os.path import isdir, join
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -99,3 +101,37 @@ def test_rebuild_3d_geom_csf(request, get_exec) -> None:
         # If there is no local installation, then skip this as we do not have
         # the cei_apex???_udrw3avz executable available
         assert True
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(
+    ("settings_values", "expected_version"),
+    [
+        ({"ADR_VERSION": "271", "CEI_APEX_SUFFIX": "261"}, "271"),
+        ({"CEI_APEX_SUFFIX": "261"}, "261"),
+    ],
+)
+def test_rebuild_3d_geometry_uses_supported_version_setting(
+    monkeypatch, tmp_path, settings_values, expected_version
+) -> None:
+    monkeypatch.setattr(gp, "settings", SimpleNamespace(**settings_values))
+    monkeypatch.setattr(gp, "is_enve", False)
+    monkeypatch.setattr(gp.platform, "system", lambda: "Linux")
+
+    def create_empty_avz(command, **kwargs):
+        with gp.zipfile.ZipFile(command[-1], "w"):
+            pass
+        return 0
+
+    converter_call = Mock(side_effect=create_empty_avz)
+    monkeypatch.setattr(gp.subprocess, "call", converter_call)
+    csf_file = tmp_path / "scene.csf"
+    csf_file.touch()
+    product_root = tmp_path / "product"
+
+    gp.rebuild_3d_geometry(csf_file=str(csf_file), exec_basis=str(product_root))
+
+    converter_call.assert_called_once()
+    assert converter_call.call_args.args[0][0] == str(
+        product_root / "bin" / f"cei_apex{expected_version}_udrw2avz"
+    )

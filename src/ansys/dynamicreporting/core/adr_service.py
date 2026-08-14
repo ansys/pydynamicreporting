@@ -246,13 +246,13 @@ class Service:
             self._ansys_installation, self._ansys_version = (ansys_installation, ansys_version)
 
         else:  # pragma: no cover
-            # local installation
-            install_resolution = resolve_install_info(
+            # Local ADR product root.
+            resolved_install = resolve_install_info(
                 ansys_installation=ansys_installation, ansys_version=ansys_version
             )
             self._ansys_installation, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+                resolved_install.install_dir,
+                resolved_install.version,
             )
             # Run the compatibility check only after the traditional install
             # probing succeeds so unsupported releases warn without changing the

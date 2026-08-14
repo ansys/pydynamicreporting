@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -55,10 +55,12 @@ jobs:
   vulnerabilities:
     name: Vulnerabilities
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/codegen
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -68,7 +70,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.3.2
+        uses: ansys/actions/check-vulnerabilities@v10.3.6
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
@@ -79,7 +81,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.3.2
+        uses: ansys/actions/check-vulnerabilities@v10.3.6
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}

@@ -354,28 +354,28 @@ class ADR:
             except Exception as e:
                 self._logger.warning(f"Problem shutting down container/service: {str(e)}")
 
-            install_resolution = resolve_install_info(
+            resolved_install = resolve_install_info(
                 ansys_installation=tmp_install_dir.name,
                 ansys_version=ansys_version,
             )
-            install_dir, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+            product_root, self._ansys_version = (
+                resolved_install.install_dir,
+                resolved_install.version,
             )
         else:
-            # Local installation.
-            install_resolution = resolve_install_info(
+            # Local ADR product root.
+            resolved_install = resolve_install_info(
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
             )
-            install_dir, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+            product_root, self._ansys_version = (
+                resolved_install.install_dir,
+                resolved_install.version,
             )
 
-        if install_dir is None:
+        if product_root is None:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
-        self._ansys_installation = Path(install_dir)
+        self._ansys_installation = Path(product_root)
         # Mirror the service-mode check: warn after resolving the install
         # version, but do not block setup for an otherwise valid installation.
         #
@@ -1000,6 +1000,17 @@ class ADR:
         )
 
     @staticmethod
+    def get_item_count() -> int:
+        """Return the total number of items in the default database.
+
+        Returns
+        -------
+        int
+            Number of persisted :class:`Item` objects.
+        """
+        return Item._orm_model_cls.objects.count()
+
+    @staticmethod
     def _create_template_with_parent(template_type: type[Template], **kwargs: Any) -> Template:
         """Internal helper to create a template and attach it to its parent."""
         template = template_type.create(**kwargs)
@@ -1039,6 +1050,20 @@ class ADR:
                 "At least one keyword argument must be provided to create the template."
             )
         return ADR._create_template_with_parent(template_type, **kwargs)
+
+    @staticmethod
+    def get_report_count() -> int:
+        """Return the number of top-level reports in the default database.
+
+        A report is a root :class:`Template` with no parent. Child templates
+        are not included in the count.
+
+        Returns
+        -------
+        int
+            Number of persisted root templates.
+        """
+        return Template._orm_model_cls.objects.filter(parent=None).count()
 
     def _populate_template(self, id_str, attr, parent_template) -> Template:
         """Internal helper to create a :class:`Template` from JSON attributes.
