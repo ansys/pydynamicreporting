@@ -208,17 +208,18 @@ def test_get_logger_adds_file_output_once(
 
 
 @pytest.mark.ado_test
-def test_get_logger_supports_deprecated_logfile(
+def test_service_supports_deprecated_logfile(
     tmp_path: Path,
     package_logger: logging.Logger,
 ) -> None:
-    """The legacy parameter remains functional while callers migrate."""
+    """The legacy parameter works and warns at the public caller's location."""
     log_path = tmp_path / "legacy.log"
 
-    with pytest.warns(DeprecationWarning, match="Use 'log_output' instead"):
-        logger = get_logger(logfile=log_path, log_level=logging.ERROR)
-    logger.error("legacy-error-message")
+    with pytest.warns(DeprecationWarning, match="Use 'log_output' instead") as warning_info:
+        service = Service(logfile=log_path, log_level=logging.ERROR)
+    service.logger.error("legacy-error-message")
 
+    assert warning_info[0].filename == __file__
     assert "legacy-error-message" in log_path.read_text()
 
 
