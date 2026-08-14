@@ -23,6 +23,7 @@
 import logging
 import os
 import sys
+import warnings
 
 # Dictionary to match:
 # key: ADR DataItem type
@@ -68,48 +69,62 @@ def in_ipynb():
         return False
 
 
-def get_logger(logfile: str | os.PathLike[str] | None = None) -> logging.Logger:
+def get_logger(
+    logfile: str | os.PathLike[str] | None = None,
+    *,
+    log_output: str | os.PathLike[str] | None = None,
+    log_level: int | str | None = None,
+) -> logging.Logger:
     """
     Return the ``ansys.dynamicreporting.core`` package logger.
 
-    ADR uses its own logger and does not change the root logger, so it does not
-    take over the application's logging setup. By default ADR stays quiet: it
-    adds a ``NullHandler`` and leaves the level alone, so nothing is shown until
-    the application turns logging on. Pass ``logfile`` to send the full ADR log
-    to a file or to stdout. When you do that, ADR sets its shared logger to
-    ``DEBUG``, so the same messages can also show up in the application's other
-    log handlers.
+    ADR uses its own logger and does not change the root logger. By default ADR
+    adds a ``NullHandler`` and leaves the logging level unchanged. Pass
+    ``log_output`` to add a file or stdout handler, and pass ``log_level`` to
+    set the shared ADR logger's level explicitly.
 
     Parameters
     ----------
     logfile : str or os.PathLike, optional
-        Where to send the ADR log. ``None`` (the default) keeps ADR quiet.
-        ``"stdout"`` writes to standard output. Any other value is used as a
-        file path. Passing ``"stdout"`` or a path also sets the shared ADR
-        logger to ``DEBUG`` for the whole process.
+        Deprecated alias for ``log_output``.
+    log_output : str or os.PathLike, optional
+        Where to send ADR logs. ``"stdout"`` writes to standard output. Any
+        other value is used as a file path. ``None`` adds no output handler.
+    log_level : int or str, optional
+        Level for the shared ADR logger. ``None`` leaves its current level
+        unchanged.
 
     Returns
     -------
     logging.Logger
         The ``ansys.dynamicreporting.core`` package logger.
     """
-    # Use ADR's own logger, not the root logger. Changing the root logger can
-    # break the application's logging and hide ADR messages below ERROR.
-    # Leaving the level alone lets the application choose the verbosity. ADR
-    # adds each handler only once.
-    logger = logging.getLogger("ansys.dynamicreporting.core")
+    if logfile is not None and log_output is not None:
+        raise ValueError("Use only one of 'logfile' or 'log_output'.")
+    if logfile is not None:
+        warnings.warn(
+            "The 'logfile' parameter is deprecated. Use 'log_output' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        log_output = logfile
 
-    if logfile is None:
+    # Use ADR's own logger, not the root logger. Changing the root logger can
+    # break the application's logging. ADR adds each handler only once.
+    logger = logging.getLogger("ansys.dynamicreporting.core")
+    if log_level is not None:
+        logger.setLevel(log_level)
+
+    if log_output is None:
         # ADR is quiet by default. A single NullHandler prevents fallback
-        # warnings until the caller picks a real log sink.
+        # warnings until the caller picks a real output handler.
         if not any(isinstance(handler, logging.NullHandler) for handler in logger.handlers):
             logger.addHandler(logging.NullHandler())
         return logger
 
-    # If the caller asks for a real sink, send the full ADR log there. Add the
-    # sink only once so repeated calls do not duplicate log lines.
-    logger.setLevel(logging.DEBUG)
-    if logfile == "stdout":
+    # Add the requested output handler once so repeated calls do not duplicate
+    # log lines.
+    if log_output == "stdout":
         already_present = any(
             isinstance(handler, logging.StreamHandler)
             and not isinstance(handler, logging.FileHandler)
@@ -122,7 +137,7 @@ def get_logger(logfile: str | os.PathLike[str] | None = None) -> logging.Logger:
     else:
         # Normalize the path before comparing file handlers.
         # "out.log" -> "C:\\cwd\\out.log" (Windows) / "/cwd/out.log" (POSIX)
-        target = os.path.normcase(os.path.abspath(os.fspath(logfile)))
+        target = os.path.normcase(os.path.abspath(os.fspath(log_output)))
         already_present = any(
             isinstance(handler, logging.FileHandler)
             and os.path.normcase(getattr(handler, "baseFilename", "")) == target
@@ -130,7 +145,7 @@ def get_logger(logfile: str | os.PathLike[str] | None = None) -> logging.Logger:
         )
         if already_present:
             return logger
-        handler = logging.FileHandler(logfile)
+        handler = logging.FileHandler(log_output)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)

@@ -97,14 +97,17 @@ class Service:
     port : int, optional
         Port to run the Ansys Dynamic Reporting service on. The default is ``8000``.
     logfile : str, optional
-        File path or ``"stdout"`` for ADR logs. If omitted, ADR stays quiet.
-        Passing a path or ``"stdout"`` sends the full ADR log there and sets
-        ADR's shared logger to ``DEBUG``, so the same messages can also show up
-        in the application's other log handlers.
+        Deprecated alias for ``log_output``.
     ansys_installation : str, optional
         Path to the directory where Ansys is installed locally. If Ansys is not
         installed locally but is to be run in a Docker image, set the
         value for this paraemter to ``"docker"``.
+    log_output : str or os.PathLike, optional
+        File path or ``"stdout"`` for ADR logs. The default is ``None``, which
+        adds no output handler.
+    log_level : int or str, optional
+        Level for the shared ADR logger. The default is ``None``, which leaves
+        the caller's logging level unchanged.
 
 
     Raises
@@ -141,6 +144,9 @@ class Service:
         port: int = DOCKER_DEFAULT_PORT,
         logfile: str = None,
         ansys_installation: str | None = None,
+        *,
+        log_output: str | os.PathLike[str] | None = None,
+        log_level: int | str | None = None,
     ) -> None:
         """
         Initialize an Ansys Dynamic Reporting object.
@@ -170,16 +176,22 @@ class Service:
             Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
             case ``8000`` is used.
         logfile: str, optional
+            Deprecated alias for ``log_output``.
+        log_output : str or os.PathLike, optional
             File path or ``"stdout"`` for ADR logs. The default is ``None``,
-            which keeps ADR quiet. Passing a path or ``"stdout"`` sends the
-            full ADR log there and sets ADR's shared logger to ``DEBUG``, so
-            the same messages can also show up in the application's other log
-            handlers.
+            which adds no output handler.
+        log_level : int or str, optional
+            Level for the shared ADR logger. The default is ``None``, which
+            leaves the caller's logging level unchanged.
         """
         self.serverobj = None
         self._session_guid = ""
         self._url = None
-        self.logger = get_logger(logfile)
+        self.logger = get_logger(
+            logfile,
+            log_output=log_output,
+            log_level=log_level,
+        )
         self._data_directory = None
         self._db_directory = db_directory
         self._delete_db = False
