@@ -128,7 +128,7 @@ class ADR:
     request : HttpRequest, optional
         Request object, useful when ADR is used in a web context.
     logfile : str, optional
-        Path to the log file. If omitted, logging typically goes to stderr.
+        Deprecated alias for ``log_output``.
     docker_image : str, optional
         Docker image URL to use when ``ansys_installation="docker"``.
         Defaults to :data:`DOCKER_REPO_URL`.
@@ -136,6 +136,12 @@ class ADR:
         If ``True``, ADR configures an in-memory SQLite database and
         temporary media/static directories, suitable for tests or
         ephemeral usage.
+    log_output : str or os.PathLike, optional
+        File path or ``"stdout"`` for ADR logs. The default is ``None``, which
+        adds no output handler.
+    log_level : int or str, optional
+        Level for the shared ADR logger. The default is ``None``, which leaves
+        the caller's logging level unchanged.
 
     Raises
     ------
@@ -213,6 +219,8 @@ class ADR:
         logfile: str | None = None,
         docker_image: str | None = None,
         in_memory: bool = False,
+        log_output: str | os.PathLike[str] | None = None,
+        log_level: int | str | None = None,
     ) -> None:
         # Basic attributes / configuration.
         self._db_directory = None
@@ -224,7 +232,11 @@ class ADR:
         self._request = request  # Used when ADR is embedded in a web server.
         self._session: Session | None = None
         self._dataset: Dataset | None = None
-        self._logger = get_logger(logfile)
+        self._logger = get_logger(
+            logfile,
+            log_output=log_output,
+            log_level=log_level,
+        )
         self._tmp_dirs: list[tempfile.TemporaryDirectory] = []
         self._in_memory = in_memory
 
