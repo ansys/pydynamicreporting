@@ -28,6 +28,7 @@ import requests
 from ansys.dynamicreporting.core.compatibility import DEFAULT_STATIC_ASSET_VERSION
 from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils.html_export_constants import (
+    CONTEXT_MENU_JS,
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
 )
@@ -39,6 +40,32 @@ def test_download_defaults_to_bundled_asset_namespace() -> None:
     downloader = rd.ReportDownloadHTML(url=None, directory=".")
 
     assert downloader._ansys_version == DEFAULT_STATIC_ASSET_VERSION
+
+
+def test_downloads_legacy_context_menu_assets_for_v261(tmp_path) -> None:
+    """Keep the v261 viewer's context-menu dependencies in downloaded HTML exports."""
+    downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=261)
+
+    with patch.object(downloader, "_download_static_files") as download_static_files:
+        downloader._download_legacy_context_menu_assets()
+
+    context_menu_path = "/ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+    download_static_files.assert_called_once_with(
+        CONTEXT_MENU_JS,
+        context_menu_path,
+        context_menu_path.lstrip("/"),
+        "legacy viewer context-menu assets",
+    )
+
+
+def test_skips_legacy_context_menu_assets_for_newer_products(tmp_path) -> None:
+    """Avoid obsolete noVNC asset requests for product versions after v261."""
+    downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=271)
+
+    with patch.object(downloader, "_download_static_files") as download_static_files:
+        downloader._download_legacy_context_menu_assets()
+
+    download_static_files.assert_not_called()
 
 
 def test_download_use_data(request, adr_service_query) -> None:

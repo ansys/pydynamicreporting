@@ -30,6 +30,7 @@ from unittest.mock import patch
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
+from ansys.dynamicreporting.core.utils.html_export_constants import CONTEXT_MENU_JS
 
 # ----------------------------
 # helpers
@@ -66,6 +67,19 @@ def _make_exporter_for_mathjax_detection(
         static_url="/static/",
         media_url="/media/",
         ansys_version="252",
+    )
+
+
+def _make_exporter_for_legacy_context_menu_assets(tmp_path: Path) -> ServerlessReportExporter:
+    """Build a v261 exporter for context-menu asset tests."""
+    return ServerlessReportExporter(
+        html_content="<div/>",
+        output_dir=tmp_path / "out",
+        static_dir=tmp_path / "static",
+        media_dir=tmp_path / "media",
+        static_url="/static/",
+        media_url="/media/",
+        ansys_version="261",
     )
 
 
@@ -162,6 +176,29 @@ def test_static_is_flattened_media_and_ansys_tree_preserved(adr_serverless, tmp_
     out = (tmp_path / "export2" / "index.html").read_text(encoding="utf-8")
     assert 'href="./media/plotly.min.js"' in out or 'src="./media/plotly.min.js"' in out
     assert f"./ansys{ver}/nexus/utils/js-test.js" in out
+
+
+def test_copies_legacy_context_menu_assets_when_available(tmp_path: Path):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+
+    for filename in CONTEXT_MENU_JS:
+        _write(exporter._static_dir / context_menu_path / filename, filename)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    for filename in CONTEXT_MENU_JS:
+        copied_file = exporter._output_dir / context_menu_path / filename
+        assert copied_file.read_text(encoding="utf-8") == filename
+
+
+def test_skips_missing_legacy_context_menu_assets(tmp_path: Path, caplog):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert not (exporter._output_dir / "ansys261/nexus/novnc").exists()
+    assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
 
 
 @pytest.mark.ado_test

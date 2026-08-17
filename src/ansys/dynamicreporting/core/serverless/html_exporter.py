@@ -375,6 +375,7 @@ class ServerlessReportExporter:
         self._copy_static_files(
             VIEWER_JS, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
         )
+        self._copy_legacy_context_menu_assets()
         self._copy_static_files(
             THREE_JS,
             f"ansys{self._ansys_version}/nexus/threejs/",
@@ -424,10 +425,25 @@ class ServerlessReportExporter:
         elif not silent:
             self._logger.warning(f"Warning: Static source file not found: {source_file}")
 
-    def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
+    def _copy_legacy_context_menu_assets(self) -> None:
+        """Copy context-menu files required by older viewer loaders when available."""
+        context_menu_path = f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/"
+        # ADR 26.1's viewer loader still requests these noVNC-era files. ADR
+        # 27.1 no longer ships or requests them, so missing source files are
+        # expected and must not produce export warnings.
+        self._copy_static_files(
+            CONTEXT_MENU_JS,
+            context_menu_path,
+            context_menu_path,
+            silent=True,
+        )
+
+    def _copy_static_files(
+        self, files: list[str], source_prefix: str, target_prefix: str, *, silent: bool = False
+    ):
         """Helper to copy a list of files using prefixes."""
         for f in files:
-            self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f)
+            self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f, silent=silent)
 
     def _make_unique_basename(self, name: str) -> str:
         """Ensures a unique filename in the target media directory to avoid collisions (legacy)."""

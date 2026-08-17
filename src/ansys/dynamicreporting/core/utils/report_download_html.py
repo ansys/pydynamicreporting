@@ -30,6 +30,7 @@ import requests
 
 from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
 from .html_export_constants import (
+    CONTEXT_MENU_JS,
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
     MATHJAX_OPTIONAL_FILES,
@@ -228,6 +229,7 @@ class ReportDownloadHTML:
             f"ansys{self._ansys_version}/nexus/",
             "ansys-nexus-viewer js",
         )
+        self._download_legacy_context_menu_assets()
         image = [
             "ArcballControls.js",
             "DRACOLoader.js",
@@ -358,6 +360,19 @@ class ReportDownloadHTML:
                     print(f"Unable to download MathJax file: {source_rel_path}\nError {e}")
             elif not (silent or source_rel_path in MATHJAX_OPTIONAL_FILES):
                 print(f"Unable to get: {url}")
+
+    def _download_legacy_context_menu_assets(self) -> None:
+        """Download the v261 viewer dependencies that newer products removed."""
+        if self._ansys_version != "261":
+            return
+
+        context_menu_path = f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/"
+        self._download_static_files(
+            CONTEXT_MENU_JS,
+            context_menu_path,
+            context_menu_path.lstrip("/"),
+            "legacy viewer context-menu assets",
+        )
 
     def _download_static_files(self, files, source_path, target_path, comment):
         tmp = urllib.parse.urlsplit(self._url)
