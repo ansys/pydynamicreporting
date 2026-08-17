@@ -67,7 +67,7 @@ jobs:
             libgl1-mesa-dev \
             libxrender1
 
-      # TODO: Restore DPF tests in PRs once PYANSYS_CI_BOT_TOKEN is SAML-authorized.
+      # TODO: Restore DPF tests once PYANSYS_CI_BOT_TOKEN is SAML-authorized.
       - name: Install DPF
         id: set-server-path
         if: false
@@ -78,7 +78,6 @@ jobs:
           ANSYS_VERSION: ${{ env.ANSYS_VERSION }}
 
       - name: Run pytest without DPF tests
-        if: ${{ github.event_name == 'pull_request' }}
         run: make test
         env:
           ANSYSLMD_LICENSE_FILE: ${{ format('1055@{0}', secrets.LICENSE_SERVER) }}
