@@ -613,6 +613,11 @@ class ADR:
                         self._logger.warning(msg)
                         warnings.warn(msg, ImportWarning)
 
+        from ._compat import apply_runtime_compatibility_shims, sanitize_settings
+
+        # Restore known NumPy aliases before importing the product's Django modules.
+        apply_runtime_compatibility_shims(self._ansys_version)
+
         # Add the Nexus Django folder to sys.path and import settings.
         try:
             adr_path = (
@@ -717,8 +722,6 @@ class ADR:
         report_utils.apply_timezone_workaround()
 
         # === Settings compatibility shim ===
-        from ._compat import sanitize_settings
-
         overrides = sanitize_settings(overrides)
 
         # Django settings + setup.

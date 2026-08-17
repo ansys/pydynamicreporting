@@ -118,8 +118,11 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
   checked-in ``uv.lock``, so release-specific stacks are documented as
   constraints files rather than mutually incompatible extras.
 
-The compatibility shim is a safety net for known setting transitions in the core product. It is
-not a substitute for matching the external venv to the target ADR release.
+The compatibility shim is a safety net for known product-setting and dependency API transitions.
+For ADR 26.1, it restores ``numpy.string_`` as an alias for NumPy 2's
+``numpy.bytes_`` type and enables NumPy's ``legacy="1.25"`` print mode. The print-mode
+compatibility keeps ADR 26.1 from writing NumPy 2 scalar representations into inline Plotly
+JavaScript. It is not a substitute for matching the external venv to the target ADR release.
 
 Recommended practice for external venv usage:
 

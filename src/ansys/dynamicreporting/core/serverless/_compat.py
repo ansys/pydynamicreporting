@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Settings compatibility shim.
+"""Serverless runtime compatibility shims.
 
-Translate product settings so they remain compatible with the dependency
-versions installed in the client's venv. This module only handles known
-setting transitions between supported ADR product lines and current client
+Translate product settings and dependency APIs so they remain compatible with
+the versions installed in the client's venv. This module handles known
+transitions between supported ADR product lines and current client
 dependencies.
 """
 
@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 VersionKey = tuple[int, ...]
 ConditionFn = Callable[[dict, dict[str, VersionKey]], bool]
 TransformFn = Callable[[dict], dict]
+_NUMPY_STRING_ALIAS_PRODUCT_VERSION = 261
 
 
 # Registry of settings transformations.
@@ -67,6 +68,28 @@ def _normalize_version(version_string: str) -> VersionKey:
         components.append(int(match.group(1)))
 
     return tuple(components)
+
+
+def apply_runtime_compatibility_shims(product_version: int) -> None:
+    """Apply dependency API shims required by a supported ADR product version.
+
+    ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
+    that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
+    NumPy scalar representations directly into inline JavaScript. Restore the
+    alias and NumPy 1.25 print formatting before importing the product's Django
+    modules.
+    """
+    if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
+        return
+
+    import numpy
+
+    if not hasattr(numpy, "string_"):
+        numpy.string_ = numpy.bytes_
+        logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+    if _normalize_version(numpy.__version__) >= (2, 0):
+        numpy.set_printoptions(legacy="1.25")
+        logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
 
 
 def _guardian_monkey_patch_rename(overrides: dict) -> dict:

@@ -20,7 +20,58 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+from types import ModuleType
+
 import ansys.dynamicreporting.core.serverless._compat as compat_module
+
+
+def test_apply_runtime_compatibility_restores_numpy_string_alias_for_261(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.5.2"
+    fake_numpy.bytes_ = object()
+    print_options = {}
+
+    def set_print_options(**kwargs):
+        print_options.update(kwargs)
+
+    fake_numpy.set_printoptions = set_print_options
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    compat_module.apply_runtime_compatibility_shims(261)
+
+    assert fake_numpy.string_ is fake_numpy.bytes_
+    assert print_options == {"legacy": "1.25"}
+
+
+def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "1.26.4"
+    fake_numpy.bytes_ = object()
+    existing_string_alias = object()
+    fake_numpy.string_ = existing_string_alias
+    print_options = {}
+
+    def set_print_options(**kwargs):
+        print_options.update(kwargs)
+
+    fake_numpy.set_printoptions = set_print_options
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    compat_module.apply_runtime_compatibility_shims(261)
+
+    assert fake_numpy.string_ is existing_string_alias
+    assert print_options == {}
+
+
+def test_apply_runtime_compatibility_does_not_patch_newer_product(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.bytes_ = object()
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    compat_module.apply_runtime_compatibility_shims(271)
+
+    assert not hasattr(fake_numpy, "string_")
 
 
 def test_sanitize_settings_renames_guardian_setting(monkeypatch):
