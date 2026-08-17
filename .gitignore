@@ -82,3 +82,4 @@ local_docs/
 # Workspace files are user-specific
 *.code-workspace
 /.codex
+/.agentic-conversations
