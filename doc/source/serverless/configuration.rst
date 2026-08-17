@@ -51,8 +51,16 @@ The primary configuration options for the ``ADR`` class constructor are:
 - ``opts`` (dict, optional):
   Dictionary of environment variables to inject into the process environment.
 
+- ``log_output`` (str or os.PathLike, optional):
+  File path or ``"stdout"`` for ADR logs. If omitted, no output handler is
+  added.
+
+- ``log_level`` (int or str, optional):
+  Level for the shared ADR logger. If omitted, the caller's logging level is
+  unchanged.
+
 - ``logfile`` (str, optional):
-  File path to write logs. If omitted, logs to console.
+  Deprecated alias for ``log_output``.
 
 - ``docker_image`` (str, optional):
   Docker image URL to use when ``ansys_installation="docker"``. Defaults to official Nexus image.
