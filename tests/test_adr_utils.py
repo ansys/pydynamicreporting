@@ -29,8 +29,11 @@ from pathlib import Path
 
 import pytest
 
+import ansys.dynamicreporting.core.serverless.adr as serverless_adr_module
 from ansys.dynamicreporting.core import Service
 from ansys.dynamicreporting.core.adr_utils import get_logger
+from ansys.dynamicreporting.core.common_utils import InstallResolution
+from ansys.dynamicreporting.core.serverless import ADR
 
 _PACKAGE_LOGGER_NAME = "ansys.dynamicreporting.core"
 
@@ -244,3 +247,47 @@ def test_service_accepts_log_output_and_log_level(
     assert service.logger is package_logger
     assert service.logger.level == logging.ERROR
     assert "service-error-message" in log_path.read_text()
+
+
+@pytest.mark.ado_test
+def test_serverless_adr_accepts_log_output_and_log_level(
+    tmp_path: Path,
+    package_logger: logging.Logger,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The serverless ADR constructor must expose the replacement parameters."""
+    install_dir = tmp_path / "install"
+    install_dir.mkdir()
+    log_path = tmp_path / "serverless.log"
+    monkeypatch.setattr(ADR, "_instance", None)
+    monkeypatch.setattr(ADR, "_is_setup", False)
+    monkeypatch.setattr(
+        serverless_adr_module,
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=271,
+        ),
+    )
+
+    adr = None
+    try:
+        adr = ADR(
+            ansys_installation=str(install_dir),
+            in_memory=True,
+            log_output=log_path,
+            log_level=logging.ERROR,
+        )
+        adr._logger.error("serverless-error-message")
+
+        assert adr._logger is package_logger
+        assert adr._logger.level == logging.ERROR
+        assert "serverless-error-message" in log_path.read_text()
+    finally:
+        if adr is not None:
+            # This constructor-only test stops before Django setup, so clean
+            # its temporary directories without touching database connections.
+            for temporary_directory in adr._tmp_dirs:
+                temporary_directory.cleanup()
+        ADR._instance = None
+        ADR._is_setup = False
