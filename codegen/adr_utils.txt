@@ -137,13 +137,12 @@ def get_logger(
     else:
         # Normalize the path before comparing file handlers.
         # "out.log" -> "C:\\cwd\\out.log" (Windows) / "/cwd/out.log" (POSIX)
-        target = os.path.normcase(os.path.abspath(os.fspath(log_output)))
-        already_present = any(
+        target_path = os.path.normcase(os.path.abspath(log_output))
+        if any(
             isinstance(handler, logging.FileHandler)
-            and os.path.normcase(getattr(handler, "baseFilename", "")) == target
+            and os.path.normcase(handler.baseFilename) == target_path
             for handler in logger.handlers
-        )
-        if already_present:
+        ):
             return logger
         handler = logging.FileHandler(log_output)
     formatter = logging.Formatter("[%(asctime)s] %(levelname)s %(name)s: %(message)s")
