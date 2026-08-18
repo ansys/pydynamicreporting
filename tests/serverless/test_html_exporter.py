@@ -192,6 +192,23 @@ def test_copies_legacy_context_menu_assets_when_available(tmp_path: Path):
         assert copied_file.read_text(encoding="utf-8") == filename
 
 
+def test_warns_for_incomplete_legacy_context_menu_assets(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+    available_file = CONTEXT_MENU_JS[0]
+    _write(exporter._static_dir / context_menu_path / available_file, available_file)
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert (exporter._output_dir / context_menu_path / available_file).is_file()
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in CONTEXT_MENU_JS[1:]:
+        assert any(filename in message for message in warning_messages)
+
+
 def test_skips_missing_legacy_context_menu_assets(tmp_path: Path, caplog):
     exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
 

@@ -428,22 +428,24 @@ class ServerlessReportExporter:
     def _copy_legacy_context_menu_assets(self) -> None:
         """Copy context-menu files required by older viewer loaders when available."""
         context_menu_path = f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/"
+        context_menu_dir = self._static_dir / context_menu_path
         # ADR 26.1's viewer loader still requests these noVNC-era files. ADR
-        # 27.1 no longer ships or requests them, so missing source files are
-        # expected and must not produce export warnings.
+        # 27.1 no longer ships the directory, so skip it only when the whole
+        # dependency set is inapplicable. A partial legacy directory should
+        # still warn about individual files that are missing.
+        if not context_menu_dir.is_dir():
+            return
+
         self._copy_static_files(
             CONTEXT_MENU_JS,
             context_menu_path,
             context_menu_path,
-            silent=True,
         )
 
-    def _copy_static_files(
-        self, files: list[str], source_prefix: str, target_prefix: str, *, silent: bool = False
-    ):
+    def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
         """Helper to copy a list of files using prefixes."""
         for f in files:
-            self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f, silent=silent)
+            self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f)
 
     def _make_unique_basename(self, name: str) -> str:
         """Ensures a unique filename in the target media directory to avoid collisions (legacy)."""
