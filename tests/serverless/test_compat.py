@@ -30,18 +30,24 @@ def test_apply_runtime_compatibility_restores_numpy_string_alias_for_261(monkeyp
     fake_numpy = ModuleType("numpy")
     fake_numpy.__version__ = "2.5.2"
     fake_numpy.bytes_ = object()
-    print_options = {}
+    current_legacy = {"value": False}
 
     def set_print_options(**kwargs):
-        print_options.update(kwargs)
+        current_legacy["value"] = kwargs["legacy"]
 
     fake_numpy.set_printoptions = set_print_options
+    fake_numpy.get_printoptions = lambda: {"legacy": current_legacy["value"]}
     monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
 
-    compat_module.apply_runtime_compatibility_shims(261)
+    restore = compat_module.apply_runtime_compatibility_shims(261)
 
     assert fake_numpy.string_ is fake_numpy.bytes_
-    assert print_options == {"legacy": "1.25"}
+    assert current_legacy["value"] == "1.25"
+
+    restore()
+
+    assert not hasattr(fake_numpy, "string_")
+    assert current_legacy["value"] is False
 
 
 def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monkeypatch):
@@ -50,18 +56,24 @@ def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monke
     fake_numpy.bytes_ = object()
     existing_string_alias = object()
     fake_numpy.string_ = existing_string_alias
-    print_options = {}
+    current_legacy = {"value": False}
 
     def set_print_options(**kwargs):
-        print_options.update(kwargs)
+        current_legacy["value"] = kwargs["legacy"]
 
     fake_numpy.set_printoptions = set_print_options
+    fake_numpy.get_printoptions = lambda: {"legacy": current_legacy["value"]}
     monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
 
-    compat_module.apply_runtime_compatibility_shims(261)
+    restore = compat_module.apply_runtime_compatibility_shims(261)
 
     assert fake_numpy.string_ is existing_string_alias
-    assert print_options == {}
+    assert current_legacy["value"] is False
+
+    restore()
+
+    assert fake_numpy.string_ is existing_string_alias
+    assert current_legacy["value"] is False
 
 
 def test_apply_runtime_compatibility_does_not_patch_newer_product(monkeypatch):
@@ -69,9 +81,10 @@ def test_apply_runtime_compatibility_does_not_patch_newer_product(monkeypatch):
     fake_numpy.bytes_ = object()
     monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
 
-    compat_module.apply_runtime_compatibility_shims(271)
+    restore = compat_module.apply_runtime_compatibility_shims(271)
 
     assert not hasattr(fake_numpy, "string_")
+    restore()
 
 
 def test_sanitize_settings_renames_guardian_setting(monkeypatch):

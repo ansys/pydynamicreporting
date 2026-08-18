@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 VersionKey = tuple[int, ...]
 ConditionFn = Callable[[dict, dict[str, VersionKey]], bool]
 TransformFn = Callable[[dict], dict]
+RuntimeCompatCleanup = Callable[[], None]
 _NUMPY_STRING_ALIAS_PRODUCT_VERSION = 261
 
 
@@ -70,26 +71,51 @@ def _normalize_version(version_string: str) -> VersionKey:
     return tuple(components)
 
 
-def apply_runtime_compatibility_shims(product_version: int) -> None:
+def _noop_runtime_compatibility_cleanup() -> None:
+    """Return a no-op cleanup callback when no shim was needed."""
+
+
+def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
     """Apply dependency API shims required by a supported ADR product version.
 
     ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
     that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
     NumPy scalar representations directly into inline JavaScript. Restore the
     alias and NumPy 1.25 print formatting before importing the product's Django
-    modules.
+    modules, and return a cleanup callback that restores the previous NumPy
+    process state when ADR is torn down.
     """
     if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
-        return
+        return _noop_runtime_compatibility_cleanup
 
     import numpy
 
+    cleanup_callbacks: list[RuntimeCompatCleanup] = []
     if not hasattr(numpy, "string_"):
         numpy.string_ = numpy.bytes_
         logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+        cleanup_callbacks.append(
+            lambda: (
+                delattr(numpy, "string_")
+                if getattr(numpy, "string_", None) is numpy.bytes_
+                else None
+            )
+        )
     if _normalize_version(numpy.__version__) >= (2, 0):
+        previous_legacy = numpy.get_printoptions().get("legacy", False)
         numpy.set_printoptions(legacy="1.25")
         logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+
+        cleanup_callbacks.append(lambda: numpy.set_printoptions(legacy=previous_legacy))
+
+    if not cleanup_callbacks:
+        return _noop_runtime_compatibility_cleanup
+
+    def _restore_runtime_compatibility() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
+
+    return _restore_runtime_compatibility
 
 
 def _guardian_monkey_patch_rename(overrides: dict) -> dict:

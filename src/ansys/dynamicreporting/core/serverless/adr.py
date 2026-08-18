@@ -49,7 +49,7 @@ import platform
 import shutil
 import sys
 import tempfile
-from typing import Any
+from typing import Any, Callable
 import uuid
 import warnings
 from collections.abc import Iterable
@@ -224,6 +224,7 @@ class ADR:
         self._request = request  # Used when ADR is embedded in a web server.
         self._session: Session | None = None
         self._dataset: Dataset | None = None
+        self._runtime_compat_restore: Callable[[], None] | None = None
         self._logger = get_logger(logfile)
         self._tmp_dirs: list[tempfile.TemporaryDirectory] = []
         self._in_memory = in_memory
@@ -616,163 +617,173 @@ class ADR:
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
         # Restore known NumPy aliases before importing the product's Django modules.
-        apply_runtime_compatibility_shims(self._ansys_version)
-
-        # Add the Nexus Django folder to sys.path and import settings.
+        self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
         try:
-            adr_path = (
-                self._ansys_installation / f"nexus{self._ansys_version}" / "django"
-            ).resolve(strict=True)
-            sys.path.append(str(adr_path))
-            from ceireports import settings_serverless
-        except (ImportError, OSError) as e:
-            raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
-
-        overrides = {}
-        for setting in dir(settings_serverless):
-            if setting.isupper():
-                overrides[setting] = getattr(settings_serverless, setting)
-
-        # Allow explicit override of DEBUG.
-        if self._debug is not None:
-            overrides["DEBUG"] = self._debug
-
-        # Override MEDIA_ROOT for serverless mode.
-        overrides["MEDIA_ROOT"] = str(self._media_directory)
-
-        # Configure static if a directory is provided.
-        if self._static_directory is not None:
-            # collect static files to this directory
-            overrides["STATIC_ROOT"] = str(self._static_directory)
-            # Replace STATICFILES_DIRS to only include the pre-collected directory
-            # from the Ansys installation.
-            source_static_dir = (
-                self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
-            )
-            if not source_static_dir.exists():
-                raise ImproperlyConfiguredError(
-                    f"The static files directory '{source_static_dir}' does not exist in the "
-                    "installation. Please check your Ansys installation and version."
-                )
-            overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
-
-        # Enforce relative media/static URLs.
-        if self._media_url is not None:
-            if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
-                raise ImproperlyConfiguredError(
-                    "The 'media_url' option must be a relative URL and start and end with a "
-                    "forward slash. Example: '/media/'"
-                )
-            overrides["MEDIA_URL"] = self._media_url
-
-        if self._static_url is not None:
-            if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
-                raise ImproperlyConfiguredError(
-                    "The 'static_url' option must be a relative URL and start and end with a "
-                    "forward slash. Example: '/static/'"
-                )
-            overrides["STATIC_URL"] = self._static_url
-
-        # Inject explicit database configuration if provided.
-        if self._databases:
-            if "default" not in self._databases:
-                raise ImproperlyConfiguredError(
-                    """The 'databases' option must be a dictionary of the following format with
-                    a "default" database specified.
-
-                {
-                    "default": {
-                        "ENGINE": "sqlite3",
-                        "NAME": os.path.join(local_db_dir, "db.sqlite3"),
-                        "USER": "user",
-                        "PASSWORD": "adr",
-                        "HOST": "",
-                        "PORT": "",
-                    }
-                    "remote": {
-                        "ENGINE": "postgresql",
-                        "NAME": "my_database",
-                        "USER": "user",
-                        "PASSWORD": "adr",
-                        "HOST": "127.0.0.1",
-                        "PORT": "5432",
-                    }
-                }
-                """
-                )
-            for db in self._databases:
-                engine = self._databases[db]["ENGINE"]
-                self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"
-            # replace the database config
-            overrides["DATABASES"] = self._databases
-
-        # In-memory media storage configuration (no on-disk files).
-        if self._in_memory:
-            overrides.update(
-                {
-                    "DEFAULT_FILE_STORAGE": "django.core.files.storage.InMemoryStorage",
-                    "FILE_UPLOAD_HANDLERS": [
-                        "django.core.files.uploadhandler.MemoryFileUploadHandler"
-                    ],
-                    "FILE_UPLOAD_MAX_MEMORY_SIZE": 1 * 10**9,  # 1 GB
-                }
-            )
-
-        # Work around Linux timezone issues when needed.
-        report_utils.apply_timezone_workaround()
-
-        # === Settings compatibility shim ===
-        overrides = sanitize_settings(overrides)
-
-        # Django settings + setup.
-        try:
-            from django.conf import settings
-
-            if not settings.configured:
-                import django
-
-                settings.configure(**overrides)
-                django.setup()
-        except ImproperlyConfigured as e:
-            self._logger.debug(
-                "Settings could not be configured during ADR setup.",
-                exc_info=True,
-            )
-            raise ImproperlyConfiguredError(extra_detail=str(e)) from e
-
-        # Run migrations.
-        database_config = self.get_database_config()
-        if database_config:
-            for db in database_config:
-                self._migrate_db(db)
-        elif self._db_directory is not None:
-            self._migrate_db("default")
-
-        # Geometry migration/update checks.
-        try:
-            from data.geofile_rendering import do_geometry_update_check
-
-            do_geometry_update_check(self._logger.info)
-        except Exception as e:
-            raise GeometryMigrationError(extra_detail=str(e))
-
-        # Optionally collect static files.
-        if collect_static:
-            if self._static_directory is None:
-                raise ImproperlyConfiguredError(
-                    "The 'static_directory' option must be specified to collect static files."
-                )
+            # Add the Nexus Django folder to sys.path and import settings.
             try:
-                call_command("collectstatic", "--no-input", "--verbosity", 0)
+                adr_path = (
+                    self._ansys_installation / f"nexus{self._ansys_version}" / "django"
+                ).resolve(strict=True)
+                sys.path.append(str(adr_path))
+                from ceireports import settings_serverless
+            except (ImportError, OSError) as e:
+                raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
+
+            overrides = {}
+            for setting in dir(settings_serverless):
+                if setting.isupper():
+                    overrides[setting] = getattr(settings_serverless, setting)
+
+            # Allow explicit override of DEBUG.
+            if self._debug is not None:
+                overrides["DEBUG"] = self._debug
+
+            # Override MEDIA_ROOT for serverless mode.
+            overrides["MEDIA_ROOT"] = str(self._media_directory)
+
+            # Configure static if a directory is provided.
+            if self._static_directory is not None:
+                # collect static files to this directory
+                overrides["STATIC_ROOT"] = str(self._static_directory)
+                # Replace STATICFILES_DIRS to only include the pre-collected directory
+                # from the Ansys installation.
+                source_static_dir = (
+                    self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
+                )
+                if not source_static_dir.exists():
+                    raise ImproperlyConfiguredError(
+                        f"The static files directory '{source_static_dir}' does not exist in the "
+                        "installation. Please check your Ansys installation and version."
+                    )
+                overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
+
+            # Enforce relative media/static URLs.
+            if self._media_url is not None:
+                if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
+                    raise ImproperlyConfiguredError(
+                        "The 'media_url' option must be a relative URL and start and end with a "
+                        "forward slash. Example: '/media/'"
+                    )
+                overrides["MEDIA_URL"] = self._media_url
+
+            if self._static_url is not None:
+                if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
+                    raise ImproperlyConfiguredError(
+                        "The 'static_url' option must be a relative URL and start and end with a "
+                        "forward slash. Example: '/static/'"
+                    )
+                overrides["STATIC_URL"] = self._static_url
+
+            # Inject explicit database configuration if provided.
+            if self._databases:
+                if "default" not in self._databases:
+                    raise ImproperlyConfiguredError(
+                        """The 'databases' option must be a dictionary of the following format with
+                        a "default" database specified.
+
+                    {
+                        "default": {
+                            "ENGINE": "sqlite3",
+                            "NAME": os.path.join(local_db_dir, "db.sqlite3"),
+                            "USER": "user",
+                            "PASSWORD": "adr",
+                            "HOST": "",
+                            "PORT": "",
+                        }
+                        "remote": {
+                            "ENGINE": "postgresql",
+                            "NAME": "my_database",
+                            "USER": "user",
+                            "PASSWORD": "adr",
+                            "HOST": "127.0.0.1",
+                            "PORT": "5432",
+                        }
+                    }
+                    """
+                    )
+                for db in self._databases:
+                    engine = self._databases[db]["ENGINE"]
+                    self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"
+                # replace the database config
+                overrides["DATABASES"] = self._databases
+
+            # In-memory media storage configuration (no on-disk files).
+            if self._in_memory:
+                overrides.update(
+                    {
+                        "DEFAULT_FILE_STORAGE": "django.core.files.storage.InMemoryStorage",
+                        "FILE_UPLOAD_HANDLERS": [
+                            "django.core.files.uploadhandler.MemoryFileUploadHandler"
+                        ],
+                        "FILE_UPLOAD_MAX_MEMORY_SIZE": 1 * 10**9,  # 1 GB
+                    }
+                )
+
+            # Work around Linux timezone issues when needed.
+            report_utils.apply_timezone_workaround()
+
+            # === Settings compatibility shim ===
+            overrides = sanitize_settings(overrides)
+
+            # Django settings + setup.
+            try:
+                from django.conf import settings
+
+                if not settings.configured:
+                    import django
+
+                    settings.configure(**overrides)
+                    django.setup()
+            except ImproperlyConfigured as e:
+                self._logger.debug(
+                    "Settings could not be configured during ADR setup.",
+                    exc_info=True,
+                )
+                raise ImproperlyConfiguredError(extra_detail=str(e)) from e
+
+            # Run migrations.
+            database_config = self.get_database_config()
+            if database_config:
+                for db in database_config:
+                    self._migrate_db(db)
+            elif self._db_directory is not None:
+                self._migrate_db("default")
+
+            # Geometry migration/update checks.
+            try:
+                from data.geofile_rendering import do_geometry_update_check
+
+                do_geometry_update_check(self._logger.info)
             except Exception as e:
-                raise StaticFilesCollectionError(extra_detail=str(e))
+                raise GeometryMigrationError(extra_detail=str(e))
 
-        # Mark setup as complete and create default session/dataset.
-        ADR._is_setup = True
+            # Optionally collect static files.
+            if collect_static:
+                if self._static_directory is None:
+                    raise ImproperlyConfiguredError(
+                        "The 'static_directory' option must be specified to collect static files."
+                    )
+                try:
+                    call_command("collectstatic", "--no-input", "--verbosity", 0)
+                except Exception as e:
+                    raise StaticFilesCollectionError(extra_detail=str(e))
 
-        # create session and dataset w/ defaults
-        self._session = Session.create()
-        self._dataset = Dataset.create()
+            # create session and dataset w/ defaults
+            self._session = Session.create()
+            self._dataset = Dataset.create()
+            ADR._is_setup = True
+        except Exception:
+            self._restore_runtime_compatibility_shims()
+            raise
+
+    def _restore_runtime_compatibility_shims(self) -> None:
+        """Restore any temporary process-wide compatibility shims."""
+        if self._runtime_compat_restore is None:
+            return
+
+        restore = self._runtime_compat_restore
+        self._runtime_compat_restore = None
+        restore()
 
     def close(self) -> None:
         """Close DB connections and clean up any temporary directories.
@@ -785,6 +796,8 @@ class ADR:
             connections.close_all()
         except DatabaseError:  # pragma: no cover
             pass
+
+        self._restore_runtime_compatibility_shims()
 
         # Clean up any TemporaryDirectory objects we created.
         for tmp_dir in self._tmp_dirs:

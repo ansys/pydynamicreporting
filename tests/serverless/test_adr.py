@@ -126,6 +126,25 @@ def test_get_counts_use_database_level_queries(monkeypatch):
     template_manager.filter.assert_called_once_with(parent=None)
 
 
+@pytest.mark.unit
+def test_close_restores_runtime_compatibility_callback(monkeypatch):
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    restore_calls: list[str] = []
+    adr = object.__new__(ADR)
+    adr._tmp_dirs = []
+    adr._logger = Mock()
+    adr._runtime_compat_restore = lambda: restore_calls.append("restored")
+    monkeypatch.setattr(adr_module.connections, "close_all", lambda: None)
+
+    adr.close()
+
+    assert restore_calls == ["restored"]
+    assert adr._runtime_compat_restore is None
+
+
 @pytest.mark.ado_test
 def test_get_instance(adr_serverless):
     assert ADR.get_instance() is adr_serverless
