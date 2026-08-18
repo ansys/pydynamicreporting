@@ -189,7 +189,7 @@ Highlights:
 - `requests`, `docker`, `Pillow`
 - Serverless stack: `django`, `djangorestframework`, `django-guardian`, `psycopg[binary]`
 - Data/analytics: `numpy`, `pandas`, `statsmodels`
-- Export/rendering: `python-pptx`, `weasyprint`, `django-weasyprint`
+- Export/rendering: `python-pptx`, `qtpy`, `playwright`
 
 ## Making changes (workflow)
 

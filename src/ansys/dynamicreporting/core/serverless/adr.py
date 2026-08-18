@@ -34,7 +34,7 @@ It is responsible for:
 * Managing default :class:`Session` and :class:`Dataset` instances.
 * Providing high-level helpers to create/query :class:`Item` and
   :class:`Template` objects.
-* Rendering and exporting reports to HTML, PDF, and PPTX.
+* Rendering and exporting reports to HTML, browser PDF, and PPTX.
 * Copying items/templates across databases and media directories.
 
 Typical usage involves creating a single :class:`ADR` instance, calling
@@ -1352,53 +1352,6 @@ class ADR:
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
 
-    def render_report_as_pdf(
-        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
-    ) -> bytes:
-        """Render a report as a PDF byte stream.
-
-        Parameters
-        ----------
-        context : dict, optional
-            Context to pass to the report template.
-        item_filter : str, optional
-            ADR filter applied to items in the report.
-        **kwargs : Any
-            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
-            At least one keyword argument must be provided to fetch the report.
-
-        Returns
-        -------
-        bytes
-            PDF document bytes (media type ``application/pdf``).
-
-        Raises
-        ------
-        ADRException
-            If no keyword arguments are provided or if the report rendering fails.
-
-        Examples
-        --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
-        >>> adr.setup()
-        >>> pdf_stream = adr.render_report_as_pdf(name="Serverless Simulation Report")
-        >>> with open("report.pdf", "wb") as f:
-        ...     f.write(pdf_stream)
-        """
-        if not kwargs:
-            raise ADRException(
-                "At least one keyword argument must be provided to fetch the report."
-            )
-        try:
-            return Template.get(**kwargs).render_pdf(
-                context=context,
-                item_filter=item_filter,
-                request=self._request,
-            )
-        except Exception as e:
-            raise ADRException(f"PDF Report rendering failed: {e}")
-
     def _resolve_browser_pdf_scratch_root(self) -> Path:
         """Return a writable root directory for browser-PDF scratch files.
 
@@ -1559,8 +1512,7 @@ class ADR:
     ) -> bytes:
         """Render a report as a browser-fidelity PDF byte stream via a headless browser.
 
-        Unlike ``render_report_as_pdf()`` which uses WeasyPrint (static CSS rendering),
-        this method produces PDF output that matches the on-screen browser appearance
+        This method produces PDF output that matches the on-screen browser appearance
         by rendering in a headless browser.
 
         Parameters
@@ -1815,65 +1767,6 @@ class ADR:
         self._logger.info(f"Successfully exported report to: {final_path}")
         return final_path
 
-    def export_report_as_pdf(
-        self,
-        *,
-        filename: str | Path = None,
-        context: dict | None = None,
-        item_filter: str = "",
-        **kwargs: Any,
-    ) -> None:
-        """Render a PDF report and write it to disk.
-
-        Parameters
-        ----------
-        filename : str or Path, optional
-            Target PDF filename. If omitted, use ``"<guid>.pdf"`` based
-            on the template GUID.
-        context : dict, optional
-            Context to pass to the report template.
-
-        item_filter : str, optional
-            ADR filter applied to items in the report.
-        **kwargs : Any
-            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
-            At least one keyword argument must be provided to fetch the report.
-
-        Returns
-        -------
-            None
-
-        Raises
-        ------
-        ADRException
-            If no keyword arguments are provided or if the report rendering fails.
-
-        Examples
-        --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
-        >>> adr.setup()
-        >>> adr.export_report_as_pdf(filename="report.pdf", name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
-        """
-        if not kwargs:
-            raise ADRException(
-                "At least one keyword argument must be provided to fetch the report."
-            )
-        template = Template.get(**kwargs)
-        try:
-            pdf_stream = template.render_pdf(
-                context=context,
-                item_filter=item_filter,
-                request=self._request,
-            )
-        except Exception as e:
-            raise ADRException(f"PDF Report rendering failed: {e}")
-
-        output_path = Path(filename) if filename else Path(f"{template.guid}.pdf")
-        with open(output_path, "wb") as f:
-            f.write(pdf_stream)
-        self._logger.info(f"Successfully exported report to: {output_path}")
-
     def export_report_as_browser_pdf(
         self,
         *,
@@ -1888,8 +1781,7 @@ class ADR:
     ) -> None:
         """Export a report as a browser-fidelity PDF file via a headless browser.
 
-        Unlike ``export_report_as_pdf()`` which uses WeasyPrint (static CSS rendering),
-        this method produces PDF output that matches the on-screen browser appearance
+        This method produces PDF output that matches the on-screen browser appearance
         by rendering in a headless browser.
 
         Parameters

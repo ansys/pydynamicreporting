@@ -26,8 +26,6 @@ dependencies = [
     "qtpy>=2.4.3,<2.5.0",
     "lark>=1.2.2,<1.3.0",
     "bleach>=6.2.0",
-    "django-weasyprint>=2.4.0,<2.5.0",
-    "weasyprint>=67.0",
     # Browser-PDF uses the Playwright browser package shipped by ADR; keep this pin
     # aligned with that product packaging source rather than a runtime version check.
     "playwright==1.60.0",
