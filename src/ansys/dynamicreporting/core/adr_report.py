@@ -765,7 +765,6 @@ class Report:
                 item_filter=item_filter,
                 filename=filename,
                 no_inline_files=no_inline_files,
-                ansys_version=self.service._ansys_version,
             )
             success = True
         except Exception as e:  # pragma: no cover

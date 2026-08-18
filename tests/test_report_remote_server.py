@@ -37,6 +37,7 @@ from ansys.dynamicreporting.core.compatibility import AUTO_DETECT_INSTALL_VERSIO
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import exceptions as e
+from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
@@ -341,6 +342,29 @@ def test_export_html_sets_html_print_query(monkeypatch) -> None:
     assert captured["no_inline_files"] is True
     assert captured["ansys_version"] == 252
     assert query == {"colormode": "dark"}
+
+
+def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatch) -> None:
+    """Use the connected v261 server's asset namespace over the client's installation."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+    captured: dict[str, object] = {}
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", lambda: {"ansys_version": "261"})
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    server._download_report_as_html_bundle(
+        report_guid="report-guid",
+        directory_name=tmp_path / "html-output",
+        query={"print": "html"},
+    )
+
+    assert captured["ansys_version"] == "261"
+    downloader.download.assert_called_once_with()
 
 
 def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> None:
