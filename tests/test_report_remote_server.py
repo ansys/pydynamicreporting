@@ -367,17 +367,20 @@ def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatc
     downloader.download.assert_called_once_with()
 
 
-def test_download_html_bundle_explicit_version_bypasses_api_probe(tmp_path, monkeypatch) -> None:
-    """Do not require ``/item/api_version/`` when the caller already supplied a version."""
+def test_download_html_bundle_explicit_version_ignores_api_probe_failure(
+    tmp_path, monkeypatch
+) -> None:
+    """Keep the explicit asset namespace when the best-effort probe fails."""
     server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
     downloader = Mock()
     captured: dict[str, object] = {}
+    probe = Mock(side_effect=RuntimeError("api down"))
 
     def fake_report_download_html(**kwargs):
         captured.update(kwargs)
         return downloader
 
-    monkeypatch.setattr(server, "get_api_version", Mock(side_effect=RuntimeError("api down")))
+    monkeypatch.setattr(server, "get_api_version", probe)
     monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
 
     server._download_report_as_html_bundle(
@@ -388,6 +391,38 @@ def test_download_html_bundle_explicit_version_bypasses_api_probe(tmp_path, monk
     )
 
     assert captured["ansys_version"] == 252
+    probe.assert_called_once_with()
+    downloader.download.assert_called_once_with()
+
+
+def test_download_html_bundle_warns_on_explicit_version_mismatch(
+    tmp_path, monkeypatch, caplog
+) -> None:
+    """Warn when the caller forces a different asset namespace than the server advertises."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+    captured: dict[str, object] = {}
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", lambda: {"ansys_version": "261"})
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    with caplog.at_level(logging.WARNING, logger="ansys.dynamicreporting.core"):
+        server._download_report_as_html_bundle(
+            report_guid="report-guid",
+            directory_name=tmp_path / "html-output",
+            query={"print": "html"},
+            ansys_version=252,
+        )
+
+    assert captured["ansys_version"] == 252
+    assert (
+        "Explicit HTML export ansys_version 252 does not match connected server version 261"
+        in caplog.text
+    )
     downloader.download.assert_called_once_with()
 
 

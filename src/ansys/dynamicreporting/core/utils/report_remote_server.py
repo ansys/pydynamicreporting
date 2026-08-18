@@ -963,6 +963,25 @@ class Server:
             # downloader rewrites static asset paths against the same product
             # namespace the report was generated with.
             resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
+        else:
+            # Best-effort UX: keep the explicit override as the source of truth,
+            # but warn when the connected server advertises a different asset
+            # namespace.  Ignore probe failures because the override exists to
+            # support cases where /item/api_version/ is unavailable or wrong.
+            try:
+                connected_ansys_version = self.get_api_version().get("ansys_version")
+            except Exception:
+                connected_ansys_version = None
+            if (
+                connected_ansys_version is not None
+                and str(connected_ansys_version) != str(resolved_ansys_version)
+            ):
+                logger.warning(
+                    "Explicit HTML export ansys_version %s does not match connected "
+                    "server version %s; continuing with the override.",
+                    resolved_ansys_version,
+                    connected_ansys_version,
+                )
 
         worker = ReportDownloadHTML(
             url=url,
