@@ -20,9 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import importlib
+import os
+import sys
+import uuid
 from pathlib import Path
 from random import random as r
-import uuid
 
 import numpy as np
 import pytest
@@ -34,6 +37,87 @@ from ansys.dynamicreporting.core.exceptions import (
     InvalidPath,
 )
 from ansys.dynamicreporting.core.serverless import ADR
+
+
+def _enve_modules() -> dict[str, object]:
+    """Return the modules associated with optional native ``enve`` loading."""
+    return {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "enve" or name == "enve_common" or name.startswith("enve_common.")
+    }
+
+
+@pytest.mark.unit
+def test_import_enve_uses_later_candidate_after_import_failure(tmp_path, monkeypatch):
+    """A failed native candidate must not prevent a later one from loading."""
+    bad_candidate = tmp_path / "bad_candidate"
+    bad_package = bad_candidate / "enve_common"
+    bad_package.mkdir(parents=True)
+    (bad_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = "bad_candidate"\n'
+        'raise ImportError("broken native extension")\n'
+    )
+
+    good_candidate = tmp_path / "good_candidate"
+    good_package = good_candidate / "enve_common"
+    good_package.mkdir(parents=True)
+    (good_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = __path__[0]\nfrom . import enve\n'
+    )
+    (good_package / "enve.py").write_text('ORIGIN = "good_candidate"\n')
+
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+    importlib.invalidate_caches()
+
+    try:
+        assert ADR._import_enve([bad_candidate, good_candidate]) is None
+        assert sys.path[0] == str(good_candidate)
+        assert str(bad_candidate) not in sys.path
+        assert sys.modules["enve_common.enve"].ORIGIN == "good_candidate"
+        assert os.environ["CEI_UDILPATH"] == str(good_package)
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
+def test_import_enve_restores_state_when_every_candidate_fails(tmp_path, monkeypatch):
+    """A failed native candidate must not leave its package state behind."""
+    bad_candidate = tmp_path / "bad_candidate"
+    bad_package = bad_candidate / "enve_common"
+    bad_package.mkdir(parents=True)
+    (bad_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = "bad_candidate"\n'
+        'raise ImportError("broken native extension")\n'
+    )
+
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    isolated_path = [str(tmp_path)]
+    monkeypatch.setattr(sys, "path", isolated_path)
+    importlib.invalidate_caches()
+
+    try:
+        error = ADR._import_enve([bad_candidate])
+
+        assert isinstance(error, ImportError)
+        assert sys.path == isolated_path
+        assert _enve_modules() == {}
+        assert "CEI_UDILPATH" not in os.environ
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        importlib.invalidate_caches()
 
 
 @pytest.mark.ado_test

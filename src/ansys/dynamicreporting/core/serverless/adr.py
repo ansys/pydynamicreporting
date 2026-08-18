@@ -43,6 +43,7 @@ templates, and report exports.
 """
 
 import copy
+import importlib
 import json
 import os
 import platform
@@ -506,6 +507,78 @@ class ADR:
         if cls._instance is None or not cls._is_setup:
             raise RuntimeError("ADR has not been set up. Instantiate ADR first and call setup().")
 
+    @staticmethod
+    def _import_enve(candidate_paths: Iterable[Path]) -> ImportError | None:
+        """Import the optional ``enve`` module from available product paths.
+
+        A failed native-module import can leave a partially initialized
+        ``enve_common`` package, its directory on ``sys.path``, and a
+        ``CEI_UDILPATH`` environment setting. Restore those between candidates
+        so that one unusable product installation does not prevent a later
+        compatible candidate from loading.
+
+        Parameters
+        ----------
+        candidate_paths : Iterable[Path]
+            Product directories that might contain the ``enve_common`` package
+            or a directly importable ``enve`` module.
+
+        Returns
+        -------
+        ImportError | None
+            The final import error when an available candidate cannot load
+            ``enve``; otherwise, ``None``.
+        """
+        try:
+            importlib.import_module("enve")
+        except ImportError as error:
+            last_error = error
+        else:
+            return None
+
+        tried_candidate = False
+        for path in candidate_paths:
+            if not path.is_dir():
+                continue
+
+            tried_candidate = True
+            original_sys_path = sys.path.copy()
+            original_udi_path = os.environ.get("CEI_UDILPATH")
+            original_modules = {
+                name: module
+                for name, module in sys.modules.items()
+                if name == "enve" or name == "enve_common" or name.startswith("enve_common.")
+            }
+            for name in original_modules:
+                sys.modules.pop(name, None)
+
+            sys.path.insert(0, str(path))
+            try:
+                # Newer product packaging exposes enve as a submodule.
+                importlib.import_module("enve_common.enve")
+            except ImportError:
+                try:
+                    # Older product packaging exposes enve directly.
+                    importlib.import_module("enve")
+                except ImportError as error:
+                    last_error = error
+                else:
+                    return None
+            else:
+                return None
+
+            sys.path[:] = original_sys_path
+            for name in tuple(sys.modules):
+                if name == "enve" or name == "enve_common" or name.startswith("enve_common."):
+                    sys.modules.pop(name)
+            sys.modules.update(original_modules)
+            if original_udi_path is None:
+                os.environ.pop("CEI_UDILPATH", None)
+            else:
+                os.environ["CEI_UDILPATH"] = original_udi_path
+
+        return last_error if tried_candidate else None
+
     def setup(self, collect_static: bool = False) -> None:
         """Configure perform ADR initialization.
 
@@ -542,77 +615,53 @@ class ADR:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
 
         # Try to import 'enve', optionally adding paths based on installation layout.
-        try:
-            import enve  # type: ignore[unused-ignore]
-        except ImportError:
-            # On Windows/Linux, attempt known Ansys paths.
-            if platform.system().lower().startswith("win"):
-                dirs_to_check = [
-                    # Windows path from commonfiles
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "ensight_components"
-                    / "winx64",
-                    # Old Windows path
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "fluids"
-                    / "ensight_components"
-                    / "winx64",
-                    # Windows path from apex folder (new ADR layout)
-                    self._ansys_installation
-                    / f"apex{self._ansys_version}"
-                    / "machines"
-                    / "win64"
-                    / "CEI",
-                    # Windows path from apex folder (legacy CEI layout, same subdir name)
-                    # Note: the inner "CEI" directory under machines/ is unchanged
-                    # in both old and new layouts.
-                ]
-            else:  # Linux
-                dirs_to_check = [
-                    # Linux path from commonfiles
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "ensight_components"
-                    / "linx64",
-                    # Old Linux path
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "fluids"
-                    / "ensight_components"
-                    / "linx64",
-                    # Linux path from apex folder (the inner 'CEI' directory
-                    # under machines/ is unchanged in both ADR and CEI layouts)
-                    self._ansys_installation
-                    / f"apex{self._ansys_version}"
-                    / "machines"
-                    / "linux_2.6_64"
-                    / "CEI",
-                ]
+        if platform.system().lower().startswith("win"):
+            dirs_to_check = [
+                # Windows path from commonfiles
+                self._ansys_installation.parent / "commonfiles" / "ensight_components" / "winx64",
+                # Old Windows path
+                self._ansys_installation.parent
+                / "commonfiles"
+                / "fluids"
+                / "ensight_components"
+                / "winx64",
+                # Windows path from apex folder (new ADR layout)
+                self._ansys_installation
+                / f"apex{self._ansys_version}"
+                / "machines"
+                / "win64"
+                / "CEI",
+                # Windows path from apex folder (legacy CEI layout, same subdir name)
+                # Note: the inner "CEI" directory under machines/ is unchanged
+                # in both old and new layouts.
+            ]
+        else:  # Linux
+            dirs_to_check = [
+                # Linux path from commonfiles
+                self._ansys_installation.parent / "commonfiles" / "ensight_components" / "linx64",
+                # Old Linux path
+                self._ansys_installation.parent
+                / "commonfiles"
+                / "fluids"
+                / "ensight_components"
+                / "linx64",
+                # Linux path from apex folder (the inner 'CEI' directory
+                # under machines/ is unchanged in both ADR and CEI layouts)
+                self._ansys_installation
+                / f"apex{self._ansys_version}"
+                / "machines"
+                / "linux_2.6_64"
+                / "CEI",
+            ]
 
-            module_found = False
-            for path in dirs_to_check:
-                if path.is_dir():
-                    sys.path.append(str(path))
-                    module_found = True
-                    break
-
-            if module_found:
-                try:
-                    # Newer packaging style.
-                    from enve_common import enve  # type: ignore[unused-ignore]
-                except ImportError:
-                    try:
-                        # Fallback to direct import.
-                        import enve  # type: ignore[unused-ignore]
-                    except ImportError as e:
-                        msg = (
-                            "Failed to import 'enve' from the Ansys installation. "
-                            f"Animations may not render correctly: {e}"
-                        )
-                        self._logger.warning(msg)
-                        warnings.warn(msg, ImportWarning)
+        enve_error = self._import_enve(dirs_to_check)
+        if enve_error is not None:
+            msg = (
+                "Failed to import 'enve' from the Ansys installation. "
+                f"Animations may not render correctly: {enve_error}"
+            )
+            self._logger.warning(msg)
+            warnings.warn(msg, ImportWarning)
 
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
@@ -630,6 +679,7 @@ class ADR:
         self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
         try:
             from ceireports import settings_serverless
+
             overrides = {}
             for setting in dir(settings_serverless):
                 if setting.isupper():
