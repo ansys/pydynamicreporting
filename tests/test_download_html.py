@@ -55,7 +55,35 @@ def test_downloads_legacy_context_menu_assets_for_v261(tmp_path) -> None:
         context_menu_path,
         context_menu_path.lstrip("/"),
         "legacy viewer context-menu assets",
+        warn_on_missing=True,
     )
+
+
+def test_reports_missing_legacy_context_menu_assets_for_v261(tmp_path) -> None:
+    """Warn when a v261 server omits part of the restored legacy asset set."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/",
+        directory=str(tmp_path),
+        ansys_version=261,
+    )
+    available_file = CONTEXT_MENU_JS[0]
+
+    def _get_side_effect(url, **kwargs):
+        if url.endswith(available_file):
+            return _make_response(requests.codes.ok, content=available_file.encode("utf-8"))
+        return _make_response(404)
+
+    with patch("requests.get", side_effect=_get_side_effect):
+        with patch("builtins.print") as mock_print:
+            downloader._download_legacy_context_menu_assets()
+
+    copied_file = tmp_path / "ansys261/nexus/novnc/vendor/jQuery-contextMenu" / available_file
+    assert copied_file.read_bytes() == available_file.encode("utf-8")
+    printed_output = "\n".join(
+        " ".join(str(arg) for arg in call.args) for call in mock_print.call_args_list
+    )
+    for filename in CONTEXT_MENU_JS[1:]:
+        assert filename in printed_output
 
 
 def test_skips_legacy_context_menu_assets_for_newer_products(tmp_path) -> None:

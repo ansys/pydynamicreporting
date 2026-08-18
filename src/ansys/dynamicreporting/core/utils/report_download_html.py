@@ -373,9 +373,12 @@ class ReportDownloadHTML:
             context_menu_path,
             context_menu_path.lstrip("/"),
             "legacy viewer context-menu assets",
+            warn_on_missing=True,
         )
 
-    def _download_static_files(self, files, source_path, target_path, comment):
+    def _download_static_files(
+        self, files, source_path, target_path, comment, *, warn_on_missing: bool = False
+    ):
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
@@ -395,6 +398,8 @@ class ReportDownloadHTML:
                     self._write_binary_file(filename, data)
                 except Exception as e:
                     print(f"Unable to download {comment}: {f}\nError: {e}")
+            elif warn_on_missing:
+                print(f"Unable to get {comment}: {url} ({resp.status_code})")
 
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
