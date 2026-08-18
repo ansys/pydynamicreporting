@@ -194,7 +194,7 @@ def test_copies_legacy_context_menu_assets_when_available(tmp_path: Path):
         assert copied_file.read_text(encoding="utf-8") == filename
 
 
-def test_silently_skips_incomplete_legacy_context_menu_assets(
+def test_warns_for_incomplete_legacy_context_menu_assets(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
     exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
@@ -206,10 +206,12 @@ def test_silently_skips_incomplete_legacy_context_menu_assets(
     exporter._copy_legacy_context_menu_assets()
 
     assert (exporter._output_dir / context_menu_path / available_file).is_file()
-    assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in CONTEXT_MENU_JS[1:]:
+        assert any(filename in message for message in warning_messages)
 
 
-def test_silently_skips_missing_v261_legacy_context_menu_directory(
+def test_warns_when_v261_legacy_context_menu_directory_is_missing(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
     exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
@@ -218,7 +220,9 @@ def test_silently_skips_missing_v261_legacy_context_menu_directory(
     exporter._copy_legacy_context_menu_assets()
 
     assert not (exporter._output_dir / "ansys261/nexus/novnc").exists()
-    assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in CONTEXT_MENU_JS:
+        assert any(filename in message for message in warning_messages)
 
 
 def test_skips_missing_legacy_context_menu_assets_for_newer_products(
