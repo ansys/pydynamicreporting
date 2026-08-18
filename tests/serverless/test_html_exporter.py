@@ -30,7 +30,12 @@ from unittest.mock import patch
 import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
-from ansys.dynamicreporting.core.utils.html_export_constants import CONTEXT_MENU_JS
+
+LEGACY_CONTEXT_MENU_FILES = (
+    "jquery.contextMenu.min.css",
+    "jquery.contextMenu.min.js",
+    "jquery.ui.position.min.js",
+)
 
 # ----------------------------
 # helpers
@@ -184,12 +189,12 @@ def test_copies_legacy_context_menu_assets_when_available(tmp_path: Path):
     exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
     context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
 
-    for filename in CONTEXT_MENU_JS:
+    for filename in LEGACY_CONTEXT_MENU_FILES:
         _write(exporter._static_dir / context_menu_path / filename, filename)
 
     exporter._copy_legacy_context_menu_assets()
 
-    for filename in CONTEXT_MENU_JS:
+    for filename in LEGACY_CONTEXT_MENU_FILES:
         copied_file = exporter._output_dir / context_menu_path / filename
         assert copied_file.read_text(encoding="utf-8") == filename
 
@@ -199,7 +204,7 @@ def test_warns_for_incomplete_legacy_context_menu_assets(
 ):
     exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
     context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
-    available_file = CONTEXT_MENU_JS[0]
+    available_file = LEGACY_CONTEXT_MENU_FILES[0]
     _write(exporter._static_dir / context_menu_path / available_file, available_file)
     caplog.set_level(logging.WARNING)
 
@@ -207,7 +212,7 @@ def test_warns_for_incomplete_legacy_context_menu_assets(
 
     assert (exporter._output_dir / context_menu_path / available_file).is_file()
     warning_messages = [record.getMessage() for record in caplog.records]
-    for filename in CONTEXT_MENU_JS[1:]:
+    for filename in LEGACY_CONTEXT_MENU_FILES[1:]:
         assert any(filename in message for message in warning_messages)
 
 
@@ -221,7 +226,7 @@ def test_warns_when_v261_legacy_context_menu_directory_is_missing(
 
     assert not (exporter._output_dir / "ansys261/nexus/novnc").exists()
     warning_messages = [record.getMessage() for record in caplog.records]
-    for filename in CONTEXT_MENU_JS:
+    for filename in LEGACY_CONTEXT_MENU_FILES:
         assert any(filename in message for message in warning_messages)
 
 
@@ -235,6 +240,55 @@ def test_skips_missing_legacy_context_menu_assets_for_newer_products(
 
     assert not (exporter._output_dir / "ansys271/nexus/novnc").exists()
     assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
+
+
+def test_copy_special_files_wires_v261_legacy_context_menu_assets(tmp_path: Path, monkeypatch):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    copied_paths: list[tuple[str, str, bool]] = []
+
+    monkeypatch.setattr(exporter, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(exporter, "_copy_mathjax_files", lambda *args, **kwargs: None)
+
+    def _record_copy(source_rel_path: str, target_rel_path: str, silent: bool = False):
+        copied_paths.append((source_rel_path, target_rel_path, silent))
+
+    monkeypatch.setattr(exporter, "_copy_static_file", _record_copy)
+
+    exporter._copy_special_files()
+
+    actual_context_menu_copies = {
+        call for call in copied_paths if "jQuery-contextMenu" in call[0]
+    }
+    expected_context_menu_copies = {
+        (
+            f"ansys261/nexus/novnc/vendor/jQuery-contextMenu/{filename}",
+            f"ansys261/nexus/novnc/vendor/jQuery-contextMenu/{filename}",
+            False,
+        )
+        for filename in LEGACY_CONTEXT_MENU_FILES
+    }
+    assert actual_context_menu_copies == expected_context_menu_copies
+
+
+def test_copy_special_files_skips_legacy_context_menu_assets_for_newer_products(
+    tmp_path: Path, monkeypatch
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    copied_paths: list[tuple[str, str, bool]] = []
+
+    monkeypatch.setattr(exporter, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(exporter, "_copy_mathjax_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        exporter,
+        "_copy_static_file",
+        lambda source_rel_path, target_rel_path, silent=False: copied_paths.append(
+            (source_rel_path, target_rel_path, silent)
+        ),
+    )
+
+    exporter._copy_special_files()
+
+    assert not any("jQuery-contextMenu" in source for source, _, _ in copied_paths)
 
 
 def test_make_output_dirs_creates_v261_legacy_context_menu_directory(tmp_path: Path):

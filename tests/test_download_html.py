@@ -28,9 +28,14 @@ import requests
 from ansys.dynamicreporting.core.compatibility import DEFAULT_STATIC_ASSET_VERSION
 from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils.html_export_constants import (
-    CONTEXT_MENU_JS,
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
+)
+
+LEGACY_CONTEXT_MENU_FILES = (
+    "jquery.contextMenu.min.css",
+    "jquery.contextMenu.min.js",
+    "jquery.ui.position.min.js",
 )
 
 
@@ -42,21 +47,35 @@ def test_download_defaults_to_bundled_asset_namespace() -> None:
     assert downloader._ansys_version == DEFAULT_STATIC_ASSET_VERSION
 
 
-def test_downloads_legacy_context_menu_assets_for_v261(tmp_path) -> None:
-    """Keep the v261 viewer's context-menu dependencies in downloaded HTML exports."""
+def test_download_special_files_wires_v261_legacy_context_menu_assets(
+    tmp_path, monkeypatch
+) -> None:
+    """Keep the v261 context-menu requests wired into the full special-file flow."""
     downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=261)
+    download_calls: list[tuple[tuple[str, ...], str, str, str, bool]] = []
 
-    with patch.object(downloader, "_download_static_files") as download_static_files:
-        downloader._download_legacy_context_menu_assets()
+    monkeypatch.setattr(downloader, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(downloader, "_download_mathjax_files", lambda *args, **kwargs: None)
 
-    context_menu_path = "/ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
-    download_static_files.assert_called_once_with(
-        CONTEXT_MENU_JS,
-        context_menu_path,
-        context_menu_path.lstrip("/"),
-        "legacy viewer context-menu assets",
-        warn_on_missing=True,
-    )
+    def _record_download(files, source_path, target_path, comment, *, warn_on_missing=False):
+        download_calls.append((tuple(files), source_path, target_path, comment, warn_on_missing))
+
+    monkeypatch.setattr(downloader, "_download_static_files", _record_download)
+
+    downloader._download_special_files()
+
+    actual_context_menu_calls = [
+        call for call in download_calls if "jQuery-contextMenu" in call[1]
+    ]
+    assert actual_context_menu_calls == [
+        (
+            LEGACY_CONTEXT_MENU_FILES,
+            "/ansys261/nexus/novnc/vendor/jQuery-contextMenu/",
+            "ansys261/nexus/novnc/vendor/jQuery-contextMenu/",
+            "legacy viewer context-menu assets",
+            True,
+        )
+    ]
 
 
 def test_reports_missing_legacy_context_menu_assets_for_v261(tmp_path) -> None:
@@ -66,7 +85,7 @@ def test_reports_missing_legacy_context_menu_assets_for_v261(tmp_path) -> None:
         directory=str(tmp_path),
         ansys_version=261,
     )
-    available_file = CONTEXT_MENU_JS[0]
+    available_file = LEGACY_CONTEXT_MENU_FILES[0]
 
     def _get_side_effect(url, **kwargs):
         if url.endswith(available_file):
@@ -82,18 +101,30 @@ def test_reports_missing_legacy_context_menu_assets_for_v261(tmp_path) -> None:
     printed_output = "\n".join(
         " ".join(str(arg) for arg in call.args) for call in mock_print.call_args_list
     )
-    for filename in CONTEXT_MENU_JS[1:]:
+    for filename in LEGACY_CONTEXT_MENU_FILES[1:]:
         assert filename in printed_output
 
 
-def test_skips_legacy_context_menu_assets_for_newer_products(tmp_path) -> None:
+def test_download_special_files_skip_legacy_context_menu_assets_for_newer_products(
+    tmp_path, monkeypatch
+) -> None:
     """Avoid obsolete noVNC asset requests for product versions after v261."""
     downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=271)
+    download_calls: list[tuple[tuple[str, ...], str, str, str, bool]] = []
 
-    with patch.object(downloader, "_download_static_files") as download_static_files:
-        downloader._download_legacy_context_menu_assets()
+    monkeypatch.setattr(downloader, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(downloader, "_download_mathjax_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        downloader,
+        "_download_static_files",
+        lambda files, source_path, target_path, comment, *, warn_on_missing=False: download_calls.append(
+            (tuple(files), source_path, target_path, comment, warn_on_missing)
+        ),
+    )
 
-    download_static_files.assert_not_called()
+    downloader._download_special_files()
+
+    assert not any("jQuery-contextMenu" in source_path for _, source_path, _, _, _ in download_calls)
 
 
 def test_download_precreates_legacy_context_menu_directory_for_v261(tmp_path) -> None:
