@@ -305,6 +305,14 @@ class ReportDownloadHTML:
             data = data.replace(
                 f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
             )
+            data = data.replace(
+                f"'/ansys{ansys_version}/nexus/threejs/libs/draco/'",
+                f"'./ansys{ansys_version}//nexus/threejs/libs/draco/'",
+            )
+            data = data.replace(
+                f'"/ansys{ansys_version}/nexus/threejs/libs/draco/"',
+                f'"./ansys{ansys_version}//nexus/threejs/libs/draco/"',
+            )
             data = data.encode("utf-8")
         return data
 

@@ -246,6 +246,15 @@ def test_make_output_dirs_creates_v261_legacy_context_menu_directory(tmp_path: P
     assert (exporter._output_dir / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
 
 
+def test_fix_viewer_component_paths_rewrites_draco_decoder_root(tmp_path: Path):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    source = b"dracoLoader.setDecoderPath('/ansys271/nexus/threejs/libs/draco/');"
+
+    patched = exporter._fix_viewer_component_paths("viewer-loader.js", source).decode("utf-8")
+
+    assert "dracoLoader.setDecoderPath('./ansys271//nexus/threejs/libs/draco/');" in patched
+
+
 @pytest.mark.ado_test
 def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
     static_dir = Path(adr_serverless.static_directory)

@@ -105,6 +105,16 @@ def test_download_precreates_legacy_context_menu_directory_for_v261(tmp_path) ->
     assert (tmp_path / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
 
 
+def test_fix_viewer_component_paths_rewrites_draco_decoder_root() -> None:
+    source = b"dracoLoader.setDecoderPath('/ansys271/nexus/threejs/libs/draco/');"
+
+    patched = rd.ReportDownloadHTML.fix_viewer_component_paths(
+        "viewer-loader.js", source, "271"
+    ).decode("utf-8")
+
+    assert "dracoLoader.setDecoderPath('./ansys271//nexus/threejs/libs/draco/');" in patched
+
+
 def test_download_use_data(request, adr_service_query) -> None:
     test_dir = join(join(request.fspath.dirname, "test_data"), "test_html_ext")
     my_url = "http://localhost:" + str(adr_service_query._port)
