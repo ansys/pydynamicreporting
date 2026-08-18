@@ -31,6 +31,7 @@ from ..adr_utils import get_logger
 # Import the shared constants and file lists
 from ..utils.html_export_constants import (
     CONTEXT_MENU_JS,
+    CONTEXT_MENU_PATH,
     DRACO_JS,
     FONTS,
     MATHJAX_2X_FILES,
@@ -427,25 +428,20 @@ class ServerlessReportExporter:
 
     def _copy_legacy_context_menu_assets(self) -> None:
         """Copy context-menu files required by older viewer loaders when available."""
-        context_menu_path = f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/"
-        context_menu_dir = self._static_dir / context_menu_path
-        # ADR 26.1's viewer loader still requests these noVNC-era files. ADR
-        # 27.1 no longer ships the directory, so skip the dependency set for
-        # newer products. Keep v261's per-file warnings for both partial and
-        # entirely absent legacy trees, matching the pre-vnc-removal behavior.
-        if not context_menu_dir.is_dir() and str(self._ansys_version) != "261":
-            return
-
+        context_menu_path = f"ansys{self._ansys_version}/{CONTEXT_MENU_PATH}/"
         self._copy_static_files(
             CONTEXT_MENU_JS,
             context_menu_path,
             context_menu_path,
+            silent=True,
         )
 
-    def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
+    def _copy_static_files(
+        self, files: list[str], source_prefix: str, target_prefix: str, *, silent: bool = False
+    ):
         """Helper to copy a list of files using prefixes."""
         for f in files:
-            self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f)
+            self._copy_static_file(source_prefix.lstrip("/") + f, target_prefix + f, silent=silent)
 
     def _make_unique_basename(self, name: str) -> str:
         """Ensures a unique filename in the target media directory to avoid collisions (legacy)."""
@@ -708,9 +704,7 @@ class ServerlessReportExporter:
         if str(self._ansys_version) == "261":
             # Preserve the pre-vnc-removal export layout even if the source
             # installation has an incomplete legacy context-menu tree.
-            common_directories.append(
-                f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu"
-            )
+            common_directories.append(f"ansys{self._ansys_version}/{CONTEXT_MENU_PATH}")
 
         for d in common_directories:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)

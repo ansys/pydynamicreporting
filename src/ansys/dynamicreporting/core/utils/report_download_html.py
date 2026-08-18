@@ -31,6 +31,7 @@ import requests
 from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
 from .html_export_constants import (
     CONTEXT_MENU_JS,
+    CONTEXT_MENU_PATH,
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
     MATHJAX_OPTIONAL_FILES,
@@ -366,7 +367,7 @@ class ReportDownloadHTML:
         if self._ansys_version != "261":
             return
 
-        context_menu_path = f"/ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/"
+        context_menu_path = f"/ansys{self._ansys_version}/{CONTEXT_MENU_PATH}/"
         self._download_static_files(
             CONTEXT_MENU_JS,
             context_menu_path,
@@ -710,10 +711,7 @@ class ReportDownloadHTML:
                 [
                     self._directory,
                     f"ansys{self._ansys_version}",
-                    "nexus",
-                    "novnc",
-                    "vendor",
-                    "jQuery-contextMenu",
+                    *CONTEXT_MENU_PATH.split("/"),
                 ]
             )
 
