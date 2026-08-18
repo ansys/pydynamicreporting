@@ -70,8 +70,10 @@ def _make_exporter_for_mathjax_detection(
     )
 
 
-def _make_exporter_for_legacy_context_menu_assets(tmp_path: Path) -> ServerlessReportExporter:
-    """Build a v261 exporter for context-menu asset tests."""
+def _make_exporter_for_legacy_context_menu_assets(
+    tmp_path: Path, *, ansys_version: str = "261"
+) -> ServerlessReportExporter:
+    """Build an exporter for legacy context-menu asset tests."""
     return ServerlessReportExporter(
         html_content="<div/>",
         output_dir=tmp_path / "out",
@@ -79,7 +81,7 @@ def _make_exporter_for_legacy_context_menu_assets(tmp_path: Path) -> ServerlessR
         media_dir=tmp_path / "media",
         static_url="/static/",
         media_url="/media/",
-        ansys_version="261",
+        ansys_version=ansys_version,
     )
 
 
@@ -209,13 +211,39 @@ def test_warns_for_incomplete_legacy_context_menu_assets(
         assert any(filename in message for message in warning_messages)
 
 
-def test_skips_missing_legacy_context_menu_assets(tmp_path: Path, caplog):
+def test_warns_when_v261_legacy_context_menu_directory_is_missing(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
     exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    caplog.set_level(logging.WARNING)
 
     exporter._copy_legacy_context_menu_assets()
 
     assert not (exporter._output_dir / "ansys261/nexus/novnc").exists()
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in CONTEXT_MENU_JS:
+        assert any(filename in message for message in warning_messages)
+
+
+def test_skips_missing_legacy_context_menu_assets_for_newer_products(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert not (exporter._output_dir / "ansys271/nexus/novnc").exists()
     assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
+
+
+def test_make_output_dirs_creates_v261_legacy_context_menu_directory(tmp_path: Path):
+    """Preserve the v261 directory layout even without legacy source assets."""
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+
+    exporter._make_output_dirs()
+
+    assert (exporter._output_dir / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
 
 
 @pytest.mark.ado_test

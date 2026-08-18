@@ -430,10 +430,10 @@ class ServerlessReportExporter:
         context_menu_path = f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/"
         context_menu_dir = self._static_dir / context_menu_path
         # ADR 26.1's viewer loader still requests these noVNC-era files. ADR
-        # 27.1 no longer ships the directory, so skip it only when the whole
-        # dependency set is inapplicable. A partial legacy directory should
-        # still warn about individual files that are missing.
-        if not context_menu_dir.is_dir():
+        # 27.1 no longer ships the directory, so skip the dependency set for
+        # newer products. Keep v261's per-file warnings for both partial and
+        # entirely absent legacy trees, matching the pre-vnc-removal behavior.
+        if not context_menu_dir.is_dir() and str(self._ansys_version) != "261":
             return
 
         self._copy_static_files(
@@ -698,11 +698,19 @@ class ServerlessReportExporter:
                 (self._output_dir / d).mkdir(parents=True, exist_ok=True)
 
         # Common directories (always created regardless of MathJax version)
-        for d in [
+        common_directories = [
             "webfonts",
             # Viewer
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
-        ]:
+        ]
+        if str(self._ansys_version) == "261":
+            # Preserve the pre-vnc-removal export layout even if the source
+            # installation has an incomplete legacy context-menu tree.
+            common_directories.append(
+                f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu"
+            )
+
+        for d in common_directories:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)

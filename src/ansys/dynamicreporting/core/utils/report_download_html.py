@@ -703,6 +703,19 @@ class ReportDownloadHTML:
                 "gltf",
             ]
         )
+        if self._ansys_version == "261":
+            # Preserve the pre-vnc-removal export layout even if an incomplete
+            # v261 server cannot provide every legacy context-menu file.
+            self._make_dir(
+                [
+                    self._directory,
+                    f"ansys{self._ansys_version}",
+                    "nexus",
+                    "novnc",
+                    "vendor",
+                    "jQuery-contextMenu",
+                ]
+            )
 
     def _download(self):
         self._filemap = dict()

@@ -68,6 +68,15 @@ def test_skips_legacy_context_menu_assets_for_newer_products(tmp_path) -> None:
     download_static_files.assert_not_called()
 
 
+def test_download_precreates_legacy_context_menu_directory_for_v261(tmp_path) -> None:
+    """Retain the v261 output layout even when no legacy assets are downloaded."""
+    downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=261)
+
+    downloader._make_output_dirs("unknown")
+
+    assert (tmp_path / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
+
+
 def test_download_use_data(request, adr_service_query) -> None:
     test_dir = join(join(request.fspath.dirname, "test_data"), "test_html_ext")
     my_url = "http://localhost:" + str(adr_service_query._port)
