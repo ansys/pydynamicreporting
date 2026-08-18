@@ -769,10 +769,13 @@ class ADR:
                     raise StaticFilesCollectionError(extra_detail=str(e))
 
             # create session and dataset w/ defaults
+            ADR._is_setup = True
             self._session = Session.create()
             self._dataset = Dataset.create()
-            ADR._is_setup = True
         except Exception:
+            ADR._is_setup = False
+            self._session = None
+            self._dataset = None
             self._restore_runtime_compatibility_shims()
             raise
 
