@@ -616,19 +616,20 @@ class ADR:
 
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
+        # Resolve the product Django path before enabling any process-wide
+        # runtime shims so missing installs fail without touching NumPy state.
+        try:
+            adr_path = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django"
+            ).resolve(strict=True)
+        except (ImportError, OSError) as e:
+            raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
+        sys.path.append(str(adr_path))
+
         # Restore known NumPy aliases before importing the product's Django modules.
         self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
         try:
-            # Add the Nexus Django folder to sys.path and import settings.
-            try:
-                adr_path = (
-                    self._ansys_installation / f"nexus{self._ansys_version}" / "django"
-                ).resolve(strict=True)
-                sys.path.append(str(adr_path))
-                from ceireports import settings_serverless
-            except (ImportError, OSError) as e:
-                raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
-
+            from ceireports import settings_serverless
             overrides = {}
             for setting in dir(settings_serverless):
                 if setting.isupper():
