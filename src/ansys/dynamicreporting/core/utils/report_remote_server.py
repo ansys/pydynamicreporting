@@ -954,11 +954,15 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query, item_filter)
-        # Ask the server for the Ansys version number when possible so the downloader rewrites
-        # static asset paths against the same product namespace the report was generated with.
-        resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
-        if ansys_version:
-            resolved_ansys_version = ansys_version
+        # Respect an explicit override before probing the server.  Some callers
+        # already know which asset namespace they need, and HTML export should
+        # not become dependent on /item/api_version/ in that case.
+        resolved_ansys_version = ansys_version
+        if resolved_ansys_version is None:
+            # Ask the server for the Ansys version number when possible so the
+            # downloader rewrites static asset paths against the same product
+            # namespace the report was generated with.
+            resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
 
         worker = ReportDownloadHTML(
             url=url,

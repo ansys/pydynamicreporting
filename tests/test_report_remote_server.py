@@ -367,6 +367,30 @@ def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatc
     downloader.download.assert_called_once_with()
 
 
+def test_download_html_bundle_explicit_version_bypasses_api_probe(tmp_path, monkeypatch) -> None:
+    """Do not require ``/item/api_version/`` when the caller already supplied a version."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+    captured: dict[str, object] = {}
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", Mock(side_effect=RuntimeError("api down")))
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    server._download_report_as_html_bundle(
+        report_guid="report-guid",
+        directory_name=tmp_path / "html-output",
+        query={"print": "html"},
+        ansys_version=252,
+    )
+
+    assert captured["ansys_version"] == 252
+    downloader.download.assert_called_once_with()
+
+
 def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> None:
     from ansys.dynamicreporting.core.utils import pdf_renderer
 
