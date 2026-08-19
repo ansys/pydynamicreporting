@@ -509,7 +509,7 @@ class ADR:
 
     @staticmethod
     def _import_enve(candidate_paths: Iterable[Path]) -> ImportError | None:
-        """Import the optional ``enve`` module from available product paths.
+        """Import the native ``enve`` module from available product paths.
 
         A failed native-module import can leave a partially initialized
         ``enve_common`` package, its directory on ``sys.path``, and a
@@ -526,8 +526,8 @@ class ADR:
         Returns
         -------
         ImportError | None
-            The final import error when an available candidate cannot load
-            ``enve``; otherwise, ``None``.
+            The final import error when ``enve`` cannot load; otherwise,
+            ``None``.
         """
         try:
             importlib.import_module("enve")
@@ -536,20 +536,18 @@ class ADR:
         else:
             return None
 
-        tried_candidate = False
         for path in candidate_paths:
             if not path.is_dir():
                 continue
 
-            tried_candidate = True
             original_sys_path = sys.path.copy()
             original_udi_path = os.environ.get("CEI_UDILPATH")
-            original_modules = {
+            old_enve_modules = {
                 name: module
                 for name, module in sys.modules.items()
-                if name == "enve" or name == "enve_common" or name.startswith("enve_common.")
+                if name in ("enve", "enve_common") or name.startswith("enve_common.")
             }
-            for name in original_modules:
+            for name in old_enve_modules:
                 sys.modules.pop(name, None)
 
             sys.path.insert(0, str(path))
@@ -569,22 +567,23 @@ class ADR:
 
             sys.path[:] = original_sys_path
             for name in tuple(sys.modules):
-                if name == "enve" or name == "enve_common" or name.startswith("enve_common."):
+                if name in ("enve", "enve_common") or name.startswith("enve_common."):
                     sys.modules.pop(name)
-            sys.modules.update(original_modules)
+            sys.modules.update(old_enve_modules)
             if original_udi_path is None:
                 os.environ.pop("CEI_UDILPATH", None)
             else:
                 os.environ["CEI_UDILPATH"] = original_udi_path
 
-        return last_error if tried_candidate else None
+        return last_error
+
 
     def setup(self, collect_static: bool = False) -> None:
         """Configure perform ADR initialization.
 
         This method:
 
-        * Optionally locates and imports the ``enve`` module for geometry.
+        * Locates and imports the ``enve`` module used by animation rendering.
         * Adds the Nexus directory to ``sys.path`` and imports
           the serverless settings module.
         * Runs configuration
@@ -614,7 +613,7 @@ class ADR:
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
 
-        # Try to import 'enve', optionally adding paths based on installation layout.
+        # Try to import native 'enve', adding paths based on installation layout.
         if platform.system().lower().startswith("win"):
             dirs_to_check = [
                 # Windows path from commonfiles
@@ -655,13 +654,14 @@ class ADR:
             ]
 
         enve_error = self._import_enve(dirs_to_check)
+        self._enve_import_error = enve_error
         if enve_error is not None:
             msg = (
-                "Failed to import 'enve' from the Ansys installation. "
-                f"Animations may not render correctly: {enve_error}"
+                "Animation rendering is unavailable because 'enve' could not be imported from "
+                f"the Ansys installation: {enve_error}"
             )
             self._logger.warning(msg)
-            warnings.warn(msg, ImportWarning)
+            warnings.warn(msg, UserWarning, stacklevel=2)
 
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
