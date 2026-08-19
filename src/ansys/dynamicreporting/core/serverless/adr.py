@@ -577,7 +577,6 @@ class ADR:
 
         return last_error
 
-
     def setup(self, collect_static: bool = False) -> None:
         """Configure perform ADR initialization.
 
@@ -671,15 +670,15 @@ class ADR:
             adr_path = (
                 self._ansys_installation / f"nexus{self._ansys_version}" / "django"
             ).resolve(strict=True)
+            sys.path.append(str(adr_path))
+
+            # Restore known NumPy aliases before importing the product's Django modules.
+            self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
+            from ceireports import settings_serverless
         except (ImportError, OSError) as e:
             raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
-        sys.path.append(str(adr_path))
 
-        # Restore known NumPy aliases before importing the product's Django modules.
-        self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
         try:
-            from ceireports import settings_serverless
-
             overrides = {}
             for setting in dir(settings_serverless):
                 if setting.isupper():
