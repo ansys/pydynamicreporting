@@ -64,9 +64,7 @@ def test_download_special_files_wires_v261_legacy_context_menu_assets(
 
     downloader._download_special_files()
 
-    actual_context_menu_calls = [
-        call for call in download_calls if "jQuery-contextMenu" in call[1]
-    ]
+    actual_context_menu_calls = [call for call in download_calls if "jQuery-contextMenu" in call[1]]
     assert actual_context_menu_calls == [
         (
             LEGACY_CONTEXT_MENU_FILES,
@@ -117,14 +115,21 @@ def test_download_special_files_skip_legacy_context_menu_assets_for_newer_produc
     monkeypatch.setattr(
         downloader,
         "_download_static_files",
-        lambda files, source_path, target_path, comment, *, warn_on_missing=False: download_calls.append(
+        lambda files,
+        source_path,
+        target_path,
+        comment,
+        *,
+        warn_on_missing=False: download_calls.append(
             (tuple(files), source_path, target_path, comment, warn_on_missing)
         ),
     )
 
     downloader._download_special_files()
 
-    assert not any("jQuery-contextMenu" in source_path for _, source_path, _, _, _ in download_calls)
+    assert not any(
+        "jQuery-contextMenu" in source_path for _, source_path, _, _, _ in download_calls
+    )
 
 
 def test_download_precreates_legacy_context_menu_directory_for_v261(tmp_path) -> None:

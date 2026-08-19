@@ -256,9 +256,7 @@ def test_copy_special_files_wires_v261_legacy_context_menu_assets(tmp_path: Path
 
     exporter._copy_special_files()
 
-    actual_context_menu_copies = {
-        call for call in copied_paths if "jQuery-contextMenu" in call[0]
-    }
+    actual_context_menu_copies = {call for call in copied_paths if "jQuery-contextMenu" in call[0]}
     expected_context_menu_copies = {
         (
             f"ansys261/nexus/novnc/vendor/jQuery-contextMenu/{filename}",
