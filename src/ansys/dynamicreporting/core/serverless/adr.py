@@ -822,11 +822,15 @@ class ADR:
             ADR._is_setup = True
             self._session = Session.create()
             self._dataset = Dataset.create()
-        except Exception:
+        except Exception as e:
             ADR._is_setup = False
             self._session = None
             self._dataset = None
             self._restore_runtime_compatibility_shims()
+            self._logger.debug(
+                "ADR could not complete setup.",
+                exc_info=True,
+            )
             raise
 
     def _restore_runtime_compatibility_shims(self) -> None:
