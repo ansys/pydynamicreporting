@@ -71,10 +71,6 @@ def _normalize_version(version_string: str) -> VersionKey:
     return tuple(components)
 
 
-def _noop_runtime_compatibility_cleanup() -> None:
-    """Return a no-op cleanup callback when no shim was needed."""
-
-
 def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
     """Apply dependency API shims required by a supported ADR product version.
 
@@ -85,6 +81,10 @@ def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatClea
     modules, and return a cleanup callback that restores the previous NumPy
     process state when ADR is torn down.
     """
+
+    def _noop_runtime_compatibility_cleanup() -> None:
+        return
+
     if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
         return _noop_runtime_compatibility_cleanup
 
