@@ -91,22 +91,26 @@ def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatClea
     import numpy
 
     cleanup_callbacks: list[RuntimeCompatCleanup] = []
+
     if not hasattr(numpy, "string_"):
         numpy.string_ = numpy.bytes_
         logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
-        cleanup_callbacks.append(
-            lambda: (
+
+        def _restore_string_alias() -> None:
+            if getattr(numpy, "string_", None) is numpy.bytes_:
                 delattr(numpy, "string_")
-                if getattr(numpy, "string_", None) is numpy.bytes_
-                else None
-            )
-        )
+
+        cleanup_callbacks.append(_restore_string_alias)
+
     if _normalize_version(numpy.__version__) >= (2, 0):
         previous_legacy = numpy.get_printoptions().get("legacy", False)
         numpy.set_printoptions(legacy="1.25")
         logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
 
-        cleanup_callbacks.append(lambda: numpy.set_printoptions(legacy=previous_legacy))
+        def _restore_legacy_printoptions() -> None:
+            numpy.set_printoptions(legacy=previous_legacy)
+
+        cleanup_callbacks.append(_restore_legacy_printoptions)
 
     if not cleanup_callbacks:
         return _noop_runtime_compatibility_cleanup
