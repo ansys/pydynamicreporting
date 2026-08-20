@@ -92,34 +92,39 @@ def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatClea
 
     cleanup_callbacks: list[RuntimeCompatCleanup] = []
 
-    if not hasattr(numpy, "string_"):
-        numpy.string_ = numpy.bytes_
-        logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+    def _restore_cleanup_callbacks() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
 
-        def _restore_string_alias() -> None:
-            if getattr(numpy, "string_", None) is numpy.bytes_:
-                delattr(numpy, "string_")
+    try:
+        if not hasattr(numpy, "string_"):
+            setattr(numpy, "string_", numpy.bytes_)
 
-        cleanup_callbacks.append(_restore_string_alias)
+            def _restore_string_alias() -> None:
+                if getattr(numpy, "string_", None) is numpy.bytes_:
+                    delattr(numpy, "string_")
 
-    if _normalize_version(numpy.__version__) >= (2, 0):
-        previous_legacy = numpy.get_printoptions().get("legacy", False)
-        numpy.set_printoptions(legacy="1.25")
-        logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+            cleanup_callbacks.append(_restore_string_alias)
+            logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
 
-        def _restore_legacy_printoptions() -> None:
-            numpy.set_printoptions(legacy=previous_legacy)
+        if _normalize_version(numpy.__version__) >= (2, 0):
+            previous_legacy = numpy.get_printoptions().get("legacy", False)
+            numpy.set_printoptions(legacy="1.25")
 
-        cleanup_callbacks.append(_restore_legacy_printoptions)
+            def _restore_legacy_printoptions() -> None:
+                numpy.set_printoptions(legacy=previous_legacy)
+
+            cleanup_callbacks.append(_restore_legacy_printoptions)
+            logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+    except BaseException:  # catch interrupts as well
+        # Do not leave a process-wide NumPy mutation behind if shim setup aborts.
+        _restore_cleanup_callbacks()
+        raise
 
     if not cleanup_callbacks:
         return _noop_runtime_compatibility_cleanup
 
-    def _restore_runtime_compatibility() -> None:
-        for cleanup in reversed(cleanup_callbacks):
-            cleanup()
-
-    return _restore_runtime_compatibility
+    return _restore_cleanup_callbacks
 
 
 def _guardian_monkey_patch_rename(overrides: dict) -> dict:

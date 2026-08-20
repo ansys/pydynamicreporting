@@ -23,6 +23,8 @@
 import sys
 from types import ModuleType
 
+import pytest
+
 import ansys.dynamicreporting.core.serverless._compat as compat_module
 
 
@@ -48,6 +50,25 @@ def test_apply_runtime_compatibility_restores_numpy_string_alias_for_261(monkeyp
 
     assert not hasattr(fake_numpy, "string_")
     assert current_legacy["value"] is False
+
+
+def test_apply_runtime_compatibility_restores_partial_changes_after_failure(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.5.2"
+    fake_numpy.bytes_ = object()
+    fake_numpy.get_printoptions = lambda: {"legacy": False}
+
+    def fail_set_print_options(**kwargs):
+        assert kwargs == {"legacy": "1.25"}
+        raise ValueError("unsupported legacy print option")
+
+    fake_numpy.set_printoptions = fail_set_print_options
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    with pytest.raises(ValueError, match="unsupported legacy print option"):
+        compat_module.apply_runtime_compatibility_shims(261)
+
+    assert not hasattr(fake_numpy, "string_")
 
 
 def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monkeypatch):
