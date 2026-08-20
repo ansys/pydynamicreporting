@@ -1603,8 +1603,6 @@ class ADR:
                         item_filter=item_filter,
                         request=self._request,
                     )
-                except ADRException:
-                    raise
                 except Exception as exc:
                     # Keep the caller-facing error ADR-owned while preserving the template-render
                     # failure as the chained cause for debugging.
