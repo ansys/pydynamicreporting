@@ -48,6 +48,46 @@ def test_setup_wraps_runtime_compatibility_errors(tmp_path, monkeypatch, compati
 
 
 @pytest.mark.unit
+def test_setup_warns_when_enve_import_fails(tmp_path, monkeypatch):
+    """A failed native import warns without retaining process-wide failure state."""
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless._compat as compat_module
+
+    installation = tmp_path / "Ansys"
+    adr_path = installation / "nexus261" / "django"
+    adr_path.mkdir(parents=True)
+
+    adr = object.__new__(ADR)
+    adr._ansys_installation = installation
+    adr._ansys_version = 261
+    adr._runtime_compat_restore = None
+    adr._logger = Mock()
+    monkeypatch.setattr(ADR, "_is_setup", False)
+    monkeypatch.setattr(adr, "_warn_for_embedded_python_mismatch", lambda: None)
+
+    enve_error = ImportError("DLL load failed while importing enve: missing dependency")
+    monkeypatch.setattr(adr, "_import_enve", lambda _: enve_error)
+
+    setup_error = ImportError("serverless settings could not be imported")
+
+    def raise_setup_error(_):
+        raise setup_error
+
+    monkeypatch.setattr(compat_module, "apply_runtime_compatibility_shims", raise_setup_error)
+
+    with pytest.warns(UserWarning, match="Animation rendering is unavailable") as warnings_record:
+        with pytest.raises(ImportError, match="Failed to initialize ADR") as exc_info:
+            adr.setup()
+
+    assert exc_info.value.__cause__ is setup_error
+    assert str(enve_error) in str(warnings_record[0].message)
+    adr._logger.warning.assert_called_once()
+    assert not hasattr(adr, "_enve_import_error")
+    assert str(adr_path) not in sys.path
+
+
+@pytest.mark.unit
 def test_setup_rolls_back_runtime_compatibility_after_settings_import_failure(
     tmp_path, monkeypatch
 ):

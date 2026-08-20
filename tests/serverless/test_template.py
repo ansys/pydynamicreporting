@@ -1173,6 +1173,94 @@ def test_template_render_resets_print_style_after_render(monkeypatch):
     assert FakeTemplateEngine.print_style_calls == ["pdf", None]
 
 
+@pytest.mark.unit
+def test_template_render_returns_error_html_for_native_import_failure(monkeypatch):
+    """HTML rendering should retain native import failures in its error markup."""
+    from datetime import timezone as datetime_timezone
+
+    from ansys.dynamicreporting.core.serverless import template as template_module
+    from ansys.dynamicreporting.core.serverless.template import BasicLayout
+
+    native_error = ImportError("DLL load failed while importing enve: missing dependency")
+
+    class FakeItem:
+        @staticmethod
+        def find(query):
+            return ["item"]
+
+    class FakeTemplateEngine:
+        print_style_calls: list[str | None] = []
+
+        @classmethod
+        def set_print_style(cls, target):
+            cls.print_style_calls.append(target)
+
+        @staticmethod
+        def set_global_context(context):
+            return None
+
+        @staticmethod
+        def start_toc_session():
+            return None
+
+        @staticmethod
+        def end_toc_session():
+            return ""
+
+    class FailingEngine:
+        def render(self, items, context):
+            raise native_error
+
+    class FakeOrmTemplate:
+        def get_engine(self):
+            return FailingEngine()
+
+    data_module = types.ModuleType("data")
+    data_models_module = types.ModuleType("data.models")
+    data_models_module.Item = FakeItem
+    data_module.models = data_models_module
+    reports_module = types.ModuleType("reports")
+    reports_engine_module = types.ModuleType("reports.engine")
+    reports_engine_module.TemplateEngine = FakeTemplateEngine
+    reports_module.engine = reports_engine_module
+    ceireports_module = types.ModuleType("ceireports")
+    ceireports_utils_module = types.ModuleType("ceireports.utils")
+
+    def fake_get_render_error_html(error, target, guid):
+        assert error is native_error
+        assert target == "report"
+        assert guid == "fake-template-guid"
+        return f"render error: {error}"
+
+    ceireports_utils_module.get_render_error_html = fake_get_render_error_html
+    ceireports_module.utils = ceireports_utils_module
+    monkeypatch.setitem(sys.modules, "data", data_module)
+    monkeypatch.setitem(sys.modules, "data.models", data_models_module)
+    monkeypatch.setitem(sys.modules, "reports", reports_module)
+    monkeypatch.setitem(sys.modules, "reports.engine", reports_engine_module)
+    monkeypatch.setitem(sys.modules, "ceireports", ceireports_module)
+    monkeypatch.setitem(sys.modules, "ceireports.utils", ceireports_utils_module)
+    monkeypatch.setattr(
+        template_module,
+        "render_to_string",
+        lambda template_name, context, request: context["HTML"],
+    )
+    monkeypatch.setattr(
+        template_module.timezone,
+        "get_current_timezone",
+        lambda: datetime_timezone.utc,
+    )
+
+    template = object.__new__(BasicLayout)
+    template.guid = "fake-template-guid"
+    template._orm_instance = FakeOrmTemplate()
+
+    rendered_html = template.render(context={"print": "html"})
+
+    assert rendered_html == f"render error: {native_error}"
+    assert FakeTemplateEngine.print_style_calls == ["html", None]
+
+
 @pytest.mark.ado_test
 @pytest.mark.parametrize(
     ("context", "tabs_properties"),

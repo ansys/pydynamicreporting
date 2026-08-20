@@ -137,27 +137,39 @@ def test_import_enve_reports_missing_module_without_candidates(tmp_path, monkeyp
 
 
 @pytest.mark.unit
-def test_get_embedded_python_versions_discovers_product_runtimes(tmp_path, monkeypatch):
-    """Embedded Python runtime discovery should parse all product Python versions."""
+def test_get_embedded_python_version_stops_after_first_valid_runtime(monkeypatch):
+    """Embedded Python runtime discovery should use only one product runtime."""
+    from types import SimpleNamespace
+
     import ansys.dynamicreporting.core.serverless.adr as adr_module
 
-    product_root = tmp_path / "CEI"
-    runtime_dir = product_root / "apex261" / "machines" / "win64"
-    for runtime_name in [
-        "Python-3.12.11",
-        "Python-3.13",
-        "python-3.11.4",
-        "Python-not-a-version",
-    ]:
-        (runtime_dir / runtime_name).mkdir(parents=True)
+    class ProductRoot:
+        def __truediv__(self, _):
+            return self
+
+        def glob(self, pattern):
+            assert pattern == "[Pp]ython-*"
+            yield SimpleNamespace(name="Python-not-a-version", is_dir=lambda: True)
+            yield SimpleNamespace(name="Python-3.12.11", is_dir=lambda: True)
+            pytest.fail("Runtime discovery should stop after the first valid runtime.")
 
     monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
 
-    assert ADR._get_embedded_python_versions(product_root, 261) == (
-        (3, 11),
-        (3, 12),
-        (3, 13),
-    )
+    assert ADR._get_embedded_python_version(ProductRoot(), 261) == (3, 12)
+
+
+@pytest.mark.unit
+def test_get_embedded_python_version_returns_none_without_valid_runtime(tmp_path, monkeypatch):
+    """Embedded Python runtime discovery returns ``None`` when no runtime is usable."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    product_root = tmp_path / "CEI"
+    runtime_directory = product_root / "apex261" / "machines" / "win64"
+    (runtime_directory / "Python-not-a-version").mkdir(parents=True)
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(product_root, 261) is None
 
 
 @pytest.mark.unit
@@ -187,20 +199,26 @@ def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, mon
     with pytest.warns(UserWarning, match="Serverless ADR is running on Python"):
         adr._warn_for_embedded_python_mismatch()
 
-    assert adr._embedded_python_versions == (embedded_python_version,)
+    assert adr._embedded_python_version == embedded_python_version
     adr._logger.warning.assert_called_once()
 
 
 @pytest.mark.unit
 def test_embedded_python_mismatch_message_skips_compatible_runtime():
     """A matching embedded Python major/minor version needs no warning."""
-    assert ADR._get_embedded_python_mismatch_message(((3, 12),), (3, 12)) is None
+    assert ADR._get_embedded_python_mismatch_message((3, 12), (3, 12)) is None
+
+
+@pytest.mark.unit
+def test_embedded_python_mismatch_message_skips_missing_runtime():
+    """An unavailable embedded runtime should not produce a compatibility warning."""
+    assert ADR._get_embedded_python_mismatch_message(None, (3, 12)) is None
 
 
 @pytest.mark.unit
 def test_embedded_python_mismatch_message_is_component_generic():
     """A mismatch warning must not imply a specific serverless component fails."""
-    message = ADR._get_embedded_python_mismatch_message(((3, 12),), (3, 13))
+    message = ADR._get_embedded_python_mismatch_message((3, 12), (3, 13))
 
     assert message is not None
     assert "Some serverless components may not work correctly" in message
@@ -208,88 +226,45 @@ def test_embedded_python_mismatch_message_is_component_generic():
 
 
 @pytest.mark.unit
-def test_render_report_explains_enve_version_mismatch(monkeypatch):
-    """Animation render failures should identify the native runtime mismatch."""
+def test_render_report_wraps_template_exception(monkeypatch):
+    """HTML report rendering converts template failures to ADR exceptions."""
     import ansys.dynamicreporting.core.serverless.adr as adr_module
 
-    enve_error = ImportError("DLL load failed while importing enve: missing dependency")
+    error = RuntimeError("Template rendering failed")
 
     class FailingTemplate:
-        """Template stand-in that simulates a native animation import failure."""
+        """Template stand-in that raises a rendering failure."""
 
         def render(self, **kwargs):
-            raise enve_error
+            raise error
 
     adr = object.__new__(ADR)
     adr._request = None
-    adr._embedded_python_versions = ((3, 12),)
-    adr._enve_import_error = enve_error
-    monkeypatch.setattr(adr_module.Item, "find", lambda *args, **kwargs: [])
     monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: FailingTemplate())
 
-    with pytest.raises(ADRException, match="Animation rendering requires `enve`") as exc_info:
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
         adr.render_report(name="AnimationReport")
 
-    message = str(exc_info.value)
-    active_python_version = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
-    assert f"Active Python: {active_python_version}" in message
-    assert "Detected Ansys embedded Python runtime version(s): 3.12." in message
-    assert f"Original `enve` import error: {enve_error}" in message
-    assert exc_info.value.__cause__ is enve_error
+    assert str(error) in str(exc_info.value)
 
 
 @pytest.mark.unit
-def test_render_report_fails_before_template_for_selected_animation(monkeypatch):
-    """Selected animation items must fail before the template can hide the import error."""
-    from types import SimpleNamespace
-
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    enve_error = ImportError("DLL load failed while importing enve: missing dependency")
-    adr = object.__new__(ADR)
-    adr._request = None
-    adr._embedded_python_versions = ((3, 12),)
-    adr._enve_import_error = enve_error
-    monkeypatch.setattr(
-        adr_module.Item,
-        "find",
-        lambda *args, **kwargs: [SimpleNamespace(type=adr_module.Animation.type)],
-    )
-    monkeypatch.setattr(
-        adr_module.Template,
-        "get",
-        lambda *args, **kwargs: pytest.fail("Template rendering should not start."),
-    )
-
-    with pytest.raises(ADRException, match="Animation rendering requires `enve`") as exc_info:
-        adr.render_report(name="AnimationReport")
-
-    assert exc_info.value.__cause__ is enve_error
-
-
-@pytest.mark.unit
-def test_render_report_without_animation_allows_unavailable_enve(monkeypatch):
-    """Reports without selected animations remain usable when ``enve`` is unavailable."""
-    from types import SimpleNamespace
-
+def test_render_report_does_not_preflight_animation_availability(monkeypatch):
+    """Rendering does not query report items before template rendering."""
     import ansys.dynamicreporting.core.serverless.adr as adr_module
 
     class SuccessfulTemplate:
-        """Template stand-in for a report without animation items."""
+        """Template stand-in for a report that renders successfully."""
 
         def render(self, **kwargs):
             return "report rendered"
 
     adr = object.__new__(ADR)
     adr._request = None
-    adr._embedded_python_versions = ((3, 12),)
-    adr._enve_import_error = ImportError("DLL load failed while importing enve")
     monkeypatch.setattr(
         adr_module.Item,
         "find",
-        lambda *args, **kwargs: [SimpleNamespace(type="text")],
+        lambda *args, **kwargs: pytest.fail("Rendering should not preflight report items."),
     )
     monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: SuccessfulTemplate())
 
@@ -297,13 +272,76 @@ def test_render_report_without_animation_allows_unavailable_enve(monkeypatch):
 
 
 @pytest.mark.unit
-def test_non_enve_import_error_keeps_generic_render_failure():
-    """Non-animation import failures must retain the regular report error path."""
-    adr = object.__new__(ADR)
-    adr._embedded_python_versions = ((3, 12),)
-    adr._enve_import_error = ImportError("DLL load failed while importing enve")
+def test_render_report_keeps_non_enve_import_error_generic(monkeypatch):
+    """Unrelated import failures retain the generic report error path."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
 
-    assert adr._get_enve_render_exception(ImportError("No module named 'other_module'")) is None
+    error = ImportError("No module named 'other_module'")
+
+    class FailingTemplate:
+        """Template stand-in that raises an unrelated import failure."""
+
+        def render(self, **kwargs):
+            raise error
+
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: FailingTemplate())
+
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
+        adr.render_report(name="StaticReport")
+
+    assert str(error) in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_render_report_as_pptx_wraps_template_exception(monkeypatch):
+    """PPTX rendering converts template failures to ADR exceptions."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    error = RuntimeError("Template PPTX rendering failed")
+
+    class FailingPPTXLayout:
+        """PPTX template stand-in that raises its own render error."""
+
+        def render_pptx(self, **kwargs):
+            raise error
+
+    template = FailingPPTXLayout()
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
+
+    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
+        adr.render_report_as_pptx(name="AnimationReport")
+
+    assert str(error) in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_export_report_as_pptx_wraps_template_exception(tmp_path, monkeypatch):
+    """PPTX export converts template failures to ADR exceptions."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    error = RuntimeError("Template PPTX rendering failed")
+
+    class FailingPPTXLayout:
+        """PPTX template stand-in that raises its own render error."""
+
+        def render_pptx(self, **kwargs):
+            raise error
+
+    template = FailingPPTXLayout()
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
+
+    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
+        adr.export_report_as_pptx(filename=tmp_path / "report.pptx", name="AnimationReport")
+
+    assert str(error) in str(exc_info.value)
 
 
 @pytest.mark.ado_test

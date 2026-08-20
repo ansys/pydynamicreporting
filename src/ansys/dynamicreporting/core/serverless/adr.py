@@ -66,7 +66,7 @@ from django.http import HttpRequest
 
 from .base import ObjectSet
 from .html_exporter import ServerlessReportExporter
-from .item import Animation, Dataset, Item, Session
+from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..compatibility import get_compatibility_warning_for_install_version
@@ -227,8 +227,7 @@ class ADR:
         self._session: Session | None = None
         self._dataset: Dataset | None = None
         self._runtime_compat_restore: Callable[[], None] | None = None
-        self._embedded_python_versions: tuple[tuple[int, int], ...] = ()
-        self._enve_import_error: ImportError | None = None
+        self._embedded_python_version: tuple[int, int] | None = None
         self._logger = get_logger(logfile)
         self._tmp_dirs: list[tempfile.TemporaryDirectory] = []
         self._in_memory = in_memory
@@ -581,10 +580,10 @@ class ADR:
         return last_error
 
     @staticmethod
-    def _get_embedded_python_versions(
+    def _get_embedded_python_version(
         ansys_installation: Path, ansys_version: int
-    ) -> tuple[tuple[int, int], ...]:
-        """Return Python major/minor versions bundled with an ADR installation.
+    ) -> tuple[int, int] | None:
+        """Return the Python major/minor version bundled with an ADR installation.
 
         Parameters
         ----------
@@ -595,9 +594,9 @@ class ADR:
 
         Returns
         -------
-        tuple[tuple[int, int], ...]
-            Sorted, unique Python major/minor versions found in the product's
-            Apex machine runtime directory.
+        tuple[int, int] | None
+            The first Python major/minor version found in the product's Apex
+            machine runtime directory, or ``None`` when none is found.
         """
         machine_directory = (
             "win64" if platform.system().lower().startswith("win") else "linux_2.6_64"
@@ -608,9 +607,8 @@ class ADR:
         try:
             runtime_paths = runtime_directory.glob("[Pp]ython-*")
         except OSError:
-            return ()
+            return None
 
-        versions = []
         for runtime_path in runtime_paths:
             if not runtime_path.is_dir():
                 continue
@@ -618,110 +616,39 @@ class ADR:
                 r"python-(\d+)\.(\d+)(?:\.\d+)?", runtime_path.name, flags=re.IGNORECASE
             )
             if match:
-                versions.append((int(match.group(1)), int(match.group(2))))
-        return tuple(sorted(set(versions)))
+                return (int(match.group(1)), int(match.group(2)))
+        return None
 
     @staticmethod
     def _get_embedded_python_mismatch_message(
-        embedded_python_versions: Iterable[tuple[int, int]],
+        embedded_python_version: tuple[int, int] | None,
         active_python_version: tuple[int, int],
     ) -> str | None:
         """Return a warning when Python cannot match the product's native runtime."""
-        available_versions = tuple(sorted(set(embedded_python_versions)))
-        if not available_versions or active_python_version in available_versions:
+        if embedded_python_version is None or active_python_version == embedded_python_version:
             return None
 
-        available_versions_text = ", ".join(
-            f"{major}.{minor}" for major, minor in available_versions
-        )
+        embedded_version_text = f"{embedded_python_version[0]}.{embedded_python_version[1]}"
         active_version_text = f"{active_python_version[0]}.{active_python_version[1]}"
         return (
             f"Serverless ADR is running on Python {active_version_text}, but the Ansys "
-            f"installation bundles Python {available_versions_text} for native components. "
+            f"installation bundles Python {embedded_version_text} for native components. "
             "Some serverless components may not work correctly unless the Python major.minor "
             "versions match."
         )
 
     def _warn_for_embedded_python_mismatch(self) -> None:
         """Warn when the active interpreter differs from the product runtime."""
-        self._embedded_python_versions = self._get_embedded_python_versions(
+        self._embedded_python_version = self._get_embedded_python_version(
             self._ansys_installation, self._ansys_version
         )
         active_python_version = (sys.version_info.major, sys.version_info.minor)
         warning_message = self._get_embedded_python_mismatch_message(
-            self._embedded_python_versions, active_python_version
+            self._embedded_python_version, active_python_version
         )
         if warning_message is not None:
             self._logger.warning(warning_message)
             warnings.warn(warning_message, UserWarning, stacklevel=2)
-
-    @staticmethod
-    def _is_enve_import_error(error: BaseException) -> bool:
-        """Return whether an exception chain contains an ``enve`` import failure."""
-        pending_errors = [error]
-        visited_errors: set[int] = set()
-
-        while pending_errors:
-            current_error = pending_errors.pop()
-            if id(current_error) in visited_errors:
-                continue
-            visited_errors.add(id(current_error))
-
-            error_message = str(current_error).lower()
-            if isinstance(current_error, ImportError) and (
-                getattr(current_error, "name", None) in {"enve", "enve_common"}
-                or "importing enve" in error_message
-                or "no module named 'enve" in error_message
-            ):
-                return True
-
-            if current_error.__cause__ is not None:
-                pending_errors.append(current_error.__cause__)
-            if current_error.__context__ is not None:
-                pending_errors.append(current_error.__context__)
-
-        return False
-
-    def _get_enve_render_exception(self, error: Exception) -> ADRException | None:
-        """Build an actionable error for animation rendering without ``enve``."""
-        if not self._is_enve_import_error(error):
-            return None
-
-        active_python_version = (
-            f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-        )
-        embedded_python_versions = getattr(self, "_embedded_python_versions", ())
-        if embedded_python_versions:
-            embedded_versions_text = ", ".join(
-                f"{major}.{minor}" for major, minor in embedded_python_versions
-            )
-            runtime_detail = (
-                f"Detected Ansys embedded Python runtime version(s): {embedded_versions_text}. "
-                "Use a Python interpreter with a matching major.minor version."
-            )
-        else:
-            runtime_detail = "No Ansys embedded Python runtime version could be detected."
-
-        original_enve_error = getattr(self, "_enve_import_error", None) or error
-        return ADRException(
-            "Animation rendering requires `enve`, but it could not be imported. "
-            f"Active Python: {active_python_version}. {runtime_detail} "
-            f"Original `enve` import error: {original_enve_error}"
-        )
-
-    def _raise_if_animation_rendering_is_unavailable(self, item_filter: str) -> None:
-        """Raise an actionable error when selected items need unavailable ``enve``."""
-        enve_error = getattr(self, "_enve_import_error", None)
-        if enve_error is None:
-            return
-
-        has_animation = any(item.type == Animation.type for item in Item.find(query=item_filter))
-        if not has_animation:
-            return
-
-        enve_exception = self._get_enve_render_exception(enve_error)
-        if enve_exception is not None:
-            raise enve_exception from enve_error
 
     def setup(self, collect_static: bool = False) -> None:
         """Configure perform ADR initialization.
@@ -800,7 +727,6 @@ class ADR:
 
         self._warn_for_embedded_python_mismatch()
         enve_error = self._import_enve(dirs_to_check)
-        self._enve_import_error = enve_error
         if enve_error is not None:
             msg = (
                 "Animation rendering is unavailable because 'enve' could not be imported from "
@@ -1496,7 +1422,6 @@ class ADR:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
-        self._raise_if_animation_rendering_is_unavailable(item_filter)
         try:
             return Template.get(**kwargs).render(
                 context=context,
@@ -1505,8 +1430,6 @@ class ADR:
                 request=self._request,
             )
         except Exception as e:
-            if enve_exception := self._get_enve_render_exception(e):
-                raise enve_exception from e
             raise ADRException(f"Report rendering failed: {e}")
 
     def render_report_as_pptx(
@@ -1557,7 +1480,6 @@ class ADR:
             raise ADRException(
                 "The template must be of type 'PPTXLayout' to render as a PowerPoint presentation."
             )
-        self._raise_if_animation_rendering_is_unavailable(item_filter)
         try:
             return template.render_pptx(
                 context=context,
@@ -1565,8 +1487,6 @@ class ADR:
                 request=self._request,
             )
         except Exception as e:
-            if enve_exception := self._get_enve_render_exception(e):
-                raise enve_exception from e
             raise ADRException(f"PPTX Report rendering failed: {e}")
 
     def _resolve_browser_pdf_scratch_root(self) -> Path:
@@ -1678,7 +1598,6 @@ class ADR:
                 # path stays aligned with ``render_report()`` unless a future public browser-PDF
                 # API intentionally exposes scene-data inlining as a separate option.
                 try:
-                    self._raise_if_animation_rendering_is_unavailable(item_filter)
                     html_content = template.render(
                         context={**(context or {}), **pdf_context},
                         item_filter=item_filter,
@@ -1690,8 +1609,6 @@ class ADR:
                     # Keep the caller-facing error ADR-owned while preserving the template-render
                     # failure as the chained cause for debugging.
                     self._logger.debug("Browser PDF template rendering failed.", exc_info=True)
-                    if enve_exception := self._get_enve_render_exception(exc):
-                        raise enve_exception from exc
                     raise ADRException("Report rendering failed.") from exc
 
                 exporter = ServerlessReportExporter(
@@ -1870,7 +1787,6 @@ class ADR:
             raise ADRException(
                 "The template must be of type 'PPTXLayout' to export as a PowerPoint presentation."
             )
-        self._raise_if_animation_rendering_is_unavailable(item_filter)
         try:
             pptx_stream = template.render_pptx(
                 context=context,
@@ -1878,8 +1794,6 @@ class ADR:
                 request=self._request,
             )
         except Exception as e:
-            if enve_exception := self._get_enve_render_exception(e):
-                raise enve_exception from e
             raise ADRException(f"PPTX Report rendering failed: {e}")
 
         output_path = (
