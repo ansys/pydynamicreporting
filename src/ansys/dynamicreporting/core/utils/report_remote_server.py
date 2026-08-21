@@ -2123,6 +2123,8 @@ def launch_local_database_server(
             break
         except exceptions.PermissionDenied:
             stop_background_local_server(db_dir)
+            if local_lock:
+                local_lock.release()
             raise exceptions.ServerConnectionError(
                 "Access to server denied.  Potential username/password error."
             )
