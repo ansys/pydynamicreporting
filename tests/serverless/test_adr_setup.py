@@ -8,45 +8,7 @@ import sys
 
 import pytest
 
-from ansys.dynamicreporting.core.exceptions import ImproperlyConfiguredError
 from ansys.dynamicreporting.core.serverless import ADR
-
-
-@pytest.mark.unit
-def test_setup_errors_on_python_mismatch_before_product_import(tmp_path, monkeypatch):
-    """A Python runtime mismatch must fail before product paths touch ``sys.path``."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    active_python_version = (sys.version_info.major, sys.version_info.minor)
-    embedded_python_version = (active_python_version[0], active_python_version[1] + 1)
-    installation = tmp_path / "Ansys"
-    adr_path = installation / "nexus261" / "django"
-    adr_path.mkdir(parents=True)
-    (
-        installation
-        / "apex261"
-        / "machines"
-        / "win64"
-        / f"Python-{embedded_python_version[0]}.{embedded_python_version[1]}.0"
-    ).mkdir(parents=True)
-
-    adr = object.__new__(ADR)
-    adr._ansys_installation = installation
-    adr._ansys_version = 261
-    adr._runtime_compat_restore = None
-    adr._disable_python_check = False
-    monkeypatch.setattr(ADR, "_is_setup", False)
-    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
-    monkeypatch.setattr(
-        adr,
-        "_import_enve",
-        lambda _: pytest.fail("enve import should not run after Python mismatch"),
-    )
-
-    with pytest.raises(ImproperlyConfiguredError, match="Serverless ADR is running on Python"):
-        adr.setup()
-
-    assert str(adr_path) not in sys.path
 
 
 @pytest.mark.unit
@@ -64,7 +26,7 @@ def test_setup_wraps_runtime_compatibility_errors(tmp_path, monkeypatch, compati
     adr._ansys_version = 261
     adr._runtime_compat_restore = None
     monkeypatch.setattr(ADR, "_is_setup", False)
-    monkeypatch.setattr(adr, "_check_embedded_python_compatibility", lambda: None)
+    monkeypatch.setattr(adr, "_warn_for_embedded_python_mismatch", lambda: None)
     monkeypatch.setattr(adr, "_import_enve", lambda _: None)
 
     error = compatibility_error("unsupported NumPy compatibility operation")
@@ -102,7 +64,7 @@ def test_setup_warns_when_enve_import_fails(tmp_path, monkeypatch):
     adr._runtime_compat_restore = None
     adr._logger = Mock()
     monkeypatch.setattr(ADR, "_is_setup", False)
-    monkeypatch.setattr(adr, "_check_embedded_python_compatibility", lambda: None)
+    monkeypatch.setattr(adr, "_warn_for_embedded_python_mismatch", lambda: None)
 
     enve_error = ImportError("DLL load failed while importing enve: missing dependency")
     monkeypatch.setattr(adr, "_import_enve", lambda _: enve_error)
@@ -143,7 +105,7 @@ def test_setup_rolls_back_runtime_compatibility_after_settings_import_failure(
     adr._ansys_version = 261
     adr._runtime_compat_restore = None
     monkeypatch.setattr(ADR, "_is_setup", False)
-    monkeypatch.setattr(adr, "_check_embedded_python_compatibility", lambda: None)
+    monkeypatch.setattr(adr, "_warn_for_embedded_python_mismatch", lambda: None)
     monkeypatch.setattr(adr, "_import_enve", lambda _: None)
 
     restore_calls: list[str] = []

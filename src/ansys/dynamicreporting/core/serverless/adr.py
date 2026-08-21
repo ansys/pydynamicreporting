@@ -85,9 +85,6 @@ from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 
 
-DISABLE_PYTHON_CHECK_ENV_VAR = "ANSYS_ADR_DISABLE_PYTHON_CHECK"
-
-
 class ADR:
     """
     Ansys Dynamic Reporting (ADR) class.
@@ -141,12 +138,6 @@ class ADR:
         If ``True``, ADR configures an in-memory SQLite database and
         temporary media/static directories, suitable for tests or
         ephemeral usage.
-    disable_python_check : bool, optional
-        If ``True``, allow setup to continue when the active Python major/minor
-        version differs from the Python version bundled with the Ansys
-        installation. If omitted, ``ANSYS_ADR_DISABLE_PYTHON_CHECK=1`` enables
-        the same behavior. A warning is still emitted when a mismatch is
-        detected.
     log_output : str or os.PathLike, optional
         File path or ``"stdout"`` for ADR logs. The default is ``None``, which
         adds no output handler.
@@ -230,7 +221,6 @@ class ADR:
         logfile: str | None = None,
         docker_image: str | None = None,
         in_memory: bool = False,
-        disable_python_check: bool | None = None,
         log_output: str | os.PathLike[str] | None = None,
         log_level: int | str | None = None,
     ) -> None:
@@ -258,7 +248,6 @@ class ADR:
         if opts is None:
             opts = {}
         os.environ.update(opts)
-        self._disable_python_check = self._resolve_disable_python_check(disable_python_check)
 
         # Configure database and media/static directories.
         if self._in_memory:
@@ -420,21 +409,6 @@ class ADR:
         if not dir_path.exists() or not dir_path.is_dir():
             raise InvalidPath(extra_detail=dir_)
         return dir_path
-
-    @staticmethod
-    def _resolve_disable_python_check(disable_python_check: bool | None) -> bool:
-        """Resolve the Python-version check escape hatch from args or environment."""
-        if disable_python_check is not None:
-            return disable_python_check
-
-        env_value = os.environ.get(DISABLE_PYTHON_CHECK_ENV_VAR)
-        if env_value is None or env_value == "0":
-            return False
-        if env_value == "1":
-            return True
-        raise ImproperlyConfiguredError(
-            f"{DISABLE_PYTHON_CHECK_ENV_VAR} must be set to '1' or '0'."
-        )
 
     @staticmethod
     def _migrate_db(db: str) -> None:
@@ -675,8 +649,8 @@ class ADR:
             "versions match."
         )
 
-    def _check_embedded_python_compatibility(self) -> None:
-        """Validate that the active interpreter matches the product runtime."""
+    def _warn_for_embedded_python_mismatch(self) -> None:
+        """Warn when the active interpreter differs from the product runtime."""
         self._embedded_python_version = self._get_embedded_python_version(
             self._ansys_installation, self._ansys_version
         )
@@ -687,12 +661,8 @@ class ADR:
         if warning_message is None:
             return
 
-        if self._disable_python_check:
-            self._logger.warning(warning_message)
-            warnings.warn(warning_message, UserWarning, stacklevel=2)
-            return
-
-        raise ImproperlyConfiguredError(warning_message)
+        self._logger.warning(warning_message)
+        warnings.warn(warning_message, UserWarning, stacklevel=2)
 
     def setup(self, collect_static: bool = False) -> None:
         """Configure perform ADR initialization.
@@ -722,8 +692,7 @@ class ADR:
         GeometryMigrationError
             If geometry update checks fail.
         ImproperlyConfiguredError
-            If settings, required paths, or the Python runtime/install pairing
-            are invalid.
+            If settings or required paths are invalid.
         StaticFilesCollectionError
             If ``collectstatic`` fails.
         """
@@ -770,7 +739,7 @@ class ADR:
                 / "CEI",
             ]
 
-        self._check_embedded_python_compatibility()
+        self._warn_for_embedded_python_mismatch()
         enve_error = self._import_enve(dirs_to_check)
         if enve_error is not None:
             msg = (
