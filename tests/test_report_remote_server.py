@@ -33,14 +33,28 @@ import pytest
 import requests
 
 from ansys.dynamicreporting.core import Service, common_utils
-from ansys.dynamicreporting.core.compatibility import AUTO_DETECT_INSTALL_VERSIONS
+from ansys.dynamicreporting.core.compatibility import (
+    AUTO_DETECT_INSTALL_VERSIONS,
+    SUPPORTED_PRODUCT_LINES,
+    product_release_to_install_version,
+)
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
-from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.exceptions import ADRException, UnsupportedServerVersionError
 from ansys.dynamicreporting.core.utils import exceptions as e
 from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
+
+
+def _supported_server_install_version() -> str:
+    """Return a server install version inside the current client support window."""
+    return str(product_release_to_install_version(f"{SUPPORTED_PRODUCT_LINES[0]}.1"))
+
+
+def _unsupported_server_install_version() -> str:
+    """Return a server install version just before the current client support window."""
+    return str(product_release_to_install_version(f"{int(SUPPORTED_PRODUCT_LINES[0]) - 1}.1"))
 
 
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
@@ -191,6 +205,66 @@ def test_none_url() -> None:
     except Exception as e:
         succ_five = "No server URL selected" in str(e)
     assert succ and succ_two and succ_three and succ_four and succ_five
+
+
+def test_server_validate_records_supported_server_install_version(monkeypatch) -> None:
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=999)
+    supported_version = _supported_server_install_version()
+    monkeypatch.setattr(
+        server,
+        "get_api_version",
+        lambda: {
+            "version": "1.0",
+            "server_name": "Supported ADR server",
+            "ansys_version": supported_version,
+        },
+    )
+
+    assert server.validate() == 1.0
+    assert server._ansys_version == supported_version
+    assert server.get_server_name() == "Supported ADR server"
+
+
+@pytest.mark.parametrize(
+    "server_info",
+    [
+        {"version": "1.0"},
+        {"version": "1.0", "ansys_version": "abc"},
+        {"version": "1.0", "ansys_version": _unsupported_server_install_version()},
+    ],
+)
+def test_server_validate_rejects_missing_malformed_or_unsupported_install_version(
+    monkeypatch, server_info
+) -> None:
+    server = r.Server(url="http://127.0.0.1:8000")
+    monkeypatch.setattr(server, "get_api_version", lambda: server_info)
+
+    with pytest.raises(UnsupportedServerVersionError):
+        server.validate()
+
+
+def test_get_server_name_preserves_unsupported_server_version(monkeypatch) -> None:
+    server = r.Server(url="http://127.0.0.1:8000")
+    monkeypatch.setattr(
+        server,
+        "get_api_version",
+        lambda: {"version": "1.0", "ansys_version": _unsupported_server_install_version()},
+    )
+
+    with pytest.raises(UnsupportedServerVersionError):
+        server.get_server_name()
+
+
+def test_server_api_version_property_validates_server_install_version(monkeypatch) -> None:
+    server = r.Server(url="http://127.0.0.1:8000")
+    monkeypatch.setattr(
+        server,
+        "get_api_version",
+        lambda: {"version": "1.0", "ansys_version": _unsupported_server_install_version()},
+    )
+
+    with pytest.raises(UnsupportedServerVersionError):
+        server.api_version
 
 
 def test_server_token(adr_service_create) -> None:
@@ -365,6 +439,25 @@ def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatc
 
     assert captured["ansys_version"] == "261"
     downloader.download.assert_called_once_with()
+
+
+def test_download_html_bundle_rejects_missing_connected_server_version(
+    tmp_path, monkeypatch
+) -> None:
+    """Do not fall back to a local install version when the server cannot prove support."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+
+    monkeypatch.setattr(server, "get_api_version", lambda: {})
+    monkeypatch.setattr(rd, "ReportDownloadHTML", Mock(return_value=downloader))
+
+    with pytest.raises(UnsupportedServerVersionError):
+        server._download_report_as_html_bundle(
+            report_guid="report-guid",
+            directory_name=tmp_path / "html-output",
+            query={"print": "html"},
+        )
+    downloader.download.assert_not_called()
 
 
 def test_download_html_bundle_explicit_version_ignores_api_probe_failure(
@@ -925,6 +1018,84 @@ def _assert_api_lock_released(lock_dir: Path) -> None:
         assert lock.is_locked
     finally:
         lock.release()
+
+
+@pytest.mark.ado_test
+def test_launch_existing_unsupported_server_fails_fast(monkeypatch, tmp_path) -> None:
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    monkeypatch.setattr(
+        r.Server,
+        "validate",
+        lambda self: (_ for _ in ()).throw(
+            UnsupportedServerVersionError("server reports product release 25.1")
+        ),
+    )
+    popen = Mock(side_effect=AssertionError("Popen must not run for an unsupported server"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+
+    with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+        r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=True,
+            verbose=False,
+            exec_basis=str(tmp_path / "install"),
+            ansys_version=int(_supported_server_install_version()),
+        )
+
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+def test_launch_polling_unsupported_server_version_stops_without_retrying(
+    monkeypatch, tmp_path
+) -> None:
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    validate_calls = 0
+
+    def validate_then_reject(self):
+        nonlocal validate_calls
+        validate_calls += 1
+        if validate_calls == 1:
+            raise ConnectionError("no server running")
+        raise UnsupportedServerVersionError("server reports product release 25.1")
+
+    class RunningProcess:
+        stderr = Mock()
+        stdout = Mock()
+
+        def poll(self):
+            return None
+
+    stop_background_server = Mock()
+    monkeypatch.setattr(r.Server, "validate", validate_then_reject)
+    monkeypatch.setattr(r.subprocess, "Popen", Mock(return_value=RunningProcess()))
+    monkeypatch.setattr(r, "stop_background_local_server", stop_background_server)
+
+    with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+        r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=True,
+            verbose=False,
+            exec_basis=str(tmp_path / "install"),
+            ansys_version=int(_supported_server_install_version()),
+        )
+
+    assert validate_calls == 2
+    stop_background_server.assert_called_once_with(str(database_dir.resolve()))
+    _assert_api_lock_released(lock_dir)
 
 
 @pytest.mark.ado_test

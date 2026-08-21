@@ -69,6 +69,7 @@ from .exceptions import (
     MissingSession,
     NotValidServer,
     StartingServiceError,
+    UnsupportedServerVersionError,
 )
 
 
@@ -311,6 +312,8 @@ class Service:
         ------
         NotValidServer
             The current Service doesn not have a valid server associated to it.
+        UnsupportedServerVersionError
+            The connected server reports an unsupported, missing, or malformed Ansys version.
 
 
         Examples
@@ -329,9 +332,11 @@ class Service:
         )
         try:
             self.serverobj.validate()
+        except UnsupportedServerVersionError:
+            raise
         except Exception as e:
             self.logger.error(f"Can not validate dynamic reporting server.\nError: {str(e)}")
-            raise NotValidServer
+            raise NotValidServer from e
         # set url after connection succeeds
         self._url = url
         # set session id
@@ -396,6 +401,8 @@ class Service:
             Can not start the ADR service.
         NotValidServer
             Can not validate the current ADR service.
+        UnsupportedServerVersionError
+            The started server reports an unsupported, missing, or malformed Ansys version.
 
         Examples
         --------
@@ -520,6 +527,8 @@ class Service:
 
             try:
                 launched = report_remote_server.launch_local_database_server(None, **launch_kwargs)
+            except UnsupportedServerVersionError:
+                raise
             except Exception as e:
                 self.logger.error(
                     "Error starting the service.\n"
