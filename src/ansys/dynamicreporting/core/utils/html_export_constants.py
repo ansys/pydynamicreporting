@@ -154,6 +154,8 @@ MATHJAX_FILES = [*MATHJAX_4X_FILES, *MATHJAX_2X_FILES]
 MATHJAX_OPTIONAL_FILES = frozenset(
     {
         "website/scripts/mathjax/LICENSE",
+        "website/scripts/mathjax/images/MenuArrow-15.png",
+        "website/scripts/mathjax/images/CloseX-31.png",
     }
 )
 
