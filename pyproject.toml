@@ -135,6 +135,7 @@ env-vars = { PYTHONPATH = "." }
 
 [tool.uv]
 default-groups = "all"
+link-mode = "copy"
 
 [tool.pytest.ini_options]
 tmp_path_retention_policy = "failed"
