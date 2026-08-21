@@ -2,7 +2,7 @@
 .. _ref_tagging:
 
 Tagging
-=======
+========
 
 Tagging is an important feature of Ansys Dynamic Reporting. Adding tags to items
 allows the database to organize them and the templates to create reports in

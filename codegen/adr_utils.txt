@@ -21,7 +21,9 @@
 # SOFTWARE.
 
 import logging
+import os
 import sys
+import warnings
 
 # Dictionary to match:
 # key: ADR DataItem type
@@ -67,33 +69,85 @@ def in_ipynb():
         return False
 
 
-def get_logger(logfile=None):
+def get_logger(
+    logfile: str | os.PathLike[str] | None = None,
+    *,
+    log_output: str | os.PathLike[str] | None = None,
+    log_level: int | str | None = None,
+) -> logging.Logger:
     """
-    Create a logger for ``pydynamicreporting`` if it does not exist already.
+    Return the ``ansys.dynamicreporting.core`` package logger.
+
+    ADR uses its own logger and does not change the root logger. By default ADR
+    adds a ``NullHandler`` and leaves the logging level unchanged. Pass
+    ``log_output`` to add a file or stdout handler, and pass ``log_level`` to
+    set the shared ADR logger's level explicitly.
 
     Parameters
     ----------
-        logfile: str
-            Name of the file for the log. If none, then use default stream
+    logfile : str or os.PathLike, optional
+        Deprecated alias for ``log_output``.
+    log_output : str or os.PathLike, optional
+        Where to send ADR logs. ``"stdout"`` writes to standard output. Any
+        other value is used as a file path. ``None`` adds no output handler.
+    log_level : int or str, optional
+        Level for the shared ADR logger. ``None`` leaves its current level
+        unchanged.
 
-    Return
-    ------
-        logger: logging.logger
-            The logger object.
+    Returns
+    -------
+    logging.Logger
+        The ``ansys.dynamicreporting.core`` package logger.
     """
-    logger = logging.getLogger()
-    logger.setLevel(logging.ERROR)
-    if logfile is None:
-        # Logging for Python APIs should be disabled by default
-        ch = logging.NullHandler()
-    elif logfile=='stdout':
-        ch = logging.StreamHandler(sys.stdout)
+    if logfile is not None and log_output is not None:
+        raise ValueError("Use only one of 'logfile' or 'log_output'.")
+    if logfile is not None:
+        warnings.warn(
+            "The 'logfile' parameter is deprecated. Use 'log_output' instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        log_output = logfile
+
+    # Use ADR's own logger, not the root logger. Changing the root logger can
+    # break the application's logging. ADR adds each handler only once.
+    logger = logging.getLogger("ansys.dynamicreporting.core")
+    if log_level is not None:
+        logger.setLevel(log_level)
+
+    if log_output is None:
+        # ADR is quiet by default. A single NullHandler prevents fallback
+        # warnings until the caller picks a real output handler.
+        if not any(isinstance(handler, logging.NullHandler) for handler in logger.handlers):
+            logger.addHandler(logging.NullHandler())
+        return logger
+
+    # Add the requested output handler once so repeated calls do not duplicate
+    # log lines.
+    if log_output == "stdout":
+        already_present = any(
+            isinstance(handler, logging.StreamHandler)
+            and not isinstance(handler, logging.FileHandler)
+            and getattr(handler, "stream", None) is sys.stdout
+            for handler in logger.handlers
+        )
+        if already_present:
+            return logger
+        handler = logging.StreamHandler(sys.stdout)
     else:
-        ch = logging.FileHandler(logfile)
-    ch.setLevel(logging.ERROR)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+        # Normalize the path before comparing file handlers.
+        # "out.log" -> "C:\\cwd\\out.log" (Windows) / "/cwd/out.log" (POSIX)
+        target_path = os.path.normcase(os.path.abspath(log_output))
+        if any(
+            isinstance(handler, logging.FileHandler)
+            and os.path.normcase(handler.baseFilename) == target_path
+            for handler in logger.handlers
+        ):
+            return logger
+        handler = logging.FileHandler(log_output)
+    formatter = logging.Formatter("[%(asctime)s] %(levelname)s %(name)s: %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
     return logger
 
 
