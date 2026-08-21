@@ -1,0 +1,6 @@
+as\_dict
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Scene.as_dict

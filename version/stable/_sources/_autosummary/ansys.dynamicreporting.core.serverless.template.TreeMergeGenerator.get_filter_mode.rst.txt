@@ -1,0 +1,6 @@
+get\_filter\_mode
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TreeMergeGenerator.get_filter_mode

@@ -1,0 +1,6 @@
+create\_template
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.create_template

@@ -1,0 +1,6 @@
+children\_order
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoproperty:: DataFilterLayout.children_order

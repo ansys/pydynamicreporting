@@ -1,0 +1,760 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Multiple simulations in same database &#8212; PyDynamicReporting documentation |version|</title>
+
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=649a27d8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/ansys_sphinx_theme.css?v=62c9ccaa" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+ 
+<link href="../../_static/css/breadcrumbs.css" rel="stylesheet" />
+
+    <script src="../../_static/documentation_options.js?v=b9678aa1"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/js/table.js?v=b64f5182"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/50-advanced/01-two_simulation_same_db';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.7';
+        </script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Contribute" href="../../contributing.html" />
+    <link rel="prev" title="Create a report from scratch" href="00-complete_report.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/examples/50-advanced/01-two_simulation_same_db.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container"><!-- Debugging: html_theme_options =  -->
+
+<!-- If there is no MiliSearch enabled, use the PyData search -->
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+   
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/pyansys-logo-black-cropped.png" class="logo__image only-light" alt="Logo image"/>
+    <script>document.write(`<img src="../../_static/pyansys-logo-black-cropped.png" class="logo__image only-dark" alt="Logo image"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.7  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>   <div class="container-xl">
+  <div class="row">
+    <div class="col-12 col-md-3" id="breadcrumbs-spacer"></div>
+    <div class="col-12 col-md-11 col-xl-9" id="breadcrumbs">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul> 
+<li class="nav-item nav-item-additional-breadcrumb">
+  <a href="https://docs.pyansys.com/">PyAnsys</a> » 
+</li>
+ 
+<li class="nav-item nav-item-0">
+  <a href="../../index.html">PyDynamicReporting documentation |version|</a> » 
+</li>
+ 
+          <li class="nav-item nav-item-1"><a href="../index.html" >Examples</a> » </li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Advanced examples</a> » </li>
+        <li class="nav-item nav-item-this"><a href="">Multiple simulations in same database</a></li> 
+      </ul>
+    </div></div>
+  </div>
+</div>
+ 
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.7  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../00-basic/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../25-intermediate/index.html">Intermediate examples</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Advanced examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00-complete_report.html">Create a report from scratch</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Multiple simulations in same database</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-examples-50-advanced-01-two-simulation-same-db-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="multiple-simulations-in-same-database">
+<span id="two-simulation-same-db"></span><span id="sphx-glr-examples-50-advanced-01-two-simulation-same-db-py"></span><h1>Multiple simulations in same database<a class="headerlink" href="#multiple-simulations-in-same-database" title="Link to this heading">#</a></h1>
+<p>Use a single database and report template for multiple simluation results.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This example assumes that you have a local Ansys installation.</p>
+</div>
+<section id="start-an-ansys-dynamic-reporting-service">
+<h2>Start an Ansys Dynamic Reporting service<a class="headerlink" href="#start-an-ansys-dynamic-reporting-service" title="Link to this heading">#</a></h2>
+<p>Start an Ansys Dynamic Reporting service with a new database. The path for the
+database directory must be to an empty directory.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">random</span> <span class="k">as</span> <a href="https://docs.python.org/3.11/library/random.html#random.random" title="random.random" class="sphx-glr-backref-module-random sphx-glr-backref-type-py-function"><span class="n">r</span></a>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">ansys.dynamicreporting.core</span> <span class="k">as</span> <span class="nn">adr</span>
+<span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_utils</span>
+
+<span class="c1"># Find a random open port for the ADR service</span>
+<span class="n">adr_port</span> <span class="o">=</span> <span class="n">report_utils</span><span class="o">.</span><span class="n">find_unused_ports</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">adr_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span>
+    <span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\Ansys Inc\v241&quot;</span><span class="p">,</span>
+    <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;D:\tmp\new_db&quot;</span><span class="p">,</span>
+    <span class="n">port</span><span class="o">=</span><span class="n">adr_port</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">session_guid</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">create_db</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="set-methods-for-items-and-report-template-creation">
+<h2>Set methods for items and report template creation<a class="headerlink" href="#set-methods-for-items-and-report-template-creation" title="Link to this heading">#</a></h2>
+<p>Define two methods: one to create items associated with a design point
+simulation, and a method to create the report template for a simulation
+report. The first method to create items is mocking what a real
+simulation would produce: a set of items pushed directly into the
+database. Please note that each item is tagged with the corresponding
+design point.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_items</span><span class="p">(</span><span class="n">dp</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">intro_text</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+    <span class="n">intro_text</span><span class="o">.</span><span class="n">item_text</span> <span class="o">=</span> <span class="s2">&quot;This section describes the settings for the simulation: initial conditions, solver settings, and such.&quot;</span>
+    <span class="n">intro_text</span><span class="o">.</span><span class="n">set_tags</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dp=dp</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span><span class="si">}</span><span class="s2"> section=intro&quot;</span><span class="p">)</span>
+
+    <span class="n">intro_tree</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+    <span class="n">mytree</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">mytree</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;root&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Solver&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;My Solver&quot;</span><span class="p">})</span>
+    <span class="n">mytree</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;root&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Number cells&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mf">10e6</span><span class="p">})</span>
+    <span class="n">mytree</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;root&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Mesh Size&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;1.0 mm^3&quot;</span><span class="p">})</span>
+    <span class="n">mytree</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;root&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Mesh Type&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;Hex8&quot;</span><span class="p">})</span>
+    <span class="n">intro_tree</span><span class="o">.</span><span class="n">item_tree</span> <span class="o">=</span> <span class="n">mytree</span>
+    <span class="n">intro_tree</span><span class="o">.</span><span class="n">set_tags</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dp=dp</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span><span class="si">}</span><span class="s2"> section=intro&quot;</span><span class="p">)</span>
+
+    <span class="n">data_table</span> <span class="o">=</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">create_item</span><span class="p">()</span>
+    <span class="n">ics</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ips</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">zet</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">30</span><span class="p">):</span>
+        <span class="n">ics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="mf">5.0</span><span class="p">)</span>
+        <span class="n">ips</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">dp</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">10.0</span><span class="p">)</span> <span class="o">+</span> <a href="https://docs.python.org/3.11/library/random.html#random.random" title="random.random" class="sphx-glr-backref-module-random sphx-glr-backref-type-py-function"><span class="n">r</span></a><span class="p">()</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">)</span>
+        <span class="n">zet</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">dp</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">10.0</span><span class="p">)</span> <span class="o">+</span> <a href="https://docs.python.org/3.11/library/random.html#random.random" title="random.random" class="sphx-glr-backref-module-random sphx-glr-backref-type-py-function"><span class="n">r</span></a><span class="p">()</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">)</span>
+
+    <span class="n">data_table</span><span class="o">.</span><span class="n">item_table</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ics</span><span class="p">,</span> <span class="n">ips</span><span class="p">,</span> <span class="n">zet</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;|S20&quot;</span><span class="p">)</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">labels_row</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="s2">&quot;Sin&quot;</span><span class="p">,</span> <span class="s2">&quot;Cos&quot;</span><span class="p">]</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">set_tags</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dp=dp</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span><span class="si">}</span><span class="s2"> section=data&quot;</span><span class="p">)</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="s2">&quot;line&quot;</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">xaxis</span> <span class="o">=</span> <span class="s2">&quot;X&quot;</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">yaxis</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Sin&quot;</span><span class="p">,</span> <span class="s2">&quot;Cos&quot;</span><span class="p">]</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">xaxis_format</span> <span class="o">=</span> <span class="s2">&quot;floatdot0&quot;</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">yaxis_format</span> <span class="o">=</span> <span class="s2">&quot;floatdot1&quot;</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">ytitle</span> <span class="o">=</span> <span class="s2">&quot;Values&quot;</span>
+    <span class="n">data_table</span><span class="o">.</span><span class="n">xtitle</span> <span class="o">=</span> <span class="s2">&quot;X&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">create_report_template</span><span class="p">(</span><span class="n">server</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">template_1</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Simulation Report&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:basic&quot;</span>
+    <span class="p">)</span>
+    <span class="n">template_1</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;HTML&quot;: &quot;&lt;h1&gt;Simulation Report&lt;/h1&gt;&quot;}&#39;</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_1</span><span class="p">)</span>
+
+    <span class="n">template_0</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;TOC&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">template_1</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:toc&quot;</span><span class="p">)</span>
+    <span class="n">template_0</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;TOCitems&quot;: 1, &quot;HTML&quot;: &quot;&lt;h2&gt;Table of Content&lt;/h2&gt;&quot;}&#39;</span>
+    <span class="n">template_0</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_name|eq|__NonexistantName__;&quot;</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_0</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_1</span><span class="p">)</span>
+
+    <span class="n">template_2</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Introduction&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">template_1</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:panel&quot;</span>
+    <span class="p">)</span>
+    <span class="n">template_2</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;HTML&quot;: &quot;&lt;h2&gt;Introduction&lt;/h2&gt;&quot;, &quot;properties&quot;: {&quot;TOCItem&quot;: &quot;1&quot;}}&#39;</span>
+    <span class="n">template_2</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_tags|cont|section=intro;&quot;</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_2</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_1</span><span class="p">)</span>
+
+    <span class="n">template_3</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Text&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">template_2</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:basic&quot;</span><span class="p">)</span>
+    <span class="n">template_3</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;properties&quot;: {&quot;TOCItem&quot;: &quot;0&quot;}}&#39;</span>
+    <span class="n">template_3</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_type|cont|html,string;&quot;</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_3</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_2</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_1</span><span class="p">)</span>
+
+    <span class="n">template_4</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Tree&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">template_2</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:basic&quot;</span><span class="p">)</span>
+    <span class="n">template_4</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="s1">&#39;{&quot;properties&quot;: {&quot;TOCItem&quot;: &quot;0&quot;}}&#39;</span>
+    <span class="n">template_4</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_type|cont|tree;&quot;</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_4</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_2</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_1</span><span class="p">)</span>
+
+    <span class="n">template_5</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Results&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">template_1</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:panel&quot;</span>
+    <span class="p">)</span>
+    <span class="n">template_5</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s1">&#39;{&quot;HTML&quot;: &quot;&lt;h2&gt;Results&lt;/h2&gt;</span><span class="se">\\</span><span class="s1">nYour simulation results.&quot;, &quot;properties&quot;: {&quot;TOCItem&quot;: &quot;1&quot;}}&#39;</span>
+    <span class="p">)</span>
+    <span class="n">template_5</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_tags|cont|section=data;&quot;</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_5</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">template_1</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="create-items-and-report-template">
+<h2>Create items and report template<a class="headerlink" href="#create-items-and-report-template" title="Link to this heading">#</a></h2>
+<p>Assume we have ran the design point dp0. Create the items. Check if the
+database already contains the report template with the method
+<a class="reference internal" href="../../_autosummary/ansys.dynamicreporting.core.Service.get_list_reports.html#ansys.dynamicreporting.core.Service.get_list_reports" title="ansys.dynamicreporting.core.Service.get_list_reports"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_list_reports</span></code></a>.
+If it doesn’t exist, then create it as well.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">create_items</span><span class="p">(</span><span class="n">dp</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="k">if</span> <span class="s2">&quot;Simulation Report&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adr_service</span><span class="o">.</span><span class="n">get_list_reports</span><span class="p">():</span>
+    <span class="n">create_report_template</span><span class="p">(</span><span class="n">server</span><span class="o">=</span><span class="n">adr_service</span><span class="o">.</span><span class="n">serverobj</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="create-items-from-second-simulation">
+<h2>Create items from second simulation<a class="headerlink" href="#create-items-from-second-simulation" title="Link to this heading">#</a></h2>
+<p>Now assume we separately ran the design point dp1. Connect to the
+currently running ADR service and push the new items in the same database.
+Check if the report template already exists and create it only if it does not.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">new_service</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\Ansys Inc\v241&quot;</span><span class="p">)</span>
+<span class="n">new_service</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="n">adr_service</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+<span class="n">create_items</span><span class="p">(</span><span class="n">dp</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">if</span> <span class="s2">&quot;Simulation Report&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new_service</span><span class="o">.</span><span class="n">get_list_reports</span><span class="p">():</span>
+    <span class="n">create_report_template</span><span class="p">(</span><span class="n">server</span><span class="o">=</span><span class="n">new_service</span><span class="o">.</span><span class="n">serverobj</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="../../_images/01_two_simulation_same_db_0.png" src="../../_images/01_two_simulation_same_db_0.png" />
+</section>
+<section id="visualize-the-report">
+<h2>Visualize the report<a class="headerlink" href="#visualize-the-report" title="Link to this heading">#</a></h2>
+<p>Now the database contains data from both design point simulations. If you
+were to simply visualize the report, both simulation results would appear.
+To avoid that, use a filter to downselect the items to visualize each time.
+Setting the filter to look only at items with tag dp=dp0 will show the
+report for the first design point. Simularly, filter for tag dp=dp1 will
+display the report for the second design point.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">new_service</span><span class="o">.</span><span class="n">visualize_report</span><span class="p">(</span><span class="n">report_name</span><span class="o">=</span><span class="s2">&quot;Simulation Report&quot;</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp0;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="../../_images/01_two_simulation_same_db_1.png" src="../../_images/01_two_simulation_same_db_1.png" />
+</section>
+<section id="visualize-the-report-for-dp1">
+<h2>Visualize the report for dp1<a class="headerlink" href="#visualize-the-report-for-dp1" title="Link to this heading">#</a></h2>
+<p>Visualize the report for the second design point. See how you only need to
+change the filter.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">new_service</span><span class="o">.</span><span class="n">visualize_report</span><span class="p">(</span><span class="n">report_name</span><span class="o">=</span><span class="s2">&quot;Simulation Report&quot;</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp1;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="close-the-service">
+<h2>Close the service<a class="headerlink" href="#close-the-service" title="Link to this heading">#</a></h2>
+<p>Close the Ansys Dynamic Reporting service. The database with the items that
+were created remains on disk.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># sphinx_gallery_thumbnail_path = &#39;_static/01_two_simulation_same_db_0.png&#39;</span>
+<span class="n">adr_service</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-examples-50-advanced-01-two-simulation-same-db-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/445124d56c52d9a808cd57262634ffc9/01-two_simulation_same_db.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">01-two_simulation_same_db.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../../_downloads/1987c410e8527bb9f6253ec7e25c22f1/01-two_simulation_same_db.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">01-two_simulation_same_db.ipynb</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start-an-ansys-dynamic-reporting-service">Start an Ansys Dynamic Reporting service</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-methods-for-items-and-report-template-creation">Set methods for items and report template creation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-items-and-report-template">Create items and report template</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-items-from-second-simulation">Create items from second simulation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualize-the-report">Visualize the report</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualize-the-report-for-dp1">Visualize the report for dp1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#close-the-service">Close the service</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/examples/50-advanced/01-two_simulation_same_db.rst">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/examples/50-advanced/01-two_simulation_same_db.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright (c) 2024 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  0.11.2. <br />Last updated on
+  <span id="date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var lastModifiedDate = new Date(document.lastModified);
+  var date = lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("date").innerHTML = date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

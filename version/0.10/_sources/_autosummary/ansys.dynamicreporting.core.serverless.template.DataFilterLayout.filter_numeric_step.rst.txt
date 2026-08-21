@@ -1,0 +1,6 @@
+filter\_numeric\_step
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: DataFilterLayout.filter_numeric_step

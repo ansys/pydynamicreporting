@@ -1,0 +1,6 @@
+interactive\_only
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: UserDefinedLayout.interactive_only

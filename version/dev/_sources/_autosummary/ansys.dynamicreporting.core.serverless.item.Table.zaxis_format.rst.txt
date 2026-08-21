@@ -1,0 +1,6 @@
+zaxis\_format
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.zaxis_format

@@ -1,0 +1,6 @@
+set\_child\_clip
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: BoxLayout.set_child_clip

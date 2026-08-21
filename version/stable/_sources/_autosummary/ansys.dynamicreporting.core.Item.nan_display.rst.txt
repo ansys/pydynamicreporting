@@ -1,0 +1,6 @@
+nan\_display
+============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.nan_display

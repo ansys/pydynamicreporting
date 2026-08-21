@@ -1,0 +1,189 @@
+﻿FooterLayout
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: FooterLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      FooterLayout.add_filter
+      
+      
+      FooterLayout.add_params
+      
+      
+      FooterLayout.add_properties
+      
+      
+      FooterLayout.add_property
+      
+      
+      FooterLayout.add_sort_fields
+      
+      
+      FooterLayout.add_tag
+      
+      
+      FooterLayout.as_dict
+      
+      
+      FooterLayout.create
+      
+      
+      FooterLayout.delete
+      
+      
+      FooterLayout.filter
+      
+      
+      FooterLayout.find
+      
+      
+      FooterLayout.get
+      
+      
+      FooterLayout.get_column_count
+      
+      
+      FooterLayout.get_column_widths
+      
+      
+      FooterLayout.get_comments
+      
+      
+      FooterLayout.get_filter
+      
+      
+      FooterLayout.get_filter_mode
+      
+      
+      FooterLayout.get_html
+      
+      
+      FooterLayout.get_params
+      
+      
+      FooterLayout.get_property
+      
+      
+      FooterLayout.get_skip
+      
+      
+      FooterLayout.get_sort_fields
+      
+      
+      FooterLayout.get_sort_selection
+      
+      
+      FooterLayout.get_tags
+      
+      
+      FooterLayout.get_transpose
+      
+      
+      FooterLayout.reinit
+      
+      
+      FooterLayout.rem_tag
+      
+      
+      FooterLayout.remove_tag
+      
+      
+      FooterLayout.render
+      
+      
+      FooterLayout.render_pdf
+      
+      
+      FooterLayout.reorder_child
+      
+      
+      FooterLayout.reorder_children
+      
+      
+      FooterLayout.save
+      
+      
+      FooterLayout.set_column_count
+      
+      
+      FooterLayout.set_column_widths
+      
+      
+      FooterLayout.set_comments
+      
+      
+      FooterLayout.set_filter
+      
+      
+      FooterLayout.set_filter_mode
+      
+      
+      FooterLayout.set_html
+      
+      
+      FooterLayout.set_params
+      
+      
+      FooterLayout.set_property
+      
+      
+      FooterLayout.set_skip
+      
+      
+      FooterLayout.set_sort_fields
+      
+      
+      FooterLayout.set_sort_selection
+      
+      
+      FooterLayout.set_tags
+      
+      
+      FooterLayout.set_transpose
+      
+      
+      FooterLayout.to_dict
+      
+      
+      FooterLayout.to_json
+      
+      
+      FooterLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      FooterLayout.children_order
+      FooterLayout.db
+      FooterLayout.item_filter
+      FooterLayout.master
+      FooterLayout.name
+      FooterLayout.params
+      FooterLayout.parent
+      FooterLayout.report_type
+      FooterLayout.saved
+      FooterLayout.tags
+      FooterLayout.type
+      FooterLayout.date
+      FooterLayout.children
+      FooterLayout.guid
+   
+   
