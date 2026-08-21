@@ -41,6 +41,7 @@ import time
 import urllib
 from urllib.parse import urlparse
 import uuid
+import warnings
 
 import requests
 from requests import JSONDecodeError
@@ -960,16 +961,26 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query, item_filter)
-        # Respect an explicit override before probing the server.  Some callers
-        # already know which asset namespace they need, and HTML export should
-        # not become dependent on /item/api_version/ in that case.
+        # Resolve the connected server version once, reusing validation state
+        # when available. Explicit overrides can still proceed if the best-effort
+        # probe fails because some callers already know which namespace they need.
+        try:
+            connected_ansys_version = (
+                self._ansys_version
+                if self._api_version is not None
+                else self.get_api_version().get("ansys_version")
+            )
+        except Exception:
+            if ansys_version is None:
+                raise
+            connected_ansys_version = None
         resolved_ansys_version = ansys_version
         if resolved_ansys_version is None:
             # Ask the server for the Ansys version number when possible so the
             # downloader rewrites static asset paths against the same product
             # namespace the report was generated with.
             resolved_ansys_version = validate_supported_server_install_version(
-                self.get_api_version().get("ansys_version")
+                connected_ansys_version
             )
             self._ansys_version = resolved_ansys_version
         else:
@@ -977,19 +988,16 @@ class Server:
             # but warn when the connected server advertises a different asset
             # namespace.  Ignore probe failures because the override exists to
             # support cases where /item/api_version/ is unavailable or wrong.
-            try:
-                connected_ansys_version = self.get_api_version().get("ansys_version")
-            except Exception:
-                connected_ansys_version = None
             if connected_ansys_version is not None and str(connected_ansys_version) != str(
                 resolved_ansys_version
             ):
-                logger.warning(
-                    "Explicit HTML export ansys_version %s does not match connected "
-                    "server version %s; continuing with the override.",
-                    resolved_ansys_version,
-                    connected_ansys_version,
+                warning_message = (
+                    f"Explicit HTML export ansys_version {resolved_ansys_version} does not match "
+                    f"connected server version {connected_ansys_version}; continuing with the "
+                    "override."
                 )
+                logger.warning(warning_message)
+                warnings.warn(warning_message, UserWarning, stacklevel=2)
 
         worker = ReportDownloadHTML(
             url=url,

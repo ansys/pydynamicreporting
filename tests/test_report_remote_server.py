@@ -441,6 +441,34 @@ def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatc
     downloader.download.assert_called_once_with()
 
 
+def test_download_html_bundle_reuses_cached_connected_server_version(tmp_path, monkeypatch) -> None:
+    """Avoid another API probe when connection validation already cached the server version."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    connected_version = _supported_server_install_version()
+    server._api_version = 1.0
+    server._ansys_version = connected_version
+    downloader = Mock()
+    captured: dict[str, object] = {}
+    probe = Mock(side_effect=AssertionError("cached server version should be reused"))
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", probe)
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    server._download_report_as_html_bundle(
+        report_guid="report-guid",
+        directory_name=tmp_path / "html-output",
+        query={"print": "html"},
+    )
+
+    assert captured["ansys_version"] == connected_version
+    probe.assert_not_called()
+    downloader.download.assert_called_once_with()
+
+
 def test_download_html_bundle_rejects_missing_connected_server_version(
     tmp_path, monkeypatch
 ) -> None:
@@ -493,29 +521,41 @@ def test_download_html_bundle_warns_on_explicit_version_mismatch(
 ) -> None:
     """Warn when the caller forces a different asset namespace than the server advertises."""
     server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    connected_version = _supported_server_install_version()
+    server._api_version = 1.0
+    server._ansys_version = connected_version
     downloader = Mock()
     captured: dict[str, object] = {}
+    probe = Mock(side_effect=AssertionError("cached server version should be reused"))
 
     def fake_report_download_html(**kwargs):
         captured.update(kwargs)
         return downloader
 
-    monkeypatch.setattr(server, "get_api_version", lambda: {"ansys_version": "261"})
+    monkeypatch.setattr(server, "get_api_version", probe)
     monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
 
     with caplog.at_level(logging.WARNING, logger="ansys.dynamicreporting.core"):
-        server._download_report_as_html_bundle(
-            report_guid="report-guid",
-            directory_name=tmp_path / "html-output",
-            query={"print": "html"},
-            ansys_version=252,
-        )
+        with pytest.warns(
+            UserWarning,
+            match=(
+                "Explicit HTML export ansys_version 252 does not match connected "
+                f"server version {connected_version}"
+            ),
+        ):
+            server._download_report_as_html_bundle(
+                report_guid="report-guid",
+                directory_name=tmp_path / "html-output",
+                query={"print": "html"},
+                ansys_version=252,
+            )
 
     assert captured["ansys_version"] == 252
     assert (
-        "Explicit HTML export ansys_version 252 does not match connected server version 261"
-        in caplog.text
+        f"Explicit HTML export ansys_version 252 does not match connected "
+        f"server version {connected_version}" in caplog.text
     )
+    probe.assert_not_called()
     downloader.download.assert_called_once_with()
 
 
