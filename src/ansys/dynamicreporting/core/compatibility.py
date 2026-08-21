@@ -26,6 +26,7 @@ from dataclasses import dataclass
 import re
 
 from ._version import __version__
+from .exceptions import UnsupportedServerVersionError
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
 _CLIENT_MAJOR_ONE_PRODUCT_LINE = 27
@@ -230,4 +231,52 @@ def get_compatibility_warning_for_install_version(
         f"{detected_release} is outside the supported window for this client. "
         f"This client is bundled with {BUNDLED_PRODUCT_RELEASE} and supports annual lines "
         f"{supported_lines}. Compatibility is not guaranteed."
+    )
+
+
+def validate_supported_server_install_version(
+    install_version: int | str | None,
+    supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES,
+) -> str:
+    """Validate the install version reported by a connected ADR server.
+
+    Parameters
+    ----------
+    install_version : int, str, or None
+        Three-digit install version reported by ``/item/api_version/``.
+    supported_product_lines : tuple[str, ...], optional
+        Supported annual product lines.
+
+    Returns
+    -------
+    str
+        Normalized three-digit install version.
+
+    Raises
+    ------
+    UnsupportedServerVersionError
+        If the server does not report a usable, supported install version.
+    """
+    if install_version is None:
+        raise UnsupportedServerVersionError(
+            "The server did not report an Ansys version in /item/api_version/."
+        )
+
+    normalized = str(install_version).strip()
+    try:
+        detected_release = install_version_to_product_release(normalized)
+    except ValueError as exc:
+        raise UnsupportedServerVersionError(
+            f"The server reported Ansys version {install_version!r}, which is not a "
+            "three-digit install version such as '271'."
+        ) from exc
+
+    if is_supported_product_release(detected_release, supported_product_lines):
+        return normalized
+
+    supported_lines = ", ".join(f"{line}.*" for line in supported_product_lines)
+    raise UnsupportedServerVersionError(
+        "Connected ADR server reports product release "
+        f"{detected_release}. This client is bundled with {BUNDLED_PRODUCT_RELEASE} "
+        f"and supports annual lines {supported_lines}."
     )

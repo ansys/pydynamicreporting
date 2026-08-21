@@ -41,6 +41,7 @@ import time
 import urllib
 from urllib.parse import urlparse
 import uuid
+import warnings
 
 import requests
 from requests import JSONDecodeError
@@ -50,9 +51,9 @@ from urllib3.util.retry import Retry
 from .. import common_utils
 from ..adr_utils import build_query_url
 from ..common_utils import populate_template
-from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION
+from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION, validate_supported_server_install_version
 from ..constants import JSON_ATTR_KEYS
-from ..exceptions import ADRException, InvalidAnsysPath
+from ..exceptions import ADRException, InvalidAnsysPath, UnsupportedServerVersionError
 from . import exceptions, filelock, report_objects, report_utils
 from .encoders import BaseEncoder
 
@@ -196,7 +197,7 @@ class Server:
     def api_version(self):
         """Read only version var."""
         if self._api_version is None:
-            self._api_version = float(self.get_api_version()["version"])
+            self.validate()
         return self._api_version
 
     @property
@@ -319,6 +320,8 @@ class Server:
         if self.cur_servername is None:
             try:
                 self.validate()
+            except UnsupportedServerVersionError:
+                raise
             except Exception as e:
                 logger.debug(f"Warning: {str(e)}")
                 pass
@@ -327,10 +330,14 @@ class Server:
         return self.cur_servername
 
     def validate(self):
+        """Validate the server connection and advertised product compatibility."""
         server_info = self.get_api_version()
         if "server_name" in server_info:
             self.cur_servername = server_info["server_name"]
         self._api_version = float(server_info["version"])
+        self._ansys_version = validate_supported_server_install_version(
+            server_info.get("ansys_version")
+        )
         return self._api_version
 
     def stop_server_allowed(self):
@@ -954,11 +961,43 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query, item_filter)
-        # Ask the server for the Ansys version number when possible so the downloader rewrites
-        # static asset paths against the same product namespace the report was generated with.
-        resolved_ansys_version = self.get_api_version().get("ansys_version", self._ansys_version)
-        if ansys_version:
-            resolved_ansys_version = ansys_version
+        # Resolve the connected server version once, reusing validation state
+        # when available. Explicit overrides can still proceed if the best-effort
+        # probe fails because some callers already know which namespace they need.
+        try:
+            connected_ansys_version = (
+                self._ansys_version
+                if self._api_version is not None
+                else self.get_api_version().get("ansys_version")
+            )
+        except Exception:
+            if ansys_version is None:
+                raise
+            connected_ansys_version = None
+        resolved_ansys_version = ansys_version
+        if resolved_ansys_version is None:
+            # Ask the server for the Ansys version number when possible so the
+            # downloader rewrites static asset paths against the same product
+            # namespace the report was generated with.
+            resolved_ansys_version = validate_supported_server_install_version(
+                connected_ansys_version
+            )
+            self._ansys_version = resolved_ansys_version
+        else:
+            # Best-effort UX: keep the explicit override as the source of truth,
+            # but warn when the connected server advertises a different asset
+            # namespace.  Ignore probe failures because the override exists to
+            # support cases where /item/api_version/ is unavailable or wrong.
+            if connected_ansys_version is not None and str(connected_ansys_version) != str(
+                resolved_ansys_version
+            ):
+                warning_message = (
+                    f"Explicit HTML export ansys_version {resolved_ansys_version} does not match "
+                    f"connected server version {connected_ansys_version}; continuing with the "
+                    "override."
+                )
+                logger.warning(warning_message)
+                warnings.warn(warning_message, UserWarning, stacklevel=2)
 
         worker = ReportDownloadHTML(
             url=url,
@@ -1941,6 +1980,12 @@ def launch_local_database_server(
                 "There appears to be a local Nexus server already running on that port.\nPlease stop that server first or select a different port."
             )
         return False
+    except UnsupportedServerVersionError:
+        if local_lock:
+            local_lock.release()
+        if raise_exception:
+            raise
+        return False
     except Exception as e:
         logger.debug(
             f"This can throw an error at the validate step but still be able to start a new server: {str(e)}"
@@ -2078,9 +2123,18 @@ def launch_local_database_server(
             break
         except exceptions.PermissionDenied:
             stop_background_local_server(db_dir)
+            if local_lock:
+                local_lock.release()
             raise exceptions.ServerConnectionError(
                 "Access to server denied.  Potential username/password error."
             )
+        except UnsupportedServerVersionError:
+            stop_background_local_server(db_dir)
+            if local_lock:
+                local_lock.release()
+            if raise_exception:
+                raise
+            return False
         except Exception as e:
             # we will try again
             logger.debug(

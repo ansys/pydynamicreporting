@@ -154,6 +154,8 @@ MATHJAX_FILES = [*MATHJAX_4X_FILES, *MATHJAX_2X_FILES]
 MATHJAX_OPTIONAL_FILES = frozenset(
     {
         "website/scripts/mathjax/LICENSE",
+        "website/scripts/mathjax/images/MenuArrow-15.png",
+        "website/scripts/mathjax/images/CloseX-31.png",
     }
 )
 
@@ -190,6 +192,9 @@ VIEWER_UTILS = ["js-inflate.js", "js-unzip.js", "jquery.min.js"]
 
 # Core JavaScript files for the modern viewer.
 VIEWER_JS = ["ANSYSViewer_min.js", "viewer-loader.js"]
+
+# Path below a versioned ``ansys###`` static root for the v261 context-menu assets.
+CONTEXT_MENU_PATH = "nexus/novnc/vendor/jQuery-contextMenu"
 
 # Files for the context menu used in the 3D viewer.
 CONTEXT_MENU_JS = [

@@ -643,45 +643,6 @@ class Template(BaseModel):
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
 
-    def render_pdf(self, *, context=None, item_filter: str = "", request=None) -> bytes:
-        """Render the template to a PDF byte stream.
-
-        Parameters
-        ----------
-        context : dict, optional
-            Additional context passed to the rendering engine.
-        item_filter : str, optional
-            ADR query string used to select :class:`Item` instances.
-        request : HttpRequest, optional
-            Django request object, if available.
-
-        Returns
-        -------
-        bytes
-            PDF document bytes.
-
-        Raises
-        ------
-        ADRException
-            If rendering or PDF generation fails.
-        """
-        ctx = self._get_base_context(context, request)
-        try:
-            from data.models import Item
-            from reports.engine import TemplateEngine
-            from weasyprint import HTML
-
-            items = Item.find(query=item_filter)
-            template_obj = self._orm_instance
-            engine = template_obj.get_engine()
-            static_html = engine.dispatch_render("pdf", items, ctx)
-            # Convert rendered HTML to PDF using WeasyPrint.
-            return HTML(string=static_html).write_pdf()
-        except Exception as e:
-            raise ADRException(
-                f"Failed to render PDF for template {self.name} ({self.guid}): {e}"
-            ) from e
-
 
 class Layout(Template):
     """Base class for layout-style templates.
