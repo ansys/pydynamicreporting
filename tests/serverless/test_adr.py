@@ -173,8 +173,105 @@ def test_get_embedded_python_version_returns_none_without_valid_runtime(tmp_path
 
 
 @pytest.mark.unit
-def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, monkeypatch):
-    """A Python mismatch should warn even before an animation is rendered."""
+def test_resolve_disable_python_check_uses_constructor_before_environment(monkeypatch):
+    """An explicit constructor value must override a hidden environment value."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    monkeypatch.setenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, "1")
+    assert ADR._resolve_disable_python_check(False) is False
+
+    monkeypatch.setenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, "0")
+    assert ADR._resolve_disable_python_check(True) is True
+
+
+@pytest.mark.unit
+def test_resolve_disable_python_check_reads_environment(monkeypatch):
+    """The env var should control the escape hatch when the constructor omits it."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    monkeypatch.delenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, raising=False)
+    assert ADR._resolve_disable_python_check(None) is False
+
+    monkeypatch.setenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, "1")
+    assert ADR._resolve_disable_python_check(None) is True
+
+    monkeypatch.setenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, "0")
+    assert ADR._resolve_disable_python_check(None) is False
+
+
+@pytest.mark.unit
+def test_resolve_disable_python_check_rejects_invalid_environment(monkeypatch):
+    """Only explicit 1/0 values are accepted for the env var."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    monkeypatch.setenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, "true")
+
+    with pytest.raises(ImproperlyConfiguredError, match="ANSYS_ADR_DISABLE_PYTHON_CHECK"):
+        ADR._resolve_disable_python_check(None)
+
+
+@pytest.mark.unit
+def test_disable_python_check_constructor_sets_escape_hatch(tmp_path, monkeypatch):
+    """The public constructor option should enable the mismatch escape hatch."""
+    from ansys.dynamicreporting.core.common_utils import InstallResolution
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    install_dir = tmp_path / "install"
+    install_dir.mkdir()
+    monkeypatch.setattr(ADR, "_instance", None)
+    monkeypatch.setattr(ADR, "_is_setup", False)
+    monkeypatch.setattr(
+        adr_module,
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=261,
+        ),
+    )
+
+    try:
+        adr = ADR(
+            ansys_installation=str(install_dir),
+            in_memory=True,
+            disable_python_check=True,
+        )
+        assert adr._disable_python_check is True
+    finally:
+        ADR._instance = None
+        ADR._is_setup = False
+
+
+@pytest.mark.unit
+def test_disable_python_check_constructor_reads_environment(tmp_path, monkeypatch):
+    """The env var should enable the public escape hatch when the argument is omitted."""
+    from ansys.dynamicreporting.core.common_utils import InstallResolution
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    install_dir = tmp_path / "install"
+    install_dir.mkdir()
+    monkeypatch.setenv(adr_module.DISABLE_PYTHON_CHECK_ENV_VAR, "1")
+    monkeypatch.setattr(ADR, "_instance", None)
+    monkeypatch.setattr(ADR, "_is_setup", False)
+    monkeypatch.setattr(
+        adr_module,
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=261,
+        ),
+    )
+
+    try:
+        adr = ADR(ansys_installation=str(install_dir), in_memory=True)
+        assert adr._disable_python_check is True
+    finally:
+        ADR._instance = None
+        ADR._is_setup = False
+
+
+@pytest.mark.unit
+def test_check_embedded_python_compatibility_errors_before_animation_import(tmp_path, monkeypatch):
+    """A Python mismatch should fail setup before animation import."""
     from unittest.mock import Mock
 
     import ansys.dynamicreporting.core.serverless.adr as adr_module
@@ -193,11 +290,44 @@ def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, mon
     adr = object.__new__(ADR)
     adr._ansys_installation = product_root
     adr._ansys_version = 261
+    adr._disable_python_check = False
+    adr._logger = Mock()
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    with pytest.raises(ImproperlyConfiguredError, match="Serverless ADR is running on Python"):
+        adr._check_embedded_python_compatibility()
+
+    assert adr._embedded_python_version == embedded_python_version
+    adr._logger.warning.assert_not_called()
+
+
+@pytest.mark.unit
+def test_check_embedded_python_compatibility_warns_when_disabled(tmp_path, monkeypatch):
+    """The explicit escape hatch keeps the existing warning behavior."""
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    active_python_version = (sys.version_info.major, sys.version_info.minor)
+    embedded_python_version = (active_python_version[0], active_python_version[1] + 1)
+    product_root = tmp_path / "CEI"
+    (
+        product_root
+        / "apex261"
+        / "machines"
+        / "win64"
+        / f"Python-{embedded_python_version[0]}.{embedded_python_version[1]}.0"
+    ).mkdir(parents=True)
+
+    adr = object.__new__(ADR)
+    adr._ansys_installation = product_root
+    adr._ansys_version = 261
+    adr._disable_python_check = True
     adr._logger = Mock()
     monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
 
     with pytest.warns(UserWarning, match="Serverless ADR is running on Python"):
-        adr._warn_for_embedded_python_mismatch()
+        adr._check_embedded_python_compatibility()
 
     assert adr._embedded_python_version == embedded_python_version
     adr._logger.warning.assert_called_once()
