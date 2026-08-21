@@ -287,8 +287,8 @@ def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
     assert success is False
 
 
-def test_export_html_defers_asset_version_to_connected_server() -> None:
-    """Avoid overriding a remote v261 server with the client's install version."""
+def test_export_html_preserves_service_asset_version_override() -> None:
+    """Keep the legacy high-level Report.export_html asset-version behavior."""
     captured: dict[str, object] = {}
 
     def fake_export_report_as_html(**kwargs):
@@ -304,7 +304,7 @@ def test_export_html_defers_asset_version_to_connected_server() -> None:
     )
 
     assert my_report.export_html(directory_name="html-output") is True
-    assert "ansys_version" not in captured
+    assert captured["ansys_version"] == 271
 
 
 @pytest.mark.ado_test

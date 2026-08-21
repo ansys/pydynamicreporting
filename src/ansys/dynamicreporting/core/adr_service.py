@@ -336,7 +336,7 @@ class Service:
             raise
         except Exception as e:
             self.logger.error(f"Can not validate dynamic reporting server.\nError: {str(e)}")
-            raise NotValidServer from e
+            raise NotValidServer
         # set url after connection succeeds
         self._url = url
         # set session id
