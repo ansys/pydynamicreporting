@@ -617,18 +617,16 @@ class ADR:
             ansys_installation / f"apex{ansys_version}" / "machines" / machine_directory
         )
         try:
-            runtime_paths = runtime_directory.glob("[Pp]ython-*")
+            for runtime_path in runtime_directory.glob("[Pp]ython-*"):
+                if not runtime_path.is_dir():
+                    continue
+                match = re.fullmatch(
+                    r"python-(\d+)\.(\d+)(?:\.\d+)?", runtime_path.name, flags=re.IGNORECASE
+                )
+                if match:
+                    return (int(match.group(1)), int(match.group(2)))
         except OSError:
             return None
-
-        for runtime_path in runtime_paths:
-            if not runtime_path.is_dir():
-                continue
-            match = re.fullmatch(
-                r"python-(\d+)\.(\d+)(?:\.\d+)?", runtime_path.name, flags=re.IGNORECASE
-            )
-            if match:
-                return (int(match.group(1)), int(match.group(2)))
         return None
 
     @staticmethod
