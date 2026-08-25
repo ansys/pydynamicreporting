@@ -32,6 +32,12 @@ from ansys.dynamicreporting.core.utils.html_export_constants import (
     MATHJAX_4X_FILES,
 )
 
+LEGACY_CONTEXT_MENU_FILES = (
+    "jquery.contextMenu.min.css",
+    "jquery.contextMenu.min.js",
+    "jquery.ui.position.min.js",
+)
+
 
 def test_download_defaults_to_bundled_asset_namespace() -> None:
     # Direct helper usage often happens without a Service instance, so the
@@ -39,6 +45,110 @@ def test_download_defaults_to_bundled_asset_namespace() -> None:
     downloader = rd.ReportDownloadHTML(url=None, directory=".")
 
     assert downloader._ansys_version == DEFAULT_STATIC_ASSET_VERSION
+
+
+def test_download_special_files_wires_v261_legacy_context_menu_assets(
+    tmp_path, monkeypatch
+) -> None:
+    """Keep the v261 context-menu requests wired into the full special-file flow."""
+    downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=261)
+    download_calls: list[tuple[tuple[str, ...], str, str, str, bool]] = []
+
+    monkeypatch.setattr(downloader, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(downloader, "_download_mathjax_files", lambda *args, **kwargs: None)
+
+    def _record_download(files, source_path, target_path, comment, *, warn_on_missing=False):
+        download_calls.append((tuple(files), source_path, target_path, comment, warn_on_missing))
+
+    monkeypatch.setattr(downloader, "_download_static_files", _record_download)
+
+    downloader._download_special_files()
+
+    actual_context_menu_calls = [call for call in download_calls if "jQuery-contextMenu" in call[1]]
+    assert actual_context_menu_calls == [
+        (
+            LEGACY_CONTEXT_MENU_FILES,
+            "/ansys261/nexus/novnc/vendor/jQuery-contextMenu/",
+            "ansys261/nexus/novnc/vendor/jQuery-contextMenu/",
+            "legacy viewer context-menu assets",
+            True,
+        )
+    ]
+
+
+def test_reports_missing_legacy_context_menu_assets_for_v261(tmp_path) -> None:
+    """Warn when a v261 server omits part of the restored legacy asset set."""
+    downloader = rd.ReportDownloadHTML(
+        url="http://localhost:8000/reports/report_display/",
+        directory=str(tmp_path),
+        ansys_version=261,
+    )
+    available_file = LEGACY_CONTEXT_MENU_FILES[0]
+
+    def _get_side_effect(url, **kwargs):
+        if url.endswith(available_file):
+            return _make_response(requests.codes.ok, content=available_file.encode("utf-8"))
+        return _make_response(404)
+
+    with patch("requests.get", side_effect=_get_side_effect):
+        with patch("builtins.print") as mock_print:
+            downloader._download_legacy_context_menu_assets()
+
+    copied_file = tmp_path / "ansys261/nexus/novnc/vendor/jQuery-contextMenu" / available_file
+    assert copied_file.read_bytes() == available_file.encode("utf-8")
+    printed_output = "\n".join(
+        " ".join(str(arg) for arg in call.args) for call in mock_print.call_args_list
+    )
+    for filename in LEGACY_CONTEXT_MENU_FILES[1:]:
+        assert filename in printed_output
+
+
+def test_download_special_files_skip_legacy_context_menu_assets_for_newer_products(
+    tmp_path, monkeypatch
+) -> None:
+    """Avoid obsolete noVNC asset requests for product versions after v261."""
+    downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=271)
+    download_calls: list[tuple[tuple[str, ...], str, str, str, bool]] = []
+
+    monkeypatch.setattr(downloader, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(downloader, "_download_mathjax_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        downloader,
+        "_download_static_files",
+        lambda files,
+        source_path,
+        target_path,
+        comment,
+        *,
+        warn_on_missing=False: download_calls.append(
+            (tuple(files), source_path, target_path, comment, warn_on_missing)
+        ),
+    )
+
+    downloader._download_special_files()
+
+    assert not any(
+        "jQuery-contextMenu" in source_path for _, source_path, _, _, _ in download_calls
+    )
+
+
+def test_download_precreates_legacy_context_menu_directory_for_v261(tmp_path) -> None:
+    """Retain the v261 output layout even when no legacy assets are downloaded."""
+    downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=261)
+
+    downloader._make_output_dirs("unknown")
+
+    assert (tmp_path / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
+
+
+def test_fix_viewer_component_paths_rewrites_draco_decoder_root() -> None:
+    source = b"dracoLoader.setDecoderPath('/ansys271/nexus/threejs/libs/draco/');"
+
+    patched = rd.ReportDownloadHTML.fix_viewer_component_paths(
+        "viewer-loader.js", source, "271"
+    ).decode("utf-8")
+
+    assert "dracoLoader.setDecoderPath('./ansys271//nexus/threejs/libs/draco/');" in patched
 
 
 def test_download_use_data(request, adr_service_query) -> None:

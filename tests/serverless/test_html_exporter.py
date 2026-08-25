@@ -31,6 +31,12 @@ import pytest
 
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
 
+LEGACY_CONTEXT_MENU_FILES = (
+    "jquery.contextMenu.min.css",
+    "jquery.contextMenu.min.js",
+    "jquery.ui.position.min.js",
+)
+
 # ----------------------------
 # helpers
 # ----------------------------
@@ -66,6 +72,21 @@ def _make_exporter_for_mathjax_detection(
         static_url="/static/",
         media_url="/media/",
         ansys_version="252",
+    )
+
+
+def _make_exporter_for_legacy_context_menu_assets(
+    tmp_path: Path, *, ansys_version: str = "261"
+) -> ServerlessReportExporter:
+    """Build an exporter for legacy context-menu asset tests."""
+    return ServerlessReportExporter(
+        html_content="<div/>",
+        output_dir=tmp_path / "out",
+        static_dir=tmp_path / "static",
+        media_dir=tmp_path / "media",
+        static_url="/static/",
+        media_url="/media/",
+        ansys_version=ansys_version,
     )
 
 
@@ -162,6 +183,128 @@ def test_static_is_flattened_media_and_ansys_tree_preserved(adr_serverless, tmp_
     out = (tmp_path / "export2" / "index.html").read_text(encoding="utf-8")
     assert 'href="./media/plotly.min.js"' in out or 'src="./media/plotly.min.js"' in out
     assert f"./ansys{ver}/nexus/utils/js-test.js" in out
+
+
+def test_copies_legacy_context_menu_assets_when_available(tmp_path: Path):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+
+    for filename in LEGACY_CONTEXT_MENU_FILES:
+        _write(exporter._static_dir / context_menu_path / filename, filename)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    for filename in LEGACY_CONTEXT_MENU_FILES:
+        copied_file = exporter._output_dir / context_menu_path / filename
+        assert copied_file.read_text(encoding="utf-8") == filename
+
+
+def test_warns_for_incomplete_legacy_context_menu_assets(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+    available_file = LEGACY_CONTEXT_MENU_FILES[0]
+    _write(exporter._static_dir / context_menu_path / available_file, available_file)
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert (exporter._output_dir / context_menu_path / available_file).is_file()
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in LEGACY_CONTEXT_MENU_FILES[1:]:
+        assert any(filename in message for message in warning_messages)
+
+
+def test_warns_when_v261_legacy_context_menu_directory_is_missing(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert not (exporter._output_dir / "ansys261/nexus/novnc").exists()
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in LEGACY_CONTEXT_MENU_FILES:
+        assert any(filename in message for message in warning_messages)
+
+
+def test_skips_missing_legacy_context_menu_assets_for_newer_products(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert not (exporter._output_dir / "ansys271/nexus/novnc").exists()
+    assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
+
+
+def test_copy_special_files_wires_v261_legacy_context_menu_assets(tmp_path: Path, monkeypatch):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    copied_paths: list[tuple[str, str, bool]] = []
+
+    monkeypatch.setattr(exporter, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(exporter, "_copy_mathjax_files", lambda *args, **kwargs: None)
+
+    def _record_copy(source_rel_path: str, target_rel_path: str, silent: bool = False):
+        copied_paths.append((source_rel_path, target_rel_path, silent))
+
+    monkeypatch.setattr(exporter, "_copy_static_file", _record_copy)
+
+    exporter._copy_special_files()
+
+    actual_context_menu_copies = {call for call in copied_paths if "jQuery-contextMenu" in call[0]}
+    expected_context_menu_copies = {
+        (
+            f"ansys261/nexus/novnc/vendor/jQuery-contextMenu/{filename}",
+            f"ansys261/nexus/novnc/vendor/jQuery-contextMenu/{filename}",
+            False,
+        )
+        for filename in LEGACY_CONTEXT_MENU_FILES
+    }
+    assert actual_context_menu_copies == expected_context_menu_copies
+
+
+def test_copy_special_files_skips_legacy_context_menu_assets_for_newer_products(
+    tmp_path: Path, monkeypatch
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    copied_paths: list[tuple[str, str, bool]] = []
+
+    monkeypatch.setattr(exporter, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(exporter, "_copy_mathjax_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        exporter,
+        "_copy_static_file",
+        lambda source_rel_path, target_rel_path, silent=False: copied_paths.append(
+            (source_rel_path, target_rel_path, silent)
+        ),
+    )
+
+    exporter._copy_special_files()
+
+    assert not any("jQuery-contextMenu" in source for source, _, _ in copied_paths)
+
+
+def test_make_output_dirs_creates_v261_legacy_context_menu_directory(tmp_path: Path):
+    """Preserve the v261 directory layout even without legacy source assets."""
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+
+    exporter._make_output_dirs()
+
+    assert (exporter._output_dir / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
+
+
+def test_fix_viewer_component_paths_rewrites_draco_decoder_root(tmp_path: Path):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    source = b"dracoLoader.setDecoderPath('/ansys271/nexus/threejs/libs/draco/');"
+
+    patched = exporter._fix_viewer_component_paths("viewer-loader.js", source).decode("utf-8")
+
+    assert "dracoLoader.setDecoderPath('./ansys271//nexus/threejs/libs/draco/');" in patched
 
 
 @pytest.mark.ado_test

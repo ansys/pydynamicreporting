@@ -20,7 +20,92 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+from types import ModuleType
+
+import pytest
+
 import ansys.dynamicreporting.core.serverless._compat as compat_module
+
+
+def test_apply_runtime_compatibility_restores_numpy_string_alias_for_261(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.5.2"
+    fake_numpy.bytes_ = object()
+    current_legacy = {"value": False}
+
+    def set_print_options(**kwargs):
+        current_legacy["value"] = kwargs["legacy"]
+
+    fake_numpy.set_printoptions = set_print_options
+    fake_numpy.get_printoptions = lambda: {"legacy": current_legacy["value"]}
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    restore = compat_module.apply_runtime_compatibility_shims(261)
+
+    assert fake_numpy.string_ is fake_numpy.bytes_
+    assert current_legacy["value"] == "1.25"
+
+    restore()
+
+    assert not hasattr(fake_numpy, "string_")
+    assert current_legacy["value"] is False
+
+
+def test_apply_runtime_compatibility_restores_partial_changes_after_failure(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.5.2"
+    fake_numpy.bytes_ = object()
+    fake_numpy.get_printoptions = lambda: {"legacy": False}
+
+    def fail_set_print_options(**kwargs):
+        assert kwargs == {"legacy": "1.25"}
+        raise ValueError("unsupported legacy print option")
+
+    fake_numpy.set_printoptions = fail_set_print_options
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    with pytest.raises(ValueError, match="unsupported legacy print option"):
+        compat_module.apply_runtime_compatibility_shims(261)
+
+    assert not hasattr(fake_numpy, "string_")
+
+
+def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "1.26.4"
+    fake_numpy.bytes_ = object()
+    existing_string_alias = object()
+    fake_numpy.string_ = existing_string_alias
+    current_legacy = {"value": False}
+
+    def set_print_options(**kwargs):
+        current_legacy["value"] = kwargs["legacy"]
+
+    fake_numpy.set_printoptions = set_print_options
+    fake_numpy.get_printoptions = lambda: {"legacy": current_legacy["value"]}
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    restore = compat_module.apply_runtime_compatibility_shims(261)
+
+    assert fake_numpy.string_ is existing_string_alias
+    assert current_legacy["value"] is False
+
+    restore()
+
+    assert fake_numpy.string_ is existing_string_alias
+    assert current_legacy["value"] is False
+
+
+def test_apply_runtime_compatibility_does_not_patch_newer_product(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.bytes_ = object()
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    restore = compat_module.apply_runtime_compatibility_shims(271)
+
+    assert not hasattr(fake_numpy, "string_")
+    restore()
 
 
 def test_sanitize_settings_renames_guardian_setting(monkeypatch):

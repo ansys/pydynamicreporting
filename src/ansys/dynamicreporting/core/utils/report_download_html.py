@@ -30,6 +30,8 @@ import requests
 
 from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
 from .html_export_constants import (
+    CONTEXT_MENU_JS,
+    CONTEXT_MENU_PATH,
     MATHJAX_2X_FILES,
     MATHJAX_4X_FILES,
     MATHJAX_OPTIONAL_FILES,
@@ -228,6 +230,7 @@ class ReportDownloadHTML:
             f"ansys{self._ansys_version}/nexus/",
             "ansys-nexus-viewer js",
         )
+        self._download_legacy_context_menu_assets()
         image = [
             "ArcballControls.js",
             "DRACOLoader.js",
@@ -302,6 +305,14 @@ class ReportDownloadHTML:
             data = data.replace(
                 f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
             )
+            data = data.replace(
+                f"'/ansys{ansys_version}/nexus/threejs/libs/draco/'",
+                f"'./ansys{ansys_version}//nexus/threejs/libs/draco/'",
+            )
+            data = data.replace(
+                f'"/ansys{ansys_version}/nexus/threejs/libs/draco/"',
+                f'"./ansys{ansys_version}//nexus/threejs/libs/draco/"',
+            )
             data = data.encode("utf-8")
         return data
 
@@ -359,7 +370,23 @@ class ReportDownloadHTML:
             elif not (silent or source_rel_path in MATHJAX_OPTIONAL_FILES):
                 print(f"Unable to get: {url}")
 
-    def _download_static_files(self, files, source_path, target_path, comment):
+    def _download_legacy_context_menu_assets(self) -> None:
+        """Download the v261 viewer dependencies that newer products removed."""
+        if self._ansys_version != "261":
+            return
+
+        context_menu_path = f"/ansys{self._ansys_version}/{CONTEXT_MENU_PATH}/"
+        self._download_static_files(
+            CONTEXT_MENU_JS,
+            context_menu_path,
+            context_menu_path.lstrip("/"),
+            "legacy viewer context-menu assets",
+            warn_on_missing=True,
+        )
+
+    def _download_static_files(
+        self, files, source_path, target_path, comment, *, warn_on_missing: bool = False
+    ):
         tmp = urllib.parse.urlsplit(self._url)
         for f in files:
             url = tmp.scheme + "://" + tmp.netloc + source_path + f
@@ -379,6 +406,8 @@ class ReportDownloadHTML:
                     self._write_binary_file(filename, data)
                 except Exception as e:
                     print(f"Unable to download {comment}: {f}\nError: {e}")
+            elif warn_on_missing:
+                print(f"Unable to get {comment}: {url} ({resp.status_code})")
 
     def _make_unique_basename(self, name: str) -> str:
         # check to see if the filename has already been used (and hence we are headed toward
@@ -688,6 +717,16 @@ class ReportDownloadHTML:
                 "gltf",
             ]
         )
+        if self._ansys_version == "261":
+            # Preserve the pre-vnc-removal export layout even if an incomplete
+            # v261 server cannot provide every legacy context-menu file.
+            self._make_dir(
+                [
+                    self._directory,
+                    f"ansys{self._ansys_version}",
+                    *CONTEXT_MENU_PATH.split("/"),
+                ]
+            )
 
     def _download(self):
         self._filemap = dict()

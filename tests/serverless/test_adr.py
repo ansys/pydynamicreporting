@@ -20,9 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import importlib
+import os
+import sys
+import uuid
 from pathlib import Path
 from random import random as r
-import uuid
 
 import numpy as np
 import pytest
@@ -34,6 +37,311 @@ from ansys.dynamicreporting.core.exceptions import (
     InvalidPath,
 )
 from ansys.dynamicreporting.core.serverless import ADR
+
+
+def _enve_modules() -> dict[str, object]:
+    """Return the modules associated with optional native ``enve`` loading."""
+    return {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "enve" or name == "enve_common" or name.startswith("enve_common.")
+    }
+
+
+@pytest.mark.unit
+def test_import_enve_uses_later_candidate_after_import_failure(tmp_path, monkeypatch):
+    """A failed native candidate must not prevent a later one from loading."""
+    bad_candidate = tmp_path / "bad_candidate"
+    bad_package = bad_candidate / "enve_common"
+    bad_package.mkdir(parents=True)
+    (bad_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = "bad_candidate"\n'
+        'raise ImportError("broken native extension")\n'
+    )
+
+    good_candidate = tmp_path / "good_candidate"
+    good_package = good_candidate / "enve_common"
+    good_package.mkdir(parents=True)
+    (good_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = __path__[0]\nfrom . import enve\n'
+    )
+    (good_package / "enve.py").write_text('ORIGIN = "good_candidate"\n')
+
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+    importlib.invalidate_caches()
+
+    try:
+        assert ADR._import_enve([bad_candidate, good_candidate]) is None
+        assert sys.path[0] == str(good_candidate)
+        assert str(bad_candidate) not in sys.path
+        assert sys.modules["enve_common.enve"].ORIGIN == "good_candidate"
+        assert os.environ["CEI_UDILPATH"] == str(good_package)
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
+def test_import_enve_restores_state_when_every_candidate_fails(tmp_path, monkeypatch):
+    """A failed native candidate must not leave its package state behind."""
+    bad_candidate = tmp_path / "bad_candidate"
+    bad_package = bad_candidate / "enve_common"
+    bad_package.mkdir(parents=True)
+    (bad_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = "bad_candidate"\n'
+        'raise ImportError("broken native extension")\n'
+    )
+
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    isolated_path = [str(tmp_path)]
+    monkeypatch.setattr(sys, "path", isolated_path)
+    importlib.invalidate_caches()
+
+    try:
+        error = ADR._import_enve([bad_candidate])
+
+        assert isinstance(error, ImportError)
+        assert sys.path == isolated_path
+        assert _enve_modules() == {}
+        assert "CEI_UDILPATH" not in os.environ
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
+def test_import_enve_reports_missing_module_without_candidates(tmp_path, monkeypatch):
+    """Missing ``enve`` must be reported even when no product path is available."""
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+
+    try:
+        assert isinstance(ADR._import_enve([]), ImportError)
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+
+
+@pytest.mark.unit
+def test_get_embedded_python_version_stops_after_first_valid_runtime(monkeypatch):
+    """Embedded Python runtime discovery should use only one product runtime."""
+    from types import SimpleNamespace
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    class ProductRoot:
+        def __truediv__(self, _):
+            return self
+
+        def glob(self, pattern):
+            assert pattern == "[Pp]ython-*"
+            yield SimpleNamespace(name="Python-not-a-version", is_dir=lambda: True)
+            yield SimpleNamespace(name="Python-3.12.11", is_dir=lambda: True)
+            pytest.fail("Runtime discovery should stop after the first valid runtime.")
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(ProductRoot(), 261) == (3, 12)
+
+
+@pytest.mark.unit
+def test_get_embedded_python_version_returns_none_without_valid_runtime(tmp_path, monkeypatch):
+    """Embedded Python runtime discovery returns ``None`` when no runtime is usable."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    product_root = tmp_path / "CEI"
+    runtime_directory = product_root / "apex261" / "machines" / "win64"
+    (runtime_directory / "Python-not-a-version").mkdir(parents=True)
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(product_root, 261) is None
+
+
+@pytest.mark.unit
+def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, monkeypatch):
+    """A Python mismatch should warn even before an animation is rendered."""
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    active_python_version = (sys.version_info.major, sys.version_info.minor)
+    embedded_python_version = (active_python_version[0], active_python_version[1] + 1)
+    product_root = tmp_path / "CEI"
+    (
+        product_root
+        / "apex261"
+        / "machines"
+        / "win64"
+        / f"Python-{embedded_python_version[0]}.{embedded_python_version[1]}.0"
+    ).mkdir(parents=True)
+
+    adr = object.__new__(ADR)
+    adr._ansys_installation = product_root
+    adr._ansys_version = 261
+    adr._logger = Mock()
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    with pytest.warns(UserWarning, match="Serverless ADR is running on Python"):
+        adr._warn_for_embedded_python_mismatch()
+
+    assert adr._embedded_python_version == embedded_python_version
+    adr._logger.warning.assert_called_once()
+
+
+@pytest.mark.unit
+def test_embedded_python_mismatch_message_skips_compatible_runtime():
+    """A matching embedded Python major/minor version needs no warning."""
+    assert ADR._get_embedded_python_mismatch_message((3, 12), (3, 12)) is None
+
+
+@pytest.mark.unit
+def test_embedded_python_mismatch_message_skips_missing_runtime():
+    """An unavailable embedded runtime should not produce a compatibility warning."""
+    assert ADR._get_embedded_python_mismatch_message(None, (3, 12)) is None
+
+
+@pytest.mark.unit
+def test_embedded_python_mismatch_message_is_component_generic():
+    """A mismatch warning must not imply a specific serverless component fails."""
+    message = ADR._get_embedded_python_mismatch_message((3, 12), (3, 13))
+
+    assert message is not None
+    assert "Some serverless components may not work correctly" in message
+    assert "animation" not in message.lower()
+
+
+@pytest.mark.unit
+def test_render_report_wraps_template_exception(monkeypatch):
+    """HTML report rendering converts template failures to ADR exceptions."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    error = RuntimeError("Template rendering failed")
+
+    class FailingTemplate:
+        """Template stand-in that raises a rendering failure."""
+
+        def render(self, **kwargs):
+            raise error
+
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: FailingTemplate())
+
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
+        adr.render_report(name="AnimationReport")
+
+    assert str(error) in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_render_report_does_not_preflight_animation_availability(monkeypatch):
+    """Rendering does not query report items before template rendering."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    class SuccessfulTemplate:
+        """Template stand-in for a report that renders successfully."""
+
+        def render(self, **kwargs):
+            return "report rendered"
+
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(
+        adr_module.Item,
+        "find",
+        lambda *args, **kwargs: pytest.fail("Rendering should not preflight report items."),
+    )
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: SuccessfulTemplate())
+
+    assert adr.render_report(name="StaticReport") == "report rendered"
+
+
+@pytest.mark.unit
+def test_render_report_keeps_non_enve_import_error_generic(monkeypatch):
+    """Unrelated import failures retain the generic report error path."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    error = ImportError("No module named 'other_module'")
+
+    class FailingTemplate:
+        """Template stand-in that raises an unrelated import failure."""
+
+        def render(self, **kwargs):
+            raise error
+
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: FailingTemplate())
+
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
+        adr.render_report(name="StaticReport")
+
+    assert str(error) in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_render_report_as_pptx_wraps_template_exception(monkeypatch):
+    """PPTX rendering converts template failures to ADR exceptions."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    error = RuntimeError("Template PPTX rendering failed")
+
+    class FailingPPTXLayout:
+        """PPTX template stand-in that raises its own render error."""
+
+        def render_pptx(self, **kwargs):
+            raise error
+
+    template = FailingPPTXLayout()
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
+
+    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
+        adr.render_report_as_pptx(name="AnimationReport")
+
+    assert str(error) in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_export_report_as_pptx_wraps_template_exception(tmp_path, monkeypatch):
+    """PPTX export converts template failures to ADR exceptions."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    error = RuntimeError("Template PPTX rendering failed")
+
+    class FailingPPTXLayout:
+        """PPTX template stand-in that raises its own render error."""
+
+        def render_pptx(self, **kwargs):
+            raise error
+
+    template = FailingPPTXLayout()
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
+
+    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
+        adr.export_report_as_pptx(filename=tmp_path / "report.pptx", name="AnimationReport")
+
+    assert str(error) in str(exc_info.value)
 
 
 @pytest.mark.ado_test
@@ -124,6 +432,25 @@ def test_get_counts_use_database_level_queries(monkeypatch):
     assert ADR.get_report_count() == 4
     item_manager.count.assert_called_once_with()
     template_manager.filter.assert_called_once_with(parent=None)
+
+
+@pytest.mark.unit
+def test_close_restores_runtime_compatibility_callback(monkeypatch):
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    restore_calls: list[str] = []
+    adr = object.__new__(ADR)
+    adr._tmp_dirs = []
+    adr._logger = Mock()
+    adr._runtime_compat_restore = lambda: restore_calls.append("restored")
+    monkeypatch.setattr(adr_module.connections, "close_all", lambda: None)
+
+    adr.close()
+
+    assert restore_calls == ["restored"]
+    assert adr._runtime_compat_restore is None
 
 
 @pytest.mark.ado_test
@@ -1244,87 +1571,6 @@ def test_export_report_html_no_kwarg_fails(adr_serverless, tmp_path):
     """
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.export_report_as_html(output_directory=tmp_path)
-
-
-@pytest.mark.ado_test
-def test_render_report_as_pdf_success(adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    # Create a template and monkeypatch its render_pdf to return bytes
-    adr_serverless.create_template(BasicLayout, name="TestPDFReport", parent=None)
-
-    def fake_render_pdf(self, context, item_filter, request):
-        return b"dummy pdf content"
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf)
-
-    pdf_bytes = adr_serverless.render_report_as_pdf(
-        name="TestPDFReport", item_filter="A|i_tags|cont|dp=dp227;"
-    )
-    assert pdf_bytes == b"dummy pdf content"
-
-
-@pytest.mark.ado_test
-def test_render_report_as_pdf_no_kwarg(adr_serverless):
-    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
-        adr_serverless.render_report_as_pdf()
-
-
-@pytest.mark.ado_test
-def test_render_report_as_pdf_render_failure(adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    adr_serverless.create_template(BasicLayout, name="FailingPDFReport", parent=None)
-
-    def fake_render_pdf_fail(self, context, item_filter, request):
-        raise Exception("Simulated rendering engine failure")
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf_fail)
-
-    with pytest.raises(ADRException, match="PDF Report rendering failed"):
-        adr_serverless.render_report_as_pdf(name="FailingPDFReport")
-
-
-@pytest.mark.ado_test
-def test_export_report_as_pdf_success(tmp_path, adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    adr_serverless.create_template(BasicLayout, name="TestPDFExport", parent=None)
-
-    def fake_render_pdf(self, context, item_filter, request):
-        return b"dummy pdf content"
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf)
-
-    output_file = tmp_path / "output.pdf"
-    adr_serverless.export_report_as_pdf(
-        filename=output_file, name="TestPDFExport", item_filter="A|i_tags|cont|dp=dp227;"
-    )
-    assert output_file.exists()
-    assert output_file.read_bytes() == b"dummy pdf content"
-
-
-@pytest.mark.ado_test
-def test_export_report_as_pdf_no_kwarg(tmp_path, adr_serverless):
-    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
-        adr_serverless.export_report_as_pdf(filename=tmp_path / "output.pdf")
-
-
-@pytest.mark.ado_test
-def test_export_report_as_pdf_render_failure(tmp_path, adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    adr_serverless.create_template(BasicLayout, name="FailingTestPDFExport", parent=None)
-
-    def fake_render_pdf_fail(self, context, item_filter, request):
-        raise Exception("Simulated rendering engine failure")
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf_fail)
-
-    with pytest.raises(ADRException, match="PDF Report rendering failed"):
-        adr_serverless.export_report_as_pdf(
-            filename=tmp_path / "output.pdf", name="FailingTestPDFExport"
-        )
 
 
 @pytest.mark.ado_test

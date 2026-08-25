@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Settings compatibility shim.
+"""Serverless runtime compatibility shims.
 
-Translate product settings so they remain compatible with the dependency
-versions installed in the client's venv. This module only handles known
-setting transitions between supported ADR product lines and current client
+Translate product settings and dependency APIs so they remain compatible with
+the versions installed in the client's venv. This module handles known
+transitions between supported ADR product lines and current client
 dependencies.
 """
 
@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 VersionKey = tuple[int, ...]
 ConditionFn = Callable[[dict, dict[str, VersionKey]], bool]
 TransformFn = Callable[[dict], dict]
+RuntimeCompatCleanup = Callable[[], None]
+_NUMPY_STRING_ALIAS_PRODUCT_VERSION = 261
 
 
 # Registry of settings transformations.
@@ -67,6 +69,62 @@ def _normalize_version(version_string: str) -> VersionKey:
         components.append(int(match.group(1)))
 
     return tuple(components)
+
+
+def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
+    """Apply dependency API shims required by a supported ADR product version.
+
+    ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
+    that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
+    NumPy scalar representations directly into inline JavaScript. Restore the
+    alias and NumPy 1.25 print formatting before importing the product's Django
+    modules, and return a cleanup callback that restores the previous NumPy
+    process state when ADR is torn down.
+    """
+
+    def _noop_runtime_compatibility_cleanup() -> None:
+        return
+
+    if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
+        return _noop_runtime_compatibility_cleanup
+
+    import numpy
+
+    cleanup_callbacks: list[RuntimeCompatCleanup] = []
+
+    def _restore_cleanup_callbacks() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
+
+    try:
+        if not hasattr(numpy, "string_"):
+            setattr(numpy, "string_", numpy.bytes_)
+
+            def _restore_string_alias() -> None:
+                if getattr(numpy, "string_", None) is numpy.bytes_:
+                    delattr(numpy, "string_")
+
+            cleanup_callbacks.append(_restore_string_alias)
+            logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+
+        if _normalize_version(numpy.__version__) >= (2, 0):
+            previous_legacy = numpy.get_printoptions().get("legacy", False)
+            numpy.set_printoptions(legacy="1.25")
+
+            def _restore_legacy_printoptions() -> None:
+                numpy.set_printoptions(legacy=previous_legacy)
+
+            cleanup_callbacks.append(_restore_legacy_printoptions)
+            logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+    except BaseException:  # catch interrupts as well
+        # Do not leave a process-wide NumPy mutation behind if shim setup aborts.
+        _restore_cleanup_callbacks()
+        raise
+
+    if not cleanup_callbacks:
+        return _noop_runtime_compatibility_cleanup
+
+    return _restore_cleanup_callbacks
 
 
 def _guardian_monkey_patch_rename(overrides: dict) -> dict:

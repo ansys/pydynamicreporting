@@ -287,6 +287,26 @@ def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
     assert success is False
 
 
+def test_export_html_preserves_service_asset_version_override() -> None:
+    """Keep the legacy high-level Report.export_html asset-version behavior."""
+    captured: dict[str, object] = {}
+
+    def fake_export_report_as_html(**kwargs):
+        captured.update(kwargs)
+
+    service = SimpleNamespace(
+        serverobj=SimpleNamespace(export_report_as_html=fake_export_report_as_html),
+        logger=logging.getLogger("test-report-export-html"),
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    assert my_report.export_html(directory_name="html-output") is True
+    assert captured["ansys_version"] == 271
+
+
 @pytest.mark.ado_test
 def test_save_as_html(adr_service_query) -> None:
     success = False
