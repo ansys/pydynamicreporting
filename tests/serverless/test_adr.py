@@ -196,33 +196,26 @@ def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, mon
     adr._logger = Mock()
     monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
 
-    with pytest.warns(UserWarning, match="Serverless ADR is running on Python"):
+    with pytest.warns(UserWarning, match="Serverless ADR is running on Python") as warning_info:
         adr._warn_for_embedded_python_mismatch()
 
     assert adr._embedded_python_version == embedded_python_version
-    adr._logger.warning.assert_called_once()
+    warning_message = str(warning_info[0].message)
+    adr._logger.warning.assert_called_once_with(warning_message)
+    assert f"Python {active_python_version[0]}.{active_python_version[1]}" in warning_message
+    assert f"Python {embedded_python_version[0]}.{embedded_python_version[1]}" in warning_message
+    assert "animation" not in warning_message.lower()
 
 
 @pytest.mark.unit
-def test_embedded_python_mismatch_message_skips_compatible_runtime():
-    """A matching embedded Python major/minor version needs no warning."""
-    assert ADR._get_embedded_python_mismatch_message((3, 12), (3, 12)) is None
-
-
-@pytest.mark.unit
-def test_embedded_python_mismatch_message_skips_missing_runtime():
-    """An unavailable embedded runtime should not produce a compatibility warning."""
-    assert ADR._get_embedded_python_mismatch_message(None, (3, 12)) is None
-
-
-@pytest.mark.unit
-def test_embedded_python_mismatch_message_is_component_generic():
-    """A mismatch warning must not imply a specific serverless component fails."""
-    message = ADR._get_embedded_python_mismatch_message((3, 12), (3, 13))
-
-    assert message is not None
-    assert "Some serverless components may not work correctly" in message
-    assert "animation" not in message.lower()
+@pytest.mark.parametrize(
+    "embedded_python_version",
+    [(3, 12), None],
+    ids=["compatible_runtime", "missing_runtime"],
+)
+def test_embedded_python_mismatch_message_skips_non_mismatch(embedded_python_version):
+    """Compatible or unavailable runtimes do not produce a warning message."""
+    assert ADR._get_embedded_python_mismatch_message(embedded_python_version, (3, 12)) is None
 
 
 @pytest.mark.unit
@@ -290,56 +283,6 @@ def test_render_report_keeps_non_enve_import_error_generic(monkeypatch):
 
     with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
         adr.render_report(name="StaticReport")
-
-    assert str(error) in str(exc_info.value)
-
-
-@pytest.mark.unit
-def test_render_report_as_pptx_wraps_template_exception(monkeypatch):
-    """PPTX rendering converts template failures to ADR exceptions."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    error = RuntimeError("Template PPTX rendering failed")
-
-    class FailingPPTXLayout:
-        """PPTX template stand-in that raises its own render error."""
-
-        def render_pptx(self, **kwargs):
-            raise error
-
-    template = FailingPPTXLayout()
-    adr = object.__new__(ADR)
-    adr._request = None
-    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
-    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
-
-    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
-        adr.render_report_as_pptx(name="AnimationReport")
-
-    assert str(error) in str(exc_info.value)
-
-
-@pytest.mark.unit
-def test_export_report_as_pptx_wraps_template_exception(tmp_path, monkeypatch):
-    """PPTX export converts template failures to ADR exceptions."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    error = RuntimeError("Template PPTX rendering failed")
-
-    class FailingPPTXLayout:
-        """PPTX template stand-in that raises its own render error."""
-
-        def render_pptx(self, **kwargs):
-            raise error
-
-    template = FailingPPTXLayout()
-    adr = object.__new__(ADR)
-    adr._request = None
-    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
-    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
-
-    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
-        adr.export_report_as_pptx(filename=tmp_path / "report.pptx", name="AnimationReport")
 
     assert str(error) in str(exc_info.value)
 

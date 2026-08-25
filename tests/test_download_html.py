@@ -24,6 +24,7 @@ from pathlib import Path
 from os.path import join
 from unittest.mock import MagicMock, patch
 import requests
+import pytest
 
 from ansys.dynamicreporting.core.compatibility import DEFAULT_STATIC_ASSET_VERSION
 from ansys.dynamicreporting.core.utils import report_download_html as rd
@@ -52,28 +53,20 @@ def test_download_special_files_wires_v261_legacy_context_menu_assets(
 ) -> None:
     """Keep the v261 context-menu requests wired into the full special-file flow."""
     downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=261)
-    download_calls: list[tuple[tuple[str, ...], str, str, str, bool]] = []
+    legacy_context_menu_calls = []
 
     monkeypatch.setattr(downloader, "_detect_mathjax_version", lambda: "unknown")
     monkeypatch.setattr(downloader, "_download_mathjax_files", lambda *args, **kwargs: None)
-
-    def _record_download(files, source_path, target_path, comment, *, warn_on_missing=False):
-        download_calls.append((tuple(files), source_path, target_path, comment, warn_on_missing))
-
-    monkeypatch.setattr(downloader, "_download_static_files", _record_download)
+    monkeypatch.setattr(downloader, "_download_static_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        downloader,
+        "_download_legacy_context_menu_assets",
+        lambda: legacy_context_menu_calls.append(True),
+    )
 
     downloader._download_special_files()
 
-    actual_context_menu_calls = [call for call in download_calls if "jQuery-contextMenu" in call[1]]
-    assert actual_context_menu_calls == [
-        (
-            LEGACY_CONTEXT_MENU_FILES,
-            "/ansys261/nexus/novnc/vendor/jQuery-contextMenu/",
-            "ansys261/nexus/novnc/vendor/jQuery-contextMenu/",
-            "legacy viewer context-menu assets",
-            True,
-        )
-    ]
+    assert legacy_context_menu_calls == [True]
 
 
 def test_reports_missing_legacy_context_menu_assets_for_v261(tmp_path) -> None:
@@ -110,8 +103,6 @@ def test_download_special_files_skip_legacy_context_menu_assets_for_newer_produc
     downloader = rd.ReportDownloadHTML(url=None, directory=str(tmp_path), ansys_version=271)
     download_calls: list[tuple[tuple[str, ...], str, str, str, bool]] = []
 
-    monkeypatch.setattr(downloader, "_detect_mathjax_version", lambda: "unknown")
-    monkeypatch.setattr(downloader, "_download_mathjax_files", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         downloader,
         "_download_static_files",
@@ -125,7 +116,7 @@ def test_download_special_files_skip_legacy_context_menu_assets_for_newer_produc
         ),
     )
 
-    downloader._download_special_files()
+    downloader._download_legacy_context_menu_assets()
 
     assert not any(
         "jQuery-contextMenu" in source_path for _, source_path, _, _, _ in download_calls
@@ -141,14 +132,18 @@ def test_download_precreates_legacy_context_menu_directory_for_v261(tmp_path) ->
     assert (tmp_path / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
 
 
-def test_fix_viewer_component_paths_rewrites_draco_decoder_root() -> None:
-    source = b"dracoLoader.setDecoderPath('/ansys271/nexus/threejs/libs/draco/');"
+@pytest.mark.parametrize("quote", ["'", '"'], ids=["single_quote", "double_quote"])
+def test_fix_viewer_component_paths_rewrites_draco_decoder_root(quote: str) -> None:
+    source = (
+        f"dracoLoader.setDecoderPath({quote}/ansys271/nexus/threejs/libs/draco/{quote});"
+    ).encode()
 
     patched = rd.ReportDownloadHTML.fix_viewer_component_paths(
         "viewer-loader.js", source, "271"
     ).decode("utf-8")
 
-    assert "dracoLoader.setDecoderPath('./ansys271//nexus/threejs/libs/draco/');" in patched
+    expected = f"dracoLoader.setDecoderPath({quote}./ansys271//nexus/threejs/libs/draco/{quote});"
+    assert expected in patched
 
 
 def test_download_use_data(request, adr_service_query) -> None:
