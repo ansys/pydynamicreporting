@@ -52,7 +52,7 @@ def test_apply_runtime_compatibility_restores_numpy_string_alias_for_261(monkeyp
     assert current_legacy["value"] is False
 
 
-def test_apply_runtime_compatibility_restores_partial_changes_after_failure(monkeypatch):
+def test_apply_runtime_compatibility_restores_partial_changes_after_interrupt(monkeypatch):
     fake_numpy = ModuleType("numpy")
     fake_numpy.__version__ = "2.5.2"
     fake_numpy.bytes_ = object()
@@ -60,20 +60,23 @@ def test_apply_runtime_compatibility_restores_partial_changes_after_failure(monk
 
     def fail_set_print_options(**kwargs):
         assert kwargs == {"legacy": "1.25"}
-        raise ValueError("unsupported legacy print option")
+        raise KeyboardInterrupt
 
     fake_numpy.set_printoptions = fail_set_print_options
     monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
 
-    with pytest.raises(ValueError, match="unsupported legacy print option"):
+    with pytest.raises(KeyboardInterrupt):
         compat_module.apply_runtime_compatibility_shims(261)
 
     assert not hasattr(fake_numpy, "string_")
 
 
-def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monkeypatch):
+@pytest.mark.parametrize("numpy_version", ["1.26.4", "2.5.2"])
+def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(
+    monkeypatch, numpy_version
+):
     fake_numpy = ModuleType("numpy")
-    fake_numpy.__version__ = "1.26.4"
+    fake_numpy.__version__ = numpy_version
     fake_numpy.bytes_ = object()
     existing_string_alias = object()
     fake_numpy.string_ = existing_string_alias
@@ -89,7 +92,10 @@ def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(monke
     restore = compat_module.apply_runtime_compatibility_shims(261)
 
     assert fake_numpy.string_ is existing_string_alias
-    assert current_legacy["value"] is False
+    if numpy_version.startswith("2"):
+        assert current_legacy["value"] == "1.25"
+    else:
+        assert current_legacy["value"] is False
 
     restore()
 

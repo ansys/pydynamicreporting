@@ -634,6 +634,8 @@ class ServerlessReportExporter:
                 s = data.decode("latin-1")
             if ver:
                 s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
+                # Example: "/ansys271/nexus/threejs/libs/draco/" becomes
+                # "./ansys271//nexus/threejs/libs/draco/"; // is intentional and browser-collapsed.
                 s = s.replace(
                     f"'/ansys{ver}/nexus/threejs/libs/draco/'",
                     f"'./ansys{ver}//nexus/threejs/libs/draco/'",
