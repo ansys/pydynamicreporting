@@ -16,12 +16,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-release:
-    name: Build release artifacts
+  prepare-release:
+    name: Prepare reviewed release artifacts
     runs-on: ubuntu-latest
     permissions:
-      id-token: write         # REQUIRED for OIDC (provenance)
-      attestations: write     # REQUIRED by attest-build-provenance v2
       contents: read
     steps:
       - name: Checkout repository
@@ -51,23 +49,33 @@ jobs:
             exit 1
           fi
 
-      - name: Set up Python Env
-        uses: ./.github/actions/setup-python-env
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
-      - name: Run version checks
-        run: make check-version
+      - name: Download the reviewed GitHub Release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          mkdir reviewed-dist
+          gh release download "$RELEASE_TAG" \
+            --pattern '*.whl' \
+            --pattern '*.tar.gz' \
+            --dir reviewed-dist
 
-      - name: Build library source and wheel artifacts
-        uses: ./.github/actions/build-library
+      - name: Preserve reviewed assets for the publishing job
+        uses: actions/upload-artifact@v4
         with:
-          library-name: ${{ env.PACKAGE_NAME }}
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          checkout: false
+          name: ${{ env.PACKAGE_NAME }}-artifacts
+          path: reviewed-dist/
+          if-no-files-found: error
+          retention-days: 7
 
   upload-release:
     name: Upload release to PyPI
     runs-on: ubuntu-latest
-    needs: [ build-release ]
+    needs: [ prepare-release ]
     permissions:
       id-token: write         # REQUIRED for OIDC
       attestations: write     # REQUIRED by attest-build-provenance v2
@@ -165,7 +173,7 @@ jobs:
   notify-release-failure:
     name: Teams notify on failure
     if: failure()
-    needs: [ build-release, upload-release ]
+    needs: [ prepare-release, upload-release ]
     runs-on: ubuntu-latest
     steps:
       - name: Microsoft Teams Notification

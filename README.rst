@@ -293,10 +293,10 @@ What the automation does
   **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
   marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads
-  artifacts to **PyPI** via Trusted Publisher, then builds and publishes the
-  versioned documentation. Release-candidate documentation is published under
-  its exact version while the stable documentation continues to point to the
-  latest final release.
+  the reviewed GitHub Release artifacts to **PyPI** via Trusted Publisher,
+  then builds and publishes the versioned documentation. Release-candidate
+  documentation is published under its exact version while the stable
+  documentation continues to point to the latest final release.
 - **Failure notifications**: posts to Microsoft Teams on workflow failure.
 
 Prerequisites
@@ -341,7 +341,9 @@ Cutting a Release
 4. Publishing the release automatically triggers the **Release** workflow,
    which:
 
-   - Uploads artifacts to **PyPI** using Trusted Publisher.
+   - Downloads the artifacts attached to the reviewed GitHub Release, validates
+     their package name and version, and uploads those exact files to **PyPI**
+     using Trusted Publisher.
    - Builds and publishes the versioned documentation.
    - Publishes RC documentation under its exact version, such as
      ``version/1.0.0rc1/``, without replacing the stable documentation.
@@ -397,9 +399,10 @@ CI workflows (reference)
   - Triggers on a **published** GitHub Release or manual dispatch.
   - Manual dispatches must select the exact existing release tag with
     ``--ref``.
-  - Rebuilds and validates, downloads artifacts, **publishes to PyPI**, and
-    publishes versioned docs. RC docs are kept separate from stable docs. A
-    manual dispatch must explicitly enable documentation deployment.
+  - Validates and promotes the reviewed GitHub Release artifacts to **PyPI**
+    without rebuilding them, then publishes versioned docs. RC docs are kept
+    separate from stable docs. A manual dispatch must explicitly enable
+    documentation deployment.
 
 CLI helpers
 ^^^^^^^^^^^
