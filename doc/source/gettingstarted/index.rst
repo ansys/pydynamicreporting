@@ -1,9 +1,15 @@
 Getting started
 ###############
 
-PyDynamicReporting supports Ansys Dynamic Reporting 2023 R2 and later. To run
-PyDynamicReporting, you must have either a local copy of an Ansys installation
-with a product that uses Ansys Dynamic Reporting or use a Docker image.
+To run PyDynamicReporting, you must have a local copy of a 
+supported Ansys installation that includes Ansys Dynamic Reporting.
+PyDynamicReporting uses a rolling ADR product compatibility policy. Each
+client major version supports the ADR annual product line it is bundled with
+and the immediately previous annual product line. For example, the ``1.x``
+client line supports ADR ``26.*`` and ``27.*``. Older ADR releases might still
+work in some cases, but they are outside the supported compatibility window and
+can produce compatibility warnings. For details, see the
+:ref:`Compatibility Policy <compatibility_policy>`.
 
 To get a copy of Ansys, visit the `Ansys <https://www.ansys.com/>`_ website.
 
@@ -63,7 +69,7 @@ directory inside the Ansys installation:
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v271")
 
 
 If there is no local installation, you must direct PyDynamicReporting to
@@ -92,7 +98,7 @@ To connect to a running service, run this code:
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v271")
    ret = adr_service.connect()
 
 
@@ -106,7 +112,7 @@ in the :func:`connect<ansys.dynamicreporting.core.Service.connect>` method:
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v271")
    ret = adr_service.connect(
        url="my_machine:8010", username="MyUsername", password="MyPassword"
    )
@@ -142,7 +148,7 @@ start method:
    import ansys.dynamicreporting.core as adr
 
    adr_service = adr.Service(
-       ansys_installation=r"C:\Program Files\ANSYS Inc\v232",
+       ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
        db_directory=r"D:\tmp\db_directory",
    )
    session_guid = adr_service.start(create_db=True)
@@ -158,7 +164,7 @@ password) by passing them as arguments:
    import ansys.dynamicreporting.core as adr
 
    adr_service = adr.Service(
-       ansys_installation=r"C:\Program Files\ANSYS Inc\v232",
+       ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
        db_directory=r"D:\tmp\db_directory",
        port=8010,
    )

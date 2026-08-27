@@ -57,6 +57,8 @@ This is useful for lightweight workflows or embedding reporting into your own ap
 
 See :doc:`Serverless ADR documentation <serverless/index>` for full details.
 
+.. _compatibility_policy:
+
 Compatibility Policy
 --------------------
 PyDynamicReporting uses plain SemVer for package versions, but product
@@ -94,6 +96,10 @@ best-effort guess.
 - Supported lines are the scope for compatibility regressions and bug fixes.
 - Supported lines are covered by this repository's targeted compatibility
   checks and release validation for the declared policy.
+- Some features can have a narrower product requirement within the supported
+  window. For example, browser PDF export requires ADR ``27.1`` or newer
+  because the required browser binary is shipped with ADR product line ``27``
+  and later.
 - Unsupported lines may still work in some cases, but compatibility is not
   guaranteed.
 - When service-mode or serverless install detection finds an ADR product line
@@ -126,15 +132,18 @@ inside the installed ADR product release.
 This means that external virtual environments should be treated as a versioned
 compatibility boundary.
 
-- Install the package together with the constraints file that matches the ADR
-  product release you are targeting.
+- For the current ADR line bundled with a client major release, install the
+  package normally unless your workflow needs stricter pins.
+- For the previous supported ADR line, use the matching constraints file when
+  one is provided. For example, ``1.x`` is bundled with ADR ``27.1`` and can use
+  ``constraints/v261.txt`` when targeting ADR ``26.1``.
 - Keep one external serverless virtual environment per supported ADR product
   release family.
 
 The repository also includes a settings compatibility shim for known
-setting transitions, but that shim is only a safety net. It is not a
-replacement for using dependency constraints that match the target ADR
-installation.
+setting transitions. That shim can patch known mismatches, but external-venv
+compatibility remains bounded by the target ADR release and the dependencies
+installed in that environment.
 
 For the detailed serverless caveats and dependency-drift explanation, see
 :doc:`serverless/caveats`.
