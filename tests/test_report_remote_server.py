@@ -172,12 +172,7 @@ def test_fail_newdb(tmp_path, get_exec) -> None:
             run_local=True,
         )
     except DBCreationFailedError as e:
-        expected_error = (
-            "Unable to generate a new database by migration"
-            if get_exec
-            else "Unable to detect an installation in"
-        )
-        succ = expected_error in str(e)
+        succ = "Unable to generate a new database by migration" in str(e)
     assert succ
 
 
