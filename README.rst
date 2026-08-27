@@ -304,7 +304,12 @@ Prerequisites
 
 - Ensure ``CHANGELOG.md`` has a section for the release **dated today**. The
   helper script validates this.
-- Working tree must be **clean**, including untracked files.
+- Use a fresh checkout of ``main`` or the applicable ``stable/*`` maintenance
+  branch. It must track and exactly match the same branch on ``origin``.
+- Working tree must be **clean**, including untracked files, and the CI-CD push
+  workflow for the exact release commit must have completed successfully.
+- Authenticate GitHub CLI (``gh``) for the repository so the helper can verify
+  the CI run before creating the tag.
 - CI secrets for publishing and docs deployment are configured in GitHub.
 - The GitHub ``pypi`` environment and PyPI Trusted Publisher are configured for
   release tags matching ``v*``.
@@ -320,8 +325,9 @@ Cutting a Release
 
       make tag
 
-   This validates the changelog date and clean working tree, then creates and
-   pushes the Git tag (for example, ``v0.10.0``).
+   This validates the tag syntax, changelog date, clean working tree, release
+   branch and upstream commit, and successful CI-CD push run. It then creates
+   and pushes the Git tag (for example, ``v0.10.0``).
 
    For a release candidate, pass the exact pre-release version explicitly:
 
@@ -343,9 +349,8 @@ Cutting a Release
 4. Publishing the release automatically triggers the **Release** workflow,
    which:
 
-   - Downloads the artifacts attached to the reviewed GitHub Release, validates
-     their package name and version, and uploads those exact files to **PyPI**
-     using Trusted Publisher.
+   - Downloads the artifacts attached to the reviewed GitHub Release and
+     uploads those exact files to **PyPI** using Trusted Publisher.
    - Builds and publishes the versioned documentation.
    - Publishes RC documentation under its exact version, such as
      ``version/1.0.0rc1/``, without replacing the stable documentation.
@@ -381,9 +386,9 @@ reference. For example:
 
    gh workflow run create-draft-release.yml --ref v1.0.0rc1
    gh workflow run release.yml --ref v1.0.0rc1 \
-     -f deploy_stable_docs=true
+     -f deploy_versioned_docs=true
    gh workflow run release-docs.yml --ref v1.0.0rc1 \
-     -f deploy_stable=true
+     -f deploy_versioned_docs=true
 
 Use ``release.yml`` only when the PyPI upload has not completed. If PyPI
 already contains the release, use the documentation-only workflow.
@@ -402,10 +407,10 @@ CI workflows (reference)
   - Triggers on a **published** GitHub Release or manual dispatch.
   - Manual dispatches must select the exact existing release tag with
     ``--ref``.
-  - Validates and promotes the reviewed GitHub Release artifacts to **PyPI**
-    without rebuilding them, then publishes versioned docs. RC docs are kept
-    separate from stable docs. A manual dispatch must explicitly enable
-    documentation deployment.
+  - Promotes the reviewed GitHub Release artifacts to **PyPI** without
+    rebuilding them, then publishes versioned docs. RC docs are kept separate
+    from stable docs. A manual dispatch must explicitly enable documentation
+    deployment.
 
 CLI helpers
 ^^^^^^^^^^^

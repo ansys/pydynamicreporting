@@ -29,17 +29,7 @@ jobs:
 
       - name: Validate the release tag
         id: release-tag
-        env:
-          RELEASE_REF_TYPE: ${{ github.ref_type }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          python scripts/release_tools.py validate-tag "$RELEASE_TAG" \
-            --require-existing \
-            --require-head \
-            --ref-type "$RELEASE_REF_TYPE"
-
-      - name: Run version checks
-        run: make check-version
+        uses: ./.github/actions/validate-release-tag
 
       - name: Inspect any existing release
         id: existing-release
@@ -47,8 +37,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
-            if [[ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" != "true" ]]; then
+          if release_is_draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [[ "$release_is_draft" != "true" ]]; then
               echo "Release for tag '$RELEASE_TAG' is already published."
               exit 1
             fi

@@ -3,8 +3,8 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      deploy_stable_docs:
-        description: "Deploy documentation as the stable site"
+      deploy_versioned_docs:
+        description: "Deploy documentation for the checked-out release version"
         required: false
         type: boolean
         default: false
@@ -12,8 +12,8 @@ on:
     types: [ published ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: release-publish-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   prepare-release:
@@ -30,17 +30,9 @@ jobs:
           ref: ${{ github.ref }}
 
       - name: Validate the exact release tag
-        id: release-tag
-        env:
-          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
-          RELEASE_REF_TYPE: ${{ github.ref_type }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          python scripts/release_tools.py validate-tag "$RELEASE_TAG" \
-            --require-existing \
-            --require-head \
-            --expected-prerelease "$RELEASE_PRERELEASE" \
-            --ref-type "$RELEASE_REF_TYPE"
+        uses: ./.github/actions/validate-release-tag
+        with:
+          expected-prerelease: ${{ github.event.release.prerelease }}
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -93,36 +85,22 @@ jobs:
           name: ${{ env.PACKAGE_NAME }}-artifacts
           path: ${{ env.PACKAGE_NAME }}-artifacts
 
-      - name: Validate artifact names and versions
-        env:
-          ARTIFACT_DIRECTORY: ${{ env.PACKAGE_NAME }}-artifacts
-          EXPECTED_PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          python scripts/release_tools.py validate-artifacts \
-            "$RELEASE_TAG" \
-            "$ARTIFACT_DIRECTORY" \
-            "$EXPECTED_PACKAGE_NAME"
-
       - name: "Upload artifacts to PyPI using trusted publisher"
         uses: pypa/gh-action-pypi-publish@v1.14.0
         if: ${{ !env.ACT }}
         with:
-          repository-url: "https://upload.pypi.org/legacy/"
-          print-hash: true
           packages-dir: ${{ env.PACKAGE_NAME }}-artifacts
-          skip-existing: false
 
   # Publish versioned docs after PyPI succeeds. The Ansys deployment action keeps
   # prereleases separate and updates stable only from final-release versions.
   docs:
-    name: Docs (post-release)
+    name: Deploy versioned docs
     needs: [ upload-release ]
     permissions:
       contents: write
     uses: ./.github/workflows/release-docs.yml
     with:
-      deploy_stable: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_stable_docs) }}
+      deploy_versioned_docs: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_versioned_docs) }}
     secrets: inherit
 
   notify-release-failure:

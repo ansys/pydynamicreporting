@@ -10,19 +10,16 @@ inputs:
   library-name:
     description: "PyPI package name used to label artifacts."
     required: true
-    type: string
 
   python-version:
     description: "Python version for the build environment."
     default: '3.13'
     required: false
-    type: string
 
   checkout:
     description: "Whether to checkout the repository before building."
     default: true
     required: false
-    type: boolean
 
 runs:
   using: "composite"
