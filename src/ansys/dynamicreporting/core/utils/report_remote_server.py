@@ -194,8 +194,14 @@ class Server:
         return session
 
     @property
-    def api_version(self):
-        """Read only version var."""
+    def api_version(self) -> float:
+        """Return the validated server API version.
+
+        Raises
+        ------
+        UnsupportedServerVersionError
+            If the server reports a missing, malformed, or unsupported Ansys version.
+        """
         if self._api_version is None:
             self.validate()
         return self._api_version
@@ -329,15 +335,21 @@ class Server:
             return self.get_URL()
         return self.cur_servername
 
-    def validate(self):
-        """Validate the server connection and advertised product compatibility."""
+    def validate(self) -> float:
+        """Validate the server connection and advertised product compatibility.
+
+        Raises
+        ------
+        UnsupportedServerVersionError
+            If the server reports a missing, malformed, or unsupported Ansys version.
+        """
         server_info = self.get_api_version()
         if "server_name" in server_info:
             self.cur_servername = server_info["server_name"]
-        self._api_version = float(server_info["version"])
-        self._ansys_version = validate_supported_server_install_version(
-            server_info.get("ansys_version")
-        )
+        ansys_version = validate_supported_server_install_version(server_info.get("ansys_version"))
+        api_version = float(server_info["version"])
+        self._api_version = api_version
+        self._ansys_version = ansys_version
         return self._api_version
 
     def stop_server_allowed(self):
@@ -942,20 +954,25 @@ class Server:
 
     def _download_report_as_html_bundle(
         self,
-        report_guid,
-        directory_name,
-        query=None,
-        item_filter=None,
-        filename="index.html",
-        no_inline_files=False,
-        ansys_version=None,
-    ):
+        report_guid: str | uuid.UUID,
+        directory_name: str | os.PathLike[str],
+        query: dict[str, object] | None = None,
+        item_filter: str | None = None,
+        filename: str = "index.html",
+        no_inline_files: bool = False,
+        ansys_version: int | str | None = None,
+    ) -> None:
         """Download a standalone HTML bundle for a report-generation request.
 
         This private helper centralizes the remote HTML-download flow used by
         standalone HTML export. Callers are responsible for preparing the final
         query dictionary, including the desired ``print`` target, before
         delegating here.
+
+        Raises
+        ------
+        UnsupportedServerVersionError
+            If the server reports a missing, malformed, or unsupported Ansys version.
         """
         directory_path = os.path.abspath(directory_name)
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
@@ -1106,14 +1123,21 @@ class Server:
 
     def export_report_as_html(
         self,
-        report_guid,
-        directory_name,
-        query=None,
-        item_filter=None,
-        filename="index.html",
-        no_inline_files=False,
-        ansys_version=None,
-    ):
+        report_guid: str | uuid.UUID,
+        directory_name: str | os.PathLike[str],
+        query: dict[str, object] | None = None,
+        item_filter: str | None = None,
+        filename: str = "index.html",
+        no_inline_files: bool = False,
+        ansys_version: int | str | None = None,
+    ) -> None:
+        """Export a report as a standalone HTML bundle.
+
+        Raises
+        ------
+        UnsupportedServerVersionError
+            If the server reports a missing, malformed, or unsupported Ansys version.
+        """
         html_query = dict(query or {})
         html_query["print"] = "html"
         self._download_report_as_html_bundle(

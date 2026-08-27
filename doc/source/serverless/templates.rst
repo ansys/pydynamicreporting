@@ -351,6 +351,21 @@ The ``render_report()`` method:
 - Passes the ``context`` and ``item_filter`` to the template's ``render()`` method.
 - Raises ``ADRException`` on failure with descriptive error messages.
 
+To include complete 3D scene payloads in rendered HTML, pass
+``embed_scene_data=True`` to either ``ADR.render_report()`` or
+``Template.render()``:
+
+.. code-block:: python
+
+    html_with_scenes = adr.render_report(
+        name="Serverless Simulation Report",
+        embed_scene_data=True,
+    )
+
+The option defaults to ``False`` because embedded scene payloads can
+substantially increase the HTML size. It applies to these HTML rendering
+methods, not to static HTML or browser-PDF export.
+
 Rendering to PPTX
 -----------------
 
@@ -426,6 +441,12 @@ Notes on ``export_report_as_html()`` method:
 - The method requires at least one keyword argument (e.g., ``name``, ``guid``) to identify the root
   template of the report to be exported.
 
+Static assets are selected from the ADR installation configured on the
+``ADR`` instance. The exporter detects MathJax 4 trees referenced by the
+report while retaining support for legacy MathJax 2 layouts. Ensure the
+configured installation matches the report assets, and use the missing-asset
+diagnostics to identify incomplete static directories.
+
 Lifecycle Notes
 ---------------
 
@@ -456,6 +477,9 @@ setting filters and parameters, and nesting templates to build complex hierarchi
 Rendering can be done directly via template instances or conveniently through the ADR singleton instance.
 
 - Use ``template.render()`` for HTML output.
+- Use ``adr.render_report_as_browser_pdf()`` or
+  ``adr.export_report_as_browser_pdf()`` for browser-PDF output with ADR 27.1
+  or later.
 - Use ``template.render_pptx()`` or ``adr.render_report_as_pptx()`` for PPTX output.
 - Both rendering paths support passing context and filtering items if applicable.
 - Handle exceptions raised as ``ADRException`` to debug issues.

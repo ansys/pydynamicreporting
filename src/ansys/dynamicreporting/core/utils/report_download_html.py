@@ -305,6 +305,8 @@ class ReportDownloadHTML:
             data = data.replace(
                 f'"/ansys{ansys_version}/nexus/images/', f'"./ansys{ansys_version}//nexus/images/'
             )
+            # Example: "/ansys271/nexus/threejs/libs/draco/" becomes
+            # "./ansys271//nexus/threejs/libs/draco/"; // is intentional and browser-collapsed.
             data = data.replace(
                 f"'/ansys{ansys_version}/nexus/threejs/libs/draco/'",
                 f"'./ansys{ansys_version}//nexus/threejs/libs/draco/'",

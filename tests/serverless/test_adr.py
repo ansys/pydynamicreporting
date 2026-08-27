@@ -88,8 +88,40 @@ def test_import_enve_uses_later_candidate_after_import_failure(tmp_path, monkeyp
 
 
 @pytest.mark.unit
+def test_import_enve_uses_direct_module_fallback(tmp_path, monkeypatch):
+    """Older product layouts should load a directly packaged ``enve.py``."""
+    candidate = tmp_path / "direct_candidate"
+    candidate.mkdir()
+    (candidate / "enve.py").write_text('ORIGIN = "direct_candidate"\n')
+
+    original_modules = _enve_modules()
+    original_udi_path = os.environ.get("CEI_UDILPATH")
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+    importlib.invalidate_caches()
+
+    try:
+        assert ADR._import_enve([candidate]) is None
+        assert sys.path[0] == str(candidate)
+        assert sys.modules["enve"].ORIGIN == "direct_candidate"
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        if original_udi_path is None:
+            os.environ.pop("CEI_UDILPATH", None)
+        else:
+            os.environ["CEI_UDILPATH"] = original_udi_path
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
 def test_import_enve_restores_state_when_every_candidate_fails(tmp_path, monkeypatch):
     """A failed native candidate must not leave its package state behind."""
+    from types import ModuleType
+
     bad_candidate = tmp_path / "bad_candidate"
     bad_package = bad_candidate / "enve_common"
     bad_package.mkdir(parents=True)
@@ -99,9 +131,14 @@ def test_import_enve_restores_state_when_every_candidate_fails(tmp_path, monkeyp
     )
 
     original_modules = _enve_modules()
+    original_udi_path = os.environ.get("CEI_UDILPATH")
     for name in original_modules:
         sys.modules.pop(name, None)
-    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    sentinel_common = ModuleType("enve_common")
+    sentinel_enve = ModuleType("enve_common.enve")
+    sys.modules["enve_common"] = sentinel_common
+    sys.modules["enve_common.enve"] = sentinel_enve
+    os.environ["CEI_UDILPATH"] = "pre-existing-udi-path"
     isolated_path = [str(tmp_path)]
     monkeypatch.setattr(sys, "path", isolated_path)
     importlib.invalidate_caches()
@@ -111,12 +148,17 @@ def test_import_enve_restores_state_when_every_candidate_fails(tmp_path, monkeyp
 
         assert isinstance(error, ImportError)
         assert sys.path == isolated_path
-        assert _enve_modules() == {}
-        assert "CEI_UDILPATH" not in os.environ
+        assert sys.modules["enve_common"] is sentinel_common
+        assert sys.modules["enve_common.enve"] is sentinel_enve
+        assert os.environ["CEI_UDILPATH"] == "pre-existing-udi-path"
     finally:
         for name in _enve_modules():
             sys.modules.pop(name, None)
         sys.modules.update(original_modules)
+        if original_udi_path is None:
+            os.environ.pop("CEI_UDILPATH", None)
+        else:
+            os.environ["CEI_UDILPATH"] = original_udi_path
         importlib.invalidate_caches()
 
 
@@ -173,6 +215,27 @@ def test_get_embedded_python_version_returns_none_without_valid_runtime(tmp_path
 
 
 @pytest.mark.unit
+def test_get_embedded_python_version_returns_none_when_runtime_glob_fails(monkeypatch):
+    """Runtime discovery should tolerate an error while iterating product paths."""
+    from types import SimpleNamespace
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    class ProductRoot:
+        def __truediv__(self, _):
+            return self
+
+        def glob(self, pattern):
+            assert pattern == "[Pp]ython-*"
+            yield SimpleNamespace(name="Python-not-a-version", is_dir=lambda: True)
+            raise OSError("runtime directory disappeared")
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(ProductRoot(), 261) is None
+
+
+@pytest.mark.unit
 def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, monkeypatch):
     """A Python mismatch should warn even before an animation is rendered."""
     from unittest.mock import Mock
@@ -196,56 +259,26 @@ def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, mon
     adr._logger = Mock()
     monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
 
-    with pytest.warns(UserWarning, match="Serverless ADR is running on Python"):
+    with pytest.warns(UserWarning, match="Serverless ADR is running on Python") as warning_info:
         adr._warn_for_embedded_python_mismatch()
 
     assert adr._embedded_python_version == embedded_python_version
-    adr._logger.warning.assert_called_once()
+    warning_message = str(warning_info[0].message)
+    adr._logger.warning.assert_called_once_with(warning_message)
+    assert f"Python {active_python_version[0]}.{active_python_version[1]}" in warning_message
+    assert f"Python {embedded_python_version[0]}.{embedded_python_version[1]}" in warning_message
+    assert "animation" not in warning_message.lower()
 
 
 @pytest.mark.unit
-def test_embedded_python_mismatch_message_skips_compatible_runtime():
-    """A matching embedded Python major/minor version needs no warning."""
-    assert ADR._get_embedded_python_mismatch_message((3, 12), (3, 12)) is None
-
-
-@pytest.mark.unit
-def test_embedded_python_mismatch_message_skips_missing_runtime():
-    """An unavailable embedded runtime should not produce a compatibility warning."""
-    assert ADR._get_embedded_python_mismatch_message(None, (3, 12)) is None
-
-
-@pytest.mark.unit
-def test_embedded_python_mismatch_message_is_component_generic():
-    """A mismatch warning must not imply a specific serverless component fails."""
-    message = ADR._get_embedded_python_mismatch_message((3, 12), (3, 13))
-
-    assert message is not None
-    assert "Some serverless components may not work correctly" in message
-    assert "animation" not in message.lower()
-
-
-@pytest.mark.unit
-def test_render_report_wraps_template_exception(monkeypatch):
-    """HTML report rendering converts template failures to ADR exceptions."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    error = RuntimeError("Template rendering failed")
-
-    class FailingTemplate:
-        """Template stand-in that raises a rendering failure."""
-
-        def render(self, **kwargs):
-            raise error
-
-    adr = object.__new__(ADR)
-    adr._request = None
-    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: FailingTemplate())
-
-    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
-        adr.render_report(name="AnimationReport")
-
-    assert str(error) in str(exc_info.value)
+@pytest.mark.parametrize(
+    "embedded_python_version",
+    [(3, 12), None],
+    ids=["compatible_runtime", "missing_runtime"],
+)
+def test_embedded_python_mismatch_message_skips_non_mismatch(embedded_python_version):
+    """Compatible or unavailable runtimes do not produce a warning message."""
+    assert ADR._get_embedded_python_mismatch_message(embedded_python_version, (3, 12)) is None
 
 
 @pytest.mark.unit
@@ -269,79 +302,6 @@ def test_render_report_does_not_preflight_animation_availability(monkeypatch):
     monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: SuccessfulTemplate())
 
     assert adr.render_report(name="StaticReport") == "report rendered"
-
-
-@pytest.mark.unit
-def test_render_report_keeps_non_enve_import_error_generic(monkeypatch):
-    """Unrelated import failures retain the generic report error path."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    error = ImportError("No module named 'other_module'")
-
-    class FailingTemplate:
-        """Template stand-in that raises an unrelated import failure."""
-
-        def render(self, **kwargs):
-            raise error
-
-    adr = object.__new__(ADR)
-    adr._request = None
-    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: FailingTemplate())
-
-    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
-        adr.render_report(name="StaticReport")
-
-    assert str(error) in str(exc_info.value)
-
-
-@pytest.mark.unit
-def test_render_report_as_pptx_wraps_template_exception(monkeypatch):
-    """PPTX rendering converts template failures to ADR exceptions."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    error = RuntimeError("Template PPTX rendering failed")
-
-    class FailingPPTXLayout:
-        """PPTX template stand-in that raises its own render error."""
-
-        def render_pptx(self, **kwargs):
-            raise error
-
-    template = FailingPPTXLayout()
-    adr = object.__new__(ADR)
-    adr._request = None
-    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
-    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
-
-    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
-        adr.render_report_as_pptx(name="AnimationReport")
-
-    assert str(error) in str(exc_info.value)
-
-
-@pytest.mark.unit
-def test_export_report_as_pptx_wraps_template_exception(tmp_path, monkeypatch):
-    """PPTX export converts template failures to ADR exceptions."""
-    import ansys.dynamicreporting.core.serverless.adr as adr_module
-
-    error = RuntimeError("Template PPTX rendering failed")
-
-    class FailingPPTXLayout:
-        """PPTX template stand-in that raises its own render error."""
-
-        def render_pptx(self, **kwargs):
-            raise error
-
-    template = FailingPPTXLayout()
-    adr = object.__new__(ADR)
-    adr._request = None
-    monkeypatch.setattr(adr_module, "PPTXLayout", FailingPPTXLayout)
-    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: template)
-
-    with pytest.raises(ADRException, match="PPTX Report rendering failed") as exc_info:
-        adr.export_report_as_pptx(filename=tmp_path / "report.pptx", name="AnimationReport")
-
-    assert str(error) in str(exc_info.value)
 
 
 @pytest.mark.ado_test

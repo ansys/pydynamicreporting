@@ -24,7 +24,7 @@ and delete tags on items.
 
 import ansys.dynamicreporting.core as adr
 
-ansys_loc = r"C:\Program Files\ANSYS Inc\v232"
+ansys_loc = r"C:\Program Files\ANSYS Inc\v261"
 db_dir = r"C:\tmp\new_database"
 adr_service = adr.Service(ansys_installation=ansys_loc, db_directory=db_dir)
 session_guid = adr_service.start(create_db=True)

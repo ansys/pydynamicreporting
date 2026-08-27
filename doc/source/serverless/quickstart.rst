@@ -10,7 +10,7 @@ Instantiation and Setup
 
     from ansys.dynamicreporting.core.serverless import ADR
 
-    install_loc = r"C:\Program Files\ANSYS Inc\v252"
+    install_loc = r"C:\Program Files\ANSYS Inc\v261"
     db_dir = r"C:\ADR\DBs\ogdocex"
 
     adr = ADR(

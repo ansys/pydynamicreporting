@@ -3,7 +3,8 @@ SHELL := bash
 
 # Cross-platform Bash
 ifeq ($(OS),Windows_NT)
-BASH := "C:/Program Files/Git/bin/bash.exe"
+GIT_CORE_PATH := $(shell git --exec-path)
+BASH := "$(patsubst %/mingw64/libexec/git-core,%/bin/bash.exe,$(GIT_CORE_PATH))"
 else
 BASH := bash
 endif
@@ -67,7 +68,7 @@ check-dist: ## Validate dist/ artifacts (long description, format)
 
 .PHONY: tag
 tag: ## 🏷 Tag the current release version (fixes changelog and pushes tag)
-	$(BASH) scripts/tag_release.sh
+	$(BASH) scripts/tag_release.sh "$(RELEASE_VERSION)"
 
 .PHONY: publish
 publish-test: ## Publish to Azure Private PyPI
@@ -97,7 +98,7 @@ test-clean:
 	uv run python scripts/test_cleanup.py
 
 docs:
-	$(MAKE) -C doc html
+	$(MAKE) -C doc html SPHINXBUILD="uv run sphinx-build"
 
 docs-clean:
 	$(MAKE) -C doc clean

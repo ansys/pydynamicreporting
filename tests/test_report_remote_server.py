@@ -172,12 +172,7 @@ def test_fail_newdb(tmp_path, get_exec) -> None:
             run_local=True,
         )
     except DBCreationFailedError as e:
-        expected_error = (
-            "Unable to generate a new database by migration"
-            if get_exec
-            else "Unable to detect an installation in"
-        )
-        succ = expected_error in str(e)
+        succ = "Unable to generate a new database by migration" in str(e)
     assert succ
 
 
@@ -237,10 +232,16 @@ def test_server_validate_rejects_missing_malformed_or_unsupported_install_versio
     monkeypatch, server_info
 ) -> None:
     server = r.Server(url="http://127.0.0.1:8000")
-    monkeypatch.setattr(server, "get_api_version", lambda: server_info)
+    get_api_version = Mock(return_value=server_info)
+    monkeypatch.setattr(server, "get_api_version", get_api_version)
 
-    with pytest.raises(UnsupportedServerVersionError):
-        server.validate()
+    for _ in range(2):
+        with pytest.raises(UnsupportedServerVersionError):
+            server.validate()
+        assert server._api_version is None
+        assert server._ansys_version is None
+
+    assert get_api_version.call_count == 2
 
 
 def test_get_server_name_preserves_unsupported_server_version(monkeypatch) -> None:
@@ -257,14 +258,18 @@ def test_get_server_name_preserves_unsupported_server_version(monkeypatch) -> No
 
 def test_server_api_version_property_validates_server_install_version(monkeypatch) -> None:
     server = r.Server(url="http://127.0.0.1:8000")
-    monkeypatch.setattr(
-        server,
-        "get_api_version",
-        lambda: {"version": "1.0", "ansys_version": _unsupported_server_install_version()},
+    get_api_version = Mock(
+        return_value={"version": "1.0", "ansys_version": _unsupported_server_install_version()}
     )
+    monkeypatch.setattr(server, "get_api_version", get_api_version)
 
-    with pytest.raises(UnsupportedServerVersionError):
-        server.api_version
+    for _ in range(2):
+        with pytest.raises(UnsupportedServerVersionError):
+            server.api_version
+        assert server._api_version is None
+        assert server._ansys_version is None
+
+    assert get_api_version.call_count == 2
 
 
 def test_server_token(adr_service_create) -> None:
@@ -1061,7 +1066,10 @@ def _assert_api_lock_released(lock_dir: Path) -> None:
 
 
 @pytest.mark.ado_test
-def test_launch_existing_unsupported_server_fails_fast(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize("raise_exception", [True, False])
+def test_launch_existing_unsupported_server_fails_fast(
+    monkeypatch, tmp_path, raise_exception
+) -> None:
     database_dir = tmp_path / "database"
     _create_minimal_local_database(database_dir)
     lock_dir = tmp_path / "locks"
@@ -1077,24 +1085,31 @@ def test_launch_existing_unsupported_server_fails_fast(monkeypatch, tmp_path) ->
     popen = Mock(side_effect=AssertionError("Popen must not run for an unsupported server"))
     monkeypatch.setattr(r.subprocess, "Popen", popen)
 
-    with pytest.raises(UnsupportedServerVersionError, match="25.1"):
-        r.launch_local_database_server(
+    def launch_server():
+        return r.launch_local_database_server(
             parent=None,
             directory=str(database_dir),
             port=8000,
-            raise_exception=True,
+            raise_exception=raise_exception,
             verbose=False,
             exec_basis=str(tmp_path / "install"),
             ansys_version=int(_supported_server_install_version()),
         )
+
+    if raise_exception:
+        with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+            launch_server()
+    else:
+        assert launch_server() is False
 
     popen.assert_not_called()
     _assert_api_lock_released(lock_dir)
 
 
 @pytest.mark.ado_test
+@pytest.mark.parametrize("raise_exception", [True, False])
 def test_launch_polling_unsupported_server_version_stops_without_retrying(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, raise_exception
 ) -> None:
     database_dir = tmp_path / "database"
     _create_minimal_local_database(database_dir)
@@ -1122,18 +1137,70 @@ def test_launch_polling_unsupported_server_version_stops_without_retrying(
     monkeypatch.setattr(r.subprocess, "Popen", Mock(return_value=RunningProcess()))
     monkeypatch.setattr(r, "stop_background_local_server", stop_background_server)
 
-    with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+    def launch_server():
+        return r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=raise_exception,
+            verbose=False,
+            exec_basis=str(tmp_path / "install"),
+            ansys_version=int(_supported_server_install_version()),
+        )
+
+    if raise_exception:
+        with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+            launch_server()
+    else:
+        assert launch_server() is False
+
+    assert validate_calls == 2
+    stop_background_server.assert_called_once_with(str(database_dir.resolve()))
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+def test_launch_polling_permission_denied_stops_without_retrying(monkeypatch, tmp_path) -> None:
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    validate_calls = 0
+
+    def validate_then_deny(self):
+        nonlocal validate_calls
+        validate_calls += 1
+        if validate_calls == 1:
+            raise ConnectionError("no server running")
+        raise r.exceptions.PermissionDenied("Invalid credentials")
+
+    class RunningProcess:
+        stderr = Mock()
+        stdout = Mock()
+
+        def poll(self):
+            return None
+
+    stop_background_server = Mock()
+    popen = Mock(return_value=RunningProcess())
+    monkeypatch.setattr(r.Server, "validate", validate_then_deny)
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+    monkeypatch.setattr(r, "stop_background_local_server", stop_background_server)
+
+    with pytest.raises(e.ServerConnectionError, match="Potential username/password error"):
         r.launch_local_database_server(
             parent=None,
             directory=str(database_dir),
             port=8000,
-            raise_exception=True,
+            raise_exception=False,
             verbose=False,
             exec_basis=str(tmp_path / "install"),
             ansys_version=int(_supported_server_install_version()),
         )
 
     assert validate_calls == 2
+    popen.assert_called_once()
     stop_background_server.assert_called_once_with(str(database_dir.resolve()))
     _assert_api_lock_released(lock_dir)
 

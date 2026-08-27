@@ -110,7 +110,8 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
 
 - ``ADR.setup()`` now sanitizes the imported product settings before reaching into the product's modules.
   This allows the setup process to complete and the product's modules to be imported, even if the client venv
-  has newer versions of dependencies that would otherwise cause import errors.
+  has newer versions of dependencies that would otherwise cause import errors. This can patch known setting
+  mismatches after the product settings module has been imported.
 
 - The base dependency set in ``pyproject.toml`` now defines the broad
   compatibility envelope, while release-specific dependency
@@ -118,24 +119,39 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
   checked-in ``uv.lock``, so release-specific stacks are documented as
   constraints files rather than mutually incompatible extras.
 
-The compatibility shim is a safety net for known product-setting and dependency API transitions.
-It is not a substitute for matching the external venv to the target ADR release.
+The compatibility shim is a safety net for known product-setting and dependency
+API transitions. External-venv compatibility is still bounded by the target ADR
+release and the packages installed in that environment.
 
 Recommended practice for external venv usage:
 
-- Install ``ansys-dynamicreporting-core`` together with the constraints
-  file that matches the target ADR release.
+- For the current ADR line bundled with a client major release, install
+  ``ansys-dynamicreporting-core`` normally unless your workflow needs stricter
+  pins. For example, the ``1.x`` client line is bundled with ADR ``27.1``.
+- For the previous supported ADR line, use the matching constraints file when
+  one is provided. For example, ``1.x`` also supports ADR ``26.1``, and
+  ``constraints/v261.txt`` documents that release profile.
 - Keep one external virtual environment per product release family.
 
-If you are installing from PyPI instead of a local checkout, copy the matching
-constraints file from ``constraints/`` in the GitHub repository and pass
-it to ``pip install -c ...``.
+If you are installing from PyPI instead of a local checkout and using a
+constraints file, copy it from ``constraints/`` in the GitHub repository and
+pass it to ``pip install -c ...``.
 
-Example from PyPI after downloading the matching constraints file locally:
+Example for ADR ``26.1`` from PyPI after downloading the matching constraints
+file locally:
 
 .. code-block:: bash
 
     pip install -c /path/to/v261.txt ansys-dynamicreporting-core
+
+Feature-specific product requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The compatibility window describes the product lines covered for regressions
+and bug fixes. Some features can still require a newer product line when the
+feature depends on files shipped by that product. For example, browser PDF
+export requires ADR ``27.1`` or newer because the required browser binary is
+shipped with ADR product line ``27`` and later.
 
 Using Subprocesses for Multiple Configurations
 ----------------------------------------------
@@ -195,7 +211,7 @@ Parent process (run different configs safely):
             "ADR_DB_DIR": "/srv/tenantA/db",
             "ADR_MEDIA_DIR": "/srv/tenantA/media",
             "ADR_STATIC_DIR": "/srv/tenantA/static",
-            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+            "ANSYS_INSTALLATION": "/opt/ansys/v261",
         }
     )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_a)
@@ -207,7 +223,7 @@ Parent process (run different configs safely):
             "ADR_DB_DIR": "/srv/tenantB/db",
             "ADR_MEDIA_DIR": "/srv/tenantB/media",
             "ADR_STATIC_DIR": "/srv/tenantB/static",
-            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+            "ANSYS_INSTALLATION": "/opt/ansys/v261",
         }
     )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_b)

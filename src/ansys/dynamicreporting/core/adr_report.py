@@ -141,7 +141,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My First Report")
             my_report.visualize(new_tab = True)
@@ -192,7 +192,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             report_url = my_report.get_url()
@@ -243,7 +243,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             report_url = my_report.get_guid()
@@ -292,7 +292,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             my_report.get_report_script()
@@ -559,7 +559,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             my_report.get_report_component()
@@ -615,7 +615,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
             report_iframe = my_report.get_iframe()
@@ -672,7 +672,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
             succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"})
@@ -741,11 +741,11 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
             succ = my_report.export_html(directory_name = r'D:\\tmp', query_params={"colormode": "dark"})
-            succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
+            succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.html', item_filter = 'A|i_type|cont|image;')
         """
         success = False
         report_logger = self._get_report_logger()
@@ -786,6 +786,9 @@ class Report:
     ) -> bool:
         """
         Export report as a browser-fidelity PDF.
+
+        This export path requires a local ADR 27.1 or later installation with
+        its product-shipped browser package.
 
         Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
         asks a headless browser to render the report through ADR's browser-facing output and
@@ -875,7 +878,7 @@ class Report:
 
             import ansys.dynamicreporting.core as adr
 
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
             adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
             report = adr_service.get_report(report_name="my_report_name")
             report.export_json(r'C:\\tmp\\my_json_file.json')

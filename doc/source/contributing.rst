@@ -6,12 +6,12 @@ Contribute
 Overall guidance on contributing to a PyAnsys library appears in the
 `Contributing <https://dev.docs.pyansys.com/how-to/contributing.html>`_ topic
 in the *PyAnsys Developer's Guide*. Ensure that you are thoroughly familiar with
-this guide before attempting to contribute to PyDnamicReporting.
+this guide before attempting to contribute to PyDynamicReporting.
 
 
 Post issues
 -----------
-Use the `PyDnamicReporting Issues <https://github.com/ansys/pydynamicreporting/issues>`_
+Use the `PyDynamicReporting Issues <https://github.com/ansys/pydynamicreporting/issues>`_
 page to submit questions, report bugs, and request new features.
 
 To reach the project support team, email `pyansys.core@ansys.com <pyansys.core@ansys.com>`_.

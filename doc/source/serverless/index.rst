@@ -20,7 +20,8 @@ want to:
 - Create, manage, and render reports locally using Python
 - Avoid setting up a centralized ADR service or HTTP connection
 - Maintain full fidelity with the ADR schema (items, templates, etc.)
-- Output HTML content and media assets for web and desktop apps.
+- Output HTML, browser-PDF, and PPTX content with the required media and
+  static assets.
 
 Serverless ADR is ideal for:
 
@@ -44,8 +45,9 @@ Key features
   Sessions, Datasets, Items and Templates are actual Python classes, not remote proxies — giving
   you full introspection, subclassing, and lifecycle control.
 - **Comprehensive rendering**:
-  Generates full HTML reports — just like the service-based API — with full
-  support for media, static assets, and custom layouts.
+  Generates full HTML reports and PPTX presentations with media, static
+  assets, and custom layouts. ADR 27.1 and later can also produce
+  browser-fidelity PDFs.
 
 Explore the docs
 ================
@@ -60,11 +62,13 @@ Explore the docs
    sessions_and_datasets
    items
    templates
+   browser_pdf
    querying
    media_and_static
    embedding_reports
    copying_objects
    deleting_objects
    configuration
+   logging
    examples
    caveats

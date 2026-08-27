@@ -57,6 +57,8 @@ This is useful for lightweight workflows or embedding reporting into your own ap
 
 See :doc:`Serverless ADR documentation <serverless/index>` for full details.
 
+.. _compatibility_policy:
+
 Compatibility Policy
 --------------------
 PyDynamicReporting uses plain SemVer for package versions, but product
@@ -74,8 +76,8 @@ compatibility is a separate explicit contract.
 Under this policy:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
-- ``1.x`` will be bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
-- ``2.x`` will be bundled with ADR ``28.1`` and supports ``27.*`` and ``28.*``.
+- ``1.x`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
+- ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
 ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
@@ -94,6 +96,10 @@ best-effort guess.
 - Supported lines are the scope for compatibility regressions and bug fixes.
 - Supported lines are covered by this repository's targeted compatibility
   checks and release validation for the declared policy.
+- Some features can have a narrower product requirement within the supported
+  window. For example, browser PDF export requires ADR ``27.1`` or newer
+  because the required browser binary is shipped with ADR product line ``27``
+  and later.
 - Unsupported lines may still work in some cases, but compatibility is not
   guaranteed.
 - When service-mode or serverless install detection finds an ADR product line
@@ -106,16 +112,9 @@ If you do not pass ``ansys_version`` explicitly, PyDynamicReporting uses an
 install-facing default search order that is separate from the public support
 contract.
 
-- The install-facing default search order is independent from the public
-  compatibility contract.
-- ``DEFAULT_ANSYS_INSTALL_RELEASE`` is the single hand-maintained
-  install-default policy constant. ``DEFAULT_ANSYS_INSTALL_VERSION`` and
-  ``AUTO_DETECT_INSTALL_VERSIONS`` are derived from it, while the client-major
-  compatibility window remains unchanged.
-- Implicit install discovery probes the default install line first, then the
-  previous annual line when the default line is unavailable.
-- Older layouts remain available when you request them explicitly, but they
-  are not part of the implicit default search path.
+Implicit install discovery tries the default install line first, then the
+previous annual line when the default is unavailable. Request an older layout
+explicitly if you need one.
 
 Serverless External Python Environments
 ---------------------------------------
@@ -126,15 +125,18 @@ inside the installed ADR product release.
 This means that external virtual environments should be treated as a versioned
 compatibility boundary.
 
-- Install the package together with the constraints file that matches the ADR
-  product release you are targeting.
+- For the current ADR line bundled with a client major release, install the
+  package normally unless your workflow needs stricter pins.
+- For the previous supported ADR line, use the matching constraints file when
+  one is provided. For example, ``1.x`` is bundled with ADR ``27.1`` and can use
+  ``constraints/v261.txt`` when targeting ADR ``26.1``.
 - Keep one external serverless virtual environment per supported ADR product
   release family.
 
 The repository also includes a settings compatibility shim for known
-setting transitions, but that shim is only a safety net. It is not a
-replacement for using dependency constraints that match the target ADR
-installation.
+setting transitions. That shim can patch known mismatches, but external-venv
+compatibility remains bounded by the target ADR release and the dependencies
+installed in that environment.
 
 For the detailed serverless caveats and dependency-drift explanation, see
 :doc:`serverless/caveats`.

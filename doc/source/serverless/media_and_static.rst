@@ -51,7 +51,7 @@ Example configuration:
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = ADR(
-        ansys_installation="C:\\Program Files\\ANSYS Inc\\v252",
+        ansys_installation="C:\\Program Files\\ANSYS Inc\\v261",
         db_directory="C:\\ADR\\db",
         media_directory="C:\\ADR\\db\\media",
         static_directory="C:\\ADR\\static",

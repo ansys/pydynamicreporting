@@ -133,7 +133,7 @@ class ADR:
         Deprecated alias for ``log_output``.
     docker_image : str, optional
         Docker image URL to use when ``ansys_installation="docker"``.
-        Defaults to :data:`DOCKER_REPO_URL`.
+        This argument is required when ``ansys_installation="docker"``.
     in_memory : bool, default: False
         If ``True``, ADR configures an in-memory SQLite database and
         temporary media/static directories, suitable for tests or
@@ -161,7 +161,7 @@ class ADR:
     --------
     Basic local SQLite usage::
 
-        install_loc = r"C:\\Program Files\\ANSYS Inc\\v252"
+        install_loc = r"C:\\Program Files\\ANSYS Inc\\v261"
         db_dir = r"C:\\DBs\\docex"
         from ansys.dynamicreporting.core.serverless import ADR, String, BasicLayout
 
@@ -617,18 +617,16 @@ class ADR:
             ansys_installation / f"apex{ansys_version}" / "machines" / machine_directory
         )
         try:
-            runtime_paths = runtime_directory.glob("[Pp]ython-*")
+            for runtime_path in runtime_directory.glob("[Pp]ython-*"):
+                if not runtime_path.is_dir():
+                    continue
+                match = re.fullmatch(
+                    r"python-(\d+)\.(\d+)(?:\.\d+)?", runtime_path.name, flags=re.IGNORECASE
+                )
+                if match:
+                    return (int(match.group(1)), int(match.group(2)))
         except OSError:
             return None
-
-        for runtime_path in runtime_paths:
-            if not runtime_path.is_dir():
-                continue
-            match = re.fullmatch(
-                r"python-(\d+)\.(\d+)(?:\.\d+)?", runtime_path.name, flags=re.IGNORECASE
-            )
-            if match:
-                return (int(match.group(1)), int(match.group(2)))
         return None
 
     @staticmethod
@@ -1427,7 +1425,7 @@ class ADR:
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.html", "w", encoding="utf-8") as f:
         ...     f.write(html_content)
@@ -1479,7 +1477,7 @@ class ADR:
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
@@ -1664,7 +1662,8 @@ class ADR:
         """Render a report as a browser-fidelity PDF byte stream via a headless browser.
 
         This method produces PDF output that matches the on-screen browser appearance
-        by rendering in a headless browser.
+        by rendering in a headless browser. It requires ADR 27.1 or later and
+        the product-shipped browser package.
 
         Parameters
         ----------
@@ -1716,7 +1715,7 @@ class ADR:
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(
-        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
         ...     db_directory=r"C:\\DBs\\docex",
         ...     media_directory=r"C:\\DBs\\docex\\media",
         ...     static_directory=r"C:\\static",
@@ -1786,7 +1785,7 @@ class ADR:
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> adr.export_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         """
@@ -1861,7 +1860,7 @@ class ADR:
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(
-                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261",
                     db_directory=r"C:\\DBs\\docex",
                     media_directory=r"C:\\DBs\\docex\\media",
                     static_directory=r"C:\\static"
@@ -1933,7 +1932,8 @@ class ADR:
         """Export a report as a browser-fidelity PDF file via a headless browser.
 
         This method produces PDF output that matches the on-screen browser appearance
-        by rendering in a headless browser.
+        by rendering in a headless browser. It requires ADR 27.1 or later and
+        the product-shipped browser package.
 
         Parameters
         ----------
@@ -1986,7 +1986,7 @@ class ADR:
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(
-        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
         ...     db_directory=r"C:\\DBs\\docex",
         ...     media_directory=r"C:\\DBs\\docex\\media",
         ...     static_directory=r"C:\\static",
