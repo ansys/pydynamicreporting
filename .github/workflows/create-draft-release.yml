@@ -27,6 +27,17 @@ jobs:
       - name: Set up Env
         uses: ./.github/actions/setup-env
 
+      - name: Validate the release tag
+        id: release-tag
+        env:
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python scripts/release_tools.py validate-tag "$RELEASE_TAG" \
+            --require-existing \
+            --require-head \
+            --ref-type "$RELEASE_REF_TYPE"
+
       - name: Run version checks
         run: make check-version
 
@@ -55,7 +66,7 @@ jobs:
       - name: Create or repair the draft GitHub Release
         run: |
           release_flags=(--draft)
-          if [[ "${GITHUB_REF_NAME}" =~ rc[0-9]+$ ]]; then
+          if [[ "${{ steps.release-tag.outputs.prerelease }}" == "true" ]]; then
             release_flags+=(--prerelease)
           fi
           if [[ "${{ steps.existing-release.outputs.exists }}" != "true" ]]; then
