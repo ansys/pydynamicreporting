@@ -260,7 +260,13 @@ class Service:
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
                 raise e
 
-            self._ansys_installation, self._ansys_version = (ansys_installation, ansys_version)
+            self._ansys_installation = ansys_installation
+            self._ansys_version = self._docker_launcher.ansys_version() or ansys_version
+            compatibility_warning = get_compatibility_warning_for_install_version(
+                self._ansys_version
+            )
+            if compatibility_warning:
+                warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
         else:  # pragma: no cover
             # Local ADR product root.
