@@ -69,6 +69,26 @@ def _unsupported_newer_install_version() -> int:
     return product_release_to_install_version(f"{newest_supported_line + 1}.1")
 
 
+def _patch_docker_launcher(monkeypatch, detected_version: str) -> None:
+    """Patch Docker startup so service compatibility tests stay unit-level."""
+
+    class FakeDockerLauncher:
+        def __init__(self, image_url):
+            self._ansys_version = None
+
+        def pull_image(self):
+            return None
+
+        def start(self, **kwargs):
+            self._ansys_version = detected_version
+
+        def ansys_version(self):
+            return self._ansys_version
+
+    monkeypatch.setattr(adr_service_module, "DockerLauncher", FakeDockerLauncher)
+    monkeypatch.setattr(adr_service_module.report_utils, "is_port_in_use", lambda port: False)
+
+
 def test_parse_product_release():
     assert parse_product_release("27.1") == ("27", 1)
     assert parse_product_release("27.2") == ("27", 2)
@@ -294,6 +314,38 @@ def test_service_warns_for_implicit_default_install_when_unsupported(monkeypatch
         Service()
 
     assert any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_service_warns_for_unsupported_docker_product_release(monkeypatch, tmp_path):
+    detected_version = str(_unsupported_newer_install_version())
+    _patch_docker_launcher(monkeypatch, detected_version)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        service = Service(
+            ansys_installation="docker",
+            docker_image="ghcr.io/ansys-internal/adr_dev",
+            db_directory=str(tmp_path / "db"),
+        )
+
+    assert service._ansys_version == detected_version
+    assert any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_service_does_not_warn_for_supported_docker_product_release(monkeypatch, tmp_path):
+    detected_version = str(product_release_to_install_version(f"{_current_supported_lines()[0]}.1"))
+    _patch_docker_launcher(monkeypatch, detected_version)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        service = Service(
+            ansys_installation="docker",
+            docker_image="ghcr.io/ansys-internal/adr_dev",
+            db_directory=str(tmp_path / "db"),
+        )
+
+    assert service._ansys_version == detected_version
+    assert not any("outside the supported window" in str(w.message) for w in caught)
 
 
 def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path):
