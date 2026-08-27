@@ -26,9 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   implementation details. Because it temporarily changes that process-wide setting, do not run
   browser-PDF exports concurrently within one process. Cleanup failures do not mask a successful
   export.
-- Public product-compatibility metadata and helpers: `ProductCompatibility`,
-  `get_compatibility_info()`, bundled and supported product-line constants, and product-release
-  parsing and display helpers.
+- A public `get_compatibility_info()` helper for inspecting the client version, bundled ADR
+  release, supported annual product lines, and support policy.
 - Serverless `ADR.get_item_count()` and `ADR.get_report_count()` helpers. Report counts include
   only top-level templates, not child templates.
 - Serverless `ADR.render_report()` and `Template.render()` now accept `embed_scene_data` to include

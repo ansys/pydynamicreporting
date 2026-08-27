@@ -51,10 +51,6 @@ The ``make install`` target runs ``uv sync --frozen --all-extras`` and installs
 the package in editable mode. Use ``uv sync --frozen --all-extras`` directly
 if ``make`` is unavailable.
 
-Importing ``Item``, ``Report``, or ``Service`` does not require a Qt or PySide
-binding. A supported binding is loaded only when a GUI-specific path needs it.
-
-
 Create an Ansys Dynamic Reporting instance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

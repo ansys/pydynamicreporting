@@ -112,16 +112,9 @@ If you do not pass ``ansys_version`` explicitly, PyDynamicReporting uses an
 install-facing default search order that is separate from the public support
 contract.
 
-- The install-facing default search order is independent from the public
-  compatibility contract.
-- ``DEFAULT_ANSYS_INSTALL_RELEASE`` is the single hand-maintained
-  install-default policy constant. ``DEFAULT_ANSYS_INSTALL_VERSION`` and
-  ``AUTO_DETECT_INSTALL_VERSIONS`` are derived from it, while the client-major
-  compatibility window remains unchanged.
-- Implicit install discovery probes the default install line first, then the
-  previous annual line when the default line is unavailable.
-- Older layouts remain available when you request them explicitly, but they
-  are not part of the implicit default search path.
+Implicit install discovery tries the default install line first, then the
+previous annual line when the default is unavailable. Request an older layout
+explicitly if you need one.
 
 Serverless External Python Environments
 ---------------------------------------

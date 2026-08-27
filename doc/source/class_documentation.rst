@@ -46,20 +46,6 @@ lines:
    print(compatibility.supported_product_lines)
    print(compatibility.support_policy)
 
-The same values are available as ``BUNDLED_PRODUCT_RELEASE``,
-``SUPPORTED_PRODUCT_LINES``, and ``SUPPORTED_PRODUCT_RELEASE_POLICY``.
-``DEFAULT_ANSYS_INSTALL_RELEASE`` and ``DEFAULT_ANSYS_INSTALL_VERSION``
-describe the default local-install lookup target; they are separate from the
-supported product window.
-
-.. autosummary::
-   :toctree: _autosummary/
-
-   ansys.dynamicreporting.core.ProductCompatibility
-   ansys.dynamicreporting.core.get_compatibility_info
-   ansys.dynamicreporting.core.product_release_to_display_string
-   ansys.dynamicreporting.core.product_release_to_short_label
-
 Logging utility
 ===============
 
