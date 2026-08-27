@@ -442,10 +442,7 @@ Notes on ``export_report_as_html()`` method:
   template of the report to be exported.
 
 Static assets are selected from the ADR installation configured on the
-``ADR`` instance. The exporter detects MathJax 4 trees referenced by the
-report while retaining support for legacy MathJax 2 layouts. Ensure the
-configured installation matches the report assets, and use the missing-asset
-diagnostics to identify incomplete static directories.
+``ADR`` instance.
 
 Lifecycle Notes
 ---------------

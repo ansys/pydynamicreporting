@@ -48,10 +48,14 @@ jobs:
 
       - name: Create Draft GitHub Release with Artifacts
         run: |
+          release_flags=(--draft)
+          if [[ "${GITHUB_REF_NAME}" =~ rc[0-9]+$ ]]; then
+            release_flags+=(--prerelease)
+          fi
           gh release create "${{ github.ref_name }}" \
             --title "Release ${GITHUB_REF_NAME}" \
             --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
-            --draft \
+            "${release_flags[@]}" \
             dist/*
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

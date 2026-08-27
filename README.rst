@@ -290,10 +290,11 @@ What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Create Draft Release** (on tag push): builds wheels/sdist and opens a
-  **draft GitHub Release** attaching artifacts.
+  **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
+  marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads
-  artifacts to **PyPI** via Trusted Publisher, then builds and deploys
-  **stable docs**.
+  artifacts to **PyPI** via Trusted Publisher, then builds the documentation.
+  Stable documentation is deployed only for a final release, not a prerelease.
 - **Failure notifications**: posts to Microsoft Teams on workflow failure.
 
 Prerequisites
@@ -301,7 +302,7 @@ Prerequisites
 
 - Ensure ``CHANGELOG.md`` has a section for the release **dated today**. The
   helper script validates this.
-- Working tree must be **clean** (no uncommitted changes).
+- Working tree must be **clean**, including untracked files.
 - CI secrets for publishing and docs deployment are configured in GitHub.
 
 Cutting a Release
@@ -315,8 +316,8 @@ Cutting a Release
 
       make tag
 
-   This runs all safety checks, validates the changelog date, and pushes the
-   Git tag (for example, ``v0.10.0``).
+   This validates the changelog date and clean working tree, then creates and
+   pushes the Git tag (for example, ``v0.10.0``).
 
    For a release candidate, pass the exact pre-release version explicitly:
 
@@ -324,17 +325,24 @@ Cutting a Release
 
       make tag RELEASE_VERSION=1.0.0rc1
 
+   An ``rcN`` tag creates a draft GitHub Release already marked as a
+   prerelease. Keep that setting enabled when reviewing and publishing the
+   draft.
+
 3. Once the tag is pushed:
 
    - The **Create Draft Release** workflow builds the package and opens a
      **draft GitHub Release** with artifacts.
-   - After reviewing and finalizing notes, publish the GitHub Release.
+   - After reviewing and finalizing notes, publish the GitHub Release. For an
+     RC, verify that the release is marked as a prerelease before publishing.
 
 4. Publishing the release automatically triggers the **Release** workflow,
    which:
 
    - Uploads artifacts to **PyPI** using Trusted Publisher.
-   - Builds and deploys the **stable documentation**.
+   - Builds the documentation.
+   - Deploys the **stable documentation** only for a final release. Publishing
+     an RC does not replace the stable documentation.
 
 Patch releases
 ^^^^^^^^^^^^^^
@@ -353,22 +361,24 @@ publish or deploy are already guarded in workflows (for example, with
 
 .. code-block:: bash
 
-   act -W '.github/workflows/release.yml' -j release --bind
+   act workflow_dispatch -W '.github/workflows/release.yml' \
+     -j build-release --input source_ref=refs/tags/v1.0.0rc1 --bind
 
 CI workflows (reference)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **.github/workflows/create_draft_release.yml**
+- **.github/workflows/create-draft-release.yml**
 
   - Triggers on tag push ``v*`` or manual dispatch.
   - Builds artifacts and opens a **draft** GitHub Release attaching
-    ``dist/*``.
+    ``dist/*``. An ``rcN`` tag is marked as a prerelease automatically.
 
 - **.github/workflows/release.yml**
 
   - Triggers on a **published** GitHub Release or manual dispatch.
-  - Rebuilds and validates, downloads artifacts, **publishes to PyPI**,
-    builds docs, and **deploys stable docs**.
+  - Rebuilds and validates, downloads artifacts, **publishes to PyPI**, and
+    builds docs. Stable docs are deployed only for final releases. A manual
+    dispatch must explicitly enable stable-doc deployment.
 
 CLI helpers
 ^^^^^^^^^^^

@@ -11,8 +11,8 @@ echo "🏷 Releasing version: $VERSION"
 # check changelog date for this version
 uv run python scripts/check_changelog_date.py "$VERSION"
 
-if ! git diff --quiet HEAD; then
-  echo "❌ ERROR: Working directory is dirty. Commit your changes through a PR."
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "❌ ERROR: Working directory is dirty, including untracked files. Commit or remove changes through a PR."
   exit 1
 fi
 

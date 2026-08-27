@@ -7,6 +7,11 @@ on:
         description: "Tag/branch/SHA to build (e.g. refs/tags/v0.10.5)"
         required: true
         default: ""
+      deploy_stable_docs:
+        description: "Deploy documentation as the stable site"
+        required: false
+        type: boolean
+        default: false
   release:
     types: [ published ]
 
@@ -79,7 +84,7 @@ jobs:
           packages-dir: ${{ env.PACKAGE_NAME }}-artifacts
           skip-existing: false
 
-  # Call the reusable Docs workflow after PyPI succeeds
+  # Build docs after PyPI succeeds. GitHub prereleases never replace stable docs.
   docs:
     name: Docs (post-release)
     needs: [ upload-release ]
@@ -89,6 +94,7 @@ jobs:
     with:
       # Build docs from the same source ref used by the build/upload steps.
       ref: ${{ inputs.source_ref || github.ref }}
+      deploy_stable: ${{ (github.event_name == 'release' && !github.event.release.prerelease) || (github.event_name == 'workflow_dispatch' && inputs.deploy_stable_docs) }}
     secrets: inherit
 
   notify-release-failure:

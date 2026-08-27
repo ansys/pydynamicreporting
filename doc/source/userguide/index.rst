@@ -212,15 +212,9 @@ offline HTML bundle:
        filename="index.html",
    )
 
-The high-level report API selects static assets for the product version
-reported by the connected ADR server. MathJax 4 asset trees are detected and
-copied when referenced, while the legacy MathJax 2 layout remains supported.
-The export retains required report viewer, context-menu, and Draco assets.
-
-If you call the low-level ``Server.export_report_as_html()`` API and provide
-an explicit ``ansys_version``, that override remains authoritative. A mismatch
-with the connected server produces a warning so the asset selection can be
-checked. Diagnostics identify incomplete legacy asset sets.
+The high-level report API uses the product version reported by the connected
+ADR server. If you call the low-level ``Server.export_report_as_html()`` API
+with an explicit ``ansys_version``, set it to the connected server's version.
 
 
 Backward compatibility with template generator scripts
