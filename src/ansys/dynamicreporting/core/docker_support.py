@@ -23,7 +23,7 @@
 """
 Docker Support module.
 
-The Docker Support module provides PyDnamicReporting with the ability to start
+The Docker Support module provides PyDynamicReporting with the ability to start
 and stop the Ansys Dynamic Reporting Docker container as well as routines for
 copying files between the host file system and the container's file system.
 

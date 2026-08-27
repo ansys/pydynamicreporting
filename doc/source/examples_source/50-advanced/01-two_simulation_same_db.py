@@ -28,7 +28,7 @@ from ansys.dynamicreporting.core.utils import report_utils
 # Find a random open port for the ADR service
 adr_port = report_utils.find_unused_ports(1)[0]
 adr_service = adr.Service(
-    ansys_installation=r"C:\Program Files\Ansys Inc\v241",
+    ansys_installation=r"C:\Program Files\Ansys Inc\v261",
     db_directory=r"D:\tmp\new_db",
     port=adr_port,
 )
@@ -148,7 +148,7 @@ if "Simulation Report" not in adr_service.get_list_reports():
 # currently running ADR service and push the new items in the same database.
 # Check if the report template already exists and create it only if it does not.
 
-new_service = adr.Service(ansys_installation=r"C:\Program Files\Ansys Inc\v241")
+new_service = adr.Service(ansys_installation=r"C:\Program Files\Ansys Inc\v261")
 new_service.connect(url=adr_service.url)
 create_items(dp=1)
 if "Simulation Report" not in new_service.get_list_reports():

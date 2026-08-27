@@ -3,6 +3,13 @@ User guide
 
 This section describes concepts that you need to know to use PyDynamicReporting.
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Connected-service guides
+
+   browser_pdf
+   logging
+
 API overview
 ------------
 
@@ -33,7 +40,7 @@ pushes an image item on a new session:
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
    ret = adr_service.connect(
        url="my_machine:8010", username="MyUsername", password="MyPassword"
    )
@@ -66,6 +73,24 @@ into any other app.
    the ``item_image`` attribute. The Ansys Dynamic Reporting database is
    automatically updated.
 
+Wrap long table text
+--------------------
+
+Service-mode table items support smart word wrapping. Set
+``table_wrap_word`` to break long text at spaces or hyphens instead of in the
+middle of a word:
+
+.. code:: python
+
+   import numpy as np
+
+   table_item = adr_service.create_item(obj_name="Status table")
+   table_item.item_table = np.array(
+       [["Run", "Long status message"], ["1", "Completed with warnings"]],
+       dtype="|S64",
+   )
+   table_item.table_wrap_word = 1
+
 Visualize an Ansys Dynamic reporting item
 -----------------------------------------
 
@@ -74,7 +99,7 @@ to visualize it standalone, as shown in the preceding code examples. The second
 is to visualize it together with all the other items that are present in the
 current Ansys Dynamic Reporting session.
 
-Each time that you use the PyDnamicReporting
+Each time that you use the PyDynamicReporting
 :func:`start<ansys.dynamicreporting.core.Service.start>` method to
 start an Ansys Dynamic Reporting service or the
 :func:`connect<ansys.dynamicreporting.core.Service.connect>` method
@@ -92,7 +117,7 @@ from. It shows that both items (image and text) have been created.
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
    ret = adr_service.connect(
        url="my_machine:8010", username="MyUsername", password="MyPassword"
    )
@@ -118,7 +143,7 @@ This code starts an Ansys Dynamic Reporting session in the first interpreter:
    import ansys.dynamicreporting.core as adr
 
    adr_service = adr.Service(
-       ansys_installation=r"C:\Program Files\ANSYS Inc\v232",
+       ansys_installation=r"C:\Program Files\ANSYS Inc\v261",
        db_directory=r"D:\tmp\test_pydynamicreporting",
        port=8010,
    )
@@ -135,7 +160,7 @@ This GUID is then copied and pasted into another interpreter as shown in this co
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
    ret = adr_service.connect(url="http://localhost:8010", session=session_guid)
 
 
@@ -172,6 +197,31 @@ method:
    my_report = adr_service.get_report(report_name="My Top Report")
    my_report.visualize()
 
+Export a connected report as static HTML
+----------------------------------------
+
+Use :meth:`~ansys.dynamicreporting.core.Report.export_html` to create an
+offline HTML bundle:
+
+.. code:: python
+
+   exported = my_report.export_html(
+       directory_name=r"C:\reports\simulation-summary",
+       query_params={"colormode": "dark"},
+       item_filter="A|i_tags|cont|project=wing;",
+       filename="index.html",
+   )
+
+The high-level report API selects static assets for the product version
+reported by the connected ADR server. MathJax 4 asset trees are detected and
+copied when referenced, while the legacy MathJax 2 layout remains supported.
+The export retains required report viewer, context-menu, and Draco assets.
+
+If you call the low-level ``Server.export_report_as_html()`` API and provide
+an explicit ``ansys_version``, that override remains authoritative. A mismatch
+with the connected server produces a warning so the asset selection can be
+checked. Diagnostics identify incomplete legacy asset sets.
+
 
 Backward compatibility with template generator scripts
 ------------------------------------------------------
@@ -201,10 +251,9 @@ lines in the legacy script with these lines:
 
    import ansys.dynamicreporting.core as adr
 
-   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v232")
+   adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
    ret = adr_service.connect(url="http://localhost:8010")
-   server = adr_
-   service.serverobj
+   server = adr_service.serverobj
 
 
 Everything else in the script remains the same.

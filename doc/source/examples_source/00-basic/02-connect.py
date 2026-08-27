@@ -28,7 +28,11 @@ import ansys.dynamicreporting.core as adr
 import ansys.dynamicreporting.core.examples as examples
 
 db_dir = r"C:\tmp\new_database"
-adr_service = adr.Service(ansys_installation="docker", db_directory=db_dir)
+adr_service = adr.Service(
+    ansys_installation="docker",
+    docker_image="your-adr-image:latest",
+    db_directory=db_dir,
+)
 session_guid = adr_service.start(create_db=True)
 
 ###############################################################################

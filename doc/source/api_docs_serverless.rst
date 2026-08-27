@@ -13,7 +13,8 @@ running a long-lived ADR server. It provides:
 * A small, well-defined set of item types (tables, trees, HTML, images, scenes,
   files, animations, and strings) that represent report content.
 * Layout and generator templates that assemble items into interactive HTML
-  reports or PPTX slide decks.
+  reports, browser-fidelity PDFs, or PPTX slide decks. Browser-PDF export
+  requires ADR 27.1 or later.
 
 .. note::
    The list is intentionally explicit to avoid exposing internal classes
@@ -29,7 +30,7 @@ You typically:
 1. Instantiate :class:`ansys.dynamicreporting.core.serverless.adr.ADR`,
 2. Call :meth:`ADR.setup` to configure database and storage,
 3. Create and query items and templates, and
-4. Render HTML or PPTX outputs.
+4. Render HTML, browser-PDF, or PPTX outputs.
 
 The :class:`~ansys.dynamicreporting.core.serverless.base.ObjectSet` helper
 provides a lightweight ORM-style interface for querying collections of models,
@@ -52,7 +53,8 @@ Item Model API
 
 Item classes represent the atomic content units stored in the serverless ADR
 database. They are created and managed through the :class:`ADR` instance and
-persisted in the configured SQLite database.
+persisted in the configured SQLite, PostgreSQL, or other Django-compatible
+database.
 
 Typical usage is:
 

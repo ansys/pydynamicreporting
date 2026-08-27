@@ -86,7 +86,8 @@ def get_logger(
     Parameters
     ----------
     logfile : str or os.PathLike, optional
-        Deprecated alias for ``log_output``.
+        Deprecated alias for ``log_output``. Passing it emits
+        ``DeprecationWarning``.
     log_output : str or os.PathLike, optional
         Where to send ADR logs. ``"stdout"`` writes to standard output. Any
         other value is used as a file path. ``None`` adds no output handler.
@@ -98,6 +99,16 @@ def get_logger(
     -------
     logging.Logger
         The ``ansys.dynamicreporting.core`` package logger.
+
+    Raises
+    ------
+    ValueError
+        If both ``logfile`` and ``log_output`` are provided.
+
+    Notes
+    -----
+    Repeated calls do not add duplicate ADR-owned handlers for the same
+    standard-output stream or normalized file path.
     """
     if logfile is not None and log_output is not None:
         raise ValueError("Use only one of 'logfile' or 'log_output'.")

@@ -27,7 +27,7 @@ Initially, create and start a session as per other examples.
 import ansys.dynamicreporting.core as adr
 
 db_dir = "C:\\tmp\\my_local_db_directory"
-ansys_ins = "C:\\Program Files\\Ansys Inc\\v241"
+ansys_ins = "C:\\Program Files\\Ansys Inc\\v261"
 adr_service = adr.Service(ansys_installation=ansys_ins, db_directory=db_dir)
 session_guid = adr_service.start(create_db=True)
 server = adr_service.serverobj
@@ -53,7 +53,7 @@ server.put_objects(template_0)
 # being the report itself.
 #
 # Filters are composed of strings in a common format. The format is explained in more detail
-# on this page [Query Expressions](https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/corp/v251/en/adr_ug/adr_ug_query_expressions.html?q=query%20expression).
+# on this page [Query Expressions](https://ansyshelp.ansys.com/public/account/secured?returnurl=/Views/Secured/corp/v261/en/adr_ug/adr_ug_query_expressions.html?q=query%20expression).
 #
 
 template_1 = server.create_template(name="Intro", parent=template_0, report_type="Layout:panel")

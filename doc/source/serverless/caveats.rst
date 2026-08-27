@@ -211,7 +211,7 @@ Parent process (run different configs safely):
             "ADR_DB_DIR": "/srv/tenantA/db",
             "ADR_MEDIA_DIR": "/srv/tenantA/media",
             "ADR_STATIC_DIR": "/srv/tenantA/static",
-            "ANSYS_INSTALLATION": "/opt/ansys/v271",
+            "ANSYS_INSTALLATION": "/opt/ansys/v261",
         }
     )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_a)
@@ -223,7 +223,7 @@ Parent process (run different configs safely):
             "ADR_DB_DIR": "/srv/tenantB/db",
             "ADR_MEDIA_DIR": "/srv/tenantB/media",
             "ADR_STATIC_DIR": "/srv/tenantB/static",
-            "ANSYS_INSTALLATION": "/opt/ansys/v271",
+            "ANSYS_INSTALLATION": "/opt/ansys/v261",
         }
     )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_b)

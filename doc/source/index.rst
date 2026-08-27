@@ -76,8 +76,8 @@ compatibility is a separate explicit contract.
 Under this policy:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
-- ``1.x`` will be bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
-- ``2.x`` will be bundled with ADR ``28.1`` and supports ``27.*`` and ``28.*``.
+- ``1.x`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
+- ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
 ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each

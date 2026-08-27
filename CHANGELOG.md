@@ -62,7 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Default Docker image references and the pull helper now use the ADR development image instead of
   the legacy Nexus repositories. Serverless Docker setup requires an explicit `docker_image`, tries
   the `/Nexus/ADR` layout before falling back to `/Nexus/CEI`, and documents how to build a local
-  Linux image.
+  Linux image. Service-mode Docker launch reads the product version discovered in the container and
+  emits a compatibility warning when it is outside the supported `26.*` and `27.*` lines.
 
 ### Deprecated
 

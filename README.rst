@@ -281,7 +281,7 @@ there is only one release per annual line, so ``26.*`` currently means
 
 For example, under this policy:
 
-- ``1.0.0`` could bundle ADR ``27.1`` and support ``26.*`` and ``27.*``.
+- ``1.0.0`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
 - ``1.2.0`` and ``1.2.2`` would still support ``26.*`` and ``27.*``.
 - ``2.0.0`` could bundle ADR ``28.1`` and support ``27.*`` and ``28.*``,
   dropping support for ``26.*``.
@@ -415,12 +415,10 @@ Troubleshooting
 
 Dependencies
 ------------
-To use PyDynamicReporting, you must have a locally installed and licensed copy
-of Ansys 2023 R2 or later.
-
-To use PyDynamicReporting Serverless
-(``ansys.dynamicreporting.core.serverless``), you must have a locally
-installed and licensed copy of Ansys 2025 R1 or later.
+PyDynamicReporting 1.x supports licensed ADR installations from the ``26.*``
+and ``27.*`` annual product lines. This requirement applies to both connected
+service mode and
+``ansys.dynamicreporting.core.serverless``.
 
 Basic usage
 -----------
@@ -429,7 +427,7 @@ This code shows how to start the simplest PyDynamicReporting session:
 .. code:: pycon
 
    >>> import ansys.dynamicreporting.core as adr
-   >>> adr_service = adr.Service(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v232\\")
+   >>> adr_service = adr.Service(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261\\")
    >>> ret = adr_service.connect()
    >>> my_img = adr_service.create_item()
    >>> my_img.item_image = "image.png"

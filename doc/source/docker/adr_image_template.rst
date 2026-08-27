@@ -1,15 +1,26 @@
 
 ADR as a Local Docker Image (Linux Template)
 --------------------------------------------
-Below, you will find instructions on how ADR can be run via Docker using the provided Docker image template.
 
-**Prerequisite**: Before using this template, Ansys software must be installed and licensed on your local machine.
-Additionally, Docker must be installed and accessible on the system.
+This template shows how to package an existing, licensed ADR installation in a
+local Linux Docker image. PyDynamicReporting does not provide a public ADR
+image.
+
+Before using the template:
+
+* Install and license ADR.
+* Install Docker and ensure that the Docker daemon is available.
+* Copy the ADR installation directory into the Docker build context as
+  ``ADR/``. Current images place this directory at ``/Nexus/ADR``.
+
+PyDynamicReporting also recognizes the legacy ``/Nexus/CEI`` layout, but it
+looks for ``/Nexus/ADR`` first.
 
 Dockerfile
 ^^^^^^^^^^
 
-This command requires a working CEI installation and must be run from the same directory in which the CEI/ folder exists.
+Save the following content as ``Dockerfile`` in the directory that contains the
+``ADR/`` installation directory:
 
 .. code::
 
@@ -18,7 +29,7 @@ This command requires a working CEI installation and must be run from the same d
 
     RUN mkdir /Nexus
     WORKDIR /Nexus
-    COPY CEI /Nexus/CEI
+    COPY ADR /Nexus/ADR
 
     # stage 2
     FROM buildpack-deps
@@ -46,35 +57,49 @@ This command requires a working CEI installation and must be run from the same d
         libxcb-util1 \
         libxcb-xkb1
 
-    # Set up default group
+    # Set up the default group.
     RUN addgroup nobody && adduser nobody nobody
 
     RUN mkdir /Nexus
     COPY --from=temp /Nexus /Nexus
-    # the database
+    # Create a database directory.
     RUN mkdir -p /Nexus/DatabaseDir
 
 Build image
 ^^^^^^^^^^^
-Please note that the Dockerfile must be saved beforehand.
-Once saved, you can build the Docker image by running the below build command from the directory containing the Dockerfile.
+Build the image from the directory containing ``Dockerfile`` and ``ADR/``.
+Replace ``your-adr-image`` with a local image name:
 
 .. code::
 
-   docker build -t adr-local -f Dockerfile .
+   docker build -t your-adr-image:latest -f Dockerfile .
 
 Run image
 ^^^^^^^^^
-If Ansys software is already installed and licensed on your local machine:
+To inspect the image independently of PyDynamicReporting:
 
 .. code::
 
-    docker run adr-local
+    docker run --rm -it your-adr-image:latest
 
-Local ADR Docker image to be used via adr_service.py
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use the local image with ``Service``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Provide the image explicitly and set ``ansys_installation="docker"``. The data
+and database directories must be writable host directories. Use an empty
+database directory when creating a database.
 
 .. code:: python
 
     import ansys.dynamicreporting.core as adr
-    adr_service = adr.Service(docker_image="adr-local:latest")
+
+    adr_service = adr.Service(
+        ansys_installation="docker",
+        docker_image="your-adr-image:latest",
+        data_directory="/tmp/adr-work",
+        db_directory="/tmp/adr-database",
+    )
+
+When the container starts, PyDynamicReporting reads the product version from
+the discovered launcher. It emits a compatibility warning if that version is
+outside the supported ``26.*`` and ``27.*`` annual product lines.

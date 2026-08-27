@@ -96,6 +96,9 @@ together:
         tags="section=data project=wing_sim",
     )
 
+When table content is a dictionary, ``array`` is required and ``dtype`` is
+optional. Omitting ``dtype`` converts a non-NumPy input to ``float64``.
+
 Item Properties and Metadata
 ----------------------------
 
