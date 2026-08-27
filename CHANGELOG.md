@@ -86,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Distribution artifacts now use Core Metadata 2.4 so Poetry/pkginfo-based environments that do
+  not yet support 2.5 can inspect and install the wheel correctly.
 - Static HTML export now handles legacy Latin-1 responses, detects and copies the MathJax 4.x asset
   tree referenced by the report while retaining legacy MathJax 2.x layouts, creates required output
   directories on demand, preserves print styles, and avoids reprocessing already rewritten relative
