@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION=$(uv run hatch version | sed 's/\.dev.*//')
+if [[ -n "${1:-}" ]]; then
+  VERSION="$1"
+else
+  VERSION=$(uv run hatch version | sed 's/\.dev.*//')
+fi
 echo "🏷 Releasing version: $VERSION"
 
 # check changelog date for this version

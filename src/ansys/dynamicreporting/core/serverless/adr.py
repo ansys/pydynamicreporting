@@ -133,7 +133,7 @@ class ADR:
         Deprecated alias for ``log_output``.
     docker_image : str, optional
         Docker image URL to use when ``ansys_installation="docker"``.
-        Defaults to :data:`DOCKER_REPO_URL`.
+        This argument is required when ``ansys_installation="docker"``.
     in_memory : bool, default: False
         If ``True``, ADR configures an in-memory SQLite database and
         temporary media/static directories, suitable for tests or

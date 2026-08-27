@@ -63,7 +63,8 @@ The primary configuration options for the ``ADR`` class constructor are:
   Deprecated alias for ``log_output``.
 
 - ``docker_image`` (str, optional):
-  Docker image URL to use when ``ansys_installation="docker"``. Defaults to official Nexus image.
+  Docker image URL to use when ``ansys_installation="docker"``. This argument is required for
+  Docker-based setup.
 
 - ``in_memory`` (bool, optional):
   Enables in-memory database and media storage for ephemeral or test usage.

@@ -304,8 +304,8 @@ Prerequisites
 - Working tree must be **clean** (no uncommitted changes).
 - CI secrets for publishing and docs deployment are configured in GitHub.
 
-Cutting a Stable Release
-^^^^^^^^^^^^^^^^^^^^^^^^
+Cutting a Release
+^^^^^^^^^^^^^^^^^
 
 1. Make sure your ``CHANGELOG.md`` entry for the version is dated **today**.
    This check runs automatically from ``make tag``.
@@ -317,6 +317,13 @@ Cutting a Stable Release
 
    This runs all safety checks, validates the changelog date, and pushes the
    Git tag (for example, ``v0.10.0``).
+
+   For a release candidate, pass the exact pre-release version explicitly:
+
+   .. code-block:: bash
+
+      make tag RELEASE_VERSION=1.0.0rc1
+
 3. Once the tag is pushed:
 
    - The **Create Draft Release** workflow builds the package and opens a
