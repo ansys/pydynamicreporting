@@ -84,7 +84,8 @@ jobs:
           packages-dir: ${{ env.PACKAGE_NAME }}-artifacts
           skip-existing: false
 
-  # Build docs after PyPI succeeds. GitHub prereleases never replace stable docs.
+  # Publish versioned docs after PyPI succeeds. The Ansys deployment action keeps
+  # prereleases separate and updates stable only from final-release versions.
   docs:
     name: Docs (post-release)
     needs: [ upload-release ]
@@ -94,7 +95,7 @@ jobs:
     with:
       # Build docs from the same source ref used by the build/upload steps.
       ref: ${{ inputs.source_ref || github.ref }}
-      deploy_stable: ${{ (github.event_name == 'release' && !github.event.release.prerelease) || (github.event_name == 'workflow_dispatch' && inputs.deploy_stable_docs) }}
+      deploy_stable: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_stable_docs) }}
     secrets: inherit
 
   notify-release-failure:

@@ -293,8 +293,10 @@ What the automation does
   **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
   marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads
-  artifacts to **PyPI** via Trusted Publisher, then builds the documentation.
-  Stable documentation is deployed only for a final release, not a prerelease.
+  artifacts to **PyPI** via Trusted Publisher, then builds and publishes the
+  versioned documentation. Release-candidate documentation is published under
+  its exact version while the stable documentation continues to point to the
+  latest final release.
 - **Failure notifications**: posts to Microsoft Teams on workflow failure.
 
 Prerequisites
@@ -340,9 +342,9 @@ Cutting a Release
    which:
 
    - Uploads artifacts to **PyPI** using Trusted Publisher.
-   - Builds the documentation.
-   - Deploys the **stable documentation** only for a final release. Publishing
-     an RC does not replace the stable documentation.
+   - Builds and publishes the versioned documentation.
+   - Publishes RC documentation under its exact version, such as
+     ``version/1.0.0rc1/``, without replacing the stable documentation.
 
 Patch releases
 ^^^^^^^^^^^^^^
@@ -377,8 +379,8 @@ CI workflows (reference)
 
   - Triggers on a **published** GitHub Release or manual dispatch.
   - Rebuilds and validates, downloads artifacts, **publishes to PyPI**, and
-    builds docs. Stable docs are deployed only for final releases. A manual
-    dispatch must explicitly enable stable-doc deployment.
+    publishes versioned docs. RC docs are kept separate from stable docs. A
+    manual dispatch must explicitly enable documentation deployment.
 
 CLI helpers
 ^^^^^^^^^^^
