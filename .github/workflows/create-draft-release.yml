@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   draft-release:
@@ -30,11 +30,17 @@ jobs:
       - name: Run version checks
         run: make check-version
 
-      - name: Check for existing release
+      - name: Inspect any existing release
+        id: existing-release
         run: |
           if gh release view "${{ github.ref_name }}" > /dev/null 2>&1; then
-            echo "❌ Release for tag '${{ github.ref_name }}' already exists."
-            exit 1
+            if [[ "$(gh release view "${{ github.ref_name }}" --json isDraft --jq .isDraft)" != "true" ]]; then
+              echo "Release for tag '${{ github.ref_name }}' is already published."
+              exit 1
+            fi
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,16 +52,20 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           checkout: false
 
-      - name: Create Draft GitHub Release with Artifacts
+      - name: Create or repair the draft GitHub Release
         run: |
           release_flags=(--draft)
           if [[ "${GITHUB_REF_NAME}" =~ rc[0-9]+$ ]]; then
             release_flags+=(--prerelease)
           fi
-          gh release create "${{ github.ref_name }}" \
-            --title "Release ${GITHUB_REF_NAME}" \
-            --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
-            "${release_flags[@]}" \
-            dist/*
+          if [[ "${{ steps.existing-release.outputs.exists }}" != "true" ]]; then
+            gh release create "${{ github.ref_name }}" \
+              --title "Release ${GITHUB_REF_NAME}" \
+              --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
+              "${release_flags[@]}"
+          else
+            echo "Reusing the existing draft for ${GITHUB_REF_NAME}."
+          fi
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
