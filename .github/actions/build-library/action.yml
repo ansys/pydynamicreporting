@@ -53,10 +53,10 @@ runs:
       if: github.ref_type == 'tag'
       shell: bash
       env:
+        LIBRARY_NAME: ${{ inputs.library-name }}
         TAG_REF: ${{ github.ref_name }}
       run: |
-        LIBRARY_NAME="${{ inputs.library-name }}"
-        LIBRARY_VERSION=$(python -c "import importlib.metadata as im; print(im.version('${LIBRARY_NAME}'))")
+        LIBRARY_VERSION=$(python -c "import importlib.metadata as im, os; print(im.version(os.environ['LIBRARY_NAME']))")
         if [ -z "$LIBRARY_VERSION" ]; then
           echo "Problem getting the library version. Exiting with error."
           exit 1

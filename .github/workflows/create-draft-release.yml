@@ -43,18 +43,19 @@ jobs:
 
       - name: Inspect any existing release
         id: existing-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          if gh release view "${{ github.ref_name }}" > /dev/null 2>&1; then
-            if [[ "$(gh release view "${{ github.ref_name }}" --json isDraft --jq .isDraft)" != "true" ]]; then
-              echo "Release for tag '${{ github.ref_name }}' is already published."
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            if [[ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" != "true" ]]; then
+              echo "Release for tag '$RELEASE_TAG' is already published."
               exit 1
             fi
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build library source and wheel artifacts
         uses: ./.github/actions/build-library
@@ -64,20 +65,23 @@ jobs:
           checkout: false
 
       - name: Create or repair the draft GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_PRERELEASE: ${{ steps.release-tag.outputs.prerelease }}
+          RELEASE_EXISTS: ${{ steps.existing-release.outputs.exists }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           release_flags=(--draft)
-          if [[ "${{ steps.release-tag.outputs.prerelease }}" == "true" ]]; then
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
             release_flags+=(--prerelease)
           fi
-          if [[ "${{ steps.existing-release.outputs.exists }}" != "true" ]]; then
-            gh release create "${{ github.ref_name }}" \
-              --title "Release ${GITHUB_REF_NAME}" \
+          if [[ "$RELEASE_EXISTS" != "true" ]]; then
+            gh release create "$RELEASE_TAG" \
+              --title "Release $RELEASE_TAG" \
               --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
               --verify-tag \
               "${release_flags[@]}"
           else
-            echo "Reusing the existing draft for ${GITHUB_REF_NAME}."
+            echo "Reusing the existing draft for $RELEASE_TAG."
           fi
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release upload "$RELEASE_TAG" dist/* --clobber
