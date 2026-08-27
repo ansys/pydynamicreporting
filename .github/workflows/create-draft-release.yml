@@ -73,6 +73,7 @@ jobs:
             gh release create "${{ github.ref_name }}" \
               --title "Release ${GITHUB_REF_NAME}" \
               --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
+              --verify-tag \
               "${release_flags[@]}"
           else
             echo "Reusing the existing draft for ${GITHUB_REF_NAME}."

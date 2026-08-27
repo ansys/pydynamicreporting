@@ -377,6 +377,7 @@ reference. For example:
 
 .. code-block:: bash
 
+   gh workflow run create-draft-release.yml --ref v1.0.0rc1
    gh workflow run release.yml --ref v1.0.0rc1 \
      -f deploy_stable_docs=true
    gh workflow run release-docs.yml --ref v1.0.0rc1 \
@@ -441,8 +442,9 @@ Troubleshooting
 
 - **"No Git tag found" during checks**: Create a tag via ``make tag`` (or
   ``git tag vX.Y.Z && git push origin vX.Y.Z``).
-- **Draft already exists**: The draft release is unique per tag. Delete or
-  publish the existing one, or bump the tag properly.
+- **Draft asset upload failed**: Re-run ``create-draft-release.yml`` from the
+  same tag. The workflow reuses the existing draft and replaces incomplete
+  assets; it never creates a missing tag or modifies a published release.
 - **Version mismatch**: ``hatch version`` determines the version from the last
   tag. Ensure you pushed the intended tag and your clone has all tags
   (``git fetch --tags``).
