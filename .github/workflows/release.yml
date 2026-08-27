@@ -124,8 +124,8 @@ jobs:
 
   notify-release-failure:
     name: Teams notify on failure
-    if: failure()
-    needs: [ prepare-release, upload-release ]
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    needs: [ prepare-release, upload-release, docs ]
     runs-on: ubuntu-latest
     steps:
       - name: Microsoft Teams Notification
