@@ -363,8 +363,25 @@ publish or deploy are already guarded in workflows (for example, with
 
 .. code-block:: bash
 
-   act workflow_dispatch -W '.github/workflows/release.yml' \
-     -j build-release --input source_ref=refs/tags/v1.0.0rc1 --bind
+   act workflow_dispatch -W '.github/workflows/release-docs.yml' \
+     -j build --bind
+
+Manual release recovery
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Manual release or documentation deployment must be dispatched from the exact
+existing release tag. Do not dispatch from ``main`` and pass a separate source
+reference. For example:
+
+.. code-block:: bash
+
+   gh workflow run release.yml --ref v1.0.0rc1 \
+     -f deploy_stable_docs=true
+   gh workflow run release-docs.yml --ref v1.0.0rc1 \
+     -f deploy_stable=true
+
+Use ``release.yml`` only when the PyPI upload has not completed. If PyPI
+already contains the release, use the documentation-only workflow.
 
 CI workflows (reference)
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -378,6 +395,8 @@ CI workflows (reference)
 - **.github/workflows/release.yml**
 
   - Triggers on a **published** GitHub Release or manual dispatch.
+  - Manual dispatches must select the exact existing release tag with
+    ``--ref``.
   - Rebuilds and validates, downloads artifacts, **publishes to PyPI**, and
     publishes versioned docs. RC docs are kept separate from stable docs. A
     manual dispatch must explicitly enable documentation deployment.

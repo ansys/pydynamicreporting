@@ -3,10 +3,6 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      source_ref:
-        description: "Tag/branch/SHA to build (e.g. refs/tags/v0.10.5)"
-        required: true
-        default: ""
       deploy_stable_docs:
         description: "Deploy documentation as the stable site"
         required: false
@@ -16,7 +12,7 @@ on:
     types: [ published ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.source_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,9 +29,7 @@ jobs:
         with:
           fetch-depth: "0"
           fetch-tags: true
-          # If manually dispatched, build from inputs.source_ref (e.g. refs/tags/v0.10.5).
-          # Otherwise (release.published), build from the release tag (github.ref).
-          ref: ${{ inputs.source_ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Validate the exact release tag
         shell: bash
@@ -84,7 +78,7 @@ jobs:
         with:
           fetch-depth: "0"
           fetch-tags: true
-          ref: ${{ inputs.source_ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -165,8 +159,6 @@ jobs:
       contents: write
     uses: ./.github/workflows/release-docs.yml
     with:
-      # Build docs from the same source ref used by the build/upload steps.
-      ref: ${{ inputs.source_ref || github.ref }}
       deploy_stable: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_stable_docs) }}
     secrets: inherit
 

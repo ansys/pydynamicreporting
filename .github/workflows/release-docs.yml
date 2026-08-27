@@ -3,9 +3,6 @@ name: Docs
 on:
   workflow_call:
     inputs:
-      ref:
-        required: false
-        type: string
       deploy_stable:
         description: "Deploy the built documentation as the stable site"
         required: false
@@ -13,10 +10,6 @@ on:
         default: true
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Git ref (tag/branch/SHA)"
-        required: false
-        default: ""
       deploy_stable:
         description: "Deploy the built documentation as the stable site"
         required: false
@@ -37,7 +30,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -59,7 +52,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
