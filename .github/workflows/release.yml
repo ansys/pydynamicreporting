@@ -37,6 +37,26 @@ jobs:
           # Otherwise (release.published), build from the release tag (github.ref).
           ref: ${{ inputs.source_ref || github.ref }}
 
+      - name: Validate the exact release tag
+        shell: bash
+        env:
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if [[ "$RELEASE_REF_TYPE" != "tag" ]]; then
+            echo "Release publication must run from an existing Git tag."
+            exit 1
+          fi
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "Unsupported release tag: $RELEASE_TAG"
+            exit 1
+          fi
+          git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"
+          if [[ "$(git rev-list -n 1 "$RELEASE_TAG")" != "$(git rev-parse HEAD)" ]]; then
+            echo "Checked-out commit does not match $RELEASE_TAG."
+            exit 1
+          fi
+
       - name: Set up Python Env
         uses: ./.github/actions/setup-python-env
 
@@ -74,6 +94,58 @@ jobs:
         with:
           name: ${{ env.PACKAGE_NAME }}-artifacts
           path: ${{ env.PACKAGE_NAME }}-artifacts
+
+      - name: Validate artifact names and versions
+        shell: bash
+        env:
+          ARTIFACT_DIRECTORY: ${{ env.PACKAGE_NAME }}-artifacts
+          EXPECTED_PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import email.parser
+          import os
+          from pathlib import Path
+          import re
+          import tarfile
+          import zipfile
+
+          artifact_directory = Path(os.environ["ARTIFACT_DIRECTORY"])
+          expected_name = re.sub(r"[-_.]+", "-", os.environ["EXPECTED_PACKAGE_NAME"]).lower()
+          expected_version = os.environ["RELEASE_TAG"].removeprefix("v")
+          wheels = list(artifact_directory.glob("*.whl"))
+          sdists = list(artifact_directory.glob("*.tar.gz"))
+          if len(wheels) != 1 or len(sdists) != 1:
+              raise SystemExit(
+                  f"Expected one wheel and one sdist; found {len(wheels)} wheel(s) "
+                  f"and {len(sdists)} sdist(s)."
+              )
+
+          with zipfile.ZipFile(wheels[0]) as archive:
+              metadata_files = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
+              if len(metadata_files) != 1:
+                  raise SystemExit("Wheel must contain exactly one METADATA file.")
+              wheel_metadata = email.parser.BytesParser().parsebytes(archive.read(metadata_files[0]))
+
+          with tarfile.open(sdists[0], "r:gz") as archive:
+              pkg_info_files = [member for member in archive.getmembers() if member.name.endswith("/PKG-INFO")]
+              if len(pkg_info_files) != 1:
+                  raise SystemExit("Source distribution must contain exactly one PKG-INFO file.")
+              extracted = archive.extractfile(pkg_info_files[0])
+              if extracted is None:
+                  raise SystemExit("Unable to read source distribution PKG-INFO.")
+              sdist_metadata = email.parser.BytesParser().parsebytes(extracted.read())
+
+          for artifact, metadata in ((wheels[0], wheel_metadata), (sdists[0], sdist_metadata)):
+              actual_name = re.sub(r"[-_.]+", "-", metadata["Name"]).lower()
+              actual_version = metadata["Version"]
+              if actual_name != expected_name or actual_version != expected_version:
+                  raise SystemExit(
+                      f"{artifact.name} contains {metadata['Name']} {actual_version}; "
+                      f"expected {os.environ['EXPECTED_PACKAGE_NAME']} {expected_version}."
+                  )
+              print(f"Validated {artifact.name}: {metadata['Name']} {actual_version}")
+          PY
 
       - name: "Upload artifacts to PyPI using trusted publisher"
         uses: pypa/gh-action-pypi-publish@v1.14.0
