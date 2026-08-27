@@ -306,6 +306,8 @@ Prerequisites
   helper script validates this.
 - Working tree must be **clean**, including untracked files.
 - CI secrets for publishing and docs deployment are configured in GitHub.
+- The GitHub ``pypi`` environment and PyPI Trusted Publisher are configured for
+  release tags matching ``v*``.
 
 Cutting a Release
 ^^^^^^^^^^^^^^^^^
