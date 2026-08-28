@@ -385,8 +385,10 @@ reference. For example:
 .. code-block:: bash
 
    gh workflow run create-draft-release.yml --ref v1.0.0rc1
+   # OR
    gh workflow run release.yml --ref v1.0.0rc1 \
      -f deploy_versioned_docs=true
+   # OR
    gh workflow run release-docs.yml --ref v1.0.0rc1 \
      -f deploy_versioned_docs=true
 
