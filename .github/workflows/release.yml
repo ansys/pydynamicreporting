@@ -20,6 +20,8 @@ jobs:
     name: Prepare reviewed release artifacts
     runs-on: ubuntu-latest
     permissions:
+      id-token: write         # REQUIRED for OIDC (provenance)
+      attestations: write     # REQUIRED by attest-build-provenance v2
       contents: read
     steps:
       - name: Checkout repository
