@@ -67,7 +67,7 @@ check-dist: ## Validate dist/ artifacts (long description, format)
 	uv run twine check dist/*
 
 .PHONY: tag
-tag: ## 🏷 Tag the current release version (fixes changelog and pushes tag)
+tag: ## 🏷 Validate the release state, then create and push the tag
 	$(BASH) scripts/tag_release.sh "$(RELEASE_VERSION)"
 
 .PHONY: publish

@@ -48,15 +48,15 @@ runs:
       run: |
         uv pip install --no-managed-python --system .
 
-    # Ensure tag version matches metadata version when triggered by tag pushes
-    - name: "Ensure tag version matches metadata version when triggered by push of tags"
-      if: github.event_name == 'push' && contains(github.ref, 'refs/tags')
+    # Ensure tag version matches metadata version for every tag-based build.
+    - name: "Ensure tag version matches metadata version"
+      if: github.ref_type == 'tag'
       shell: bash
       env:
+        LIBRARY_NAME: ${{ inputs.library-name }}
         TAG_REF: ${{ github.ref_name }}
       run: |
-        LIBRARY_NAME="${{ inputs.library-name }}"
-        LIBRARY_VERSION=$(python -c "import importlib.metadata as im; print(im.version('${LIBRARY_NAME}'))")
+        LIBRARY_VERSION=$(python -c "import importlib.metadata as im, os; print(im.version(os.environ['LIBRARY_NAME']))")
         if [ -z "$LIBRARY_VERSION" ]; then
           echo "Problem getting the library version. Exiting with error."
           exit 1

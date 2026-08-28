@@ -17,9 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   exports retain the report page's normal network access. The renderer supports serverless report
   context and dark mode, report query parameters and item filters, landscape output, unit-aware
   margins, and one bounded browser-render timeout covering launch, navigation, readiness, and print
-  preparation. It waits for ADR web components, fonts, MathJax, Plotly, images, and videos; print
-  styling keeps headings with their following content and preserves the report canvas for responsive
-  charts. Raw custom asynchronous HTML has no separate readiness hook. Browser-PDF export requires
+  preparation. It waits for ADR web components, fonts, MathJax, Plotly, images, and videos. Print
+  styling keeps headings with their following content; keeps plots, viewers, tables, sliders, images,
+  videos, canvases, and responsive charts visible across pages; hides empty headers on collapsed
+  tables; improves border contrast; and prevents right-edge clipping by measuring the rendered page
+  width, with A4 as the fallback when a wider page is unnecessary. Raw custom asynchronous HTML has
+  no separate readiness hook. Browser-PDF export requires
   a configured ADR 27.1 installation and its validated local Chromium bundle rather than a
   machine-wide Playwright cache, restores a caller-provided `PLAYWRIGHT_BROWSERS_PATH` afterward,
   and reports missing or incomplete product browser packages without exposing renderer
@@ -83,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Distribution artifacts now use Core Metadata 2.4 so Poetry/pkginfo-based environments that do
+  not yet support 2.5 can inspect and install the wheel correctly.
 - Static HTML export now handles legacy Latin-1 responses, detects and copies the MathJax 4.x asset
   tree referenced by the report while retaining legacy MathJax 2.x layouts, creates required output
   directories on demand, preserves print styles, and avoids reprocessing already rewritten relative

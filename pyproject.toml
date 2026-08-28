@@ -113,10 +113,13 @@ timestamp_format = "long"
 path = "codegen/build_hook.py"
 
 [tool.hatch.build.targets.wheel]
+# Keep artifacts readable by Poetry/pkginfo versions that support Core Metadata through 2.4.
+core-metadata-version = "2.4"
 ignore-vcs = true
 packages = ["src/ansys"]
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
 ignore-vcs = true
 include = [
     "src/**",

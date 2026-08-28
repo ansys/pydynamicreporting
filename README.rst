@@ -290,10 +290,13 @@ What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Create Draft Release** (on tag push): builds wheels/sdist and opens a
-  **draft GitHub Release** attaching artifacts.
+  **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
+  marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads
-  artifacts to **PyPI** via Trusted Publisher, then builds and deploys
-  **stable docs**.
+  the reviewed GitHub Release artifacts to **PyPI** via Trusted Publisher,
+  then builds and publishes the versioned documentation. Release-candidate
+  documentation is published under its exact version while the stable
+  documentation continues to point to the latest final release.
 - **Failure notifications**: posts to Microsoft Teams on workflow failure.
 
 Prerequisites
@@ -301,8 +304,15 @@ Prerequisites
 
 - Ensure ``CHANGELOG.md`` has a section for the release **dated today**. The
   helper script validates this.
-- Working tree must be **clean** (no uncommitted changes).
+- Use a fresh checkout of ``main`` or the applicable ``stable/*`` maintenance
+  branch. It must track and exactly match the same branch on ``origin``.
+- Working tree must be **clean**, including untracked files, and the CI-CD push
+  workflow for the exact release commit must have completed successfully.
+- Authenticate GitHub CLI (``gh``) for the repository so the helper can verify
+  the CI run before creating the tag.
 - CI secrets for publishing and docs deployment are configured in GitHub.
+- The GitHub ``pypi`` environment and PyPI Trusted Publisher are configured for
+  release tags matching ``v*``.
 
 Cutting a Release
 ^^^^^^^^^^^^^^^^^
@@ -315,8 +325,9 @@ Cutting a Release
 
       make tag
 
-   This runs all safety checks, validates the changelog date, and pushes the
-   Git tag (for example, ``v0.10.0``).
+   This validates the tag syntax, changelog date, clean working tree, release
+   branch and upstream commit, and successful CI-CD push run. It then creates
+   and pushes the Git tag (for example, ``v0.10.0``).
 
    For a release candidate, pass the exact pre-release version explicitly:
 
@@ -324,17 +335,25 @@ Cutting a Release
 
       make tag RELEASE_VERSION=1.0.0rc1
 
+   An ``rcN`` tag creates a draft GitHub Release already marked as a
+   prerelease. Keep that setting enabled when reviewing and publishing the
+   draft.
+
 3. Once the tag is pushed:
 
    - The **Create Draft Release** workflow builds the package and opens a
      **draft GitHub Release** with artifacts.
-   - After reviewing and finalizing notes, publish the GitHub Release.
+   - After reviewing and finalizing notes, publish the GitHub Release. For an
+     RC, verify that the release is marked as a prerelease before publishing.
 
 4. Publishing the release automatically triggers the **Release** workflow,
    which:
 
-   - Uploads artifacts to **PyPI** using Trusted Publisher.
-   - Builds and deploys the **stable documentation**.
+   - Downloads the artifacts attached to the reviewed GitHub Release and
+     uploads those exact files to **PyPI** using Trusted Publisher.
+   - Builds and publishes the versioned documentation.
+   - Publishes RC documentation under its exact version, such as
+     ``version/1.0.0rc1/``, without replacing the stable documentation.
 
 Patch releases
 ^^^^^^^^^^^^^^
@@ -353,22 +372,47 @@ publish or deploy are already guarded in workflows (for example, with
 
 .. code-block:: bash
 
-   act -W '.github/workflows/release.yml' -j release --bind
+   act workflow_dispatch -W '.github/workflows/release-docs.yml' \
+     -j build --bind
+
+Manual release recovery
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Manual release or documentation deployment must be dispatched from the exact
+existing release tag. Do not dispatch from ``main`` and pass a separate source
+reference. For example:
+
+.. code-block:: bash
+
+   gh workflow run create-draft-release.yml --ref v1.0.0rc1
+   # OR
+   gh workflow run release.yml --ref v1.0.0rc1 \
+     -f deploy_versioned_docs=true
+   # OR
+   gh workflow run release-docs.yml --ref v1.0.0rc1 \
+     -f deploy_versioned_docs=true
+
+Use ``release.yml`` only when the PyPI upload has not completed. If PyPI
+already contains the release, use the documentation-only workflow.
 
 CI workflows (reference)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **.github/workflows/create_draft_release.yml**
+- **.github/workflows/create-draft-release.yml**
 
   - Triggers on tag push ``v*`` or manual dispatch.
   - Builds artifacts and opens a **draft** GitHub Release attaching
-    ``dist/*``.
+    ``dist/*``. An ``rcN`` tag is marked as a prerelease automatically.
 
 - **.github/workflows/release.yml**
 
   - Triggers on a **published** GitHub Release or manual dispatch.
-  - Rebuilds and validates, downloads artifacts, **publishes to PyPI**,
-    builds docs, and **deploys stable docs**.
+  - Manual dispatches must select the exact existing release tag with
+    ``--ref``.
+  - Promotes the reviewed GitHub Release artifacts to **PyPI** without
+    rebuilding them, then publishes versioned docs. RC docs are kept separate
+    from stable docs. A manual dispatch must explicitly enable documentation
+    deployment.
 
 CLI helpers
 ^^^^^^^^^^^
@@ -407,8 +451,9 @@ Troubleshooting
 
 - **"No Git tag found" during checks**: Create a tag via ``make tag`` (or
   ``git tag vX.Y.Z && git push origin vX.Y.Z``).
-- **Draft already exists**: The draft release is unique per tag. Delete or
-  publish the existing one, or bump the tag properly.
+- **Draft asset upload failed**: Re-run ``create-draft-release.yml`` from the
+  same tag. The workflow reuses the existing draft and replaces incomplete
+  assets; it never creates a missing tag or modifies a published release.
 - **Version mismatch**: ``hatch version`` determines the version from the last
   tag. Ensure you pushed the intended tag and your clone has all tags
   (``git fetch --tags``).

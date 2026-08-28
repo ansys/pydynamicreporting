@@ -3,15 +3,18 @@ name: Docs
 on:
   workflow_call:
     inputs:
-      ref:
+      deploy_versioned_docs:
+        description: "Deploy documentation for the checked-out release version"
         required: false
-        type: string
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Git ref (tag/branch/SHA)"
+      deploy_versioned_docs:
+        description: "Deploy documentation for the checked-out release version"
         required: false
-        default: ""
+        type: boolean
+        default: false
 
 # Needed to push to gh-pages via doc-deploy-stable/gh-pages action
 permissions:
@@ -27,7 +30,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
+
+      - name: Validate the exact release tag
+        if: ${{ !env.ACT }}
+        uses: ./.github/actions/validate-release-tag
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -35,26 +42,31 @@ jobs:
       - name: Run Ansys documentation building action
         uses: ansys/actions/doc-build@v11.0.0
         with:
+          checkout: false
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
           sphinxopts: "-j auto"
 
   deploy:
-    name: Upload release docs
+    name: Deploy versioned docs
+    if: ${{ inputs.deploy_versioned_docs }}
     runs-on: ubuntu-latest
     needs: build
+    concurrency:
+      group: release-docs-deploy-${{ github.repository }}
+      cancel-in-progress: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
 
-      - name: Deploy the stable documentation
+      - name: Deploy versioned documentation
         uses: ansys/actions/doc-deploy-stable@v11.0.0
         if: ${{ !env.ACT }}
         with:

@@ -3,20 +3,21 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      source_ref:
-        description: "Tag/branch/SHA to build (e.g. refs/tags/v0.10.5)"
-        required: true
-        default: ""
+      deploy_versioned_docs:
+        description: "Deploy documentation for the checked-out release version"
+        required: false
+        type: boolean
+        default: false
   release:
     types: [ published ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.source_ref || github.ref }}
-  cancel-in-progress: true
+  group: release-publish-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-release:
-    name: Build release artifacts
+  prepare-release:
+    name: Prepare reviewed release artifacts
     runs-on: ubuntu-latest
     permissions:
       id-token: write         # REQUIRED for OIDC (provenance)
@@ -28,27 +29,43 @@ jobs:
         with:
           fetch-depth: "0"
           fetch-tags: true
-          # If manually dispatched, build from inputs.source_ref (e.g. refs/tags/v0.10.5).
-          # Otherwise (release.published), build from the release tag (github.ref).
-          ref: ${{ inputs.source_ref || github.ref }}
+          ref: ${{ github.ref }}
 
-      - name: Set up Python Env
-        uses: ./.github/actions/setup-python-env
-
-      - name: Run version checks
-        run: make check-version
-
-      - name: Build library source and wheel artifacts
-        uses: ./.github/actions/build-library
+      - name: Validate the exact release tag
+        uses: ./.github/actions/validate-release-tag
         with:
-          library-name: ${{ env.PACKAGE_NAME }}
-          python-version: ${{ env.MAIN_PYTHON_VERSION }}
-          checkout: false
+          expected-prerelease: ${{ github.event.release.prerelease }}
+
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
+
+      - name: Download the reviewed GitHub Release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          mkdir reviewed-dist
+          gh release download "$RELEASE_TAG" \
+            --pattern '*.whl' \
+            --pattern '*.tar.gz' \
+            --dir reviewed-dist
+
+      - name: Preserve reviewed assets for the publishing job
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}-artifacts
+          path: reviewed-dist/
+          if-no-files-found: error
+          retention-days: 7
 
   upload-release:
     name: Upload release to PyPI
     runs-on: ubuntu-latest
-    needs: [ build-release ]
+    needs: [ prepare-release ]
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ansys-dynamicreporting-core/
     permissions:
       id-token: write         # REQUIRED for OIDC
       attestations: write     # REQUIRED by attest-build-provenance v2
@@ -59,7 +76,7 @@ jobs:
         with:
           fetch-depth: "0"
           fetch-tags: true
-          ref: ${{ inputs.source_ref || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Set up Env
         uses: ./.github/actions/setup-env
@@ -74,27 +91,24 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.14.0
         if: ${{ !env.ACT }}
         with:
-          repository-url: "https://upload.pypi.org/legacy/"
-          print-hash: true
           packages-dir: ${{ env.PACKAGE_NAME }}-artifacts
-          skip-existing: false
 
-  # Call the reusable Docs workflow after PyPI succeeds
+  # Publish versioned docs after PyPI succeeds. The Ansys deployment action keeps
+  # prereleases separate and updates stable only from final-release versions.
   docs:
-    name: Docs (post-release)
+    name: Deploy versioned docs
     needs: [ upload-release ]
     permissions:
       contents: write
     uses: ./.github/workflows/release-docs.yml
     with:
-      # Build docs from the same source ref used by the build/upload steps.
-      ref: ${{ inputs.source_ref || github.ref }}
+      deploy_versioned_docs: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_versioned_docs) }}
     secrets: inherit
 
   notify-release-failure:
     name: Teams notify on failure
-    if: failure()
-    needs: [ build-release, upload-release ]
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    needs: [ prepare-release, upload-release, docs ]
     runs-on: ubuntu-latest
     steps:
       - name: Microsoft Teams Notification

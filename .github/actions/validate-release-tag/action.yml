@@ -1,0 +1,55 @@
+name: Validate release tag
+description: Validate and describe the release tag checked out by a workflow.
+
+inputs:
+  expected-prerelease:
+    description: Optional GitHub Release prerelease state to compare with the tag.
+    required: false
+    default: ""
+
+outputs:
+  prerelease:
+    description: Whether the tag identifies a release candidate.
+    value: ${{ steps.validate.outputs.prerelease }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate tag and checkout
+      id: validate
+      shell: bash
+      env:
+        EXPECTED_PRERELEASE: ${{ inputs.expected-prerelease }}
+        RELEASE_REF_TYPE: ${{ github.ref_type }}
+        RELEASE_TAG: ${{ github.ref_name }}
+      run: |
+        if [[ "$RELEASE_REF_TYPE" != "tag" ]]; then
+          echo "Release publication requires a tag ref, not '$RELEASE_REF_TYPE'."
+          exit 1
+        fi
+
+        tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(rc(0|[1-9][0-9]*))?$'
+        if [[ ! "$RELEASE_TAG" =~ $tag_pattern ]]; then
+          echo "Unsupported release tag '$RELEASE_TAG'. Expected vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCHrcN with no leading zeroes."
+          exit 1
+        fi
+
+        if ! git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+          echo "Release tag '$RELEASE_TAG' does not exist locally."
+          exit 1
+        fi
+        if [[ "$(git rev-list -n 1 "$RELEASE_TAG")" != "$(git rev-parse HEAD)" ]]; then
+          echo "The checked-out commit does not match '$RELEASE_TAG'."
+          exit 1
+        fi
+
+        prerelease=false
+        if [[ "$RELEASE_TAG" == *rc* ]]; then
+          prerelease=true
+        fi
+        if [[ -n "$EXPECTED_PRERELEASE" && "$EXPECTED_PRERELEASE" != "$prerelease" ]]; then
+          echo "GitHub Release prerelease state '$EXPECTED_PRERELEASE' does not match '$RELEASE_TAG'."
+          exit 1
+        fi
+
+        printf 'prerelease=%s\n' "$prerelease" >> "$GITHUB_OUTPUT"

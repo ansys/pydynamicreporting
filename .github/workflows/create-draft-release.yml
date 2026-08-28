@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   draft-release:
@@ -27,17 +27,25 @@ jobs:
       - name: Set up Env
         uses: ./.github/actions/setup-env
 
-      - name: Run version checks
-        run: make check-version
+      - name: Validate the release tag
+        id: release-tag
+        uses: ./.github/actions/validate-release-tag
 
-      - name: Check for existing release
-        run: |
-          if gh release view "${{ github.ref_name }}" > /dev/null 2>&1; then
-            echo "❌ Release for tag '${{ github.ref_name }}' already exists."
-            exit 1
-          fi
+      - name: Inspect any existing release
+        id: existing-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if release_is_draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [[ "$release_is_draft" != "true" ]]; then
+              echo "Release for tag '$RELEASE_TAG' is already published."
+              exit 1
+            fi
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build library source and wheel artifacts
         uses: ./.github/actions/build-library
@@ -46,12 +54,24 @@ jobs:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           checkout: false
 
-      - name: Create Draft GitHub Release with Artifacts
-        run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "Release ${GITHUB_REF_NAME}" \
-            --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
-            --draft \
-            dist/*
+      - name: Create or repair the draft GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_PRERELEASE: ${{ steps.release-tag.outputs.prerelease }}
+          RELEASE_EXISTS: ${{ steps.existing-release.outputs.exists }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          release_flags=(--draft)
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            release_flags+=(--prerelease)
+          fi
+          if [[ "$RELEASE_EXISTS" != "true" ]]; then
+            gh release create "$RELEASE_TAG" \
+              --title "Release $RELEASE_TAG" \
+              --notes "See [CHANGELOG.md](./CHANGELOG.md)" \
+              --verify-tag \
+              "${release_flags[@]}"
+          else
+            echo "Reusing the existing draft for $RELEASE_TAG."
+          fi
+          gh release upload "$RELEASE_TAG" dist/* --clobber
