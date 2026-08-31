@@ -1444,6 +1444,106 @@ class ADR:
         except Exception as e:
             raise ADRException(f"Report rendering failed: {e}")
 
+    def serve_report(
+        self,
+        *,
+        host: str = "127.0.0.1",
+        port: int = 8000,
+        open_browser: bool = True,
+        context: dict | None = None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Serve a report and its assets from a local development web server.
+
+        The server renders the selected report at ``/`` on every request. It
+        serves the configured collected static files and media files from their
+        respective URL prefixes. The call blocks until the server is interrupted.
+
+        Parameters
+        ----------
+        host : str, default: "127.0.0.1"
+            Hostname or IPv4 address on which to bind the server.
+        port : int, default: 8000
+            TCP port on which to bind the server.
+        open_browser : bool, default: True
+            Whether to open the report URL in the default web browser after the
+            server binds successfully.
+        context : dict, optional
+            Context to pass to the report template on each request.
+        item_filter : str, optional
+            ADR filter applied to items in the report.
+        embed_scene_data : bool, default: False
+            Whether to include full scene data for 3D visualizations in the
+            rendered HTML.
+        **kwargs : Any
+            Fields used to fetch the report template, such as ``name`` or
+            ``guid``. At least one field must be provided.
+
+        Raises
+        ------
+        ADRException
+            If no report lookup field is provided or the report cannot be
+            resolved.
+        ImproperlyConfiguredError
+            If ``static_directory`` was not configured or the server options
+            are invalid.
+        InvalidPath
+            If a configured static or media directory no longer exists.
+        OSError
+            If the server cannot bind to the requested host and port.
+
+        Notes
+        -----
+        This server is intended only for local previews and development. It is
+        not suitable for production use.
+
+        Examples
+        --------
+        >>> adr.setup(collect_static=True)
+        >>> adr.serve_report(name="Serverless Simulation Report")
+        """
+        ADR.ensure_setup()
+        if not kwargs:
+            raise ADRException(
+                "At least one keyword argument must be provided to fetch the report."
+            )
+        if self._static_directory is None:
+            raise ImproperlyConfiguredError(
+                "The 'static_directory' must be configured to serve a report."
+            )
+
+        try:
+            Template.get(**kwargs)
+        except Exception as e:
+            raise ADRException(f"Report server setup failed: {e}") from e
+
+        def render_for_request(request: HttpRequest) -> str:
+            try:
+                return Template.get(**kwargs).render(
+                    context=context,
+                    item_filter=item_filter,
+                    embed_scene_data=embed_scene_data,
+                    request=request,
+                )
+            except Exception as e:
+                raise ADRException(f"Report rendering failed: {e}") from e
+
+        from ._report_server import _ReportServer
+
+        server = _ReportServer(
+            render_report=render_for_request,
+            static_directory=self._static_directory,
+            media_directory=self._media_directory,
+            static_url=self._static_url,
+            media_url=self._media_url,
+            host=host,
+            port=port,
+            logger=self._logger,
+        )
+        server.serve_forever(open_browser=open_browser)
+
     def render_report_as_pptx(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> bytes:
