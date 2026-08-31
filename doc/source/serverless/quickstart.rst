@@ -12,12 +12,14 @@ Instantiation and Setup
 
     install_loc = r"C:\Program Files\ANSYS Inc\v261"
     db_dir = r"C:\ADR\DBs\ogdocex"
+    static_dir = r"C:\ADR\Static"
 
     adr = ADR(
         ansys_installation=install_loc,
         db_directory=db_dir,
+        static_directory=static_dir,
     )
-    adr.setup()
+    adr.setup(collect_static=True)
 
 Creating Items
 --------------
@@ -70,6 +72,19 @@ Render the report template to HTML, filtering items as needed.
     # Save to file or use the HTML content in your application
     with open("quickstart_report.html", "w", encoding="utf-8") as f:
         f.write(html_content)
+
+Previewing the Report
+---------------------
+
+Start a local server that renders the report and serves its collected static
+and media files. The call opens ``http://127.0.0.1:8000/`` and runs until you
+press ``Ctrl+C``.
+
+.. code-block:: python
+
+    adr.serve_report(name="Quickstart Report")
+
+See :doc:`serving_reports` for filters, custom ports, and headless use.
 
 Accessing the ADR Instance
 --------------------------

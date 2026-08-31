@@ -166,5 +166,5 @@ Proper setup, naming conventions, and lifecycle handling ensure seamless integra
 Next Steps
 ----------
 
-Explore the :doc:`embedding_reports` guide to learn how to embed Serverless ADR reports
-within your own web applications or documentation portals.
+Use :doc:`serving_reports` to preview a report with its collected assets, or
+read :doc:`embedding_reports` to add a report to an existing application.
