@@ -166,5 +166,5 @@ Proper setup, naming conventions, and lifecycle handling ensure seamless integra
 Next Steps
 ----------
 
-Use :doc:`serving_reports` to preview a report with its collected assets, or
+Use :doc:`previewing_reports` to preview a report with its collected assets, or
 read :doc:`embedding_reports` to add a report to an existing application.

@@ -65,7 +65,7 @@ Explore the docs
    browser_pdf
    querying
    media_and_static
-   serving_reports
+   previewing_reports
    embedding_reports
    copying_objects
    deleting_objects

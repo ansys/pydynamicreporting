@@ -8,7 +8,7 @@ Instantiation and Setup
 
 .. code-block:: python
 
-    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import ADR, preview_report
 
     install_loc = r"C:\Program Files\ANSYS Inc\v261"
     db_dir = r"C:\ADR\DBs\ogdocex"
@@ -76,15 +76,15 @@ Render the report template to HTML, filtering items as needed.
 Previewing the Report
 ---------------------
 
-Start a local server that renders the report and serves its collected static
+Start a local preview that renders the report and provides its collected static
 and media files. The call opens ``http://127.0.0.1:8000/`` and runs until you
 press ``Ctrl+C``.
 
 .. code-block:: python
 
-    adr.serve_report(name="Quickstart Report")
+    preview_report(adr, name="Quickstart Report")
 
-See :doc:`serving_reports` for filters, custom ports, and headless use.
+See :doc:`previewing_reports` for filters, custom ports, and headless use.
 
 Accessing the ADR Instance
 --------------------------

@@ -58,9 +58,11 @@ from .template import (
     TreeMergeGenerator,
     UserDefinedLayout,
 )
+from .preview import preview_report
 
 __all__ = [
     "ADR",
+    "preview_report",
     "Session",
     "Dataset",
     "Item",
