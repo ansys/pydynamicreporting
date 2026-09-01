@@ -1413,7 +1413,9 @@ class ADR:
         embed_assets : bool, optional
             Whether to embed the ADR-owned static, media, scene, and viewer dependencies needed by
             this report. Enabling this option also enables ``embed_scene_data``. Custom remote
-            resources remain external. The option is disabled by default.
+            resources remain external. Viewer configurations that construct ADR asset URLs at
+            runtime are rejected rather than modifying browser APIs. The option is disabled by
+            default.
         **kwargs : Any
             Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
             At least one keyword argument must be provided to fetch the report.

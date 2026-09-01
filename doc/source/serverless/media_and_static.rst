@@ -79,7 +79,9 @@ The asset requirements depend on how the report is delivered:
 - ``render_report(embed_assets=True)`` reads static files directly from the
   Ansys installation and embeds the report's ADR-owned dependencies. The served
   response does not require ``static_directory``, ``collect_static=True``, or
-  ADR static and media routes.
+  ADR static and media routes. Reports whose viewer scripts construct ADR URLs
+  at runtime fail the strict embedding check; use linked rendering or offline
+  export for those reports.
 - ``export_report_as_html()`` and the browser-PDF methods use their existing
   offline export pipelines. Their files and byte streams are separate from the
   served HTML returned by ``render_report(embed_assets=True)``.

@@ -73,8 +73,8 @@ Serving a Self-Contained Report
 
 Set ``embed_assets=True`` when the report endpoint should not depend on ADR
 static or media routes. The renderer reads product static files from the Ansys
-installation and embeds the dependencies used by the report in the returned
-HTML string.
+installation and embeds directly referenced dependencies in the returned HTML
+string.
 
 .. code-block:: python
 
@@ -98,6 +98,13 @@ HTML string.
 This path does not require ``static_directory``, ``collect_static=True``, or
 application routes for ADR static and media files. It also embeds scene data.
 Remote resources supplied by templates or applications remain external.
+
+The embedder does not replace or wrap ``fetch``, ``XMLHttpRequest``, or DOM
+APIs. If viewer JavaScript still contains an ADR URL that it constructs at
+runtime, such as a Draco decoder directory, ``render_report()`` raises
+``ADRException`` during its unresolved-reference check. Use linked rendering
+or the existing offline export pipeline for a report that requires those
+runtime viewer loads.
 
 The response contains inline scripts and styles plus ``data:`` resources. Set
 the host application's Content Security Policy to allow the required inline

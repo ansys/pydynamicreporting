@@ -25,7 +25,6 @@
 from __future__ import annotations
 
 import base64
-import json
 import logging
 import mimetypes
 from pathlib import Path
@@ -33,17 +32,7 @@ import re
 import urllib.parse
 
 from ..exceptions import ADRException, ImproperlyConfiguredError
-from ..utils.html_export_constants import (
-    CONTEXT_MENU_JS,
-    CONTEXT_MENU_PATH,
-    DRACO_JS,
-    MATHJAX_VERSION_SENTINELS,
-    NEXUS_IMAGES,
-    THREE_JS,
-    VIEWER_IMAGES_OLD,
-    VIEWER_JS,
-    VIEWER_UTILS,
-)
+from ..utils.html_export_constants import MATHJAX_VERSION_SENTINELS
 from ..utils.html_export_mathjax import detect_mathjax_version_from_html
 
 
@@ -105,8 +94,10 @@ _ASSET_TAG_PATTERN: re.Pattern[str] = re.compile(
     r"ansys-nexus-viewer)\b[^>]*>",
     re.IGNORECASE | re.DOTALL,
 )
-_OPEN_TAG_PATTERN: re.Pattern[str] = re.compile(
-    r"<(?!/|!|\?)(?P<name>[a-z][\w:-]*)\b[^>]*>",
+_STYLE_ATTRIBUTE_TAG_PATTERN: re.Pattern[str] = re.compile(
+    r"<(?!/|!|\?)(?!script\b|style\b)(?P<name>[a-z][\w:-]*)\b"
+    r"(?=(?:[^>\"']|\"[^\"]*\"|'[^']*')*\sstyle\s*=)"
+    r"(?:[^>\"']|\"[^\"]*\"|'[^']*')*>",
     re.IGNORECASE | re.DOTALL,
 )
 _QUOTED_REFERENCE_PATTERN: re.Pattern[str] = re.compile(
@@ -115,10 +106,6 @@ _QUOTED_REFERENCE_PATTERN: re.Pattern[str] = re.compile(
 )
 _ELEMENT_SOURCE_PATTERN: re.Pattern[str] = re.compile(
     r"(?P<prefix>\be\.src\s*=\s*)(?P<quote>['\"])(?P<url>.*?)(?P=quote)",
-    re.IGNORECASE | re.DOTALL,
-)
-_RUNTIME_SCRIPT_PATTERN: re.Pattern[str] = re.compile(
-    r"<script\b[^>]*\bdata-adr-embedded-assets\b[^>]*>.*?</script\s*>",
     re.IGNORECASE | re.DOTALL,
 )
 _DATA_URI_PATTERN: re.Pattern[str] = re.compile(
@@ -163,9 +150,6 @@ class ServerlessAssetEmbedder:
     _encoded_cache: dict[Path, str]
     _data_uri_cache: dict[tuple[Path, str], str]
     _css_cache: dict[Path, str]
-    _runtime_stylesheet_cache: dict[Path, str]
-    _runtime_assets: dict[str, str]
-    _runtime_base_paths: set[str]
     _source_bytes: int
     _encoded_bytes: int
     _mathjax_version: str | None
@@ -191,9 +175,6 @@ class ServerlessAssetEmbedder:
         self._encoded_cache = {}
         self._data_uri_cache = {}
         self._css_cache = {}
-        self._runtime_stylesheet_cache = {}
-        self._runtime_assets = {}
-        self._runtime_base_paths = set()
         self._source_bytes = 0
         self._encoded_bytes = 0
         self._mathjax_version = None
@@ -208,17 +189,11 @@ class ServerlessAssetEmbedder:
             self._logger.debug("Detected MathJax version '%s'.", self._mathjax_version)
 
             html = self._html_content
-            viewer_required = self._uses_viewer_assets(html)
-            if viewer_required:
-                self._prepare_viewer_runtime_assets()
-
             html = self._inline_stylesheet_links(html)
             html = self._inline_style_elements(html)
             html = self._inline_style_attributes(html)
             html = self._inline_asset_tags(html)
             html = self._inline_script_elements(html)
-            if viewer_required and self._runtime_assets:
-                html = self._inject_viewer_resolver(html)
             self._assert_no_unresolved_assets(html)
 
             self._logger.info(
@@ -241,9 +216,6 @@ class ServerlessAssetEmbedder:
         self._encoded_cache.clear()
         self._data_uri_cache.clear()
         self._css_cache.clear()
-        self._runtime_stylesheet_cache.clear()
-        self._runtime_assets.clear()
-        self._runtime_base_paths.clear()
         self._source_bytes = 0
         self._encoded_bytes = 0
         self._mathjax_version = None
@@ -272,25 +244,6 @@ class ServerlessAssetEmbedder:
                 return version
         return "unknown"
 
-    def _uses_viewer_assets(self, html: str) -> bool:
-        """Return whether viewer markup or JavaScript is present in the report."""
-        if re.search(r"<ansys-nexus-viewer\b", html, re.IGNORECASE):
-            return True
-
-        viewer_filenames = {filename.lower() for filename in VIEWER_JS}
-        viewer_script_tokens = ("gltfviewer", "dracoloader", "ansys-nexus-viewer")
-        for script_match in _SCRIPT_TAG_PATTERN.finditer(html):
-            script_tag = script_match.group(0)
-            reference = self._attribute_value(script_tag, "src")
-            if reference is not None:
-                filename = Path(urllib.parse.urlsplit(reference).path).name.lower()
-                if filename in viewer_filenames:
-                    return True
-            script_body = script_match.group("body").lower()
-            if any(token in script_body for token in viewer_script_tokens):
-                return True
-        return False
-
     def _owned_path(self, reference: str) -> tuple[Path, Path] | None:
         """Resolve an ADR-owned URL to ``(path, allowed_root)``.
 
@@ -308,12 +261,8 @@ class ServerlessAssetEmbedder:
 
         url_path = urllib.parse.unquote(parsed.path).replace("\\", "/")
         version_prefix = f"/ansys{self._ansys_version}/"
-        static_version_prefix = f"{self._static_url}ansys{self._ansys_version}/"
 
-        if url_path.startswith(static_version_prefix):
-            relative_path = url_path.removeprefix(self._static_url)
-            root = self._static_dir
-        elif url_path.startswith(self._static_url):
+        if url_path.startswith(self._static_url):
             relative_path = url_path.removeprefix(self._static_url)
             root = self._static_dir
         elif url_path.startswith(self._media_url):
@@ -346,9 +295,9 @@ class ServerlessAssetEmbedder:
         if parsed.scheme or parsed.netloc:
             return None
 
-        if base_dir == self._static_dir or base_dir.is_relative_to(self._static_dir):
+        if base_dir.is_relative_to(self._static_dir):
             root = self._static_dir
-        elif base_dir == self._media_dir or base_dir.is_relative_to(self._media_dir):
+        elif base_dir.is_relative_to(self._media_dir):
             root = self._media_dir
         else:
             raise ADRException(f"Asset base directory '{base_dir}' is outside the ADR roots.")
@@ -363,9 +312,7 @@ class ServerlessAssetEmbedder:
         """Resolve *candidate* and reject traversal or symlink escape from *root*."""
         resolved_root = root.resolve()
         resolved_candidate = candidate.resolve()
-        if resolved_candidate != resolved_root and not resolved_candidate.is_relative_to(
-            resolved_root
-        ):
+        if not resolved_candidate.is_relative_to(resolved_root):
             raise ADRException(f"Unsafe ADR asset reference '{reference}'.")
         return resolved_candidate
 
@@ -597,7 +544,9 @@ class ServerlessAssetEmbedder:
         For example, ``style="background:url('/static/a.png')"`` becomes a
         style attribute containing ``url(data:image/png;base64,...)``. Relative
         URLs stay unchanged because an HTML attribute has no stylesheet path
-        against which to resolve them.
+        against which to resolve them. The scan is limited to tags that contain
+        a style attribute, excludes script and style elements, and preserves a
+        literal ``>`` inside a quoted attribute value.
         """
 
         def replace_tag(match: re.Match[str]) -> str:
@@ -610,7 +559,7 @@ class ServerlessAssetEmbedder:
                 return tag
             return self._replace_attribute(tag, "style", transformed)
 
-        return _OPEN_TAG_PATTERN.sub(replace_tag, html)
+        return _STYLE_ATTRIBUTE_TAG_PATTERN.sub(replace_tag, html)
 
     @staticmethod
     def _insert_attribute(tag: str, attribute_name: str, value: str) -> str:
@@ -811,214 +760,9 @@ class ServerlessAssetEmbedder:
 
         return _ELEMENT_SOURCE_PATTERN.sub(replace_element_source, script_text)
 
-    def _runtime_url_variants(self, relative_path: str) -> set[str]:
-        """Return the exact served URL spellings for one viewer asset."""
-        clean_path = relative_path.lstrip("/")
-        variants = {f"{self._static_url}{clean_path}"}
-        if clean_path.startswith(f"ansys{self._ansys_version}/"):
-            variants.add(f"/{clean_path}")
-        return variants
-
-    def _runtime_data_uri(self, path: Path, reference: str) -> str:
-        """Embed relative dependencies before mapping a runtime stylesheet."""
-        if path.suffix.lower() != ".css":
-            return self._data_uri(path, reference)
-        if path in self._runtime_stylesheet_cache:
-            self._logger.debug("Reused encoded ADR runtime stylesheet '%s'.", path)
-            return self._runtime_stylesheet_cache[path]
-
-        stylesheet = self._embed_stylesheet(path, reference)
-        encoded = base64.b64encode(stylesheet.encode("utf-8")).decode("ascii")
-        data_uri = f"data:text/css;base64,{encoded}"
-        self._runtime_stylesheet_cache[path] = data_uri
-        self._encoded_bytes += len(encoded)
-        return data_uri
-
-    def _register_runtime_group(
-        self,
-        relative_dir: str,
-        filenames: list[str],
-        *,
-        fallbacks: dict[str, tuple[str, ...]] | None = None,
-    ) -> None:
-        """Register one fixed viewer directory and cover it only when complete."""
-        clean_dir = relative_dir.strip("/")
-        all_available = True
-        for filename in filenames:
-            relative_path = f"{clean_dir}/{filename}"
-            candidates = (relative_path, *((fallbacks or {}).get(filename, ())))
-            source_path: Path | None = None
-            for candidate in candidates:
-                possible_path = self._contained_path(
-                    self._static_dir,
-                    self._static_dir / candidate,
-                    candidate,
-                )
-                if possible_path.is_file():
-                    source_path = possible_path
-                    break
-            if source_path is None:
-                all_available = False
-                self._logger.debug(
-                    "Skipped unavailable optional viewer asset '%s'.",
-                    relative_path,
-                )
-                continue
-
-            data_uri = self._runtime_data_uri(source_path, relative_path)
-            for url in self._runtime_url_variants(relative_path):
-                self._runtime_assets[url] = data_uri
-
-        if all_available:
-            base_path = f"{clean_dir}/"
-            self._runtime_base_paths.update(self._runtime_url_variants(base_path))
-
-    def _prepare_viewer_runtime_assets(self) -> None:
-        """Build the approved exact-path map for fixed ADR viewer dependencies."""
-        version_root = f"ansys{self._ansys_version}/nexus"
-        image_names = sorted(
-            set(NEXUS_IMAGES + VIEWER_IMAGES_OLD + ["proxy_viewer.png", "play.png"])
-        )
-        image_fallbacks = {filename: (f"website/images/{filename}",) for filename in image_names}
-        utility_fallbacks = {"jquery.min.js": ("website/scripts/jquery.min.js",)}
-
-        self._register_runtime_group(
-            f"{version_root}/images",
-            image_names,
-            fallbacks=image_fallbacks,
-        )
-        self._register_runtime_group("website/images", image_names)
-        self._register_runtime_group(
-            f"{version_root}/utils",
-            VIEWER_UTILS,
-            fallbacks=utility_fallbacks,
-        )
-        self._register_runtime_group(version_root, VIEWER_JS)
-        self._register_runtime_group(f"{version_root}/threejs", THREE_JS)
-        self._register_runtime_group(
-            f"{version_root}/threejs/libs/draco",
-            DRACO_JS,
-        )
-        self._register_runtime_group(
-            f"{version_root}/threejs/libs/draco/gltf",
-            DRACO_JS,
-        )
-
-        context_dir = f"ansys{self._ansys_version}/{CONTEXT_MENU_PATH}"
-        if (self._static_dir / context_dir).is_dir() or self._ansys_version == "261":
-            self._register_runtime_group(context_dir, CONTEXT_MENU_JS)
-
-    def _runtime_resolver_script(self) -> str:
-        """Return the narrowly scoped browser resolver for exact viewer paths."""
-        asset_map = json.dumps(self._runtime_assets, separators=(",", ":"), sort_keys=True)
-        script_body = f"""(function () {{
-    "use strict";
-    var assets = {asset_map};
-    var owns = Object.prototype.hasOwnProperty;
-
-    function mappedUrl(value) {{
-        var raw = typeof value === "string" ? value : value && (value.url || value.href);
-        if (typeof raw !== "string") {{
-            return null;
-        }}
-        if (owns.call(assets, raw)) {{
-            return assets[raw];
-        }}
-        try {{
-            var parsed = new URL(raw, document.baseURI);
-            if (parsed.origin !== window.location.origin) {{
-                return null;
-            }}
-            return owns.call(assets, parsed.pathname) ? assets[parsed.pathname] : null;
-        }} catch (error) {{
-            return null;
-        }}
-    }}
-
-    if (typeof window.fetch === "function") {{
-        var nativeFetch = window.fetch.bind(window);
-        window.fetch = function (input, init) {{
-            return nativeFetch(mappedUrl(input) || input, init);
-        }};
-    }}
-
-    if (typeof window.XMLHttpRequest === "function") {{
-        var nativeOpen = window.XMLHttpRequest.prototype.open;
-        window.XMLHttpRequest.prototype.open = function () {{
-            var args = Array.prototype.slice.call(arguments);
-            args[1] = mappedUrl(args[1]) || args[1];
-            return nativeOpen.apply(this, args);
-        }};
-    }}
-
-    if (typeof window.Element === "function") {{
-        var nativeSetAttribute = window.Element.prototype.setAttribute;
-        window.Element.prototype.setAttribute = function (name, value) {{
-            var lowerName = String(name).toLowerCase();
-            if (lowerName === "src" || lowerName === "href" || lowerName === "poster") {{
-                value = mappedUrl(value) || value;
-            }}
-            return nativeSetAttribute.call(this, name, value);
-        }};
-    }}
-
-    function patchProperty(prototype, name) {{
-        if (!prototype) {{
-            return;
-        }}
-        var descriptor = Object.getOwnPropertyDescriptor(prototype, name);
-        if (!descriptor || !descriptor.configurable || typeof descriptor.set !== "function") {{
-            return;
-        }}
-        Object.defineProperty(prototype, name, {{
-            configurable: descriptor.configurable,
-            enumerable: descriptor.enumerable,
-            get: descriptor.get,
-            set: function (value) {{
-                descriptor.set.call(this, mappedUrl(value) || value);
-            }}
-        }});
-    }}
-
-    patchProperty(window.HTMLImageElement && window.HTMLImageElement.prototype, "src");
-    patchProperty(window.HTMLScriptElement && window.HTMLScriptElement.prototype, "src");
-    patchProperty(window.HTMLLinkElement && window.HTMLLinkElement.prototype, "href");
-    patchProperty(window.HTMLSourceElement && window.HTMLSourceElement.prototype, "src");
-    patchProperty(window.HTMLMediaElement && window.HTMLMediaElement.prototype, "src");
-}})();"""
-        return (
-            "<script data-adr-embedded-assets>"
-            f"{self._escape_element_text(script_body, 'script')}</script>"
-        )
-
-    def _inject_viewer_resolver(self, html: str) -> str:
-        """Insert the exact-path resolver immediately before viewer JavaScript."""
-        resolver = self._runtime_resolver_script()
-        viewer_names = tuple(name.lower() for name in VIEWER_JS)
-        viewer_tokens = (
-            *viewer_names,
-            "gltfviewer",
-            "dracoloader",
-            "ansys-nexus-viewer",
-        )
-        first_script: re.Match[str] | None = None
-        for script_match in _SCRIPT_TAG_PATTERN.finditer(html):
-            if first_script is None:
-                first_script = script_match
-            if any(token in script_match.group(0).lower() for token in viewer_tokens):
-                return f"{html[: script_match.start()]}{resolver}{html[script_match.start() :]}"
-
-        if first_script is not None:
-            return f"{html[: first_script.start()]}{resolver}{html[first_script.start() :]}"
-        viewer_position = html.lower().find("<ansys-nexus-viewer")
-        if viewer_position >= 0:
-            return f"{html[:viewer_position]}{resolver}{html[viewer_position:]}"
-        return f"{resolver}{html}"
-
     def _assert_no_unresolved_assets(self, html: str) -> None:
-        """Fail if any ADR-owned reference remains outside the viewer map."""
-        scan_text = _RUNTIME_SCRIPT_PATTERN.sub("", html)
-        scan_text = _DATA_URI_PATTERN.sub("data:", scan_text)
+        """Fail if any ADR-owned reference remains after the embedding passes."""
+        scan_text = _DATA_URI_PATTERN.sub("data:", html)
         prefixes = sorted(
             {self._static_url, self._media_url, f"/ansys{self._ansys_version}/"},
             key=len,
@@ -1035,9 +779,6 @@ class ServerlessAssetEmbedder:
         for match in candidate_pattern.finditer(scan_text):
             candidate = match.group("owned")
             if candidate is None:
-                continue
-            candidate_path = urllib.parse.urlsplit(candidate).path
-            if candidate_path in self._runtime_assets or candidate_path in self._runtime_base_paths:
                 continue
             if self._owned_path(candidate) is not None:
                 raise ADRException(
