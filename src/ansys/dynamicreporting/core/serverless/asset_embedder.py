@@ -78,12 +78,6 @@ _MIME_TYPES: dict[str, str] = {
     ".woff2": "font/woff2",
 }
 
-_VIEWER_MARKERS: tuple[str, ...] = (
-    "<ansys-nexus-viewer",
-    "ANSYSViewer_min.js",
-    "viewer-loader.js",
-    "GLTFViewer",
-)
 _CSS_IMPORT_QUOTED_PATTERN: re.Pattern[str] = re.compile(
     r"@import\s+(?:url\(\s*)?(?P<quote>['\"])(?P<url>.*?)(?P=quote)"
     r"\s*\)?\s*(?P<media>[^;]*);",
@@ -169,6 +163,7 @@ class ServerlessAssetEmbedder:
     _encoded_cache: dict[Path, str]
     _data_uri_cache: dict[tuple[Path, str], str]
     _css_cache: dict[Path, str]
+    _runtime_stylesheet_cache: dict[Path, str]
     _runtime_assets: dict[str, str]
     _runtime_base_paths: set[str]
     _source_bytes: int
@@ -196,6 +191,7 @@ class ServerlessAssetEmbedder:
         self._encoded_cache = {}
         self._data_uri_cache = {}
         self._css_cache = {}
+        self._runtime_stylesheet_cache = {}
         self._runtime_assets = {}
         self._runtime_base_paths = set()
         self._source_bytes = 0
@@ -212,7 +208,7 @@ class ServerlessAssetEmbedder:
             self._logger.debug("Detected MathJax version '%s'.", self._mathjax_version)
 
             html = self._html_content
-            viewer_required = any(marker.lower() in html.lower() for marker in _VIEWER_MARKERS)
+            viewer_required = self._uses_viewer_assets(html)
             if viewer_required:
                 self._prepare_viewer_runtime_assets()
 
@@ -245,6 +241,7 @@ class ServerlessAssetEmbedder:
         self._encoded_cache.clear()
         self._data_uri_cache.clear()
         self._css_cache.clear()
+        self._runtime_stylesheet_cache.clear()
         self._runtime_assets.clear()
         self._runtime_base_paths.clear()
         self._source_bytes = 0
@@ -274,6 +271,25 @@ class ServerlessAssetEmbedder:
             if (mathjax_root / sentinel).is_file():
                 return version
         return "unknown"
+
+    def _uses_viewer_assets(self, html: str) -> bool:
+        """Return whether viewer markup or JavaScript is present in the report."""
+        if re.search(r"<ansys-nexus-viewer\b", html, re.IGNORECASE):
+            return True
+
+        viewer_filenames = {filename.lower() for filename in VIEWER_JS}
+        viewer_script_tokens = ("gltfviewer", "dracoloader", "ansys-nexus-viewer")
+        for script_match in _SCRIPT_TAG_PATTERN.finditer(html):
+            script_tag = script_match.group(0)
+            reference = self._attribute_value(script_tag, "src")
+            if reference is not None:
+                filename = Path(urllib.parse.urlsplit(reference).path).name.lower()
+                if filename in viewer_filenames:
+                    return True
+            script_body = script_match.group("body").lower()
+            if any(token in script_body for token in viewer_script_tokens):
+                return True
+        return False
 
     def _owned_path(self, reference: str) -> tuple[Path, Path] | None:
         """Resolve an ADR-owned URL to ``(path, allowed_root)``.
@@ -803,6 +819,21 @@ class ServerlessAssetEmbedder:
             variants.add(f"/{clean_path}")
         return variants
 
+    def _runtime_data_uri(self, path: Path, reference: str) -> str:
+        """Embed relative dependencies before mapping a runtime stylesheet."""
+        if path.suffix.lower() != ".css":
+            return self._data_uri(path, reference)
+        if path in self._runtime_stylesheet_cache:
+            self._logger.debug("Reused encoded ADR runtime stylesheet '%s'.", path)
+            return self._runtime_stylesheet_cache[path]
+
+        stylesheet = self._embed_stylesheet(path, reference)
+        encoded = base64.b64encode(stylesheet.encode("utf-8")).decode("ascii")
+        data_uri = f"data:text/css;base64,{encoded}"
+        self._runtime_stylesheet_cache[path] = data_uri
+        self._encoded_bytes += len(encoded)
+        return data_uri
+
     def _register_runtime_group(
         self,
         relative_dir: str,
@@ -834,7 +865,7 @@ class ServerlessAssetEmbedder:
                 )
                 continue
 
-            data_uri = self._data_uri(source_path, relative_path)
+            data_uri = self._runtime_data_uri(source_path, relative_path)
             for url in self._runtime_url_variants(relative_path):
                 self._runtime_assets[url] = data_uri
 
