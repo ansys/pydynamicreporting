@@ -72,6 +72,15 @@ Integration Tips
 Serving Embedded Content
 ------------------------
 
+For a temporary local preview, Serverless ADR can render the report and provide
+its collected static and media files:
+
+.. code-block:: python
+
+    adr.preview_report(name="My Simulation Report")
+
+See :doc:`previewing_reports` for setup and preview options.
+
 If embedding in a web app, serve static and media files via a web server or
 framework static route pointing to ADR’s configured directories.
 

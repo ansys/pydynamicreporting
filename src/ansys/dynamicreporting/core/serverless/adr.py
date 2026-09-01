@@ -1444,6 +1444,77 @@ class ADR:
         except Exception as e:
             raise ADRException(f"Report rendering failed: {e}")
 
+    def preview_report(
+        self,
+        *,
+        host: str = "127.0.0.1",
+        port: int = 8000,
+        open_browser: bool = True,
+        context: dict | None = None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Preview a report and its assets in a local browser.
+
+        The preview renders the selected report at ``/`` on every request and
+        serves the configured collected static and media files from their respective
+        URL prefixes. The call blocks until interrupted.
+
+        Parameters
+        ----------
+        host : str, default: "127.0.0.1"
+            Hostname or IPv4 address on which to bind the preview server.
+        port : int, default: 8000
+            TCP port on which to bind the preview server.
+        open_browser : bool, default: True
+            Whether to open the preview URL in the default browser after binding.
+        context : dict, optional
+            Context to pass to the report template on each request.
+        item_filter : str, optional
+            ADR filter applied to items in the report.
+        embed_scene_data : bool, default: False
+            Whether to include full scene data for 3D visualizations in the rendered
+            HTML.
+        **kwargs : Any
+            Fields used to fetch the report template, such as ``name`` or ``guid``.
+            At least one field must be provided.
+
+        Raises
+        ------
+        ADRException
+            If no report lookup field is provided or the report cannot be resolved.
+        ImproperlyConfiguredError
+            If ``static_directory`` was not configured or the preview options are
+            invalid.
+        InvalidPath
+            If a configured static or media directory no longer exists.
+        OSError
+            If the preview server cannot bind to the requested host and port.
+
+        Notes
+        -----
+        This preview is intended only for local development. It does not provide
+        authentication, TLS, or production-server hardening.
+
+        Examples
+        --------
+        >>> adr.setup(collect_static=True)
+        >>> adr.preview_report(name="Serverless Simulation Report")
+        """
+        from .preview import _preview_report
+
+        _preview_report(
+            self,
+            host=host,
+            port=port,
+            open_browser=open_browser,
+            context=context,
+            item_filter=item_filter,
+            embed_scene_data=embed_scene_data,
+            **kwargs,
+        )
+
     def render_report_as_pptx(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
     ) -> bytes:
