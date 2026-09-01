@@ -366,6 +366,23 @@ The option defaults to ``False`` because embedded scene payloads can
 substantially increase the HTML size. It applies to these HTML rendering
 methods, not to static HTML or browser-PDF export.
 
+To return one HTML response containing the ADR-owned dependencies needed by
+the report, enable asset embedding on the ADR entry point:
+
+.. code-block:: python
+
+    self_contained_html = adr.render_report(
+        name="Serverless Simulation Report",
+        embed_assets=True,
+    )
+
+``embed_assets=True`` includes the required static files, media, viewer files,
+and scene payloads in the returned string. It therefore implies
+``embed_scene_data=True``. Custom remote resources remain external.
+``embed_assets`` is available on ``ADR.render_report()`` only; use
+``embed_scene_data`` when you need scene payloads without bundling the other
+ADR assets. The default ``False`` value preserves linked rendering.
+
 Rendering to PPTX
 -----------------
 

@@ -64,6 +64,7 @@ from django.core.management.utils import get_random_secret_key
 from django.db import DatabaseError, connections
 from django.http import HttpRequest
 
+from .asset_embedder import ServerlessAssetEmbedder
 from .base import ObjectSet
 from .html_exporter import ServerlessReportExporter
 from .item import Dataset, Item, Session
@@ -1395,6 +1396,7 @@ class ADR:
         context: dict | None = None,
         item_filter: str = "",
         embed_scene_data: bool = False,
+        embed_assets: bool = False,
         **kwargs: Any,
     ) -> str:
         """Render a report as an HTML string.
@@ -1405,9 +1407,13 @@ class ADR:
             Context to pass to the report template.
         item_filter : str, optional
             ADR filter applied to items in the report.
-        embed_scene_data: bool, optional
+        embed_scene_data : bool, optional
             Whether to include full scene data for 3D visualizations in the output HTML.
-             This can increase the size of the output significantly, so it is disabled by default.
+            This can increase the size of the output significantly, so it is disabled by default.
+        embed_assets : bool, optional
+            Whether to embed the ADR-owned static, media, scene, and viewer dependencies needed by
+            this report. Enabling this option also enables ``embed_scene_data``. Custom remote
+            resources remain external. The option is disabled by default.
         **kwargs : Any
             Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
             At least one keyword argument must be provided to fetch the report.
@@ -1435,14 +1441,36 @@ class ADR:
                 "At least one keyword argument must be provided to fetch the report."
             )
         try:
-            return Template.get(**kwargs).render(
+            html_content = Template.get(**kwargs).render(
                 context=context,
                 item_filter=item_filter,
-                embed_scene_data=embed_scene_data,
+                embed_scene_data=(embed_scene_data or embed_assets),
                 request=self._request,
             )
         except Exception as e:
             raise ADRException(f"Report rendering failed: {e}")
+
+        if not embed_assets:
+            return html_content
+
+        try:
+            static_dir = (
+                self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
+            )
+            return ServerlessAssetEmbedder(
+                html_content=html_content,
+                static_dir=static_dir,
+                media_dir=self._media_directory,
+                static_url=self._static_url,
+                media_url=self._media_url,
+                ansys_version=str(self._ansys_version),
+                logger=self._logger,
+            ).embed()
+        except ADRException:
+            raise
+        except Exception as e:
+            self._logger.debug("Report asset embedding failed.", exc_info=True)
+            raise ADRException("Report asset embedding failed.") from e
 
     def render_report_as_pptx(
         self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
