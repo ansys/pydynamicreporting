@@ -69,6 +69,25 @@ File Storage and Access
 - Static files can be served by any compatible web server (eg. NGINX) or via built-in mechanisms in web frameworks.
 - Items without files do not consume media storage.
 
+Choosing a Report Output Path
+-----------------------------
+
+The asset requirements depend on how the report is delivered:
+
+- Normal ``render_report()`` output contains static and media URLs. Configure a
+  static directory, collect the static files, and serve both URL prefixes.
+- ``render_report(embed_assets=True)`` reads static files directly from the
+  Ansys installation and embeds the report's ADR-owned dependencies. The served
+  response does not require ``static_directory``, ``collect_static=True``, or
+  ADR static and media routes.
+- ``export_report_as_html()`` and the browser-PDF methods use their existing
+  offline export pipelines. Their files and byte streams are separate from the
+  served HTML returned by ``render_report(embed_assets=True)``.
+
+Embedded assets increase the HTML response size and transient process memory,
+especially for reports containing media or 3D scenes. Remote resources supplied
+by the report remain external.
+
 Managing Media Files in Items
 -----------------------------
 
@@ -143,7 +162,10 @@ In-Memory Mode and Temporary Files
 Best Practices
 --------------
 
-- Always explicitly configure media and static directories during ADR instantiation to avoid ambiguity.
+- Explicitly configure the media directory when its default location is not
+  suitable. Configure and collect a static directory for linked rendering and
+  the existing export pipelines; it is optional for an
+  ``embed_assets=True`` served response.
 - Ensure the media directory has sufficient disk space and correct read/write permissions.
 - When serving reports on a web server, map the ``media_url`` and ``static_url`` to the correct directories.
 - Use meaningful and consistent tags on Items to organize media assets logically.

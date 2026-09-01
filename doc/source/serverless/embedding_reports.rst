@@ -59,9 +59,8 @@ rendering child templates individually:
 Integration Tips
 ----------------
 
-- Make sure your embedded HTML includes references to static and media URLs
-  configured during ADR setup so that assets like images and stylesheets
-  load correctly and your web server is configured to serve them.
+- With the default linked output, make sure the static and media URLs configured
+  during ADR setup are served by your web application.
 
 - Use the ``context`` parameter to pass additional context variables
   needed for rendering.
@@ -69,11 +68,52 @@ Integration Tips
 - When embedding in frameworks with isolated DOM (e.g., React, Angular),
   be mindful of script execution and CSS scope.
 
-Serving Embedded Content
-------------------------
+Serving a Self-Contained Report
+-------------------------------
 
-If embedding in a web app, serve static and media files via a web server or
-framework static route pointing to ADR’s configured directories.
+Set ``embed_assets=True`` when the report endpoint should not depend on ADR
+static or media routes. The renderer reads product static files from the Ansys
+installation and embeds the dependencies used by the report in the returned
+HTML string.
+
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import ADR
+    from flask import Flask, Response
+
+    adr = ADR(
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
+        db_directory=r"C:\Reports\DB",
+    )
+    adr.setup()
+
+    app = Flask(__name__)
+
+
+    @app.get("/report")
+    def report():
+        html = adr.render_report(name="My Simulation Report", embed_assets=True)
+        return Response(html, mimetype="text/html")
+
+This path does not require ``static_directory``, ``collect_static=True``, or
+application routes for ADR static and media files. It also embeds scene data.
+Remote resources supplied by templates or applications remain external.
+
+The response contains inline scripts and styles plus ``data:`` resources. Set
+the host application's Content Security Policy to allow the required inline
+content and ``data:`` sources for the report endpoint. Viewer workers may also
+require the policy already used by ADR viewer content.
+
+Asset embedding increases the response size and transient memory use. The
+returned string is intended to be served as an HTML response; it is not the
+offline-export deliverable produced by ``export_report_as_html()`` or the
+browser-PDF methods.
+
+Serving Linked Content
+----------------------
+
+For the default ``embed_assets=False`` path, serve static and media files via a
+web server or framework route pointing to ADR's configured directories.
 
 Example with Flask:
 
