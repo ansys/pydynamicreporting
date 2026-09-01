@@ -1,9 +1,9 @@
 Previewing Reports Locally
 ==========================
 
-Use :func:`preview_report() <ansys.dynamicreporting.core.serverless.preview.preview_report>`
-to open one serverless ADR report in a browser. The local preview provides
-three routes:
+Use :meth:`ADR.preview_report() <ansys.dynamicreporting.core.serverless.adr.ADR.preview_report>`
+to open one serverless ADR report in a browser. The local preview provides three
+routes:
 
 - ``/`` renders the selected report.
 - The configured ``static_url`` serves files from ``static_directory``.
@@ -19,7 +19,7 @@ Configure a static directory and collect the ADR frontend files during setup:
 
 .. code-block:: python
 
-    from ansys.dynamicreporting.core.serverless import ADR, preview_report
+    from ansys.dynamicreporting.core.serverless import ADR
 
     adr = ADR(
         ansys_installation=r"C:\Program Files\ANSYS Inc\v261",
@@ -30,7 +30,7 @@ Configure a static directory and collect the ADR frontend files during setup:
     )
     adr.setup(collect_static=True)
 
-``preview_report()`` reads directly from the collected static directory. It
+``adr.preview_report()`` reads directly from the collected static directory. It
 raises an error if ``static_directory`` was not configured.
 
 Starting the Preview
@@ -41,7 +41,7 @@ accepted by ``render_report()``:
 
 .. code-block:: python
 
-    preview_report(adr, name="My Simulation Report")
+    adr.preview_report(name="My Simulation Report")
 
 The default URL is ``http://127.0.0.1:8000/``. The function opens that URL in
 the default browser and blocks until you press ``Ctrl+C``.
@@ -50,8 +50,7 @@ Pass rendering options when the preview needs a filter or custom context:
 
 .. code-block:: python
 
-    preview_report(
-        adr,
+    adr.preview_report(
         name="My Simulation Report",
         context={"plotly": 1},
         item_filter="A|i_tags|cont|project=demo;",
@@ -63,8 +62,7 @@ local port if needed:
 
 .. code-block:: python
 
-    preview_report(
-        adr,
+    adr.preview_report(
         guid=report.guid,
         host="127.0.0.1",
         port=8123,

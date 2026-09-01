@@ -77,9 +77,7 @@ its collected static and media files:
 
 .. code-block:: python
 
-    from ansys.dynamicreporting.core.serverless import preview_report
-
-    preview_report(adr, name="My Simulation Report")
+    adr.preview_report(name="My Simulation Report")
 
 See :doc:`previewing_reports` for setup and preview options.
 

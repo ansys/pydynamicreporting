@@ -28,7 +28,7 @@ import logging
 from pathlib import Path
 import re
 from types import ModuleType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 import webbrowser
 from wsgiref.simple_server import make_server
@@ -41,8 +41,10 @@ from django.urls.resolvers import URLPattern
 from django.views.static import serve
 
 from ..exceptions import ADRException, ImproperlyConfiguredError, InvalidPath
-from .adr import ADR
 from .template import Template
+
+if TYPE_CHECKING:
+    from .adr import ADR
 
 
 @contextmanager
@@ -175,8 +177,8 @@ class _ReportPreviewServer:
                     self._logger.info("Stopped the serverless ADR report preview.")
 
 
-def preview_report(
-    adr: ADR,
+def _preview_report(
+    adr: "ADR",
     *,
     host: str = "127.0.0.1",
     port: int = 8000,
@@ -186,57 +188,8 @@ def preview_report(
     embed_scene_data: bool = False,
     **kwargs: Any,
 ) -> None:
-    """Preview a report and its assets in a local browser.
-
-    The preview renders the selected report at ``/`` on every request and
-    serves the configured collected static and media files from their respective
-    URL prefixes. The call blocks until interrupted.
-
-    Parameters
-    ----------
-    adr : ADR
-        Configured serverless ADR instance used to render the report and locate
-        its collected assets.
-    host : str, default: "127.0.0.1"
-        Hostname or IPv4 address on which to bind the preview server.
-    port : int, default: 8000
-        TCP port on which to bind the preview server.
-    open_browser : bool, default: True
-        Whether to open the preview URL in the default browser after binding.
-    context : dict, optional
-        Context to pass to the report template on each request.
-    item_filter : str, optional
-        ADR filter applied to items in the report.
-    embed_scene_data : bool, default: False
-        Whether to include full scene data for 3D visualizations in the rendered
-        HTML.
-    **kwargs : Any
-        Fields used to fetch the report template, such as ``name`` or ``guid``.
-        At least one field must be provided.
-
-    Raises
-    ------
-    ADRException
-        If no report lookup field is provided or the report cannot be resolved.
-    ImproperlyConfiguredError
-        If ``static_directory`` was not configured or the preview options are
-        invalid.
-    InvalidPath
-        If a configured static or media directory no longer exists.
-    OSError
-        If the preview server cannot bind to the requested host and port.
-
-    Notes
-    -----
-    This preview is intended only for local development. It does not provide
-    authentication, TLS, or production-server hardening.
-
-    Examples
-    --------
-    >>> adr.setup(collect_static=True)
-    >>> preview_report(adr, name="Serverless Simulation Report")
-    """
-    ADR.ensure_setup()
+    """Run a local browser preview for a report from an ADR instance."""
+    adr.ensure_setup()
     if not kwargs:
         raise ADRException("At least one keyword argument must be provided to fetch the report.")
     if adr._static_directory is None:

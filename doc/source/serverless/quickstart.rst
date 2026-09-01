@@ -8,7 +8,7 @@ Instantiation and Setup
 
 .. code-block:: python
 
-    from ansys.dynamicreporting.core.serverless import ADR, preview_report
+    from ansys.dynamicreporting.core.serverless import ADR
 
     install_loc = r"C:\Program Files\ANSYS Inc\v261"
     db_dir = r"C:\ADR\DBs\ogdocex"
@@ -82,7 +82,7 @@ press ``Ctrl+C``.
 
 .. code-block:: python
 
-    preview_report(adr, name="Quickstart Report")
+    adr.preview_report(name="Quickstart Report")
 
 See :doc:`previewing_reports` for filters, custom ports, and headless use.
 

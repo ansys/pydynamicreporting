@@ -30,7 +30,7 @@ from django.urls.resolvers import RegexPattern, URLResolver
 import pytest
 
 from ansys.dynamicreporting.core.exceptions import ADRException, ImproperlyConfiguredError
-from ansys.dynamicreporting.core.serverless import ADR, preview_report
+from ansys.dynamicreporting.core.serverless import ADR
 from ansys.dynamicreporting.core.serverless import preview as preview_module
 from ansys.dynamicreporting.core.serverless.preview import _ReportPreviewServer
 
@@ -217,7 +217,7 @@ def _bare_adr(tmp_path: Path) -> ADR:
 def test_preview_report_forwards_render_and_server_options(tmp_path, monkeypatch):
     """The preview entry point should bind one resolved template to the request view."""
     adr = _bare_adr(tmp_path)
-    monkeypatch.setattr(ADR, "ensure_setup", lambda: None)
+    monkeypatch.setattr(ADR, "ensure_setup", classmethod(lambda cls: None))
 
     request = object()
     render_calls = []
@@ -247,8 +247,7 @@ def test_preview_report_forwards_render_and_server_options(tmp_path, monkeypatch
         FakeReportPreviewServer,
     )
 
-    preview_report(
-        adr,
+    adr.preview_report(
         name="Preview Report",
         host="localhost",
         port=8124,
@@ -285,10 +284,10 @@ def test_preview_report_forwards_render_and_server_options(tmp_path, monkeypatch
 def test_preview_report_requires_a_report_lookup(tmp_path, monkeypatch):
     """Starting a preview without selecting a report should fail before binding."""
     adr = _bare_adr(tmp_path)
-    monkeypatch.setattr(ADR, "ensure_setup", lambda: None)
+    monkeypatch.setattr(ADR, "ensure_setup", classmethod(lambda cls: None))
 
     with pytest.raises(ADRException, match="At least one keyword argument"):
-        preview_report(adr)
+        adr.preview_report()
 
 
 @pytest.mark.unit
@@ -296,21 +295,21 @@ def test_preview_report_requires_a_static_directory(tmp_path, monkeypatch):
     """The preview cannot load ADR assets when no static root was configured."""
     adr = _bare_adr(tmp_path)
     adr._static_directory = None
-    monkeypatch.setattr(ADR, "ensure_setup", lambda: None)
+    monkeypatch.setattr(ADR, "ensure_setup", classmethod(lambda cls: None))
 
     with pytest.raises(ImproperlyConfiguredError, match="must be configured to preview a report"):
-        preview_report(adr, name="Preview Report")
+        adr.preview_report(name="Preview Report")
 
 
 @pytest.mark.unit
 def test_preview_report_chains_report_lookup_failure(tmp_path, monkeypatch):
     """A missing report should fail before the preview binds."""
     adr = _bare_adr(tmp_path)
-    monkeypatch.setattr(ADR, "ensure_setup", lambda: None)
+    monkeypatch.setattr(ADR, "ensure_setup", classmethod(lambda cls: None))
     lookup_error = RuntimeError("report does not exist")
     monkeypatch.setattr(preview_module.Template, "get", Mock(side_effect=lookup_error))
 
     with pytest.raises(ADRException, match="Report preview setup failed") as exc_info:
-        preview_report(adr, name="Missing Report")
+        adr.preview_report(name="Missing Report")
 
     assert exc_info.value.__cause__ is lookup_error
