@@ -2,13 +2,67 @@
 # SPDX-License-Identifier: MIT
 #
 
-"""Unit tests for serverless ADR initialization failures."""
+"""Unit tests for serverless ADR initialization."""
 
+import asyncio
+import os
 import sys
+from types import ModuleType
 
 import pytest
 
 from ansys.dynamicreporting.core.serverless import ADR
+
+
+@pytest.mark.unit
+def test_jupyter_async_support_allows_django_sync_operations(monkeypatch):
+    """An IPykernel cell can call the synchronous Django API used by Serverless ADR."""
+    from django.utils.asyncio import async_unsafe
+
+    monkeypatch.delenv("DJANGO_ALLOW_ASYNC_UNSAFE", raising=False)
+    shell = type("ZMQInteractiveShell", (), {})()
+    ipython = ModuleType("IPython")
+    monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
+    monkeypatch.setitem(sys.modules, "IPython", ipython)
+
+    @async_unsafe("Synchronous test operation")
+    def synchronous_operation():
+        return "completed"
+
+    async def run_operation():
+        ADR._enable_jupyter_async_support()
+        return synchronous_operation()
+
+    assert asyncio.run(run_operation()) == "completed"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("shell_name", "initial_value", "expected_value"),
+    [
+        ("ZMQInteractiveShell", None, "true"),
+        ("TerminalInteractiveShell", None, None),
+        ("ZMQInteractiveShell", "caller-value", "caller-value"),
+    ],
+)
+def test_jupyter_async_support_is_limited_to_kernel_and_preserves_user_value(
+    monkeypatch, shell_name, initial_value, expected_value
+):
+    """Only IPykernel sessions should receive ADR's Django async override."""
+    environment_variable = "DJANGO_ALLOW_ASYNC_UNSAFE"
+    if initial_value is None:
+        monkeypatch.delenv(environment_variable, raising=False)
+    else:
+        monkeypatch.setenv(environment_variable, initial_value)
+
+    shell = type(shell_name, (), {})()
+    ipython = ModuleType("IPython")
+    monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
+    monkeypatch.setitem(sys.modules, "IPython", ipython)
+
+    ADR._enable_jupyter_async_support()
+
+    assert os.environ.get(environment_variable) == expected_value
 
 
 @pytest.mark.unit

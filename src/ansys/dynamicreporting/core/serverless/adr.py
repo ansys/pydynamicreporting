@@ -411,6 +411,20 @@ class ADR:
         return dir_path
 
     @staticmethod
+    def _enable_jupyter_async_support() -> None:
+        """Allow synchronous Django operations in an IPykernel-backed notebook."""
+        try:
+            from IPython import get_ipython
+        except ImportError:
+            return
+
+        shell = get_ipython()
+        if shell is None or shell.__class__.__name__ != "ZMQInteractiveShell":
+            return
+
+        os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
+
+    @staticmethod
     def _migrate_db(db: str) -> None:
         """Run db migrations for the given database alias.
 
@@ -696,6 +710,8 @@ class ADR:
         """
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
+
+        self._enable_jupyter_async_support()
 
         # Try to import native 'enve', adding paths based on installation layout.
         if platform.system().lower().startswith("win"):
