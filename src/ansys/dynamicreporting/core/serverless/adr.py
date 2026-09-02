@@ -411,18 +411,22 @@ class ADR:
         return dir_path
 
     @staticmethod
-    def _enable_jupyter_async_support() -> None:
-        """Allow synchronous Django operations in an IPykernel-backed notebook."""
+    def _enable_jupyter_async_support() -> bool:
+        """Enable the notebook override and report whether ADR added it."""
         try:
             from IPython import get_ipython
         except ImportError:
-            return
+            return False
 
         shell = get_ipython()
         if shell is None or shell.__class__.__name__ != "ZMQInteractiveShell":
-            return
+            return False
 
-        os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
+        if "DJANGO_ALLOW_ASYNC_UNSAFE" in os.environ:
+            return False
+
+        os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+        return True
 
     @staticmethod
     def _migrate_db(db: str) -> None:
@@ -711,8 +715,17 @@ class ADR:
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
 
-        self._enable_jupyter_async_support()
+        jupyter_override_added = self._enable_jupyter_async_support()
+        try:
+            self._setup(collect_static)
+        except BaseException:
+            # Roll back ADR's override even if the notebook interrupts setup.
+            if jupyter_override_added:
+                os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+            raise
 
+    def _setup(self, collect_static: bool) -> None:
+        """Initialize the product runtime, Django settings, and default objects."""
         # Try to import native 'enve', adding paths based on installation layout.
         if platform.system().lower().startswith("win"):
             dirs_to_check = [
@@ -761,7 +774,7 @@ class ADR:
                 f"the Ansys installation: {enve_error}"
             )
             self._logger.warning(msg)
-            warnings.warn(msg, UserWarning, stacklevel=2)
+            warnings.warn(msg, UserWarning, stacklevel=3)
 
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 

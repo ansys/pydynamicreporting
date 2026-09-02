@@ -14,21 +14,6 @@ Configuration for Serverless ADR can be done through:
 - Environment variables (legacy or advanced usage).
 - Optional overrides during the ``setup()`` call.
 
-Jupyter notebooks
------------------
-
-When :meth:`~ansys.dynamicreporting.core.serverless.adr.ADR.setup` detects an
-IPykernel-backed notebook, it sets ``DJANGO_ALLOW_ASYNC_UNSAFE=true`` for the
-notebook process unless the variable already has a value. IPykernel runs each
-cell with an active event loop, while the Serverless ADR API uses Django's
-synchronous ORM. Terminal IPython and other Python processes remain unchanged.
-
-.. warning::
-
-   Run cells that access a Serverless ADR database serially. Django's async
-   safety check is disabled in the notebook process, and concurrent access to
-   synchronous ORM operations can cause data loss or corruption.
-
 Key Configuration Parameters
 ----------------------------
 

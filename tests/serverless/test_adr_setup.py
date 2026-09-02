@@ -14,45 +14,78 @@ import pytest
 from ansys.dynamicreporting.core.serverless import ADR
 
 
-@pytest.mark.unit
-def test_jupyter_async_support_allows_django_sync_operations(monkeypatch):
-    """An IPykernel cell can call the synchronous Django API used by Serverless ADR."""
-    from django.utils.asyncio import async_unsafe
-
+@pytest.fixture
+def clean_async_environment(monkeypatch):
+    """Unset the override and clean up values added by ADR during a test."""
     monkeypatch.delenv("DJANGO_ALLOW_ASYNC_UNSAFE", raising=False)
+    yield
+    os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+
+
+@pytest.fixture(params=[None, "", "caller-value"])
+def jupyter_async_environment(monkeypatch, request, clean_async_environment):
+    """Run in an IPykernel shell with an unset or caller-supplied override."""
+    initial_value = request.param
+    if initial_value is not None:
+        monkeypatch.setenv("DJANGO_ALLOW_ASYNC_UNSAFE", initial_value)
+
     shell = type("ZMQInteractiveShell", (), {})()
     ipython = ModuleType("IPython")
     monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
     monkeypatch.setitem(sys.modules, "IPython", ipython)
+    return initial_value
+
+
+@pytest.mark.unit
+def test_setup_allows_django_sync_operations_in_jupyter(monkeypatch, clean_async_environment):
+    """An IPykernel cell can call the synchronous Django API used by Serverless ADR."""
+    from django.utils.asyncio import async_unsafe
+
+    shell = type("ZMQInteractiveShell", (), {})()
+    ipython = ModuleType("IPython")
+    monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
+    monkeypatch.setitem(sys.modules, "IPython", ipython)
+    monkeypatch.setattr(ADR, "_is_setup", False)
+    adr = object.__new__(ADR)
 
     @async_unsafe("Synchronous test operation")
-    def synchronous_operation():
-        return "completed"
+    def initialize(collect_static):
+        assert collect_static is True
+        ADR._is_setup = True
+
+    monkeypatch.setattr(adr, "_setup", initialize)
 
     async def run_operation():
-        ADR._enable_jupyter_async_support()
-        return synchronous_operation()
+        adr.setup(collect_static=True)
 
-    assert asyncio.run(run_operation()) == "completed"
+    asyncio.run(run_operation())
+    assert ADR._is_setup is True
+    override = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+    assert override == "true"
+
+    with pytest.raises(RuntimeError, match="ADR has already been configured"):
+        adr.setup()
+
+    override = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+    assert override == "true"
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("shell_name", "initial_value", "expected_value"),
+    ("shell_name", "initial_value", "expected_value", "expected_added"),
     [
-        ("ZMQInteractiveShell", None, "true"),
-        ("TerminalInteractiveShell", None, None),
-        ("ZMQInteractiveShell", "caller-value", "caller-value"),
+        ("ZMQInteractiveShell", None, "true", True),
+        ("TerminalInteractiveShell", None, None, False),
+        ("ZMQInteractiveShell", "caller-value", "caller-value", False),
+        ("ZMQInteractiveShell", "", "", False),
     ],
 )
 def test_jupyter_async_support_is_limited_to_kernel_and_preserves_user_value(
-    monkeypatch, shell_name, initial_value, expected_value
+    monkeypatch, clean_async_environment, shell_name, initial_value, expected_value, expected_added
 ):
     """Only IPykernel sessions should receive ADR's Django async override."""
     environment_variable = "DJANGO_ALLOW_ASYNC_UNSAFE"
-    if initial_value is None:
-        monkeypatch.delenv(environment_variable, raising=False)
-    else:
+    if initial_value is not None:
         monkeypatch.setenv(environment_variable, initial_value)
 
     shell = type(shell_name, (), {})()
@@ -60,9 +93,39 @@ def test_jupyter_async_support_is_limited_to_kernel_and_preserves_user_value(
     monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
     monkeypatch.setitem(sys.modules, "IPython", ipython)
 
-    ADR._enable_jupyter_async_support()
+    assert ADR._enable_jupyter_async_support() is expected_added
 
-    assert os.environ.get(environment_variable) == expected_value
+    actual_value = os.environ.get(environment_variable)
+    assert actual_value == expected_value
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("failure_type", [RuntimeError, KeyboardInterrupt])
+def test_setup_restores_jupyter_async_environment_after_early_failure(
+    tmp_path, monkeypatch, jupyter_async_environment, failure_type
+):
+    """An early setup failure or interruption restores ADR's environment override."""
+    adr = object.__new__(ADR)
+    adr._ansys_installation = tmp_path
+    adr._ansys_version = 261
+    monkeypatch.setattr(ADR, "_is_setup", False)
+
+    failure = failure_type("embedded Python check failed")
+    expected_value = "true" if jupyter_async_environment is None else jupyter_async_environment
+
+    def fail_embedded_python_check():
+        actual_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+        assert actual_value == expected_value
+        raise failure
+
+    monkeypatch.setattr(adr, "_warn_for_embedded_python_mismatch", fail_embedded_python_check)
+
+    with pytest.raises(failure_type) as exc_info:
+        adr.setup()
+
+    assert exc_info.value is failure
+    final_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+    assert final_value == jupyter_async_environment
 
 
 @pytest.mark.unit
@@ -136,6 +199,7 @@ def test_setup_warns_when_enve_import_fails(tmp_path, monkeypatch):
 
     assert exc_info.value.__cause__ is setup_error
     assert str(enve_error) in str(warnings_record[0].message)
+    assert warnings_record[0].filename == __file__
     adr._logger.warning.assert_called_once()
     assert not hasattr(adr, "_enve_import_error")
     assert str(adr_path) not in sys.path
@@ -143,7 +207,7 @@ def test_setup_warns_when_enve_import_fails(tmp_path, monkeypatch):
 
 @pytest.mark.unit
 def test_setup_rolls_back_runtime_compatibility_after_settings_import_failure(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, jupyter_async_environment
 ):
     """A failed settings import must not leave process-wide setup state behind."""
     import builtins
@@ -184,10 +248,14 @@ def test_setup_rolls_back_runtime_compatibility_after_settings_import_failure(
     assert restore_calls == ["restored"]
     assert adr._runtime_compat_restore is None
     assert str(adr_path) not in sys.path
+    final_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+    assert final_value == jupyter_async_environment
 
 
 @pytest.mark.unit
-def test_setup_rolls_back_state_after_dataset_creation_failure(tmp_path, monkeypatch):
+def test_setup_rolls_back_state_after_dataset_creation_failure(
+    tmp_path, monkeypatch, jupyter_async_environment
+):
     """A late setup failure must restore session, dataset, and runtime state."""
     import django
     from types import ModuleType, SimpleNamespace
@@ -219,6 +287,7 @@ def test_setup_rolls_back_state_after_dataset_creation_failure(tmp_path, monkeyp
     adr._logger = Mock()
 
     monkeypatch.setattr(ADR, "_is_setup", False)
+    monkeypatch.setattr(sys, "path", sys.path.copy())
     monkeypatch.setattr(adr, "_warn_for_embedded_python_mismatch", lambda: None)
     monkeypatch.setattr(adr, "_import_enve", lambda _: None)
     monkeypatch.setattr(ADR, "get_database_config", lambda *args, **kwargs: None)
@@ -272,6 +341,9 @@ def test_setup_rolls_back_state_after_dataset_creation_failure(tmp_path, monkeyp
     def create_dataset():
         assert ADR._is_setup is True
         assert adr._session is session_sentinel
+        expected_value = "true" if jupyter_async_environment is None else jupyter_async_environment
+        actual_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+        assert actual_value == expected_value
         raise dataset_error
 
     monkeypatch.setattr(adr_module, "Dataset", SimpleNamespace(create=create_dataset))
@@ -285,3 +357,5 @@ def test_setup_rolls_back_state_after_dataset_creation_failure(tmp_path, monkeyp
     assert adr._dataset is None
     assert restore_calls == ["restored"]
     assert adr._runtime_compat_restore is None
+    final_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+    assert final_value == jupyter_async_environment
