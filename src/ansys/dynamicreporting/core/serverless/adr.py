@@ -411,24 +411,6 @@ class ADR:
         return dir_path
 
     @staticmethod
-    def _enable_jupyter_async_support() -> bool:
-        """Enable the notebook override and report whether ADR added it."""
-        try:
-            from IPython import get_ipython
-        except ImportError:
-            return False
-
-        shell = get_ipython()
-        if shell is None or shell.__class__.__name__ != "ZMQInteractiveShell":
-            return False
-
-        if "DJANGO_ALLOW_ASYNC_UNSAFE" in os.environ:
-            return False
-
-        os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
-        return True
-
-    @staticmethod
     def _migrate_db(db: str) -> None:
         """Run db migrations for the given database alias.
 
@@ -715,17 +697,6 @@ class ADR:
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
 
-        jupyter_override_added = self._enable_jupyter_async_support()
-        try:
-            self._setup(collect_static)
-        except BaseException:
-            # Roll back ADR's override even if the notebook interrupts setup.
-            if jupyter_override_added:
-                os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
-            raise
-
-    def _setup(self, collect_static: bool) -> None:
-        """Initialize the product runtime, Django settings, and default objects."""
         # Try to import native 'enve', adding paths based on installation layout.
         if platform.system().lower().startswith("win"):
             dirs_to_check = [
@@ -774,12 +745,12 @@ class ADR:
                 f"the Ansys installation: {enve_error}"
             )
             self._logger.warning(msg)
-            warnings.warn(msg, UserWarning, stacklevel=3)
+            warnings.warn(msg, UserWarning, stacklevel=2)
 
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
         # Resolve the product Django path before enabling any process-wide
-        # runtime shims so missing installs fail without touching NumPy state.
+        # runtime shims so missing installs fail without changing process state.
         adr_path_added = False
         try:
             adr_path = (
@@ -790,14 +761,18 @@ class ADR:
                 sys.path.append(adr_path_string)
                 adr_path_added = True
 
-            # Restore known NumPy aliases before importing the product's Django modules.
+            # Apply runtime compatibility shims before importing the product's Django modules.
             self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
             from ceireports import settings_serverless
-        except (AttributeError, ImportError, OSError, TypeError, ValueError) as e:
+        except BaseException as e:  # Restore shims even when notebook setup is interrupted.
             self._restore_runtime_compatibility_shims()
             if adr_path_added:
                 sys.path.remove(adr_path_string)
-            raise ImportError(f"Failed to initialize ADR from the Ansys installation: {e}") from e
+            if isinstance(e, (AttributeError, ImportError, OSError, TypeError, ValueError)):
+                raise ImportError(
+                    f"Failed to initialize ADR from the Ansys installation: {e}"
+                ) from e
+            raise
 
         try:
             overrides = {}
@@ -943,7 +918,7 @@ class ADR:
             ADR._is_setup = True
             self._session = Session.create()
             self._dataset = Dataset.create()
-        except Exception as e:
+        except BaseException:  # Restore shims and setup state on interruption too.
             ADR._is_setup = False
             self._session = None
             self._dataset = None

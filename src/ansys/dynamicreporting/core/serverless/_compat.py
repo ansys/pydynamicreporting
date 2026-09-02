@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import logging
+import os
 import re
 from typing import Callable
 
@@ -71,25 +72,41 @@ def _normalize_version(version_string: str) -> VersionKey:
     return tuple(components)
 
 
+def _enable_jupyter_async_support() -> RuntimeCompatCleanup | None:
+    """Enable synchronous Django calls in IPykernel and return a restore callback."""
+    try:
+        from IPython import get_ipython
+    except ImportError:
+        return None
+
+    shell = get_ipython()
+    if shell is None or shell.__class__.__name__ != "ZMQInteractiveShell":
+        return None
+
+    previous_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+
+    def _restore_async_environment() -> None:
+        if previous_value is None:
+            os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+        else:
+            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = previous_value
+
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+    return _restore_async_environment
+
+
 def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
-    """Apply dependency API shims required by a supported ADR product version.
+    """Apply runtime shims and return a callback that restores process state.
+
+    In IPykernel, enable Django's synchronous ORM calls while ADR is active.
+    Restore the previous environment value when setup fails or ADR closes.
 
     ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
     that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
     NumPy scalar representations directly into inline JavaScript. Restore the
     alias and NumPy 1.25 print formatting before importing the product's Django
-    modules, and return a cleanup callback that restores the previous NumPy
-    process state when ADR is torn down.
+    modules, and restore the previous NumPy state when ADR is torn down.
     """
-
-    def _noop_runtime_compatibility_cleanup() -> None:
-        return
-
-    if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
-        return _noop_runtime_compatibility_cleanup
-
-    import numpy
-
     cleanup_callbacks: list[RuntimeCompatCleanup] = []
 
     def _restore_cleanup_callbacks() -> None:
@@ -97,32 +114,36 @@ def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatClea
             cleanup()
 
     try:
-        if not hasattr(numpy, "string_"):
-            setattr(numpy, "string_", numpy.bytes_)
+        restore_jupyter = _enable_jupyter_async_support()
+        if restore_jupyter is not None:
+            cleanup_callbacks.append(restore_jupyter)
 
-            def _restore_string_alias() -> None:
-                if getattr(numpy, "string_", None) is numpy.bytes_:
-                    delattr(numpy, "string_")
+        if product_version == _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
+            import numpy
 
-            cleanup_callbacks.append(_restore_string_alias)
-            logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+            if not hasattr(numpy, "string_"):
+                setattr(numpy, "string_", numpy.bytes_)
 
-        if _normalize_version(numpy.__version__) >= (2, 0):
-            previous_legacy = numpy.get_printoptions().get("legacy", False)
-            numpy.set_printoptions(legacy="1.25")
+                def _restore_string_alias() -> None:
+                    if getattr(numpy, "string_", None) is numpy.bytes_:
+                        delattr(numpy, "string_")
 
-            def _restore_legacy_printoptions() -> None:
-                numpy.set_printoptions(legacy=previous_legacy)
+                cleanup_callbacks.append(_restore_string_alias)
+                logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
 
-            cleanup_callbacks.append(_restore_legacy_printoptions)
-            logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+            if _normalize_version(numpy.__version__) >= (2, 0):
+                previous_legacy = numpy.get_printoptions().get("legacy", False)
+                numpy.set_printoptions(legacy="1.25")
+
+                def _restore_legacy_printoptions() -> None:
+                    numpy.set_printoptions(legacy=previous_legacy)
+
+                cleanup_callbacks.append(_restore_legacy_printoptions)
+                logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
     except BaseException:  # catch interrupts as well
-        # Do not leave a process-wide NumPy mutation behind if shim setup aborts.
+        # Do not leave process-wide mutations behind if shim setup aborts.
         _restore_cleanup_callbacks()
         raise
-
-    if not cleanup_callbacks:
-        return _noop_runtime_compatibility_cleanup
 
     return _restore_cleanup_callbacks
 
