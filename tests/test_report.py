@@ -29,6 +29,7 @@ import warnings
 import pytest
 
 from ansys.dynamicreporting.core import Report, Service
+from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import report_remote_server
 
 
@@ -264,6 +265,44 @@ def test_export_browser_pdf_returns_false_on_failure(tmp_path, monkeypatch) -> N
     success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
 
     assert success is False
+
+
+def test_export_browser_pdf_warns_with_specific_readiness_failure_reason(
+    tmp_path, monkeypatch
+) -> None:
+    # A renderer readiness timeout (e.g. Plotly charts never finishing) surfaces as an
+    # ADRException with a specific reason. That reason must reach the caller through both the
+    # log and a UserWarning, not just a generic failure message, even though the caller only
+    # sees a boolean return value.
+    failure_reason = "Browser PDF rendering failed: Plotly charts timed out after 120.0s"
+
+    def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
+        raise ADRException(failure_reason)
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_browser_pdf", fake_export_report_as_browser_pdf, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        success = my_report.export_browser_pdf(
+            file_name=str(tmp_path / "browser-report.pdf"), render_timeout=120.0
+        )
+
+    assert success is False
+    assert len(w) == 1
+    assert issubclass(w[-1].category, UserWarning)
+    assert failure_reason in str(w[-1].message)
 
 
 def test_export_browser_pdf_returns_false_without_service(tmp_path) -> None:

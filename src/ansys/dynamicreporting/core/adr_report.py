@@ -819,7 +819,10 @@ class Report:
         Returns
         -------
         bool
-            Success status of the browser PDF export: True if it worked, False otherwise
+            Success status of the browser PDF export: True if it worked, False otherwise.
+            On failure, the specific reason (for example, which readiness step timed out) is
+            logged through the ADR logger and also raised as a ``UserWarning``, since a False
+            return on its own does not carry that detail.
 
         Examples
         --------
@@ -856,7 +859,12 @@ class Report:
             )
             return True
         except Exception as e:
-            report_logger.error(f"Can not export browser pdf report: {str(e)}")
+            # report_logger.error() alone is invisible unless the caller configured log
+            # output, so also warn: that surfaces the specific failure reason (e.g. which
+            # readiness step timed out) to a caller who only checks the boolean return value.
+            failure_message = f"Can not export browser pdf report: {str(e)}"
+            report_logger.error(failure_message)
+            warnings.warn(failure_message, UserWarning, stacklevel=2)
             return False
 
     def export_json(self, json_file_path: str) -> None:
