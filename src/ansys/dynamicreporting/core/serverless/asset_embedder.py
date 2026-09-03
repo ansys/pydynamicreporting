@@ -234,6 +234,8 @@ class ServerlessAssetEmbedder:
 
     def _detect_mathjax_version(self) -> str:
         """Detect the report's MathJax major, then probe installed sentinels."""
+        # MathJax 2.x can select its configuration from the loader's `?config=` query.
+        # Inlining drops that query, so product-backed verification remains required for this edge.
         html_version = detect_mathjax_version_from_html(self._html_content)
         if html_version != "unknown":
             return html_version
