@@ -40,7 +40,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v11.0.0
+        uses: ansys/actions/doc-build@v11.0.3
         with:
           checkout: false
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
@@ -67,7 +67,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Deploy versioned documentation
-        uses: ansys/actions/doc-deploy-stable@v11.0.0
+        uses: ansys/actions/doc-deploy-stable@v11.0.3
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
