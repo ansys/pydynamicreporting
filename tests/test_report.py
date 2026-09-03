@@ -164,6 +164,32 @@ def test_unit_no_url(request) -> None:
     assert err_msg
 
 
+def test_export_pdf_returns_false_on_failure(tmp_path, monkeypatch) -> None:
+    def fake_export_report_as_pdf(**kwargs):
+        raise RuntimeError("Simulated pdf export failure")
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(serverobj, "export_report_as_pdf", fake_export_report_as_pdf, raising=False)
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-export-pdf"),
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        success = my_report.export_pdf(file_name=str(tmp_path / "report.pdf"))
+
+    assert success is False
+    assert len(w) == 1
+    assert issubclass(w[-1].category, UserWarning)
+    assert "Simulated pdf export failure" in str(w[-1].message)
+
+
 @pytest.mark.ado_test
 def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
     exec_basis = get_exec
@@ -344,6 +370,33 @@ def test_export_html_preserves_service_asset_version_override() -> None:
 
     assert my_report.export_html(directory_name="html-output") is True
     assert captured["ansys_version"] == 271
+
+
+def test_export_html_returns_false_on_failure(tmp_path, monkeypatch) -> None:
+    def fake_export_report_as_html(**kwargs):
+        raise RuntimeError("Simulated html export failure")
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_html", fake_export_report_as_html, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-export-html"),
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        success = my_report.export_html(directory_name=str(tmp_path))
+
+    assert success is False
+    assert len(w) == 1
+    assert issubclass(w[-1].category, UserWarning)
+    assert "Simulated html export failure" in str(w[-1].message)
 
 
 @pytest.mark.ado_test
