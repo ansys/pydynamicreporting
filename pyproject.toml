@@ -1,7 +1,7 @@
 [project]
 name = "ansys-dynamicreporting-core"
 dynamic = ["version"]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 dependencies = [
     "docker>=7.1.0",
     "pypng>=0.20220715.0",
@@ -53,6 +53,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
@@ -250,4 +251,4 @@ require_serial = true
 exclude_dirs = ["venv/*", "scripts/*", "tests/*", "doc/*"]
 
 [tool.pre-commit.default_language_versions]
-python = "3.13"
+python = "3.14"
