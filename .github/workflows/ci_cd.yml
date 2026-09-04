@@ -31,7 +31,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
 
       - name: PyAnsys code style checks
-        uses: ansys/actions/code-style@v11.0.0
+        uses: ansys/actions/code-style@v11.0.3
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           show-diff-on-failure: false
@@ -55,7 +55,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Build wheelhouse
-        uses: ansys/actions/build-wheelhouse@v11.0.0
+        uses: ansys/actions/build-wheelhouse@v11.0.3
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ${{ matrix.os }}
@@ -92,7 +92,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v11.0.0
+        uses: ansys/actions/doc-build@v11.0.3
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
@@ -178,7 +178,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Deploy the latest documentation
-        uses: ansys/actions/doc-deploy-dev@v11.0.0
+        uses: ansys/actions/doc-deploy-dev@v11.0.3
         if: ${{ !env.ACT }}
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
