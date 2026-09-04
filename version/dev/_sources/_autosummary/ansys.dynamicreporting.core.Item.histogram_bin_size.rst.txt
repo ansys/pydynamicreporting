@@ -1,0 +1,6 @@
+histogram\_bin\_size
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.histogram_bin_size

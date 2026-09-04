@@ -1,0 +1,6 @@
+table\_condensed
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.table_condensed

@@ -1,0 +1,6 @@
+file\_path
+==========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoproperty:: Scene.file_path

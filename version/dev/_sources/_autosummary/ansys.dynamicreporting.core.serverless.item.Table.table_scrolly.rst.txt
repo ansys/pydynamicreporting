@@ -1,0 +1,6 @@
+table\_scrolly
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.table_scrolly

@@ -1,0 +1,6 @@
+backup\_database
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.backup_database

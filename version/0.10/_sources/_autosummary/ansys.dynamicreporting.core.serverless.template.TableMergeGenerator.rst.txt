@@ -1,0 +1,165 @@
+﻿TableMergeGenerator
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TableMergeGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TableMergeGenerator.add_filter
+      
+      
+      TableMergeGenerator.add_params
+      
+      
+      TableMergeGenerator.add_properties
+      
+      
+      TableMergeGenerator.add_property
+      
+      
+      TableMergeGenerator.add_sort_fields
+      
+      
+      TableMergeGenerator.add_tag
+      
+      
+      TableMergeGenerator.as_dict
+      
+      
+      TableMergeGenerator.create
+      
+      
+      TableMergeGenerator.delete
+      
+      
+      TableMergeGenerator.filter
+      
+      
+      TableMergeGenerator.find
+      
+      
+      TableMergeGenerator.get
+      
+      
+      TableMergeGenerator.get_append_tags
+      
+      
+      TableMergeGenerator.get_filter
+      
+      
+      TableMergeGenerator.get_filter_mode
+      
+      
+      TableMergeGenerator.get_generated_items
+      
+      
+      TableMergeGenerator.get_params
+      
+      
+      TableMergeGenerator.get_property
+      
+      
+      TableMergeGenerator.get_sort_fields
+      
+      
+      TableMergeGenerator.get_sort_selection
+      
+      
+      TableMergeGenerator.get_tags
+      
+      
+      TableMergeGenerator.reinit
+      
+      
+      TableMergeGenerator.rem_tag
+      
+      
+      TableMergeGenerator.remove_tag
+      
+      
+      TableMergeGenerator.render
+      
+      
+      TableMergeGenerator.render_pdf
+      
+      
+      TableMergeGenerator.reorder_child
+      
+      
+      TableMergeGenerator.reorder_children
+      
+      
+      TableMergeGenerator.save
+      
+      
+      TableMergeGenerator.set_append_tags
+      
+      
+      TableMergeGenerator.set_filter
+      
+      
+      TableMergeGenerator.set_filter_mode
+      
+      
+      TableMergeGenerator.set_generated_items
+      
+      
+      TableMergeGenerator.set_params
+      
+      
+      TableMergeGenerator.set_property
+      
+      
+      TableMergeGenerator.set_sort_fields
+      
+      
+      TableMergeGenerator.set_sort_selection
+      
+      
+      TableMergeGenerator.set_tags
+      
+      
+      TableMergeGenerator.to_dict
+      
+      
+      TableMergeGenerator.to_json
+      
+      
+      TableMergeGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TableMergeGenerator.children_order
+      TableMergeGenerator.db
+      TableMergeGenerator.item_filter
+      TableMergeGenerator.master
+      TableMergeGenerator.name
+      TableMergeGenerator.params
+      TableMergeGenerator.parent
+      TableMergeGenerator.report_type
+      TableMergeGenerator.saved
+      TableMergeGenerator.tags
+      TableMergeGenerator.type
+      TableMergeGenerator.date
+      TableMergeGenerator.children
+      TableMergeGenerator.guid
+   
+   

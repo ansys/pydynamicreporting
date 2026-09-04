@@ -1,0 +1,6 @@
+item\_filter
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: BoxLayout.item_filter

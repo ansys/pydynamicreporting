@@ -1,0 +1,6 @@
+palette\_range
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.palette_range

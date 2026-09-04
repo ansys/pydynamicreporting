@@ -1,0 +1,6 @@
+filters\_table
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: ItemsComparisonGenerator.filters_table

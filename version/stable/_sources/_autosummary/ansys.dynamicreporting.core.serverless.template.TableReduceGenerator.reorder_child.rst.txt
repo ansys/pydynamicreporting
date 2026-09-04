@@ -1,0 +1,6 @@
+reorder\_child
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableReduceGenerator.reorder_child

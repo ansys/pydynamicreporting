@@ -1,0 +1,6 @@
+set\_html
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TOCLayout.set_html

@@ -1,0 +1,85 @@
+﻿Scene
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: Scene
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Scene.add_tag
+      
+      
+      Scene.as_dict
+      
+      
+      Scene.create
+      
+      
+      Scene.delete
+      
+      
+      Scene.filter
+      
+      
+      Scene.find
+      
+      
+      Scene.get
+      
+      
+      Scene.get_tags
+      
+      
+      Scene.reinit
+      
+      
+      Scene.rem_tag
+      
+      
+      Scene.remove_tag
+      
+      
+      Scene.render
+      
+      
+      Scene.save
+      
+      
+      Scene.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Scene.content
+      Scene.dataset
+      Scene.db
+      Scene.file_ext
+      Scene.file_path
+      Scene.has_file
+      Scene.name
+      Scene.saved
+      Scene.sequence
+      Scene.session
+      Scene.source
+      Scene.tags
+      Scene.type
+      Scene.date
+      Scene.guid
+   
+   

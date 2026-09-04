@@ -1,0 +1,6 @@
+﻿get\_logger
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.adr_utils
+
+.. autofunction:: get_logger
