@@ -131,6 +131,8 @@ Recommended practice for external venv usage:
 - For the previous supported ADR line, use the matching constraints file when
   one is provided. For example, ``1.x`` also supports ADR ``26.1``, and
   ``constraints/v261.txt`` documents that release profile.
+- The ADR ``26.1`` constraint profile is not supported on Python 3.14. Use
+  Python 3.12 for Serverless ADR with ADR ``26.1``.
 - Keep one external virtual environment per product release family.
 
 If you are installing from PyPI instead of a local checkout and using a

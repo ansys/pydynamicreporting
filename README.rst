@@ -68,7 +68,7 @@ To reach the project support team, email
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.10 through 3.13 on
+The ``pydynamicreporting`` package supports Python 3.10 through 3.14 on
 Windows and Linux. It is currently available on
 `PyPI <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -333,7 +333,7 @@ Cutting a Release
 
    .. code-block:: bash
 
-      make tag RELEASE_VERSION=1.0.0rc1
+      make tag RELEASE_VERSION=1.0.0rc2
 
    An ``rcN`` tag creates a draft GitHub Release already marked as a
    prerelease. Keep that setting enabled when reviewing and publishing the
@@ -353,7 +353,7 @@ Cutting a Release
      uploads those exact files to **PyPI** using Trusted Publisher.
    - Builds and publishes the versioned documentation.
    - Publishes RC documentation under its exact version, such as
-     ``version/1.0.0rc1/``, without replacing the stable documentation.
+     ``version/1.0.0rc2/``, without replacing the stable documentation.
 
 Patch releases
 ^^^^^^^^^^^^^^
@@ -384,12 +384,12 @@ reference. For example:
 
 .. code-block:: bash
 
-   gh workflow run create-draft-release.yml --ref v1.0.0rc1
+   gh workflow run create-draft-release.yml --ref v1.0.0rc2
    # OR
-   gh workflow run release.yml --ref v1.0.0rc1 \
+   gh workflow run release.yml --ref v1.0.0rc2 \
      -f deploy_versioned_docs=true
    # OR
-   gh workflow run release-docs.yml --ref v1.0.0rc1 \
+   gh workflow run release-docs.yml --ref v1.0.0rc2 \
      -f deploy_versioned_docs=true
 
 Use ``release.yml`` only when the PyPI upload has not completed. If PyPI
@@ -464,6 +464,10 @@ PyDynamicReporting 1.x supports licensed ADR installations from the ``26.*``
 and ``27.*`` annual product lines. This requirement applies to both connected
 service mode and
 ``ansys.dynamicreporting.core.serverless``.
+
+Python 3.14 is supported for connected service mode and Serverless ADR with
+ADR ``27.1``. For Serverless ADR with ADR ``26.1``, use Python 3.12 and
+``constraints/v261.txt``.
 
 Basic usage
 -----------
