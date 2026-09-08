@@ -216,6 +216,27 @@ The high-level report API uses the product version reported by the connected
 ADR server. If you call the low-level ``Server.export_report_as_html()`` API
 with an explicit ``ansys_version``, set it to the connected server's version.
 
+Diagnosing an export failure
+-----------------------------
+
+:meth:`~ansys.dynamicreporting.core.Report.export_pdf`,
+:meth:`~ansys.dynamicreporting.core.Report.export_html`, and
+:meth:`~ansys.dynamicreporting.core.Report.export_browser_pdf` return ``False``
+on failure instead of raising, so the specific reason is not visible unless you
+capture it. Each method logs the reason through the ADR logger (configure it
+with, for example, ``adr.Service(..., log_output="stdout")``) and also raises
+it as a ``UserWarning``, which you can catch even without configuring logging:
+
+.. code:: python
+
+   import warnings
+
+   with warnings.catch_warnings(record=True) as caught:
+       warnings.simplefilter("always")
+       exported = my_report.export_html(directory_name=r"C:\reports\summary")
+   if not exported:
+       raise RuntimeError(str(caught[-1].message))
+
 
 Backward compatibility with template generator scripts
 ------------------------------------------------------
