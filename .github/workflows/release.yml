@@ -52,7 +52,7 @@ jobs:
             --dir reviewed-dist
 
       - name: Preserve reviewed assets for the publishing job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PACKAGE_NAME }}-artifacts
           path: reviewed-dist/
