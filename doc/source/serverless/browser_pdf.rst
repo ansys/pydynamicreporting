@@ -81,6 +81,26 @@ If ``filename`` is omitted, the export uses the report template GUID with a
 ``.pdf`` suffix. Both methods require at least one template lookup argument,
 such as ``name`` or ``guid``.
 
+Diagnosing failures
+--------------------
+
+Unlike the connected-service :meth:`~ansys.dynamicreporting.core.Report.export_browser_pdf`,
+which returns ``False`` on failure for backward compatibility, both serverless methods
+raise ``ADRException`` when the export fails, for example when a readiness signal such as
+Plotly charts does not finish within ``render_timeout``. Catch that exception to see the
+specific reason:
+
+.. code-block:: python
+
+   from ansys.dynamicreporting.core.exceptions import ADRException
+
+   try:
+       adr.export_report_as_browser_pdf(
+           filename="simulation-summary.pdf", name="Simulation Summary"
+       )
+   except ADRException as exc:
+       raise RuntimeError(f"Browser PDF export failed: {exc}") from exc
+
 Options
 -------
 

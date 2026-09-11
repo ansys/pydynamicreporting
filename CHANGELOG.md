@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0rc2] - 2026-09-04
+
+### Added
+
+- Python 3.14 support on Windows and Linux for connected service mode and
+  Serverless ADR with ADR 27.1. For Serverless ADR with ADR 26.1, use Python
+  3.12 and the ADR 26.1 constraint profile.
+
+### Maintenance
+
+- Updated the primary CI, build, and pre-commit Python version to 3.14 while retaining CI
+  coverage for Python 3.10 through 3.13.
+
 ## [1.0.0rc1] - 2026-08-27
 
 ### Added

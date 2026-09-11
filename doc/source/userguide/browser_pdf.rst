@@ -50,6 +50,29 @@ The method returns ``True`` after writing the file and ``False`` if the report
 is disconnected or the export fails. It does not modify the supplied
 ``query_params`` dictionary.
 
+Diagnosing a ``False`` return
+==============================
+
+A ``False`` return does not raise an exception, so the specific failure reason
+(for example, which readiness step timed out, such as Plotly charts not
+finishing within ``render_timeout``) is not visible unless you capture it:
+
+* Configure ADR logging before calling ``export_browser_pdf``, for example
+  ``adr.Service(..., log_output="stdout")``, then look for a
+  ``Can not export browser pdf report:`` message.
+* Or catch the ``UserWarning`` that is raised alongside the log message, which
+  carries the same failure reason and does not require logging configuration:
+
+  .. code-block:: python
+
+     import warnings
+
+     with warnings.catch_warnings(record=True) as caught:
+         warnings.simplefilter("always")
+         exported = report.export_browser_pdf(file_name=r"C:\reports\summary.pdf")
+     if not exported:
+         raise RuntimeError(str(caught[-1].message))
+
 Options
 ========
 

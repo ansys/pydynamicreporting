@@ -130,6 +130,8 @@ compatibility boundary.
 - For the previous supported ADR line, use the matching constraints file when
   one is provided. For example, ``1.x`` is bundled with ADR ``27.1`` and can use
   ``constraints/v261.txt`` when targeting ADR ``26.1``.
+- Python 3.14 is supported with ADR ``27.1``. Use Python 3.12 with the ADR
+  ``26.1`` constraint profile.
 - Keep one external serverless virtual environment per supported ADR product
   release family.
 

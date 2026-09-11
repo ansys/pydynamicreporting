@@ -14,7 +14,7 @@ inputs:
 
   python-version:
     description: "Python version for the build environment."
-    default: '3.13'
+    default: '3.14'
     required: false
     type: string
 
