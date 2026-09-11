@@ -5,18 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.0.0rc2] - 2026-09-04
+## [1.0.0rc2] - 2026-09-11
 
 ### Added
 
-- Python 3.14 support on Windows and Linux for connected service mode and
-  Serverless ADR with ADR 27.1. For Serverless ADR with ADR 26.1, use Python
-  3.12 and the ADR 26.1 constraint profile.
+- Python 3.14 support on Windows and Linux for connected service mode and for
+  Serverless ADR with ADR 27.1. Serverless ADR with ADR 26.1 continues to require
+  Python 3.12.
+- Support for setting up and using Serverless ADR in Jupyter notebooks. Wait for
+  each Serverless ADR operation to finish before starting another from a different
+  cell or background task.
 
-### Maintenance
+### Fixed
 
-- Updated the primary CI, build, and pre-commit Python version to 3.14 while retaining CI
-  coverage for Python 3.10 through 3.13.
+- When `Report.export_pdf()`, `Report.export_browser_pdf()`, or `Report.export_html()`
+  fails, it now reports the specific reason in a `UserWarning` and configured logs
+  while continuing to return `False`.
 
 ## [1.0.0rc1] - 2026-08-27
 
