@@ -59,8 +59,6 @@ Thread-Level Behavior
   will use Serverless ADR.
 - Calling ``setup()`` concurrently or repeatedly from multiple threads can cause
   race conditions or inconsistent environment state.
-- Jupyter notebooks normally run cells one at a time. Keep Serverless ADR operations
-  sequential; do not run them concurrently from background tasks or threads.
 
 Example: Threading with Serverless ADR
 
@@ -88,6 +86,12 @@ Example: Threading with Serverless ADR
 
         for t in threads:
             t.join()
+
+Jupyter Notebook Usage
+----------------------
+
+Jupyter notebooks normally run cells one at a time. Do not overlap Serverless ADR
+operations between cells or background tasks.
 
 External Venv Dependency Drift
 ------------------------------
