@@ -48,7 +48,7 @@ def clean_async_environment(monkeypatch):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "initial_value",
-    [None, "caller-value"],
+    [None, "", "caller-value"],
 )
 def test_runtime_shims_allow_django_sync_operations_in_ipykernel(
     monkeypatch, clean_async_environment, initial_value
