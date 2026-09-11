@@ -91,8 +91,7 @@ Example: Querying from multiple threads with Serverless ADR
 Jupyter Notebook Usage
 ----------------------
 
-Two operations overlap when the second starts before the first finishes. In Jupyter
-notebooks, wait for each Serverless ADR operation to finish before starting another
+In Jupyternotebooks, wait for each Serverless ADR operation to finish before starting another
 from a different cell or background task.
 
 External Venv Dependency Drift
