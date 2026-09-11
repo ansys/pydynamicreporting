@@ -120,6 +120,38 @@ def test_runtime_shims_leave_idle_ipykernel_unchanged(monkeypatch, clean_async_e
 
 
 @pytest.mark.unit
+def test_runtime_shims_restore_jupyter_environment_after_later_shim_interrupt(
+    monkeypatch, clean_async_environment
+):
+    """A later compatibility failure rolls back the earlier Jupyter change."""
+    monkeypatch.setenv("DJANGO_ALLOW_ASYNC_UNSAFE", "caller-value")
+    _install_ipython_shell(monkeypatch, ZMQInteractiveShell())
+
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.0.0"
+    fake_numpy.bytes_ = object()
+    fake_numpy.get_printoptions = lambda: {"legacy": False}
+
+    def fail_print_options(**kwargs):
+        assert kwargs == {"legacy": "1.25"}
+        assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "true"
+        assert fake_numpy.string_ is fake_numpy.bytes_
+        raise KeyboardInterrupt
+
+    fake_numpy.set_printoptions = fail_print_options
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    async def apply_shims():
+        compat_module.apply_runtime_compatibility_shims(261)
+
+    with pytest.raises(KeyboardInterrupt):
+        asyncio.run(apply_shims())
+
+    assert not hasattr(fake_numpy, "string_")
+    assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "caller-value"
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("failure_stage", ["settings-import", "settings-processing"])
 def test_setup_restores_jupyter_environment_after_interrupt(
     tmp_path, monkeypatch, clean_async_environment, failure_stage
