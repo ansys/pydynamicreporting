@@ -14,6 +14,30 @@ import pytest
 from ansys.dynamicreporting.core.serverless import ADR
 
 
+class ZMQInteractiveShell:
+    """Minimal stand-in for ipykernel's public shell type."""
+
+
+class CustomZMQInteractiveShell(ZMQInteractiveShell):
+    """Represent an application-specific ipykernel shell subclass."""
+
+
+def _install_ipython_shell(monkeypatch, shell):
+    """Expose a test shell through the optional IPython and ipykernel modules."""
+    ipython = ModuleType("IPython")
+    monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
+
+    zmqshell = ModuleType("ipykernel.zmqshell")
+    monkeypatch.setattr(zmqshell, "ZMQInteractiveShell", ZMQInteractiveShell, raising=False)
+    ipykernel = ModuleType("ipykernel")
+    monkeypatch.setattr(ipykernel, "__path__", [], raising=False)
+    monkeypatch.setattr(ipykernel, "zmqshell", zmqshell, raising=False)
+
+    monkeypatch.setitem(sys.modules, "IPython", ipython)
+    monkeypatch.setitem(sys.modules, "ipykernel", ipykernel)
+    monkeypatch.setitem(sys.modules, "ipykernel.zmqshell", zmqshell)
+
+
 @pytest.fixture
 def clean_async_environment(monkeypatch):
     """Unset the override and clean up values added by ADR during a test."""
@@ -29,10 +53,7 @@ def jupyter_async_environment(monkeypatch, request, clean_async_environment):
     if initial_value is not None:
         monkeypatch.setenv("DJANGO_ALLOW_ASYNC_UNSAFE", initial_value)
 
-    shell = type("ZMQInteractiveShell", (), {})()
-    ipython = ModuleType("IPython")
-    monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
-    monkeypatch.setitem(sys.modules, "IPython", ipython)
+    _install_ipython_shell(monkeypatch, ZMQInteractiveShell())
     return initial_value
 
 
@@ -96,19 +117,31 @@ def test_runtime_shims_override_and_restore_jupyter_environment(
     """Notebook support applies to both product lines and backs up any value."""
     from ansys.dynamicreporting.core.serverless._compat import apply_runtime_compatibility_shims
 
-    restore = apply_runtime_compatibility_shims(product_version)
-    try:
-        active_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
-        assert active_value == "true"
-    finally:
-        restore()
+    async def apply_and_restore_shims():
+        restore = apply_runtime_compatibility_shims(product_version)
+        try:
+            active_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+            assert active_value == "true"
+        finally:
+            restore()
+
+    asyncio.run(apply_and_restore_shims())
 
     restored_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
     assert restored_value == jupyter_async_environment
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("shell_name", [None, "TerminalInteractiveShell", "missing-ipython"])
+@pytest.mark.parametrize(
+    "shell_name",
+    [
+        None,
+        "TerminalInteractiveShell",
+        "ZMQInteractiveShell",
+        "missing-ipython",
+        "missing-ipykernel",
+    ],
+)
 @pytest.mark.parametrize("initial_value", [None, "", "caller-value"])
 def test_runtime_shims_leave_non_notebook_environment_unchanged(
     monkeypatch, clean_async_environment, shell_name, initial_value
@@ -124,18 +157,59 @@ def test_runtime_shims_leave_non_notebook_environment_unchanged(
         monkeypatch.setitem(sys.modules, "IPython", None)
     else:
         shell = None if shell_name is None else type(shell_name, (), {})()
-        ipython = ModuleType("IPython")
-        monkeypatch.setattr(ipython, "get_ipython", lambda: shell, raising=False)
-        monkeypatch.setitem(sys.modules, "IPython", ipython)
+        _install_ipython_shell(monkeypatch, shell)
+        if shell_name == "missing-ipykernel":
+            monkeypatch.setitem(sys.modules, "ipykernel", None)
+            monkeypatch.setitem(sys.modules, "ipykernel.zmqshell", None)
 
-    restore = apply_runtime_compatibility_shims(271)
-    active_value = os.environ.get(environment_variable)
-    assert active_value == initial_value
-    monkeypatch.setenv(environment_variable, "after-setup")
-    restore()
+    async def apply_and_restore_shims():
+        restore = apply_runtime_compatibility_shims(271)
+        active_value = os.environ.get(environment_variable)
+        assert active_value == initial_value
+        monkeypatch.setenv(environment_variable, "after-setup")
+        restore()
+
+    asyncio.run(apply_and_restore_shims())
 
     current_value = os.environ.get(environment_variable)
     assert current_value == "after-setup"
+
+
+@pytest.mark.unit
+def test_runtime_shims_support_ipykernel_shell_subclasses(monkeypatch, clean_async_environment):
+    """Custom ipykernel shell subclasses receive the notebook workaround."""
+    from ansys.dynamicreporting.core.serverless._compat import apply_runtime_compatibility_shims
+
+    _install_ipython_shell(monkeypatch, CustomZMQInteractiveShell())
+
+    async def apply_and_restore_shims():
+        restore = apply_runtime_compatibility_shims(271)
+        assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "true"
+        restore()
+
+    asyncio.run(apply_and_restore_shims())
+    assert "DJANGO_ALLOW_ASYNC_UNSAFE" not in os.environ
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("initial_value", [None, "", "caller-value"])
+def test_runtime_shims_leave_ipykernel_without_running_loop_unchanged(
+    monkeypatch, clean_async_environment, initial_value
+):
+    """An idle ipykernel shell does not require Django's async override."""
+    from ansys.dynamicreporting.core.serverless._compat import apply_runtime_compatibility_shims
+
+    environment_variable = "DJANGO_ALLOW_ASYNC_UNSAFE"
+    if initial_value is not None:
+        monkeypatch.setenv(environment_variable, initial_value)
+    _install_ipython_shell(monkeypatch, ZMQInteractiveShell())
+
+    restore = apply_runtime_compatibility_shims(271)
+    assert os.environ.get(environment_variable) == initial_value
+    monkeypatch.setenv(environment_variable, "after-setup")
+    restore()
+
+    assert os.environ.get(environment_variable) == "after-setup"
 
 
 @pytest.mark.unit
@@ -265,8 +339,11 @@ def test_setup_rolls_back_runtime_compatibility_after_settings_import_failure(
 
     monkeypatch.setattr(builtins, "__import__", fail_settings_import)
 
-    with pytest.raises(failure_type) as exc_info:
+    async def run_setup():
         adr.setup()
+
+    with pytest.raises(failure_type) as exc_info:
+        asyncio.run(run_setup())
 
     if failure_type is ImportError:
         assert exc_info.value.__cause__ is failure
@@ -374,8 +451,11 @@ def test_setup_rolls_back_state_after_dataset_creation_failure(
 
     monkeypatch.setattr(adr_module.Dataset, "create", create_dataset)
 
-    with pytest.raises(failure_type) as exc_info:
+    async def run_setup():
         adr.setup()
+
+    with pytest.raises(failure_type) as exc_info:
+        asyncio.run(run_setup())
 
     assert exc_info.value is dataset_error
     assert ADR._is_setup is False
@@ -408,8 +488,12 @@ def test_setup_restores_jupyter_environment_after_runtime_shim_failure(
     monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
 
     expected_error = ImportError if failure_type is TypeError else failure_type
-    with pytest.raises(expected_error) as exc_info:
+
+    async def run_setup():
         setup_runtime.setup()
+
+    with pytest.raises(expected_error) as exc_info:
+        asyncio.run(run_setup())
 
     if failure_type is TypeError:
         assert exc_info.value.__cause__ is failure

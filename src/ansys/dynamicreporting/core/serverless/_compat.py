@@ -30,6 +30,7 @@ dependencies.
 
 from __future__ import annotations
 
+import asyncio
 import importlib.metadata
 import logging
 import os
@@ -73,14 +74,20 @@ def _normalize_version(version_string: str) -> VersionKey:
 
 
 def _enable_jupyter_async_support() -> RuntimeCompatCleanup | None:
-    """Enable synchronous Django calls in IPykernel and return a restore callback."""
+    """Enable synchronous Django calls in an active IPykernel event loop."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
     try:
         from IPython import get_ipython
+        from ipykernel.zmqshell import ZMQInteractiveShell
     except ImportError:
         return None
 
     shell = get_ipython()
-    if shell is None or shell.__class__.__name__ != "ZMQInteractiveShell":
+    if not isinstance(shell, ZMQInteractiveShell):
         return None
 
     previous_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
