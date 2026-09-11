@@ -102,6 +102,48 @@ def _enable_jupyter_async_support() -> RuntimeCompatCleanup | None:
     return _restore_async_environment
 
 
+def _enable_numpy_compatibility(product_version: int) -> RuntimeCompatCleanup | None:
+    """Apply NumPy compatibility changes required by an ADR product version."""
+    if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
+        return None
+
+    import numpy
+
+    cleanup_callbacks: list[RuntimeCompatCleanup] = []
+
+    def _restore_numpy_state() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
+
+    try:
+        if not hasattr(numpy, "string_"):
+            setattr(numpy, "string_", numpy.bytes_)
+
+            def _restore_string_alias() -> None:
+                if getattr(numpy, "string_", None) is numpy.bytes_:
+                    delattr(numpy, "string_")
+
+            cleanup_callbacks.append(_restore_string_alias)
+            logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+
+        if _normalize_version(numpy.__version__) >= (2, 0):
+            previous_legacy = numpy.get_printoptions().get("legacy", False)
+            numpy.set_printoptions(legacy="1.25")
+
+            def _restore_legacy_printoptions() -> None:
+                numpy.set_printoptions(legacy=previous_legacy)
+
+            cleanup_callbacks.append(_restore_legacy_printoptions)
+            logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+    except BaseException:
+        _restore_numpy_state()
+        raise
+
+    if not cleanup_callbacks:
+        return None
+    return _restore_numpy_state
+
+
 def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
     """Apply runtime shims and return a callback that restores process state.
 
@@ -125,28 +167,9 @@ def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatClea
         if restore_jupyter is not None:
             cleanup_callbacks.append(restore_jupyter)
 
-        if product_version == _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
-            import numpy
-
-            if not hasattr(numpy, "string_"):
-                setattr(numpy, "string_", numpy.bytes_)
-
-                def _restore_string_alias() -> None:
-                    if getattr(numpy, "string_", None) is numpy.bytes_:
-                        delattr(numpy, "string_")
-
-                cleanup_callbacks.append(_restore_string_alias)
-                logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
-
-            if _normalize_version(numpy.__version__) >= (2, 0):
-                previous_legacy = numpy.get_printoptions().get("legacy", False)
-                numpy.set_printoptions(legacy="1.25")
-
-                def _restore_legacy_printoptions() -> None:
-                    numpy.set_printoptions(legacy=previous_legacy)
-
-                cleanup_callbacks.append(_restore_legacy_printoptions)
-                logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+        restore_numpy = _enable_numpy_compatibility(product_version)
+        if restore_numpy is not None:
+            cleanup_callbacks.append(restore_numpy)
     except BaseException:  # catch interrupts as well
         # Do not leave process-wide mutations behind if shim setup aborts.
         _restore_cleanup_callbacks()
