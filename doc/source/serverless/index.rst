@@ -41,6 +41,8 @@ Key features
 - **In-memory execution**:
   Runs entirely in your local Python process, with no separate backend or
   daemon needed.
+- **Jupyter notebook support**:
+  Create, query, and render reports directly in Jupyter notebooks.
 - **First-class objects**:
   Sessions, Datasets, Items and Templates are actual Python classes, not remote proxies — giving
   you full introspection, subclassing, and lifecycle control.

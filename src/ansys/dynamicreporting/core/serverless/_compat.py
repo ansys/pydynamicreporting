@@ -30,8 +30,10 @@ dependencies.
 
 from __future__ import annotations
 
+import asyncio
 import importlib.metadata
 import logging
+import os
 import re
 from typing import Callable
 
@@ -71,28 +73,45 @@ def _normalize_version(version_string: str) -> VersionKey:
     return tuple(components)
 
 
-def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
-    """Apply dependency API shims required by a supported ADR product version.
+def _enable_jupyter_async_support() -> RuntimeCompatCleanup | None:
+    """Enable synchronous Django calls in an active IPykernel event loop."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return None
 
-    ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
-    that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
-    NumPy scalar representations directly into inline JavaScript. Restore the
-    alias and NumPy 1.25 print formatting before importing the product's Django
-    modules, and return a cleanup callback that restores the previous NumPy
-    process state when ADR is torn down.
-    """
+    try:
+        from IPython import get_ipython
+        from ipykernel.zmqshell import ZMQInteractiveShell
+    except ImportError:
+        return None
 
-    def _noop_runtime_compatibility_cleanup() -> None:
-        return
+    shell = get_ipython()
+    if not isinstance(shell, ZMQInteractiveShell):
+        return None
 
+    previous_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+
+    def _restore_async_environment() -> None:
+        if previous_value is None:
+            os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+        else:
+            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = previous_value
+
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+    return _restore_async_environment
+
+
+def _enable_numpy_compatibility(product_version: int) -> RuntimeCompatCleanup | None:
+    """Apply NumPy compatibility changes required by an ADR product version."""
     if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
-        return _noop_runtime_compatibility_cleanup
+        return None
 
     import numpy
 
     cleanup_callbacks: list[RuntimeCompatCleanup] = []
 
-    def _restore_cleanup_callbacks() -> None:
+    def _restore_numpy_state() -> None:
         for cleanup in reversed(cleanup_callbacks):
             cleanup()
 
@@ -116,13 +135,45 @@ def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatClea
 
             cleanup_callbacks.append(_restore_legacy_printoptions)
             logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
-    except BaseException:  # catch interrupts as well
-        # Do not leave a process-wide NumPy mutation behind if shim setup aborts.
-        _restore_cleanup_callbacks()
+    except BaseException:
+        _restore_numpy_state()
         raise
 
     if not cleanup_callbacks:
-        return _noop_runtime_compatibility_cleanup
+        return None
+    return _restore_numpy_state
+
+
+def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
+    """Apply runtime shims and return a callback that restores process state.
+
+    In IPykernel, enable Django's synchronous ORM calls while ADR is active.
+    Restore the previous environment value when setup fails or ADR closes.
+
+    ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
+    that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
+    NumPy scalar representations directly into inline JavaScript. Restore the
+    alias and NumPy 1.25 print formatting before importing the product's Django
+    modules, and restore the previous NumPy state when ADR is torn down.
+    """
+    cleanup_callbacks: list[RuntimeCompatCleanup] = []
+
+    def _restore_cleanup_callbacks() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
+
+    try:
+        restore_jupyter = _enable_jupyter_async_support()
+        if restore_jupyter is not None:
+            cleanup_callbacks.append(restore_jupyter)
+
+        restore_numpy = _enable_numpy_compatibility(product_version)
+        if restore_numpy is not None:
+            cleanup_callbacks.append(restore_numpy)
+    except BaseException:  # catch interrupts as well
+        # Do not leave process-wide mutations behind if shim setup aborts.
+        _restore_cleanup_callbacks()
+        raise
 
     return _restore_cleanup_callbacks
 

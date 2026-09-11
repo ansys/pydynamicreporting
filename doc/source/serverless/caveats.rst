@@ -53,14 +53,14 @@ Thread-Level Behavior
 ---------------------
 
 - Serverless ADR configuration applies process-wide and is shared by all threads.
-- It is unnecessary and discouraged to call ``ADR.setup()`` multiple times within the
-  same process.
-- Ensure the main thread calls ``ADR.setup()`` **before spawning any threads** that
-  will use Serverless ADR.
-- Calling ``setup()`` concurrently or repeatedly from multiple threads can cause
-  race conditions or inconsistent environment state.
+- Call ``ADR.setup()`` once, before starting any threads that use Serverless ADR.
+- While threads are running, do not call ``ADR.setup()`` or ``ADR.close()``, change the
+  default session or dataset, or modify the same item or template from multiple threads.
+- Do not use ``in_memory=True`` when multiple threads access Serverless ADR.
+- When using a local SQLite database, run write operations one at a time.
+- Run report rendering and export operations one at a time.
 
-Example: Threading with Serverless ADR
+Example: Querying from multiple threads with Serverless ADR
 
 .. code-block:: python
 
@@ -70,8 +70,7 @@ Example: Threading with Serverless ADR
 
     def thread_task():
         adr = ADR.get_instance()
-        # ADR is already setup in main thread, so just use it directly
-        # Make ADR API calls here
+        print(adr.get_item_count())
 
 
     if __name__ == "__main__":
@@ -86,6 +85,14 @@ Example: Threading with Serverless ADR
 
         for t in threads:
             t.join()
+
+        adr.close()
+
+Jupyter Notebook Usage
+----------------------
+
+In Jupyternotebooks, wait for each Serverless ADR operation to finish before starting another
+from a different cell or background task.
 
 External Venv Dependency Drift
 ------------------------------

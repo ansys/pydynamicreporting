@@ -750,7 +750,7 @@ class ADR:
         from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
         # Resolve the product Django path before enabling any process-wide
-        # runtime shims so missing installs fail without touching NumPy state.
+        # runtime shims so missing installs fail without changing process state.
         adr_path_added = False
         try:
             adr_path = (
@@ -761,14 +761,18 @@ class ADR:
                 sys.path.append(adr_path_string)
                 adr_path_added = True
 
-            # Restore known NumPy aliases before importing the product's Django modules.
+            # Apply runtime compatibility shims before importing the product's Django modules.
             self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
             from ceireports import settings_serverless
-        except (AttributeError, ImportError, OSError, TypeError, ValueError) as e:
+        except BaseException as e:  # Restore shims even when notebook setup is interrupted.
             self._restore_runtime_compatibility_shims()
             if adr_path_added:
                 sys.path.remove(adr_path_string)
-            raise ImportError(f"Failed to initialize ADR from the Ansys installation: {e}") from e
+            if isinstance(e, (AttributeError, ImportError, OSError, TypeError, ValueError)):
+                raise ImportError(
+                    f"Failed to initialize ADR from the Ansys installation: {e}"
+                ) from e
+            raise
 
         try:
             overrides = {}
@@ -914,7 +918,7 @@ class ADR:
             ADR._is_setup = True
             self._session = Session.create()
             self._dataset = Dataset.create()
-        except Exception as e:
+        except BaseException:  # Restore shims and setup state on interruption too.
             ADR._is_setup = False
             self._session = None
             self._dataset = None
