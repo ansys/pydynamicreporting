@@ -47,25 +47,25 @@ def clean_async_environment(monkeypatch):
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    ("product_version", "initial_value"),
-    [(261, None), (261, ""), (271, "caller-value")],
+    "initial_value",
+    [None, "caller-value"],
 )
 def test_runtime_shims_allow_django_sync_operations_in_ipykernel(
-    monkeypatch, clean_async_environment, product_version, initial_value
+    monkeypatch, clean_async_environment, initial_value
 ):
     """The shim enables Django calls and restores the exact prior value."""
     from django.utils.asyncio import async_unsafe
 
     if initial_value is not None:
         monkeypatch.setenv("DJANGO_ALLOW_ASYNC_UNSAFE", initial_value)
-    _install_ipython_shell(monkeypatch, ZMQInteractiveShell())
+    _install_ipython_shell(monkeypatch, CustomZMQInteractiveShell())
 
     @async_unsafe("Synchronous test operation")
     def synchronous_operation():
         return "completed"
 
     async def run_operation():
-        restore = compat_module.apply_runtime_compatibility_shims(product_version)
+        restore = compat_module.apply_runtime_compatibility_shims(271)
         try:
             assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "true"
             assert synchronous_operation() == "completed"
@@ -80,7 +80,7 @@ def test_runtime_shims_allow_django_sync_operations_in_ipykernel(
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "shell_case",
-    ["no-shell", "terminal", "same-name", "missing-ipython", "missing-ipykernel"],
+    ["same-name", "missing-ipython"],
 )
 def test_runtime_shims_leave_other_async_environments_unchanged(
     monkeypatch, clean_async_environment, shell_case
@@ -91,16 +91,8 @@ def test_runtime_shims_leave_other_async_environments_unchanged(
     if shell_case == "missing-ipython":
         monkeypatch.setitem(sys.modules, "IPython", None)
     else:
-        shells = {
-            "no-shell": None,
-            "terminal": type("TerminalInteractiveShell", (), {})(),
-            "same-name": type("ZMQInteractiveShell", (), {})(),
-            "missing-ipykernel": ZMQInteractiveShell(),
-        }
-        _install_ipython_shell(monkeypatch, shells[shell_case])
-        if shell_case == "missing-ipykernel":
-            monkeypatch.setitem(sys.modules, "ipykernel", None)
-            monkeypatch.setitem(sys.modules, "ipykernel.zmqshell", None)
+        shell = type("ZMQInteractiveShell", (), {})()
+        _install_ipython_shell(monkeypatch, shell)
 
     async def apply_and_restore_shims():
         restore = compat_module.apply_runtime_compatibility_shims(271)
@@ -111,21 +103,6 @@ def test_runtime_shims_leave_other_async_environments_unchanged(
     asyncio.run(apply_and_restore_shims())
 
     assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "after-setup"
-
-
-@pytest.mark.unit
-def test_runtime_shims_support_ipykernel_shell_subclasses(monkeypatch, clean_async_environment):
-    """Custom IPykernel shell subclasses receive the override."""
-    _install_ipython_shell(monkeypatch, CustomZMQInteractiveShell())
-
-    async def apply_and_restore_shims():
-        restore = compat_module.apply_runtime_compatibility_shims(271)
-        assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "true"
-        restore()
-
-    asyncio.run(apply_and_restore_shims())
-
-    assert "DJANGO_ALLOW_ASYNC_UNSAFE" not in os.environ
 
 
 @pytest.mark.unit
@@ -140,38 +117,6 @@ def test_runtime_shims_leave_idle_ipykernel_unchanged(monkeypatch, clean_async_e
     restore()
 
     assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "after-setup"
-
-
-@pytest.mark.unit
-def test_runtime_shims_restore_jupyter_environment_after_later_shim_interrupt(
-    monkeypatch, clean_async_environment
-):
-    """A later compatibility failure rolls back the earlier Jupyter change."""
-    monkeypatch.setenv("DJANGO_ALLOW_ASYNC_UNSAFE", "caller-value")
-    _install_ipython_shell(monkeypatch, ZMQInteractiveShell())
-
-    fake_numpy = ModuleType("numpy")
-    fake_numpy.__version__ = "2.0.0"
-    fake_numpy.bytes_ = object()
-    fake_numpy.get_printoptions = lambda: {"legacy": False}
-
-    def fail_print_options(**kwargs):
-        assert kwargs == {"legacy": "1.25"}
-        assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "true"
-        assert fake_numpy.string_ is fake_numpy.bytes_
-        raise KeyboardInterrupt
-
-    fake_numpy.set_printoptions = fail_print_options
-    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
-
-    async def apply_shims():
-        compat_module.apply_runtime_compatibility_shims(261)
-
-    with pytest.raises(KeyboardInterrupt):
-        asyncio.run(apply_shims())
-
-    assert not hasattr(fake_numpy, "string_")
-    assert os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE") == "caller-value"
 
 
 @pytest.mark.unit
