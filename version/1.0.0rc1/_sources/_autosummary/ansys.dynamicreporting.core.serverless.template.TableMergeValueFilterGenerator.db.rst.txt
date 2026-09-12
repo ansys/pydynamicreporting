@@ -1,0 +1,6 @@
+db
+==
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoproperty:: TableMergeValueFilterGenerator.db

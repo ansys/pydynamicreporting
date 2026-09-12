@@ -1,0 +1,6 @@
+to\_json
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: StatisticalGenerator.to_json

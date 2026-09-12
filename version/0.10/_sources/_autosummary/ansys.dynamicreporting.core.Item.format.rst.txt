@@ -1,0 +1,6 @@
+format
+======
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.format

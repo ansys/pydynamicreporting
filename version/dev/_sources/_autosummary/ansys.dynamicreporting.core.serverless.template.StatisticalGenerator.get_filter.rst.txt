@@ -1,0 +1,6 @@
+get\_filter
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: StatisticalGenerator.get_filter

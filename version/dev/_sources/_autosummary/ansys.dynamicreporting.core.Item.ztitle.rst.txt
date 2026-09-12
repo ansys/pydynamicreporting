@@ -1,0 +1,6 @@
+ztitle
+======
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.ztitle

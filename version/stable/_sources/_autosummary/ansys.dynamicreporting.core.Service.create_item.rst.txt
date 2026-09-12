@@ -1,0 +1,6 @@
+create\_item
+============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Service.create_item

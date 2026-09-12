@@ -1,0 +1,6 @@
+set\_params
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.set_params

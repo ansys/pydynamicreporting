@@ -1,0 +1,6 @@
+get\_panel\_style
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PanelLayout.get_panel_style

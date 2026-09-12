@@ -1,0 +1,6 @@
+rem\_tag
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Item.rem_tag

@@ -1,0 +1,165 @@
+﻿TableMergeValueFilterGenerator
+==============================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TableMergeValueFilterGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TableMergeValueFilterGenerator.add_filter
+      
+      
+      TableMergeValueFilterGenerator.add_params
+      
+      
+      TableMergeValueFilterGenerator.add_properties
+      
+      
+      TableMergeValueFilterGenerator.add_property
+      
+      
+      TableMergeValueFilterGenerator.add_sort_fields
+      
+      
+      TableMergeValueFilterGenerator.add_tag
+      
+      
+      TableMergeValueFilterGenerator.as_dict
+      
+      
+      TableMergeValueFilterGenerator.create
+      
+      
+      TableMergeValueFilterGenerator.delete
+      
+      
+      TableMergeValueFilterGenerator.filter
+      
+      
+      TableMergeValueFilterGenerator.find
+      
+      
+      TableMergeValueFilterGenerator.get
+      
+      
+      TableMergeValueFilterGenerator.get_append_tags
+      
+      
+      TableMergeValueFilterGenerator.get_filter
+      
+      
+      TableMergeValueFilterGenerator.get_filter_mode
+      
+      
+      TableMergeValueFilterGenerator.get_generated_items
+      
+      
+      TableMergeValueFilterGenerator.get_params
+      
+      
+      TableMergeValueFilterGenerator.get_property
+      
+      
+      TableMergeValueFilterGenerator.get_sort_fields
+      
+      
+      TableMergeValueFilterGenerator.get_sort_selection
+      
+      
+      TableMergeValueFilterGenerator.get_tags
+      
+      
+      TableMergeValueFilterGenerator.reinit
+      
+      
+      TableMergeValueFilterGenerator.rem_tag
+      
+      
+      TableMergeValueFilterGenerator.remove_tag
+      
+      
+      TableMergeValueFilterGenerator.render
+      
+      
+      TableMergeValueFilterGenerator.render_pdf
+      
+      
+      TableMergeValueFilterGenerator.reorder_child
+      
+      
+      TableMergeValueFilterGenerator.reorder_children
+      
+      
+      TableMergeValueFilterGenerator.save
+      
+      
+      TableMergeValueFilterGenerator.set_append_tags
+      
+      
+      TableMergeValueFilterGenerator.set_filter
+      
+      
+      TableMergeValueFilterGenerator.set_filter_mode
+      
+      
+      TableMergeValueFilterGenerator.set_generated_items
+      
+      
+      TableMergeValueFilterGenerator.set_params
+      
+      
+      TableMergeValueFilterGenerator.set_property
+      
+      
+      TableMergeValueFilterGenerator.set_sort_fields
+      
+      
+      TableMergeValueFilterGenerator.set_sort_selection
+      
+      
+      TableMergeValueFilterGenerator.set_tags
+      
+      
+      TableMergeValueFilterGenerator.to_dict
+      
+      
+      TableMergeValueFilterGenerator.to_json
+      
+      
+      TableMergeValueFilterGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TableMergeValueFilterGenerator.children_order
+      TableMergeValueFilterGenerator.db
+      TableMergeValueFilterGenerator.item_filter
+      TableMergeValueFilterGenerator.master
+      TableMergeValueFilterGenerator.name
+      TableMergeValueFilterGenerator.params
+      TableMergeValueFilterGenerator.parent
+      TableMergeValueFilterGenerator.report_type
+      TableMergeValueFilterGenerator.saved
+      TableMergeValueFilterGenerator.tags
+      TableMergeValueFilterGenerator.type
+      TableMergeValueFilterGenerator.date
+      TableMergeValueFilterGenerator.children
+      TableMergeValueFilterGenerator.guid
+   
+   

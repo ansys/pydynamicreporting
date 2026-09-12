@@ -1,0 +1,1842 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ADR &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=9e79609d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=9e79609d" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=3f37fbb9"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="backup_database" href="ansys.dynamicreporting.core.serverless.adr.ADR.backup_database.html" />
+    <link rel="prev" title="Serverless ADR API Reference" href="../api_docs_serverless.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.10" />
+  <meta property="og:site_name" content="PyAnsys" />
+  <meta name="physics" content="dynamicreporting" />
+  <meta name="physics" content="reporting" />
+  <meta name="physics" content="report" />
+  <meta name="physics" content="adr" />
+  <meta name="physics" content="nexus" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav>
+</div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav>
+</div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">ADR</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.backup_database.html">backup_database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.close.html">close</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects.html">copy_objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.create_item.html">create_item</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.create_objects.html">create_objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.create_template.html">create_template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup.html">ensure_setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html.html">export_report_as_html</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf.html">export_report_as_pdf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx.html">export_report_as_pptx</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config.html">get_database_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_instance.html">get_instance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports.html">get_list_reports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_report.html">get_report</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_reports.html">get_reports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates.html">load_templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file.html">load_templates_from_file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.query.html">query</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.render_report.html">render_report</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf.html">render_report_as_pdf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx.html">render_report_as_pptx</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.restore_database.html">restore_database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.set_default_dataset.html">set_default_dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.set_default_session.html">set_default_session</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.setup.html">setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation.html">ansys_installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version.html">ansys_version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.dataset.html">dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.db_directory.html">db_directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.is_setup.html">is_setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.media_directory.html">media_directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.media_url.html">media_url</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.session.html">session</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.session_guid.html">session_guid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.static_directory.html">static_directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.static_url.html">static_url</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html">ObjectSet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html">Session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html">Dataset</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.String.html">String</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.HTML.html">HTML</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.html">Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Tree.html">Tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html">File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Image.html">Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Animation.html">Animation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Scene.html">Scene</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html">Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.BasicLayout.html">BasicLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PanelLayout.html">PanelLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.BoxLayout.html">BoxLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TabLayout.html">TabLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.CarouselLayout.html">CarouselLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.SliderLayout.html">SliderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.FooterLayout.html">FooterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.HeaderLayout.html">HeaderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.IteratorLayout.html">IteratorLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TagPropertyLayout.html">TagPropertyLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TOCLayout.html">TOCLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.ReportLinkLayout.html">ReportLinkLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PPTXLayout.html">PPTXLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout.html">PPTXSlideLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.DataFilterLayout.html">DataFilterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.UserDefinedLayout.html">UserDefinedLayout</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeGenerator.html">TableMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableReduceGenerator.html">TableReduceGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator.html">TableMergeRCFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator.html">TableMergeValueFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMapGenerator.html">TableMapGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator.html">TableSortFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.html">TreeMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator.html">SQLQueryGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator.html">ItemsComparisonGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.StatisticalGenerator.html">StatisticalGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.IteratorGenerator.html">IteratorGenerator</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="../api_docs_serverless.html" class="nav-link">Serverless ADR API Reference</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">ADR</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="adr">
+<h1>ADR<a class="headerlink" href="#adr" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ansys.dynamicreporting.core.serverless.adr.</span></span><span class="sig-name descname"><span class="pre">ADR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Ansys Dynamic Reporting (ADR) class.</p>
+<p>This class provides a high-level API for interacting with ADR without
+running the full web server. It encapsulates Django setup,
+database configuration, media/static configuration, and report
+rendering/export.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>ansys_installation</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Path to an Ansys/Nexus installation. If <code class="docutils literal notranslate"><span class="pre">&quot;docker&quot;</span></code>, ADR will
+spin up a Docker container and copy the core bits from it.
+If not provided, <code class="xref py py-func docutils literal notranslate"><span class="pre">get_install_info()</span></code> attempts to infer the
+installation location.</p>
+</dd>
+<dt><strong>ansys_version</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Explicit Ansys version to use. If omitted, ADR tries to infer it
+from the installation content.</p>
+</dd>
+<dt><strong>db_directory</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Directory for a local SQLite database (and media subdirectory).
+Either this or <code class="docutils literal notranslate"><span class="pre">databases</span></code> is required unless <code class="docutils literal notranslate"><span class="pre">in_memory=True</span></code>.</p>
+</dd>
+<dt><strong>databases</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Full Django <code class="docutils literal notranslate"><span class="pre">DATABASES</span></code> configuration. If provided, it replaces
+the default SQLite configuration. Must include a <code class="docutils literal notranslate"><span class="pre">&quot;default&quot;</span></code> key.</p>
+</dd>
+<dt><strong>media_directory</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Directory where uploaded media files are stored. If omitted, ADR
+uses <code class="docutils literal notranslate"><span class="pre">CEI_NEXUS_LOCAL_MEDIA_DIR</span></code> or falls back to
+<code class="docutils literal notranslate"><span class="pre">&lt;db_directory&gt;/media</span></code>.</p>
+</dd>
+<dt><strong>static_directory</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Directory where static files are collected. If omitted, static
+exports are not available.</p>
+</dd>
+<dt><strong>media_url</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “/media/”</span></dt><dd><p>Base URL (relative) for serving media files.</p>
+</dd>
+<dt><strong>static_url</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “/static/”</span></dt><dd><p>Base URL (relative) for serving static files.</p>
+</dd>
+<dt><strong>debug</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Explicit Django DEBUG flag. If omitted, the value from the ADR
+settings module is used.</p>
+</dd>
+<dt><strong>opts</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Extra environment variables to inject into <code class="xref py py-mod docutils literal notranslate"><span class="pre">os.environ</span></code>
+before setup.</p>
+</dd>
+<dt><strong>request</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HttpRequest</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Django request object, useful when ADR is used in a web context.</p>
+</dd>
+<dt><strong>logfile</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Path to the log file. If omitted, logging typically goes to stderr.</p>
+</dd>
+<dt><strong>docker_image</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Docker image URL to use when <code class="docutils literal notranslate"><span class="pre">ansys_installation=&quot;docker&quot;</span></code>.
+Defaults to <code class="xref py py-data docutils literal notranslate"><span class="pre">DOCKER_REPO_URL</span></code>.</p>
+</dd>
+<dt><strong>in_memory</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, ADR configures an in-memory SQLite database and
+temporary media/static directories, suitable for tests or
+ephemeral usage.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If Docker bootstrapping or installation copying fails.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImproperlyConfiguredError</span></code></dt><dd><p>If required configuration such as DB or media directories is
+missing or invalid.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidAnsysPath</span></code></dt><dd><p>If a valid Ansys installation cannot be located.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidPath</span></code></dt><dd><p>If a configured path does not exist and cannot be created.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Basic local SQLite usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">install_loc</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v252&quot;</span>
+<span class="n">db_dir</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;C:\DBs\docex&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">BasicLayout</span>
+
+<span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span>
+    <span class="n">ansys_installation</span><span class="o">=</span><span class="n">install_loc</span><span class="p">,</span>
+    <span class="n">db_directory</span><span class="o">=</span><span class="n">db_dir</span><span class="p">,</span>
+    <span class="n">static_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\DBs\static&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">adr</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">collect_static</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">item</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span>
+    <span class="n">String</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;intro_text&quot;</span><span class="p">,</span>
+    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;It&#39;s alive!&quot;</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;dp=dp227 section=intro&quot;</span><span class="p">,</span>
+    <span class="n">source</span><span class="o">=</span><span class="s2">&quot;sls-test&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">BasicLayout</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">,</span>
+    <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="s2">&quot;dp=dp227&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">template</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_tags|cont|dp=dp227;&quot;</span><span class="p">)</span>
+<span class="n">template</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+<span class="n">html_content</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">render_report</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">,</span>
+    <span class="n">context</span><span class="o">=</span><span class="p">{},</span>
+    <span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp=dp227;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.backup_database.html#ansys.dynamicreporting.core.serverless.adr.ADR.backup_database" title="ansys.dynamicreporting.core.serverless.adr.ADR.backup_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.backup_database</span></code></a>([output_directory, ...])</p></td>
+<td><p>Create a JSON (optionally gzipped) backup of an ADR database.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.close.html#ansys.dynamicreporting.core.serverless.adr.ADR.close" title="ansys.dynamicreporting.core.serverless.adr.ADR.close"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.close</span></code></a>()</p></td>
+<td><p>Close DB connections and clean up any temporary directories.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects.html#ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects" title="ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.copy_objects</span></code></a>(object_type, target_database, *)</p></td>
+<td><p>Copy ADR objects (and associated media) between databases.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.create_item.html#ansys.dynamicreporting.core.serverless.adr.ADR.create_item" title="ansys.dynamicreporting.core.serverless.adr.ADR.create_item"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.create_item</span></code></a>(item_type, **kwargs)</p></td>
+<td><p>Create and persist a new <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> of the given type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.create_objects.html#ansys.dynamicreporting.core.serverless.adr.ADR.create_objects" title="ansys.dynamicreporting.core.serverless.adr.ADR.create_objects"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.create_objects</span></code></a>(objects, **kwargs)</p></td>
+<td><p>Persist multiple ADR objects, returning the count of saved objects.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.create_template.html#ansys.dynamicreporting.core.serverless.adr.ADR.create_template" title="ansys.dynamicreporting.core.serverless.adr.ADR.create_template"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.create_template</span></code></a>(template_type, **kwargs)</p></td>
+<td><p>Create and persist a new <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> of the given type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup.html#ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.ensure_setup</span></code></a>()</p></td>
+<td><p>Verify that <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-class docutils literal notranslate"><span class="pre">ADR</span></code></a> has been instantiated and <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.setup"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setup()</span></code></a> called.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html.html#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html" title="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.export_report_as_html</span></code></a>(output_directory, *)</p></td>
+<td><p>Export a report as a standalone HTML file (plus assets).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf.html#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf" title="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.export_report_as_pdf</span></code></a>(*[, filename, ...])</p></td>
+<td><p>Render a PDF report and write it to disk.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx.html#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx" title="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.export_report_as_pptx</span></code></a>(*[, filename, ...])</p></td>
+<td><p>Render a PPTX report and write it to disk.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config.html#ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config" title="ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.get_database_config</span></code></a>([raise_exception])</p></td>
+<td><p>Return the Django <code class="docutils literal notranslate"><span class="pre">DATABASES</span></code> configuration, if available.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_instance.html#ansys.dynamicreporting.core.serverless.adr.ADR.get_instance" title="ansys.dynamicreporting.core.serverless.adr.ADR.get_instance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.get_instance</span></code></a>()</p></td>
+<td><p>Retrieve the configured ADR singleton instance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports.html#ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports" title="ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.get_list_reports</span></code></a>([r_type])</p></td>
+<td><p>Return a list of reports or just their names.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_report.html#ansys.dynamicreporting.core.serverless.adr.ADR.get_report" title="ansys.dynamicreporting.core.serverless.adr.ADR.get_report"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.get_report</span></code></a>(**kwargs)</p></td>
+<td><p>Fetch a root report template (no parent) using template fields.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.get_reports.html#ansys.dynamicreporting.core.serverless.adr.ADR.get_reports" title="ansys.dynamicreporting.core.serverless.adr.ADR.get_reports"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.get_reports</span></code></a>(*[, fields, flat])</p></td>
+<td><p>Return all root report templates, optionally as a values-list.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates.html#ansys.dynamicreporting.core.serverless.adr.ADR.load_templates" title="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.load_templates</span></code></a>(templates)</p></td>
+<td><p>Load a template tree from a Python dictionary.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file.html#ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file" title="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.load_templates_from_file</span></code></a>(file_path)</p></td>
+<td><p>Load a template tree from a JSON file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.query.html#ansys.dynamicreporting.core.serverless.adr.ADR.query" title="ansys.dynamicreporting.core.serverless.adr.ADR.query"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.query</span></code></a>(query_type, *[, query])</p></td>
+<td><p>Run an ADR query against sessions, datasets, items, or templates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.render_report.html#ansys.dynamicreporting.core.serverless.adr.ADR.render_report" title="ansys.dynamicreporting.core.serverless.adr.ADR.render_report"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.render_report</span></code></a>(*[, context, item_filter])</p></td>
+<td><p>Render a report as an HTML string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf.html#ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf" title="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.render_report_as_pdf</span></code></a>(*[, context, ...])</p></td>
+<td><p>Render a report as a PDF byte stream.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx.html#ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx" title="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.render_report_as_pptx</span></code></a>(*[, context, ...])</p></td>
+<td><p>Render a report as a PPTX byte stream.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.restore_database.html#ansys.dynamicreporting.core.serverless.adr.ADR.restore_database" title="ansys.dynamicreporting.core.serverless.adr.ADR.restore_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.restore_database</span></code></a>(input_file, *[, database])</p></td>
+<td><p>Restore a database from a JSON (or JSON.gz) dump file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.set_default_dataset" title="ansys.dynamicreporting.core.serverless.adr.ADR.set_default_dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.set_default_dataset</span></code></a>(dataset)</p></td>
+<td><p>Convenience method for setting <a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.dataset.html#ansys.dynamicreporting.core.serverless.adr.ADR.dataset" title="ansys.dynamicreporting.core.serverless.adr.ADR.dataset"><code class="xref py py-attr docutils literal notranslate"><span class="pre">dataset</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.set_default_session" title="ansys.dynamicreporting.core.serverless.adr.ADR.set_default_session"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.set_default_session</span></code></a>(session)</p></td>
+<td><p>Convenience method for setting <a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.session.html#ansys.dynamicreporting.core.serverless.adr.ADR.session" title="ansys.dynamicreporting.core.serverless.adr.ADR.session"><code class="xref py py-attr docutils literal notranslate"><span class="pre">session</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.setup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.setup</span></code></a>([collect_static])</p></td>
+<td><p>Configure Django and perform ADR initialization.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Attributes</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation.html#ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation" title="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.ansys_installation</span></code></a></p></td>
+<td><p>Absolute path to the resolved Ansys/Nexus installation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version.html#ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version" title="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.ansys_version</span></code></a></p></td>
+<td><p>Detected or configured Ansys version.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.dataset.html#ansys.dynamicreporting.core.serverless.adr.ADR.dataset" title="ansys.dynamicreporting.core.serverless.adr.ADR.dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.dataset</span></code></a></p></td>
+<td><p>Default <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code> associated with this ADR instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.db_directory.html#ansys.dynamicreporting.core.serverless.adr.ADR.db_directory" title="ansys.dynamicreporting.core.serverless.adr.ADR.db_directory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.db_directory</span></code></a></p></td>
+<td><p>Directory where the primary database resides.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.is_setup.html#ansys.dynamicreporting.core.serverless.adr.ADR.is_setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.is_setup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.is_setup</span></code></a></p></td>
+<td><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.setup"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setup()</span></code></a> has been successfully completed.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.media_directory.html#ansys.dynamicreporting.core.serverless.adr.ADR.media_directory" title="ansys.dynamicreporting.core.serverless.adr.ADR.media_directory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.media_directory</span></code></a></p></td>
+<td><p>Directory where media files (uploads) are stored.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.media_url.html#ansys.dynamicreporting.core.serverless.adr.ADR.media_url" title="ansys.dynamicreporting.core.serverless.adr.ADR.media_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.media_url</span></code></a></p></td>
+<td><p>Relative URL prefix used for media files.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.session.html#ansys.dynamicreporting.core.serverless.adr.ADR.session" title="ansys.dynamicreporting.core.serverless.adr.ADR.session"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.session</span></code></a></p></td>
+<td><p>Default <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code> associated with this ADR instance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.session_guid.html#ansys.dynamicreporting.core.serverless.adr.ADR.session_guid" title="ansys.dynamicreporting.core.serverless.adr.ADR.session_guid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.session_guid</span></code></a></p></td>
+<td><p>GUID of the default <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.static_directory" title="ansys.dynamicreporting.core.serverless.adr.ADR.static_directory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.static_directory</span></code></a></p></td>
+<td><p>Directory where static files are collected.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.static_url" title="ansys.dynamicreporting.core.serverless.adr.ADR.static_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR.static_url</span></code></a></p></td>
+<td><p>Relative URL prefix used for static files.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ansys_installation</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation" title="Link to this definition">#</a></dt>
+<dd><p>Absolute path to the resolved Ansys/Nexus installation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ansys_version</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version" title="Link to this definition">#</a></dt>
+<dd><p>Detected or configured Ansys version.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.backup_database">
+<span class="sig-name descname"><span class="pre">backup_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_primary_keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.backup_database" title="Link to this definition">#</a></dt>
+<dd><p>Create a JSON (optionally gzipped) backup of an ADR database.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>output_directory</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code>, default: “.”</span></dt><dd><p>Directory in which to place the backup file.</p>
+</dd>
+<dt><strong>database</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “default”</span></dt><dd><p>ADR database alias to back up.</p>
+</dd>
+<dt><strong>compress</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, write a <code class="docutils literal notranslate"><span class="pre">.json.gz</span></code> file instead of plain JSON.</p>
+</dd>
+<dt><strong>ignore_primary_keys</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, use <code class="docutils literal notranslate"><span class="pre">--natural-primary</span></code> to ignore primary key
+values and rely on natural keys instead.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If in-memory mode is active, the target DB is not configured,
+the output directory is invalid, or the backup command fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.close" title="Link to this definition">#</a></dt>
+<dd><p>Close DB connections and clean up any temporary directories.</p>
+<p>This is safe to call multiple times and is typically used when
+tearing down an ADR instance at process exit or the end of a test.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects">
+<span class="sig-name descname"><span class="pre">copy_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html#ansys.dynamicreporting.core.serverless.item.Session" title="ansys.dynamicreporting.core.serverless.item.Session"><span class="pre">Session</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html#ansys.dynamicreporting.core.serverless.item.Dataset" title="ansys.dynamicreporting.core.serverless.item.Dataset"><span class="pre">Dataset</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File.type" title="ansys.dynamicreporting.core.serverless.item.File.type"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><span class="pre">Item</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File.type" title="ansys.dynamicreporting.core.serverless.item.File.type"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html#ansys.dynamicreporting.core.serverless.template.Template" title="ansys.dynamicreporting.core.serverless.template.Template"><span class="pre">Template</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_media_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects" title="Link to this definition">#</a></dt>
+<dd><p>Copy ADR objects (and associated media) between databases.</p>
+<p>This method:</p>
+<ul class="simple">
+<li><p>Queries objects of the given type from the <strong>source</strong> database
+(currently hard-coded to <code class="docutils literal notranslate"><span class="pre">&quot;default&quot;</span></code>).</p></li>
+<li><p>For <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> objects, ensures their <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code> and
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code> are also present in the target database, creating
+them as needed.</p></li>
+<li><p>For <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> objects, only copies root templates
+(children are copied recursively).</p></li>
+<li><p>Copies media files to a target media directory, optionally
+rebuilding 3D geometry files.</p></li>
+</ul>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>object_type</strong><span class="classifier">type</span></dt><dd><p>One of <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code>
+subclass, or <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code>.</p>
+</dd>
+<dt><strong>target_database</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a></span></dt><dd><p>Django database alias to copy into.</p>
+</dd>
+<dt><strong>query</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “”</span></dt><dd><p>ADR query string used to select objects from the source DB.</p>
+</dd>
+<dt><strong>target_media_dir</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code>, default: “”</span></dt><dd><p>Target directory for media files, required when copying items
+with associated files and the target database is not SQLite.</p>
+</dd>
+<dt><strong>test</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, do not actually write anything; just log and
+return the count of objects that would be copied.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a></dt><dd><p>Number of objects copied (or that would be copied in test mode).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If misconfigured (e.g. missing DB aliases, invalid media
+directory, non-top-level templates, or copy errors).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.create_item">
+<span class="sig-name descname"><span class="pre">create_item</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File.type" title="ansys.dynamicreporting.core.serverless.item.File.type"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><span class="pre">Item</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><span class="pre">Item</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.create_item" title="Link to this definition">#</a></dt>
+<dd><p>Create and persist a new <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> of the given type.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>item_type</strong><span class="classifier">type[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Item</span></code>]</span></dt><dd><p>Concrete <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> subclass (e.g. <code class="docutils literal notranslate"><span class="pre">String</span></code>, <code class="docutils literal notranslate"><span class="pre">HTML</span></code>).</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Field values to use when constructing the new item.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Item</span></code></dt><dd><p>The newly created item instance.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TypeError</span></code></a></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">item_type</span></code> is not a subclass of <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code>.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.create_objects">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html#ansys.dynamicreporting.core.serverless.base.ObjectSet" title="ansys.dynamicreporting.core.serverless.base.ObjectSet"><span class="pre">ObjectSet</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.create_objects" title="Link to this definition">#</a></dt>
+<dd><p>Persist multiple ADR objects, returning the count of saved objects.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>objects</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">ObjectSet</span></code></span></dt><dd><p>Iterable of ADR model instances to save.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments passed to each object’s <code class="docutils literal notranslate"><span class="pre">save</span></code>
+method (for example, <code class="docutils literal notranslate"><span class="pre">using=&quot;remote&quot;</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a></dt><dd><p>Number of objects successfully saved.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">objects</span></code> is not iterable.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.create_template">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_template</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">template_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File.type" title="ansys.dynamicreporting.core.serverless.item.File.type"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html#ansys.dynamicreporting.core.serverless.template.Template" title="ansys.dynamicreporting.core.serverless.template.Template"><span class="pre">Template</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html#ansys.dynamicreporting.core.serverless.template.Template" title="ansys.dynamicreporting.core.serverless.template.Template"><span class="pre">Template</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.create_template" title="Link to this definition">#</a></dt>
+<dd><p>Create and persist a new <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> of the given type.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>template_type</strong><span class="classifier">type[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Template</span></code>]</span></dt><dd><p>Concrete <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> subclass (e.g. <code class="docutils literal notranslate"><span class="pre">BasicLayout</span></code>).</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Attributes for template creation. May include <code class="docutils literal notranslate"><span class="pre">parent</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Template</span></code></dt><dd><p>The newly created template instance.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TypeError</span></code></a></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">template_type</span></code> is not a subclass of <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code>.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.dataset">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">dataset</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html#ansys.dynamicreporting.core.serverless.item.Dataset" title="ansys.dynamicreporting.core.serverless.item.Dataset"><span class="pre">Dataset</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.dataset" title="Link to this definition">#</a></dt>
+<dd><p>Default <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code> associated with this ADR instance.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.db_directory">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">db_directory</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.db_directory" title="Link to this definition">#</a></dt>
+<dd><p>Directory where the primary database resides.</p>
+<p>If <code class="xref py py-attr docutils literal notranslate"><span class="pre">_db_directory</span></code> is not set, this attempts to infer the
+directory from the SQLite DB path associated with the default
+database alias.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ensure_setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup" title="Link to this definition">#</a></dt>
+<dd><p>Verify that <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-class docutils literal notranslate"><span class="pre">ADR</span></code></a> has been instantiated and <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.setup"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setup()</span></code></a> called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></dt><dd><p>If no instance exists or setup has not been completed.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html">
+<span class="sig-name descname"><span class="pre">export_report_as_html</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'index.html'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dark_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html" title="Link to this definition">#</a></dt>
+<dd><p>Export a report as a standalone HTML file (plus assets).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>output_directory</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code></span></dt><dd><p>Directory where the report will be exported. It is created if
+it does not exist.</p>
+</dd>
+<dt><strong>filename</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “index.html”</span></dt><dd><p>Name of the HTML file within <code class="docutils literal notranslate"><span class="pre">output_directory</span></code>.</p>
+</dd>
+<dt><strong>dark_mode</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the report is rendered using a dark theme (where
+supported).</p>
+</dd>
+<dt><strong>context</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Context to pass to the report template.</p>
+</dd>
+<dt><strong>item_filter</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>ADR filter applied to items in the report.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments to pass to fetch the report template. Eg: <cite>guid</cite>, <cite>name</cite>, etc.
+At least one keyword argument must be provided to fetch the report.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code></dt><dd><p>Path to the generated HTML file.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided or if the static directory is not configured.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImproperlyConfiguredError</span></code></dt><dd><p>If the static directory is not configured or if the output directory cannot be created.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span>
+<span class="go">            ansys_installation=r&quot;C:\Program Files\ANSYS Inc\v252&quot;,</span>
+<span class="go">            db_directory=r&quot;C:\DBs\docex&quot;,</span>
+<span class="go">            media_directory=r&quot;C:\DBs\docex\media&quot;,</span>
+<span class="go">            static_directory=r&quot;C:\static&quot;</span>
+<span class="go">        )</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">collect_static</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">output_path</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">export_report_as_html</span><span class="p">(</span>
+<span class="go">            Path.cwd() / &quot;htmlex&quot;,</span>
+<span class="go">            context={},</span>
+<span class="go">            item_filter=&quot;A|i_tags|cont|dp=dp227;&quot;,</span>
+<span class="go">            name=&quot;Serverless Simulation Report&quot;,</span>
+<span class="go">        )</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf">
+<span class="sig-name descname"><span class="pre">export_report_as_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf" title="Link to this definition">#</a></dt>
+<dd><p>Render a PDF report and write it to disk.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>filename</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Target PDF filename. If omitted, use <code class="docutils literal notranslate"><span class="pre">&quot;&lt;guid&gt;.pdf&quot;</span></code> based
+on the template GUID.</p>
+</dd>
+<dt><strong>context</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Context to pass to the report template.</p>
+</dd>
+<dt><strong>item_filter</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>ADR filter applied to items in the report.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments to pass to the report template. Eg: <cite>guid</cite>, <cite>name</cite>, etc.
+At least one keyword argument must be provided to fetch the report.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">None</span></code></a></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided or if the report rendering fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v252&quot;</span><span class="p">,</span> <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\DBs\docex&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">export_report_as_pdf</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;report.pdf&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">,</span> <span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp=dp227;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx">
+<span class="sig-name descname"><span class="pre">export_report_as_pptx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx" title="Link to this definition">#</a></dt>
+<dd><p>Render a PPTX report and write it to disk.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">filename</span></code> is not provided, the template’s <code class="docutils literal notranslate"><span class="pre">output_pptx</span></code>
+property is used, or a fallback based on the template GUID.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>filename</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Target PPTX filename. If omitted, use the template’s
+<code class="docutils literal notranslate"><span class="pre">output_pptx</span></code> property or <code class="docutils literal notranslate"><span class="pre">&quot;&lt;guid&gt;.pptx&quot;</span></code>.</p>
+</dd>
+<dt><strong>context</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Context to pass to the report template.</p>
+</dd>
+<dt><strong>item_filter</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>ADR filter applied to items in the report.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments to pass to the report template. Eg: <cite>guid</cite>, <cite>name</cite>, etc. At least one
+keyword argument must be provided to fetch the report.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">None</span></code></a></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided or if the template is not of type PPTXLayout or
+if the report rendering fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v252&quot;</span><span class="p">,</span> <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\DBs\docex&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">export_report_as_pptx</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">,</span> <span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp=dp227;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_database_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raise_exception</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config" title="Link to this definition">#</a></dt>
+<dd><p>Return the Django <code class="docutils literal notranslate"><span class="pre">DATABASES</span></code> configuration, if available.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>raise_exception</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, raise <code class="xref py py-class docutils literal notranslate"><span class="pre">ImproperlyConfiguredError</span></code> when
+settings are not yet configured.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a> or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">None</span></code></a></dt><dd><p>The <code class="docutils literal notranslate"><span class="pre">DATABASES</span></code> mapping, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if settings are not
+configured and <code class="docutils literal notranslate"><span class="pre">raise_exception</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImproperlyConfiguredError</span></code></dt><dd><p>If Django settings are not configured and
+<code class="docutils literal notranslate"><span class="pre">raise_exception=True</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.get_instance">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_instance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><span class="pre">ADR</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_instance" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the configured ADR singleton instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADR</span></code></a></dt><dd><p>The existing <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-class docutils literal notranslate"><span class="pre">ADR</span></code></a> instance.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></dt><dd><p>If no instance has been created yet.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports">
+<span class="sig-name descname"><span class="pre">get_list_reports</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'name'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html#ansys.dynamicreporting.core.serverless.base.ObjectSet" title="ansys.dynamicreporting.core.serverless.base.ObjectSet"><span class="pre">ObjectSet</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports" title="Link to this definition">#</a></dt>
+<dd><p>Return a list of reports or just their names.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>r_type</strong><span class="classifier">{“name”, “report”, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">None</span></code></a>}, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">&quot;name&quot;</span></code>, return a list of report names. If <code class="docutils literal notranslate"><span class="pre">&quot;report&quot;</span></code> or
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, return an <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectSet</span></code> of templates.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ObjectSet</span></code> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a></dt><dd><p>Either templates or report names.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">r_type</span></code> is not one of the supported options.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.get_report">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html#ansys.dynamicreporting.core.serverless.template.Template" title="ansys.dynamicreporting.core.serverless.template.Template"><span class="pre">Template</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_report" title="Link to this definition">#</a></dt>
+<dd><p>Fetch a root report template (no parent) using template fields.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Filter arguments (for example, <code class="docutils literal notranslate"><span class="pre">name=&quot;Report</span> <span class="pre">Name&quot;</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Template</span></code></dt><dd><p>The matching root template.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no kwargs are provided or the template cannot be found.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.get_reports">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_reports</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html#ansys.dynamicreporting.core.serverless.base.ObjectSet" title="ansys.dynamicreporting.core.serverless.base.ObjectSet"><span class="pre">ObjectSet</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_reports" title="Link to this definition">#</a></dt>
+<dd><p>Return all root report templates, optionally as a values-list.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>fields</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>If provided, use <code class="docutils literal notranslate"><span class="pre">values_list</span></code> on the underlying queryset
+with these fields.</p>
+</dd>
+<dt><strong>flat</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, default: <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">False</span></code></a></span></dt><dd><p>Passed through to <code class="docutils literal notranslate"><span class="pre">values_list</span></code>. Typically used when a
+single field name is provided in <code class="docutils literal notranslate"><span class="pre">fields</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ObjectSet</span></code> or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a></dt><dd><p>Either an <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectSet</span></code> of templates or a list of
+field tuples/values.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.is_setup">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_setup</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.is_setup" title="Link to this definition">#</a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if <a class="reference internal" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup" title="ansys.dynamicreporting.core.serverless.adr.ADR.setup"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setup()</span></code></a> has been successfully completed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates">
+<span class="sig-name descname"><span class="pre">load_templates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">templates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.load_templates" title="Link to this definition">#</a></dt>
+<dd><p>Load a template tree from a Python dictionary.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>templates</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a></span></dt><dd><p>A mapping produced by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Template.to_dict()</span></code>, typically by
+reading JSON and decoding it.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no root (parent-less) template can be found in the mapping.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file">
+<span class="sig-name descname"><span class="pre">load_templates_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file" title="Link to this definition">#</a></dt>
+<dd><p>Load a template tree from a JSON file.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>file_path</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code></span></dt><dd><p>Path to the JSON file containing templates exported via
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">Template.to_json()</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#FileNotFoundError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FileNotFoundError</span></code></a></dt><dd><p>If the file does not exist.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.media_directory">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">media_directory</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.media_directory" title="Link to this definition">#</a></dt>
+<dd><p>Directory where media files (uploads) are stored.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.media_url">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">media_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.media_url" title="Link to this definition">#</a></dt>
+<dd><p>Relative URL prefix used for media files.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.query">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html#ansys.dynamicreporting.core.serverless.item.Session" title="ansys.dynamicreporting.core.serverless.item.Session"><span class="pre">Session</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html#ansys.dynamicreporting.core.serverless.item.Dataset" title="ansys.dynamicreporting.core.serverless.item.Dataset"><span class="pre">Dataset</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File.type" title="ansys.dynamicreporting.core.serverless.item.File.type"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><span class="pre">Item</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File.type" title="ansys.dynamicreporting.core.serverless.item.File.type"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html#ansys.dynamicreporting.core.serverless.template.Template" title="ansys.dynamicreporting.core.serverless.template.Template"><span class="pre">Template</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html#ansys.dynamicreporting.core.serverless.base.ObjectSet" title="ansys.dynamicreporting.core.serverless.base.ObjectSet"><span class="pre">ObjectSet</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.query" title="Link to this definition">#</a></dt>
+<dd><p>Run an ADR query against sessions, datasets, items, or templates.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>query_type</strong><span class="classifier">type</span></dt><dd><p>One of <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code>
+subclass, or <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code>.</p>
+</dd>
+<dt><strong>query</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “”</span></dt><dd><p>ADR query string (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;A|i_tags|cont|dp=dp227;&quot;</span></code>).</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments forwarded to <code class="docutils literal notranslate"><span class="pre">.find</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ObjectSet</span></code></dt><dd><p>Query results wrapped in <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectSet</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TypeError</span></code></a></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">query_type</span></code> is not a supported ADR model type.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.render_report">
+<span class="sig-name descname"><span class="pre">render_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.render_report" title="Link to this definition">#</a></dt>
+<dd><p>Render a report as an HTML string.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>context</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Context to pass to the report template.</p>
+</dd>
+<dt><strong>item_filter</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>ADR filter applied to items in the report.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments to pass to the report template. Eg: <cite>guid</cite>, <cite>name</cite>, etc.
+At least one keyword argument must be provided to fetch the report.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a></dt><dd><p>Rendered HTML content (media type <code class="docutils literal notranslate"><span class="pre">text/html</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided or if the report rendering fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v252&quot;</span><span class="p">,</span> <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\DBs\docex&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">html_content</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">render_report</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">,</span> <span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp=dp227;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;report.html&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">html_content</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf">
+<span class="sig-name descname"><span class="pre">render_report_as_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf" title="Link to this definition">#</a></dt>
+<dd><p>Render a report as a PDF byte stream.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>context</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Context to pass to the report template.</p>
+</dd>
+<dt><strong>item_filter</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>ADR filter applied to items in the report.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments to pass to the report template. Eg: <cite>guid</cite>, <cite>name</cite>, etc.
+At least one keyword argument must be provided to fetch the report.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a></dt><dd><p>PDF document bytes (media type <code class="docutils literal notranslate"><span class="pre">application/pdf</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided or if the report rendering fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v252&quot;</span><span class="p">,</span> <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\DBs\docex&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pdf_stream</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">render_report_as_pdf</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;report.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pdf_stream</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx">
+<span class="sig-name descname"><span class="pre">render_report_as_pptx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx" title="Link to this definition">#</a></dt>
+<dd><p>Render a report as a PPTX byte stream.</p>
+<p>Only templates of type <code class="xref py py-class docutils literal notranslate"><span class="pre">PPTXLayout</span></code> are supported.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>context</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>Context to pass to the report template.</p>
+</dd>
+<dt><strong>item_filter</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>ADR filter applied to items in the report.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code></span></dt><dd><p>Additional keyword arguments to pass to the report template. Eg: <cite>guid</cite>, <cite>name</cite>, etc. At least one
+keyword argument must be provided to fetch the report.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bytes</span></code></a></dt><dd><p>PPTX document bytes
+(media type
+<code class="docutils literal notranslate"><span class="pre">application/vnd.openxmlformats-officedocument.presentationml.presentation</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If no keyword arguments are provided or if the template is not of type PPTXLayout or
+if the report rendering fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">ansys.dynamicreporting.core.serverless</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADR</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span> <span class="o">=</span> <span class="n">ADR</span><span class="p">(</span><span class="n">ansys_installation</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\Program Files\ANSYS Inc\v252&quot;</span><span class="p">,</span> <span class="n">db_directory</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;C:\DBs\docex&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adr</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pptx_stream</span> <span class="o">=</span> <span class="n">adr</span><span class="o">.</span><span class="n">render_report_as_pptx</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Serverless Simulation Report&quot;</span><span class="p">,</span> <span class="n">item_filter</span><span class="o">=</span><span class="s2">&quot;A|i_tags|cont|dp=dp227;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;report.pptx&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pptx_stream</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.restore_database">
+<span class="sig-name descname"><span class="pre">restore_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.restore_database" title="Link to this definition">#</a></dt>
+<dd><p>Restore a database from a JSON (or JSON.gz) dump file.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>input_file</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">Path</span></code></span></dt><dd><p>Path to the dump file.</p>
+</dd>
+<dt><strong>database</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, default: “default”</span></dt><dd><p>Django database alias to restore into.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ADRException</span></code></dt><dd><p>If the target DB is not configured, the file does not exist,
+or the load command fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.session">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">session</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html#ansys.dynamicreporting.core.serverless.item.Session" title="ansys.dynamicreporting.core.serverless.item.Session"><span class="pre">Session</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.session" title="Link to this definition">#</a></dt>
+<dd><p>Default <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code> associated with this ADR instance.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.session_guid">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">session_guid</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/uuid.html#uuid.UUID" title="(in Python v3.14)"><span class="pre">UUID</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.session_guid" title="Link to this definition">#</a></dt>
+<dd><p>GUID of the default <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.set_default_dataset">
+<span class="sig-name descname"><span class="pre">set_default_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html#ansys.dynamicreporting.core.serverless.item.Dataset" title="ansys.dynamicreporting.core.serverless.item.Dataset"><span class="pre">Dataset</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.set_default_dataset" title="Link to this definition">#</a></dt>
+<dd><p>Convenience method for setting <a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.dataset.html#ansys.dynamicreporting.core.serverless.adr.ADR.dataset" title="ansys.dynamicreporting.core.serverless.adr.ADR.dataset"><code class="xref py py-attr docutils literal notranslate"><span class="pre">dataset</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.set_default_session">
+<span class="sig-name descname"><span class="pre">set_default_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html#ansys.dynamicreporting.core.serverless.item.Session" title="ansys.dynamicreporting.core.serverless.item.Session"><span class="pre">Session</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.set_default_session" title="Link to this definition">#</a></dt>
+<dd><p>Convenience method for setting <a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.session.html#ansys.dynamicreporting.core.serverless.adr.ADR.session" title="ansys.dynamicreporting.core.serverless.adr.ADR.session"><code class="xref py py-attr docutils literal notranslate"><span class="pre">session</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collect_static</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup" title="Link to this definition">#</a></dt>
+<dd><p>Configure Django and perform ADR initialization.</p>
+<p>This method:</p>
+<ul class="simple">
+<li><p>Optionally locates and imports the <code class="docutils literal notranslate"><span class="pre">enve</span></code> module for geometry.</p></li>
+<li><p>Adds the Nexus Django directory to <code class="docutils literal notranslate"><span class="pre">sys.path</span></code> and imports
+the serverless settings module.</p></li>
+<li><p>Builds an overrides dict and calls <code class="xref py py-func docutils literal notranslate"><span class="pre">django.conf.settings.configure()</span></code>.</p></li>
+<li><p>Runs Django migrations for all configured databases.</p></li>
+<li><p>Runs geometry migration/update checks.</p></li>
+<li><p>Optionally collects static files to <code class="xref py py-attr docutils literal notranslate"><span class="pre">_static_directory</span></code>.</p></li>
+<li><p>Creates a default <code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code>.</p></li>
+</ul>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>collect_static</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bltin-boolean-values" title="(in Python v3.14)"><span class="xref std std-ref">bool</span></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">optional</span></code></span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, run <code class="docutils literal notranslate"><span class="pre">collectstatic</span></code> into <code class="xref py py-attr docutils literal notranslate"><span class="pre">_static_directory</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ImportError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImportError</span></code></a></dt><dd><p>If the Nexus Django settings could not be imported.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">DatabaseMigrationError</span></code></dt><dd><p>If migrations fail on any database.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">GeometryMigrationError</span></code></dt><dd><p>If geometry update checks fail.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImproperlyConfiguredError</span></code></dt><dd><p>If settings or required paths are invalid.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">StaticFilesCollectionError</span></code></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">collectstatic</span></code> fails.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.static_directory">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">static_directory</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.static_directory" title="Link to this definition">#</a></dt>
+<dd><p>Directory where static files are collected.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.adr.ADR.static_url">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">static_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.adr.ADR.static_url" title="Link to this definition">#</a></dt>
+<dd><p>Relative URL prefix used for static files.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR"><code class="docutils literal notranslate"><span class="pre">ADR</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.ansys_installation"><code class="docutils literal notranslate"><span class="pre">ADR.ansys_installation</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.ansys_version"><code class="docutils literal notranslate"><span class="pre">ADR.ansys_version</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.backup_database"><code class="docutils literal notranslate"><span class="pre">ADR.backup_database()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.close"><code class="docutils literal notranslate"><span class="pre">ADR.close()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.copy_objects"><code class="docutils literal notranslate"><span class="pre">ADR.copy_objects()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.create_item"><code class="docutils literal notranslate"><span class="pre">ADR.create_item()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.create_objects"><code class="docutils literal notranslate"><span class="pre">ADR.create_objects()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.create_template"><code class="docutils literal notranslate"><span class="pre">ADR.create_template()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.dataset"><code class="docutils literal notranslate"><span class="pre">ADR.dataset</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.db_directory"><code class="docutils literal notranslate"><span class="pre">ADR.db_directory</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.ensure_setup"><code class="docutils literal notranslate"><span class="pre">ADR.ensure_setup()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_html"><code class="docutils literal notranslate"><span class="pre">ADR.export_report_as_html()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pdf"><code class="docutils literal notranslate"><span class="pre">ADR.export_report_as_pdf()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.export_report_as_pptx"><code class="docutils literal notranslate"><span class="pre">ADR.export_report_as_pptx()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_database_config"><code class="docutils literal notranslate"><span class="pre">ADR.get_database_config()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_instance"><code class="docutils literal notranslate"><span class="pre">ADR.get_instance()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_list_reports"><code class="docutils literal notranslate"><span class="pre">ADR.get_list_reports()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_report"><code class="docutils literal notranslate"><span class="pre">ADR.get_report()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.get_reports"><code class="docutils literal notranslate"><span class="pre">ADR.get_reports()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.is_setup"><code class="docutils literal notranslate"><span class="pre">ADR.is_setup</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.load_templates"><code class="docutils literal notranslate"><span class="pre">ADR.load_templates()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.load_templates_from_file"><code class="docutils literal notranslate"><span class="pre">ADR.load_templates_from_file()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.media_directory"><code class="docutils literal notranslate"><span class="pre">ADR.media_directory</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.media_url"><code class="docutils literal notranslate"><span class="pre">ADR.media_url</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.query"><code class="docutils literal notranslate"><span class="pre">ADR.query()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.render_report"><code class="docutils literal notranslate"><span class="pre">ADR.render_report()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pdf"><code class="docutils literal notranslate"><span class="pre">ADR.render_report_as_pdf()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.render_report_as_pptx"><code class="docutils literal notranslate"><span class="pre">ADR.render_report_as_pptx()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.restore_database"><code class="docutils literal notranslate"><span class="pre">ADR.restore_database()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.session"><code class="docutils literal notranslate"><span class="pre">ADR.session</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.session_guid"><code class="docutils literal notranslate"><span class="pre">ADR.session_guid</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.set_default_dataset"><code class="docutils literal notranslate"><span class="pre">ADR.set_default_dataset()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.set_default_session"><code class="docutils literal notranslate"><span class="pre">ADR.set_default_session()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.setup"><code class="docutils literal notranslate"><span class="pre">ADR.setup()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.static_directory"><code class="docutils literal notranslate"><span class="pre">ADR.static_directory</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.adr.ADR.static_url"><code class="docutils literal notranslate"><span class="pre">ADR.static_url</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="None">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.6.4. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,76 @@
+﻿Session
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: Session
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Session.add_tag
+      
+      
+      Session.as_dict
+      
+      
+      Session.create
+      
+      
+      Session.delete
+      
+      
+      Session.filter
+      
+      
+      Session.find
+      
+      
+      Session.get
+      
+      
+      Session.get_tags
+      
+      
+      Session.reinit
+      
+      
+      Session.rem_tag
+      
+      
+      Session.remove_tag
+      
+      
+      Session.save
+      
+      
+      Session.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Session.application
+      Session.db
+      Session.hostname
+      Session.platform
+      Session.saved
+      Session.tags
+      Session.version
+      Session.date
+      Session.guid
+   
+   

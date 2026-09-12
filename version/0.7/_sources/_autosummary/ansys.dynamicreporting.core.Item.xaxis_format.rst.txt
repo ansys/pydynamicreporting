@@ -1,0 +1,6 @@
+xaxis\_format
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.xaxis_format

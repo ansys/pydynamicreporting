@@ -1,0 +1,6 @@
+export\_json
+============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.export_json

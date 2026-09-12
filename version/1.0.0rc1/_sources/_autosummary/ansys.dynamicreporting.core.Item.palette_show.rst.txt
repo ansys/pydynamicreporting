@@ -1,0 +1,6 @@
+palette\_show
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.palette_show

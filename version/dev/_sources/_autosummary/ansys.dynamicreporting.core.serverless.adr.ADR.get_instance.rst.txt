@@ -1,0 +1,6 @@
+get\_instance
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.get_instance

@@ -1,0 +1,6 @@
+load\_templates\_from\_file
+===========================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.load_templates_from_file

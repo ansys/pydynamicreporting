@@ -1,0 +1,198 @@
+﻿BoxLayout
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: BoxLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      BoxLayout.add_filter
+      
+      
+      BoxLayout.add_params
+      
+      
+      BoxLayout.add_properties
+      
+      
+      BoxLayout.add_property
+      
+      
+      BoxLayout.add_sort_fields
+      
+      
+      BoxLayout.add_tag
+      
+      
+      BoxLayout.as_dict
+      
+      
+      BoxLayout.create
+      
+      
+      BoxLayout.delete
+      
+      
+      BoxLayout.filter
+      
+      
+      BoxLayout.find
+      
+      
+      BoxLayout.get
+      
+      
+      BoxLayout.get_children_layout
+      
+      
+      BoxLayout.get_column_count
+      
+      
+      BoxLayout.get_column_widths
+      
+      
+      BoxLayout.get_comments
+      
+      
+      BoxLayout.get_filter
+      
+      
+      BoxLayout.get_filter_mode
+      
+      
+      BoxLayout.get_html
+      
+      
+      BoxLayout.get_params
+      
+      
+      BoxLayout.get_property
+      
+      
+      BoxLayout.get_skip
+      
+      
+      BoxLayout.get_sort_fields
+      
+      
+      BoxLayout.get_sort_selection
+      
+      
+      BoxLayout.get_tags
+      
+      
+      BoxLayout.get_transpose
+      
+      
+      BoxLayout.reinit
+      
+      
+      BoxLayout.rem_tag
+      
+      
+      BoxLayout.remove_tag
+      
+      
+      BoxLayout.render
+      
+      
+      BoxLayout.render_pdf
+      
+      
+      BoxLayout.reorder_child
+      
+      
+      BoxLayout.reorder_children
+      
+      
+      BoxLayout.save
+      
+      
+      BoxLayout.set_child_clip
+      
+      
+      BoxLayout.set_child_position
+      
+      
+      BoxLayout.set_column_count
+      
+      
+      BoxLayout.set_column_widths
+      
+      
+      BoxLayout.set_comments
+      
+      
+      BoxLayout.set_filter
+      
+      
+      BoxLayout.set_filter_mode
+      
+      
+      BoxLayout.set_html
+      
+      
+      BoxLayout.set_params
+      
+      
+      BoxLayout.set_property
+      
+      
+      BoxLayout.set_skip
+      
+      
+      BoxLayout.set_sort_fields
+      
+      
+      BoxLayout.set_sort_selection
+      
+      
+      BoxLayout.set_tags
+      
+      
+      BoxLayout.set_transpose
+      
+      
+      BoxLayout.to_dict
+      
+      
+      BoxLayout.to_json
+      
+      
+      BoxLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      BoxLayout.children_order
+      BoxLayout.db
+      BoxLayout.item_filter
+      BoxLayout.master
+      BoxLayout.name
+      BoxLayout.params
+      BoxLayout.parent
+      BoxLayout.report_type
+      BoxLayout.saved
+      BoxLayout.tags
+      BoxLayout.type
+      BoxLayout.date
+      BoxLayout.children
+      BoxLayout.guid
+   
+   

@@ -1,0 +1,6 @@
+plot\_zaxis\_type
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.plot_zaxis_type

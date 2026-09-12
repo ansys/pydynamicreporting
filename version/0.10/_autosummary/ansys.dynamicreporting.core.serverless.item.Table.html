@@ -1,0 +1,1800 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Table &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=9e79609d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/ansys-sphinx-theme.css?v=9e79609d" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="../_static/documentation_options.js?v=3f37fbb9"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_autosummary/ansys.dynamicreporting.core.serverless.item.Table';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="../_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="add_tag" href="ansys.dynamicreporting.core.serverless.item.Table.add_tag.html" />
+    <link rel="prev" title="guid" href="ansys.dynamicreporting.core.serverless.item.HTML.guid.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.10" />
+  <meta property="og:site_name" content="PyAnsys" />
+  <meta name="physics" content="dynamicreporting" />
+  <meta name="physics" content="reporting" />
+  <meta name="physics" content="report" />
+  <meta name="physics" content="adr" />
+  <meta name="physics" content="nexus" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/_autosummary/ansys.dynamicreporting.core.serverless.item.Table.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="../_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav>
+</div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api_docs_serverless.html">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav>
+</div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.adr.ADR.html">ADR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.base.ObjectSet.html">ObjectSet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Session.html">Session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Dataset.html">Dataset</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.String.html">String</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.HTML.html">HTML</a></li>
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Table</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.add_tag.html">add_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.as_dict.html">as_dict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.create.html">create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.delete.html">delete</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.filter.html">filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.find.html">find</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.get.html">get</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.get_tags.html">get_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.reinit.html">reinit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.rem_tag.html">rem_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.remove_tag.html">remove_tag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.render.html">render</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.save.html">save</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.set_tags.html">set_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.align_column.html">align_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.bar_gap.html">bar_gap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.bar_mode.html">bar_mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.col_tags.html">col_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.collbls.html">collbls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.column_maximum.html">column_maximum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.column_minimum.html">column_minimum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.content.html">content</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.dataset.html">dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.db.html">db</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.format.html">format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.format_column.html">format_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.format_row.html">format_row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.height.html">height</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size.html">histogram_bin_size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative.html">histogram_cumulative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized.html">histogram_normalized</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold.html">histogram_threshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.item_justification.html">item_justification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.labels_column.html">labels_column</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.labels_row.html">labels_row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.legend_position.html">legend_position</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_color.html">line_color</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_error_bars.html">line_error_bars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker.html">line_marker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0.html">line_marker_aux0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1.html">line_marker_aux1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2.html">line_marker_aux2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3.html">line_marker_aux3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4.html">line_marker_aux4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5.html">line_marker_aux5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6.html">line_marker_aux6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7.html">line_marker_aux7</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8.html">line_marker_aux8</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux9.html">line_marker_aux9</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_opacity.html">line_marker_opacity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_scale.html">line_marker_scale</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_size.html">line_marker_size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_text.html">line_marker_text</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_style.html">line_style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_width.html">line_width</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.marker_text_rowname.html">marker_text_rowname</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.name.html">name</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.nan_display.html">nan_display</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.palette.html">palette</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.palette_position.html">palette_position</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.palette_range.html">palette_range</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.palette_show.html">palette_show</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.palette_title.html">palette_title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.plot.html">plot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.plot_margins.html">plot_margins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.plot_title.html">plot_title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.plot_xaxis_type.html">plot_xaxis_type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.plot_yaxis_type.html">plot_yaxis_type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.plot_zaxis_type.html">plot_zaxis_type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.row_tags.html">row_tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.rowlbls.html">rowlbls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.saved.html">saved</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.sequence.html">sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.session.html">session</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.show_border.html">show_border</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.show_legend.html">show_legend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.show_legend_border.html">show_legend_border</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.source.html">source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.stacked.html">stacked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_bordered.html">table_bordered</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_cond_format.html">table_cond_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_condensed.html">table_condensed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_default_col_labels.html">table_default_col_labels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_page.html">table_page</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_pagemenu.html">table_pagemenu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_scrollx.html">table_scrollx</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_scrolly.html">table_scrolly</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_search.html">table_search</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_sort.html">table_sort</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_title.html">table_title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.table_wrap_content.html">table_wrap_content</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.tags.html">tags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.title.html">title</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.type.html">type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.width.html">width</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.xaxis.html">xaxis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.xaxis_format.html">xaxis_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.xaxis_tick_delta.html">xaxis_tick_delta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.xrange.html">xrange</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.xtitle.html">xtitle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.yaxis.html">yaxis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.yaxis_format.html">yaxis_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.yaxis_tick_delta.html">yaxis_tick_delta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.yrange.html">yrange</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.ytitle.html">ytitle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.zaxis.html">zaxis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.zaxis_format.html">zaxis_format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.zaxis_tick_delta.html">zaxis_tick_delta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.zrange.html">zrange</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.ztitle.html">ztitle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.date.html">date</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.guid.html">guid</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Tree.html">Tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.File.html">File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Image.html">Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Animation.html">Animation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Scene.html">Scene</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.Template.html">Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.BasicLayout.html">BasicLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PanelLayout.html">PanelLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.BoxLayout.html">BoxLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TabLayout.html">TabLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.CarouselLayout.html">CarouselLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.SliderLayout.html">SliderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.FooterLayout.html">FooterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.HeaderLayout.html">HeaderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.IteratorLayout.html">IteratorLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TagPropertyLayout.html">TagPropertyLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TOCLayout.html">TOCLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.ReportLinkLayout.html">ReportLinkLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PPTXLayout.html">PPTXLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout.html">PPTXSlideLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.DataFilterLayout.html">DataFilterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.UserDefinedLayout.html">UserDefinedLayout</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeGenerator.html">TableMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableReduceGenerator.html">TableReduceGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator.html">TableMergeRCFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator.html">TableMergeValueFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableMapGenerator.html">TableMapGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator.html">TableSortFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.html">TreeMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator.html">SQLQueryGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator.html">ItemsComparisonGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.StatisticalGenerator.html">StatisticalGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ansys.dynamicreporting.core.serverless.template.IteratorGenerator.html">IteratorGenerator</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="../index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a href="../api_docs_serverless.html" class="nav-link">Serverless ADR API Reference</a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Table</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="id1">
+<h1>Table<a class="headerlink" href="#id1" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ansys.dynamicreporting.core.serverless.item.</span></span><span class="sig-name descname"><span class="pre">Table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code></a></p>
+<p>Item representing a 2D table backed by a NumPy array.</p>
+<p>The array is stored in the ORM <code class="docutils literal notranslate"><span class="pre">payloaddata</span></code> field together with
+additional payload properties such as row and column labels.</p>
+<p class="rubric">Methods</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.add_tag.html#ansys.dynamicreporting.core.serverless.item.Table.add_tag" title="ansys.dynamicreporting.core.serverless.item.Table.add_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.add_tag</span></code></a>(tag[, value])</p></td>
+<td><p>Add or update a single tag.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.as_dict.html#ansys.dynamicreporting.core.serverless.item.Table.as_dict" title="ansys.dynamicreporting.core.serverless.item.Table.as_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.as_dict</span></code></a>([recursive])</p></td>
+<td><p>Serialize the model into a plain dictionary.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.create.html#ansys.dynamicreporting.core.serverless.item.Table.create" title="ansys.dynamicreporting.core.serverless.item.Table.create"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.create</span></code></a>(**kwargs)</p></td>
+<td><p>Factory-style creation that dispatches to the correct subclass.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.delete.html#ansys.dynamicreporting.core.serverless.item.Table.delete" title="ansys.dynamicreporting.core.serverless.item.Table.delete"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.delete</span></code></a>()</p></td>
+<td><p>Delete this object from the database.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.filter.html#ansys.dynamicreporting.core.serverless.item.Table.filter" title="ansys.dynamicreporting.core.serverless.item.Table.filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.filter</span></code></a>(**kwargs)</p></td>
+<td><p>Return a collection of items, scoped by subclass type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.find.html#ansys.dynamicreporting.core.serverless.item.Table.find" title="ansys.dynamicreporting.core.serverless.item.Table.find"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.find</span></code></a>([query])</p></td>
+<td><p>Search for items using an ADR query string.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.get.html#ansys.dynamicreporting.core.serverless.item.Table.get" title="ansys.dynamicreporting.core.serverless.item.Table.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.get</span></code></a>(**kwargs)</p></td>
+<td><p>Retrieve a single item instance, scoped by subclass type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.get_tags.html#ansys.dynamicreporting.core.serverless.item.Table.get_tags" title="ansys.dynamicreporting.core.serverless.item.Table.get_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.get_tags</span></code></a>()</p></td>
+<td><p>Return the raw tag string stored on this object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.reinit.html#ansys.dynamicreporting.core.serverless.item.Table.reinit" title="ansys.dynamicreporting.core.serverless.item.Table.reinit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.reinit</span></code></a>()</p></td>
+<td><p>Reset the in-memory ORM state for this object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.rem_tag.html#ansys.dynamicreporting.core.serverless.item.Table.rem_tag" title="ansys.dynamicreporting.core.serverless.item.Table.rem_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.rem_tag</span></code></a>(tag)</p></td>
+<td><p>Remove a tag by key, if it exists.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.remove_tag.html#ansys.dynamicreporting.core.serverless.item.Table.remove_tag" title="ansys.dynamicreporting.core.serverless.item.Table.remove_tag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.remove_tag</span></code></a>(tag)</p></td>
+<td><p>Alias for <a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.rem_tag.html#ansys.dynamicreporting.core.serverless.item.Table.rem_tag" title="ansys.dynamicreporting.core.serverless.item.Table.rem_tag"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rem_tag()</span></code></a> for backwards compatibility.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.render.html#ansys.dynamicreporting.core.serverless.item.Table.render" title="ansys.dynamicreporting.core.serverless.item.Table.render"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.render</span></code></a>(*[, context, request])</p></td>
+<td><p>Render the item as HTML.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.save" title="ansys.dynamicreporting.core.serverless.item.Table.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.save</span></code></a>(**kwargs)</p></td>
+<td><p>Serialize the table array and payload properties into <code class="docutils literal notranslate"><span class="pre">payloaddata</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.set_tags.html#ansys.dynamicreporting.core.serverless.item.Table.set_tags" title="ansys.dynamicreporting.core.serverless.item.Table.set_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.set_tags</span></code></a>(tag_str)</p></td>
+<td><p>Replace all tags with the given tag string.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Attributes</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.align_column.html#ansys.dynamicreporting.core.serverless.item.Table.align_column" title="ansys.dynamicreporting.core.serverless.item.Table.align_column"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.align_column</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.bar_gap.html#ansys.dynamicreporting.core.serverless.item.Table.bar_gap" title="ansys.dynamicreporting.core.serverless.item.Table.bar_gap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.bar_gap</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.bar_mode.html#ansys.dynamicreporting.core.serverless.item.Table.bar_mode" title="ansys.dynamicreporting.core.serverless.item.Table.bar_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.bar_mode</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.col_tags.html#ansys.dynamicreporting.core.serverless.item.Table.col_tags" title="ansys.dynamicreporting.core.serverless.item.Table.col_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.col_tags</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.collbls.html#ansys.dynamicreporting.core.serverless.item.Table.collbls" title="ansys.dynamicreporting.core.serverless.item.Table.collbls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.collbls</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.column_maximum.html#ansys.dynamicreporting.core.serverless.item.Table.column_maximum" title="ansys.dynamicreporting.core.serverless.item.Table.column_maximum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.column_maximum</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.column_minimum.html#ansys.dynamicreporting.core.serverless.item.Table.column_minimum" title="ansys.dynamicreporting.core.serverless.item.Table.column_minimum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.column_minimum</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.content.html#ansys.dynamicreporting.core.serverless.item.Table.content" title="ansys.dynamicreporting.core.serverless.item.Table.content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.content</span></code></a></p></td>
+<td><p>Validated 2D NumPy array content for this table item.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.dataset.html#ansys.dynamicreporting.core.serverless.item.Table.dataset" title="ansys.dynamicreporting.core.serverless.item.Table.dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.dataset</span></code></a></p></td>
+<td><p>Dataset associated with this item.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.db.html#ansys.dynamicreporting.core.serverless.item.Table.db" title="ansys.dynamicreporting.core.serverless.item.Table.db"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.db</span></code></a></p></td>
+<td><p>Database alias in which this object is stored.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.format.html#ansys.dynamicreporting.core.serverless.item.Table.format" title="ansys.dynamicreporting.core.serverless.item.Table.format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.format</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.format_column.html#ansys.dynamicreporting.core.serverless.item.Table.format_column" title="ansys.dynamicreporting.core.serverless.item.Table.format_column"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.format_column</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.format_row.html#ansys.dynamicreporting.core.serverless.item.Table.format_row" title="ansys.dynamicreporting.core.serverless.item.Table.format_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.format_row</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.height.html#ansys.dynamicreporting.core.serverless.item.Table.height" title="ansys.dynamicreporting.core.serverless.item.Table.height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.height</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size.html#ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size" title="ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.histogram_bin_size</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative.html#ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative" title="ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.histogram_cumulative</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized.html#ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized" title="ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.histogram_normalized</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold.html#ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold" title="ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.histogram_threshold</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.item_justification.html#ansys.dynamicreporting.core.serverless.item.Table.item_justification" title="ansys.dynamicreporting.core.serverless.item.Table.item_justification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.item_justification</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.labels_column.html#ansys.dynamicreporting.core.serverless.item.Table.labels_column" title="ansys.dynamicreporting.core.serverless.item.Table.labels_column"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.labels_column</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.labels_row.html#ansys.dynamicreporting.core.serverless.item.Table.labels_row" title="ansys.dynamicreporting.core.serverless.item.Table.labels_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.labels_row</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.legend_position.html#ansys.dynamicreporting.core.serverless.item.Table.legend_position" title="ansys.dynamicreporting.core.serverless.item.Table.legend_position"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.legend_position</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_color.html#ansys.dynamicreporting.core.serverless.item.Table.line_color" title="ansys.dynamicreporting.core.serverless.item.Table.line_color"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_color</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_error_bars.html#ansys.dynamicreporting.core.serverless.item.Table.line_error_bars" title="ansys.dynamicreporting.core.serverless.item.Table.line_error_bars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_error_bars</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux0</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux1</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux2</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux3</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux4</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux5</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux6</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux7</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8.html#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux8</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux9" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux9"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_aux9</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_opacity" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_opacity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_opacity</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_scale" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_scale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_scale</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_size" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_size</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_text" title="ansys.dynamicreporting.core.serverless.item.Table.line_marker_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_marker_text</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_style" title="ansys.dynamicreporting.core.serverless.item.Table.line_style"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_style</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.line_width" title="ansys.dynamicreporting.core.serverless.item.Table.line_width"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.line_width</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.marker_text_rowname" title="ansys.dynamicreporting.core.serverless.item.Table.marker_text_rowname"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.marker_text_rowname</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.name.html#ansys.dynamicreporting.core.serverless.item.Table.name" title="ansys.dynamicreporting.core.serverless.item.Table.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.name</span></code></a></p></td>
+<td><p>Human-readable name for the item.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.nan_display" title="ansys.dynamicreporting.core.serverless.item.Table.nan_display"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.nan_display</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.palette" title="ansys.dynamicreporting.core.serverless.item.Table.palette"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.palette</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_position" title="ansys.dynamicreporting.core.serverless.item.Table.palette_position"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.palette_position</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_range" title="ansys.dynamicreporting.core.serverless.item.Table.palette_range"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.palette_range</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_show" title="ansys.dynamicreporting.core.serverless.item.Table.palette_show"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.palette_show</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_title" title="ansys.dynamicreporting.core.serverless.item.Table.palette_title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.palette_title</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.plot" title="ansys.dynamicreporting.core.serverless.item.Table.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.plot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_margins" title="ansys.dynamicreporting.core.serverless.item.Table.plot_margins"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.plot_margins</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_title" title="ansys.dynamicreporting.core.serverless.item.Table.plot_title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.plot_title</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_xaxis_type" title="ansys.dynamicreporting.core.serverless.item.Table.plot_xaxis_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.plot_xaxis_type</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_yaxis_type" title="ansys.dynamicreporting.core.serverless.item.Table.plot_yaxis_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.plot_yaxis_type</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_zaxis_type" title="ansys.dynamicreporting.core.serverless.item.Table.plot_zaxis_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.plot_zaxis_type</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.row_tags" title="ansys.dynamicreporting.core.serverless.item.Table.row_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.row_tags</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.rowlbls" title="ansys.dynamicreporting.core.serverless.item.Table.rowlbls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.rowlbls</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.saved.html#ansys.dynamicreporting.core.serverless.item.Table.saved" title="ansys.dynamicreporting.core.serverless.item.Table.saved"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.saved</span></code></a></p></td>
+<td><p>Whether this object has been successfully saved to the database.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.sequence.html#ansys.dynamicreporting.core.serverless.item.Table.sequence" title="ansys.dynamicreporting.core.serverless.item.Table.sequence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.sequence</span></code></a></p></td>
+<td><p>Sequence index for ordering items within a dataset/session.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.session.html#ansys.dynamicreporting.core.serverless.item.Table.session" title="ansys.dynamicreporting.core.serverless.item.Table.session"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.session</span></code></a></p></td>
+<td><p>Session that owns this item.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.show_border" title="ansys.dynamicreporting.core.serverless.item.Table.show_border"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.show_border</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.show_legend" title="ansys.dynamicreporting.core.serverless.item.Table.show_legend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.show_legend</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.show_legend_border" title="ansys.dynamicreporting.core.serverless.item.Table.show_legend_border"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.show_legend_border</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.source.html#ansys.dynamicreporting.core.serverless.item.Table.source" title="ansys.dynamicreporting.core.serverless.item.Table.source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.source</span></code></a></p></td>
+<td><p>Optional free-form source identifier for this item.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.stacked" title="ansys.dynamicreporting.core.serverless.item.Table.stacked"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.stacked</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_bordered" title="ansys.dynamicreporting.core.serverless.item.Table.table_bordered"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_bordered</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_cond_format" title="ansys.dynamicreporting.core.serverless.item.Table.table_cond_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_cond_format</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_condensed" title="ansys.dynamicreporting.core.serverless.item.Table.table_condensed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_condensed</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_default_col_labels" title="ansys.dynamicreporting.core.serverless.item.Table.table_default_col_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_default_col_labels</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_page" title="ansys.dynamicreporting.core.serverless.item.Table.table_page"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_page</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_pagemenu" title="ansys.dynamicreporting.core.serverless.item.Table.table_pagemenu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_pagemenu</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_scrollx" title="ansys.dynamicreporting.core.serverless.item.Table.table_scrollx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_scrollx</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_scrolly" title="ansys.dynamicreporting.core.serverless.item.Table.table_scrolly"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_scrolly</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_search" title="ansys.dynamicreporting.core.serverless.item.Table.table_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_search</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_sort" title="ansys.dynamicreporting.core.serverless.item.Table.table_sort"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_sort</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_title" title="ansys.dynamicreporting.core.serverless.item.Table.table_title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_title</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.table_wrap_content" title="ansys.dynamicreporting.core.serverless.item.Table.table_wrap_content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.table_wrap_content</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.tags.html#ansys.dynamicreporting.core.serverless.item.Table.tags" title="ansys.dynamicreporting.core.serverless.item.Table.tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.tags</span></code></a></p></td>
+<td><p>Tag string used to group and filter objects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.title" title="ansys.dynamicreporting.core.serverless.item.Table.title"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.title</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.type" title="ansys.dynamicreporting.core.serverless.item.Table.type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.type</span></code></a></p></td>
+<td><p>Item type identifier for table items.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.width" title="ansys.dynamicreporting.core.serverless.item.Table.width"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.width</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis" title="ansys.dynamicreporting.core.serverless.item.Table.xaxis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.xaxis</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis_format" title="ansys.dynamicreporting.core.serverless.item.Table.xaxis_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.xaxis_format</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis_tick_delta" title="ansys.dynamicreporting.core.serverless.item.Table.xaxis_tick_delta"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.xaxis_tick_delta</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.xrange" title="ansys.dynamicreporting.core.serverless.item.Table.xrange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.xrange</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.xtitle" title="ansys.dynamicreporting.core.serverless.item.Table.xtitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.xtitle</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis" title="ansys.dynamicreporting.core.serverless.item.Table.yaxis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.yaxis</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis_format" title="ansys.dynamicreporting.core.serverless.item.Table.yaxis_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.yaxis_format</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis_tick_delta" title="ansys.dynamicreporting.core.serverless.item.Table.yaxis_tick_delta"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.yaxis_tick_delta</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.yrange" title="ansys.dynamicreporting.core.serverless.item.Table.yrange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.yrange</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.ytitle" title="ansys.dynamicreporting.core.serverless.item.Table.ytitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.ytitle</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis" title="ansys.dynamicreporting.core.serverless.item.Table.zaxis"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.zaxis</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis_format" title="ansys.dynamicreporting.core.serverless.item.Table.zaxis_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.zaxis_format</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis_tick_delta" title="ansys.dynamicreporting.core.serverless.item.Table.zaxis_tick_delta"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.zaxis_tick_delta</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.zrange" title="ansys.dynamicreporting.core.serverless.item.Table.zrange"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.zrange</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.ztitle" title="ansys.dynamicreporting.core.serverless.item.Table.ztitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.ztitle</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.date.html#ansys.dynamicreporting.core.serverless.item.Table.date" title="ansys.dynamicreporting.core.serverless.item.Table.date"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.date</span></code></a></p></td>
+<td><p>Timestamp when the item was created.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Table.guid.html#ansys.dynamicreporting.core.serverless.item.Table.guid" title="ansys.dynamicreporting.core.serverless.item.Table.guid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Table.guid</span></code></a></p></td>
+<td><p>Globally unique identifier for this object.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.DoesNotExist">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.DoesNotExist" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item.DoesNotExist" title="ansys.dynamicreporting.core.serverless.item.Item.DoesNotExist"><code class="xref py py-class docutils literal notranslate"><span class="pre">DoesNotExist</span></code></a></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.IntegrityError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">IntegrityError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.IntegrityError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item.IntegrityError" title="ansys.dynamicreporting.core.serverless.item.Item.IntegrityError"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntegrityError</span></code></a></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.MultipleObjectsReturned">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.MultipleObjectsReturned" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item.MultipleObjectsReturned" title="ansys.dynamicreporting.core.serverless.item.Item.MultipleObjectsReturned"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></a></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.NotSaved">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">NotSaved</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_detail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.NotSaved" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item.NotSaved" title="ansys.dynamicreporting.core.serverless.item.Item.NotSaved"><code class="xref py py-class docutils literal notranslate"><span class="pre">NotSaved</span></code></a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.align_column">
+<span class="sig-name descname"><span class="pre">align_column</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.align_column" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.bar_gap">
+<span class="sig-name descname"><span class="pre">bar_gap</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.bar_gap" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.bar_mode">
+<span class="sig-name descname"><span class="pre">bar_mode</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.bar_mode" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.col_tags">
+<span class="sig-name descname"><span class="pre">col_tags</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.col_tags" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.collbls">
+<span class="sig-name descname"><span class="pre">collbls</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.collbls" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.column_maximum">
+<span class="sig-name descname"><span class="pre">column_maximum</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.column_maximum" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.column_minimum">
+<span class="sig-name descname"><span class="pre">column_minimum</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.column_minimum" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.content">
+<span class="sig-name descname"><span class="pre">content</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">TableContent</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.content" title="Link to this definition">#</a></dt>
+<dd><p>Validated 2D NumPy array content for this table item.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.format" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.format_column">
+<span class="sig-name descname"><span class="pre">format_column</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.format_column" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.format_row">
+<span class="sig-name descname"><span class="pre">format_row</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.format_row" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.height">
+<span class="sig-name descname"><span class="pre">height</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.height" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size">
+<span class="sig-name descname"><span class="pre">histogram_bin_size</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative">
+<span class="sig-name descname"><span class="pre">histogram_cumulative</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized">
+<span class="sig-name descname"><span class="pre">histogram_normalized</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold">
+<span class="sig-name descname"><span class="pre">histogram_threshold</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.item_justification">
+<span class="sig-name descname"><span class="pre">item_justification</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.item_justification" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.labels_column">
+<span class="sig-name descname"><span class="pre">labels_column</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.labels_column" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.labels_row">
+<span class="sig-name descname"><span class="pre">labels_row</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.labels_row" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.legend_position">
+<span class="sig-name descname"><span class="pre">legend_position</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.legend_position" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_color">
+<span class="sig-name descname"><span class="pre">line_color</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_color" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_error_bars">
+<span class="sig-name descname"><span class="pre">line_error_bars</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_error_bars" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker">
+<span class="sig-name descname"><span class="pre">line_marker</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0">
+<span class="sig-name descname"><span class="pre">line_marker_aux0</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1">
+<span class="sig-name descname"><span class="pre">line_marker_aux1</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2">
+<span class="sig-name descname"><span class="pre">line_marker_aux2</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3">
+<span class="sig-name descname"><span class="pre">line_marker_aux3</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4">
+<span class="sig-name descname"><span class="pre">line_marker_aux4</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5">
+<span class="sig-name descname"><span class="pre">line_marker_aux5</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6">
+<span class="sig-name descname"><span class="pre">line_marker_aux6</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7">
+<span class="sig-name descname"><span class="pre">line_marker_aux7</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8">
+<span class="sig-name descname"><span class="pre">line_marker_aux8</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux9">
+<span class="sig-name descname"><span class="pre">line_marker_aux9</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux9" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_opacity">
+<span class="sig-name descname"><span class="pre">line_marker_opacity</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_opacity" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_scale">
+<span class="sig-name descname"><span class="pre">line_marker_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_scale" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_size">
+<span class="sig-name descname"><span class="pre">line_marker_size</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_size" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_marker_text">
+<span class="sig-name descname"><span class="pre">line_marker_text</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_text" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_style">
+<span class="sig-name descname"><span class="pre">line_style</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_style" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.line_width">
+<span class="sig-name descname"><span class="pre">line_width</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.line_width" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.marker_text_rowname">
+<span class="sig-name descname"><span class="pre">marker_text_rowname</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.marker_text_rowname" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.nan_display">
+<span class="sig-name descname"><span class="pre">nan_display</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.nan_display" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.palette">
+<span class="sig-name descname"><span class="pre">palette</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.palette" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.palette_position">
+<span class="sig-name descname"><span class="pre">palette_position</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_position" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.palette_range">
+<span class="sig-name descname"><span class="pre">palette_range</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_range" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.palette_show">
+<span class="sig-name descname"><span class="pre">palette_show</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_show" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.palette_title">
+<span class="sig-name descname"><span class="pre">palette_title</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_title" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.plot" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.plot_margins">
+<span class="sig-name descname"><span class="pre">plot_margins</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_margins" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.plot_title">
+<span class="sig-name descname"><span class="pre">plot_title</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_title" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.plot_xaxis_type">
+<span class="sig-name descname"><span class="pre">plot_xaxis_type</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_xaxis_type" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.plot_yaxis_type">
+<span class="sig-name descname"><span class="pre">plot_yaxis_type</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_yaxis_type" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.plot_zaxis_type">
+<span class="sig-name descname"><span class="pre">plot_zaxis_type</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_zaxis_type" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.row_tags">
+<span class="sig-name descname"><span class="pre">row_tags</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.row_tags" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.rowlbls">
+<span class="sig-name descname"><span class="pre">rowlbls</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.rowlbls" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.save" title="Link to this definition">#</a></dt>
+<dd><p>Serialize the table array and payload properties into <code class="docutils literal notranslate"><span class="pre">payloaddata</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>**kwargs</strong></dt><dd><p>Keyword arguments forwarded to the database <code class="docutils literal notranslate"><span class="pre">save</span></code> method of
+the underlying ORM instance. For eg: The <code class="docutils literal notranslate"><span class="pre">using</span></code> argument can be
+used to select the target database alias.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference internal" href="#ansys.dynamicreporting.core.serverless.item.Table.IntegrityError" title="ansys.dynamicreporting.core.serverless.item.Table.IntegrityError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IntegrityError</span></code></a></dt><dd><p>If the database reports an integrity violation while saving.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidFieldError</span></code></dt><dd><p>If invalid field names or values are supplied (via decorator).</p>
+</dd>
+<dt><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></a></dt><dd><p>Any other unexpected exception is propagated unchanged.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.show_border">
+<span class="sig-name descname"><span class="pre">show_border</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.show_border" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.show_legend">
+<span class="sig-name descname"><span class="pre">show_legend</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.show_legend" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.show_legend_border">
+<span class="sig-name descname"><span class="pre">show_legend_border</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.show_legend_border" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.stacked">
+<span class="sig-name descname"><span class="pre">stacked</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.stacked" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_bordered">
+<span class="sig-name descname"><span class="pre">table_bordered</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_bordered" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_cond_format">
+<span class="sig-name descname"><span class="pre">table_cond_format</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_cond_format" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_condensed">
+<span class="sig-name descname"><span class="pre">table_condensed</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_condensed" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_default_col_labels">
+<span class="sig-name descname"><span class="pre">table_default_col_labels</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_default_col_labels" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_page">
+<span class="sig-name descname"><span class="pre">table_page</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_page" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_pagemenu">
+<span class="sig-name descname"><span class="pre">table_pagemenu</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_pagemenu" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_scrollx">
+<span class="sig-name descname"><span class="pre">table_scrollx</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_scrollx" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_scrolly">
+<span class="sig-name descname"><span class="pre">table_scrolly</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_scrolly" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_search">
+<span class="sig-name descname"><span class="pre">table_search</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_search" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_sort">
+<span class="sig-name descname"><span class="pre">table_sort</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_sort" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_title">
+<span class="sig-name descname"><span class="pre">table_title</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_title" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.table_wrap_content">
+<span class="sig-name descname"><span class="pre">table_wrap_content</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.table_wrap_content" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.title">
+<span class="sig-name descname"><span class="pre">title</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.title" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.type">
+<span class="sig-name descname"><span class="pre">type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'table'</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.type" title="Link to this definition">#</a></dt>
+<dd><p>Item type identifier for table items.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.width">
+<span class="sig-name descname"><span class="pre">width</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.width" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.xaxis">
+<span class="sig-name descname"><span class="pre">xaxis</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.xaxis_format">
+<span class="sig-name descname"><span class="pre">xaxis_format</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis_format" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.xaxis_tick_delta">
+<span class="sig-name descname"><span class="pre">xaxis_tick_delta</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis_tick_delta" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.xrange">
+<span class="sig-name descname"><span class="pre">xrange</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.xrange" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.xtitle">
+<span class="sig-name descname"><span class="pre">xtitle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.xtitle" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.yaxis">
+<span class="sig-name descname"><span class="pre">yaxis</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.yaxis_format">
+<span class="sig-name descname"><span class="pre">yaxis_format</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis_format" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.yaxis_tick_delta">
+<span class="sig-name descname"><span class="pre">yaxis_tick_delta</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis_tick_delta" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.yrange">
+<span class="sig-name descname"><span class="pre">yrange</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.yrange" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.ytitle">
+<span class="sig-name descname"><span class="pre">ytitle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.ytitle" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.zaxis">
+<span class="sig-name descname"><span class="pre">zaxis</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.zaxis_format">
+<span class="sig-name descname"><span class="pre">zaxis_format</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis_format" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.zaxis_tick_delta">
+<span class="sig-name descname"><span class="pre">zaxis_tick_delta</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis_tick_delta" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.zrange">
+<span class="sig-name descname"><span class="pre">zrange</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.zrange" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ansys.dynamicreporting.core.serverless.item.Table.ztitle">
+<span class="sig-name descname"><span class="pre">ztitle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#ansys.dynamicreporting.core.serverless.item.Table.ztitle" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table"><code class="docutils literal notranslate"><span class="pre">Table</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">Table.DoesNotExist</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.IntegrityError"><code class="docutils literal notranslate"><span class="pre">Table.IntegrityError</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">Table.MultipleObjectsReturned</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.NotSaved"><code class="docutils literal notranslate"><span class="pre">Table.NotSaved</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.align_column"><code class="docutils literal notranslate"><span class="pre">Table.align_column</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.bar_gap"><code class="docutils literal notranslate"><span class="pre">Table.bar_gap</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.bar_mode"><code class="docutils literal notranslate"><span class="pre">Table.bar_mode</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.col_tags"><code class="docutils literal notranslate"><span class="pre">Table.col_tags</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.collbls"><code class="docutils literal notranslate"><span class="pre">Table.collbls</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.column_maximum"><code class="docutils literal notranslate"><span class="pre">Table.column_maximum</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.column_minimum"><code class="docutils literal notranslate"><span class="pre">Table.column_minimum</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.content"><code class="docutils literal notranslate"><span class="pre">Table.content</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.format"><code class="docutils literal notranslate"><span class="pre">Table.format</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.format_column"><code class="docutils literal notranslate"><span class="pre">Table.format_column</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.format_row"><code class="docutils literal notranslate"><span class="pre">Table.format_row</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.height"><code class="docutils literal notranslate"><span class="pre">Table.height</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_bin_size"><code class="docutils literal notranslate"><span class="pre">Table.histogram_bin_size</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_cumulative"><code class="docutils literal notranslate"><span class="pre">Table.histogram_cumulative</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_normalized"><code class="docutils literal notranslate"><span class="pre">Table.histogram_normalized</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.histogram_threshold"><code class="docutils literal notranslate"><span class="pre">Table.histogram_threshold</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.item_justification"><code class="docutils literal notranslate"><span class="pre">Table.item_justification</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.labels_column"><code class="docutils literal notranslate"><span class="pre">Table.labels_column</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.labels_row"><code class="docutils literal notranslate"><span class="pre">Table.labels_row</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.legend_position"><code class="docutils literal notranslate"><span class="pre">Table.legend_position</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_color"><code class="docutils literal notranslate"><span class="pre">Table.line_color</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_error_bars"><code class="docutils literal notranslate"><span class="pre">Table.line_error_bars</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker"><code class="docutils literal notranslate"><span class="pre">Table.line_marker</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux0"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux0</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux1"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux1</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux2"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux2</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux3"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux3</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux4"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux4</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux5"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux5</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux6"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux6</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux7"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux7</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux8"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux8</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_aux9"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_aux9</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_opacity"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_opacity</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_scale"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_scale</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_size"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_size</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_marker_text"><code class="docutils literal notranslate"><span class="pre">Table.line_marker_text</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_style"><code class="docutils literal notranslate"><span class="pre">Table.line_style</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.line_width"><code class="docutils literal notranslate"><span class="pre">Table.line_width</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.marker_text_rowname"><code class="docutils literal notranslate"><span class="pre">Table.marker_text_rowname</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.nan_display"><code class="docutils literal notranslate"><span class="pre">Table.nan_display</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.palette"><code class="docutils literal notranslate"><span class="pre">Table.palette</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_position"><code class="docutils literal notranslate"><span class="pre">Table.palette_position</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_range"><code class="docutils literal notranslate"><span class="pre">Table.palette_range</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_show"><code class="docutils literal notranslate"><span class="pre">Table.palette_show</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.palette_title"><code class="docutils literal notranslate"><span class="pre">Table.palette_title</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.plot"><code class="docutils literal notranslate"><span class="pre">Table.plot</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_margins"><code class="docutils literal notranslate"><span class="pre">Table.plot_margins</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_title"><code class="docutils literal notranslate"><span class="pre">Table.plot_title</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_xaxis_type"><code class="docutils literal notranslate"><span class="pre">Table.plot_xaxis_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_yaxis_type"><code class="docutils literal notranslate"><span class="pre">Table.plot_yaxis_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.plot_zaxis_type"><code class="docutils literal notranslate"><span class="pre">Table.plot_zaxis_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.row_tags"><code class="docutils literal notranslate"><span class="pre">Table.row_tags</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.rowlbls"><code class="docutils literal notranslate"><span class="pre">Table.rowlbls</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.save"><code class="docutils literal notranslate"><span class="pre">Table.save()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.show_border"><code class="docutils literal notranslate"><span class="pre">Table.show_border</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.show_legend"><code class="docutils literal notranslate"><span class="pre">Table.show_legend</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.show_legend_border"><code class="docutils literal notranslate"><span class="pre">Table.show_legend_border</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.stacked"><code class="docutils literal notranslate"><span class="pre">Table.stacked</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_bordered"><code class="docutils literal notranslate"><span class="pre">Table.table_bordered</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_cond_format"><code class="docutils literal notranslate"><span class="pre">Table.table_cond_format</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_condensed"><code class="docutils literal notranslate"><span class="pre">Table.table_condensed</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_default_col_labels"><code class="docutils literal notranslate"><span class="pre">Table.table_default_col_labels</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_page"><code class="docutils literal notranslate"><span class="pre">Table.table_page</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_pagemenu"><code class="docutils literal notranslate"><span class="pre">Table.table_pagemenu</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_scrollx"><code class="docutils literal notranslate"><span class="pre">Table.table_scrollx</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_scrolly"><code class="docutils literal notranslate"><span class="pre">Table.table_scrolly</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_search"><code class="docutils literal notranslate"><span class="pre">Table.table_search</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_sort"><code class="docutils literal notranslate"><span class="pre">Table.table_sort</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_title"><code class="docutils literal notranslate"><span class="pre">Table.table_title</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.table_wrap_content"><code class="docutils literal notranslate"><span class="pre">Table.table_wrap_content</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.title"><code class="docutils literal notranslate"><span class="pre">Table.title</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.type"><code class="docutils literal notranslate"><span class="pre">Table.type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.width"><code class="docutils literal notranslate"><span class="pre">Table.width</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis"><code class="docutils literal notranslate"><span class="pre">Table.xaxis</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis_format"><code class="docutils literal notranslate"><span class="pre">Table.xaxis_format</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.xaxis_tick_delta"><code class="docutils literal notranslate"><span class="pre">Table.xaxis_tick_delta</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.xrange"><code class="docutils literal notranslate"><span class="pre">Table.xrange</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.xtitle"><code class="docutils literal notranslate"><span class="pre">Table.xtitle</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis"><code class="docutils literal notranslate"><span class="pre">Table.yaxis</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis_format"><code class="docutils literal notranslate"><span class="pre">Table.yaxis_format</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.yaxis_tick_delta"><code class="docutils literal notranslate"><span class="pre">Table.yaxis_tick_delta</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.yrange"><code class="docutils literal notranslate"><span class="pre">Table.yrange</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.ytitle"><code class="docutils literal notranslate"><span class="pre">Table.ytitle</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis"><code class="docutils literal notranslate"><span class="pre">Table.zaxis</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis_format"><code class="docutils literal notranslate"><span class="pre">Table.zaxis_format</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.zaxis_tick_delta"><code class="docutils literal notranslate"><span class="pre">Table.zaxis_tick_delta</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.zrange"><code class="docutils literal notranslate"><span class="pre">Table.zrange</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ansys.dynamicreporting.core.serverless.item.Table.ztitle"><code class="docutils literal notranslate"><span class="pre">Table.ztitle</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="None">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="../_sources/_autosummary/ansys.dynamicreporting.core.serverless.item.Table.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "../_static/search.json";
+const ADVANCE_SEARCH_PATH = "../search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="../_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.6.4. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

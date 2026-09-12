@@ -1,0 +1,6 @@
+as\_dict
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Session.as_dict

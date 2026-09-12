@@ -1,0 +1,82 @@
+﻿String
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: String
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      String.add_tag
+      
+      
+      String.as_dict
+      
+      
+      String.create
+      
+      
+      String.delete
+      
+      
+      String.filter
+      
+      
+      String.find
+      
+      
+      String.get
+      
+      
+      String.get_tags
+      
+      
+      String.reinit
+      
+      
+      String.rem_tag
+      
+      
+      String.remove_tag
+      
+      
+      String.render
+      
+      
+      String.save
+      
+      
+      String.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      String.content
+      String.dataset
+      String.db
+      String.name
+      String.saved
+      String.sequence
+      String.session
+      String.source
+      String.tags
+      String.type
+      String.date
+      String.guid
+   
+   

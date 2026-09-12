@@ -1,0 +1,6 @@
+add\_sort\_fields
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: IteratorGenerator.add_sort_fields

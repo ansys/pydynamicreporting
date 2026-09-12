@@ -1,0 +1,6 @@
+nan\_display
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.nan_display

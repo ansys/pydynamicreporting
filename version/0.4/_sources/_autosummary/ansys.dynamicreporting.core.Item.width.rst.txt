@@ -1,0 +1,6 @@
+width
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.width

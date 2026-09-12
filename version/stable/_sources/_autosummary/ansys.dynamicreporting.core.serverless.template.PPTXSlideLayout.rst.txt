@@ -1,0 +1,191 @@
+﻿PPTXSlideLayout
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: PPTXSlideLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      PPTXSlideLayout.add_filter
+      
+      
+      PPTXSlideLayout.add_params
+      
+      
+      PPTXSlideLayout.add_properties
+      
+      
+      PPTXSlideLayout.add_property
+      
+      
+      PPTXSlideLayout.add_sort_fields
+      
+      
+      PPTXSlideLayout.add_tag
+      
+      
+      PPTXSlideLayout.as_dict
+      
+      
+      PPTXSlideLayout.create
+      
+      
+      PPTXSlideLayout.delete
+      
+      
+      PPTXSlideLayout.filter
+      
+      
+      PPTXSlideLayout.find
+      
+      
+      PPTXSlideLayout.get
+      
+      
+      PPTXSlideLayout.get_column_count
+      
+      
+      PPTXSlideLayout.get_column_widths
+      
+      
+      PPTXSlideLayout.get_comments
+      
+      
+      PPTXSlideLayout.get_filter
+      
+      
+      PPTXSlideLayout.get_filter_mode
+      
+      
+      PPTXSlideLayout.get_html
+      
+      
+      PPTXSlideLayout.get_params
+      
+      
+      PPTXSlideLayout.get_property
+      
+      
+      PPTXSlideLayout.get_skip
+      
+      
+      PPTXSlideLayout.get_sort_fields
+      
+      
+      PPTXSlideLayout.get_sort_selection
+      
+      
+      PPTXSlideLayout.get_tags
+      
+      
+      PPTXSlideLayout.get_transpose
+      
+      
+      PPTXSlideLayout.reinit
+      
+      
+      PPTXSlideLayout.rem_tag
+      
+      
+      PPTXSlideLayout.remove_tag
+      
+      
+      PPTXSlideLayout.render
+      
+      
+      PPTXSlideLayout.render_pdf
+      
+      
+      PPTXSlideLayout.reorder_child
+      
+      
+      PPTXSlideLayout.reorder_children
+      
+      
+      PPTXSlideLayout.save
+      
+      
+      PPTXSlideLayout.set_column_count
+      
+      
+      PPTXSlideLayout.set_column_widths
+      
+      
+      PPTXSlideLayout.set_comments
+      
+      
+      PPTXSlideLayout.set_filter
+      
+      
+      PPTXSlideLayout.set_filter_mode
+      
+      
+      PPTXSlideLayout.set_html
+      
+      
+      PPTXSlideLayout.set_params
+      
+      
+      PPTXSlideLayout.set_property
+      
+      
+      PPTXSlideLayout.set_skip
+      
+      
+      PPTXSlideLayout.set_sort_fields
+      
+      
+      PPTXSlideLayout.set_sort_selection
+      
+      
+      PPTXSlideLayout.set_tags
+      
+      
+      PPTXSlideLayout.set_transpose
+      
+      
+      PPTXSlideLayout.to_dict
+      
+      
+      PPTXSlideLayout.to_json
+      
+      
+      PPTXSlideLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      PPTXSlideLayout.children_order
+      PPTXSlideLayout.db
+      PPTXSlideLayout.exclude_from_toc
+      PPTXSlideLayout.item_filter
+      PPTXSlideLayout.master
+      PPTXSlideLayout.name
+      PPTXSlideLayout.params
+      PPTXSlideLayout.parent
+      PPTXSlideLayout.report_type
+      PPTXSlideLayout.saved
+      PPTXSlideLayout.source_slide
+      PPTXSlideLayout.tags
+      PPTXSlideLayout.type
+      PPTXSlideLayout.date
+      PPTXSlideLayout.children
+      PPTXSlideLayout.guid
+   
+   

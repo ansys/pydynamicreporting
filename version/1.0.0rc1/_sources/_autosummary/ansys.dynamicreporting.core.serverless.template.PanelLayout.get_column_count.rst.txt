@@ -1,0 +1,6 @@
+get\_column\_count
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PanelLayout.get_column_count

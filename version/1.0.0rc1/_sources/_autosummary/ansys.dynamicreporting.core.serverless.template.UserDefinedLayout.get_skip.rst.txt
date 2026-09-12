@@ -1,0 +1,6 @@
+get\_skip
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: UserDefinedLayout.get_skip

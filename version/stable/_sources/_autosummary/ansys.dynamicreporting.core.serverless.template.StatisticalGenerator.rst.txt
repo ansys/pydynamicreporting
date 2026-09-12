@@ -1,0 +1,165 @@
+﻿StatisticalGenerator
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: StatisticalGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      StatisticalGenerator.add_filter
+      
+      
+      StatisticalGenerator.add_params
+      
+      
+      StatisticalGenerator.add_properties
+      
+      
+      StatisticalGenerator.add_property
+      
+      
+      StatisticalGenerator.add_sort_fields
+      
+      
+      StatisticalGenerator.add_tag
+      
+      
+      StatisticalGenerator.as_dict
+      
+      
+      StatisticalGenerator.create
+      
+      
+      StatisticalGenerator.delete
+      
+      
+      StatisticalGenerator.filter
+      
+      
+      StatisticalGenerator.find
+      
+      
+      StatisticalGenerator.get
+      
+      
+      StatisticalGenerator.get_append_tags
+      
+      
+      StatisticalGenerator.get_filter
+      
+      
+      StatisticalGenerator.get_filter_mode
+      
+      
+      StatisticalGenerator.get_generated_items
+      
+      
+      StatisticalGenerator.get_params
+      
+      
+      StatisticalGenerator.get_property
+      
+      
+      StatisticalGenerator.get_sort_fields
+      
+      
+      StatisticalGenerator.get_sort_selection
+      
+      
+      StatisticalGenerator.get_tags
+      
+      
+      StatisticalGenerator.reinit
+      
+      
+      StatisticalGenerator.rem_tag
+      
+      
+      StatisticalGenerator.remove_tag
+      
+      
+      StatisticalGenerator.render
+      
+      
+      StatisticalGenerator.render_pdf
+      
+      
+      StatisticalGenerator.reorder_child
+      
+      
+      StatisticalGenerator.reorder_children
+      
+      
+      StatisticalGenerator.save
+      
+      
+      StatisticalGenerator.set_append_tags
+      
+      
+      StatisticalGenerator.set_filter
+      
+      
+      StatisticalGenerator.set_filter_mode
+      
+      
+      StatisticalGenerator.set_generated_items
+      
+      
+      StatisticalGenerator.set_params
+      
+      
+      StatisticalGenerator.set_property
+      
+      
+      StatisticalGenerator.set_sort_fields
+      
+      
+      StatisticalGenerator.set_sort_selection
+      
+      
+      StatisticalGenerator.set_tags
+      
+      
+      StatisticalGenerator.to_dict
+      
+      
+      StatisticalGenerator.to_json
+      
+      
+      StatisticalGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      StatisticalGenerator.children_order
+      StatisticalGenerator.db
+      StatisticalGenerator.item_filter
+      StatisticalGenerator.master
+      StatisticalGenerator.name
+      StatisticalGenerator.params
+      StatisticalGenerator.parent
+      StatisticalGenerator.report_type
+      StatisticalGenerator.saved
+      StatisticalGenerator.tags
+      StatisticalGenerator.type
+      StatisticalGenerator.date
+      StatisticalGenerator.children
+      StatisticalGenerator.guid
+   
+   

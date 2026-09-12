@@ -1,0 +1,6 @@
+create\_item
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.create_item

@@ -1,0 +1,6 @@
+get\_url
+========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.get_url

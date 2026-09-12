@@ -1,0 +1,6 @@
+line\_error\_bars
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.line_error_bars

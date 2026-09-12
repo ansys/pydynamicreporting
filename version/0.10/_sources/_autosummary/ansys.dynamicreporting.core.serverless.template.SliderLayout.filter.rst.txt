@@ -1,0 +1,6 @@
+filter
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.filter

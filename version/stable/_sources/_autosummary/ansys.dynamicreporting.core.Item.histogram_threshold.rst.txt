@@ -1,0 +1,6 @@
+histogram\_threshold
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.histogram_threshold

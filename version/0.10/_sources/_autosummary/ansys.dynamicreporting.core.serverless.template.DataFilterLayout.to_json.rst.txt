@@ -1,0 +1,6 @@
+to\_json
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: DataFilterLayout.to_json

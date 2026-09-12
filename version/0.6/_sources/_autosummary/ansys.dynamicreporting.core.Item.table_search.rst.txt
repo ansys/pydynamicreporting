@@ -1,0 +1,6 @@
+table\_search
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.table_search

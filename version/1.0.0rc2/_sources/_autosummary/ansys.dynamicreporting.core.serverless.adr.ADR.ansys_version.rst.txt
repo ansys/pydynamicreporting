@@ -1,0 +1,6 @@
+ansys\_version
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.ansys_version

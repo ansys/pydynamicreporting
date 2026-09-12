@@ -1,0 +1,6 @@
+palette\_position
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.palette_position

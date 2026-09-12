@@ -1,0 +1,6 @@
+labels\_row
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.labels_row

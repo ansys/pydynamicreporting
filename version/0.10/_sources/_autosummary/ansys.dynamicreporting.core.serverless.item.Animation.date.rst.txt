@@ -1,0 +1,6 @@
+date
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Animation.date

@@ -1,0 +1,6 @@
+table\_wrap\_word
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.table_wrap_word
