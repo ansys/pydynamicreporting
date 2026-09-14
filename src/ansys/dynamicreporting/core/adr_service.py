@@ -41,6 +41,7 @@ import os
 import shutil
 import tempfile
 import time
+from pathlib import Path
 
 try:
     from IPython.display import IFrame
@@ -49,6 +50,7 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
+from typing import Any
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -56,8 +58,10 @@ from ansys.dynamicreporting.core.utils import report_objects, report_remote_serv
 from .adr_item import Item
 from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
-from .compatibility import get_compatibility_warning_for_install_version
 from .common_utils import resolve_install_info
+from .compatibility import get_compatibility_warning_for_install_version
+from .server_exchange_backend import ServerExchangeBackend
+from .serverless.exchange_importer import ExchangeImporter
 from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -714,6 +718,25 @@ class Service:
         """
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
+
+    def import_from_json(self, json_file_path: str | Path, *, on_error: str = "collect") -> Any:
+        """Import an ADR exchange JSON document into the current ADR service.
+
+        Parameters
+        ----------
+        json_file_path : str or Path
+            Path to the JSON document.
+        on_error : str, default="collect"
+            Strategy for item-level failures: ``"collect"`` keeps going and records the
+            failures while ``"raise"`` raises at the first failure.
+
+        Returns
+        -------
+        Any
+            Import summary from the exchange importer.
+        """
+        importer = ExchangeImporter(ServerExchangeBackend(self))
+        return importer.import_file(json_file_path, on_error=on_error)
 
     def query(
         self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""

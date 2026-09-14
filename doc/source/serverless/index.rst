@@ -59,7 +59,6 @@ Explore the docs
    instantiation
    sessions_and_datasets
    items
-   json_importer
    templates
    querying
    media_and_static
