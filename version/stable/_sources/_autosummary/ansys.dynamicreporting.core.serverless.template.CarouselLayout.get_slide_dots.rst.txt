@@ -1,0 +1,6 @@
+get\_slide\_dots
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: CarouselLayout.get_slide_dots

@@ -1,0 +1,6 @@
+add\_property
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMapGenerator.add_property

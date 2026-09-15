@@ -1,0 +1,6 @@
+get\_report\_component
+======================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.get_report_component

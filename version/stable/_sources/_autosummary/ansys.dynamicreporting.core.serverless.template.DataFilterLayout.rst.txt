@@ -1,0 +1,196 @@
+﻿DataFilterLayout
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: DataFilterLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      DataFilterLayout.add_filter
+      
+      
+      DataFilterLayout.add_params
+      
+      
+      DataFilterLayout.add_properties
+      
+      
+      DataFilterLayout.add_property
+      
+      
+      DataFilterLayout.add_sort_fields
+      
+      
+      DataFilterLayout.add_tag
+      
+      
+      DataFilterLayout.as_dict
+      
+      
+      DataFilterLayout.create
+      
+      
+      DataFilterLayout.delete
+      
+      
+      DataFilterLayout.filter
+      
+      
+      DataFilterLayout.find
+      
+      
+      DataFilterLayout.get
+      
+      
+      DataFilterLayout.get_column_count
+      
+      
+      DataFilterLayout.get_column_widths
+      
+      
+      DataFilterLayout.get_comments
+      
+      
+      DataFilterLayout.get_filter
+      
+      
+      DataFilterLayout.get_filter_mode
+      
+      
+      DataFilterLayout.get_html
+      
+      
+      DataFilterLayout.get_params
+      
+      
+      DataFilterLayout.get_property
+      
+      
+      DataFilterLayout.get_skip
+      
+      
+      DataFilterLayout.get_sort_fields
+      
+      
+      DataFilterLayout.get_sort_selection
+      
+      
+      DataFilterLayout.get_tags
+      
+      
+      DataFilterLayout.get_transpose
+      
+      
+      DataFilterLayout.reinit
+      
+      
+      DataFilterLayout.rem_tag
+      
+      
+      DataFilterLayout.remove_tag
+      
+      
+      DataFilterLayout.render
+      
+      
+      DataFilterLayout.render_pdf
+      
+      
+      DataFilterLayout.reorder_child
+      
+      
+      DataFilterLayout.reorder_children
+      
+      
+      DataFilterLayout.save
+      
+      
+      DataFilterLayout.set_column_count
+      
+      
+      DataFilterLayout.set_column_widths
+      
+      
+      DataFilterLayout.set_comments
+      
+      
+      DataFilterLayout.set_filter
+      
+      
+      DataFilterLayout.set_filter_mode
+      
+      
+      DataFilterLayout.set_html
+      
+      
+      DataFilterLayout.set_params
+      
+      
+      DataFilterLayout.set_property
+      
+      
+      DataFilterLayout.set_skip
+      
+      
+      DataFilterLayout.set_sort_fields
+      
+      
+      DataFilterLayout.set_sort_selection
+      
+      
+      DataFilterLayout.set_tags
+      
+      
+      DataFilterLayout.set_transpose
+      
+      
+      DataFilterLayout.to_dict
+      
+      
+      DataFilterLayout.to_json
+      
+      
+      DataFilterLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      DataFilterLayout.children_order
+      DataFilterLayout.db
+      DataFilterLayout.filter_checkbox
+      DataFilterLayout.filter_dropdown
+      DataFilterLayout.filter_input
+      DataFilterLayout.filter_numeric_step
+      DataFilterLayout.filter_single_dropdown
+      DataFilterLayout.filter_slider
+      DataFilterLayout.filter_types
+      DataFilterLayout.item_filter
+      DataFilterLayout.master
+      DataFilterLayout.name
+      DataFilterLayout.params
+      DataFilterLayout.parent
+      DataFilterLayout.report_type
+      DataFilterLayout.saved
+      DataFilterLayout.tags
+      DataFilterLayout.type
+      DataFilterLayout.date
+      DataFilterLayout.children
+      DataFilterLayout.guid
+   
+   

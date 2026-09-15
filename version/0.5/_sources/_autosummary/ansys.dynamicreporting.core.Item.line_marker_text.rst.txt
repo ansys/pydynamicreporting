@@ -1,0 +1,6 @@
+line\_marker\_text
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.line_marker_text

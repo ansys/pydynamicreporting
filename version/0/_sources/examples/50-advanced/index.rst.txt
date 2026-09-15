@@ -1,0 +1,85 @@
+
+
+.. _sphx_glr_examples_50-advanced:
+
+.. _advanced-gallery:
+
+Advanced examples
+=================
+
+Advanced examples show how to use the low-level API in Ansys
+Dynamic Reporting to create, query, visualize, and embed reports based on
+customers case studies.
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="To use PyDynamicReporting to build a report from scratch, you start a new Ansys Dynamic Reporting instance on a new database, populate it, amd generate a report template. As a result, you get a report.">
+
+.. only:: html
+
+  .. image:: /examples/50-advanced/images/thumb/sphx_glr_00-complete_report_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_50-advanced_00-complete_report.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Create a report from scratch</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Use a single database and report template for multiple simluation results.">
+
+.. only:: html
+
+  .. image:: /examples/50-advanced/images/thumb/sphx_glr_01-two_simulation_same_db_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_50-advanced_01-two_simulation_same_db.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Multiple simulations in same database</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Applying the new custom web component &lt;adr-report&gt;&lt;/adr-report&gt; as an alternative of using &lt;iframe&gt;&lt;/iframe&gt; to fetch and embed a report in the external web application.">
+
+.. only:: html
+
+  .. image:: /examples/50-advanced/images/thumb/sphx_glr_02-customized_report_embed_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_50-advanced_02-customized_report_embed.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Embed report and overwrite styles</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
+
+.. toctree::
+   :hidden:
+
+   /examples/50-advanced/00-complete_report
+   /examples/50-advanced/01-two_simulation_same_db
+   /examples/50-advanced/02-customized_report_embed
+

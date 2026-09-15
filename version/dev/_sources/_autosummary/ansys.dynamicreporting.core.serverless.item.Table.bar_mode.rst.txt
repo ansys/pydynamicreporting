@@ -1,0 +1,6 @@
+bar\_mode
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.bar_mode
