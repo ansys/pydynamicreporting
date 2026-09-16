@@ -32,6 +32,7 @@ from .compatibility import (
     product_release_to_display_string,
     product_release_to_short_label,
 )
+from .common_utils import PDFPageSize
 
 VERSION = __version__
 # ``DEFAULT_ANSYS_VERSION`` remains the compatibility shim name used across the

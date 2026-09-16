@@ -32,7 +32,7 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from ansys.dynamicreporting.core import Service, common_utils
+from ansys.dynamicreporting.core import PDFPageSize, Service, common_utils
 from ansys.dynamicreporting.core.compatibility import (
     AUTO_DETECT_INSTALL_VERSIONS,
     SUPPORTED_PRODUCT_LINES,
@@ -612,6 +612,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             auth_cookies=None,
             landscape=False,
             margins=None,
+            page_size=PDFPageSize.A4,
             render_timeout=30.0,
             ansys_installation=None,
             ansys_version=None,
@@ -621,6 +622,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             captured["renderer_auth_cookies"] = auth_cookies
             captured["renderer_landscape"] = landscape
             captured["renderer_margins"] = margins
+            captured["renderer_page_size"] = page_size
             captured["renderer_render_timeout"] = render_timeout
             captured["renderer_ansys_installation"] = ansys_installation
             captured["renderer_ansys_version"] = ansys_version
@@ -646,6 +648,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         item_filter="A|i_tags|cont|dp=dp227;",
         landscape=True,
         margins=margins,
+        page_size=PDFPageSize.A3,
         render_timeout=12.5,
         ansys_installation="/opt/ansys/v271",
         ansys_version=271,
@@ -663,6 +666,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     ]
     assert captured["renderer_landscape"] is True
     assert captured["renderer_margins"] == margins
+    assert captured["renderer_page_size"] is PDFPageSize.A3
     assert captured["renderer_render_timeout"] == 12.5
     # The connected service's local install is forwarded so the renderer uses the packed browser.
     assert captured["renderer_ansys_installation"] == "/opt/ansys/v271"
@@ -721,6 +725,7 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
             auth_cookies=None,
             landscape=False,
             margins=None,
+            page_size=PDFPageSize.A4,
             render_timeout=30.0,
             ansys_installation=None,
             ansys_version=None,

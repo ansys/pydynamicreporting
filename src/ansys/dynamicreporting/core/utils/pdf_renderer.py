@@ -38,21 +38,19 @@ treating PDF export as a screenshot of already-painted viewport pixels:
               v
     +-----------------------------------------------+
     | Phase A: live browser / continuous-media pass |
-    | - A4 content-width viewport for JS layout      |
+    | - selected content-width viewport for layout   |
     | - execute ADR, Plotly, MathJax, viewers       |
     | - wait for readiness signals                  |
     | - inject capture CSS                          |
-    | - measure content width from the live page    |
     +-----------------------------------------------+
               |
               v
     +-----------------------------------------------+
     | Phase B: paged PDF generation pass            |
-    | - use A4 unless final content overflows       |
+    | - use the selected fixed page format          |
     | - Chromium generates paged output             |
-    | - requested paper width defines page area     |
-    | - auto-width nodes/divs can use that width    |
-    | - wide legends/content avoid right clipping   |
+    | - selected page width caps rendered content   |
+    | - content beyond that width is clipped        |
     +-----------------------------------------------+
 
 - Playwright documents ``page.pdf()`` as generating a PDF of the page, with print CSS
@@ -61,10 +59,9 @@ treating PDF export as a screenshot of already-painted viewport pixels:
   paged media, and notes that the initial containing block changes accordingly.
 
 That distinction matters for browser-PDF exports. Phase A stabilizes responsive
-browser-rendered content such as Plotly against the printable width of an oriented A4
-page so width measurements are deterministic and match the eventual page content box.
-Phase B keeps that standard A4 page when content fits, or feeds a measured overflow
-width into ``page.pdf()`` so genuinely wide content is not clipped at the right edge.
+browser-rendered content such as Plotly against the printable width of the selected
+oriented page. Phase B passes that fixed format to ``page.pdf()`` so the output page
+size is definitive and content cannot expand it.
 """
 
 from abc import ABC, abstractmethod
@@ -87,6 +84,7 @@ from ..adr_utils import get_logger
 from ..compatibility import install_version_to_product_release
 from ..compatibility import product_release_to_display_string
 from ..compatibility import product_release_to_product_line
+from ..common_utils import PDFPageSize
 from ..exceptions import ADRException
 
 # Product-browser metadata filename expected inside the packaged Playwright cache.
@@ -286,6 +284,8 @@ class _BasePlaywrightPDFRenderer(ABC):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
+    page_size : PDFPageSize, default: PDFPageSize.A4
+        Fixed page size used for browser layout, pagination, and PDF generation.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the prepared
         report source is ready to open. This shared budget covers browser launch,
@@ -322,14 +322,21 @@ class _BasePlaywrightPDFRenderer(ABC):
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    # The standard format avoids custom-dimension rounding for ordinary A4 output.
-    _DEFAULT_PAGE_FORMAT: str = "A4"
-    # the width of an A4 page
-    _DEFAULT_PAGE_WIDTH: str = "210mm"
-    # the height of an A4 page
-    _DEFAULT_PAGE_HEIGHT: str = "297mm"
+    _DEFAULT_PAGE_SIZE: PDFPageSize = PDFPageSize.A4
+    # Mirror Playwright's fixed-format dimensions for viewport and pagination calculations.
+    _PAGE_DIMENSIONS: dict[PDFPageSize, tuple[str, str]] = {
+        PDFPageSize.LETTER: ("8.5in", "11in"),
+        PDFPageSize.LEGAL: ("8.5in", "14in"),
+        PDFPageSize.TABLOID: ("11in", "17in"),
+        PDFPageSize.A0: ("33.1in", "46.8in"),
+        PDFPageSize.A1: ("23.4in", "33.1in"),
+        PDFPageSize.A2: ("16.54in", "23.4in"),
+        PDFPageSize.A3: ("11.7in", "16.54in"),
+        PDFPageSize.A4: ("8.27in", "11.7in"),
+        PDFPageSize.A5: ("5.83in", "8.27in"),
+    }
     # The virtual viewport height does not constrain PDF pagination. Its width is derived
-    # from the oriented A4 content box after caller-configured margins are subtracted.
+    # from the selected oriented content box after caller-configured margins are subtracted.
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
@@ -343,14 +350,13 @@ class _BasePlaywrightPDFRenderer(ABC):
     # Browser-PDF depends on a product-shipped Chromium binary introduced with
     # product line 27. Older supported lines can still use other export formats.
     _MIN_BROWSER_PDF_PRODUCT_LINE: int = 27
-    # Preserve right-edge ink and borders across Chromium's custom-page rounding.
-    _CUSTOM_PAGE_WIDTH_ALLOWANCE_PX: float = 12.0
 
     def __init__(
         self,
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize = _DEFAULT_PAGE_SIZE,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -358,6 +364,7 @@ class _BasePlaywrightPDFRenderer(ABC):
     ) -> None:
         """Initialize the renderer with shared browser-PDF configuration."""
         self._landscape = landscape
+        self._page_size = self._validate_page_size(page_size)
         self._margins = self._validate_margins(margins)
         self._printable_page_width_px()
         self._render_timeout = self._validate_render_timeout(render_timeout)
@@ -498,7 +505,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                         browser_phase_deadline, "browser context creation"
                     )
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
-                    # items lay themselves out deterministically before the PDF width is computed.
+                    # items lay themselves out against the selected page's printable width.
                     context = self._new_browser_context(browser)
                     self._prepare_context(context)
                     self._remaining_browser_phase_timeout_ms(
@@ -526,12 +533,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
                     self._prepare_content_for_pagination(page)
-                    self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "PDF width measurement"
-                    )
-                    pdf_width = self._compute_pdf_width(page)
                     pdf_options = {
-                        **self._pdf_page_size_options(pdf_width),
+                        **self._pdf_page_size_options(),
                         "margin": self._margins,
                         "print_background": True,
                     }
@@ -539,9 +542,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     # Playwright describes page.pdf() as generating paged output, not a bitmap
                     # snapshot of the already-painted viewport. MDN's paged-media model also
                     # distinguishes the continuous-media viewport from the paged page area.
-                    # Standard A4 keeps ordinary reports physically predictable. When final
-                    # content genuinely overflows the A4 content box, the measured width gives
-                    # the PDF generation pass enough page area to preserve that overflow.
+                    # The selected fixed format keeps output dimensions predictable. Content
+                    # wider than its printable area is clipped instead of expanding the page.
                     #
                     # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
                     # so this deadline check is a preflight guard rather than an interruptible
@@ -600,15 +602,17 @@ class _BasePlaywrightPDFRenderer(ABC):
         }
 
     def _oriented_page_width(self) -> str:
-        """Return the physical A4 page width for the requested orientation."""
-        return self._DEFAULT_PAGE_HEIGHT if self._landscape else self._DEFAULT_PAGE_WIDTH
+        """Return the selected physical page width for the requested orientation."""
+        page_width, page_height = self._PAGE_DIMENSIONS[self._page_size]
+        return page_height if self._landscape else page_width
 
     def _oriented_page_height(self) -> str:
-        """Return the physical A4 page height for the requested orientation."""
-        return self._DEFAULT_PAGE_WIDTH if self._landscape else self._DEFAULT_PAGE_HEIGHT
+        """Return the selected physical page height for the requested orientation."""
+        page_width, page_height = self._PAGE_DIMENSIONS[self._page_size]
+        return page_width if self._landscape else page_height
 
     def _printable_page_width_px(self) -> float:
-        """Return the oriented A4 content-box width after horizontal PDF margins."""
+        """Return the oriented content-box width after horizontal PDF margins."""
         page_width_px = self._pdf_length_to_px(self._oriented_page_width())
         margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
             self._margins["right"]
@@ -617,21 +621,16 @@ class _BasePlaywrightPDFRenderer(ABC):
         if printable_width_px < 1.0:
             raise ADRException(
                 "Browser PDF horizontal margins must leave at least one CSS pixel "
-                "of printable A4 page width."
+                f"of printable {self._page_size.value} page width."
             )
         return printable_width_px
-
-    def _custom_page_horizontal_margin_width_px(self) -> float:
-        """Return margins on the custom sheet's horizontal axis after rotation."""
-        margin_sides = ("top", "bottom") if self._landscape else ("left", "right")
-        return sum(self._pdf_length_to_px(self._margins[side]) for side in margin_sides)
 
     def _browser_viewport_width_px(self) -> int:
         """Return an integer viewport no wider than the PDF content box."""
         return floor(self._printable_page_width_px())
 
     def _printable_page_height_px(self) -> float:
-        """Return the oriented A4 content-box height after vertical PDF margins."""
+        """Return the oriented content-box height after vertical PDF margins."""
         page_height_px = self._pdf_length_to_px(self._oriented_page_height())
         margin_height_px = self._pdf_length_to_px(self._margins["top"]) + self._pdf_length_to_px(
             self._margins["bottom"]
@@ -640,29 +639,13 @@ class _BasePlaywrightPDFRenderer(ABC):
         if printable_height_px < 1.0:
             raise ADRException(
                 "Browser PDF vertical margins must leave at least one CSS pixel "
-                "of printable A4 page height."
+                f"of printable {self._page_size.value} page height."
             )
         return printable_height_px
 
-    def _pdf_page_size_options(self, fitted_page_width: str | None) -> dict[str, str | bool]:
-        """Return Playwright page-size options for standard A4 or measured overflow."""
-        if fitted_page_width is None:
-            return {"format": self._DEFAULT_PAGE_FORMAT, "landscape": self._landscape}
-
-        if self._landscape:
-            # Chromium applies landscape after reading width and height. Supply the desired
-            # physical output width as the pre-rotation height so the final page remains
-            # fitted-width x 210 mm rather than rotating the overflow width vertically.
-            return {
-                "width": self._DEFAULT_PAGE_WIDTH,
-                "height": fitted_page_width,
-                "landscape": True,
-            }
-        return {
-            "width": fitted_page_width,
-            "height": self._DEFAULT_PAGE_HEIGHT,
-            "landscape": False,
-        }
+    def _pdf_page_size_options(self) -> dict[str, str | bool]:
+        """Return Playwright options for the selected fixed page format."""
+        return {"format": self._page_size.value, "landscape": self._landscape}
 
     @abstractmethod
     def _get_navigation_target(self) -> str:
@@ -1208,92 +1191,6 @@ class _BasePlaywrightPDFRenderer(ABC):
                 fragmentation_result["breakableItems"],
             )
 
-    def _compute_pdf_width(self, page: Any) -> str | None:
-        """Return an explicit page width only when final content exceeds A4."""
-        margin_width_px = self._custom_page_horizontal_margin_width_px()
-        content_width_px = self._measure_content_width_px(page)
-        printable_width_px = self._printable_page_width_px()
-        if content_width_px <= printable_width_px:
-            self._logger.info(
-                "Browser PDF content fits the A4 content box: "
-                f"content_width_px={content_width_px:.2f}, "
-                f"printable_width_px={printable_width_px:.2f}"
-            )
-            return None
-
-        pdf_width_px = content_width_px + margin_width_px + self._CUSTOM_PAGE_WIDTH_ALLOWANCE_PX
-        self._logger.info(
-            "Browser PDF content exceeds the A4 content box; widening the page: "
-            f"content_width_px={content_width_px:.2f}, "
-            f"printable_width_px={printable_width_px:.2f}, "
-            f"page_width_px={pdf_width_px:.2f}"
-        )
-        return f"{pdf_width_px:.2f}px"
-
-    def _measure_content_width_px(self, page: Any) -> float:
-        """Measure the final rightmost visible report extent in one browser evaluation."""
-        measurement = page.evaluate(
-            """() => {
-                    const root = document.getElementById('report_root');
-                    if (!root) {
-                        return { widthPx: 0, source: 'no #report_root' };
-                    }
-
-                    const candidateSelector = [
-                        'adr-data-item', '.nexus-plot', '.js-plotly-plot',
-                        '.js-plotly-plot .plot-container', '.js-plotly-plot .svg-container',
-                        '.js-plotly-plot .main-svg', '.js-plotly-plot .legend',
-                        '.js-plotly-plot .legend text', '.table-responsive', 'table', 'img',
-                        'video', 'canvas', 'ansys-nexus-viewer'
-                    ].join(',');
-                    const candidates = root.querySelectorAll(candidateSelector);
-                    const scrollX = window.scrollX || 0;
-                    const rootRect = root.getBoundingClientRect();
-                    let maxRight = 0;
-                    let widestSource = 'none';
-
-                    // A full-width root is the normal responsive canvas, not evidence of overflow.
-                    // Its scrollWidth matters only when descendants genuinely extend beyond it.
-                    if (root.scrollWidth > root.clientWidth) {
-                        maxRight = rootRect.left + scrollX + root.scrollWidth;
-                        widestSource = '#report_root scrollWidth';
-                    }
-
-                    for (const node of candidates) {
-                        const style = window.getComputedStyle(node);
-                        if (style.display === 'none' || style.visibility === 'hidden') {
-                            continue;
-                        }
-                        // Skip elements that have no layout box of their own. For example,
-                        // display: contents nodes do not produce client rects even though their
-                        // children can still render and be measured separately.
-                        if (node.getClientRects().length === 0) {
-                            continue;
-                        }
-
-                        const rect = node.getBoundingClientRect();
-                        const renderedRight = rect.right + scrollX;
-                        const scrollRight = rect.left + scrollX + (node.scrollWidth || 0);
-                        const rightmostExtent = Math.max(renderedRight, scrollRight);
-                        if (rightmostExtent > maxRight) {
-                            maxRight = rightmostExtent;
-                            const id = node.id ? `#${node.id}` : '';
-                            const classes = [...node.classList].slice(0, 3).join('.');
-                            const classSuffix = classes ? `.${classes}` : '';
-                            widestSource = `${node.tagName.toLowerCase()}${id}${classSuffix}`;
-                        }
-                    }
-
-                    return { widthPx: maxRight, source: widestSource };
-                }"""
-        )
-        width_px = float(measurement["widthPx"])
-        self._logger.info(
-            "Measured final browser PDF content width: "
-            f"width_px={width_px:.2f}, source={measurement['source']}"
-        )
-        return width_px
-
     def _pdf_length_to_px(self, value: str) -> float:
         """Convert a Playwright PDF length to CSS pixels."""
         match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*", value)
@@ -1305,6 +1202,17 @@ class _BasePlaywrightPDFRenderer(ABC):
         if unit not in self._PDF_UNIT_TO_PX:
             raise ADRException(f"Unsupported PDF length unit for browser PDF rendering: {value!r}")
         return number * self._PDF_UNIT_TO_PX[unit]
+
+    @classmethod
+    def _validate_page_size(cls, page_size: PDFPageSize) -> PDFPageSize:
+        """Validate that a supported fixed page-size enum member was supplied."""
+        if not isinstance(page_size, PDFPageSize):
+            supported = ", ".join(page_size.name for page_size in PDFPageSize)
+            raise ADRException(
+                "Browser PDF page_size must be a PDFPageSize member; "
+                f"supported values are {supported}."
+            )
+        return page_size
 
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
         """Validate browser-PDF margins and return a private copy."""
@@ -1720,6 +1628,8 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
+    page_size : PDFPageSize, default: PDFPageSize.A4
+        Fixed page size used for browser layout, pagination, and PDF generation.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the
         exported HTML bundle is ready to open. This shared budget covers browser
@@ -1748,6 +1658,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -1757,6 +1668,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         super().__init__(
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
             render_timeout=render_timeout,
             ansys_installation=ansys_installation,
             ansys_version=ansys_version,
@@ -1847,6 +1759,8 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
+    page_size : PDFPageSize, default: PDFPageSize.A4
+        Fixed page size used for browser layout, pagination, and PDF generation.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the
         live report URL is ready to open. This shared budget covers browser
@@ -1872,6 +1786,7 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         auth_cookies: list[dict[str, object]] | None = None,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -1882,6 +1797,7 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         super().__init__(
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
             render_timeout=render_timeout,
             ansys_installation=ansys_installation,
             ansys_version=ansys_version,

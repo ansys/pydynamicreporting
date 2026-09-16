@@ -29,20 +29,21 @@ service that hosts the report, and call
        password="report-password",
    )
 
-   report = service.get_report(report_name="Simulation Summary")
-   exported = report.export_browser_pdf(
+     report = service.get_report(report_name="Simulation Summary")
+     exported = report.export_browser_pdf(
        file_name=r"C:\reports\simulation-summary.pdf",
        query_params={"colormode": "dark"},
        item_filter="A|i_tags|cont|project=wing;",
        landscape=True,
+       page_size=adr.PDFPageSize.A3,
        margins={
-           "top": "12mm",
-           "right": "12mm",
-           "bottom": "12mm",
-           "left": "12mm",
+         "top": "12mm",
+         "right": "12mm",
+         "bottom": "12mm",
+         "left": "12mm",
        },
        render_timeout=45,
-   )
+     )
    if not exported:
        raise RuntimeError("The report was not exported.")
 
@@ -80,6 +81,10 @@ Options
   ``{"colormode": "dark"}`` requests the report's dark color mode.
 * ``item_filter`` limits the report items with an ADR query expression.
 * ``landscape`` defaults to portrait output.
+* ``page_size`` selects ``adr.PDFPageSize.LETTER``, ``adr.PDFPageSize.LEGAL``,
+  ``adr.PDFPageSize.TABLOID``, or ``adr.PDFPageSize.A0`` through
+  ``adr.PDFPageSize.A5``. The default is A4. Content wider than the selected
+  printable area is clipped and never expands the page.
 * ``margins`` must contain exactly ``top``, ``right``, ``bottom``, and
   ``left``. Values can use pixels, inches, centimeters, or millimeters. A
   unitless value is treated as pixels. The default is 10 mm on every side.
@@ -92,8 +97,10 @@ How the report is rendered
 
 The browser opens the live report URL, carries the authenticated ADR web
 session into that browser context, and waits for ADR web components, fonts,
-MathJax, Plotly, images, and videos. The live page keeps its normal network
-access. Authentication cookies are scoped to the originating ADR service.
+MathJax, Plotly, images, and videos. Browser layout and pagination use the
+printable dimensions of the selected fixed page size. The live page keeps its
+normal network access. Authentication cookies are scoped to the originating
+ADR service.
 
 Custom asynchronous JavaScript in raw HTML items or layout HTML does not have
 its own readiness signal. If that code finishes outside the built-in signals,

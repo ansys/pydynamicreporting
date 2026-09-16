@@ -28,7 +28,7 @@ import warnings
 
 import pytest
 
-from ansys.dynamicreporting.core import Report, Service
+from ansys.dynamicreporting.core import PDFPageSize, Report, Service
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import report_remote_server
 
@@ -255,6 +255,7 @@ def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
         item_filter="A|i_tags|cont|dp=dp227;",
         landscape=True,
         margins=margins,
+        page_size=PDFPageSize.A3,
         render_timeout=12.5,
     )
 
@@ -265,6 +266,7 @@ def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
     assert captured["landscape"] is True
     assert captured["margins"] == margins
+    assert captured["page_size"] is PDFPageSize.A3
     assert captured["render_timeout"] == 12.5
     assert captured["ansys_installation"] == "/opt/ansys/v271"
     assert captured["ansys_version"] == 271

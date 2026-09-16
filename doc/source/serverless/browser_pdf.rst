@@ -19,7 +19,7 @@ product's static files during setup:
 
 .. code-block:: python
 
-   from ansys.dynamicreporting.core.serverless import ADR
+   from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
 
    adr = ADR(
        ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
@@ -48,6 +48,7 @@ when another API or storage layer needs the PDF as bytes:
        item_filter="A|i_tags|cont|project=wing;",
        dark_mode=True,
        landscape=True,
+       page_size=PDFPageSize.A3,
        margins={
            "top": "12mm",
            "right": "12mm",
@@ -75,6 +76,7 @@ to write the report directly:
        context={"project": "wing"},
        item_filter="A|i_tags|cont|project=wing;",
        dark_mode=True,
+       page_size=PDFPageSize.A3,
    )
 
 If ``filename`` is omitted, the export uses the report template GUID with a
@@ -108,6 +110,10 @@ Options
 * ``item_filter`` limits report items with an ADR query expression.
 * ``dark_mode`` selects the report's dark presentation.
 * ``landscape`` defaults to portrait output.
+* ``page_size`` selects ``PDFPageSize.LETTER``, ``PDFPageSize.LEGAL``,
+  ``PDFPageSize.TABLOID``, or ``PDFPageSize.A0`` through ``PDFPageSize.A5``.
+  The default is A4. Content wider than the selected printable area is clipped
+  and never expands the page.
 * ``margins`` must contain exactly ``top``, ``right``, ``bottom``, and
   ``left``. Values can use pixels, inches, centimeters, or millimeters. A
   unitless value is treated as pixels. The default is 10 mm on every side.
@@ -121,7 +127,8 @@ Offline rendering behavior
 
 The renderer waits for ADR web components, fonts, MathJax, Plotly, images, and
 videos. Print styling keeps headings with the following content and preserves
-the report canvas used by responsive charts.
+the report canvas used by responsive charts. Browser layout and pagination use
+the printable dimensions of the selected fixed page size.
 
 The staged report blocks external network requests. All content needed by the
 PDF must therefore be present in the offline bundle. Custom asynchronous

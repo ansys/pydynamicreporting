@@ -31,7 +31,7 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
+from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, PDFPageSize, common_utils
 from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightPDFRenderer
@@ -68,6 +68,7 @@ def _simple_renderer(
     body: str,
     *,
     landscape: bool = False,
+    page_size: PDFPageSize = PDFPageSize.A4,
     render_timeout: float | None = None,
     ansys_installation: str | None = None,
     ansys_version: int | None = None,
@@ -83,6 +84,7 @@ def _simple_renderer(
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
+        page_size=page_size,
         render_timeout=(
             _OfflinePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT
             if render_timeout is None
@@ -272,7 +274,6 @@ def _arrange_product_browser_renderer(
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     return renderer, flow, browser_binary_dir
 
@@ -296,14 +297,11 @@ def _capture_render_start_env(flow: MockPlaywrightPDFFlow, env_seen: dict[str, o
 def _stub_playwright_render(
     monkeypatch: pytest.MonkeyPatch,
     renderer: _OfflinePlaywrightPDFRenderer,
-    *,
-    pdf_width: str | None = None,
 ) -> tuple[Mock, Mock, Mock]:
-    """Stub browser preparation and width measurement, and return the rendered page."""
+    """Stub browser preparation and return the rendered page."""
     stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
     monkeypatch.setattr(renderer, "_prepare_content_for_pagination", lambda page: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return stack.page, stack.context, stack.browser
 
 
@@ -382,7 +380,6 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
@@ -406,7 +403,6 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     renderer.render_pdf()
 
@@ -438,7 +434,6 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
         captured_deadline["value"] = deadline
 
     monkeypatch.setattr(renderer, "_wait_for_render_ready", capture_ready)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     renderer.render_pdf()
 
@@ -559,6 +554,23 @@ def test_live_report_url_renderer_forwards_product_browser_install_metadata():
 
 
 @pytest.mark.unit
+def test_pdf_page_size_is_exported_from_common_utils():
+    assert common_utils.PDFPageSize is PDFPageSize
+    assert "PDFPageSize" in common_utils.__all__
+    assert tuple(page_size.value for page_size in PDFPageSize) == (
+        "Letter",
+        "Legal",
+        "Tabloid",
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+    )
+
+
+@pytest.mark.unit
 def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
     page, _, _ = _stub_playwright_render(monkeypatch, renderer)
@@ -566,52 +578,94 @@ def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
     renderer.render_pdf()
 
     pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["format"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_FORMAT
+    assert pdf_options["format"] == PDFPageSize.A4.value
     assert pdf_options["landscape"] is False
     assert "width" not in pdf_options
     assert "height" not in pdf_options
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_path, monkeypatch):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Measured width</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
-
-    renderer.render_pdf()
-
-    # Measured content width takes priority so wide browser-rendered content is not clipped.
-    pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["width"] == "488.00px"
-    assert pdf_options["height"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
-    assert pdf_options["landscape"] is False
-    assert "format" not in pdf_options
-
-
-@pytest.mark.unit
-def test_playwright_landscape_pdf_rotates_computed_overflow_width(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "page_size",
+    [
+        PDFPageSize.LETTER,
+        PDFPageSize.LEGAL,
+        PDFPageSize.TABLOID,
+        PDFPageSize.A0,
+        PDFPageSize.A1,
+        PDFPageSize.A2,
+        PDFPageSize.A3,
+        PDFPageSize.A5,
+    ],
+)
+def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, page_size):
     renderer = _simple_renderer(
         tmp_path,
-        "<html><body><p>Landscape overflow</p></body></html>",
-        landscape=True,
+        '<html><body><table style="width: 12000px"><tr><td>Wide</td></tr></table></body></html>',
+        page_size=page_size,
     )
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="1200.00px")
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
     pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["width"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_WIDTH
-    assert pdf_options["height"] == "1200.00px"
-    assert pdf_options["landscape"] is True
-    assert "format" not in pdf_options
+    assert pdf_options["format"] == page_size.value
+    assert pdf_options["landscape"] is False
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("landscape, expected_width", [(False, 718), (True, 1046)])
-def test_browser_context_uses_oriented_a4_printable_width(tmp_path, landscape, expected_width):
+def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Landscape A3</p></body></html>",
+        landscape=True,
+        page_size=PDFPageSize.A3,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["format"] == PDFPageSize.A3.value
+    assert pdf_options["landscape"] is True
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "page_size, landscape, expected_width",
+    [
+        (PDFPageSize.LETTER, False, 740),
+        (PDFPageSize.LETTER, True, 980),
+        (PDFPageSize.LEGAL, False, 740),
+        (PDFPageSize.LEGAL, True, 1268),
+        (PDFPageSize.TABLOID, False, 980),
+        (PDFPageSize.TABLOID, True, 1556),
+        (PDFPageSize.A0, False, 3102),
+        (PDFPageSize.A0, True, 4417),
+        (PDFPageSize.A1, False, 2170),
+        (PDFPageSize.A1, True, 3102),
+        (PDFPageSize.A2, False, 1512),
+        (PDFPageSize.A2, True, 2170),
+        (PDFPageSize.A3, False, 1047),
+        (PDFPageSize.A3, True, 1512),
+        (PDFPageSize.A4, False, 718),
+        (PDFPageSize.A4, True, 1047),
+        (PDFPageSize.A5, False, 484),
+        (PDFPageSize.A5, True, 718),
+    ],
+)
+def test_browser_context_uses_selected_printable_width(
+    tmp_path, page_size, landscape, expected_width
+):
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Responsive content</p></body></html>",
         landscape=landscape,
+        page_size=page_size,
     )
 
     context_options = renderer._shared_browser_context_kwargs()
@@ -621,9 +675,9 @@ def test_browser_context_uses_oriented_a4_printable_width(tmp_path, landscape, e
 
 
 @pytest.mark.unit
-def test_playwright_pdf_prepares_pagination_before_width(tmp_path, monkeypatch):
+def test_playwright_pdf_prepares_pagination_before_generation(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="420.00px")
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
     call_order: list[str] = []
 
     monkeypatch.setattr(
@@ -642,15 +696,9 @@ def test_playwright_pdf_prepares_pagination_before_width(tmp_path, monkeypatch):
         lambda observed_page: call_order.append("pagination"),
     )
 
-    def capture_width(observed_page):
-        call_order.append("width")
-        return "420.00px"
-
-    monkeypatch.setattr(renderer, "_compute_pdf_width", capture_width)
-
     renderer.render_pdf()
 
-    assert call_order == ["styles", "ready", "pagination", "width"]
+    assert call_order == ["styles", "ready", "pagination"]
     page.pdf.assert_called_once()
 
 
@@ -1851,58 +1899,17 @@ def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
 
 
 @pytest.mark.unit
-def test_compute_pdf_width_keeps_a4_when_content_fits(tmp_path, monkeypatch):
-    renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Fits A4</body></html>"),
-        **_browser_metadata_kwargs(),
-    )
-    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 700.0)
-
-    assert renderer._compute_pdf_width(Mock()) is None
-
-
-@pytest.mark.unit
-def test_compute_pdf_width_includes_margins_and_rounding_allowance_for_overflow(
-    tmp_path, monkeypatch
-):
-    renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
-        margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
-        **_browser_metadata_kwargs(),
-    )
-    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 600.0)
-
-    assert renderer._compute_pdf_width(Mock()) == "900.00px"
+def test_renderer_rejects_non_enum_page_size(tmp_path):
+    with pytest.raises(ADRException, match="page_size must be a PDFPageSize member"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>Invalid page size</body></html>"),
+            page_size="A3",
+            **_browser_metadata_kwargs(),
+        )
 
 
 @pytest.mark.unit
-def test_compute_pdf_width_uses_rotated_margin_axis_for_landscape(tmp_path, monkeypatch):
-    renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Landscape margins</body></html>"),
-        landscape=True,
-        margins={"top": "1in", "right": "10mm", "bottom": "2in", "left": "10mm"},
-        **_browser_metadata_kwargs(),
-    )
-    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 1100.0)
-
-    assert renderer._compute_pdf_width(Mock()) == "1400.00px"
-
-
-@pytest.mark.unit
-def test_measure_content_width_uses_one_final_browser_evaluation(tmp_path):
-    renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Measure once</body></html>"),
-        **_browser_metadata_kwargs(),
-    )
-    page = Mock()
-    page.evaluate.return_value = {"widthPx": 715.375, "source": "table#summary"}
-
-    assert renderer._measure_content_width_px(page) == 715.375
-    page.evaluate.assert_called_once()
-
-
-@pytest.mark.unit
-def test_renderer_rejects_horizontal_margins_that_consume_a4_width(tmp_path):
+def test_renderer_rejects_horizontal_margins_that_consume_selected_page_width(tmp_path):
     with pytest.raises(ADRException, match="leave at least one CSS pixel"):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>No printable width</body></html>"),

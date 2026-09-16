@@ -34,6 +34,7 @@ Install resolution uses four distinct path and version concepts:
 """
 
 from dataclasses import dataclass
+from enum import Enum
 import logging
 import os
 from pathlib import Path
@@ -48,6 +49,36 @@ from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    "PDFPageSize",
+    "InstallResolution",
+    "PROPERTIES_EXEMPT",
+    "check_dictionary_for_html",
+    "check_list_for_html",
+    "get_install_info",
+    "get_install_version",
+    "populate_template",
+    "resolve_install_info",
+]
+
+
+class PDFPageSize(str, Enum):
+    """Fixed page sizes supported by browser-PDF export."""
+
+    LETTER = "Letter"
+    LEGAL = "Legal"
+    TABLOID = "Tabloid"
+    A0 = "A0"
+    A1 = "A1"
+    A2 = "A2"
+    A3 = "A3"
+    A4 = "A4"
+    A5 = "A5"
+
+    def __str__(self) -> str:
+        """Return the page-size value accepted by the browser renderer."""
+        return self.value
 
 
 def get_install_version(install_dir: Path) -> int | None:
