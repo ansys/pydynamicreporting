@@ -547,16 +547,17 @@ def test_live_report_url_renderer_forwards_product_browser_install_metadata():
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
+def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
     page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
-    # A missing measured width must still produce a consistent A4-sized page.
     pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["width"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_WIDTH
-    assert pdf_options["height"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
+    assert pdf_options["format"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_FORMAT
+    assert pdf_options["landscape"] is False
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
 
 
 @pytest.mark.unit
@@ -570,6 +571,41 @@ def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_
     pdf_options = page.pdf.call_args.kwargs
     assert pdf_options["width"] == "488.00px"
     assert pdf_options["height"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
+    assert pdf_options["landscape"] is False
+    assert "format" not in pdf_options
+
+
+@pytest.mark.unit
+def test_playwright_landscape_pdf_rotates_computed_overflow_width(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Landscape overflow</p></body></html>",
+        landscape=True,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="1200.00px")
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["width"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_WIDTH
+    assert pdf_options["height"] == "1200.00px"
+    assert pdf_options["landscape"] is True
+    assert "format" not in pdf_options
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("landscape, expected_width", [(False, 718), (True, 1046)])
+def test_browser_context_uses_oriented_a4_printable_width(tmp_path, landscape, expected_width):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Responsive content</p></body></html>",
+        landscape=landscape,
+    )
+
+    context_options = renderer._shared_browser_context_kwargs()
+
+    assert context_options["viewport"]["width"] == expected_width
+    assert context_options["viewport"]["height"] == renderer._DEFAULT_BROWSER_VIEWPORT_HEIGHT
 
 
 @pytest.mark.unit
@@ -1488,17 +1524,54 @@ def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
 
 
 @pytest.mark.unit
-def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
+def test_compute_pdf_width_keeps_a4_when_content_fits(tmp_path, monkeypatch):
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Fits A4</body></html>"),
+        **_browser_metadata_kwargs(),
+    )
+    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 700.0)
+
+    assert renderer._compute_pdf_width(Mock()) is None
+
+
+@pytest.mark.unit
+def test_compute_pdf_width_uses_configured_margins_for_overflow(tmp_path, monkeypatch):
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
         margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
         **_browser_metadata_kwargs(),
     )
-    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 100.0)
-    monkeypatch.setattr(renderer, "_measure_layout_width_px", lambda page: 200.0)
+    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 600.0)
 
-    # The width uses the larger layout width plus the caller-provided left/right margins.
-    assert renderer._compute_pdf_width(Mock()) == "488.00px"
+    assert renderer._compute_pdf_width(Mock()) == "888.00px"
+
+
+@pytest.mark.unit
+def test_measure_content_width_uses_one_final_browser_evaluation(tmp_path):
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Measure once</body></html>"),
+        **_browser_metadata_kwargs(),
+    )
+    page = Mock()
+    page.evaluate.return_value = {"widthPx": 715.375, "source": "table#summary"}
+
+    assert renderer._measure_content_width_px(page) == 715.375
+    page.evaluate.assert_called_once()
+
+
+@pytest.mark.unit
+def test_renderer_rejects_horizontal_margins_that_consume_a4_width(tmp_path):
+    with pytest.raises(ADRException, match="leave at least one CSS pixel"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>No printable width</body></html>"),
+            margins={
+                "top": "10mm",
+                "right": "105mm",
+                "bottom": "10mm",
+                "left": "105mm",
+            },
+            **_browser_metadata_kwargs(),
+        )
 
 
 @pytest.mark.unit

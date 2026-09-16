@@ -38,7 +38,7 @@ treating PDF export as a screenshot of already-painted viewport pixels:
               v
     +-----------------------------------------------+
     | Phase A: live browser / continuous-media pass |
-    | - fixed viewport for deterministic JS layout  |
+    | - A4 content-width viewport for JS layout      |
     | - execute ADR, Plotly, MathJax, viewers       |
     | - wait for readiness signals                  |
     | - inject capture CSS                          |
@@ -48,7 +48,7 @@ treating PDF export as a screenshot of already-painted viewport pixels:
               v
     +-----------------------------------------------+
     | Phase B: paged PDF generation pass            |
-    | - call page.pdf(width=measured, ...)          |
+    | - use A4 unless final content overflows       |
     | - Chromium generates paged output             |
     | - requested paper width defines page area     |
     | - auto-width nodes/divs can use that width    |
@@ -61,10 +61,10 @@ treating PDF export as a screenshot of already-painted viewport pixels:
   paged media, and notes that the initial containing block changes accordingly.
 
 That distinction matters for browser-PDF exports. Phase A stabilizes responsive
-browser-rendered content such as Plotly against a fixed viewport so width measurements
-are deterministic. Phase B then feeds the measured width back into ``page.pdf()`` so
-the final paged layout has enough horizontal space to preserve content that would
-otherwise overflow or be clipped at the right edge.
+browser-rendered content such as Plotly against the printable width of an oriented A4
+page so width measurements are deterministic and match the eventual page content box.
+Phase B keeps that standard A4 page when content fits, or feeds a measured overflow
+width into ``page.pdf()`` so genuinely wide content is not clipped at the right edge.
 """
 
 from abc import ABC, abstractmethod
@@ -74,7 +74,7 @@ import json
 import os
 import platform
 import re
-from math import ceil
+from math import ceil, floor
 from pathlib import Path
 from time import monotonic
 from typing import Any, ClassVar
@@ -313,12 +313,14 @@ class _BasePlaywrightPDFRenderer(ABC):
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
+    # The standard format avoids custom-dimension rounding for ordinary A4 output.
+    _DEFAULT_PAGE_FORMAT: str = "A4"
     # the width of an A4 page
     _DEFAULT_PAGE_WIDTH: str = "210mm"
     # the height of an A4 page
     _DEFAULT_PAGE_HEIGHT: str = "297mm"
-    # the default virtual browser viewport width and height
-    _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
+    # The virtual viewport height does not constrain PDF pagination. Its width is derived
+    # from the oriented A4 content box after caller-configured margins are subtracted.
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
@@ -346,6 +348,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Initialize the renderer with shared browser-PDF configuration."""
         self._landscape = landscape
         self._margins = self._validate_margins(margins)
+        self._printable_page_width_px()
         self._render_timeout = self._validate_render_timeout(render_timeout)
         if ansys_installation is None or ansys_version is None:
             raise ADRException(
@@ -515,18 +518,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                         browser_phase_deadline, "PDF width measurement"
                     )
                     pdf_width = self._compute_pdf_width(page)
-                    # Keep the fallback page size internally consistent. Playwright defaults
-                    # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
-                    # mixed Letter-width/A4-height page when no content width can be measured.
-                    pdf_page_width = (
-                        pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
-                    )
                     pdf_options = {
-                        # Keep page height explicit so pagination remains under ADR's control
-                        # instead of depending entirely on Playwright's default page format.
-                        "width": pdf_page_width,
-                        "height": self._DEFAULT_PAGE_HEIGHT,
-                        "landscape": self._landscape,
+                        **self._pdf_page_size_options(pdf_width),
                         "margin": self._margins,
                         "print_background": True,
                     }
@@ -534,10 +527,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                     # Playwright describes page.pdf() as generating paged output, not a bitmap
                     # snapshot of the already-painted viewport. MDN's paged-media model also
                     # distinguishes the continuous-media viewport from the paged page area.
-                    # Passing the measured width here therefore gives the PDF generation pass a
-                    # wider page area even though the live browser pass already ran. Elements
-                    # such as #report_root that remain auto-width can then lay out against that
-                    # wider paged space without us assigning them an explicit width in the DOM.
+                    # Standard A4 keeps ordinary reports physically predictable. When final
+                    # content genuinely overflows the A4 content box, the measured width gives
+                    # the PDF generation pass enough page area to preserve that overflow.
                     #
                     # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
                     # so this deadline check is a preflight guard rather than an interruptible
@@ -588,11 +580,53 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Return browser-context options shared by both offline and live renders."""
         return {
             "viewport": {
-                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                "width": self._browser_viewport_width_px(),
                 "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
             },
             "service_workers": "block",
             "accept_downloads": False,
+        }
+
+    def _oriented_page_width(self) -> str:
+        """Return the physical A4 page width for the requested orientation."""
+        return self._DEFAULT_PAGE_HEIGHT if self._landscape else self._DEFAULT_PAGE_WIDTH
+
+    def _printable_page_width_px(self) -> float:
+        """Return the oriented A4 content-box width after horizontal PDF margins."""
+        page_width_px = self._pdf_length_to_px(self._oriented_page_width())
+        margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
+            self._margins["right"]
+        )
+        printable_width_px = page_width_px - margin_width_px
+        if printable_width_px < 1.0:
+            raise ADRException(
+                "Browser PDF horizontal margins must leave at least one CSS pixel "
+                "of printable A4 page width."
+            )
+        return printable_width_px
+
+    def _browser_viewport_width_px(self) -> int:
+        """Return an integer viewport no wider than the PDF content box."""
+        return floor(self._printable_page_width_px())
+
+    def _pdf_page_size_options(self, fitted_page_width: str | None) -> dict[str, str | bool]:
+        """Return Playwright page-size options for standard A4 or measured overflow."""
+        if fitted_page_width is None:
+            return {"format": self._DEFAULT_PAGE_FORMAT, "landscape": self._landscape}
+
+        if self._landscape:
+            # Chromium applies landscape after reading width and height. Supply the desired
+            # physical output width as the pre-rotation height so the final page remains
+            # fitted-width x 210 mm rather than rotating the overflow width vertically.
+            return {
+                "width": self._DEFAULT_PAGE_WIDTH,
+                "height": fitted_page_width,
+                "landscape": True,
+            }
+        return {
+            "width": fitted_page_width,
+            "height": self._DEFAULT_PAGE_HEIGHT,
+            "landscape": False,
         }
 
     @abstractmethod
@@ -711,82 +745,59 @@ class _BasePlaywrightPDFRenderer(ABC):
         )
 
     def _compute_pdf_width(self, page: Any) -> str | None:
-        """Compute an explicit PDF page width when needed to preserve browser content."""
+        """Return an explicit page width only when final content exceeds A4."""
         margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
             self._margins["right"]
         )
         content_width_px = self._measure_content_width_px(page)
-        layout_width_px = self._measure_layout_width_px(page)
-        if content_width_px <= 0:
+        printable_width_px = self._printable_page_width_px()
+        if content_width_px <= printable_width_px:
             self._logger.info(
-                "No visible report width was found; using the default A4 PDF page width."
+                "Browser PDF content fits the A4 content box: "
+                f"content_width_px={content_width_px:.2f}, "
+                f"printable_width_px={printable_width_px:.2f}"
             )
             return None
 
-        # The PDF page must preserve the same layout canvas that Chromium used while rendering
-        # the report. If the PDF content area is narrower than the browser viewport, responsive
-        # Plotly legends can still be clipped at the right edge even when the report root itself
-        # appears narrower than the viewport.
-        # if actual content is wider, use that
-        # if the viewport/layout canvas is wider, use that instead
-        fitted_content_width_px = max(content_width_px, layout_width_px)
-        pdf_width_px = fitted_content_width_px + margin_width_px
+        pdf_width_px = content_width_px + margin_width_px
         self._logger.info(
-            "Computed browser PDF width fit: "
+            "Browser PDF content exceeds the A4 content box; widening the page: "
             f"content_width_px={content_width_px:.2f}, "
-            f"layout_width_px={layout_width_px:.2f}, "
-            f"fitted_width_px={pdf_width_px:.2f}"
+            f"printable_width_px={printable_width_px:.2f}, "
+            f"page_width_px={pdf_width_px:.2f}"
         )
         return f"{pdf_width_px:.2f}px"
 
     def _measure_content_width_px(self, page: Any) -> float:
-        """Measure the rightmost visible report content in CSS pixels."""
-        # Limit the query to elements that actually paint user-visible content. This keeps the
-        # probe close to O(number of rendered report objects) instead of walking the entire page.
-        return float(
-            page.evaluate(
-                """() => {
+        """Measure the final rightmost visible report extent in one browser evaluation."""
+        measurement = page.evaluate(
+            """() => {
                     const root = document.getElementById('report_root');
                     if (!root) {
-                        return 0;
+                        return { widthPx: 0, source: 'no #report_root' };
                     }
 
+                    const candidateSelector = [
+                        'adr-data-item', '.nexus-plot', '.js-plotly-plot',
+                        '.js-plotly-plot .plot-container', '.js-plotly-plot .svg-container',
+                        '.js-plotly-plot .main-svg', '.js-plotly-plot .legend',
+                        '.js-plotly-plot .legend text', '.table-responsive', 'table', 'img',
+                        'video', 'canvas', 'ansys-nexus-viewer'
+                    ].join(',');
+                    const candidates = root.querySelectorAll(candidateSelector);
+                    const scrollX = window.scrollX || 0;
                     const rootRect = root.getBoundingClientRect();
-                    // Measure a curated set of content-bearing descendants instead of walking the
-                    // entire DOM. New ADR content types that can widen the report should update
-                    // this list so the width probe keeps seeing the real rendered geometry.
-                    const candidateSelectors = [
-                        'adr-data-item',
-                        '.nexus-plot',
-                        '.js-plotly-plot',
-                        '.js-plotly-plot .plot-container',
-                        '.js-plotly-plot .svg-container',
-                        '.js-plotly-plot .main-svg',
-                        '.js-plotly-plot .legend',
-                        '.js-plotly-plot .legend text',
-                        '.table-responsive',
-                        'table',
-                        'img',
-                        'video',
-                        'canvas',
-                        'ansys-nexus-viewer'
-                    ];
-                    const candidates = [root];
-                    for (const selector of candidateSelectors) {
-                        candidates.push(...root.querySelectorAll(selector));
+                    let maxRight = 0;
+                    let widestSource = 'none';
+
+                    // A full-width root is the normal responsive canvas, not evidence of overflow.
+                    // Its scrollWidth matters only when descendants genuinely extend beyond it.
+                    if (root.scrollWidth > root.clientWidth) {
+                        maxRight = rootRect.left + scrollX + root.scrollWidth;
+                        widestSource = '#report_root scrollWidth';
                     }
 
-                    const seen = new Set();
-                    // Start with the report root's own visible width and scrollable width. The
-                    // scrollWidth fallback helps when child content extends farther right than the
-                    // root's immediate visible box.
-                    let maxRight = Math.max(rootRect.width, root.scrollWidth);
                     for (const node of candidates) {
-                        if (seen.has(node)) {
-                            continue;
-                        }
-                        seen.add(node);
-
                         const style = window.getComputedStyle(node);
                         if (style.display === 'none' || style.visibility === 'hidden') {
                             continue;
@@ -797,50 +808,29 @@ class _BasePlaywrightPDFRenderer(ABC):
                         if (node.getClientRects().length === 0) {
                             continue;
                         }
-                        // Measure the node in viewport coordinates, then convert that geometry
-                        // into #report_root-relative coordinates for width comparisons.
+
                         const rect = node.getBoundingClientRect();
-                        // offsetLeft is how far this node starts from the left edge of the report
-                        // root, which lets scrollWidth-based checks compute a root-relative
-                        // rightmost extent.
-                        const offsetLeft = rect.left - rootRect.left;
-                        // Width is tracked as the farthest rightward extent reached by any
-                        // measured node, relative to the left edge of #report_root. The
-                        // right edge matters here because browser-rendered content can overflow
-                        // past the root's nominal box, so "space remaining to the root edge"
-                        // would under-measure the PDF width we actually need.
-                        maxRight = Math.max(maxRight, rect.right - rootRect.left);
-                        if ('scrollWidth' in node) {
-                            // scrollWidth catches horizontally scrollable content that can extend
-                            // beyond the node's current client box.
-                            maxRight = Math.max(maxRight, offsetLeft + (node.scrollWidth || 0));
+                        const renderedRight = rect.right + scrollX;
+                        const scrollRight = rect.left + scrollX + (node.scrollWidth || 0);
+                        const rightmostExtent = Math.max(renderedRight, scrollRight);
+                        if (rightmostExtent > maxRight) {
+                            maxRight = rightmostExtent;
+                            const id = node.id ? `#${node.id}` : '';
+                            const classes = [...node.classList].slice(0, 3).join('.');
+                            const classSuffix = classes ? `.${classes}` : '';
+                            widestSource = `${node.tagName.toLowerCase()}${id}${classSuffix}`;
                         }
                     }
-                    return maxRight;
-                }""",
-            )
-        )
 
-    def _measure_layout_width_px(self, page: Any) -> float:
-        """Measure the effective browser layout width in CSS pixels.
-
-        _measure_content_width_px() reports how far visible content extends to the right.
-        Some responsive content may lay out relative to the viewport rather than the report
-        root; so return the widest of both.
-        """
-        return float(
-            page.evaluate(
-                """() => {
-                    // Use the widest of the common viewport/document width signals so the PDF
-                    // preserves the layout canvas Chromium actually used while rendering.
-                    return Math.max(
-                        window.innerWidth || 0,  // The viewport width
-                        document.documentElement?.clientWidth || 0,  // <html> element width
-                        document.body?.clientWidth || 0  // <body> element width
-                    );
-                }""",
-            )
+                    return { widthPx: maxRight, source: widestSource };
+                }"""
         )
+        width_px = float(measurement["widthPx"])
+        self._logger.info(
+            "Measured final browser PDF content width: "
+            f"width_px={width_px:.2f}, source={measurement['source']}"
+        )
+        return width_px
 
     def _pdf_length_to_px(self, value: str) -> float:
         """Convert a Playwright PDF length to CSS pixels."""
