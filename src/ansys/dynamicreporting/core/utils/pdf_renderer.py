@@ -47,7 +47,7 @@ treating PDF export as a screenshot of already-painted viewport pixels:
               v
     +-----------------------------------------------+
     | Phase B: paged PDF generation pass            |
-    | - use the selected fixed page format          |
+    | - use the selected format or dimensions       |
     | - Chromium generates paged output             |
     | - selected page width caps rendered content   |
     | - content beyond that width is clipped        |
@@ -60,7 +60,7 @@ treating PDF export as a screenshot of already-painted viewport pixels:
 
 That distinction matters for browser-PDF exports. Phase A stabilizes responsive
 browser-rendered content such as Plotly against the printable width of the selected
-oriented page. Phase B passes that fixed format to ``page.pdf()`` so the output page
+oriented page. Phase B passes that explicit sizing to ``page.pdf()`` so the output page
 size is definitive and content cannot expand it.
 """
 
@@ -71,7 +71,7 @@ import json
 import os
 import platform
 import re
-from math import ceil, floor
+from math import ceil, floor, isfinite
 from pathlib import Path
 from time import monotonic
 from typing import Any, ClassVar
@@ -284,8 +284,14 @@ class _BasePlaywrightPDFRenderer(ABC):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
-    page_size : PDFPageSize, default: PDFPageSize.A4
-        Fixed page size used for browser layout, pagination, and PDF generation.
+    page_size : PDFPageSize or None, default: PDFPageSize.A4
+        Fixed page format used for browser layout, pagination, and PDF generation.
+        A fixed format takes precedence over ``width`` and ``height``. Set to ``None``
+        to use custom dimensions.
+    width : str or float, optional
+        Custom page width used when ``page_size`` is ``None``.
+    height : str or float, optional
+        Custom page height used when ``page_size`` is ``None``.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the prepared
         report source is ready to open. This shared budget covers browser launch,
@@ -328,12 +334,14 @@ class _BasePlaywrightPDFRenderer(ABC):
         PDFPageSize.LETTER: ("8.5in", "11in"),
         PDFPageSize.LEGAL: ("8.5in", "14in"),
         PDFPageSize.TABLOID: ("11in", "17in"),
+        PDFPageSize.LEDGER: ("17in", "11in"),
         PDFPageSize.A0: ("33.1in", "46.8in"),
         PDFPageSize.A1: ("23.4in", "33.1in"),
         PDFPageSize.A2: ("16.54in", "23.4in"),
         PDFPageSize.A3: ("11.7in", "16.54in"),
         PDFPageSize.A4: ("8.27in", "11.7in"),
         PDFPageSize.A5: ("5.83in", "8.27in"),
+        PDFPageSize.A6: ("4.13in", "5.83in"),
     }
     # The virtual viewport height does not constrain PDF pagination. Its width is derived
     # from the selected oriented content box after caller-configured margins are subtracted.
@@ -356,7 +364,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize = _DEFAULT_PAGE_SIZE,
+        page_size: PDFPageSize | None = _DEFAULT_PAGE_SIZE,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -364,9 +374,20 @@ class _BasePlaywrightPDFRenderer(ABC):
     ) -> None:
         """Initialize the renderer with shared browser-PDF configuration."""
         self._landscape = landscape
-        self._page_size = self._validate_page_size(page_size)
+        validated_page_size = self._validate_page_size(page_size)
+        self._width, self._height = self._validate_custom_page_dimensions(
+            page_size=validated_page_size,
+            width=width,
+            height=height,
+        )
+        self._page_size = (
+            self._DEFAULT_PAGE_SIZE
+            if validated_page_size is None and self._width is None
+            else validated_page_size
+        )
         self._margins = self._validate_margins(margins)
         self._printable_page_width_px()
+        self._printable_page_height_px()
         self._render_timeout = self._validate_render_timeout(render_timeout)
         if ansys_installation is None or ansys_version is None:
             raise ADRException(
@@ -542,8 +563,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     # Playwright describes page.pdf() as generating paged output, not a bitmap
                     # snapshot of the already-painted viewport. MDN's paged-media model also
                     # distinguishes the continuous-media viewport from the paged page area.
-                    # The selected fixed format keeps output dimensions predictable. Content
-                    # wider than its printable area is clipped instead of expanding the page.
+                    # Explicit page sizing keeps output dimensions predictable. Content wider
+                    # than its printable area is clipped instead of expanding the page.
                     #
                     # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
                     # so this deadline check is a preflight guard rather than an interruptible
@@ -601,15 +622,27 @@ class _BasePlaywrightPDFRenderer(ABC):
             "accept_downloads": False,
         }
 
-    def _oriented_page_width(self) -> str:
+    def _page_dimensions(self) -> tuple[str | float, str | float]:
+        """Return the selected portrait page dimensions."""
+        if self._page_size is not None:
+            return self._PAGE_DIMENSIONS[self._page_size]
+
+        assert self._width is not None and self._height is not None
+        return self._width, self._height
+
+    def _oriented_page_width(self) -> str | float:
         """Return the selected physical page width for the requested orientation."""
-        page_width, page_height = self._PAGE_DIMENSIONS[self._page_size]
+        page_width, page_height = self._page_dimensions()
         return page_height if self._landscape else page_width
 
-    def _oriented_page_height(self) -> str:
+    def _oriented_page_height(self) -> str | float:
         """Return the selected physical page height for the requested orientation."""
-        page_width, page_height = self._PAGE_DIMENSIONS[self._page_size]
+        page_width, page_height = self._page_dimensions()
         return page_width if self._landscape else page_height
+
+    def _page_size_description(self) -> str:
+        """Return a concise page-size description for validation errors."""
+        return self._page_size.value if self._page_size is not None else "custom"
 
     def _printable_page_width_px(self) -> float:
         """Return the oriented content-box width after horizontal PDF margins."""
@@ -621,7 +654,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         if printable_width_px < 1.0:
             raise ADRException(
                 "Browser PDF horizontal margins must leave at least one CSS pixel "
-                f"of printable {self._page_size.value} page width."
+                f"of printable {self._page_size_description()} page width."
             )
         return printable_width_px
 
@@ -639,13 +672,20 @@ class _BasePlaywrightPDFRenderer(ABC):
         if printable_height_px < 1.0:
             raise ADRException(
                 "Browser PDF vertical margins must leave at least one CSS pixel "
-                f"of printable {self._page_size.value} page height."
+                f"of printable {self._page_size_description()} page height."
             )
         return printable_height_px
 
-    def _pdf_page_size_options(self) -> dict[str, str | bool]:
-        """Return Playwright options for the selected fixed page format."""
-        return {"format": self._page_size.value, "landscape": self._landscape}
+    def _pdf_page_size_options(self) -> dict[str, str | float | bool]:
+        """Return Playwright options for the selected page sizing."""
+        options: dict[str, str | float | bool] = {"landscape": self._landscape}
+        if self._page_size is not None:
+            options["format"] = self._page_size.value
+        else:
+            assert self._width is not None and self._height is not None
+            options["width"] = self._width
+            options["height"] = self._height
+        return options
 
     @abstractmethod
     def _get_navigation_target(self) -> str:
@@ -1191,8 +1231,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                 fragmentation_result["breakableItems"],
             )
 
-    def _pdf_length_to_px(self, value: str) -> float:
+    def _pdf_length_to_px(self, value: str | float) -> float:
         """Convert a Playwright PDF length to CSS pixels."""
+        if isinstance(value, bool):
+            raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
+        if isinstance(value, (int, float)):
+            number = float(value)
+            if not isfinite(number):
+                raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
+            return number
+        if not isinstance(value, str):
+            raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
+
         match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*", value)
         if match is None:
             raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
@@ -1204,15 +1254,38 @@ class _BasePlaywrightPDFRenderer(ABC):
         return number * self._PDF_UNIT_TO_PX[unit]
 
     @classmethod
-    def _validate_page_size(cls, page_size: PDFPageSize) -> PDFPageSize:
-        """Validate that a supported fixed page-size enum member was supplied."""
-        if not isinstance(page_size, PDFPageSize):
-            supported = ", ".join(page_size.name for page_size in PDFPageSize)
+    def _validate_page_size(cls, page_size: PDFPageSize | None) -> PDFPageSize | None:
+        """Validate that a supported fixed page-size enum member or ``None`` was supplied."""
+        if page_size is not None and not isinstance(page_size, PDFPageSize):
+            supported = ", ".join(size.name for size in PDFPageSize)
             raise ADRException(
-                "Browser PDF page_size must be a PDFPageSize member; "
+                "Browser PDF page_size must be a PDFPageSize member or None; "
                 f"supported values are {supported}."
             )
         return page_size
+
+    def _validate_custom_page_dimensions(
+        self,
+        *,
+        page_size: PDFPageSize | None,
+        width: str | float | None,
+        height: str | float | None,
+    ) -> tuple[str | float | None, str | float | None]:
+        """Validate custom dimensions when no fixed page format is selected."""
+        if page_size is not None:
+            return None, None
+        if width is None and height is None:
+            return None, None
+        if width is None or height is None:
+            raise ADRException(
+                "Browser PDF width and height must be provided together when page_size is None."
+            )
+
+        for dimension_name, dimension_value in (("width", width), ("height", height)):
+            dimension_px = self._pdf_length_to_px(dimension_value)
+            if dimension_px <= 0:
+                raise ADRException(f"Browser PDF {dimension_name} must be a positive PDF length.")
+        return width, height
 
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
         """Validate browser-PDF margins and return a private copy."""
@@ -1628,8 +1701,12 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
-    page_size : PDFPageSize, default: PDFPageSize.A4
-        Fixed page size used for browser layout, pagination, and PDF generation.
+    page_size : PDFPageSize or None, default: PDFPageSize.A4
+        Fixed page format. Set to ``None`` to use ``width`` and ``height``.
+    width : str or float, optional
+        Custom page width used when ``page_size`` is ``None``.
+    height : str or float, optional
+        Custom page height used when ``page_size`` is ``None``.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the
         exported HTML bundle is ready to open. This shared budget covers browser
@@ -1658,7 +1735,9 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
+        page_size: PDFPageSize | None = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -1669,6 +1748,8 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
             landscape=landscape,
             margins=margins,
             page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
             ansys_installation=ansys_installation,
             ansys_version=ansys_version,
@@ -1759,8 +1840,12 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
-    page_size : PDFPageSize, default: PDFPageSize.A4
-        Fixed page size used for browser layout, pagination, and PDF generation.
+    page_size : PDFPageSize or None, default: PDFPageSize.A4
+        Fixed page format. Set to ``None`` to use ``width`` and ``height``.
+    width : str or float, optional
+        Custom page width used when ``page_size`` is ``None``.
+    height : str or float, optional
+        Custom page height used when ``page_size`` is ``None``.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the
         live report URL is ready to open. This shared budget covers browser
@@ -1786,7 +1871,9 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         auth_cookies: list[dict[str, object]] | None = None,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
+        page_size: PDFPageSize | None = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -1798,6 +1885,8 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
             landscape=landscape,
             margins=margins,
             page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
             ansys_installation=ansys_installation,
             ansys_version=ansys_version,

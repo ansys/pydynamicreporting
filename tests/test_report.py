@@ -256,6 +256,8 @@ def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
         landscape=True,
         margins=margins,
         page_size=PDFPageSize.A3,
+        width="12in",
+        height="18in",
         render_timeout=12.5,
     )
 
@@ -267,6 +269,8 @@ def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
     assert captured["landscape"] is True
     assert captured["margins"] == margins
     assert captured["page_size"] is PDFPageSize.A3
+    assert captured["width"] == "12in"
+    assert captured["height"] == "18in"
     assert captured["render_timeout"] == 12.5
     assert captured["ansys_installation"] == "/opt/ansys/v271"
     assert captured["ansys_version"] == 271

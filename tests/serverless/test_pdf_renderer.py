@@ -68,7 +68,10 @@ def _simple_renderer(
     body: str,
     *,
     landscape: bool = False,
-    page_size: PDFPageSize = PDFPageSize.A4,
+    margins: dict[str, str] | None = None,
+    page_size: PDFPageSize | None = PDFPageSize.A4,
+    width: str | float | None = None,
+    height: str | float | None = None,
     render_timeout: float | None = None,
     ansys_installation: str | None = None,
     ansys_version: int | None = None,
@@ -84,7 +87,10 @@ def _simple_renderer(
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
+        margins=margins,
         page_size=page_size,
+        width=width,
+        height=height,
         render_timeout=(
             _OfflinePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT
             if render_timeout is None
@@ -561,12 +567,14 @@ def test_pdf_page_size_is_exported_from_common_utils():
         "Letter",
         "Legal",
         "Tabloid",
+        "Ledger",
         "A0",
         "A1",
         "A2",
         "A3",
         "A4",
         "A5",
+        "A6",
     )
 
 
@@ -591,11 +599,13 @@ def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
         PDFPageSize.LETTER,
         PDFPageSize.LEGAL,
         PDFPageSize.TABLOID,
+        PDFPageSize.LEDGER,
         PDFPageSize.A0,
         PDFPageSize.A1,
         PDFPageSize.A2,
         PDFPageSize.A3,
         PDFPageSize.A5,
+        PDFPageSize.A6,
     ],
 )
 def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, page_size):
@@ -635,6 +645,59 @@ def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypa
 
 
 @pytest.mark.unit
+def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Custom dimensions</p></body></html>",
+        page_size=None,
+        width="12in",
+        height=1728.0,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["width"] == "12in"
+    assert pdf_options["height"] == 1728.0
+    assert pdf_options["landscape"] is False
+    assert "format" not in pdf_options
+
+
+@pytest.mark.unit
+def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Fixed format wins</p></body></html>",
+        page_size=PDFPageSize.LEDGER,
+        width="1px",
+        height="1px",
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["format"] == PDFPageSize.LEDGER.value
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_a4_when_all_sizing_is_omitted(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Default dimensions</p></body></html>",
+        page_size=None,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    assert page.pdf.call_args.kwargs["format"] == PDFPageSize.A4.value
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "page_size, landscape, expected_width",
     [
@@ -644,6 +707,8 @@ def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypa
         (PDFPageSize.LEGAL, True, 1268),
         (PDFPageSize.TABLOID, False, 980),
         (PDFPageSize.TABLOID, True, 1556),
+        (PDFPageSize.LEDGER, False, 1556),
+        (PDFPageSize.LEDGER, True, 980),
         (PDFPageSize.A0, False, 3102),
         (PDFPageSize.A0, True, 4417),
         (PDFPageSize.A1, False, 2170),
@@ -656,6 +721,8 @@ def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypa
         (PDFPageSize.A4, True, 1047),
         (PDFPageSize.A5, False, 484),
         (PDFPageSize.A5, True, 718),
+        (PDFPageSize.A6, False, 320),
+        (PDFPageSize.A6, True, 484),
     ],
 )
 def test_browser_context_uses_selected_printable_width(
@@ -672,6 +739,21 @@ def test_browser_context_uses_selected_printable_width(
 
     assert context_options["viewport"]["width"] == expected_width
     assert context_options["viewport"]["height"] == renderer._DEFAULT_BROWSER_VIEWPORT_HEIGHT
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("landscape, expected_width", [(False, 1076), (True, 1652)])
+def test_browser_context_uses_custom_printable_width(tmp_path, landscape, expected_width):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Custom responsive width</p></body></html>",
+        landscape=landscape,
+        page_size=None,
+        width="12in",
+        height="18in",
+    )
+
+    assert renderer._shared_browser_context_kwargs()["viewport"]["width"] == expected_width
 
 
 @pytest.mark.unit
@@ -1429,6 +1511,7 @@ def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
     assert renderer._pdf_length_to_px("25.4mm") == pytest.approx(96.0)
     assert renderer._pdf_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._pdf_length_to_px("96px") == pytest.approx(96.0)
+    assert renderer._pdf_length_to_px(96.0) == pytest.approx(96.0)
 
 
 @pytest.mark.unit
@@ -1904,6 +1987,55 @@ def test_renderer_rejects_non_enum_page_size(tmp_path):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>Invalid page size</body></html>"),
             page_size="A3",
+            **_browser_metadata_kwargs(),
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "width, height",
+    [("12in", None), (None, "18in")],
+)
+def test_renderer_requires_custom_width_and_height_together(tmp_path, width, height):
+    with pytest.raises(ADRException, match="width and height must be provided together"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>Incomplete dimensions</body></html>"),
+            page_size=None,
+            width=width,
+            height=height,
+            **_browser_metadata_kwargs(),
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "width, height, expected_error",
+    [
+        ("0px", "18in", "width must be a positive PDF length"),
+        ("12in", -1.0, "height must be a positive PDF length"),
+        ("1em", "18in", "Unsupported PDF length unit"),
+    ],
+)
+def test_renderer_rejects_invalid_custom_dimensions(tmp_path, width, height, expected_error):
+    with pytest.raises(ADRException, match=expected_error):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>Invalid dimensions</body></html>"),
+            page_size=None,
+            width=width,
+            height=height,
+            **_browser_metadata_kwargs(),
+        )
+
+
+@pytest.mark.unit
+def test_renderer_rejects_margins_that_consume_custom_page_height(tmp_path):
+    with pytest.raises(ADRException, match="leave at least one CSS pixel"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>No printable height</body></html>"),
+            page_size=None,
+            width="8in",
+            height="1in",
+            margins={"top": "0.5in", "right": "0", "bottom": "0.5in", "left": "0"},
             **_browser_metadata_kwargs(),
         )
 

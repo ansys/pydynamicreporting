@@ -1858,6 +1858,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         landscape=False,
         margins=None,
         page_size=PDFPageSize.A4,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -1869,6 +1871,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["page_size"] = page_size
+        captured["width"] = width
+        captured["height"] = height
         captured["render_timeout"] = render_timeout
         captured["ansys_installation"] = ansys_installation
         captured["ansys_version"] = ansys_version
@@ -1894,6 +1898,8 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     assert Path(captured["html_dir"]).parent == db_directory
     assert captured["margins"] == margins
     assert captured["page_size"] is PDFPageSize.A4
+    assert captured["width"] is None
+    assert captured["height"] is None
     assert captured["render_timeout"] == 30.0
     assert captured["ansys_installation"] == adr_serverless._ansys_installation
     assert captured["ansys_version"] == adr_serverless._ansys_version
@@ -1955,6 +1961,8 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
         landscape=False,
         margins=None,
         page_size=PDFPageSize.A4,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -2007,6 +2015,8 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
         landscape=False,
         margins=None,
         page_size=PDFPageSize.A4,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -2074,6 +2084,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         landscape=False,
         margins=None,
         page_size=PDFPageSize.A4,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -2083,6 +2095,8 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         captured["landscape"] = landscape
         captured["margins"] = margins
         captured["page_size"] = page_size
+        captured["width"] = width
+        captured["height"] = height
         captured["render_timeout"] = render_timeout
         captured["ansys_installation"] = ansys_installation
         captured["ansys_version"] = ansys_version
@@ -2102,7 +2116,9 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         dark_mode=True,
         landscape=True,
         margins=margins,
-        page_size=PDFPageSize.A3,
+        page_size=None,
+        width="12in",
+        height="18in",
         render_timeout=12.5,
     )
 
@@ -2116,7 +2132,9 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert isinstance(captured["html_dir"], Path)
     assert captured["landscape"] is True
     assert captured["margins"] == margins
-    assert captured["page_size"] is PDFPageSize.A3
+    assert captured["page_size"] is None
+    assert captured["width"] == "12in"
+    assert captured["height"] == "18in"
     assert captured["render_timeout"] == 12.5
     assert captured["ansys_installation"] == adr_serverless._ansys_installation
     assert captured["ansys_version"] == adr_serverless._ansys_version

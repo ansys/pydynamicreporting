@@ -1568,7 +1568,9 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A4,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
     ) -> bytes:
         """Render one resolved template as a browser-fidelity PDF byte stream.
@@ -1602,6 +1604,8 @@ class ADR:
                     landscape=landscape,
                     margins=margins,
                     page_size=page_size,
+                    width=width,
+                    height=height,
                     render_timeout=render_timeout,
                     ansys_installation=self._ansys_installation,
                     ansys_version=self._ansys_version,
@@ -1662,7 +1666,9 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A4,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1687,10 +1693,13 @@ class ADR:
             strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
             (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
             every side.
-        page_size : PDFPageSize, optional
-            Fixed PDF page size. Choose ``PDFPageSize.LETTER``, ``PDFPageSize.LEGAL``,
-            ``PDFPageSize.TABLOID``, or ``PDFPageSize.A0`` through ``PDFPageSize.A5``.
-            Default ``PDFPageSize.A4``.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default ``PDFPageSize.A4``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             Maximum time, in seconds, for the browser render phase after the offline HTML
             bundle has been staged. This shared browser-side budget covers launch, navigation,
@@ -1756,6 +1765,8 @@ class ADR:
             landscape=landscape,
             margins=margins,
             page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
         )
 
@@ -1939,7 +1950,9 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A4,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
@@ -1966,10 +1979,13 @@ class ADR:
             strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
             (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
             every side.
-        page_size : PDFPageSize, optional
-            Fixed PDF page size. Choose ``PDFPageSize.LETTER``, ``PDFPageSize.LEGAL``,
-            ``PDFPageSize.TABLOID``, or ``PDFPageSize.A0`` through ``PDFPageSize.A5``.
-            Default ``PDFPageSize.A4``.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default ``PDFPageSize.A4``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             Maximum time, in seconds, for the browser render phase after the offline HTML
             bundle has been staged. This shared browser-side budget covers launch, navigation,
@@ -2032,6 +2048,8 @@ class ADR:
             landscape=landscape,
             margins=margins,
             page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
         )
 

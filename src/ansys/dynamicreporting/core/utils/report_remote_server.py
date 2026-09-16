@@ -1160,6 +1160,8 @@ class Server:
         landscape=False,
         margins=None,
         page_size=PDFPageSize.A4,
+        width=None,
+        height=None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
         # this module does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout=30.0,
@@ -1194,10 +1196,13 @@ class Server:
             PDF margin lengths expressed as strings using unitless pixels or the ``px``,
             ``in``, ``cm``, or ``mm`` units (for example ``"10mm"`` or ``"0.5in"``).
             Keys can include ``top``, ``right``, ``bottom``, and ``left``.
-        page_size : PDFPageSize, optional
-            Fixed PDF page size. Choose ``PDFPageSize.LETTER``, ``PDFPageSize.LEGAL``,
-            ``PDFPageSize.TABLOID``, or ``PDFPageSize.A0`` through ``PDFPageSize.A5``.
-            Default is ``PDFPageSize.A4``.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default is ``PDFPageSize.A4``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
@@ -1233,6 +1238,8 @@ class Server:
                 landscape=landscape,
                 margins=margins,
                 page_size=page_size,
+                width=width,
+                height=height,
                 render_timeout=render_timeout,
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
