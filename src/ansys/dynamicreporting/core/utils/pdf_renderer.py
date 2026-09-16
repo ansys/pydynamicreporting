@@ -329,7 +329,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         "mm": 96.0 / 25.4,
     }
     _DEFAULT_PAGE_SIZE: PDFPageSize = PDFPageSize.A4
-    # Mirror Playwright's fixed-format dimensions for viewport and pagination calculations.
+    # Mirror Playwright's fixed-format dimensions for internal viewport and pagination calculations.
     _PAGE_DIMENSIONS: dict[PDFPageSize, tuple[str, str]] = {
         PDFPageSize.LETTER: ("8.5in", "11in"),
         PDFPageSize.LEGAL: ("8.5in", "14in"),
