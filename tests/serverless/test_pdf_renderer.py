@@ -288,9 +288,11 @@ def _stub_playwright_render(
     *,
     pdf_width: str | None = None,
 ) -> tuple[Mock, Mock, Mock]:
-    """Stub the full render path (skipping readiness waits and width measurement) and return the page."""
+    """Stub browser preparation and width measurement, and return the rendered page."""
     stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
+    monkeypatch.setattr(renderer, "_fit_landscape_visual_items", lambda page: None)
+    monkeypatch.setattr(renderer, "_keep_fitting_single_child_media_panels", lambda page: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return stack.page, stack.context, stack.browser
 
@@ -609,13 +611,11 @@ def test_browser_context_uses_oriented_a4_printable_width(tmp_path, landscape, e
 
 
 @pytest.mark.unit
-def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_path, monkeypatch):
+def test_playwright_pdf_prepares_pagination_before_width(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
     page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="420.00px")
     call_order: list[str] = []
 
-    # Width measurement depends on the capture CSS already being present, and readiness
-    # waits must observe the same styled DOM that Chromium will later print to PDF.
     monkeypatch.setattr(
         renderer,
         "_apply_pdf_capture_styles",
@@ -626,6 +626,11 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
         "_wait_for_render_ready",
         lambda observed_page, deadline=None: call_order.append("ready"),
     )
+    monkeypatch.setattr(
+        renderer,
+        "_keep_fitting_single_child_media_panels",
+        lambda observed_page: call_order.append("pagination"),
+    )
 
     def capture_width(observed_page):
         call_order.append("width")
@@ -635,7 +640,7 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
 
     renderer.render_pdf()
 
-    assert call_order == ["styles", "ready", "width"]
+    assert call_order == ["styles", "ready", "pagination", "width"]
     page.pdf.assert_called_once()
 
 
@@ -1045,6 +1050,102 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["tableCell"]["borderRightColor"] == "rgb(173, 181, 189)"
     assert computed_styles["collapsedHead"]["display"] == "none"
     assert computed_styles["collapsedHead"]["visibility"] == "hidden"
+
+
+@pytest.mark.unit
+def test_keep_fitting_single_child_media_panels_caps_only_supported_panels(tmp_path):
+    html = """
+    <html>
+    <head>
+        <style>
+            adr-panel, adr-slider-template, adr-data-item, section, img {
+                display: block;
+            }
+            img {
+                height: 300px;
+                width: 300px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="slider-layout" data-layout-type="panel">
+            <adr-panel>
+                <section>
+                    <adr-slider-template><img id="slider-media" /></adr-slider-template>
+                </section>
+            </adr-panel>
+        </div>
+        <div id="animation-layout" data-layout-type="panel">
+            <adr-panel>
+                <section>
+                    <adr-data-item data-item-type="anim">
+                        <img id="animation-media" />
+                    </adr-data-item>
+                </section>
+            </adr-panel>
+        </div>
+        <div id="multi-child-layout" data-layout-type="panel">
+            <adr-panel>
+                <section>
+                    <adr-slider-template><img id="multi-child-media" /></adr-slider-template>
+                </section>
+                <section>Second child</section>
+            </adr-panel>
+        </div>
+        <div id="over-height-layout" data-layout-type="panel">
+            <adr-panel>
+                <section style="height: 1200px">
+                    <adr-slider-template><img id="over-height-media" /></adr-slider-template>
+                </section>
+            </adr-panel>
+        </div>
+    </body>
+    </html>
+    """
+    renderer = _simple_renderer(tmp_path, html)
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+
+        renderer._keep_fitting_single_child_media_panels(page)
+        panel_styles = page.evaluate(
+            """() => {
+                const panelState = (layoutId, mediaId) => {
+                    const layout = document.getElementById(layoutId);
+                    const media = document.getElementById(mediaId);
+                    return {
+                        breakInside: layout.style.getPropertyValue('break-inside'),
+                        breakPriority: layout.style.getPropertyPriority('break-inside'),
+                        maxHeight: media.style.getPropertyValue('max-height'),
+                        maxHeightPriority: media.style.getPropertyPriority('max-height'),
+                        height: media.style.getPropertyValue('height'),
+                    };
+                };
+                return {
+                    slider: panelState('slider-layout', 'slider-media'),
+                    animation: panelState('animation-layout', 'animation-media'),
+                    multiChild: panelState('multi-child-layout', 'multi-child-media'),
+                    overHeight: panelState('over-height-layout', 'over-height-media'),
+                };
+            }"""
+        )
+        browser.close()
+
+    for supported_panel in (panel_styles["slider"], panel_styles["animation"]):
+        assert supported_panel["breakInside"] == "avoid"
+        assert supported_panel["breakPriority"] == "important"
+        assert supported_panel["maxHeight"].endswith("px")
+        assert supported_panel["maxHeightPriority"] == "important"
+        assert supported_panel["height"] == "auto"
+
+    assert panel_styles["multiChild"]["breakInside"] == ""
+    assert panel_styles["multiChild"]["maxHeight"] == ""
+    assert panel_styles["overHeight"]["breakInside"] == ""
+    assert panel_styles["overHeight"]["maxHeight"] == ""
 
 
 @pytest.mark.unit

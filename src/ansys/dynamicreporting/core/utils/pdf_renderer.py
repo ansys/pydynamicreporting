@@ -514,6 +514,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page.emulate_media(media="screen")
                     self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
+                    if self._landscape:
+                        self._fit_landscape_visual_items(page)
+                    self._keep_fitting_single_child_media_panels(page)
                     self._remaining_browser_phase_timeout_ms(
                         browser_phase_deadline, "PDF width measurement"
                     )
@@ -591,6 +594,10 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Return the physical A4 page width for the requested orientation."""
         return self._DEFAULT_PAGE_HEIGHT if self._landscape else self._DEFAULT_PAGE_WIDTH
 
+    def _oriented_page_height(self) -> str:
+        """Return the physical A4 page height for the requested orientation."""
+        return self._DEFAULT_PAGE_WIDTH if self._landscape else self._DEFAULT_PAGE_HEIGHT
+
     def _printable_page_width_px(self) -> float:
         """Return the oriented A4 content-box width after horizontal PDF margins."""
         page_width_px = self._pdf_length_to_px(self._oriented_page_width())
@@ -608,6 +615,20 @@ class _BasePlaywrightPDFRenderer(ABC):
     def _browser_viewport_width_px(self) -> int:
         """Return an integer viewport no wider than the PDF content box."""
         return floor(self._printable_page_width_px())
+
+    def _printable_page_height_px(self) -> float:
+        """Return the oriented A4 content-box height after vertical PDF margins."""
+        page_height_px = self._pdf_length_to_px(self._oriented_page_height())
+        margin_height_px = self._pdf_length_to_px(self._margins["top"]) + self._pdf_length_to_px(
+            self._margins["bottom"]
+        )
+        printable_height_px = page_height_px - margin_height_px
+        if printable_height_px < 1.0:
+            raise ADRException(
+                "Browser PDF vertical margins must leave at least one CSS pixel "
+                "of printable A4 page height."
+            )
+        return printable_height_px
 
     def _pdf_page_size_options(self, fitted_page_width: str | None) -> dict[str, str | bool]:
         """Return Playwright page-size options for standard A4 or measured overflow."""
@@ -743,6 +764,279 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
             """,
         )
+
+        if self._landscape:
+            page.add_style_tag(
+                content="""
+                    div[data-layout-type="panel"] {
+                        break-inside: auto !important;
+                        page-break-inside: auto !important;
+                    }
+
+                    div[data-layout-type="basic"]:has(
+                        > :is(h1, h2, h3, h4, h5, h6) + section.adr-container
+                    ) {
+                        break-inside: avoid !important;
+                        page-break-inside: avoid !important;
+                    }
+                """,
+            )
+            page.evaluate(
+                """() => {
+                    for (const panel of document.querySelectorAll('adr-panel')) {
+                        const shadowRoot = panel.shadowRoot;
+                        if (!shadowRoot || shadowRoot.querySelector('style[data-adr-pdf-pagination]')) {
+                            continue;
+                        }
+
+                        const style = document.createElement('style');
+                        style.dataset.adrPdfPagination = '';
+                        style.textContent = `
+                            section.adr-panel {
+                                display: block !important;
+                            }
+
+                            header.adr-panel-header {
+                                break-after: avoid !important;
+                                page-break-after: avoid !important;
+                            }
+                        `;
+                        shadowRoot.append(style);
+
+                        const firstPanelContent = panel.firstElementChild;
+                        if (firstPanelContent) {
+                            firstPanelContent.style.setProperty(
+                                'break-before', 'avoid', 'important'
+                            );
+                            firstPanelContent.style.setProperty(
+                                'page-break-before', 'avoid', 'important'
+                            );
+                        }
+                    }
+                }"""
+            )
+
+    def _fit_landscape_visual_items(self, page: Any) -> None:
+        """Fit or relax over-height content for A4 landscape pagination."""
+        result = page.evaluate(
+            """async (printableHeightPx) => {
+                const fragmentationSafetyPx = 8;
+                const headingSelector = ':scope > h1, :scope > h2, :scope > h3, '
+                    + ':scope > h4, :scope > h5, :scope > h6';
+                const visualSelector = [
+                    'img.img-fluid', 'video.img-fluid', 'canvas', '.nexus-plot',
+                    'ansys-nexus-viewer'
+                ].join(',');
+                const adjustedItems = [];
+                const adjustedVisuals = new Set();
+                const resizePromises = [];
+
+                const fitVisual = (visual, groupStart, groupEnd, title) => {
+                    const visualRect = visual.getBoundingClientRect();
+                    const fixedHeight = Math.max(0, visualRect.top - groupStart)
+                        + Math.max(0, groupEnd - visualRect.bottom);
+                    const fittedHeight = Math.floor(
+                        printableHeightPx - fixedHeight - fragmentationSafetyPx
+                    );
+                    if (fittedHeight < 1 || visualRect.height <= fittedHeight) {
+                        return;
+                    }
+
+                    visual.style.setProperty('max-height', `${fittedHeight}px`, 'important');
+                    visual.style.setProperty('max-width', '100%', 'important');
+                    if (visual.matches('img, video, canvas')) {
+                        visual.style.setProperty('height', 'auto', 'important');
+                        visual.style.setProperty('width', 'auto', 'important');
+                        visual.style.setProperty('object-fit', 'contain', 'important');
+                    } else {
+                        visual.style.setProperty('height', `${fittedHeight}px`, 'important');
+                    }
+
+                    if (visual.matches('ansys-nexus-viewer')) {
+                        const item = visual.closest('adr-data-item');
+                        visual.style.setProperty('overflow', 'hidden', 'important');
+                        if (item) {
+                            item.style.setProperty('height', `${fittedHeight}px`, 'important');
+                            item.style.setProperty('max-height', `${fittedHeight}px`, 'important');
+                            item.style.setProperty('overflow', 'hidden', 'important');
+                        }
+                    }
+
+                    if (visual.matches('.nexus-plot') && window.Plotly?.Plots?.resize) {
+                        resizePromises.push(Promise.resolve(window.Plotly.Plots.resize(visual)));
+                    }
+                    adjustedVisuals.add(visual);
+                    adjustedItems.push({
+                        title,
+                        type: visual.tagName.toLowerCase(),
+                        originalHeightPx: visualRect.height,
+                        fittedHeightPx: fittedHeight
+                    });
+                };
+
+                for (const layout of document.querySelectorAll(
+                    'div[data-layout-type="basic"]'
+                )) {
+                    const heading = layout.querySelector(headingSelector);
+                    const container = heading?.nextElementSibling;
+                    if (!container?.matches('section.adr-container')) {
+                        continue;
+                    }
+
+                    const visual = container.querySelector(visualSelector);
+                    if (!visual || visual.getClientRects().length === 0) {
+                        continue;
+                    }
+
+                    const panel = layout.closest('adr-panel');
+                    const panelHeader = panel?.shadowRoot?.querySelector('header.adr-panel-header');
+                    const panelBody = panel?.shadowRoot?.querySelector('section.adr-panel-body');
+                    const firstTitledLayout = panel
+                        ? [...panel.querySelectorAll('div[data-layout-type="basic"]')].find(
+                            candidate => candidate.querySelector(headingSelector)
+                        )
+                        : null;
+                    const layoutRect = layout.getBoundingClientRect();
+                    const panelLayout = panel?.closest('div[data-layout-type="panel"]');
+                    const groupStart = panelHeader && firstTitledLayout === layout && panelLayout
+                        ? panelLayout.getBoundingClientRect().top
+                        : layoutRect.top;
+                    const fragmentPaddingPx = panelBody
+                        ? Number.parseFloat(window.getComputedStyle(panelBody).paddingBottom) || 0
+                        : 0;
+                    fitVisual(
+                        visual,
+                        groupStart,
+                        layoutRect.bottom + fragmentPaddingPx,
+                        heading.textContent.trim()
+                    );
+                }
+
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                    const visibleChildren = [...panel.children].filter(
+                        child => child.getClientRects().length > 0
+                    );
+                    const panelRect = panelLayout?.getBoundingClientRect();
+                    if (!panelRect || visibleChildren.length !== 1
+                            || panelRect.height <= printableHeightPx) {
+                        continue;
+                    }
+
+                    const visual = panel.querySelector(
+                        'adr-slider-template img, adr-data-item[data-item-type="anim"] img'
+                    );
+                    if (!visual || adjustedVisuals.has(visual)) {
+                        continue;
+                    }
+
+                    const panelHeader = panel.shadowRoot?.querySelector('header.adr-panel-header');
+                    fitVisual(
+                        visual,
+                        panelRect.top,
+                        panelRect.bottom,
+                        panelHeader?.textContent.trim() || 'Untitled panel'
+                    );
+                }
+
+                await Promise.all(resizePromises);
+                await new Promise(resolve => requestAnimationFrame(
+                    () => requestAnimationFrame(resolve)
+                ));
+
+                const breakableItems = [];
+                for (const item of document.querySelectorAll('adr-data-item')) {
+                    const itemRect = item.getBoundingClientRect();
+                    if (itemRect.height <= printableHeightPx) {
+                        continue;
+                    }
+
+                    item.style.setProperty('break-inside', 'auto', 'important');
+                    item.style.setProperty('page-break-inside', 'auto', 'important');
+                    const layout = item.closest('div[data-layout-type="basic"]');
+                    if (layout) {
+                        layout.style.setProperty('break-inside', 'auto', 'important');
+                        layout.style.setProperty('page-break-inside', 'auto', 'important');
+                    }
+                    for (const child of item.querySelectorAll('.table-responsive, table')) {
+                        child.style.setProperty('break-inside', 'auto', 'important');
+                        child.style.setProperty('page-break-inside', 'auto', 'important');
+                    }
+                    breakableItems.push({
+                        id: item.id,
+                        type: item.dataset.itemType || 'unknown',
+                        heightPx: itemRect.height
+                    });
+                }
+
+                return { adjustedItems, breakableItems };
+            }""",
+            self._printable_page_height_px(),
+        )
+        if result["adjustedItems"]:
+            self._logger.info(
+                "Fitted landscape browser PDF visual items: %s", result["adjustedItems"]
+            )
+        if result["breakableItems"]:
+            self._logger.info(
+                "Allowed over-height landscape browser PDF items to paginate: %s",
+                result["breakableItems"],
+            )
+
+    def _keep_fitting_single_child_media_panels(self, page: Any) -> None:
+        """Keep a fitting panel header with its sole slider or animation item."""
+        kept_panels = page.evaluate(
+            """(printableHeightPx) => {
+                const keptPanels = [];
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                    const visibleChildren = [...panel.children].filter(
+                        child => child.getClientRects().length > 0
+                    );
+                    const media = panel.querySelector(
+                        'adr-slider-template img, adr-data-item[data-item-type="anim"] img'
+                    );
+                    if (!panelLayout || !media || visibleChildren.length !== 1
+                            || panelLayout.getBoundingClientRect().height > printableHeightPx) {
+                        continue;
+                    }
+
+                    const panelRect = panelLayout.getBoundingClientRect();
+                    const mediaRect = media.getBoundingClientRect();
+                    const fixedHeight = Math.max(0, mediaRect.top - panelRect.top)
+                        + Math.max(0, panelRect.bottom - mediaRect.bottom);
+                    const fittedHeight = Math.floor(printableHeightPx - fixedHeight - 8);
+                    if (fittedHeight < 1) {
+                        continue;
+                    }
+
+                    const currentMaxHeight = Number.parseFloat(
+                        media.style.getPropertyValue('max-height')
+                    );
+                    const constrainedHeight = Number.isFinite(currentMaxHeight)
+                        ? Math.min(currentMaxHeight, fittedHeight)
+                        : fittedHeight;
+                    media.style.setProperty(
+                        'max-height', `${constrainedHeight}px`, 'important'
+                    );
+                    media.style.setProperty('max-width', '100%', 'important');
+                    media.style.setProperty('height', 'auto', 'important');
+                    media.style.setProperty('width', 'auto', 'important');
+                    media.style.setProperty('object-fit', 'contain', 'important');
+
+                    panelLayout.style.setProperty('break-inside', 'avoid', 'important');
+                    panelLayout.style.setProperty('page-break-inside', 'avoid', 'important');
+                    keptPanels.push(
+                        panel.shadowRoot?.querySelector('header.adr-panel-header')
+                            ?.textContent.trim() || 'Untitled panel'
+                    );
+                }
+                return keptPanels;
+            }""",
+            self._printable_page_height_px(),
+        )
+        if kept_panels:
+            self._logger.info("Kept fitting browser PDF media panels intact: %s", kept_panels)
 
     def _compute_pdf_width(self, page: Any) -> str | None:
         """Return an explicit page width only when final content exceeds A4."""
