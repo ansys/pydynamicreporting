@@ -117,6 +117,17 @@ def _mock_playwright_pdf_flow(
 ) -> MockPlaywrightPDFFlow:
     """Create the mocked Playwright PDF flow used by renderer tests."""
     page = Mock()
+    page.evaluate.return_value = {
+        "__adrTimedOut": False,
+        "cappedVisualCount": 0,
+        "resizedVisuals": [],
+        "keptLayouts": [],
+        "keptPanels": [],
+        "breakableSliders": [],
+        "breakableItems": [],
+        "widthPx": 0.0,
+        "source": "mock page",
+    }
     page.pdf.return_value = pdf_bytes
     context = Mock()
     context.new_page.return_value = page

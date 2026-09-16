@@ -89,7 +89,16 @@ from ..compatibility import product_release_to_display_string
 from ..compatibility import product_release_to_product_line
 from ..exceptions import ADRException
 
+# Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
+# Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
+_PAGINATION_FIT_GUARD_PX = 8.0
+# Direct-child headings that own the content container in an ADR basic layout.
+_PAGINATION_HEADING_SELECTOR = (
+    ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
+)
+# Visual elements treated as indivisible and resized instead of split across PDF pages.
+_PAGINATION_VISUAL_SELECTOR = "img, video, canvas, .nexus-plot, ansys-nexus-viewer"
 
 
 @dataclass(frozen=True)
@@ -814,13 +823,29 @@ class _BasePlaywrightPDFRenderer(ABC):
         )
 
     def _prepare_content_for_pagination(self, page: Any) -> None:
-        """Prepare rendered report content for portrait or landscape pagination."""
-        result = page.evaluate(
-            """async (printableHeightPx) => {
-                const fragmentationSafetyPx = 8;
-                const headingSelector = ':scope > h1, :scope > h2, :scope > h3, '
-                    + ':scope > h4, :scope > h5, :scope > h6';
-                const visualSelector = 'img, video, canvas, .nexus-plot, ansys-nexus-viewer';
+        """Fit indivisible visuals and configure vertical pagination boundaries."""
+        printable_height_px = self._printable_page_height_px()
+        visual_result = self._fit_visuals_for_pagination(page, printable_height_px)
+        cohesion_result = self._set_pagination_cohesion(page, printable_height_px)
+        fragmentation_result = self._make_oversized_structures_fragmentable(
+            page, printable_height_px
+        )
+        self._log_pagination_preparation(
+            visual_result,
+            cohesion_result,
+            fragmentation_result,
+        )
+
+    def _fit_visuals_for_pagination(self, page: Any, printable_height_px: float) -> dict[str, Any]:
+        """Resize indivisible visual media to fit within one printable page."""
+        return page.evaluate(
+            """async (options) => {
+                const {
+                    printableHeightPx,
+                    fitGuardPx,
+                    headingSelector,
+                    visualSelector
+                } = options;
                 const preparedVisuals = new Set();
                 const resizedVisuals = [];
                 const resizePromises = [];
@@ -863,7 +888,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     const fixedHeight = Math.max(0, visualRect.top - groupStart)
                         + Math.max(0, groupEnd - visualRect.bottom);
                     const fittedHeight = Math.floor(
-                        printableHeightPx - fixedHeight - fragmentationSafetyPx
+                        printableHeightPx - fixedHeight - fitGuardPx
                     );
                     if (fittedHeight < 1 || visualRect.height < 1 || visualRect.width < 1) {
                         return false;
@@ -1020,6 +1045,31 @@ class _BasePlaywrightPDFRenderer(ABC):
                     () => requestAnimationFrame(resolve)
                 ));
 
+                return {
+                    cappedVisualCount: preparedVisuals.size,
+                    resizedVisuals
+                };
+            }""",
+            {
+                "printableHeightPx": printable_height_px,
+                "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "headingSelector": _PAGINATION_HEADING_SELECTOR,
+                "visualSelector": _PAGINATION_VISUAL_SELECTOR,
+            },
+        )
+
+    def _set_pagination_cohesion(self, page: Any, printable_height_px: float) -> dict[str, Any]:
+        """Keep basic layouts and panels together when they fit on one page."""
+        return page.evaluate(
+            """(options) => {
+                const { printableHeightPx, headingSelector } = options;
+                const isVisible = element => {
+                    const style = window.getComputedStyle(element);
+                    return element.getClientRects().length > 0
+                        && style.display !== 'none'
+                        && style.visibility !== 'hidden';
+                };
+
                 const keptLayouts = [];
                 for (const layout of document.querySelectorAll(
                     'div[data-layout-type="basic"]'
@@ -1062,6 +1112,21 @@ class _BasePlaywrightPDFRenderer(ABC):
                         );
                     }
                 }
+
+                return { keptLayouts, keptPanels };
+            }""",
+            {
+                "printableHeightPx": printable_height_px,
+                "headingSelector": _PAGINATION_HEADING_SELECTOR,
+            },
+        )
+
+    def _make_oversized_structures_fragmentable(
+        self, page: Any, printable_height_px: float
+    ) -> dict[str, Any]:
+        """Allow over-height sliders, items, and tables to split between pages."""
+        return page.evaluate(
+            """(printableHeightPx) => {
 
                 const breakableSliders = [];
                 for (const slider of document.querySelectorAll('adr-slider-template')) {
@@ -1107,35 +1172,40 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
 
                 return {
-                    cappedVisualCount: preparedVisuals.size,
-                    resizedVisuals,
-                    keptLayouts,
-                    keptPanels,
                     breakableSliders,
                     breakableItems
                 };
             }""",
-            self._printable_page_height_px(),
+            printable_height_px,
         )
+
+    def _log_pagination_preparation(
+        self,
+        visual_result: dict[str, Any],
+        cohesion_result: dict[str, Any],
+        fragmentation_result: dict[str, Any],
+    ) -> None:
+        """Log pagination changes that materially affect the generated PDF."""
         self._logger.debug(
             "Prepared %d browser PDF visuals and kept %d layouts and %d panels intact.",
-            result["cappedVisualCount"],
-            len(result["keptLayouts"]),
-            len(result["keptPanels"]),
+            visual_result["cappedVisualCount"],
+            len(cohesion_result["keptLayouts"]),
+            len(cohesion_result["keptPanels"]),
         )
-        if result["resizedVisuals"]:
+        if visual_result["resizedVisuals"]:
             self._logger.info(
-                "Fitted over-height browser PDF visuals: %s", result["resizedVisuals"]
+                "Fitted over-height browser PDF visuals: %s",
+                visual_result["resizedVisuals"],
             )
-        if result["breakableSliders"]:
+        if fragmentation_result["breakableSliders"]:
             self._logger.info(
                 "Allowed over-height browser PDF sliders to paginate: %s",
-                result["breakableSliders"],
+                fragmentation_result["breakableSliders"],
             )
-        if result["breakableItems"]:
+        if fragmentation_result["breakableItems"]:
             self._logger.info(
                 "Allowed over-height browser PDF items to paginate: %s",
-                result["breakableItems"],
+                fragmentation_result["breakableItems"],
             )
 
     def _compute_pdf_width(self, page: Any) -> str | None:
