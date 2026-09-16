@@ -291,8 +291,7 @@ def _stub_playwright_render(
     """Stub browser preparation and width measurement, and return the rendered page."""
     stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_fit_landscape_visual_items", lambda page: None)
-    monkeypatch.setattr(renderer, "_keep_fitting_single_child_media_panels", lambda page: None)
+    monkeypatch.setattr(renderer, "_prepare_content_for_pagination", lambda page: None)
     monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
     return stack.page, stack.context, stack.browser
 
@@ -628,7 +627,7 @@ def test_playwright_pdf_prepares_pagination_before_width(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(
         renderer,
-        "_keep_fitting_single_child_media_panels",
+        "_prepare_content_for_pagination",
         lambda observed_page: call_order.append("pagination"),
     )
 
@@ -783,7 +782,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
     renderer._apply_pdf_capture_styles(page)
 
-    css = page.add_style_tag.call_args.kwargs["content"]
+    css = "\n".join(call.kwargs["content"] for call in page.add_style_tag.call_args_list)
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
     assert ".avz-viewer" in css
@@ -1053,99 +1052,315 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
 
 
 @pytest.mark.unit
-def test_keep_fitting_single_child_media_panels_caps_only_supported_panels(tmp_path):
+@pytest.mark.parametrize("landscape", [False, True])
+def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp_path, landscape):
     html = """
     <html>
     <head>
         <style>
-            adr-panel, adr-slider-template, adr-data-item, section, img {
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+            }
+            adr-panel,
+            adr-slider-template,
+            adr-data-item,
+            ansys-nexus-viewer,
+            section,
+            img,
+            video,
+            canvas {
                 display: block;
             }
-            img {
-                height: 300px;
-                width: 300px;
+            div[data-layout-type] {
+                padding: 4px;
+            }
+            .oversized-visual {
+                height: 1400px;
+                width: 320px;
+            }
+            .multi-media {
+                display: flex;
+                gap: 8px;
+            }
+            .multi-media img {
+                height: 100px;
+                width: 120px;
+            }
+            #responsive-image {
+                height: 120px;
+                width: 100%;
             }
         </style>
+        <script>
+            customElements.define('adr-panel', class extends HTMLElement {
+                connectedCallback() {
+                    if (this.shadowRoot) {
+                        return;
+                    }
+                    const shadowRoot = this.attachShadow({mode: 'open'});
+                    shadowRoot.innerHTML = `
+                        <style>
+                            :host, section { display: block; }
+                            header { height: 40px; }
+                            section.adr-panel-body { padding-bottom: 4px; }
+                        </style>
+                        <section class="adr-panel">
+                            <header class="adr-panel-header">${this.dataset.title}</header>
+                            <section class="adr-panel-body"><slot></slot></section>
+                        </section>
+                    `;
+                }
+            });
+            window.__plotlyResizeCount = 0;
+            window.Plotly = {
+                Plots: {
+                    resize: () => {
+                        window.__plotlyResizeCount += 1;
+                    }
+                }
+            };
+        </script>
     </head>
     <body>
-        <div id="slider-layout" data-layout-type="panel">
-            <adr-panel>
-                <section>
-                    <adr-slider-template><img id="slider-media" /></adr-slider-template>
-                </section>
-            </adr-panel>
-        </div>
-        <div id="animation-layout" data-layout-type="panel">
-            <adr-panel>
-                <section>
-                    <adr-data-item data-item-type="anim">
-                        <img id="animation-media" />
+        <main id="report_root">
+            <div id="explicit-layout" data-layout-type="basic">
+                <h2>Explicit image</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="image">
+                        <img
+                            id="explicit-image"
+                            class="oversized-visual"
+                            alt="explicit"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
                     </adr-data-item>
                 </section>
-            </adr-panel>
-        </div>
-        <div id="multi-child-layout" data-layout-type="panel">
-            <adr-panel>
-                <section>
-                    <adr-slider-template><img id="multi-child-media" /></adr-slider-template>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Slider video</h2>
+                <section class="adr-container">
+                    <adr-slider-template id="video-slider" data-guid="video-slider">
+                        <section id="slider_container_video">
+                            <section class="adr-row">
+                                <video id="slider-video" class="oversized-visual"></video>
+                            </section>
+                        </section>
+                    </adr-slider-template>
                 </section>
-                <section>Second child</section>
-            </adr-panel>
-        </div>
-        <div id="over-height-layout" data-layout-type="panel">
-            <adr-panel>
-                <section style="height: 1200px">
-                    <adr-slider-template><img id="over-height-media" /></adr-slider-template>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Canvas</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="image">
+                        <canvas id="canvas" class="oversized-visual"></canvas>
+                    </adr-data-item>
                 </section>
-            </adr-panel>
-        </div>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Plot</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="table">
+                        <section id="plot" class="nexus-plot oversized-visual loaded">
+                            <canvas id="plot-canvas"></canvas>
+                        </section>
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Scene</h2>
+                <section class="adr-container">
+                    <adr-data-item id="viewer-item" data-item-type="scene">
+                        <ansys-nexus-viewer id="viewer" class="oversized-visual">
+                            <img
+                                id="viewer-proxy"
+                                alt="scene proxy"
+                                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                                style="height: 100%; width: 100%"
+                            />
+                        </ansys-nexus-viewer>
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Multiple media</h2>
+                <section class="adr-container">
+                    <adr-data-item class="multi-media" data-item-type="image">
+                        <img
+                            id="multi-image-a"
+                            alt="first"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                        <img
+                            id="multi-image-b"
+                            alt="second"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Responsive image</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="image">
+                        <img
+                            id="responsive-image"
+                            alt="responsive"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                    </adr-data-item>
+                </section>
+            </div>
+            <img
+                id="hidden-image"
+                alt="hidden"
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                style="display: none"
+            />
+            <div id="fitting-panel-layout" data-layout-type="panel">
+                <adr-panel data-title="Fitting panel">
+                    <adr-data-item style="height: 120px" data-item-type="table">
+                        Fitting table
+                    </adr-data-item>
+                </adr-panel>
+            </div>
+            <div id="oversized-panel-layout" data-layout-type="panel">
+                <adr-panel data-title="Oversized panel">
+                    <adr-data-item style="height: 1400px" data-item-type="table">
+                        Oversized panel table
+                    </adr-data-item>
+                </adr-panel>
+            </div>
+            <adr-slider-template id="oversized-slider" data-guid="oversized-slider">
+                <section id="slider_container_oversized" style="height: 1400px">
+                    <section id="oversized-slider-row" class="adr-row" style="height: 1400px">
+                        Oversized slider content
+                    </section>
+                </section>
+            </adr-slider-template>
+            <div id="oversized-layout" data-layout-type="basic">
+                <h2>Oversized table</h2>
+                <section class="adr-container">
+                    <adr-data-item id="oversized-item" data-item-type="table">
+                        <div class="table-responsive" style="height: 1400px">
+                            <table id="oversized-table"><tbody><tr><td>Value</td></tr></tbody></table>
+                        </div>
+                    </adr-data-item>
+                </section>
+            </div>
+        </main>
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html)
+    renderer = _simple_renderer(tmp_path, html, landscape=landscape)
 
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        page = browser.new_page()
+        page = browser.new_page(viewport=renderer._shared_browser_context_kwargs()["viewport"])
         page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        page.emulate_media(media="screen")
 
-        renderer._keep_fitting_single_child_media_panels(page)
-        panel_styles = page.evaluate(
-            """() => {
-                const panelState = (layoutId, mediaId) => {
-                    const layout = document.getElementById(layoutId);
-                    const media = document.getElementById(mediaId);
+        renderer._apply_pdf_capture_styles(page)
+        renderer._prepare_content_for_pagination(page)
+        state = page.evaluate(
+            """async () => {
+                const inlineState = id => {
+                    const element = document.getElementById(id);
                     return {
-                        breakInside: layout.style.getPropertyValue('break-inside'),
-                        breakPriority: layout.style.getPropertyPriority('break-inside'),
-                        maxHeight: media.style.getPropertyValue('max-height'),
-                        maxHeightPriority: media.style.getPropertyPriority('max-height'),
-                        height: media.style.getPropertyValue('height'),
+                        breakInside: element.style.getPropertyValue('break-inside'),
+                        breakPriority: element.style.getPropertyPriority('break-inside'),
+                        height: element.style.getPropertyValue('height'),
+                        maxHeight: element.style.getPropertyValue('max-height'),
+                        maxHeightPriority: element.style.getPropertyPriority('max-height'),
+                        maxWidth: element.style.getPropertyValue('max-width'),
+                        maxWidthPriority: element.style.getPropertyPriority('max-width'),
+                        width: element.style.getPropertyValue('width'),
                     };
                 };
+                const fittingPanel = document.querySelector(
+                    '#fitting-panel-layout > adr-panel'
+                );
+                const responsiveImage = document.getElementById('responsive-image');
+                const responsiveWidthCap = Number.parseFloat(
+                    responsiveImage.style.getPropertyValue('max-width')
+                );
+                document.getElementById('report_root').style.width = '5000px';
+                await new Promise(resolve => requestAnimationFrame(
+                    () => requestAnimationFrame(resolve)
+                ));
                 return {
-                    slider: panelState('slider-layout', 'slider-media'),
-                    animation: panelState('animation-layout', 'animation-media'),
-                    multiChild: panelState('multi-child-layout', 'multi-child-media'),
-                    overHeight: panelState('over-height-layout', 'over-height-media'),
+                    explicitImage: inlineState('explicit-image'),
+                    explicitLayout: inlineState('explicit-layout'),
+                    sliderVideo: inlineState('slider-video'),
+                    canvas: inlineState('canvas'),
+                    plot: inlineState('plot'),
+                    viewer: inlineState('viewer'),
+                    viewerItem: inlineState('viewer-item'),
+                    viewerProxy: inlineState('viewer-proxy'),
+                    multiImageA: inlineState('multi-image-a'),
+                    multiImageB: inlineState('multi-image-b'),
+                    responsiveImage: inlineState('responsive-image'),
+                    responsiveImageWidth: responsiveImage.getBoundingClientRect().width,
+                    responsiveWidthCap,
+                    hiddenImage: inlineState('hidden-image'),
+                    fittingPanel: inlineState('fitting-panel-layout'),
+                    oversizedPanel: inlineState('oversized-panel-layout'),
+                    oversizedSlider: inlineState('slider_container_oversized'),
+                    oversizedSliderRow: inlineState('oversized-slider-row'),
+                    oversizedLayout: inlineState('oversized-layout'),
+                    oversizedItem: inlineState('oversized-item'),
+                    oversizedTable: inlineState('oversized-table'),
+                    panelPaginationStyle: Boolean(
+                        fittingPanel.shadowRoot.querySelector(
+                            'style[data-adr-pdf-pagination]'
+                        )
+                    ),
+                    panelHeaderBreakAfter: getComputedStyle(
+                        fittingPanel.shadowRoot.querySelector('header.adr-panel-header')
+                    ).breakAfter,
+                    plotlyResizeCount: window.__plotlyResizeCount,
                 };
             }"""
         )
         browser.close()
 
-    for supported_panel in (panel_styles["slider"], panel_styles["animation"]):
-        assert supported_panel["breakInside"] == "avoid"
-        assert supported_panel["breakPriority"] == "important"
-        assert supported_panel["maxHeight"].endswith("px")
-        assert supported_panel["maxHeightPriority"] == "important"
-        assert supported_panel["height"] == "auto"
+    for visual_name in ("explicitImage", "sliderVideo", "canvas", "plot", "viewer"):
+        visual = state[visual_name]
+        assert visual["maxHeight"].endswith("px")
+        assert 0 < float(visual["maxHeight"][:-2]) <= renderer._printable_page_height_px()
+        assert visual["maxHeightPriority"] == "important"
+        assert visual["maxWidth"].endswith("px")
+        assert visual["maxWidthPriority"] == "important"
 
-    assert panel_styles["multiChild"]["breakInside"] == ""
-    assert panel_styles["multiChild"]["maxHeight"] == ""
-    assert panel_styles["overHeight"]["breakInside"] == ""
-    assert panel_styles["overHeight"]["maxHeight"] == ""
+    for replaced_visual_name in ("explicitImage", "sliderVideo", "canvas"):
+        assert state[replaced_visual_name]["height"] == "auto"
+        assert state[replaced_visual_name]["width"] == "auto"
+
+    assert state["plot"]["height"].endswith("px")
+    assert state["viewer"]["height"].endswith("px")
+    assert state["viewerItem"]["height"] == state["viewer"]["height"]
+    assert state["viewerProxy"]["maxWidth"] == ""
+    assert state["hiddenImage"]["maxWidth"] == ""
+    assert state["multiImageA"]["maxWidth"].endswith("px")
+    assert state["multiImageB"]["maxWidth"].endswith("px")
+    assert state["responsiveImage"]["maxWidth"].endswith("px")
+    assert state["responsiveImageWidth"] <= state["responsiveWidthCap"] + 0.5
+    assert state["explicitLayout"]["breakInside"] == "avoid"
+    assert state["fittingPanel"]["breakInside"] == "avoid"
+    assert state["fittingPanel"]["breakPriority"] == "important"
+    assert state["oversizedPanel"]["breakInside"] == "auto"
+    assert state["oversizedSlider"]["breakInside"] == "auto"
+    assert state["oversizedSliderRow"]["breakInside"] == "auto"
+    assert state["oversizedLayout"]["breakInside"] == "auto"
+    assert state["oversizedItem"]["breakInside"] == "auto"
+    assert state["oversizedTable"]["breakInside"] == "auto"
+    assert state["panelPaginationStyle"] is True
+    assert state["panelHeaderBreakAfter"] == "avoid"
+    assert state["plotlyResizeCount"] == 1
 
 
 @pytest.mark.unit
@@ -1636,7 +1851,9 @@ def test_compute_pdf_width_keeps_a4_when_content_fits(tmp_path, monkeypatch):
 
 
 @pytest.mark.unit
-def test_compute_pdf_width_uses_configured_margins_for_overflow(tmp_path, monkeypatch):
+def test_compute_pdf_width_includes_margins_and_rounding_allowance_for_overflow(
+    tmp_path, monkeypatch
+):
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
         margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
@@ -1644,7 +1861,20 @@ def test_compute_pdf_width_uses_configured_margins_for_overflow(tmp_path, monkey
     )
     monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 600.0)
 
-    assert renderer._compute_pdf_width(Mock()) == "888.00px"
+    assert renderer._compute_pdf_width(Mock()) == "900.00px"
+
+
+@pytest.mark.unit
+def test_compute_pdf_width_uses_rotated_margin_axis_for_landscape(tmp_path, monkeypatch):
+    renderer = _OfflinePlaywrightPDFRenderer(
+        html_dir=_write_html(tmp_path, "<html><body>Landscape margins</body></html>"),
+        landscape=True,
+        margins={"top": "1in", "right": "10mm", "bottom": "2in", "left": "10mm"},
+        **_browser_metadata_kwargs(),
+    )
+    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 1100.0)
+
+    assert renderer._compute_pdf_width(Mock()) == "1400.00px"
 
 
 @pytest.mark.unit

@@ -334,6 +334,8 @@ class _BasePlaywrightPDFRenderer(ABC):
     # Browser-PDF depends on a product-shipped Chromium binary introduced with
     # product line 27. Older supported lines can still use other export formats.
     _MIN_BROWSER_PDF_PRODUCT_LINE: int = 27
+    # Preserve right-edge ink and borders across Chromium's custom-page rounding.
+    _CUSTOM_PAGE_WIDTH_ALLOWANCE_PX: float = 12.0
 
     def __init__(
         self,
@@ -514,9 +516,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page.emulate_media(media="screen")
                     self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
-                    if self._landscape:
-                        self._fit_landscape_visual_items(page)
-                    self._keep_fitting_single_child_media_panels(page)
+                    self._prepare_content_for_pagination(page)
                     self._remaining_browser_phase_timeout_ms(
                         browser_phase_deadline, "PDF width measurement"
                     )
@@ -611,6 +611,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                 "of printable A4 page width."
             )
         return printable_width_px
+
+    def _custom_page_horizontal_margin_width_px(self) -> float:
+        """Return margins on the custom sheet's horizontal axis after rotation."""
+        margin_sides = ("top", "bottom") if self._landscape else ("left", "right")
+        return sum(self._pdf_length_to_px(self._margins[side]) for side in margin_sides)
 
     def _browser_viewport_width_px(self) -> int:
         """Return an integer viewport no wider than the PDF content box."""
@@ -765,113 +770,162 @@ class _BasePlaywrightPDFRenderer(ABC):
             """,
         )
 
-        if self._landscape:
-            page.add_style_tag(
-                content="""
-                    div[data-layout-type="panel"] {
-                        break-inside: auto !important;
-                        page-break-inside: auto !important;
+        page.add_style_tag(
+            content="""
+                div[data-layout-type="panel"] {
+                    break-inside: auto !important;
+                    page-break-inside: auto !important;
+                }
+            """,
+        )
+        page.evaluate(
+            """() => {
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const shadowRoot = panel.shadowRoot;
+                    if (!shadowRoot || shadowRoot.querySelector('style[data-adr-pdf-pagination]')) {
+                        continue;
                     }
 
-                    div[data-layout-type="basic"]:has(
-                        > :is(h1, h2, h3, h4, h5, h6) + section.adr-container
-                    ) {
-                        break-inside: avoid !important;
-                        page-break-inside: avoid !important;
-                    }
-                """,
-            )
-            page.evaluate(
-                """() => {
-                    for (const panel of document.querySelectorAll('adr-panel')) {
-                        const shadowRoot = panel.shadowRoot;
-                        if (!shadowRoot || shadowRoot.querySelector('style[data-adr-pdf-pagination]')) {
-                            continue;
+                    const style = document.createElement('style');
+                    style.dataset.adrPdfPagination = '';
+                    style.textContent = `
+                        section.adr-panel {
+                            display: block !important;
                         }
 
-                        const style = document.createElement('style');
-                        style.dataset.adrPdfPagination = '';
-                        style.textContent = `
-                            section.adr-panel {
-                                display: block !important;
-                            }
-
-                            header.adr-panel-header {
-                                break-after: avoid !important;
-                                page-break-after: avoid !important;
-                            }
-                        `;
-                        shadowRoot.append(style);
-
-                        const firstPanelContent = panel.firstElementChild;
-                        if (firstPanelContent) {
-                            firstPanelContent.style.setProperty(
-                                'break-before', 'avoid', 'important'
-                            );
-                            firstPanelContent.style.setProperty(
-                                'page-break-before', 'avoid', 'important'
-                            );
+                        header.adr-panel-header {
+                            break-after: avoid !important;
+                            page-break-after: avoid !important;
                         }
-                    }
-                }"""
-            )
+                    `;
+                    shadowRoot.append(style);
 
-    def _fit_landscape_visual_items(self, page: Any) -> None:
-        """Fit or relax over-height content for A4 landscape pagination."""
+                    const firstPanelContent = panel.firstElementChild;
+                    if (firstPanelContent) {
+                        firstPanelContent.style.setProperty(
+                            'break-before', 'avoid', 'important'
+                        );
+                        firstPanelContent.style.setProperty(
+                            'page-break-before', 'avoid', 'important'
+                        );
+                    }
+                }
+            }"""
+        )
+
+    def _prepare_content_for_pagination(self, page: Any) -> None:
+        """Prepare rendered report content for portrait or landscape pagination."""
         result = page.evaluate(
             """async (printableHeightPx) => {
                 const fragmentationSafetyPx = 8;
                 const headingSelector = ':scope > h1, :scope > h2, :scope > h3, '
                     + ':scope > h4, :scope > h5, :scope > h6';
-                const visualSelector = [
-                    'img.img-fluid', 'video.img-fluid', 'canvas', '.nexus-plot',
-                    'ansys-nexus-viewer'
-                ].join(',');
-                const adjustedItems = [];
-                const adjustedVisuals = new Set();
+                const visualSelector = 'img, video, canvas, .nexus-plot, ansys-nexus-viewer';
+                const preparedVisuals = new Set();
+                const resizedVisuals = [];
                 const resizePromises = [];
 
+                const isVisible = element => {
+                    const style = window.getComputedStyle(element);
+                    return element.getClientRects().length > 0
+                        && style.display !== 'none'
+                        && style.visibility !== 'hidden';
+                };
+
+                const findRenderedVisuals = root => {
+                    const visuals = [];
+                    const seen = new Set();
+                    for (const candidate of root.querySelectorAll(visualSelector)) {
+                        // Plotly and the scene viewer can add image or canvas descendants.
+                        // Prepare their stable ADR containers instead of internal render nodes.
+                        const visual = candidate.closest(
+                            '.nexus-plot, ansys-nexus-viewer'
+                        ) || candidate;
+                        if (!root.contains(visual) || seen.has(visual) || !isVisible(visual)) {
+                            continue;
+                        }
+                        seen.add(visual);
+                        visuals.push(visual);
+                    }
+                    return visuals;
+                };
+
+                const visualLabel = visual => {
+                    const id = visual.id ? `#${visual.id}` : '';
+                    return `${visual.tagName.toLowerCase()}${id}`;
+                };
+
                 const fitVisual = (visual, groupStart, groupEnd, title) => {
+                    if (preparedVisuals.has(visual)) {
+                        return true;
+                    }
                     const visualRect = visual.getBoundingClientRect();
                     const fixedHeight = Math.max(0, visualRect.top - groupStart)
                         + Math.max(0, groupEnd - visualRect.bottom);
                     const fittedHeight = Math.floor(
                         printableHeightPx - fixedHeight - fragmentationSafetyPx
                     );
-                    if (fittedHeight < 1 || visualRect.height <= fittedHeight) {
-                        return;
+                    if (fittedHeight < 1 || visualRect.height < 1 || visualRect.width < 1) {
+                        return false;
                     }
 
-                    visual.style.setProperty('max-height', `${fittedHeight}px`, 'important');
-                    visual.style.setProperty('max-width', '100%', 'important');
-                    if (visual.matches('img, video, canvas')) {
+                    const computedMaxHeight = Number.parseFloat(
+                        window.getComputedStyle(visual).maxHeight
+                    );
+                    const existingMaxHeight = Number.isFinite(computedMaxHeight)
+                            && computedMaxHeight > 0
+                        ? computedMaxHeight
+                        : Number.POSITIVE_INFINITY;
+                    const constrainedHeight = Math.max(1, Math.floor(Math.min(
+                        visualRect.height, fittedHeight, existingMaxHeight
+                    )));
+                    const constrainedWidth = Math.max(1, Math.ceil(visualRect.width));
+                    const wasResized = visualRect.height > constrainedHeight + 0.5;
+
+                    visual.style.setProperty(
+                        'max-height', `${constrainedHeight}px`, 'important'
+                    );
+                    visual.style.setProperty(
+                        'max-width', `${constrainedWidth}px`, 'important'
+                    );
+                    if (wasResized && visual.matches('img, video, canvas')) {
                         visual.style.setProperty('height', 'auto', 'important');
                         visual.style.setProperty('width', 'auto', 'important');
                         visual.style.setProperty('object-fit', 'contain', 'important');
-                    } else {
-                        visual.style.setProperty('height', `${fittedHeight}px`, 'important');
+                    } else if (wasResized) {
+                        visual.style.setProperty(
+                            'height', `${constrainedHeight}px`, 'important'
+                        );
                     }
 
-                    if (visual.matches('ansys-nexus-viewer')) {
+                    if (wasResized && visual.matches('ansys-nexus-viewer')) {
                         const item = visual.closest('adr-data-item');
                         visual.style.setProperty('overflow', 'hidden', 'important');
                         if (item) {
-                            item.style.setProperty('height', `${fittedHeight}px`, 'important');
-                            item.style.setProperty('max-height', `${fittedHeight}px`, 'important');
+                            item.style.setProperty(
+                                'height', `${constrainedHeight}px`, 'important'
+                            );
+                            item.style.setProperty(
+                                'max-height', `${constrainedHeight}px`, 'important'
+                            );
                             item.style.setProperty('overflow', 'hidden', 'important');
                         }
                     }
 
-                    if (visual.matches('.nexus-plot') && window.Plotly?.Plots?.resize) {
+                    if (wasResized && visual.matches('.nexus-plot')
+                            && window.Plotly?.Plots?.resize) {
                         resizePromises.push(Promise.resolve(window.Plotly.Plots.resize(visual)));
                     }
-                    adjustedVisuals.add(visual);
-                    adjustedItems.push({
-                        title,
-                        type: visual.tagName.toLowerCase(),
-                        originalHeightPx: visualRect.height,
-                        fittedHeightPx: fittedHeight
-                    });
+                    preparedVisuals.add(visual);
+                    if (wasResized) {
+                        resizedVisuals.push({
+                            title,
+                            visual: visualLabel(visual),
+                            originalHeightPx: visualRect.height,
+                            fittedHeightPx: constrainedHeight
+                        });
+                    }
+                    return true;
                 };
 
                 for (const layout of document.querySelectorAll(
@@ -883,33 +937,42 @@ class _BasePlaywrightPDFRenderer(ABC):
                         continue;
                     }
 
-                    const visual = container.querySelector(visualSelector);
-                    if (!visual || visual.getClientRects().length === 0) {
+                    const visuals = findRenderedVisuals(container);
+                    if (!visuals.length) {
                         continue;
                     }
 
                     const panel = layout.closest('adr-panel');
                     const panelHeader = panel?.shadowRoot?.querySelector('header.adr-panel-header');
                     const panelBody = panel?.shadowRoot?.querySelector('section.adr-panel-body');
-                    const firstTitledLayout = panel
-                        ? [...panel.querySelectorAll('div[data-layout-type="basic"]')].find(
-                            candidate => candidate.querySelector(headingSelector)
-                        )
-                        : null;
                     const layoutRect = layout.getBoundingClientRect();
                     const panelLayout = panel?.closest('div[data-layout-type="panel"]');
-                    const groupStart = panelHeader && firstTitledLayout === layout && panelLayout
-                        ? panelLayout.getBoundingClientRect().top
-                        : layoutRect.top;
+                    const firstVisiblePanelChild = panel
+                        ? [...panel.children].find(isVisible)
+                        : null;
+                    const firstOwner = visuals[0].closest(
+                        'adr-data-item, adr-slider-template'
+                    ) || visuals[0];
                     const fragmentPaddingPx = panelBody
                         ? Number.parseFloat(window.getComputedStyle(panelBody).paddingBottom) || 0
                         : 0;
-                    fitVisual(
-                        visual,
-                        groupStart,
-                        layoutRect.bottom + fragmentPaddingPx,
-                        heading.textContent.trim()
-                    );
+                    for (const visual of visuals) {
+                        const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
+                        const ownerRect = owner.getBoundingClientRect();
+                        const includesHeading = owner === firstOwner;
+                        const groupStart = includesHeading && panelHeader
+                                && firstVisiblePanelChild === layout && panelLayout
+                            ? panelLayout.getBoundingClientRect().top
+                            : includesHeading
+                                ? layoutRect.top
+                                : ownerRect.top;
+                        fitVisual(
+                            visual,
+                            groupStart,
+                            ownerRect.bottom + fragmentPaddingPx,
+                            heading.textContent.trim()
+                        );
+                    }
                 }
 
                 for (const panel of document.querySelectorAll('adr-panel')) {
@@ -917,32 +980,106 @@ class _BasePlaywrightPDFRenderer(ABC):
                     const visibleChildren = [...panel.children].filter(
                         child => child.getClientRects().length > 0
                     );
-                    const panelRect = panelLayout?.getBoundingClientRect();
-                    if (!panelRect || visibleChildren.length !== 1
-                            || panelRect.height <= printableHeightPx) {
+                    if (!panelLayout || visibleChildren.length !== 1) {
                         continue;
                     }
 
-                    const visual = panel.querySelector(
-                        'adr-slider-template img, adr-data-item[data-item-type="anim"] img'
-                    );
-                    if (!visual || adjustedVisuals.has(visual)) {
-                        continue;
-                    }
-
+                    const panelRect = panelLayout.getBoundingClientRect();
                     const panelHeader = panel.shadowRoot?.querySelector('header.adr-panel-header');
-                    fitVisual(
-                        visual,
-                        panelRect.top,
-                        panelRect.bottom,
-                        panelHeader?.textContent.trim() || 'Untitled panel'
-                    );
+                    for (const visual of findRenderedVisuals(visibleChildren[0])) {
+                        fitVisual(
+                            visual,
+                            panelRect.top,
+                            panelRect.bottom,
+                            panelHeader?.textContent.trim() || 'Untitled panel'
+                        );
+                    }
+                }
+
+                const reportRoot = document.getElementById('report_root');
+                if (reportRoot) {
+                    for (const visual of findRenderedVisuals(reportRoot)) {
+                        if (preparedVisuals.has(visual)) {
+                            continue;
+                        }
+                        const owner = visual.closest(
+                            'adr-data-item, adr-slider-template, div[data-layout-type]'
+                        ) || visual;
+                        const ownerRect = owner.getBoundingClientRect();
+                        fitVisual(
+                            visual,
+                            ownerRect.top,
+                            ownerRect.bottom,
+                            visualLabel(visual)
+                        );
+                    }
                 }
 
                 await Promise.all(resizePromises);
                 await new Promise(resolve => requestAnimationFrame(
                     () => requestAnimationFrame(resolve)
                 ));
+
+                const keptLayouts = [];
+                for (const layout of document.querySelectorAll(
+                    'div[data-layout-type="basic"]'
+                )) {
+                    const heading = layout.querySelector(headingSelector);
+                    const container = heading?.nextElementSibling;
+                    if (!container?.matches('section.adr-container') || !isVisible(layout)) {
+                        continue;
+                    }
+                    const fits = layout.getBoundingClientRect().height <= printableHeightPx;
+                    layout.style.setProperty(
+                        'break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    layout.style.setProperty(
+                        'page-break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    if (fits) {
+                        keptLayouts.push(heading.textContent.trim() || 'Untitled layout');
+                    }
+                }
+
+                const keptPanels = [];
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                    const visibleChildren = [...panel.children].filter(isVisible);
+                    if (!panelLayout || !visibleChildren.length) {
+                        continue;
+                    }
+                    const fits = panelLayout.getBoundingClientRect().height <= printableHeightPx;
+                    panelLayout.style.setProperty(
+                        'break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    panelLayout.style.setProperty(
+                        'page-break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    if (fits) {
+                        keptPanels.push(
+                            panel.shadowRoot?.querySelector('header.adr-panel-header')
+                                ?.textContent.trim() || 'Untitled panel'
+                        );
+                    }
+                }
+
+                const breakableSliders = [];
+                for (const slider of document.querySelectorAll('adr-slider-template')) {
+                    const container = [...slider.children].find(
+                        child => child.matches('section[id^="slider_container_"]')
+                    );
+                    if (!container || container.getBoundingClientRect().height <= printableHeightPx) {
+                        continue;
+                    }
+                    container.style.setProperty('break-inside', 'auto', 'important');
+                    container.style.setProperty('page-break-inside', 'auto', 'important');
+                    const row = container.querySelector(':scope > section.adr-row');
+                    if (row) {
+                        row.style.setProperty('break-inside', 'auto', 'important');
+                        row.style.setProperty('page-break-inside', 'auto', 'important');
+                    }
+                    breakableSliders.push(slider.dataset.guid || slider.id || 'untitled');
+                }
 
                 const breakableItems = [];
                 for (const item of document.querySelectorAll('adr-data-item')) {
@@ -969,80 +1106,41 @@ class _BasePlaywrightPDFRenderer(ABC):
                     });
                 }
 
-                return { adjustedItems, breakableItems };
+                return {
+                    cappedVisualCount: preparedVisuals.size,
+                    resizedVisuals,
+                    keptLayouts,
+                    keptPanels,
+                    breakableSliders,
+                    breakableItems
+                };
             }""",
             self._printable_page_height_px(),
         )
-        if result["adjustedItems"]:
+        self._logger.debug(
+            "Prepared %d browser PDF visuals and kept %d layouts and %d panels intact.",
+            result["cappedVisualCount"],
+            len(result["keptLayouts"]),
+            len(result["keptPanels"]),
+        )
+        if result["resizedVisuals"]:
             self._logger.info(
-                "Fitted landscape browser PDF visual items: %s", result["adjustedItems"]
+                "Fitted over-height browser PDF visuals: %s", result["resizedVisuals"]
+            )
+        if result["breakableSliders"]:
+            self._logger.info(
+                "Allowed over-height browser PDF sliders to paginate: %s",
+                result["breakableSliders"],
             )
         if result["breakableItems"]:
             self._logger.info(
-                "Allowed over-height landscape browser PDF items to paginate: %s",
+                "Allowed over-height browser PDF items to paginate: %s",
                 result["breakableItems"],
             )
 
-    def _keep_fitting_single_child_media_panels(self, page: Any) -> None:
-        """Keep a fitting panel header with its sole slider or animation item."""
-        kept_panels = page.evaluate(
-            """(printableHeightPx) => {
-                const keptPanels = [];
-                for (const panel of document.querySelectorAll('adr-panel')) {
-                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
-                    const visibleChildren = [...panel.children].filter(
-                        child => child.getClientRects().length > 0
-                    );
-                    const media = panel.querySelector(
-                        'adr-slider-template img, adr-data-item[data-item-type="anim"] img'
-                    );
-                    if (!panelLayout || !media || visibleChildren.length !== 1
-                            || panelLayout.getBoundingClientRect().height > printableHeightPx) {
-                        continue;
-                    }
-
-                    const panelRect = panelLayout.getBoundingClientRect();
-                    const mediaRect = media.getBoundingClientRect();
-                    const fixedHeight = Math.max(0, mediaRect.top - panelRect.top)
-                        + Math.max(0, panelRect.bottom - mediaRect.bottom);
-                    const fittedHeight = Math.floor(printableHeightPx - fixedHeight - 8);
-                    if (fittedHeight < 1) {
-                        continue;
-                    }
-
-                    const currentMaxHeight = Number.parseFloat(
-                        media.style.getPropertyValue('max-height')
-                    );
-                    const constrainedHeight = Number.isFinite(currentMaxHeight)
-                        ? Math.min(currentMaxHeight, fittedHeight)
-                        : fittedHeight;
-                    media.style.setProperty(
-                        'max-height', `${constrainedHeight}px`, 'important'
-                    );
-                    media.style.setProperty('max-width', '100%', 'important');
-                    media.style.setProperty('height', 'auto', 'important');
-                    media.style.setProperty('width', 'auto', 'important');
-                    media.style.setProperty('object-fit', 'contain', 'important');
-
-                    panelLayout.style.setProperty('break-inside', 'avoid', 'important');
-                    panelLayout.style.setProperty('page-break-inside', 'avoid', 'important');
-                    keptPanels.push(
-                        panel.shadowRoot?.querySelector('header.adr-panel-header')
-                            ?.textContent.trim() || 'Untitled panel'
-                    );
-                }
-                return keptPanels;
-            }""",
-            self._printable_page_height_px(),
-        )
-        if kept_panels:
-            self._logger.info("Kept fitting browser PDF media panels intact: %s", kept_panels)
-
     def _compute_pdf_width(self, page: Any) -> str | None:
         """Return an explicit page width only when final content exceeds A4."""
-        margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
-            self._margins["right"]
-        )
+        margin_width_px = self._custom_page_horizontal_margin_width_px()
         content_width_px = self._measure_content_width_px(page)
         printable_width_px = self._printable_page_width_px()
         if content_width_px <= printable_width_px:
@@ -1053,7 +1151,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             )
             return None
 
-        pdf_width_px = content_width_px + margin_width_px
+        pdf_width_px = content_width_px + margin_width_px + self._CUSTOM_PAGE_WIDTH_ALLOWANCE_PX
         self._logger.info(
             "Browser PDF content exceeds the A4 content box; widening the page: "
             f"content_width_px={content_width_px:.2f}, "
