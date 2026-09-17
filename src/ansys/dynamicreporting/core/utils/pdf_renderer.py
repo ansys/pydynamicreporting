@@ -749,6 +749,15 @@ class _BasePlaywrightPDFRenderer(ABC):
                     overflow-x: clip !important;
                 }
 
+                body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                #report_root > div[data-layout-type]:first-child > br:first-child {
+                    display: none !important;
+                }
+
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
@@ -1208,13 +1217,15 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Keep basic layouts and panels together when they fit on one page."""
         return page.evaluate(
             """(options) => {
-                const { printableHeightPx, headingSelector } = options;
+                const { printableHeightPx, fitGuardPx, headingSelector } = options;
                 const isVisible = element => {
                     const style = window.getComputedStyle(element);
                     return element.getClientRects().length > 0
                         && style.display !== 'none'
                         && style.visibility !== 'hidden';
                 };
+                const fitsOnPage = element =>
+                    element.getBoundingClientRect().height <= printableHeightPx - fitGuardPx;
 
                 const keptLayouts = [];
                 // Avoid a split only when the complete heading-plus-content
@@ -1227,7 +1238,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     if (!container?.matches('section.adr-container') || !isVisible(layout)) {
                         continue;
                     }
-                    const fits = layout.getBoundingClientRect().height <= printableHeightPx;
+                    const fits = fitsOnPage(layout);
                     layout.style.setProperty(
                         'break-inside', fits ? 'avoid' : 'auto', 'important'
                     );
@@ -1248,7 +1259,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     if (!panelLayout || !visibleChildren.length) {
                         continue;
                     }
-                    const fits = panelLayout.getBoundingClientRect().height <= printableHeightPx;
+                    const fits = fitsOnPage(panelLayout);
                     panelLayout.style.setProperty(
                         'break-inside', fits ? 'avoid' : 'auto', 'important'
                     );
@@ -1267,6 +1278,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             }""",
             {
                 "printableHeightPx": printable_height_px,
+                "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
             },
         )
