@@ -942,6 +942,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "--adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;" in css
     assert "-webkit-print-color-adjust: exact !important;" in css
     assert "print-color-adjust: exact !important;" in css
+    assert "overflow-x: clip !important;" in css
     assert "display: block !important;" in css
     assert "@media print" not in css
     assert "[nexus_template]" not in css
@@ -1084,6 +1085,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const sliderRow = document.getElementById('slider_row');
                     const tableCell = document.getElementById('table-cell');
                     const collapsedHead = document.getElementById('collapsed-head');
+                    const documentStyle = getComputedStyle(document.documentElement);
+                    const bodyStyle = getComputedStyle(document.body);
                     const sectionHeadingStyle = getComputedStyle(sectionHeading);
                     const itemStyle = getComputedStyle(item);
                     const plotStyle = getComputedStyle(plot);
@@ -1097,6 +1100,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const tableCellStyle = getComputedStyle(tableCell);
                     const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
+                        document: {
+                            htmlOverflowX: documentStyle.overflowX,
+                            bodyOverflowX: bodyStyle.overflowX,
+                        },
                         sectionHeading: {
                             breakAfter: sectionHeadingStyle.breakAfter,
                             pageBreakAfter: sectionHeadingStyle.pageBreakAfter,
@@ -1163,6 +1170,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
         # close the browser; call close() explicitly before the with-block exits.
         browser.close()
 
+    assert computed_styles["document"]["htmlOverflowX"] == "clip"
+    assert computed_styles["document"]["bodyOverflowX"] == "clip"
     assert computed_styles["sectionHeading"]["breakAfter"] == "avoid"
     assert computed_styles["sectionHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["item"]["display"] == "block"

@@ -42,6 +42,7 @@ treating PDF export as a screenshot of already-painted viewport pixels:
     | - execute ADR, Plotly, MathJax, viewers       |
     | - wait for readiness signals                  |
     | - inject capture CSS                          |
+    | - clip overflow at the printable page width   |
     +-----------------------------------------------+
               |
               v
@@ -571,8 +572,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     # Playwright describes page.pdf() as generating paged output, not a bitmap
                     # snapshot of the already-painted viewport. MDN's paged-media model also
                     # distinguishes the continuous-media viewport from the paged page area.
-                    # Explicit page sizing keeps output dimensions predictable. Content wider
-                    # than its printable area is clipped instead of expanding the page.
+                    # Capture CSS clips horizontal overflow at the printable-width viewport,
+                    # while explicit page sizing keeps output dimensions predictable.
                     #
                     # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
                     # so this deadline check is a preflight guard rather than an interruptible
@@ -735,6 +736,13 @@ class _BasePlaywrightPDFRenderer(ABC):
         # ``:is(ansys-adr-viewer, ansys-nexus-viewer)`` before injecting the CSS.
         page.add_style_tag(
             content="""
+                html,
+                body {
+                    /* The viewport matches the printable width. Clip wider descendants here so
+                       Chromium does not shrink the entire document during PDF pagination. */
+                    overflow-x: clip !important;
+                }
+
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
