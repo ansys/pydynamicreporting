@@ -104,6 +104,42 @@ Example with Flask:
             </html>
         """
 
+Serving Installation-Backed Static Files
+----------------------------------------
+
+The following Flask example mounts ADR static files directly from the Ansys
+installation instead of collecting them into ``static_directory``:
+
+.. code-block:: python
+
+    from functools import partial
+
+    from ansys.dynamicreporting.core.serverless import ADR
+    from flask import Flask, send_from_directory
+
+    # Disable Flask's default /static/ route because ADR returns that required alias.
+    app = Flask(__name__, static_folder=None)
+    adr = ADR(
+        ansys_installation=r"E:\Program Files\ANSYS Inc\ANSYS Student\v261",
+        db_directory=r"C:\ADR\db",
+        static_url="/adr-static/",
+    )
+    static_routes = adr.get_installation_static_routes()
+    adr.setup()
+
+    for route_index, (url_prefix, directory) in enumerate(static_routes.items()):
+        app.add_url_rule(
+            f"{url_prefix}<path:path>",
+            endpoint=f"adr_installation_static_{route_index}",
+            view_func=partial(send_from_directory, directory),
+        )
+
+``send_from_directory`` keeps the requested path inside its configured
+directory. For production, review the framework or web server's MIME headers,
+caching policy, access controls, and file-serving performance. The example
+only mounts static files; the application must mount ``adr.media_url`` to
+``adr.media_directory`` separately when the report contains media.
+
 Security Considerations
 -----------------------
 

@@ -1094,6 +1094,83 @@ class ADR:
         """Relative URL prefix used for static files."""
         return self._static_url
 
+    def get_installation_static_routes(self) -> dict[str, str]:
+        """Return URL prefixes mapped to static directories in the installation.
+
+        The returned routes let a host application serve ADR assets directly
+        from the resolved Ansys installation without running ``collectstatic``.
+        This method only describes the routes; it does not serve files or
+        configure a web framework.
+
+        Returns
+        -------
+        dict[str, str]
+            URL prefixes mapped to absolute static directory paths.
+
+        Raises
+        ------
+        ImproperlyConfiguredError
+            If the installation does not contain the required static
+            directories, or if ``static_url`` is invalid or overlaps a
+            required ADR route.
+        """
+        static_url = self._static_url
+        if (
+            not isinstance(static_url, str)
+            or static_url == "/"
+            or not static_url.startswith("/")
+            or static_url.startswith("//")
+            or not static_url.endswith("/")
+            or "\\" in static_url
+            or "?" in static_url
+            or "#" in static_url
+            or any(part in {".", ".."} for part in static_url.split("/"))
+        ):
+            raise ImproperlyConfiguredError(
+                "The 'static_url' option must be a local URL prefix other than '/' and "
+                "start and end with '/'."
+            )
+
+        installation_root = self._ansys_installation.resolve()
+        if not installation_root.is_dir():
+            raise ImproperlyConfiguredError(
+                f"The resolved Ansys installation directory does not exist: '{installation_root}'."
+            )
+
+        static_root = (
+            installation_root / f"nexus{self._ansys_version}" / "django" / "static"
+        ).resolve()
+        if not static_root.is_dir():
+            raise ImproperlyConfiguredError(
+                f"The Ansys installation static directory does not exist: '{static_root}'."
+            )
+
+        version_url = f"/ansys{self._ansys_version}/"
+        version_static_root = (static_root / f"ansys{self._ansys_version}").resolve()
+        if not version_static_root.is_dir():
+            raise ImproperlyConfiguredError(
+                "The Ansys installation versioned static directory does not exist: "
+                f"'{version_static_root}'."
+            )
+
+        for reserved_url in ("/static/", version_url):
+            if static_url == reserved_url and reserved_url == "/static/":
+                continue
+            if (
+                static_url == reserved_url
+                or static_url.startswith(reserved_url)
+                or reserved_url.startswith(static_url)
+            ):
+                raise ImproperlyConfiguredError(
+                    f"The configured static URL prefix '{static_url}' overlaps the required "
+                    f"ADR static prefix '{reserved_url}'."
+                )
+
+        routes = {static_url: str(static_root)}
+        routes.setdefault("/static/", str(static_root))
+        routes[version_url] = str(version_static_root)
+        return routes
+
     @property
     def media_url(self) -> str:
         """Relative URL prefix used for media files."""
