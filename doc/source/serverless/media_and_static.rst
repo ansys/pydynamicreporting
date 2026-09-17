@@ -32,7 +32,9 @@ Static files provide the frontend styling and interactivity needed for report vi
 - JavaScript libraries (e.g., Plotly support)
 - Fonts and icons
 
-Static files reside in a **static directory** and are served alongside media files, typically by a web server or via the framework’s static file handling.
+Static files reside in the Ansys installation. They can be served in place by
+the host application or copied to a configured **static directory** with
+``collectstatic``.
 
 Configuration
 -------------
@@ -40,7 +42,8 @@ Configuration
 You configure media and static paths and URLs when instantiating and setting up the ADR object:
 
 - ``media_directory``: Path on disk for media files storage.
-- ``static_directory``: Path on disk for static assets.
+- ``static_directory``: Target path for collected static assets. This is
+  optional when the host serves the installation-backed routes directly.
 - ``media_url``: URL prefix to access media files (default: ``/media/``).
 - ``static_url``: URL prefix to access static files (default: ``/static/``).
 
@@ -66,7 +69,8 @@ File Storage and Access
 - Media files are saved with unique names based on the Item GUID and type, e.g., ``<guid>_image.png``.
 - The media directory should be accessible by any server or process serving reports or web content.
 - Static files are collected during setup if ``collect_static=True`` is passed to ``ADR.setup()``.
-- Static files can be served by any compatible web server (eg. NGINX) or via built-in mechanisms in web frameworks.
+- Static files can instead be served directly from the installation by mounting
+  the routes returned by ``ADR.get_installation_static_routes()``.
 - Items without files do not consume media storage.
 
 Managing Media Files in Items
@@ -125,13 +129,62 @@ Deleting Items cleans up media files automatically:
 Static Files Collection and Serving
 -----------------------------------
 
-- Static files are typically collected from ADR’s installed packages during setup by calling:
+There are two ways to make ADR static files available to a rendered report.
 
-  ``adr.setup(collect_static=True)``
+Collected static directory
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- This process copies necessary CSS, JS, fonts, and icons into the configured static directory.
-- Static files must be served by your web server or framework to enable proper report rendering.
-- The static URL prefix (e.g., ``/static/``) must correspond to your web server configuration.
+Collect the installed assets into ``static_directory`` during setup:
+
+.. code-block:: python
+
+    adr.setup(collect_static=True)
+
+The host application must serve that directory at ``static_url``. Continue to
+use this approach for workflows and export methods that require a populated
+``static_directory``. Calling ``get_installation_static_routes()`` does not
+populate that directory or change ``setup()`` behavior.
+
+Installation-backed static routes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An existing web application can avoid the copy by asking ADR which installation
+directories to mount:
+
+.. code-block:: python
+
+    adr = ADR(
+        ansys_installation=r"E:\Program Files\ANSYS Inc\ANSYS Student\v261",
+        db_directory=r"C:\ADR\db",
+        static_url="/adr-static/",
+    )
+
+    static_routes = adr.get_installation_static_routes()
+
+The method is available immediately after construction; ``setup()`` is not
+required to obtain the routes. For this 26R1 example, ``static_routes`` maps:
+
+- ``/adr-static/`` to the installation's ``nexus261/django/static`` directory.
+- ``/static/`` to the same directory for product assets that use the canonical
+  prefix.
+- ``/ansys261/`` to ``nexus261/django/static/ansys261`` for viewer modules,
+  Draco files, and other versioned assets.
+
+The returned paths are absolute, and each call returns a new dictionary. The
+method raises ``ImproperlyConfiguredError`` when an installation directory is
+missing or when ``static_url`` is not a valid, non-overlapping local prefix.
+
+ADR does not register or serve these routes. The host application is
+responsible for all of the following:
+
+- Mount every returned prefix without conflicting with an existing route.
+- Keep requested paths inside the mapped directory and prevent path traversal.
+- Set correct MIME and security headers.
+- Define caching and production file-serving behavior.
+- Serve ``media_url`` from ``media_directory`` separately; media routes are not
+  included in this mapping.
+
+See :doc:`embedding_reports` for a Flask example.
 
 In-Memory Mode and Temporary Files
 ----------------------------------
@@ -143,7 +196,8 @@ In-Memory Mode and Temporary Files
 Best Practices
 --------------
 
-- Always explicitly configure media and static directories during ADR instantiation to avoid ambiguity.
+- Explicitly configure the media directory and choose either collected or
+  installation-backed static serving.
 - Ensure the media directory has sufficient disk space and correct read/write permissions.
 - When serving reports on a web server, map the ``media_url`` and ``static_url`` to the correct directories.
 - Use meaningful and consistent tags on Items to organize media assets logically.
@@ -154,7 +208,8 @@ Troubleshooting
 
 - **Media files missing:** Confirm media directory path is correct and files exist on disk.
 - **Permission denied errors:** Verify file system permissions allow read/write by the ADR process and web server.
-- **Static assets not loading:** Ensure static files were collected during setup and your web server serves the static directory correctly.
+- **Static assets not loading:** Ensure the host serves every required URL
+  prefix from the corresponding collected or installation-backed directory.
 - **File corruption:** Re-upload or regenerate files; validate file types before saving.
 
 Summary

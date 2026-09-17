@@ -73,21 +73,38 @@ Serving Embedded Content
 ------------------------
 
 If embedding in a web app, serve static and media files via a web server or
-framework static route pointing to ADR’s configured directories.
+framework static routes. Static assets can be mounted directly from the Ansys
+installation, without running ``collectstatic``.
 
 Example with Flask:
 
 .. code-block:: python
 
-    from ansys.dynamicreporting.core.serverless import ADR
-    from flask import Flask, render_template_string
+    from functools import partial
 
-    app = Flask(__name__)
+    from ansys.dynamicreporting.core.serverless import ADR
+    from flask import Flask, send_from_directory
+
+    # Disable Flask's default /static/ route because ADR returns that required alias.
+    app = Flask(__name__, static_folder=None)
+    adr = ADR(
+        ansys_installation=r"E:\Program Files\ANSYS Inc\ANSYS Student\v261",
+        db_directory=r"C:\ADR\db",
+        static_url="/adr-static/",
+    )
+    static_routes = adr.get_installation_static_routes()
+    adr.setup()
+
+    for route_index, (url_prefix, directory) in enumerate(static_routes.items()):
+        app.add_url_rule(
+            f"{url_prefix}<path:path>",
+            endpoint=f"adr_installation_static_{route_index}",
+            view_func=partial(send_from_directory, directory),
+        )
 
 
     @app.route("/embedded-report")
     def embedded_report():
-        adr = ADR.get_instance()
         my_app_html = "<!-- Your app's HTML here -->"
         html = adr.render_report(name="My Simulation Report")
         return f"""
@@ -103,6 +120,12 @@ Example with Flask:
                 </body>
             </html>
         """
+
+``send_from_directory`` keeps the requested path inside its configured
+directory. For production, review the framework or web server's MIME headers,
+caching policy, access controls, and file-serving performance. The example
+only mounts static files; the application must mount ``adr.media_url`` to
+``adr.media_directory`` separately when the report contains media.
 
 Security Considerations
 -----------------------
