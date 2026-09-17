@@ -697,7 +697,28 @@ class Template(BaseModel):
         embed_scene_data: bool = False,
         request=None,
     ) -> None:
-        """Display the rendered report inline in an IPython-compatible frontend."""
+        """Display the rendered report inline.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. The default is 1000 pixels.
+        height : int or float, optional
+            Iframe height. The default is 800 pixels.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        item_filter : str, optional
+            ADR query string used to select items for the report.
+        embed_scene_data : bool, optional
+            Whether to include full scene data in the rendered HTML.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Raises
+        ------
+        RuntimeError
+            If IPython is unavailable.
+        """
         _display_iframe(
             self.get_iframe(
                 width=width,

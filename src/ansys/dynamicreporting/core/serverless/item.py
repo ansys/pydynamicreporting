@@ -793,7 +793,26 @@ class Item(BaseModel):
         context=None,
         request=None,
     ) -> None:
-        """Display the rendered item inline in an IPython-compatible frontend."""
+        """Display the rendered item inline.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. When set to zero, the width is derived as described by
+            :meth:`get_iframe`.
+        height : int or float, optional
+            Iframe height. When set to zero, the height is derived as described by
+            :meth:`get_iframe`.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Raises
+        ------
+        RuntimeError
+            If IPython is unavailable.
+        """
         _display_iframe(
             self.get_iframe(width=width, height=height, context=context, request=request)
         )
