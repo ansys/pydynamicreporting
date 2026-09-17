@@ -1222,6 +1222,10 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                 height: 1400px;
                 width: 320px;
             }
+            .scene-visual {
+                height: 720px;
+                width: 960px;
+            }
             .multi-media {
                 display: flex;
                 gap: 8px;
@@ -1314,14 +1318,17 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                 <h2>Scene</h2>
                 <section class="adr-container">
                     <adr-data-item id="viewer-item" data-item-type="scene">
-                        <ansys-nexus-viewer id="viewer" class="oversized-visual">
-                            <img
-                                id="viewer-proxy"
-                                alt="scene proxy"
-                                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-                                style="height: 100%; width: 100%"
-                            />
-                        </ansys-nexus-viewer>
+                        <div id="viewer-wrapper" class="avz-viewer scene-visual">
+                            <ansys-nexus-viewer id="viewer">
+                                <img
+                                    id="viewer-proxy"
+                                    class="ansys-nexus-proxy"
+                                    alt="scene proxy"
+                                    src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                                    style="height: 100%; width: 100%"
+                                />
+                            </ansys-nexus-viewer>
+                        </div>
                     </adr-data-item>
                 </section>
             </div>
@@ -1420,6 +1427,9 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                         maxWidth: element.style.getPropertyValue('max-width'),
                         maxWidthPriority: element.style.getPropertyPriority('max-width'),
                         width: element.style.getPropertyValue('width'),
+                        aspectRatio: element.style.getPropertyValue('aspect-ratio'),
+                        objectFit: element.style.getPropertyValue('object-fit'),
+                        overflow: element.style.getPropertyValue('overflow'),
                     };
                 };
                 const fittingPanel = document.querySelector(
@@ -1429,6 +1439,13 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                 const responsiveWidthCap = Number.parseFloat(
                     responsiveImage.style.getPropertyValue('max-width')
                 );
+                const viewerWrapper = document.getElementById('viewer-wrapper');
+                const viewerContainer = viewerWrapper.closest('section.adr-container');
+                const viewerWrapperRect = viewerWrapper.getBoundingClientRect();
+                const viewerContainerRect = viewerContainer.getBoundingClientRect();
+                const viewerWrapperFitsContainer = viewerWrapperRect.left
+                        >= viewerContainerRect.left - 0.5
+                    && viewerWrapperRect.right <= viewerContainerRect.right + 0.5;
                 document.getElementById('report_root').style.width = '5000px';
                 await new Promise(resolve => requestAnimationFrame(
                     () => requestAnimationFrame(resolve)
@@ -1439,9 +1456,12 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                     sliderVideo: inlineState('slider-video'),
                     canvas: inlineState('canvas'),
                     plot: inlineState('plot'),
+                    viewerWrapper: inlineState('viewer-wrapper'),
                     viewer: inlineState('viewer'),
                     viewerItem: inlineState('viewer-item'),
                     viewerProxy: inlineState('viewer-proxy'),
+                    viewerWrapperFitsContainer,
+                    viewerWrapperWidth: viewerWrapper.getBoundingClientRect().width,
                     multiImageA: inlineState('multi-image-a'),
                     multiImageB: inlineState('multi-image-b'),
                     responsiveImage: inlineState('responsive-image'),
@@ -1469,7 +1489,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
         )
         browser.close()
 
-    for visual_name in ("explicitImage", "sliderVideo", "canvas", "plot", "viewer"):
+    for visual_name in ("explicitImage", "sliderVideo", "canvas", "plot", "viewerWrapper"):
         visual = state[visual_name]
         assert visual["maxHeight"].endswith("px")
         assert 0 < float(visual["maxHeight"][:-2]) <= renderer._printable_page_height_px()
@@ -1482,9 +1502,16 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
         assert state[replaced_visual_name]["width"] == "auto"
 
     assert state["plot"]["height"].endswith("px")
-    assert state["viewer"]["height"].endswith("px")
-    assert state["viewerItem"]["height"] == state["viewer"]["height"]
-    assert state["viewerProxy"]["maxWidth"] == ""
+    assert state["viewerWrapper"]["aspectRatio"]
+    assert state["viewerWrapper"]["overflow"] == "hidden"
+    assert state["viewerWrapperWidth"] <= 960
+    assert state["viewerWrapperFitsContainer"] is True
+    assert state["viewer"]["height"] == "100%"
+    assert state["viewer"]["width"] == "100%"
+    assert state["viewerProxy"]["maxWidth"] == "100%"
+    assert state["viewerProxy"]["objectFit"] == "contain"
+    if state["viewerItem"]["height"]:
+        assert state["viewerItem"]["height"] == state["viewerWrapper"]["height"]
     assert state["hiddenImage"]["maxWidth"] == ""
     assert state["multiImageA"]["maxWidth"].endswith("px")
     assert state["multiImageB"]["maxWidth"].endswith("px")
