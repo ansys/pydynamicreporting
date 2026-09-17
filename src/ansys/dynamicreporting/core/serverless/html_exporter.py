@@ -651,6 +651,8 @@ class ServerlessReportExporter:
 
     def _inline_ansys_viewer(self, html: str) -> str:
         """Inline assets for every registered Ansys 3D viewer component tag."""
+        # Scan each tag independently because transitional reports can contain
+        # both the ADR name and its Nexus compatibility alias.
         for viewer_tag in ANSYS_VIEWER_TAGS:
             opening_tag = f"<{viewer_tag}"
             current_pos = 0
@@ -668,6 +670,8 @@ class ServerlessReportExporter:
                     text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
                 if self._replaced_file_ext:
                     ext = self._replaced_file_ext.replace(".", "").upper()
+                    # Limit the format hint to this component's opening tag;
+                    # embedded payload text can contain tag-like strings.
                     text = text.replace(opening_tag, f'{opening_tag} src_ext="{ext}"', 1)
                 html = html[:start] + text + html[end:]
                 current_pos = start + len(text)

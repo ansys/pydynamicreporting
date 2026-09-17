@@ -50,6 +50,8 @@ from .utils.exceptions import TemplateEditorJSONLoadingError
 
 logger = logging.getLogger(__name__)
 
+# Keep the page-size enum outside the renderer module: both service and
+# serverless entry points can share one public type without importing Playwright.
 __all__ = [
     "PDFPageSize",
     "InstallResolution",
@@ -64,7 +66,7 @@ __all__ = [
 
 
 class PDFPageSize(str, Enum):
-    """Fixed page sizes supported by browser-PDF export."""
+    """Named page formats passed to Chromium by browser-PDF export."""
 
     LETTER = "Letter"
     LEGAL = "Legal"

@@ -388,6 +388,8 @@ class _BasePlaywrightPDFRenderer(ABC):
             width=width,
             height=height,
         )
+        # ``page_size=None`` with no custom pair means "use the default", while
+        # a complete pair keeps ``_page_size`` at None for Playwright width/height options.
         self._page_size = (
             self._DEFAULT_PAGE_SIZE
             if validated_page_size is None and self._width is None
@@ -636,6 +638,8 @@ class _BasePlaywrightPDFRenderer(ABC):
         if self._page_size is not None:
             return self._PAGE_DIMENSIONS[self._page_size]
 
+        # Constructor validation makes a half-populated pair unreachable, but
+        # keep this runtime guard for subclasses or later internal mutation.
         if self._width is None or self._height is None:
             raise ADRException("Browser PDF custom page dimensions are incomplete.")
         return self._width, self._height
@@ -689,6 +693,8 @@ class _BasePlaywrightPDFRenderer(ABC):
     def _pdf_page_size_options(self) -> dict[str, str | float | bool]:
         """Return Playwright options for the selected page sizing."""
         options: dict[str, str | float | bool] = {"landscape": self._landscape}
+        # Chromium accepts either a named format or explicit dimensions. Never
+        # send both, because format is the public precedence rule for this API.
         if self._page_size is not None:
             options["format"] = self._page_size.value
         else:
@@ -871,6 +877,8 @@ class _BasePlaywrightPDFRenderer(ABC):
     def _prepare_content_for_pagination(self, page: Any) -> None:
         """Fit indivisible visuals and configure vertical pagination boundaries."""
         printable_height_px = self._printable_page_height_px()
+        # Later cohesion checks must see post-resize geometry. Fragmentation runs
+        # last so structures that still exceed a page can override avoid rules.
         visual_result = self._fit_visuals_for_pagination(page, printable_height_px)
         cohesion_result = self._set_pagination_cohesion(page, printable_height_px)
         fragmentation_result = self._make_oversized_structures_fragmentable(
@@ -950,6 +958,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     const renderedAspectRatio = layoutRect.height > 0
                         ? layoutRect.width / layoutRect.height
                         : Number.NaN;
+                    // Prefer product metadata, then the rendered box, and use a
+                    // stable widescreen fallback only when neither is usable.
                     const aspectRatio = Number.isFinite(configuredAspectRatio)
                             && configuredAspectRatio > 0
                         ? configuredAspectRatio
@@ -993,6 +1003,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     const responsiveHeightReduction = Math.max(
                         0, initialVisualRect.height - visualRect.height
                     );
+                    // Keep the heading, owner chrome, and panel padding in the
+                    // same page-height budget as the indivisible visual.
                     const fixedHeight = Math.max(0, visualRect.top - groupStart)
                         + Math.max(
                             0, groupEnd - responsiveHeightReduction - visualRect.bottom
@@ -1080,6 +1092,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return true;
                 };
 
+                // Basic layouts own headings and content containers, so fitting
+                // against that group keeps a title with its resized visual.
                 for (const layout of document.querySelectorAll(
                     'div[data-layout-type="basic"]'
                 )) {
@@ -1127,6 +1141,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
                 }
 
+                // Panels without the basic-layout wrapper still need their
+                // shadow-DOM header included in the available-height budget.
                 for (const panel of document.querySelectorAll('adr-panel')) {
                     const panelLayout = panel.closest('div[data-layout-type="panel"]');
                     const visibleChildren = [...panel.children].filter(
@@ -1150,6 +1166,8 @@ class _BasePlaywrightPDFRenderer(ABC):
 
                 const reportRoot = document.getElementById('report_root');
                 if (reportRoot) {
+                    // Catch standalone visuals not owned by either known layout
+                    // shape without processing anything already fitted above.
                     for (const visual of findRenderedVisuals(reportRoot)) {
                         if (preparedVisuals.has(visual)) {
                             continue;
@@ -1199,6 +1217,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                 };
 
                 const keptLayouts = [];
+                // Avoid a split only when the complete heading-plus-content
+                // group fits; forcing it on taller content can create clipping.
                 for (const layout of document.querySelectorAll(
                     'div[data-layout-type="basic"]'
                 )) {
@@ -1220,6 +1240,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
 
                 const keptPanels = [];
+                // Apply the same fit-sensitive rule at the panel wrapper, which
+                // owns the shadow-DOM header and its light-DOM children.
                 for (const panel of document.querySelectorAll('adr-panel')) {
                     const panelLayout = panel.closest('div[data-layout-type="panel"]');
                     const visibleChildren = [...panel.children].filter(isVisible);
@@ -1257,6 +1279,8 @@ class _BasePlaywrightPDFRenderer(ABC):
             """(printableHeightPx) => {
 
                 const breakableSliders = [];
+                // Capture CSS initially protects sliders as one unit. Release
+                // only over-height containers and their direct row for paging.
                 for (const slider of document.querySelectorAll('adr-slider-template')) {
                     const container = [...slider.children].find(
                         child => child.matches('section[id^="slider_container_"]')
@@ -1275,6 +1299,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
 
                 const breakableItems = [];
+                // Over-height tabular items cannot honor break-inside: avoid;
+                // release the item, owning layout, and table wrappers together.
                 for (const item of document.querySelectorAll('adr-data-item')) {
                     const itemRect = item.getBoundingClientRect();
                     if (itemRect.height <= printableHeightPx) {
@@ -1854,6 +1880,8 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
+        # Normalize the bundle root once so the later entry-point containment
+        # check compares resolved absolute paths.
         self._html_dir = None if html_dir is None else Path(html_dir).expanduser().resolve()
         super().__init__(
             landscape=landscape,
@@ -1991,6 +2019,8 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         logger: Any = None,
     ) -> None:
         self._url = self._validate_url(url)
+        # Copy the container so later append/remove operations by the service
+        # layer cannot change a configured renderer.
         self._auth_cookies = [] if auth_cookies is None else list(auth_cookies)
         super().__init__(
             landscape=landscape,

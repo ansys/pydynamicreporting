@@ -22,6 +22,7 @@
 
 # serverless
 
+# Keep the serverless import surface aligned with the top-level client API.
 from ..common_utils import PDFPageSize
 from .adr import ADR
 

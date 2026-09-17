@@ -1232,6 +1232,8 @@ class Server:
             report_url = self.build_url_with_query(report_guid, browser_query, item_filter)
             browser_auth_cookies = self._get_browser_auth_cookies()
 
+            # The remote layer supplies navigation and authentication only;
+            # the shared renderer owns page-geometry validation and pagination.
             renderer = _ReportURLPlaywrightPDFRenderer(
                 url=report_url,
                 auth_cookies=browser_auth_cookies,

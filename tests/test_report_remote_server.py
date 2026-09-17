@@ -605,6 +605,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     )
 
     class FakeRenderer:
+        # Capture the live-render boundary without launching Chromium; lower-level
+        # renderer tests own page validation and browser behavior.
         def __init__(
             self,
             url,
@@ -670,6 +672,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         "csrftoken",
         "sessionid",
     ]
+    # Custom dimensions must reach the shared renderer unchanged; this layer
+    # only constructs the authenticated live-report URL and writes returned bytes.
     assert captured["renderer_landscape"] is True
     assert captured["renderer_margins"] == margins
     assert captured["renderer_page_size"] is None
@@ -726,6 +730,8 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
         return "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
 
     class FakeRenderer:
+        # Accept the complete production signature so this failure test catches
+        # wrapping behavior without masking argument-forwarding regressions.
         def __init__(
             self,
             url,

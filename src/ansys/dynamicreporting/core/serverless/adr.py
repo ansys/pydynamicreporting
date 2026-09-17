@@ -1428,7 +1428,7 @@ class ADR:
 
         Examples
         --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
+        >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.html", "w", encoding="utf-8") as f:
@@ -1480,7 +1480,7 @@ class ADR:
 
         Examples
         --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
+        >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
@@ -1733,7 +1733,7 @@ class ADR:
 
         Examples
         --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
         >>> adr = ADR(
         ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
         ...     db_directory=r"C:\\DBs\\docex",
@@ -1757,6 +1757,8 @@ class ADR:
 
         template = Template.get(**kwargs)
 
+        # Route byte-stream export through the same resolved-template pipeline
+        # used by file export so both entry points apply identical page geometry.
         return self._render_template_as_browser_pdf(
             template,
             context=context,
@@ -2018,7 +2020,7 @@ class ADR:
 
         Examples
         --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
         >>> adr = ADR(
         ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
         ...     db_directory=r"C:\\DBs\\docex",
@@ -2040,6 +2042,8 @@ class ADR:
             )
 
         template = Template.get(**kwargs)
+        # Render from the object already resolved above; its GUID remains
+        # available for the default filename without a second template lookup.
         pdf_stream = self._render_template_as_browser_pdf(
             template,
             context=context,

@@ -125,6 +125,8 @@ def _mock_playwright_pdf_flow(
 ) -> MockPlaywrightPDFFlow:
     """Create the mocked Playwright PDF flow used by renderer tests."""
     page = Mock()
+    # Pagination helpers share one page.evaluate mock. Return every result key
+    # consumed by logging so render-pipeline tests can focus on their own phase.
     page.evaluate.return_value = {
         "__adrTimedOut": False,
         "cappedVisualCount": 0,
@@ -561,6 +563,7 @@ def test_live_report_url_renderer_forwards_product_browser_install_metadata():
 
 @pytest.mark.unit
 def test_pdf_page_size_is_exported_from_common_utils():
+    """Expose one enum identity and the exact Chromium format spellings."""
     assert common_utils.PDFPageSize is PDFPageSize
     assert "PDFPageSize" in common_utils.__all__
     assert tuple(page_size.value for page_size in PDFPageSize) == (
@@ -578,6 +581,8 @@ def test_pdf_page_size_is_exported_from_common_utils():
     )
 
 
+# Fixed formats and custom dimensions are mutually exclusive Playwright option
+# shapes. These tests pin the public precedence rules as well as their values.
 @pytest.mark.unit
 def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
@@ -609,6 +614,8 @@ def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
     ],
 )
 def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, page_size):
+    # Deliberately wide content must not replace the caller-selected format with
+    # a content-derived width; capture CSS owns overflow handling.
     renderer = _simple_renderer(
         tmp_path,
         '<html><body><table style="width: 12000px"><tr><td>Wide</td></tr></table></body></html>',
@@ -685,6 +692,8 @@ def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monke
 
 @pytest.mark.unit
 def test_playwright_pdf_uses_a4_when_all_sizing_is_omitted(tmp_path, monkeypatch):
+    # ``page_size=None`` is also the custom-size switch. With no complete custom
+    # pair, it falls back to A4 for compatibility instead of producing no size.
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Default dimensions</p></body></html>",
@@ -728,6 +737,8 @@ def test_playwright_pdf_uses_a4_when_all_sizing_is_omitted(tmp_path, monkeypatch
 def test_browser_context_uses_selected_printable_width(
     tmp_path, page_size, landscape, expected_width
 ):
+    # Expected values are portrait/landscape physical widths converted to CSS
+    # pixels, minus both default margins, then floored for a valid viewport.
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Responsive content</p></body></html>",
@@ -744,6 +755,7 @@ def test_browser_context_uses_selected_printable_width(
 @pytest.mark.unit
 @pytest.mark.parametrize("landscape, expected_width", [(False, 1076), (True, 1652)])
 def test_browser_context_uses_custom_printable_width(tmp_path, landscape, expected_width):
+    # Orientation swaps the custom physical dimensions before margin subtraction.
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Custom responsive width</p></body></html>",
@@ -762,6 +774,8 @@ def test_playwright_pdf_prepares_pagination_before_generation(tmp_path, monkeypa
     page, _, _ = _stub_playwright_render(monkeypatch, renderer)
     call_order: list[str] = []
 
+    # Styles establish print geometry, readiness settles the styled DOM, and
+    # pagination then mutates that final geometry immediately before page.pdf().
     monkeypatch.setattr(
         renderer,
         "_apply_pdf_capture_styles",
@@ -923,6 +937,8 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
     renderer._apply_pdf_capture_styles(page)
 
+    # Capture styles are injected in separate global and panel-layout blocks;
+    # inspect the combined contract rather than relying on call order.
     css = "\n".join(call.kwargs["content"] for call in page.add_style_tag.call_args_list)
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
@@ -1085,6 +1101,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const sliderRow = document.getElementById('slider_row');
                     const tableCell = document.getElementById('table-cell');
                     const collapsedHead = document.getElementById('collapsed-head');
+                    // Chromium may use either root element as the scrolling box;
+                    // both must clip horizontal overflow before PDF generation.
                     const documentStyle = getComputedStyle(document.documentElement);
                     const bodyStyle = getComputedStyle(document.body);
                     const sectionHeadingStyle = getComputedStyle(sectionHeading);
@@ -1170,8 +1188,11 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
         # close the browser; call close() explicitly before the with-block exits.
         browser.close()
 
+    # Root clipping prevents Chromium from scaling all report content to fit a
+    # single over-width descendant.
     assert computed_styles["document"]["htmlOverflowX"] == "clip"
     assert computed_styles["document"]["bodyOverflowX"] == "clip"
+    # Cohesion rules keep headings and indivisible visuals with their content.
     assert computed_styles["sectionHeading"]["breakAfter"] == "avoid"
     assert computed_styles["sectionHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["item"]["display"] == "block"
@@ -1184,6 +1205,8 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["viewer"]["overflow"] == "hidden"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
+    # PDF capture overrides border tokens at the report root so descendants
+    # inherit printable contrast without selector-by-selector color patches.
     assert computed_styles["root"]["borderColorToken"] == "#adb5bd"
     assert computed_styles["root"]["translucentBorderColorToken"] == "rgba(0, 0, 0, 0.28)"
     assert computed_styles["root"]["printColorAdjust"] == "exact"
@@ -1205,6 +1228,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
 @pytest.mark.unit
 @pytest.mark.parametrize("landscape", [False, True])
 def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp_path, landscape):
+    """Exercise visual fitting, layout cohesion, and oversized fragmentation together."""
     html = """
     <html>
     <head>
@@ -1485,6 +1509,8 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                 };
                 const viewerWrapperFitsPanelBody = fitsPanelBody(viewerWrapper);
                 const directViewerFitsContainer = fitsContainer(directViewer);
+                // Widen the ancestor after fitting to prove each visual received
+                // a stable inline cap rather than relying on transient layout width.
                 document.getElementById('report_root').style.width = '5000px';
                 await new Promise(resolve => requestAnimationFrame(
                     () => requestAnimationFrame(resolve)
@@ -1531,6 +1557,8 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
         )
         browser.close()
 
+    # Every visible indivisible visual receives explicit page-height and
+    # observed-width caps, regardless of its owning ADR component.
     for visual_name in (
         "explicitImage",
         "sliderVideo",
@@ -1546,10 +1574,14 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
         assert visual["maxWidth"].endswith("px")
         assert visual["maxWidthPriority"] == "important"
 
+    # Native replaced media preserve aspect ratio through auto dimensions;
+    # plots and scene viewers use their component-specific resize paths below.
     for replaced_visual_name in ("explicitImage", "sliderVideo", "canvas"):
         assert state[replaced_visual_name]["height"] == "auto"
         assert state[replaced_visual_name]["width"] == "auto"
 
+    # Scene wrappers stay inside their owning content boxes while both current
+    # and compatibility tags retain the component dimensions they require.
     assert state["plot"]["height"].endswith("px")
     assert state["viewerWrapper"]["aspectRatio"]
     assert state["viewerWrapper"]["display"] == "block"
@@ -1568,11 +1600,15 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
     assert state["directViewerFitsContainer"] is True
     if state["directViewerItem"]["height"]:
         assert state["directViewerItem"]["height"] == state["directViewer"]["height"]
+    # Hidden visuals remain untouched, while every visible visual is capped
+    # independently, including multiple media in one item.
     assert state["hiddenImage"]["maxWidth"] == ""
     assert state["multiImageA"]["maxWidth"].endswith("px")
     assert state["multiImageB"]["maxWidth"].endswith("px")
     assert state["responsiveImage"]["maxWidth"].endswith("px")
     assert state["responsiveImageWidth"] <= state["responsiveWidthCap"] + 0.5
+    # Fitting groups stay cohesive; structures taller than a page are released
+    # so Chromium can fragment them instead of clipping or leaving blank pages.
     assert state["explicitLayout"]["breakInside"] == "avoid"
     assert state["fittingPanel"]["breakInside"] == "avoid"
     assert state["fittingPanel"]["breakPriority"] == "important"
@@ -1591,6 +1627,8 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
 def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
 
+    # Strings follow CSS absolute-unit conversion; numeric values already mean
+    # CSS pixels and therefore pass through unchanged.
     assert renderer._pdf_length_to_px("25.4mm") == pytest.approx(96.0)
     assert renderer._pdf_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._pdf_length_to_px("96px") == pytest.approx(96.0)
@@ -2066,6 +2104,8 @@ def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
 
 @pytest.mark.unit
 def test_renderer_rejects_non_enum_page_size(tmp_path):
+    # Raw strings are ambiguous with custom dimensions and bypass the supported
+    # public value set, so only enum members are accepted as fixed formats.
     with pytest.raises(ADRException, match="page_size must be a PDFPageSize member"):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>Invalid page size</body></html>"),
@@ -2080,6 +2120,7 @@ def test_renderer_rejects_non_enum_page_size(tmp_path):
     [("12in", None), (None, "18in")],
 )
 def test_renderer_requires_custom_width_and_height_together(tmp_path, width, height):
+    # A complete pair keeps page orientation and printable-area calculations deterministic.
     with pytest.raises(ADRException, match="width and height must be provided together"):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>Incomplete dimensions</body></html>"),
@@ -2100,6 +2141,7 @@ def test_renderer_requires_custom_width_and_height_together(tmp_path, width, hei
     ],
 )
 def test_renderer_rejects_invalid_custom_dimensions(tmp_path, width, height, expected_error):
+    # Validate values with the same converter used by viewport and pagination math.
     with pytest.raises(ADRException, match=expected_error):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>Invalid dimensions</body></html>"),
@@ -2112,6 +2154,7 @@ def test_renderer_rejects_invalid_custom_dimensions(tmp_path, width, height, exp
 
 @pytest.mark.unit
 def test_renderer_rejects_margins_that_consume_custom_page_height(tmp_path):
+    # Validation happens during construction, before Chromium or staging work starts.
     with pytest.raises(ADRException, match="leave at least one CSS pixel"):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>No printable height</body></html>"),
@@ -2125,6 +2168,7 @@ def test_renderer_rejects_margins_that_consume_custom_page_height(tmp_path):
 
 @pytest.mark.unit
 def test_renderer_rejects_horizontal_margins_that_consume_selected_page_width(tmp_path):
+    # Cover the fixed-format horizontal axis separately from custom page height.
     with pytest.raises(ADRException, match="leave at least one CSS pixel"):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>No printable width</body></html>"),

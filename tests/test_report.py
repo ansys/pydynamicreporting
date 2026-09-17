@@ -225,6 +225,7 @@ def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
 
 
 def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
+    """Keep the public Report facade lossless across the server export boundary."""
     captured: dict[str, object] = {}
 
     def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
@@ -261,6 +262,8 @@ def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
         render_timeout=12.5,
     )
 
+    # Width and height remain observable even with a fixed format; precedence is
+    # enforced by the renderer rather than silently rewriting public inputs here.
     assert success is True
     assert captured["report_guid"] == "report-guid"
     assert captured["file_name"] == str(output_file)

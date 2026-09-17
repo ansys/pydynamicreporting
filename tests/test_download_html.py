@@ -219,9 +219,12 @@ def _make_downloader(
 def test_inline_ansys_viewer_supports_registered_component_tags(
     tmp_path: Path, monkeypatch, viewer_tag: str
 ) -> None:
+    """Apply identical asset and source-format rewriting to both registered tags."""
     downloader = _make_downloader(tmp_path)
 
     def replace_blocks(html, prefix, suffix, inline=False, size_check=False):
+        # Model the two production replacements without filesystem or HTTP I/O:
+        # proxy first, then scene source with its original extension recorded.
         downloader._replaced_file_ext = None
         if prefix == 'proxy_img="':
             return html.replace("/media/proxy.png", "data:image/png;base64,proxy")

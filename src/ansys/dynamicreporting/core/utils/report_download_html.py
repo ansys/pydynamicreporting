@@ -552,6 +552,8 @@ class ReportDownloadHTML:
 
     def _inline_ansys_viewer(self, html: str) -> str:
         """Inline assets for every registered Ansys 3D viewer component tag."""
+        # Process the canonical and compatibility tags separately so position
+        # tracking remains valid even when one report contains both forms.
         for viewer_tag in ANSYS_VIEWER_TAGS:
             opening_tag = f"<{viewer_tag}"
             current_pos = 0
@@ -571,6 +573,7 @@ class ReportDownloadHTML:
                 # If the source became a data URI, tell the component its original file type.
                 if self._replaced_file_ext:
                     ext = self._replaced_file_ext.replace(".", "").upper()
+                    # Only the current component needs the source-format hint.
                     text = text.replace(opening_tag, f'{opening_tag} src_ext="{ext}"', 1)
                 html = html[:start] + text + html[end:]
                 current_pos = start + len(text)
