@@ -1318,7 +1318,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                 <h2>Scene</h2>
                 <section class="adr-container">
                     <adr-data-item id="viewer-item" data-item-type="scene">
-                        <div id="viewer-wrapper" class="avz-viewer scene-visual">
+                        <div id="viewer-wrapper" class="scene-visual">
                             <ansys-nexus-viewer id="viewer">
                                 <img
                                     id="viewer-proxy"

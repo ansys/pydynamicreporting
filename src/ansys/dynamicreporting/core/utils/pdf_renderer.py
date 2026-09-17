@@ -96,7 +96,7 @@ _PAGINATION_HEADING_SELECTOR = (
     ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
 )
 # Visual elements treated as indivisible and resized instead of split across PDF pages.
-_PAGINATION_VISUAL_SELECTOR = "img, video, canvas, .nexus-plot, .avz-viewer, ansys-nexus-viewer"
+_PAGINATION_VISUAL_SELECTOR = "img, video, canvas, .nexus-plot, ansys-nexus-viewer"
 
 
 @dataclass(frozen=True)
@@ -887,8 +887,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                         // Plotly and the scene viewer can add image or canvas descendants.
                         // Prepare their stable ADR containers instead of internal render nodes.
                         const visual = candidate.closest(
-                            '.nexus-plot, .avz-viewer'
-                        ) || candidate.closest('ansys-nexus-viewer') || candidate;
+                            '.nexus-plot, ansys-nexus-viewer'
+                        ) || candidate;
                         if (!root.contains(visual) || seen.has(visual) || !isVisible(visual)) {
                             continue;
                         }
@@ -903,37 +903,45 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return `${visual.tagName.toLowerCase()}${id}`;
                 };
 
-                const prepareSceneWrapper = visual => {
-                    if (!visual.matches('.avz-viewer')) {
-                        return;
+                const sceneLayoutRoot = viewer => {
+                    const item = viewer.closest('adr-data-item');
+                    let layoutRoot = viewer;
+                    while (item && layoutRoot.parentElement
+                            && layoutRoot.parentElement !== item) {
+                        layoutRoot = layoutRoot.parentElement;
                     }
-                    const wrapperRect = visual.getBoundingClientRect();
-                    if (wrapperRect.width < 1 || wrapperRect.height < 1) {
+                    return layoutRoot;
+                };
+
+                const prepareSceneViewer = (viewer, layoutRoot, layoutRect) => {
+                    if (layoutRect.width < 1 || layoutRect.height < 1) {
                         return;
                     }
 
-                    visual.style.setProperty(
-                        'aspect-ratio', `${wrapperRect.width} / ${wrapperRect.height}`, 'important'
+                    const proxy = viewer.shadowRoot?.querySelector('.ansys-nexus-proxy')
+                        || viewer.querySelector('.ansys-nexus-proxy');
+                    const aspectRatio = proxy?.naturalWidth > 0 && proxy?.naturalHeight > 0
+                        ? proxy.naturalWidth / proxy.naturalHeight
+                        : layoutRect.width / layoutRect.height;
+                    layoutRoot.style.setProperty(
+                        'aspect-ratio', `${aspectRatio}`, 'important'
                     );
-                    visual.style.setProperty('box-sizing', 'border-box', 'important');
-                    visual.style.setProperty('width', '100%', 'important');
-                    visual.style.setProperty('height', 'auto', 'important');
-                    visual.style.setProperty(
-                        'max-width', `${Math.ceil(wrapperRect.width)}px`, 'important'
+                    layoutRoot.style.setProperty('box-sizing', 'border-box', 'important');
+                    layoutRoot.style.setProperty('width', '100%', 'important');
+                    layoutRoot.style.setProperty('height', 'auto', 'important');
+                    layoutRoot.style.setProperty(
+                        'max-width', `${Math.ceil(layoutRect.width)}px`, 'important'
                     );
-                    visual.style.setProperty('overflow', 'hidden', 'important');
+                    layoutRoot.style.setProperty('overflow', 'hidden', 'important');
 
-                    const viewer = visual.querySelector(':scope > ansys-nexus-viewer');
-                    if (!viewer) {
-                        return;
+                    if (layoutRoot !== viewer) {
+                        viewer.style.setProperty('width', '100%', 'important');
+                        viewer.style.setProperty('height', '100%', 'important');
+                        viewer.style.setProperty('max-width', '100%', 'important');
+                        viewer.style.setProperty('max-height', '100%', 'important');
                     }
-                    viewer.style.setProperty('width', '100%', 'important');
-                    viewer.style.setProperty('height', '100%', 'important');
-                    viewer.style.setProperty('max-width', '100%', 'important');
-                    viewer.style.setProperty('max-height', '100%', 'important');
                     viewer.style.setProperty('overflow', 'hidden', 'important');
 
-                    const proxy = viewer.querySelector('.ansys-nexus-proxy');
                     if (proxy) {
                         proxy.style.setProperty('width', '100%', 'important');
                         proxy.style.setProperty('height', '100%', 'important');
@@ -947,9 +955,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                     if (preparedVisuals.has(visual)) {
                         return true;
                     }
-                    const initialVisualRect = visual.getBoundingClientRect();
-                    prepareSceneWrapper(visual);
-                    const visualRect = visual.getBoundingClientRect();
+                    const isSceneViewer = visual.matches('ansys-nexus-viewer');
+                    const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
+                    const initialVisualRect = fittedVisual.getBoundingClientRect();
+                    if (isSceneViewer) {
+                        prepareSceneViewer(visual, fittedVisual, initialVisualRect);
+                    }
+                    const visualRect = fittedVisual.getBoundingClientRect();
                     const responsiveHeightReduction = Math.max(
                         0, initialVisualRect.height - visualRect.height
                     );
@@ -965,7 +977,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
 
                     const computedMaxHeight = Number.parseFloat(
-                        window.getComputedStyle(visual).maxHeight
+                        window.getComputedStyle(fittedVisual).maxHeight
                     );
                     const existingMaxHeight = Number.isFinite(computedMaxHeight)
                             && computedMaxHeight > 0
@@ -977,7 +989,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     let constrainedWidth = Math.max(1, Math.ceil(visualRect.width));
                     const wasResized = visualRect.height > constrainedHeight + 0.5;
 
-                    if (wasResized && visual.matches('.avz-viewer')) {
+                    if (wasResized && isSceneViewer) {
                         const aspectRatio = visualRect.width / visualRect.height;
                         constrainedWidth = Math.max(1, Math.floor(Math.min(
                             visualRect.width, constrainedHeight * aspectRatio
@@ -987,17 +999,17 @@ class _BasePlaywrightPDFRenderer(ABC):
                         );
                     }
 
-                    visual.style.setProperty(
+                    fittedVisual.style.setProperty(
                         'max-height', `${constrainedHeight}px`, 'important'
                     );
-                    visual.style.setProperty(
+                    fittedVisual.style.setProperty(
                         'max-width', `${constrainedWidth}px`, 'important'
                     );
-                    if (wasResized && visual.matches('.avz-viewer')) {
-                        visual.style.setProperty(
+                    if (wasResized && isSceneViewer) {
+                        fittedVisual.style.setProperty(
                             'height', `${constrainedHeight}px`, 'important'
                         );
-                        visual.style.setProperty(
+                        fittedVisual.style.setProperty(
                             'width', `${constrainedWidth}px`, 'important'
                         );
                     } else if (wasResized && visual.matches('img, video, canvas')) {
@@ -1010,9 +1022,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                         );
                     }
 
-                    if (wasResized && visual.matches('.avz-viewer, ansys-nexus-viewer')) {
+                    if (wasResized && isSceneViewer) {
                         const item = visual.closest('adr-data-item');
-                        visual.style.setProperty('overflow', 'hidden', 'important');
+                        fittedVisual.style.setProperty('overflow', 'hidden', 'important');
                         if (item) {
                             item.style.setProperty(
                                 'height', `${constrainedHeight}px`, 'important'
