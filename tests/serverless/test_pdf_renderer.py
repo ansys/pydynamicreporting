@@ -22,6 +22,7 @@
 
 import os
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -29,6 +30,7 @@ from unittest.mock import Mock
 import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from pypdf import PdfReader
 
 import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, PDFPageSize, common_utils
@@ -348,6 +350,57 @@ def test_playwright_pdf_landscape(tmp_path, product_playwright_context):
     )
     pdf_bytes = renderer.render_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
+
+
+@pytest.mark.unit
+def test_playwright_pdf_has_no_blank_pages(tmp_path, product_playwright_context):
+    page_markers = ("PDF page one", "PDF page two", "PDF page three")
+    layouts = "".join(
+        f"""
+        <div data-layout-type="basic">
+            <br>
+            <h2>{page_marker}</h2>
+            <section class="adr-container">Visible report content</section>
+        </div>
+        """
+        for page_marker in page_markers
+    )
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head>
+            <style>
+                * {{ box-sizing: border-box; }}
+                #report_root > div[data-layout-type="basic"] {{
+                    break-after: page;
+                    height: 968px;
+                }}
+                #report_root > div[data-layout-type="basic"]:last-child {{
+                    break-after: auto;
+                }}
+            </style>
+        </head>
+        <body class="loaded">
+            <main id="report_root">{layouts}</main>
+        </body>
+        </html>
+        """,
+        landscape=True,
+        margins={"top": "20mm", "right": "15mm", "bottom": "20mm", "left": "15mm"},
+        page_size=PDFPageSize.A3,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [(page.extract_text() or "").strip() for page in reader.pages]
+    blank_pages = [page_number for page_number, text in enumerate(page_text, start=1) if not text]
+
+    assert not blank_pages, f"Generated blank PDF pages: {blank_pages}"
+    assert len(page_text) == len(page_markers)
+    for page_number, (text, page_marker) in enumerate(zip(page_text, page_markers), start=1):
+        assert page_marker in text, f"PDF page {page_number} does not contain {page_marker!r}"
 
 
 @pytest.mark.unit

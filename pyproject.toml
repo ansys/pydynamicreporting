@@ -67,6 +67,7 @@ ci = "https://github.com/ansys/pydynamicreporting/actions"
 
 [project.optional-dependencies]
 test = [
+    "pypdf>=6.0.0,<7.0.0",
     "pytest",
     "pytest-cov",
     "pyvista==0.48.4",
