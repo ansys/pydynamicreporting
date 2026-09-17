@@ -926,6 +926,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     css = "\n".join(call.kwargs["content"] for call in page.add_style_tag.call_args_list)
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
+    assert ".avz-viewer" in css
     assert "ansys-adr-viewer" in css
     assert "ansys-nexus-viewer" in css
     assert "table.tree" in css
@@ -933,6 +934,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert 'adr-slider-template > section[id^="slider_container_"] > section.adr-row' in css
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
+    assert ".ansys-nexus-proxy" in css
     assert "h2:has(+ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css

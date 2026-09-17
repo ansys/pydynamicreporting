@@ -79,7 +79,12 @@ class PDFPageSize(str, Enum):
     A6 = "A6"
 
     def __str__(self) -> str:
-        """Return the page-size value accepted by the browser renderer."""
+        """Return the page-size value accepted by the browser renderer.
+
+        Examples
+        --------
+        ``str(PDFPageSize.A4)`` returns ``"A4"``.
+        """
         return self.value
 
 

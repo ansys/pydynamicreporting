@@ -96,7 +96,7 @@ _PAGINATION_FIT_GUARD_PX = 8.0
 _PAGINATION_HEADING_SELECTOR = (
     ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
 )
-# Canonical and compatibility tags registered for the same product-owned 3D viewer.
+# Joining the registered tags produces ``:is(ansys-adr-viewer, ansys-nexus-viewer)``.
 _SCENE_VIEWER_SELECTOR = f":is({', '.join(ANSYS_VIEWER_TAGS)})"
 # Visual elements treated as indivisible and resized instead of split across PDF pages.
 _PAGINATION_VISUAL_SELECTOR = f"img, video, canvas, .nexus-plot, {_SCENE_VIEWER_SELECTOR}"
@@ -314,6 +314,10 @@ class _BasePlaywrightPDFRenderer(ABC):
         Logger used for renderer lifecycle messages.
     """
 
+    _page_size: PDFPageSize | None
+    _width: str | float | None
+    _height: str | float | None
+
     # 10mm on all sides. This is the default page margin if the caller doesn't specify custom margins.
     _DEFAULT_MARGINS: dict[str, str] = {
         "top": "10mm",
@@ -389,6 +393,7 @@ class _BasePlaywrightPDFRenderer(ABC):
             else validated_page_size
         )
         self._margins = self._validate_margins(margins)
+        # Validate the selected page and margins before starting Chromium.
         self._printable_page_width_px()
         self._printable_page_height_px()
         self._render_timeout = self._validate_render_timeout(render_timeout)
@@ -630,7 +635,8 @@ class _BasePlaywrightPDFRenderer(ABC):
         if self._page_size is not None:
             return self._PAGE_DIMENSIONS[self._page_size]
 
-        assert self._width is not None and self._height is not None
+        if self._width is None or self._height is None:
+            raise ADRException("Browser PDF custom page dimensions are incomplete.")
         return self._width, self._height
 
     def _oriented_page_width(self) -> str | float:
@@ -685,9 +691,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         if self._page_size is not None:
             options["format"] = self._page_size.value
         else:
-            assert self._width is not None and self._height is not None
-            options["width"] = self._width
-            options["height"] = self._height
+            options["width"], options["height"] = self._page_dimensions()
         return options
 
     @abstractmethod
@@ -725,6 +729,10 @@ class _BasePlaywrightPDFRenderer(ABC):
         # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
         # PDF table layout still reserves space for those hidden header groups, which paints a
         # blank top row even though the browser view looks correct.
+        # Earlier ADR report HTML uses ``.avz-viewer`` wrappers and
+        # ``.ansys-nexus-proxy`` images, so keep those selectors with the registered tags.
+        # Convert each ``__ANSYS_VIEWER__`` placeholder to
+        # ``:is(ansys-adr-viewer, ansys-nexus-viewer)`` before injecting the CSS.
         page.add_style_tag(
             content="""
                 adr-data-item,
@@ -733,6 +741,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .js-plotly-plot,
                 .plot-container,
                 .svg-container,
+                .avz-viewer,
                 __ANSYS_VIEWER__ {
                     display: block !important;
                 }
@@ -743,6 +752,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .js-plotly-plot,
                 .plot-container,
                 .svg-container,
+                .avz-viewer,
                 __ANSYS_VIEWER__,
                 .table-responsive,
                 table.table,
@@ -751,6 +761,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 adr-slider-template > section[id^="slider_container_"] > section.adr-row,
                 img.img-fluid,
                 video.img-fluid,
+                .ansys-nexus-proxy,
                 canvas {
                     break-inside: avoid !important;
                     page-break-inside: avoid !important;
@@ -766,6 +777,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     max-height: none !important;
                 }
 
+                .avz-viewer,
                 __ANSYS_VIEWER__ {
                     overflow: hidden !important;
                     max-height: none !important;
@@ -1317,7 +1329,13 @@ class _BasePlaywrightPDFRenderer(ABC):
             )
 
     def _pdf_length_to_px(self, value: str | float) -> float:
-        """Convert a Playwright PDF length to CSS pixels."""
+        """Convert a Playwright PDF length to CSS pixels.
+
+        Examples
+        --------
+        ``"10mm"`` becomes approximately ``37.795`` CSS pixels, while ``"1in"`` and
+        ``96.0`` both become ``96.0``.
+        """
         if isinstance(value, bool):
             raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
         if isinstance(value, (int, float)):

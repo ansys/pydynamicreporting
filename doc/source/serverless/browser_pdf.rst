@@ -140,9 +140,14 @@ Options
 * ``context`` supplies template rendering values.
 * ``item_filter`` limits report items with an ADR query expression.
 * ``dark_mode`` selects the report's dark presentation.
+* ``landscape`` defaults to portrait output. When enabled, it swaps the
+  selected page width and height.
 * ``margins`` must contain exactly ``top``, ``right``, ``bottom``, and
   ``left``. Values can use pixels, inches, centimeters, or millimeters. A
   unitless value is treated as pixels. The default is 10 mm on every side.
+* ``page_size`` selects a fixed ``PDFPageSize`` and defaults to A4.
+* ``width`` and ``height`` define a custom page when ``page_size=None``. Both
+  dimensions are required.
 * ``render_timeout`` is one shared browser-side budget for browser launch,
   navigation, readiness checks, and print preparation. It defaults to 30
   seconds. Server-side template rendering and offline asset staging occur
