@@ -20,51 +20,56 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 from unittest.mock import Mock
 
 
 def test_item_visualization_renders_display_ready_iframe(monkeypatch):
-    from ansys.dynamicreporting.core.serverless import item as item_module
+    from IPython import display as ipython_display
+
     from ansys.dynamicreporting.core.serverless.item import Item, ItemType
 
     request = object()
     render = Mock(return_value='<p title="quoted">A &amp; B</p>')
     item = SimpleNamespace(type=ItemType.SCENE, render=render)
+    item.get_iframe = MethodType(Item.get_iframe, item)
+    display = Mock()
+    monkeypatch.setattr(ipython_display, "display", display)
 
-    iframe = Item.get_iframe(item, context={"plotly": 1}, request=request)
+    assert Item.visualize(item, context={"plotly": 1}, request=request) is None
 
     render.assert_called_once_with(context={"plotly": 1}, request=request)
+    display.assert_called_once()
+    iframe = display.call_args.args[0]
     assert 'width="1000" height="800"' in iframe
     assert 'srcdoc="&lt;p title=&quot;quoted&quot;&gt;A &amp;amp; B&lt;/p&gt;"' in iframe
     assert 'sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts"' in iframe
     assert iframe._repr_html_() == str(iframe)
 
-    item.get_iframe = Mock(return_value=iframe)
-    display_iframe = Mock()
-    monkeypatch.setattr(item_module, "_display_iframe", display_iframe)
-
-    assert Item.visualize(item, width=640, height=480) is None
-    item.get_iframe.assert_called_once_with(width=640, height=480, context=None, request=None)
-    display_iframe.assert_called_once_with(iframe)
-
 
 def test_report_visualization_forwards_render_options(monkeypatch):
-    from ansys.dynamicreporting.core.serverless import template as template_module
+    from IPython import display as ipython_display
+
     from ansys.dynamicreporting.core.serverless.template import Template
 
     request = object()
     render = Mock(return_value="<main>Report</main>")
     report = SimpleNamespace(render=render)
+    report.get_iframe = MethodType(Template.get_iframe, report)
+    display = Mock()
+    monkeypatch.setattr(ipython_display, "display", display)
 
-    iframe = Template.get_iframe(
-        report,
-        width=720,
-        height=540,
-        context={"plotly": 1},
-        item_filter="A|i_name|cont|result;",
-        embed_scene_data=True,
-        request=request,
+    assert (
+        Template.visualize(
+            report,
+            width=720,
+            height=540,
+            context={"plotly": 1},
+            item_filter="A|i_name|cont|result;",
+            embed_scene_data=True,
+            request=request,
+        )
+        is None
     )
 
     render.assert_called_once_with(
@@ -73,20 +78,7 @@ def test_report_visualization_forwards_render_options(monkeypatch):
         embed_scene_data=True,
         request=request,
     )
+    display.assert_called_once()
+    iframe = display.call_args.args[0]
     assert 'width="720" height="540"' in iframe
     assert 'srcdoc="&lt;main&gt;Report&lt;/main&gt;"' in iframe
-
-    report.get_iframe = Mock(return_value=iframe)
-    display_iframe = Mock()
-    monkeypatch.setattr(template_module, "_display_iframe", display_iframe)
-
-    assert Template.visualize(report, item_filter="A|i_tags|cont|section=summary;") is None
-    report.get_iframe.assert_called_once_with(
-        width=1000,
-        height=800,
-        context=None,
-        item_filter="A|i_tags|cont|section=summary;",
-        embed_scene_data=False,
-        request=None,
-    )
-    display_iframe.assert_called_once_with(iframe)
