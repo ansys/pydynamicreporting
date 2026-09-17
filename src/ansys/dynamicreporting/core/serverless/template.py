@@ -48,6 +48,7 @@ from django.utils import timezone
 from ..common_utils import check_dictionary_for_html
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException, TemplateDoesNotExist, TemplateReorderOutOfBounds
+from ._visualization import _build_iframe, _display_iframe
 from .base import BaseModel, StrEnum
 
 
@@ -642,6 +643,71 @@ class Template(BaseModel):
             ctx["HTML"] = get_render_error_html(e, target="report", guid=self.guid)
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
+
+    def get_iframe(
+        self,
+        width: int | float = 1000,
+        height: int | float = 800,
+        *,
+        context=None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        request=None,
+    ) -> str:
+        """Return an inline iframe containing the rendered report.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. The default is 1000 pixels.
+        height : int or float, optional
+            Iframe height. The default is 800 pixels.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        item_filter : str, optional
+            ADR query string used to select items for the report.
+        embed_scene_data : bool, optional
+            Whether to include full scene data in the rendered HTML.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Returns
+        -------
+        str
+            String-like iframe markup that rich display frontends render as HTML.
+        """
+        return _build_iframe(
+            self.render(
+                context=context,
+                item_filter=item_filter,
+                embed_scene_data=embed_scene_data,
+                request=request,
+            ),
+            width=width,
+            height=height,
+        )
+
+    def visualize(
+        self,
+        width: int | float = 1000,
+        height: int | float = 800,
+        *,
+        context=None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        request=None,
+    ) -> None:
+        """Display the rendered report inline in an IPython-compatible frontend."""
+        _display_iframe(
+            self.get_iframe(
+                width=width,
+                height=height,
+                context=context,
+                item_filter=item_filter,
+                embed_scene_data=embed_scene_data,
+                request=request,
+            )
+        )
 
 
 class Layout(Template):
