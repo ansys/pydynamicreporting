@@ -926,14 +926,13 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     css = "\n".join(call.kwargs["content"] for call in page.add_style_tag.call_args_list)
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
-    assert ".avz-viewer" in css
+    assert "ansys-adr-viewer" in css
     assert "ansys-nexus-viewer" in css
     assert "table.tree" in css
     assert 'adr-slider-template > section[id^="slider_container_"]' in css
     assert 'adr-slider-template > section[id^="slider_container_"] > section.adr-row' in css
     assert "img.img-fluid" in css
     assert "video.img-fluid" in css
-    assert ".ansys-nexus-proxy" in css
     assert "h2:has(+ section.adr-container)" in css
     assert "header:has(+ section.adr-panel-body)" in css
     assert 'table.table-fit-head > thead[style*="visibility: collapse"]' in css
@@ -1005,9 +1004,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             <div class="nexus-plot" id="plot">
                 <div class="plot-container">Plot content</div>
             </div>
-            <div class="avz-viewer" id="scene-wrap">
-                <ansys-nexus-viewer id="viewer"></ansys-nexus-viewer>
-            </div>
+            <ansys-nexus-viewer id="viewer"></ansys-nexus-viewer>
             <img
                 id="image"
                 class="img img-fluid"
@@ -1114,6 +1111,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         viewer: {
                             display: viewerStyle.display,
                             breakInside: viewerStyle.breakInside,
+                            overflow: viewerStyle.overflow,
                         },
                         image: {
                             breakInside: imageStyle.breakInside,
@@ -1172,6 +1170,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["plot"]["pageBreakInside"] == "avoid"
     assert computed_styles["viewer"]["display"] == "block"
     assert computed_styles["viewer"]["breakInside"] == "avoid"
+    assert computed_styles["viewer"]["overflow"] == "hidden"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
     assert computed_styles["root"]["borderColorToken"] == "#adb5bd"
@@ -1208,6 +1207,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
             adr-panel,
             adr-slider-template,
             adr-data-item,
+            ansys-adr-viewer,
             ansys-nexus-viewer,
             section,
             img,
@@ -1250,7 +1250,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                         <style>
                             :host, section { display: block; }
                             header { height: 40px; }
-                            section.adr-panel-body { padding-bottom: 4px; }
+                            section.adr-panel-body { padding: 0 20px 4px; }
                         </style>
                         <section class="adr-panel">
                             <header class="adr-panel-header">${this.dataset.title}</header>
@@ -1314,21 +1314,30 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                     </adr-data-item>
                 </section>
             </div>
+            <div id="scene-panel-layout" data-layout-type="panel">
+                <adr-panel data-title="Scene panel">
+                    <div data-layout-type="basic">
+                        <h2>Scene</h2>
+                        <section class="adr-container">
+                            <adr-data-item id="viewer-item" data-item-type="scene">
+                                <div id="viewer-wrapper" class="scene-visual">
+                                    <ansys-adr-viewer id="viewer" aspect_ratio="1.333333">
+                                    </ansys-adr-viewer>
+                                </div>
+                            </adr-data-item>
+                        </section>
+                    </div>
+                </adr-panel>
+            </div>
             <div data-layout-type="basic">
-                <h2>Scene</h2>
+                <h2>Direct scene</h2>
                 <section class="adr-container">
-                    <adr-data-item id="viewer-item" data-item-type="scene">
-                        <div id="viewer-wrapper" class="scene-visual">
-                            <ansys-nexus-viewer id="viewer">
-                                <img
-                                    id="viewer-proxy"
-                                    class="ansys-nexus-proxy"
-                                    alt="scene proxy"
-                                    src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-                                    style="height: 100%; width: 100%"
-                                />
-                            </ansys-nexus-viewer>
-                        </div>
+                    <adr-data-item id="direct-viewer-item" data-item-type="scene">
+                        <ansys-nexus-viewer
+                            id="direct-viewer"
+                            class="scene-visual"
+                            aspect_ratio="1.333333"
+                        ></ansys-nexus-viewer>
                     </adr-data-item>
                 </section>
             </div>
@@ -1428,7 +1437,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                         maxWidthPriority: element.style.getPropertyPriority('max-width'),
                         width: element.style.getPropertyValue('width'),
                         aspectRatio: element.style.getPropertyValue('aspect-ratio'),
-                        objectFit: element.style.getPropertyValue('object-fit'),
+                        display: element.style.getPropertyValue('display'),
                         overflow: element.style.getPropertyValue('overflow'),
                     };
                 };
@@ -1440,12 +1449,31 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                     responsiveImage.style.getPropertyValue('max-width')
                 );
                 const viewerWrapper = document.getElementById('viewer-wrapper');
-                const viewerContainer = viewerWrapper.closest('section.adr-container');
-                const viewerWrapperRect = viewerWrapper.getBoundingClientRect();
-                const viewerContainerRect = viewerContainer.getBoundingClientRect();
-                const viewerWrapperFitsContainer = viewerWrapperRect.left
-                        >= viewerContainerRect.left - 0.5
-                    && viewerWrapperRect.right <= viewerContainerRect.right + 0.5;
+                const directViewer = document.getElementById('direct-viewer');
+                const fitsPanelBody = visual => {
+                    const panelBody = visual.closest('adr-panel').shadowRoot.querySelector(
+                        'section.adr-panel-body'
+                    );
+                    const panelBodyRect = panelBody.getBoundingClientRect();
+                    const panelBodyStyle = getComputedStyle(panelBody);
+                    const contentLeft = panelBodyRect.left
+                        + Number.parseFloat(panelBodyStyle.paddingLeft);
+                    const contentRight = panelBodyRect.right
+                        - Number.parseFloat(panelBodyStyle.paddingRight);
+                    const visualRect = visual.getBoundingClientRect();
+                    return visualRect.left >= contentLeft - 0.5
+                        && visualRect.right <= contentRight + 0.5;
+                };
+                const fitsContainer = visual => {
+                    const visualRect = visual.getBoundingClientRect();
+                    const containerRect = visual.closest(
+                        'section.adr-container'
+                    ).getBoundingClientRect();
+                    return visualRect.left >= containerRect.left - 0.5
+                        && visualRect.right <= containerRect.right + 0.5;
+                };
+                const viewerWrapperFitsPanelBody = fitsPanelBody(viewerWrapper);
+                const directViewerFitsContainer = fitsContainer(directViewer);
                 document.getElementById('report_root').style.width = '5000px';
                 await new Promise(resolve => requestAnimationFrame(
                     () => requestAnimationFrame(resolve)
@@ -1459,9 +1487,12 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
                     viewerWrapper: inlineState('viewer-wrapper'),
                     viewer: inlineState('viewer'),
                     viewerItem: inlineState('viewer-item'),
-                    viewerProxy: inlineState('viewer-proxy'),
-                    viewerWrapperFitsContainer,
+                    viewerWrapperFitsPanelBody,
                     viewerWrapperWidth: viewerWrapper.getBoundingClientRect().width,
+                    directViewer: inlineState('direct-viewer'),
+                    directViewerItem: inlineState('direct-viewer-item'),
+                    directViewerFitsContainer,
+                    directViewerWidth: directViewer.getBoundingClientRect().width,
                     multiImageA: inlineState('multi-image-a'),
                     multiImageB: inlineState('multi-image-b'),
                     responsiveImage: inlineState('responsive-image'),
@@ -1489,7 +1520,14 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
         )
         browser.close()
 
-    for visual_name in ("explicitImage", "sliderVideo", "canvas", "plot", "viewerWrapper"):
+    for visual_name in (
+        "explicitImage",
+        "sliderVideo",
+        "canvas",
+        "plot",
+        "viewerWrapper",
+        "directViewer",
+    ):
         visual = state[visual_name]
         assert visual["maxHeight"].endswith("px")
         assert 0 < float(visual["maxHeight"][:-2]) <= renderer._printable_page_height_px()
@@ -1503,15 +1541,22 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
 
     assert state["plot"]["height"].endswith("px")
     assert state["viewerWrapper"]["aspectRatio"]
+    assert state["viewerWrapper"]["display"] == "block"
     assert state["viewerWrapper"]["overflow"] == "hidden"
     assert state["viewerWrapperWidth"] <= 960
-    assert state["viewerWrapperFitsContainer"] is True
+    assert state["viewerWrapperFitsPanelBody"] is True
     assert state["viewer"]["height"] == "100%"
     assert state["viewer"]["width"] == "100%"
-    assert state["viewerProxy"]["maxWidth"] == "100%"
-    assert state["viewerProxy"]["objectFit"] == "contain"
+    assert state["viewer"]["overflow"] == "hidden"
     if state["viewerItem"]["height"]:
         assert state["viewerItem"]["height"] == state["viewerWrapper"]["height"]
+    assert state["directViewer"]["aspectRatio"]
+    assert state["directViewer"]["display"] == "block"
+    assert state["directViewer"]["overflow"] == "hidden"
+    assert state["directViewerWidth"] <= 960
+    assert state["directViewerFitsContainer"] is True
+    if state["directViewerItem"]["height"]:
+        assert state["directViewerItem"]["height"] == state["directViewer"]["height"]
     assert state["hiddenImage"]["maxWidth"] == ""
     assert state["multiImageA"]["maxWidth"].endswith("px")
     assert state["multiImageB"]["maxWidth"].endswith("px")

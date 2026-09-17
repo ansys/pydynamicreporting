@@ -27,6 +27,7 @@ import re
 from typing import Any
 
 from ..adr_utils import get_logger
+from ..constants import ANSYS_VIEWER_TAGS
 
 # Import the shared constants and file lists
 from ..utils.html_export_constants import (
@@ -649,25 +650,27 @@ class ServerlessReportExporter:
         return data
 
     def _inline_ansys_viewer(self, html: str) -> str:
-        """Handles the special case of inlining assets for the <ansys-nexus-viewer> component."""
-        current_pos = 0
-        while True:
-            start, end, text_block = self._find_block(
-                html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
-            )
-            if start < 0:
-                break
-            # Legacy parity: always inline viewer attributes
-            text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=True)
-            text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
-            if "__SIZE_EXCEPTION__" in text:
-                msg = "3D geometry too large for stand-alone HTML file"
-                text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
-            if self._replaced_file_ext:
-                ext = self._replaced_file_ext.replace(".", "").upper()
-                text = text.replace("<ansys-nexus-viewer", f'<ansys-nexus-viewer src_ext="{ext}"')
-            html = html[:start] + text + html[end:]
-            current_pos = start + len(text)
+        """Inline assets for every registered Ansys 3D viewer component tag."""
+        for viewer_tag in ANSYS_VIEWER_TAGS:
+            opening_tag = f"<{viewer_tag}"
+            current_pos = 0
+            while True:
+                start, end, text_block = self._find_block(
+                    html, current_pos, opening_tag, f"</{viewer_tag}>"
+                )
+                if start < 0:
+                    break
+                # Legacy parity: always inline viewer attributes
+                text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=True)
+                text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
+                if "__SIZE_EXCEPTION__" in text:
+                    msg = "3D geometry too large for stand-alone HTML file"
+                    text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
+                if self._replaced_file_ext:
+                    ext = self._replaced_file_ext.replace(".", "").upper()
+                    text = text.replace(opening_tag, f'{opening_tag} src_ext="{ext}"', 1)
+                html = html[:start] + text + html[end:]
+                current_pos = start + len(text)
         return html
 
     def _make_output_dirs(self):

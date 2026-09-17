@@ -85,6 +85,7 @@ from ..compatibility import install_version_to_product_release
 from ..compatibility import product_release_to_display_string
 from ..compatibility import product_release_to_product_line
 from ..common_utils import PDFPageSize
+from ..constants import ANSYS_VIEWER_TAGS
 from ..exceptions import ADRException
 
 # Product-browser metadata filename expected inside the packaged Playwright cache.
@@ -95,8 +96,10 @@ _PAGINATION_FIT_GUARD_PX = 8.0
 _PAGINATION_HEADING_SELECTOR = (
     ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
 )
+# Canonical and compatibility tags registered for the same product-owned 3D viewer.
+_SCENE_VIEWER_SELECTOR = f":is({', '.join(ANSYS_VIEWER_TAGS)})"
 # Visual elements treated as indivisible and resized instead of split across PDF pages.
-_PAGINATION_VISUAL_SELECTOR = "img, video, canvas, .nexus-plot, ansys-nexus-viewer"
+_PAGINATION_VISUAL_SELECTOR = f"img, video, canvas, .nexus-plot, {_SCENE_VIEWER_SELECTOR}"
 
 
 @dataclass(frozen=True)
@@ -730,8 +733,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .js-plotly-plot,
                 .plot-container,
                 .svg-container,
-                .avz-viewer,
-                ansys-nexus-viewer {
+                __ANSYS_VIEWER__ {
                     display: block !important;
                 }
 
@@ -741,8 +743,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .js-plotly-plot,
                 .plot-container,
                 .svg-container,
-                .avz-viewer,
-                ansys-nexus-viewer,
+                __ANSYS_VIEWER__,
                 .table-responsive,
                 table.table,
                 table.tree,
@@ -750,7 +751,6 @@ class _BasePlaywrightPDFRenderer(ABC):
                 adr-slider-template > section[id^="slider_container_"] > section.adr-row,
                 img.img-fluid,
                 video.img-fluid,
-                .ansys-nexus-proxy,
                 canvas {
                     break-inside: avoid !important;
                     page-break-inside: avoid !important;
@@ -761,10 +761,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .plot-container,
                 .svg-container,
                 .main-svg,
-                .table-responsive,
-                .avz-viewer,
-                ansys-nexus-viewer {
+                .table-responsive {
                     overflow: visible !important;
+                    max-height: none !important;
+                }
+
+                __ANSYS_VIEWER__ {
+                    overflow: hidden !important;
                     max-height: none !important;
                 }
 
@@ -799,7 +802,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     visibility: hidden !important;
                     height: 0 !important;
                 }
-            """,
+            """.replace("__ANSYS_VIEWER__", _SCENE_VIEWER_SELECTOR),
         )
 
         page.add_style_tag(
@@ -867,7 +870,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     printableHeightPx,
                     fitGuardPx,
                     headingSelector,
-                    visualSelector
+                    visualSelector,
+                    sceneViewerSelector
                 } = options;
                 const preparedVisuals = new Set();
                 const resizedVisuals = [];
@@ -887,7 +891,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                         // Plotly and the scene viewer can add image or canvas descendants.
                         // Prepare their stable ADR containers instead of internal render nodes.
                         const visual = candidate.closest(
-                            '.nexus-plot, ansys-nexus-viewer'
+                            `.nexus-plot, ${sceneViewerSelector}`
                         ) || candidate;
                         if (!root.contains(visual) || seen.has(visual) || !isVisible(visual)) {
                             continue;
@@ -906,6 +910,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                 const sceneLayoutRoot = viewer => {
                     const item = viewer.closest('adr-data-item');
                     let layoutRoot = viewer;
+                    // Current product HTML can place the component inside a sizing element.
+                    // Fit the direct slotted root so the same path also handles wrapper-free HTML.
                     while (item && layoutRoot.parentElement
                             && layoutRoot.parentElement !== item) {
                         layoutRoot = layoutRoot.parentElement;
@@ -914,25 +920,35 @@ class _BasePlaywrightPDFRenderer(ABC):
                 };
 
                 const prepareSceneViewer = (viewer, layoutRoot, layoutRect) => {
-                    if (layoutRect.width < 1 || layoutRect.height < 1) {
+                    if (layoutRect.width < 1) {
                         return;
                     }
 
-                    const proxy = viewer.shadowRoot?.querySelector('.ansys-nexus-proxy')
-                        || viewer.querySelector('.ansys-nexus-proxy');
-                    const aspectRatio = proxy?.naturalWidth > 0 && proxy?.naturalHeight > 0
-                        ? proxy.naturalWidth / proxy.naturalHeight
-                        : layoutRect.width / layoutRect.height;
+                    const configuredAspectRatio = Number.parseFloat(
+                        viewer.aspect_ratio ?? viewer.getAttribute('aspect_ratio')
+                    );
+                    const renderedAspectRatio = layoutRect.height > 0
+                        ? layoutRect.width / layoutRect.height
+                        : Number.NaN;
+                    const aspectRatio = Number.isFinite(configuredAspectRatio)
+                            && configuredAspectRatio > 0
+                        ? configuredAspectRatio
+                        : Number.isFinite(renderedAspectRatio) && renderedAspectRatio > 0
+                            ? renderedAspectRatio
+                            : 16 / 9;
                     layoutRoot.style.setProperty(
                         'aspect-ratio', `${aspectRatio}`, 'important'
                     );
                     layoutRoot.style.setProperty('box-sizing', 'border-box', 'important');
+                    layoutRoot.style.setProperty('display', 'block', 'important');
                     layoutRoot.style.setProperty('width', '100%', 'important');
                     layoutRoot.style.setProperty('height', 'auto', 'important');
                     layoutRoot.style.setProperty(
                         'max-width', `${Math.ceil(layoutRect.width)}px`, 'important'
                     );
                     layoutRoot.style.setProperty('overflow', 'hidden', 'important');
+                    layoutRoot.style.setProperty('break-inside', 'avoid', 'important');
+                    layoutRoot.style.setProperty('page-break-inside', 'avoid', 'important');
 
                     if (layoutRoot !== viewer) {
                         viewer.style.setProperty('width', '100%', 'important');
@@ -941,21 +957,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                         viewer.style.setProperty('max-height', '100%', 'important');
                     }
                     viewer.style.setProperty('overflow', 'hidden', 'important');
-
-                    if (proxy) {
-                        proxy.style.setProperty('width', '100%', 'important');
-                        proxy.style.setProperty('height', '100%', 'important');
-                        proxy.style.setProperty('max-width', '100%', 'important');
-                        proxy.style.setProperty('max-height', '100%', 'important');
-                        proxy.style.setProperty('object-fit', 'contain', 'important');
-                    }
                 };
 
                 const fitVisual = (visual, groupStart, groupEnd, title) => {
                     if (preparedVisuals.has(visual)) {
                         return true;
                     }
-                    const isSceneViewer = visual.matches('ansys-nexus-viewer');
+                    const isSceneViewer = visual.matches(sceneViewerSelector);
                     const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
                     const initialVisualRect = fittedVisual.getBoundingClientRect();
                     if (isSceneViewer) {
@@ -1154,6 +1162,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
                 "visualSelector": _PAGINATION_VISUAL_SELECTOR,
+                "sceneViewerSelector": _SCENE_VIEWER_SELECTOR,
             },
         )
 

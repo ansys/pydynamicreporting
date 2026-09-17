@@ -29,6 +29,7 @@ from unittest.mock import patch
 
 import pytest
 
+from ansys.dynamicreporting.core.constants import ANSYS_VIEWER_TAGS
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
 
 LEGACY_CONTEXT_MENU_FILES = (
@@ -312,7 +313,10 @@ def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
 
 
 @pytest.mark.ado_test
-def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: Path):
+@pytest.mark.parametrize("viewer_tag", ANSYS_VIEWER_TAGS)
+def test_inline_viewer_size_exception_sets_proxy_only(
+    adr_serverless, tmp_path: Path, viewer_tag: str
+):
     static_dir = Path(adr_serverless.static_directory)
     media_dir = Path(adr_serverless.media_directory)
     ver = str(adr_serverless.ansys_version)
@@ -328,7 +332,7 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
     html = textwrap.dedent(
         f"""
         <div>
-          <ansys-nexus-viewer src="{media_src}" proxy_img="{media_preview}"></ansys-nexus-viewer>
+                    <{viewer_tag} src="{media_src}" proxy_img="{media_preview}"></{viewer_tag}>
         </div>
         """
     )

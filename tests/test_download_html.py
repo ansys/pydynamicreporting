@@ -27,6 +27,7 @@ import requests
 import pytest
 
 from ansys.dynamicreporting.core.compatibility import DEFAULT_STATIC_ASSET_VERSION
+from ansys.dynamicreporting.core.constants import ANSYS_VIEWER_TAGS
 from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils.html_export_constants import (
     MATHJAX_2X_FILES,
@@ -106,13 +107,10 @@ def test_download_special_files_skip_legacy_context_menu_assets_for_newer_produc
     monkeypatch.setattr(
         downloader,
         "_download_static_files",
-        lambda files,
-        source_path,
-        target_path,
-        comment,
-        *,
-        warn_on_missing=False: download_calls.append(
-            (tuple(files), source_path, target_path, comment, warn_on_missing)
+        lambda files, source_path, target_path, comment, *, warn_on_missing=False: (
+            download_calls.append(
+                (tuple(files), source_path, target_path, comment, warn_on_missing)
+            )
         ),
     )
 
@@ -215,6 +213,29 @@ def _make_downloader(
     # ``tmp_path`` keeps cleanup deterministic and avoids depending on
     # ``TemporaryDirectory`` finalizers or implementation-specific GC timing.
     return rd.ReportDownloadHTML(url=url, directory=str(tmp_path))
+
+
+@pytest.mark.parametrize("viewer_tag", ANSYS_VIEWER_TAGS)
+def test_inline_ansys_viewer_supports_registered_component_tags(
+    tmp_path: Path, monkeypatch, viewer_tag: str
+) -> None:
+    downloader = _make_downloader(tmp_path)
+
+    def replace_blocks(html, prefix, suffix, inline=False, size_check=False):
+        downloader._replaced_file_ext = None
+        if prefix == 'proxy_img="':
+            return html.replace("/media/proxy.png", "data:image/png;base64,proxy")
+        downloader._replaced_file_ext = ".avz"
+        return html.replace("/media/scene.avz", "data:application/octet-stream;base64,scene")
+
+    monkeypatch.setattr(downloader, "_replace_blocks", replace_blocks)
+    html = f'<{viewer_tag} proxy_img="/media/proxy.png" src="/media/scene.avz"></{viewer_tag}>'
+
+    output = downloader._inline_ansys_viewer(html)
+
+    assert f'<{viewer_tag} src_ext="AVZ"' in output
+    assert 'proxy_img="data:image/png;base64,proxy"' in output
+    assert 'src="data:application/octet-stream;base64,scene"' in output
 
 
 def _build_mathjax_url(source_rel_path: str) -> str:
