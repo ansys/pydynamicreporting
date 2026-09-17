@@ -73,10 +73,42 @@ Serving Embedded Content
 ------------------------
 
 If embedding in a web app, serve static and media files via a web server or
-framework static routes. Static assets can be mounted directly from the Ansys
-installation, without running ``collectstatic``.
+framework static route pointing to ADR’s configured directories.
 
 Example with Flask:
+
+.. code-block:: python
+
+    from ansys.dynamicreporting.core.serverless import ADR
+    from flask import Flask, render_template_string
+
+    app = Flask(__name__)
+
+
+    @app.route("/embedded-report")
+    def embedded_report():
+        adr = ADR.get_instance()
+        my_app_html = "<!-- Your app's HTML here -->"
+        html = adr.render_report(name="My Simulation Report")
+        return f"""
+            <html>
+                <head>
+                    <title>Embedded Report</title>
+                </head>
+                <body>
+                    {my_app_html}
+                    <div class="report-content">
+                        {html}
+                    </div>
+                </body>
+            </html>
+        """
+
+Serving Installation-Backed Static Files
+----------------------------------------
+
+The following Flask example mounts ADR static files directly from the Ansys
+installation instead of collecting them into ``static_directory``:
 
 .. code-block:: python
 
@@ -101,25 +133,6 @@ Example with Flask:
             endpoint=f"adr_installation_static_{route_index}",
             view_func=partial(send_from_directory, directory),
         )
-
-
-    @app.route("/embedded-report")
-    def embedded_report():
-        my_app_html = "<!-- Your app's HTML here -->"
-        html = adr.render_report(name="My Simulation Report")
-        return f"""
-            <html>
-                <head>
-                    <title>Embedded Report</title>
-                </head>
-                <body>
-                    {my_app_html}
-                    <div class="report-content">
-                        {html}
-                    </div>
-                </body>
-            </html>
-        """
 
 ``send_from_directory`` keeps the requested path inside its configured
 directory. For production, review the framework or web server's MIME headers,
