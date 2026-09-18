@@ -29,6 +29,7 @@ import urllib.parse
 import requests
 
 from ..compatibility import DEFAULT_STATIC_ASSET_VERSION as CURRENT_VERSION
+from ..constants import ANSYS_VIEWER_TAGS
 from .html_export_constants import (
     CONTEXT_MENU_JS,
     CONTEXT_MENU_PATH,
@@ -278,7 +279,7 @@ class ReportDownloadHTML:
 
     @staticmethod
     def fix_viewer_component_paths(filename, data, ansys_version):
-        # Special case for AVZ viewer: ANSYSViewer_min.js to set the base path for images
+        # Special case for the Ansys 3D viewer: set the base image path in ANSYSViewer_min.js.
         if filename.endswith("ANSYSViewer_min.js"):
             try:
                 data = data.decode("utf-8")
@@ -296,7 +297,7 @@ class ReportDownloadHTML:
             # need to lie to the AVZ core and tell it to go ahead and try.
             data = data.replace('"FILE",delegate', '"arraybuffer",delegate')
             data = data.encode("utf-8")
-        # Special case for the AVZ viewer web component (loading proxy images and play arrow)
+        # Special case for the Ansys 3D viewer web component (proxy and play-button images)
         elif filename.endswith("viewer-loader.js"):
             try:
                 data = data.decode("utf-8")
@@ -550,31 +551,32 @@ class ReportDownloadHTML:
         return html
 
     def _inline_ansys_viewer(self, html: str) -> str:
-        #  AVZ component interface
-        # <ansys-nexus-viewer proxy_img="/media/ca0845e2-1edd-11ec-8c57-381428170733_scene/proxy.png" active=false
-        # ... aspect_ratio="proxy" src="/media/ca0845e2-1edd-11ec-8c57-381428170733_scene/scene.avz"
-        # ... id="avz_comp_042395948b40418b81a48f2ffbb7fa2a"></ansys-nexus-viewer>
-        current_pos = 0
-        while True:
-            start, end, text = self.find_block(
-                html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
-            )
-            if start < 0:
-                break
-            text = self._replace_blocks(text, 'proxy_img="', '"', inline=True)
-            text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
-            # handle any size check exception
-            if "__SIZE_EXCEPTION__" in text:
-                # convert src="__SIZE_EXCEPTION__" to: src="" proxy_only="Hover text"
-                msg = "3D geometry too large for stand-alone HTML file"
-                text = text.replace("__SIZE_EXCEPTION__", f'" proxy_only="{msg}')
-            # if the src was replaced with a data URI, we need to inject the src_ext attribute so
-            # that the component knows what the source file format is.
-            if self._replaced_file_ext:
-                ext = self._replaced_file_ext.replace(".", "").upper()
-                text = text.replace("<ansys-nexus-viewer", f'<ansys-nexus-viewer src_ext="{ext}"')
-            html = html[:start] + text + html[end:]
-            current_pos = start + len(text)
+        """Inline assets for every registered Ansys 3D viewer component tag."""
+        # Process the canonical and compatibility tags separately so position
+        # tracking remains valid even when one report contains both forms.
+        for viewer_tag in ANSYS_VIEWER_TAGS:
+            opening_tag = f"<{viewer_tag}"
+            current_pos = 0
+            while True:
+                start, end, text = self.find_block(
+                    html, current_pos, opening_tag, f"</{viewer_tag}>"
+                )
+                if start < 0:
+                    break
+                text = self._replace_blocks(text, 'proxy_img="', '"', inline=True)
+                text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
+                # handle any size check exception
+                if "__SIZE_EXCEPTION__" in text:
+                    # convert src="__SIZE_EXCEPTION__" to: src="" proxy_only="Hover text"
+                    msg = "3D geometry too large for stand-alone HTML file"
+                    text = text.replace("__SIZE_EXCEPTION__", f'" proxy_only="{msg}')
+                # If the source became a data URI, tell the component its original file type.
+                if self._replaced_file_ext:
+                    ext = self._replaced_file_ext.replace(".", "").upper()
+                    # Only the current component needs the source-format hint.
+                    text = text.replace(opening_tag, f'{opening_tag} src_ext="{ext}"', 1)
+                html = html[:start] + text + html[end:]
+                current_pos = start + len(text)
         return html
 
     @staticmethod
@@ -784,10 +786,7 @@ class ReportDownloadHTML:
         # "slider_loader_1162.key_images = {"
         # ['/media/8fa34470-f349-11e8-ae8c-1c1b0da59167_image.png',],
         # "slider_loader_1162.update();"
-        #  AVZ viewer
-        # <script>
-        #  var viewer_bb97d5297dc44d77a4a43c92ee60197a = new GLTFViewer('avz_viewer_bb97d5297dc44d77a4a43c92ee60197a','/media/1782c99a-22b2-11ea-977f-6c2b599f031b_scene.avz','AVZ');
-        # </script>
+        # Legacy script-based 3D viewer blocks predating the web component
         # Deep pixels handlers
         # async function tiff_image_6ad0cc989c414473a4823bf42b2c4d92_loader() {
         #    const response = await fetch("./media/435491e8-f099-11ea-81f3-28f10e13ffe6_image.tif");

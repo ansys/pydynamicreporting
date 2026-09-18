@@ -50,7 +50,7 @@ from urllib3.util.retry import Retry
 
 from .. import common_utils
 from ..adr_utils import build_query_url
-from ..common_utils import populate_template
+from ..common_utils import PDFPageSize, populate_template
 from ..compatibility import DEFAULT_ANSYS_INSTALL_VERSION, validate_supported_server_install_version
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException, InvalidAnsysPath, UnsupportedServerVersionError
@@ -1159,6 +1159,9 @@ class Server:
         item_filter=None,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
         # this module does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout=30.0,
@@ -1193,6 +1196,13 @@ class Server:
             PDF margin lengths expressed as strings using unitless pixels or the ``px``,
             ``in``, ``cm``, or ``mm`` units (for example ``"10mm"`` or ``"0.5in"``).
             Keys can include ``top``, ``right``, ``bottom``, and ``left``.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default is ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
@@ -1222,11 +1232,16 @@ class Server:
             report_url = self.build_url_with_query(report_guid, browser_query, item_filter)
             browser_auth_cookies = self._get_browser_auth_cookies()
 
+            # The remote layer supplies navigation and authentication only;
+            # the shared renderer owns page-geometry validation and pagination.
             renderer = _ReportURLPlaywrightPDFRenderer(
                 url=report_url,
                 auth_cookies=browser_auth_cookies,
                 landscape=landscape,
                 margins=margins,
+                page_size=page_size,
+                width=width,
+                height=height,
                 render_timeout=render_timeout,
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,

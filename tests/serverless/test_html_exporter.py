@@ -29,6 +29,7 @@ from unittest.mock import patch
 
 import pytest
 
+from ansys.dynamicreporting.core.constants import ANSYS_VIEWER_TAGS
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
 
 LEGACY_CONTEXT_MENU_FILES = (
@@ -312,12 +313,16 @@ def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
 
 
 @pytest.mark.ado_test
-def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: Path):
+@pytest.mark.parametrize("viewer_tag", ANSYS_VIEWER_TAGS)
+def test_inline_viewer_size_exception_sets_proxy_only(
+    adr_serverless, tmp_path: Path, viewer_tag: str
+):
+    """Preserve proxy-only fallback for the canonical and compatibility viewer tags."""
     static_dir = Path(adr_serverless.static_directory)
     media_dir = Path(adr_serverless.media_directory)
     ver = str(adr_serverless.ansys_version)
 
-    # Provide a "large" file to force size exception
+    # Exceed a deliberately tiny inline limit to exercise the proxy-only path.
     _write(media_dir / "bigfile.stl", b"x" * 2048)
     _write(media_dir / "preview.png", b"P")
     _write(static_dir / "website/images/favicon.png", b"P")
@@ -328,7 +333,7 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
     html = textwrap.dedent(
         f"""
         <div>
-          <ansys-nexus-viewer src="{media_src}" proxy_img="{media_preview}"></ansys-nexus-viewer>
+                    <{viewer_tag} src="{media_src}" proxy_img="{media_preview}"></{viewer_tag}>
         </div>
         """
     )
@@ -347,8 +352,8 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
 
     out = (tmp_path / "export5" / "index.html").read_text(encoding="utf-8")
     assert 'proxy_only="3D geometry too large for stand-alone HTML file"' in out
-    assert 'src=""' in out  # viewer src cleared
-    # proxy_img still inlined or copied
+    assert 'src=""' in out  # The unusable geometry source must be cleared.
+    # The preview remains available even when the full scene cannot be embedded.
     assert "./media/preview.png" in out or "data:application/octet-stream;base64," in out
 
 

@@ -32,7 +32,7 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from ansys.dynamicreporting.core import Service, common_utils
+from ansys.dynamicreporting.core import PDFPageSize, Service, common_utils
 from ansys.dynamicreporting.core.compatibility import (
     AUTO_DETECT_INSTALL_VERSIONS,
     SUPPORTED_PRODUCT_LINES,
@@ -605,6 +605,8 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     )
 
     class FakeRenderer:
+        # Capture the live-render boundary without launching Chromium; lower-level
+        # renderer tests own page validation and browser behavior.
         def __init__(
             self,
             url,
@@ -612,6 +614,9 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             auth_cookies=None,
             landscape=False,
             margins=None,
+            page_size=PDFPageSize.A3,
+            width=None,
+            height=None,
             render_timeout=30.0,
             ansys_installation=None,
             ansys_version=None,
@@ -621,6 +626,9 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
             captured["renderer_auth_cookies"] = auth_cookies
             captured["renderer_landscape"] = landscape
             captured["renderer_margins"] = margins
+            captured["renderer_page_size"] = page_size
+            captured["renderer_width"] = width
+            captured["renderer_height"] = height
             captured["renderer_render_timeout"] = render_timeout
             captured["renderer_ansys_installation"] = ansys_installation
             captured["renderer_ansys_version"] = ansys_version
@@ -646,6 +654,9 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         item_filter="A|i_tags|cont|dp=dp227;",
         landscape=True,
         margins=margins,
+        page_size=None,
+        width="12in",
+        height="18in",
         render_timeout=12.5,
         ansys_installation="/opt/ansys/v271",
         ansys_version=271,
@@ -661,8 +672,13 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
         "csrftoken",
         "sessionid",
     ]
+    # Custom dimensions must reach the shared renderer unchanged; this layer
+    # only constructs the authenticated live-report URL and writes returned bytes.
     assert captured["renderer_landscape"] is True
     assert captured["renderer_margins"] == margins
+    assert captured["renderer_page_size"] is None
+    assert captured["renderer_width"] == "12in"
+    assert captured["renderer_height"] == "18in"
     assert captured["renderer_render_timeout"] == 12.5
     # The connected service's local install is forwarded so the renderer uses the packed browser.
     assert captured["renderer_ansys_installation"] == "/opt/ansys/v271"
@@ -714,6 +730,8 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
         return "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
 
     class FakeRenderer:
+        # Accept the complete production signature so this failure test catches
+        # wrapping behavior without masking argument-forwarding regressions.
         def __init__(
             self,
             url,
@@ -721,6 +739,9 @@ def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> No
             auth_cookies=None,
             landscape=False,
             margins=None,
+            page_size=PDFPageSize.A3,
+            width=None,
+            height=None,
             render_timeout=30.0,
             ansys_installation=None,
             ansys_version=None,

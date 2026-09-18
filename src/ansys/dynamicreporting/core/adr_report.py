@@ -48,6 +48,7 @@ import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
+from ansys.dynamicreporting.core.common_utils import PDFPageSize
 from ansys.dynamicreporting.core.utils import report_objects
 
 LOGGER = logging.getLogger(__name__)
@@ -794,6 +795,9 @@ class Report:
         item_filter: str | None = None,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
         # Report does not eagerly import the Playwright renderer module (and Playwright with it).
         render_timeout: float = 30.0,
@@ -826,6 +830,13 @@ class Report:
             strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
             (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer
             defaults.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default: ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             Maximum time, in seconds, to spend waiting for browser readiness signals.
             Default: 30.0
@@ -865,6 +876,9 @@ class Report:
                 item_filter=item_filter,
                 landscape=landscape,
                 margins=margins,
+                page_size=page_size,
+                width=width,
+                height=height,
                 render_timeout=render_timeout,
                 # Forward the connected service's local Ansys install so the remote render
                 # uses the product-shipped browser binary.

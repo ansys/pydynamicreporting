@@ -38,21 +38,20 @@ treating PDF export as a screenshot of already-painted viewport pixels:
               v
     +-----------------------------------------------+
     | Phase A: live browser / continuous-media pass |
-    | - fixed viewport for deterministic JS layout  |
+    | - selected content-width viewport for layout   |
     | - execute ADR, Plotly, MathJax, viewers       |
     | - wait for readiness signals                  |
     | - inject capture CSS                          |
-    | - measure content width from the live page    |
+    | - clip overflow at the printable page width   |
     +-----------------------------------------------+
               |
               v
     +-----------------------------------------------+
     | Phase B: paged PDF generation pass            |
-    | - call page.pdf(width=measured, ...)          |
+    | - use the selected format or dimensions       |
     | - Chromium generates paged output             |
-    | - requested paper width defines page area     |
-    | - auto-width nodes/divs can use that width    |
-    | - wide legends/content avoid right clipping   |
+    | - selected page width caps rendered content   |
+    | - content beyond that width is clipped        |
     +-----------------------------------------------+
 
 - Playwright documents ``page.pdf()`` as generating a PDF of the page, with print CSS
@@ -61,10 +60,9 @@ treating PDF export as a screenshot of already-painted viewport pixels:
   paged media, and notes that the initial containing block changes accordingly.
 
 That distinction matters for browser-PDF exports. Phase A stabilizes responsive
-browser-rendered content such as Plotly against a fixed viewport so width measurements
-are deterministic. Phase B then feeds the measured width back into ``page.pdf()`` so
-the final paged layout has enough horizontal space to preserve content that would
-otherwise overflow or be clipped at the right edge.
+browser-rendered content such as Plotly against the printable width of the selected
+oriented page. Phase B passes that explicit sizing to ``page.pdf()`` so the output page
+size is definitive and content cannot expand it.
 """
 
 from abc import ABC, abstractmethod
@@ -74,7 +72,7 @@ import json
 import os
 import platform
 import re
-from math import ceil
+from math import ceil, floor, isfinite
 from pathlib import Path
 from time import monotonic
 from typing import Any, ClassVar
@@ -87,9 +85,22 @@ from ..adr_utils import get_logger
 from ..compatibility import install_version_to_product_release
 from ..compatibility import product_release_to_display_string
 from ..compatibility import product_release_to_product_line
+from ..common_utils import PDFPageSize
+from ..constants import ANSYS_VIEWER_TAGS
 from ..exceptions import ADRException
 
+# Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
+# Spare vertical space for subpixel rounding and continuous-to-paged layout reflow.
+_PAGINATION_FIT_GUARD_PX = 8.0
+# Direct-child headings that own the content container in an ADR basic layout.
+_PAGINATION_HEADING_SELECTOR = (
+    ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
+)
+# Joining the registered tags produces ``:is(ansys-adr-viewer, ansys-nexus-viewer)``.
+_SCENE_VIEWER_SELECTOR = f":is({', '.join(ANSYS_VIEWER_TAGS)})"
+# Visual elements treated as indivisible and resized instead of split across PDF pages.
+_PAGINATION_VISUAL_SELECTOR = f"img, video, canvas, .nexus-plot, {_SCENE_VIEWER_SELECTOR}"
 
 
 @dataclass(frozen=True)
@@ -277,6 +288,14 @@ class _BasePlaywrightPDFRenderer(ABC):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
+    page_size : PDFPageSize or None, default: PDFPageSize.A3
+        Fixed page format used for browser layout, pagination, and PDF generation.
+        A fixed format takes precedence over ``width`` and ``height``. Set to ``None``
+        to use custom dimensions.
+    width : str or float, optional
+        Custom page width used when ``page_size`` is ``None``.
+    height : str or float, optional
+        Custom page height used when ``page_size`` is ``None``.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the prepared
         report source is ready to open. This shared budget covers browser launch,
@@ -296,6 +315,10 @@ class _BasePlaywrightPDFRenderer(ABC):
         Logger used for renderer lifecycle messages.
     """
 
+    _page_size: PDFPageSize | None
+    _width: str | float | None
+    _height: str | float | None
+
     # 10mm on all sides. This is the default page margin if the caller doesn't specify custom margins.
     _DEFAULT_MARGINS: dict[str, str] = {
         "top": "10mm",
@@ -313,12 +336,23 @@ class _BasePlaywrightPDFRenderer(ABC):
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    # the width of an A4 page
-    _DEFAULT_PAGE_WIDTH: str = "210mm"
-    # the height of an A4 page
-    _DEFAULT_PAGE_HEIGHT: str = "297mm"
-    # the default virtual browser viewport width and height
-    _DEFAULT_BROWSER_VIEWPORT_WIDTH: int = 1600
+    _DEFAULT_PAGE_SIZE: PDFPageSize = PDFPageSize.A3
+    # Mirror Playwright's fixed-format dimensions for internal viewport and pagination calculations.
+    _PAGE_DIMENSIONS: dict[PDFPageSize, tuple[str, str]] = {
+        PDFPageSize.LETTER: ("8.5in", "11in"),
+        PDFPageSize.LEGAL: ("8.5in", "14in"),
+        PDFPageSize.TABLOID: ("11in", "17in"),
+        PDFPageSize.LEDGER: ("17in", "11in"),
+        PDFPageSize.A0: ("33.1in", "46.8in"),
+        PDFPageSize.A1: ("23.4in", "33.1in"),
+        PDFPageSize.A2: ("16.54in", "23.4in"),
+        PDFPageSize.A3: ("11.7in", "16.54in"),
+        PDFPageSize.A4: ("8.27in", "11.7in"),
+        PDFPageSize.A5: ("5.83in", "8.27in"),
+        PDFPageSize.A6: ("4.13in", "5.83in"),
+    }
+    # The virtual viewport height does not constrain PDF pagination. Its width is derived
+    # from the selected oriented content box after caller-configured margins are subtracted.
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
@@ -338,6 +372,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = _DEFAULT_PAGE_SIZE,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = _DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
@@ -345,7 +382,23 @@ class _BasePlaywrightPDFRenderer(ABC):
     ) -> None:
         """Initialize the renderer with shared browser-PDF configuration."""
         self._landscape = landscape
+        validated_page_size = self._validate_page_size(page_size)
+        self._width, self._height = self._validate_custom_page_dimensions(
+            page_size=validated_page_size,
+            width=width,
+            height=height,
+        )
+        # ``page_size=None`` with no custom pair means "use the default", while
+        # a complete pair keeps ``_page_size`` at None for Playwright width/height options.
+        self._page_size = (
+            self._DEFAULT_PAGE_SIZE
+            if validated_page_size is None and self._width is None
+            else validated_page_size
+        )
         self._margins = self._validate_margins(margins)
+        # Validate the selected page and margins before starting Chromium.
+        self._printable_page_width_px()
+        self._printable_page_height_px()
         self._render_timeout = self._validate_render_timeout(render_timeout)
         if ansys_installation is None or ansys_version is None:
             raise ADRException(
@@ -484,7 +537,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                         browser_phase_deadline, "browser context creation"
                     )
                     # Fix the responsive layout width up front so Plotly and other browser-rendered
-                    # items lay themselves out deterministically before the PDF width is computed.
+                    # items lay themselves out against the selected page's printable width.
                     context = self._new_browser_context(browser)
                     self._prepare_context(context)
                     self._remaining_browser_phase_timeout_ms(
@@ -511,22 +564,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page.emulate_media(media="screen")
                     self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
-                    self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "PDF width measurement"
-                    )
-                    pdf_width = self._compute_pdf_width(page)
-                    # Keep the fallback page size internally consistent. Playwright defaults
-                    # unspecified PDF dimensions to Letter, so an explicit A4 width prevents a
-                    # mixed Letter-width/A4-height page when no content width can be measured.
-                    pdf_page_width = (
-                        pdf_width if pdf_width is not None else self._DEFAULT_PAGE_WIDTH
+                    current_timeout_phase = "pagination preparation"
+                    self._prepare_content_for_pagination(
+                        page,
+                        deadline=browser_phase_deadline,
                     )
                     pdf_options = {
-                        # Keep page height explicit so pagination remains under ADR's control
-                        # instead of depending entirely on Playwright's default page format.
-                        "width": pdf_page_width,
-                        "height": self._DEFAULT_PAGE_HEIGHT,
-                        "landscape": self._landscape,
+                        **self._pdf_page_size_options(),
                         "margin": self._margins,
                         "print_background": True,
                     }
@@ -534,16 +578,15 @@ class _BasePlaywrightPDFRenderer(ABC):
                     # Playwright describes page.pdf() as generating paged output, not a bitmap
                     # snapshot of the already-painted viewport. MDN's paged-media model also
                     # distinguishes the continuous-media viewport from the paged page area.
-                    # Passing the measured width here therefore gives the PDF generation pass a
-                    # wider page area even though the live browser pass already ran. Elements
-                    # such as #report_root that remain auto-width can then lay out against that
-                    # wider paged space without us assigning them an explicit width in the DOM.
+                    # Capture CSS clips horizontal overflow at the printable-width viewport,
+                    # while explicit page sizing keeps output dimensions predictable.
                     #
                     # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
                     # so this deadline check is a preflight guard rather than an interruptible
                     # in-flight timeout.
+                    current_timeout_phase = "PDF generation"
                     self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "PDF generation"
+                        browser_phase_deadline, current_timeout_phase
                     )
                     pdf_bytes = page.pdf(**pdf_options)
                     self._logger.info(
@@ -588,12 +631,80 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Return browser-context options shared by both offline and live renders."""
         return {
             "viewport": {
-                "width": self._DEFAULT_BROWSER_VIEWPORT_WIDTH,
+                "width": self._browser_viewport_width_px(),
                 "height": self._DEFAULT_BROWSER_VIEWPORT_HEIGHT,
             },
             "service_workers": "block",
             "accept_downloads": False,
         }
+
+    def _page_dimensions(self) -> tuple[str | float, str | float]:
+        """Return the selected portrait page dimensions."""
+        if self._page_size is not None:
+            return self._PAGE_DIMENSIONS[self._page_size]
+
+        # Constructor validation makes a half-populated pair unreachable, but
+        # keep this runtime guard for subclasses or later internal mutation.
+        if self._width is None or self._height is None:
+            raise ADRException("Browser PDF custom page dimensions are incomplete.")
+        return self._width, self._height
+
+    def _oriented_page_width(self) -> str | float:
+        """Return the selected physical page width for the requested orientation."""
+        page_width, page_height = self._page_dimensions()
+        return page_height if self._landscape else page_width
+
+    def _oriented_page_height(self) -> str | float:
+        """Return the selected physical page height for the requested orientation."""
+        page_width, page_height = self._page_dimensions()
+        return page_width if self._landscape else page_height
+
+    def _page_size_description(self) -> str:
+        """Return a concise page-size description for validation errors."""
+        return self._page_size.value if self._page_size is not None else "custom"
+
+    def _printable_page_width_px(self) -> float:
+        """Return the oriented content-box width after horizontal PDF margins."""
+        page_width_px = self._pdf_length_to_px(self._oriented_page_width())
+        margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
+            self._margins["right"]
+        )
+        printable_width_px = page_width_px - margin_width_px
+        if printable_width_px < 1.0:
+            raise ADRException(
+                "Browser PDF horizontal margins must leave at least one CSS pixel "
+                f"of printable {self._page_size_description()} page width."
+            )
+        return printable_width_px
+
+    def _browser_viewport_width_px(self) -> int:
+        """Return an integer viewport no wider than the PDF content box."""
+        return floor(self._printable_page_width_px())
+
+    def _printable_page_height_px(self) -> float:
+        """Return the oriented content-box height after vertical PDF margins."""
+        page_height_px = self._pdf_length_to_px(self._oriented_page_height())
+        margin_height_px = self._pdf_length_to_px(self._margins["top"]) + self._pdf_length_to_px(
+            self._margins["bottom"]
+        )
+        printable_height_px = page_height_px - margin_height_px
+        if printable_height_px < 1.0:
+            raise ADRException(
+                "Browser PDF vertical margins must leave at least one CSS pixel "
+                f"of printable {self._page_size_description()} page height."
+            )
+        return printable_height_px
+
+    def _pdf_page_size_options(self) -> dict[str, str | float | bool]:
+        """Return Playwright options for the selected page sizing."""
+        options: dict[str, str | float | bool] = {"landscape": self._landscape}
+        # Chromium accepts either a named format or explicit dimensions. Never
+        # send both, because format is the public precedence rule for this API.
+        if self._page_size is not None:
+            options["format"] = self._page_size.value
+        else:
+            options["width"], options["height"] = self._page_dimensions()
+        return options
 
     @abstractmethod
     def _get_navigation_target(self) -> str:
@@ -630,8 +741,41 @@ class _BasePlaywrightPDFRenderer(ABC):
         # ``<thead style="visibility: collapse;">`` blocks for key/value tables. Chromium's
         # PDF table layout still reserves space for those hidden header groups, which paints a
         # blank top row even though the browser view looks correct.
+        # Earlier ADR report HTML uses ``.avz-viewer`` wrappers and
+        # ``.ansys-nexus-proxy`` images, so keep those selectors with the registered tags.
+        # Convert each ``__ANSYS_VIEWER__`` placeholder to
+        # ``:is(ansys-adr-viewer, ansys-nexus-viewer)`` before injecting the CSS.
         page.add_style_tag(
             content="""
+                /* The browser window was already sized to the page's printable width, so
+                   anything wider than that is genuine overflow. Clip it off here; if we let it
+                   stay, Chromium reacts by shrinking the whole report to fit, which ruins the
+                   fixed page size. Clipping only affects the horizontal axis, so top-to-bottom
+                   pagination is untouched. */
+                html,
+                body {
+                    overflow-x: clip !important;
+                }
+
+                /* Browsers give <body> a small default margin. That margin stacks on top of the
+                   PDF page margins we already ask Playwright for and pushes content inward.
+                   Zero it so the report starts flush against the printable area. */
+                body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                /* The report HTML sometimes begins with a stray line break before the first
+                   section. That blank line pushed content down far enough to leave an empty
+                   first page, most visibly in landscape (a shorter page). Hide just that first
+                   <br> of the first layout so the report starts at the top of page one. */
+                #report_root > div[data-layout-type]:first-child > br:first-child {
+                    display: none !important;
+                }
+
+                /* Force plots, tables, viewers, and their containers to lay out as full-width
+                   blocks. Some render inline (side by side) on screen, which makes their size
+                   hard to measure and paginate; a block each takes its own line and full width. */
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
@@ -639,10 +783,13 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .plot-container,
                 .svg-container,
                 .avz-viewer,
-                ansys-nexus-viewer {
+                __ANSYS_VIEWER__ {
                     display: block !important;
                 }
 
+                /* Tell the PDF engine: never split any of these across a page break. Each plot,
+                   table, slider row, image, video, canvas, or viewer should stay whole on one
+                   page instead of having its top half on one page and bottom half on the next. */
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
@@ -650,7 +797,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 .plot-container,
                 .svg-container,
                 .avz-viewer,
-                ansys-nexus-viewer,
+                __ANSYS_VIEWER__,
                 .table-responsive,
                 table.table,
                 table.tree,
@@ -664,18 +811,30 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page-break-inside: avoid !important;
                 }
 
+                /* On screen these can be scroll boxes with a capped height and hidden overflow.
+                   A PDF cannot scroll, so reveal the full content: drop the height cap and let
+                   the content flow instead of being trapped inside a fixed-height scroll box. */
                 adr-data-item,
                 .nexus-plot,
                 .plot-container,
                 .svg-container,
                 .main-svg,
-                .table-responsive,
-                .avz-viewer,
-                ansys-nexus-viewer {
+                .table-responsive {
                     overflow: visible !important;
                     max-height: none !important;
                 }
 
+                /* The 3D viewers are the exception: the pagination pass resizes them to fit a
+                   page, so here we clip anything spilling past that resized box (rather than
+                   revealing it) while still removing any fixed height cap. */
+                .avz-viewer,
+                __ANSYS_VIEWER__ {
+                    overflow: hidden !important;
+                    max-height: none !important;
+                }
+
+                /* Hide UI that belongs on screen but not in a static document: the loading
+                   spinner and Plotly's floating toolbar (zoom/pan buttons). */
                 .adr-spinner-loader-container,
                 .modebar {
                     display: none !important;
@@ -684,13 +843,19 @@ class _BasePlaywrightPDFRenderer(ABC):
                 #report_root {
                     /* Wide browser-PDF pages can make 1px ADR borders look faint when PDF
                        viewers scale the page down. Override ADR's border design tokens for
-                       capture instead of selecting individual report items or changing layout. */
+                       capture instead of selecting individual report items or changing layout.
+                       The two color-adjust lines tell Chromium to print backgrounds and colors
+                       exactly as shown rather than "optimizing" them away for ink saving. */
                     --adr-border-color: #adb5bd !important;
                     --adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                 }
 
+                /* Keep a section heading glued to the content right after it. ":has(+ ...)"
+                   means "a heading immediately followed by a report section". "break-after:
+                   avoid" stops a page break landing between them, so a title is never stranded
+                   alone at the bottom of a page with its table or plot on the next. */
                 h1:has(+ section.adr-container),
                 h2:has(+ section.adr-container),
                 h3:has(+ section.adr-container),
@@ -702,148 +867,695 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page-break-after: avoid !important;
                 }
 
+                /* ADR emits an invisible ("collapsed") table header row. Chromium still reserves
+                   blank space for it when laying out the PDF, painting an empty band at the top
+                   of the table. Fully remove it so that blank band disappears. */
                 table.table-fit-head > thead[style*="visibility: collapse"] {
                     display: none !important;
                     visibility: hidden !important;
                     height: 0 !important;
                 }
+            """.replace("__ANSYS_VIEWER__", _SCENE_VIEWER_SELECTOR),
+        )
+
+        # Panel-type layouts default to "may split across pages". The pagination pass later
+        # tightens the ones that actually fit onto a single page back to "keep together".
+        page.add_style_tag(
+            content="""
+                div[data-layout-type="panel"] {
+                    break-inside: auto !important;
+                    page-break-inside: auto !important;
+                }
             """,
         )
+        # An <adr-panel> renders its content inside a shadow DOM, a private subtree that the
+        # page-level stylesheet above cannot reach. So run a script that injects a small
+        # stylesheet directly into each panel's shadow root.
+        page.evaluate(
+            """() => {
+                // Visit every panel on the page.
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const shadowRoot = panel.shadowRoot;
+                    // Skip panels with no shadow root, and skip any we already stamped, so
+                    // running this more than once is harmless (no duplicate style tags).
+                    if (!shadowRoot || shadowRoot.querySelector('style[data-adr-pdf-pagination]')) {
+                        continue;
+                    }
 
-    def _compute_pdf_width(self, page: Any) -> str | None:
-        """Compute an explicit PDF page width when needed to preserve browser content."""
-        margin_width_px = self._pdf_length_to_px(self._margins["left"]) + self._pdf_length_to_px(
-            self._margins["right"]
+                    // Build a <style> element, tag it with our marker attribute (the skip check
+                    // above looks for this), and fill it with the panel's print rules.
+                    const style = document.createElement('style');
+                    style.dataset.adrPdfPagination = '';
+                    style.textContent = `
+                        section.adr-panel {
+                            display: block !important;
+                        }
+
+                        /* Keep the panel's header from being the last thing on a page; it should
+                           stay with the body that follows it. */
+                        header.adr-panel-header {
+                            break-after: avoid !important;
+                            page-break-after: avoid !important;
+                        }
+                    `;
+                    // Insert the stylesheet into the panel's private subtree.
+                    shadowRoot.append(style);
+
+                    // Also keep the panel's first content block attached to the header, so the
+                    // header and the start of its content never separate across a page break.
+                    const firstPanelContent = panel.firstElementChild;
+                    if (firstPanelContent) {
+                        firstPanelContent.style.setProperty(
+                            'break-before', 'avoid', 'important'
+                        );
+                        firstPanelContent.style.setProperty(
+                            'page-break-before', 'avoid', 'important'
+                        );
+                    }
+                }
+            }"""
         )
-        content_width_px = self._measure_content_width_px(page)
-        layout_width_px = self._measure_layout_width_px(page)
-        if content_width_px <= 0:
-            self._logger.info(
-                "No visible report width was found; using the default A4 PDF page width."
+
+    def _prepare_content_for_pagination(
+        self,
+        page: Any,
+        *,
+        deadline: float | None = None,
+    ) -> None:
+        """Fit indivisible visuals and configure vertical pagination boundaries."""
+        # ``render_pdf`` supplies its shared browser deadline. Direct internal callers start a
+        # fresh budget so this private preparation helper remains usable in isolation.
+        if deadline is None:
+            deadline = monotonic() + self._render_timeout
+
+        timeout_phase = "pagination preparation"
+        printable_height_px = self._printable_page_height_px()
+        # Later cohesion checks must see post-resize geometry. Fragmentation runs
+        # last so structures that still exceed a page can override avoid rules.
+        remaining_timeout_ms = self._remaining_browser_phase_timeout_ms(
+            deadline,
+            timeout_phase,
+        )
+        visual_result = self._fit_visuals_for_pagination(
+            page,
+            printable_height_px,
+            timeout_ms=remaining_timeout_ms,
+        )
+        if visual_result.get("__adrTimedOut") is True:
+            raise ADRException(
+                f"Browser PDF rendering failed: {timeout_phase} timed out after "
+                f"{self._render_timeout:.1f}s"
             )
-            return None
 
-        # The PDF page must preserve the same layout canvas that Chromium used while rendering
-        # the report. If the PDF content area is narrower than the browser viewport, responsive
-        # Plotly legends can still be clipped at the right edge even when the report root itself
-        # appears narrower than the viewport.
-        # if actual content is wider, use that
-        # if the viewport/layout canvas is wider, use that instead
-        fitted_content_width_px = max(content_width_px, layout_width_px)
-        pdf_width_px = fitted_content_width_px + margin_width_px
-        self._logger.info(
-            "Computed browser PDF width fit: "
-            f"content_width_px={content_width_px:.2f}, "
-            f"layout_width_px={layout_width_px:.2f}, "
-            f"fitted_width_px={pdf_width_px:.2f}"
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
+        cohesion_result = self._set_pagination_cohesion(page, printable_height_px)
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
+        fragmentation_result = self._make_oversized_structures_fragmentable(
+            page, printable_height_px
         )
-        return f"{pdf_width_px:.2f}px"
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
+        self._log_pagination_preparation(
+            visual_result,
+            cohesion_result,
+            fragmentation_result,
+        )
 
-    def _measure_content_width_px(self, page: Any) -> float:
-        """Measure the rightmost visible report content in CSS pixels."""
-        # Limit the query to elements that actually paint user-visible content. This keeps the
-        # probe close to O(number of rendered report objects) instead of walking the entire page.
-        return float(
-            page.evaluate(
-                """() => {
-                    const root = document.getElementById('report_root');
-                    if (!root) {
-                        return 0;
-                    }
+    def _fit_visuals_for_pagination(
+        self,
+        page: Any,
+        printable_height_px: float,
+        *,
+        timeout_ms: int,
+    ) -> dict[str, Any]:
+        """Resize indivisible visual media to fit within one printable page."""
+        return page.evaluate(
+            """async (options) => {
+                // This function runs inside the page. Its job: find each "indivisible" visual
+                // (a plot, image, video, canvas, or 3D viewer that must not be split across
+                // pages) and shrink any that are taller than a single printable page so it fits
+                // on one page. "options" carries the numbers and selectors computed in Python.
+                const {
+                    printableHeightPx,   // usable page height (page minus top/bottom margins)
+                    fitGuardPx,          // small safety margin so rounding never overflows a page
+                    headingSelector,     // matches a section's heading (h1..h6)
+                    visualSelector,      // matches the visuals we may need to resize
+                    sceneViewerSelector, // matches the 3D viewer tags
+                    timeoutMs            // remaining shared browser-render budget
+                } = options;
+                let timeoutHandle;
+                const timeoutResult = new Promise(resolve => {
+                    timeoutHandle = window.setTimeout(() => {
+                        resolve({ __adrTimedOut: true });
+                    }, timeoutMs);
+                });
+                const preparedVisuals = new Set();   // visuals already handled (avoid double work)
+                const resizedVisuals = [];           // record of what we shrank, for logging
+                const resizePromises = [];           // Plotly redraws to wait for before finishing
 
-                    const rootRect = root.getBoundingClientRect();
-                    // Measure a curated set of content-bearing descendants instead of walking the
-                    // entire DOM. New ADR content types that can widen the report should update
-                    // this list so the width probe keeps seeing the real rendered geometry.
-                    const candidateSelectors = [
-                        'adr-data-item',
-                        '.nexus-plot',
-                        '.js-plotly-plot',
-                        '.js-plotly-plot .plot-container',
-                        '.js-plotly-plot .svg-container',
-                        '.js-plotly-plot .main-svg',
-                        '.js-plotly-plot .legend',
-                        '.js-plotly-plot .legend text',
-                        '.table-responsive',
-                        'table',
-                        'img',
-                        'video',
-                        'canvas',
-                        'ansys-nexus-viewer'
-                    ];
-                    const candidates = [root];
-                    for (const selector of candidateSelectors) {
-                        candidates.push(...root.querySelectorAll(selector));
-                    }
+                // True only when an element actually takes up space and is not hidden, so we
+                // never try to resize something the reader cannot see.
+                const isVisible = element => {
+                    const style = window.getComputedStyle(element);
+                    return element.getClientRects().length > 0
+                        && style.display !== 'none'
+                        && style.visibility !== 'hidden';
+                };
 
+                // Collect the visible visuals under "root", de-duplicated. When a match is only
+                // an inner piece of a plot or viewer, climb to its stable ADR container instead
+                // of resizing the internal render node.
+                const findRenderedVisuals = root => {
+                    const visuals = [];
                     const seen = new Set();
-                    // Start with the report root's own visible width and scrollable width. The
-                    // scrollWidth fallback helps when child content extends farther right than the
-                    // root's immediate visible box.
-                    let maxRight = Math.max(rootRect.width, root.scrollWidth);
-                    for (const node of candidates) {
-                        if (seen.has(node)) {
+                    for (const candidate of root.querySelectorAll(visualSelector)) {
+                        // Plotly and the scene viewer can add image or canvas descendants.
+                        // Prepare their stable ADR containers instead of internal render nodes.
+                        const visual = candidate.closest(
+                            `.nexus-plot, ${sceneViewerSelector}`
+                        ) || candidate;
+                        if (!root.contains(visual) || seen.has(visual) || !isVisible(visual)) {
                             continue;
                         }
-                        seen.add(node);
+                        seen.add(visual);
+                        visuals.push(visual);
+                    }
+                    return visuals;
+                };
 
-                        const style = window.getComputedStyle(node);
-                        if (style.display === 'none' || style.visibility === 'hidden') {
-                            continue;
-                        }
-                        // Skip elements that have no layout box of their own. For example,
-                        // display: contents nodes do not produce client rects even though their
-                        // children can still render and be measured separately.
-                        if (node.getClientRects().length === 0) {
-                            continue;
-                        }
-                        // Measure the node in viewport coordinates, then convert that geometry
-                        // into #report_root-relative coordinates for width comparisons.
-                        const rect = node.getBoundingClientRect();
-                        // offsetLeft is how far this node starts from the left edge of the report
-                        // root, which lets scrollWidth-based checks compute a root-relative
-                        // rightmost extent.
-                        const offsetLeft = rect.left - rootRect.left;
-                        // Width is tracked as the farthest rightward extent reached by any
-                        // measured node, relative to the left edge of #report_root. The
-                        // right edge matters here because browser-rendered content can overflow
-                        // past the root's nominal box, so "space remaining to the root edge"
-                        // would under-measure the PDF width we actually need.
-                        maxRight = Math.max(maxRight, rect.right - rootRect.left);
-                        if ('scrollWidth' in node) {
-                            // scrollWidth catches horizontally scrollable content that can extend
-                            // beyond the node's current client box.
-                            maxRight = Math.max(maxRight, offsetLeft + (node.scrollWidth || 0));
+                // Build a short human-readable name like "img#plot3" for log messages.
+                const visualLabel = visual => {
+                    const id = visual.id ? `#${visual.id}` : '';
+                    return `${visual.tagName.toLowerCase()}${id}`;
+                };
+
+                // A 3D viewer may sit inside a wrapper element that controls its size. Walk up
+                // from the viewer to the outermost wrapper still inside its data-item, and treat
+                // that wrapper as the thing to resize (works with or without a wrapper).
+                const sceneLayoutRoot = viewer => {
+                    const item = viewer.closest('adr-data-item');
+                    let layoutRoot = viewer;
+                    // Current product HTML can place the component inside a sizing element.
+                    // Fit the direct slotted root so the same path also handles wrapper-free HTML.
+                    while (item && layoutRoot.parentElement
+                            && layoutRoot.parentElement !== item) {
+                        layoutRoot = layoutRoot.parentElement;
+                    }
+                    return layoutRoot;
+                };
+
+                // Make a 3D viewer behave like a responsive image before we size it: give it a
+                // fixed width-to-height ratio, let it fill the available width, and cap it so it
+                // never grows past its current rendered width.
+                const prepareSceneViewer = (viewer, layoutRoot, layoutRect) => {
+                    if (layoutRect.width < 1) {
+                        return;
+                    }
+
+                    // Pick the shape (aspect ratio) to lock in: the value the product set on the
+                    // viewer if present, otherwise the ratio it currently renders at, otherwise
+                    // a 16:9 fallback.
+                    const configuredAspectRatio = Number.parseFloat(
+                        viewer.aspect_ratio ?? viewer.getAttribute('aspect_ratio')
+                    );
+                    const renderedAspectRatio = layoutRect.height > 0
+                        ? layoutRect.width / layoutRect.height
+                        : Number.NaN;
+                    // Prefer product metadata, then the rendered box, and use a
+                    // stable widescreen fallback only when neither is usable.
+                    const aspectRatio = Number.isFinite(configuredAspectRatio)
+                            && configuredAspectRatio > 0
+                        ? configuredAspectRatio
+                        : Number.isFinite(renderedAspectRatio) && renderedAspectRatio > 0
+                            ? renderedAspectRatio
+                            : 16 / 9;
+                    // Apply that ratio and make the wrapper a full-width block that keeps its
+                    // shape; the browser then derives its height from the width automatically.
+                    layoutRoot.style.setProperty(
+                        'aspect-ratio', `${aspectRatio}`, 'important'
+                    );
+                    layoutRoot.style.setProperty('box-sizing', 'border-box', 'important');
+                    layoutRoot.style.setProperty('display', 'block', 'important');
+                    layoutRoot.style.setProperty('width', '100%', 'important');
+                    layoutRoot.style.setProperty('height', 'auto', 'important');
+                    layoutRoot.style.setProperty(
+                        'max-width', `${Math.ceil(layoutRect.width)}px`, 'important'
+                    );
+                    layoutRoot.style.setProperty('overflow', 'hidden', 'important');
+                    layoutRoot.style.setProperty('break-inside', 'avoid', 'important');
+                    layoutRoot.style.setProperty('page-break-inside', 'avoid', 'important');
+
+                    if (layoutRoot !== viewer) {
+                        viewer.style.setProperty('width', '100%', 'important');
+                        viewer.style.setProperty('height', '100%', 'important');
+                        viewer.style.setProperty('max-width', '100%', 'important');
+                        viewer.style.setProperty('max-height', '100%', 'important');
+                    }
+                    viewer.style.setProperty('overflow', 'hidden', 'important');
+                };
+
+                // Core routine: shrink one visual so it, plus the fixed things sharing its page
+                // (such as a heading), fits within one printable page. "groupStart"/"groupEnd"
+                // mark the top and bottom of that shared group; "title" is only for logging.
+                const fitVisual = (visual, groupStart, groupEnd, title) => {
+                    if (preparedVisuals.has(visual)) {
+                        return true;   // already handled by an earlier pass
+                    }
+                    const isSceneViewer = visual.matches(sceneViewerSelector);
+                    // For a 3D viewer we resize its wrapper; for anything else, the visual itself.
+                    const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
+                    const initialVisualRect = fittedVisual.getBoundingClientRect();
+                    if (isSceneViewer) {
+                        prepareSceneViewer(visual, fittedVisual, initialVisualRect);
+                    }
+                    const visualRect = fittedVisual.getBoundingClientRect();
+                    const responsiveHeightReduction = Math.max(
+                        0, initialVisualRect.height - visualRect.height
+                    );
+                    // Keep the heading, owner chrome, and panel padding in the
+                    // same page-height budget as the indivisible visual.
+                    const fixedHeight = Math.max(0, visualRect.top - groupStart)
+                        + Math.max(
+                            0, groupEnd - responsiveHeightReduction - visualRect.bottom
+                        );
+                    const fittedHeight = Math.floor(
+                        printableHeightPx - fixedHeight - fitGuardPx
+                    );
+                    if (fittedHeight < 1 || visualRect.height < 1 || visualRect.width < 1) {
+                        return false;
+                    }
+
+                    const computedMaxHeight = Number.parseFloat(
+                        window.getComputedStyle(fittedVisual).maxHeight
+                    );
+                    const existingMaxHeight = Number.isFinite(computedMaxHeight)
+                            && computedMaxHeight > 0
+                        ? computedMaxHeight
+                        : Number.POSITIVE_INFINITY;
+                    // Final height = the smallest of: its current height, the height that fits
+                    // the page, and any max-height already set on it. Width starts at its current
+                    // width. "wasResized" is true only if we actually made it shorter.
+                    let constrainedHeight = Math.max(1, Math.floor(Math.min(
+                        visualRect.height, fittedHeight, existingMaxHeight
+                    )));
+                    let constrainedWidth = Math.max(1, Math.ceil(visualRect.width));
+                    const wasResized = visualRect.height > constrainedHeight + 0.5;
+
+                    // For a shrunk 3D viewer, also narrow the width to keep its shape so it does
+                    // not look stretched after the height is reduced.
+                    if (wasResized && isSceneViewer) {
+                        const aspectRatio = visualRect.width / visualRect.height;
+                        constrainedWidth = Math.max(1, Math.floor(Math.min(
+                            visualRect.width, constrainedHeight * aspectRatio
+                        )));
+                        constrainedHeight = Math.max(
+                            1, Math.floor(constrainedWidth / aspectRatio)
+                        );
+                    }
+
+                    // Apply the computed caps. Then, only if we shrank it, pin the concrete size
+                    // in the way that suits each visual type (viewer, media element, or other).
+                    fittedVisual.style.setProperty(
+                        'max-height', `${constrainedHeight}px`, 'important'
+                    );
+                    fittedVisual.style.setProperty(
+                        'max-width', `${constrainedWidth}px`, 'important'
+                    );
+                    if (wasResized && isSceneViewer) {
+                        fittedVisual.style.setProperty(
+                            'height', `${constrainedHeight}px`, 'important'
+                        );
+                        fittedVisual.style.setProperty(
+                            'width', `${constrainedWidth}px`, 'important'
+                        );
+                    } else if (wasResized && visual.matches('img, video, canvas')) {
+                        // Let images/videos/canvases scale within the caps while keeping their
+                        // aspect ratio ("object-fit: contain" prevents stretching).
+                        visual.style.setProperty('height', 'auto', 'important');
+                        visual.style.setProperty('width', 'auto', 'important');
+                        visual.style.setProperty('object-fit', 'contain', 'important');
+                    } else if (wasResized) {
+                        visual.style.setProperty(
+                            'height', `${constrainedHeight}px`, 'important'
+                        );
+                    }
+
+                    // A shrunk 3D viewer also clips its own overflow, and its surrounding
+                    // data-item is pinned to the same height so the box leaves no gap.
+                    if (wasResized && isSceneViewer) {
+                        const item = visual.closest('adr-data-item');
+                        fittedVisual.style.setProperty('overflow', 'hidden', 'important');
+                        if (item) {
+                            item.style.setProperty(
+                                'height', `${constrainedHeight}px`, 'important'
+                            );
+                            item.style.setProperty(
+                                'max-height', `${constrainedHeight}px`, 'important'
+                            );
+                            item.style.setProperty('overflow', 'hidden', 'important');
                         }
                     }
-                    return maxRight;
-                }""",
-            )
-        )
 
-    def _measure_layout_width_px(self, page: Any) -> float:
-        """Measure the effective browser layout width in CSS pixels.
+                    // A Plotly chart keeps its old pixel size unless told to redraw; queue that
+                    // redraw at the new box size to wait for before the function returns.
+                    if (wasResized && visual.matches('.nexus-plot')
+                            && window.Plotly?.Plots?.resize) {
+                        resizePromises.push(Promise.resolve(window.Plotly.Plots.resize(visual)));
+                    }
+                    preparedVisuals.add(visual);   // mark done so later passes skip it
+                    // Record what we shrank, for an info log line back in Python.
+                    if (wasResized) {
+                        resizedVisuals.push({
+                            title,
+                            visual: visualLabel(visual),
+                            originalHeightPx: visualRect.height,
+                            fittedHeightPx: constrainedHeight
+                        });
+                    }
+                    return true;
+                };
 
-        _measure_content_width_px() reports how far visible content extends to the right.
-        Some responsive content may lay out relative to the viewport rather than the report
-        root; so return the widest of both.
-        """
-        return float(
-            page.evaluate(
-                """() => {
-                    // Use the widest of the common viewport/document width signals so the PDF
-                    // preserves the layout canvas Chromium actually used while rendering.
-                    return Math.max(
-                        window.innerWidth || 0,  // The viewport width
-                        document.documentElement?.clientWidth || 0,  // <html> element width
-                        document.body?.clientWidth || 0  // <body> element width
+                // Basic layouts own headings and content containers, so fitting
+                // against that group keeps a title with its resized visual.
+                for (const layout of document.querySelectorAll(
+                    'div[data-layout-type="basic"]'
+                )) {
+                    const heading = layout.querySelector(headingSelector);
+                    const container = heading?.nextElementSibling;
+                    if (!container?.matches('section.adr-container')) {
+                        continue;
+                    }
+
+                    const visuals = findRenderedVisuals(container);
+                    if (!visuals.length) {
+                        continue;
+                    }
+
+                    const panel = layout.closest('adr-panel');
+                    const panelHeader = panel?.shadowRoot?.querySelector('header.adr-panel-header');
+                    const panelBody = panel?.shadowRoot?.querySelector('section.adr-panel-body');
+                    const layoutRect = layout.getBoundingClientRect();
+                    const panelLayout = panel?.closest('div[data-layout-type="panel"]');
+                    const firstVisiblePanelChild = panel
+                        ? [...panel.children].find(isVisible)
+                        : null;
+                    const firstOwner = visuals[0].closest(
+                        'adr-data-item, adr-slider-template'
+                    ) || visuals[0];
+                    const fragmentPaddingPx = panelBody
+                        ? Number.parseFloat(window.getComputedStyle(panelBody).paddingBottom) || 0
+                        : 0;
+                    for (const visual of visuals) {
+                        const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
+                        const ownerRect = owner.getBoundingClientRect();
+                        const includesHeading = owner === firstOwner;
+                        // "groupStart" is the top of everything sharing this visual's page. The
+                        // first visual also carries the heading (and the panel header, if any),
+                        // so its group starts higher; later visuals start at their own top.
+                        const groupStart = includesHeading && panelHeader
+                                && firstVisiblePanelChild === layout && panelLayout
+                            ? panelLayout.getBoundingClientRect().top
+                            : includesHeading
+                                ? layoutRect.top
+                                : ownerRect.top;
+                        fitVisual(
+                            visual,
+                            groupStart,
+                            ownerRect.bottom + fragmentPaddingPx,
+                            heading.textContent.trim()
+                        );
+                    }
+                }
+
+                // Panels without the basic-layout wrapper still need their
+                // shadow-DOM header included in the available-height budget.
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                    const visibleChildren = [...panel.children].filter(
+                        child => child.getClientRects().length > 0
                     );
-                }""",
-            )
+                    if (!panelLayout || visibleChildren.length !== 1) {
+                        continue;
+                    }
+
+                    const panelRect = panelLayout.getBoundingClientRect();
+                    const panelHeader = panel.shadowRoot?.querySelector('header.adr-panel-header');
+                    for (const visual of findRenderedVisuals(visibleChildren[0])) {
+                        fitVisual(
+                            visual,
+                            panelRect.top,
+                            panelRect.bottom,
+                            panelHeader?.textContent.trim() || 'Untitled panel'
+                        );
+                    }
+                }
+
+                const reportRoot = document.getElementById('report_root');
+                if (reportRoot) {
+                    // Catch standalone visuals not owned by either known layout
+                    // shape without processing anything already fitted above.
+                    for (const visual of findRenderedVisuals(reportRoot)) {
+                        if (preparedVisuals.has(visual)) {
+                            continue;
+                        }
+                        const owner = visual.closest(
+                            'adr-data-item, adr-slider-template, div[data-layout-type]'
+                        ) || visual;
+                        const ownerRect = owner.getBoundingClientRect();
+                        fitVisual(
+                            visual,
+                            ownerRect.top,
+                            ownerRect.bottom,
+                            visualLabel(visual)
+                        );
+                    }
+                }
+
+                const preparationResult = (async () => {
+                    // Wait for any Plotly charts we asked to redraw at their new size.
+                    await Promise.all(resizePromises);
+                    // Wait two animation frames so the browser finishes applying every style
+                    // change above before we hand back control (measurements must be settled).
+                    await new Promise(resolve => requestAnimationFrame(
+                        () => requestAnimationFrame(resolve)
+                    ));
+
+                    // Report back to Python: how many visuals we touched, and details of the ones
+                    // we actually shrank.
+                    return {
+                        __adrTimedOut: false,
+                        cappedVisualCount: preparedVisuals.size,
+                        resizedVisuals
+                    };
+                })();
+                const result = await Promise.race([preparationResult, timeoutResult]);
+                if (!result.__adrTimedOut) {
+                    window.clearTimeout(timeoutHandle);
+                }
+                return result;
+            }""",
+            {
+                "printableHeightPx": printable_height_px,
+                "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "headingSelector": _PAGINATION_HEADING_SELECTOR,
+                "visualSelector": _PAGINATION_VISUAL_SELECTOR,
+                "sceneViewerSelector": _SCENE_VIEWER_SELECTOR,
+                "timeoutMs": timeout_ms,
+            },
         )
 
-    def _pdf_length_to_px(self, value: str) -> float:
-        """Convert a Playwright PDF length to CSS pixels."""
+    def _set_pagination_cohesion(self, page: Any, printable_height_px: float) -> dict[str, Any]:
+        """Keep basic layouts and panels together when they fit on one page."""
+        return page.evaluate(
+            """(options) => {
+                // This runs in the page. For each report section and panel, decide whether it
+                // fits on one page. If it fits, ask the PDF engine to keep it whole ("avoid" a
+                // break); if not, allow it to split ("auto"), because forcing a too-tall block
+                // onto one page would clip it.
+                const { printableHeightPx, fitGuardPx, headingSelector } = options;
+                const isVisible = element => {
+                    const style = window.getComputedStyle(element);
+                    return element.getClientRects().length > 0
+                        && style.display !== 'none'
+                        && style.visibility !== 'hidden';
+                };
+                // "Fits" means its height is within the usable page height, minus a small guard
+                // so a block sitting exactly at the edge is not forced to stay whole.
+                const fitsOnPage = element =>
+                    element.getBoundingClientRect().height <= printableHeightPx - fitGuardPx;
+
+                const keptLayouts = [];
+                // Avoid a split only when the complete heading-plus-content
+                // group fits; forcing it on taller content can create clipping.
+                for (const layout of document.querySelectorAll(
+                    'div[data-layout-type="basic"]'
+                )) {
+                    const heading = layout.querySelector(headingSelector);
+                    const container = heading?.nextElementSibling;
+                    if (!container?.matches('section.adr-container') || !isVisible(layout)) {
+                        continue;
+                    }
+                    // "avoid" keeps the section whole on one page; "auto" lets it split. Both the
+                    // modern and legacy property names are set for wider browser support.
+                    const fits = fitsOnPage(layout);
+                    layout.style.setProperty(
+                        'break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    layout.style.setProperty(
+                        'page-break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    if (fits) {
+                        // Remember kept sections by title, for a debug log line in Python.
+                        keptLayouts.push(heading.textContent.trim() || 'Untitled layout');
+                    }
+                }
+
+                const keptPanels = [];
+                // Apply the same fit-sensitive rule at the panel wrapper, which
+                // owns the shadow-DOM header and its light-DOM children.
+                for (const panel of document.querySelectorAll('adr-panel')) {
+                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
+                    const visibleChildren = [...panel.children].filter(isVisible);
+                    if (!panelLayout || !visibleChildren.length) {
+                        continue;
+                    }
+                    const fits = fitsOnPage(panelLayout);
+                    panelLayout.style.setProperty(
+                        'break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    panelLayout.style.setProperty(
+                        'page-break-inside', fits ? 'avoid' : 'auto', 'important'
+                    );
+                    if (fits) {
+                        keptPanels.push(
+                            panel.shadowRoot?.querySelector('header.adr-panel-header')
+                                ?.textContent.trim() || 'Untitled panel'
+                        );
+                    }
+                }
+
+                return { keptLayouts, keptPanels };
+            }""",
+            {
+                "printableHeightPx": printable_height_px,
+                "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
+                "headingSelector": _PAGINATION_HEADING_SELECTOR,
+            },
+        )
+
+    def _make_oversized_structures_fragmentable(
+        self, page: Any, printable_height_px: float
+    ) -> dict[str, Any]:
+        """Allow over-height sliders, items, and tables to split between pages."""
+        return page.evaluate(
+            """(printableHeightPx) => {
+                // This runs in the page. The capture CSS earlier asked the PDF engine to keep
+                // sliders and data-items whole. But some are simply taller than a page and must
+                // be allowed to split, or they would overflow. Here we find those over-height
+                // structures and flip them back to "may split across pages".
+                const breakableSliders = [];
+                // Capture CSS initially protects sliders as one unit. Release
+                // only over-height containers and their direct row for paging.
+                for (const slider of document.querySelectorAll('adr-slider-template')) {
+                    const container = [...slider.children].find(
+                        child => child.matches('section[id^="slider_container_"]')
+                    );
+                    // Only touch sliders taller than one page; shorter ones stay whole.
+                    if (!container || container.getBoundingClientRect().height <= printableHeightPx) {
+                        continue;
+                    }
+                    container.style.setProperty('break-inside', 'auto', 'important');
+                    container.style.setProperty('page-break-inside', 'auto', 'important');
+                    const row = container.querySelector(':scope > section.adr-row');
+                    if (row) {
+                        row.style.setProperty('break-inside', 'auto', 'important');
+                        row.style.setProperty('page-break-inside', 'auto', 'important');
+                    }
+                    breakableSliders.push(slider.dataset.guid || slider.id || 'untitled');
+                }
+
+                const breakableItems = [];
+                // Over-height tabular items cannot honor break-inside: avoid;
+                // release the item, owning layout, and table wrappers together.
+                for (const item of document.querySelectorAll('adr-data-item')) {
+                    const itemRect = item.getBoundingClientRect();
+                    // Only over-height items need to become splittable; skip the rest.
+                    if (itemRect.height <= printableHeightPx) {
+                        continue;
+                    }
+
+                    item.style.setProperty('break-inside', 'auto', 'important');
+                    item.style.setProperty('page-break-inside', 'auto', 'important');
+                    const layout = item.closest('div[data-layout-type="basic"]');
+                    if (layout) {
+                        layout.style.setProperty('break-inside', 'auto', 'important');
+                        layout.style.setProperty('page-break-inside', 'auto', 'important');
+                    }
+                    for (const child of item.querySelectorAll('.table-responsive, table')) {
+                        child.style.setProperty('break-inside', 'auto', 'important');
+                        child.style.setProperty('page-break-inside', 'auto', 'important');
+                    }
+                    breakableItems.push({
+                        id: item.id,
+                        type: item.dataset.itemType || 'unknown',
+                        heightPx: itemRect.height
+                    });
+                }
+
+                return {
+                    breakableSliders,
+                    breakableItems
+                };
+            }""",
+            printable_height_px,
+        )
+
+    def _log_pagination_preparation(
+        self,
+        visual_result: dict[str, Any],
+        cohesion_result: dict[str, Any],
+        fragmentation_result: dict[str, Any],
+    ) -> None:
+        """Log pagination changes that materially affect the generated PDF."""
+        self._logger.debug(
+            "Prepared %d browser PDF visuals and kept %d layouts and %d panels intact.",
+            visual_result["cappedVisualCount"],
+            len(cohesion_result["keptLayouts"]),
+            len(cohesion_result["keptPanels"]),
+        )
+        if visual_result["resizedVisuals"]:
+            self._logger.info(
+                "Fitted over-height browser PDF visuals: %s",
+                visual_result["resizedVisuals"],
+            )
+        if fragmentation_result["breakableSliders"]:
+            self._logger.info(
+                "Allowed over-height browser PDF sliders to paginate: %s",
+                fragmentation_result["breakableSliders"],
+            )
+        if fragmentation_result["breakableItems"]:
+            self._logger.info(
+                "Allowed over-height browser PDF items to paginate: %s",
+                fragmentation_result["breakableItems"],
+            )
+
+    def _pdf_length_to_px(self, value: str | float) -> float:
+        """Convert a Playwright PDF length to CSS pixels.
+
+        Examples
+        --------
+        ``"10mm"`` becomes approximately ``37.795`` CSS pixels, while ``"1in"`` and
+        ``96.0`` both become ``96.0``.
+        """
+        if isinstance(value, bool):
+            raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
+        if isinstance(value, (int, float)):
+            number = float(value)
+            if not isfinite(number):
+                raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
+            return number
+        if not isinstance(value, str):
+            raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
+
         match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*", value)
         if match is None:
             raise ADRException(f"Unsupported PDF length for browser PDF rendering: {value!r}")
@@ -853,6 +1565,40 @@ class _BasePlaywrightPDFRenderer(ABC):
         if unit not in self._PDF_UNIT_TO_PX:
             raise ADRException(f"Unsupported PDF length unit for browser PDF rendering: {value!r}")
         return number * self._PDF_UNIT_TO_PX[unit]
+
+    @classmethod
+    def _validate_page_size(cls, page_size: PDFPageSize | None) -> PDFPageSize | None:
+        """Validate that a supported fixed page-size enum member or ``None`` was supplied."""
+        if page_size is not None and not isinstance(page_size, PDFPageSize):
+            supported = ", ".join(size.name for size in PDFPageSize)
+            raise ADRException(
+                "Browser PDF page_size must be a PDFPageSize member or None; "
+                f"supported values are {supported}."
+            )
+        return page_size
+
+    def _validate_custom_page_dimensions(
+        self,
+        *,
+        page_size: PDFPageSize | None,
+        width: str | float | None,
+        height: str | float | None,
+    ) -> tuple[str | float | None, str | float | None]:
+        """Validate custom dimensions when no fixed page format is selected."""
+        if page_size is not None:
+            return None, None
+        if width is None and height is None:
+            return None, None
+        if width is None or height is None:
+            raise ADRException(
+                "Browser PDF width and height must be provided together when page_size is None."
+            )
+
+        for dimension_name, dimension_value in (("width", width), ("height", height)):
+            dimension_px = self._pdf_length_to_px(dimension_value)
+            if dimension_px <= 0:
+                raise ADRException(f"Browser PDF {dimension_name} must be a positive PDF length.")
+        return width, height
 
     def _validate_margins(self, margins: dict[str, str] | None) -> dict[str, str]:
         """Validate browser-PDF margins and return a private copy."""
@@ -1268,6 +2014,12 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
+    page_size : PDFPageSize or None, default: PDFPageSize.A3
+        Fixed page format. Set to ``None`` to use ``width`` and ``height``.
+    width : str or float, optional
+        Custom page width used when ``page_size`` is ``None``.
+    height : str or float, optional
+        Custom page height used when ``page_size`` is ``None``.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the
         exported HTML bundle is ready to open. This shared budget covers browser
@@ -1296,15 +2048,23 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         *,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
+        # Normalize the bundle root once so the later entry-point containment
+        # check compares resolved absolute paths.
         self._html_dir = None if html_dir is None else Path(html_dir).expanduser().resolve()
         super().__init__(
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
             ansys_installation=ansys_installation,
             ansys_version=ansys_version,
@@ -1395,6 +2155,12 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
+    page_size : PDFPageSize or None, default: PDFPageSize.A3
+        Fixed page format. Set to ``None`` to use ``width`` and ``height``.
+    width : str or float, optional
+        Custom page width used when ``page_size`` is ``None``.
+    height : str or float, optional
+        Custom page height used when ``page_size`` is ``None``.
     render_timeout : float, default: 30.0
         Maximum time, in seconds, for the shared browser render phase once the
         live report URL is ready to open. This shared budget covers browser
@@ -1420,16 +2186,24 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         auth_cookies: list[dict[str, object]] | None = None,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = _BasePlaywrightPDFRenderer._DEFAULT_PAGE_SIZE,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT,
         ansys_installation: Path | str | None = None,
         ansys_version: int | None = None,
         logger: Any = None,
     ) -> None:
         self._url = self._validate_url(url)
+        # Copy the container so later append/remove operations by the service
+        # layer cannot change a configured renderer.
         self._auth_cookies = [] if auth_cookies is None else list(auth_cookies)
         super().__init__(
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
             ansys_installation=ansys_installation,
             ansys_version=ansys_version,

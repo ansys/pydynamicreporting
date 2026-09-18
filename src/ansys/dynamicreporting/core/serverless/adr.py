@@ -70,7 +70,7 @@ from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..compatibility import get_compatibility_warning_for_install_version
-from ..common_utils import populate_template, resolve_install_info
+from ..common_utils import PDFPageSize, populate_template, resolve_install_info
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -1568,6 +1568,9 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
     ) -> bytes:
         """Render one resolved template as a browser-fidelity PDF byte stream.
@@ -1600,6 +1603,9 @@ class ADR:
                     html_dir=tmp_path,
                     landscape=landscape,
                     margins=margins,
+                    page_size=page_size,
+                    width=width,
+                    height=height,
                     render_timeout=render_timeout,
                     ansys_installation=self._ansys_installation,
                     ansys_version=self._ansys_version,
@@ -1660,6 +1666,9 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
@@ -1684,6 +1693,13 @@ class ADR:
             strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
             (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
             every side.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             Maximum time, in seconds, for the browser render phase after the offline HTML
             bundle has been staged. This shared browser-side budget covers launch, navigation,
@@ -1717,7 +1733,7 @@ class ADR:
 
         Examples
         --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
         >>> adr = ADR(
         ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
         ...     db_directory=r"C:\\DBs\\docex",
@@ -1728,6 +1744,7 @@ class ADR:
         >>> pdf_bytes = adr.render_report_as_browser_pdf(
         ...     name="Serverless Simulation Report",
         ...     landscape=True,
+        ...     page_size=PDFPageSize.A3,
         ...     margins={"top": "12mm", "right": "12mm", "bottom": "12mm", "left": "12mm"},
         ... )
         >>> with open("browser-report.pdf", "wb") as f:
@@ -1740,6 +1757,8 @@ class ADR:
 
         template = Template.get(**kwargs)
 
+        # Route byte-stream export through the same resolved-template pipeline
+        # used by file export so both entry points apply identical page geometry.
         return self._render_template_as_browser_pdf(
             template,
             context=context,
@@ -1747,6 +1766,9 @@ class ADR:
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
         )
 
@@ -1930,6 +1952,9 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
@@ -1956,6 +1981,13 @@ class ADR:
             strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
             (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
             every side.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
             Maximum time, in seconds, for the browser render phase after the offline HTML
             bundle has been staged. This shared browser-side budget covers launch, navigation,
@@ -1988,7 +2020,7 @@ class ADR:
 
         Examples
         --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
+        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
         >>> adr = ADR(
         ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
         ...     db_directory=r"C:\\DBs\\docex",
@@ -2001,6 +2033,7 @@ class ADR:
         ...     name="Serverless Simulation Report",
         ...     item_filter="A|i_tags|cont|dp=dp227;",
         ...     landscape=True,
+        ...     page_size=PDFPageSize.A3,
         ... )
         """
         if not kwargs:
@@ -2009,6 +2042,8 @@ class ADR:
             )
 
         template = Template.get(**kwargs)
+        # Render from the object already resolved above; its GUID remains
+        # available for the default filename without a second template lookup.
         pdf_stream = self._render_template_as_browser_pdf(
             template,
             context=context,
@@ -2016,6 +2051,9 @@ class ADR:
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
         )
 

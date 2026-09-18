@@ -22,6 +22,7 @@
 
 import os
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import Mock
@@ -29,9 +30,10 @@ from unittest.mock import Mock
 import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from pypdf import PdfReader
 
 import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
+from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, PDFPageSize, common_utils
 from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightPDFRenderer
@@ -68,6 +70,10 @@ def _simple_renderer(
     body: str,
     *,
     landscape: bool = False,
+    margins: dict[str, str] | None = None,
+    page_size: PDFPageSize | None = PDFPageSize.A3,
+    width: str | float | None = None,
+    height: str | float | None = None,
     render_timeout: float | None = None,
     ansys_installation: str | None = None,
     ansys_version: int | None = None,
@@ -83,6 +89,10 @@ def _simple_renderer(
     renderer = _OfflinePlaywrightPDFRenderer(
         html_dir=html_dir,
         landscape=landscape,
+        margins=margins,
+        page_size=page_size,
+        width=width,
+        height=height,
         render_timeout=(
             _OfflinePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT
             if render_timeout is None
@@ -117,6 +127,19 @@ def _mock_playwright_pdf_flow(
 ) -> MockPlaywrightPDFFlow:
     """Create the mocked Playwright PDF flow used by renderer tests."""
     page = Mock()
+    # Pagination helpers share one page.evaluate mock. Return every result key
+    # consumed by logging so render-pipeline tests can focus on their own phase.
+    page.evaluate.return_value = {
+        "__adrTimedOut": False,
+        "cappedVisualCount": 0,
+        "resizedVisuals": [],
+        "keptLayouts": [],
+        "keptPanels": [],
+        "breakableSliders": [],
+        "breakableItems": [],
+        "widthPx": 0.0,
+        "source": "mock page",
+    }
     page.pdf.return_value = pdf_bytes
     context = Mock()
     context.new_page.return_value = page
@@ -261,7 +284,6 @@ def _arrange_product_browser_renderer(
     )
     monkeypatch.setattr(pdf_renderer_module, "sync_playwright", flow.sync_playwright)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     return renderer, flow, browser_binary_dir
 
@@ -285,13 +307,15 @@ def _capture_render_start_env(flow: MockPlaywrightPDFFlow, env_seen: dict[str, o
 def _stub_playwright_render(
     monkeypatch: pytest.MonkeyPatch,
     renderer: _OfflinePlaywrightPDFRenderer,
-    *,
-    pdf_width: str | None = None,
 ) -> tuple[Mock, Mock, Mock]:
-    """Stub the full render path (skipping readiness waits and width measurement) and return the page."""
+    """Stub browser preparation and return the rendered page."""
     stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: pdf_width)
+    monkeypatch.setattr(
+        renderer,
+        "_prepare_content_for_pagination",
+        lambda page, deadline=None: None,
+    )
     return stack.page, stack.context, stack.browser
 
 
@@ -333,6 +357,57 @@ def test_playwright_pdf_landscape(tmp_path, product_playwright_context):
 
 
 @pytest.mark.unit
+def test_playwright_pdf_has_no_blank_pages(tmp_path, product_playwright_context):
+    page_markers = ("PDF page one", "PDF page two", "PDF page three")
+    layouts = "".join(
+        f"""
+        <div data-layout-type="basic">
+            <br>
+            <h2>{page_marker}</h2>
+            <section class="adr-container">Visible report content</section>
+        </div>
+        """
+        for page_marker in page_markers
+    )
+    renderer = _simple_renderer(
+        tmp_path,
+        f"""
+        <html>
+        <head>
+            <style>
+                * {{ box-sizing: border-box; }}
+                #report_root > div[data-layout-type="basic"] {{
+                    break-after: page;
+                    height: 968px;
+                }}
+                #report_root > div[data-layout-type="basic"]:last-child {{
+                    break-after: auto;
+                }}
+            </style>
+        </head>
+        <body class="loaded">
+            <main id="report_root">{layouts}</main>
+        </body>
+        </html>
+        """,
+        landscape=True,
+        margins={"top": "20mm", "right": "15mm", "bottom": "20mm", "left": "15mm"},
+        page_size=PDFPageSize.A3,
+        ansys_installation=product_playwright_context.ansys_installation,
+        ansys_version=product_playwright_context.ansys_version,
+    )
+
+    reader = PdfReader(BytesIO(renderer.render_pdf()))
+    page_text = [(page.extract_text() or "").strip() for page in reader.pages]
+    blank_pages = [page_number for page_number, text in enumerate(page_text, start=1) if not text]
+
+    assert not blank_pages, f"Generated blank PDF pages: {blank_pages}"
+    assert len(page_text) == len(page_markers)
+    for page_number, (text, page_marker) in enumerate(zip(page_text, page_markers), start=1):
+        assert page_marker in text, f"PDF page {page_number} does not contain {page_marker!r}"
+
+
+@pytest.mark.unit
 def test_playwright_pdf_validates_missing_entrypoint_before_browser_start(tmp_path):
     renderer = _OfflinePlaywrightPDFRenderer(html_dir=tmp_path, **_browser_metadata_kwargs())
 
@@ -366,11 +441,10 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
         **_browser_metadata_kwargs(),
     )
     stack = _stub_playwright_stack(monkeypatch)
-    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
+    monotonic_values = iter([100.0] * 10)
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
     stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
@@ -390,11 +464,10 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
         **_browser_metadata_kwargs(),
     )
     stack = _stub_playwright_stack(monkeypatch)
-    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0])
+    monotonic_values = iter([100.0] * 10)
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     renderer.render_pdf()
 
@@ -418,7 +491,7 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
     )
     _stub_playwright_stack(monkeypatch)
     captured_deadline: dict[str, float] = {}
-    monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0])
+    monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0])
 
     monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
 
@@ -426,7 +499,6 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
         captured_deadline["value"] = deadline
 
     monkeypatch.setattr(renderer, "_wait_for_render_ready", capture_ready)
-    monkeypatch.setattr(renderer, "_compute_pdf_width", lambda page: None)
 
     renderer.render_pdf()
 
@@ -547,39 +619,219 @@ def test_live_report_url_renderer_forwards_product_browser_install_metadata():
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_a4_width_when_content_width_is_unavailable(tmp_path, monkeypatch):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>No measured width</p></body></html>")
+def test_pdf_page_size_is_exported_from_common_utils():
+    """Expose one enum identity and the exact Chromium format spellings."""
+    assert common_utils.PDFPageSize is PDFPageSize
+    assert tuple(page_size.value for page_size in PDFPageSize) == (
+        "Letter",
+        "Legal",
+        "Tabloid",
+        "Ledger",
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+    )
+
+
+# Fixed formats and custom dimensions are mutually exclusive Playwright option
+# shapes. These tests pin the public precedence rules as well as their values.
+@pytest.mark.unit
+def test_playwright_pdf_uses_a3_format_when_content_fits(tmp_path, monkeypatch):
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
     page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
-    # A missing measured width must still produce a consistent A4-sized page.
     pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["width"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_WIDTH
-    assert pdf_options["height"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
+    assert pdf_options["format"] == PDFPageSize.A3.value
+    assert pdf_options["landscape"] is False
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_computed_width_when_content_width_is_available(tmp_path, monkeypatch):
-    renderer = _simple_renderer(tmp_path, "<html><body><p>Measured width</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="488.00px")
+@pytest.mark.parametrize(
+    "page_size",
+    [
+        PDFPageSize.LETTER,
+        PDFPageSize.LEGAL,
+        PDFPageSize.TABLOID,
+        PDFPageSize.LEDGER,
+        PDFPageSize.A0,
+        PDFPageSize.A1,
+        PDFPageSize.A2,
+        PDFPageSize.A3,
+        PDFPageSize.A5,
+        PDFPageSize.A6,
+    ],
+)
+def test_playwright_pdf_uses_selected_fixed_page_size(tmp_path, monkeypatch, page_size):
+    # Deliberately wide content must not replace the caller-selected format with
+    # a content-derived width; capture CSS owns overflow handling.
+    renderer = _simple_renderer(
+        tmp_path,
+        '<html><body><table style="width: 12000px"><tr><td>Wide</td></tr></table></body></html>',
+        page_size=page_size,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
-    # Measured content width takes priority so wide browser-rendered content is not clipped.
     pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["width"] == "488.00px"
-    assert pdf_options["height"] == _OfflinePlaywrightPDFRenderer._DEFAULT_PAGE_HEIGHT
+    assert pdf_options["format"] == page_size.value
+    assert pdf_options["landscape"] is False
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
 
 
 @pytest.mark.unit
-def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_path, monkeypatch):
+def test_playwright_landscape_pdf_rotates_selected_fixed_page(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Landscape A3</p></body></html>",
+        landscape=True,
+        page_size=PDFPageSize.A3,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["format"] == PDFPageSize.A3.value
+    assert pdf_options["landscape"] is True
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_custom_dimensions_when_page_size_is_none(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Custom dimensions</p></body></html>",
+        page_size=None,
+        width="12in",
+        height=1728.0,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["width"] == "12in"
+    assert pdf_options["height"] == 1728.0
+    assert pdf_options["landscape"] is False
+    assert "format" not in pdf_options
+
+
+@pytest.mark.unit
+def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monkeypatch):
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Fixed format wins</p></body></html>",
+        page_size=PDFPageSize.LEDGER,
+        width="1px",
+        height="1px",
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    pdf_options = page.pdf.call_args.kwargs
+    assert pdf_options["format"] == PDFPageSize.LEDGER.value
+    assert "width" not in pdf_options
+    assert "height" not in pdf_options
+
+
+@pytest.mark.unit
+def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(tmp_path, monkeypatch):
+    # ``page_size=None`` is also the custom-size switch. With no complete custom
+    # pair, it falls back to A3 instead of producing no size.
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Default dimensions</p></body></html>",
+        page_size=None,
+    )
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
+
+    renderer.render_pdf()
+
+    assert page.pdf.call_args.kwargs["format"] == PDFPageSize.A3.value
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "page_size, landscape, expected_width",
+    [
+        (PDFPageSize.LETTER, False, 740),
+        (PDFPageSize.LETTER, True, 980),
+        (PDFPageSize.LEGAL, False, 740),
+        (PDFPageSize.LEGAL, True, 1268),
+        (PDFPageSize.TABLOID, False, 980),
+        (PDFPageSize.TABLOID, True, 1556),
+        (PDFPageSize.LEDGER, False, 1556),
+        (PDFPageSize.LEDGER, True, 980),
+        (PDFPageSize.A0, False, 3102),
+        (PDFPageSize.A0, True, 4417),
+        (PDFPageSize.A1, False, 2170),
+        (PDFPageSize.A1, True, 3102),
+        (PDFPageSize.A2, False, 1512),
+        (PDFPageSize.A2, True, 2170),
+        (PDFPageSize.A3, False, 1047),
+        (PDFPageSize.A3, True, 1512),
+        (PDFPageSize.A4, False, 718),
+        (PDFPageSize.A4, True, 1047),
+        (PDFPageSize.A5, False, 484),
+        (PDFPageSize.A5, True, 718),
+        (PDFPageSize.A6, False, 320),
+        (PDFPageSize.A6, True, 484),
+    ],
+)
+def test_browser_context_uses_selected_printable_width(
+    tmp_path, page_size, landscape, expected_width
+):
+    # Expected values are portrait/landscape physical widths converted to CSS
+    # pixels, minus both default margins, then floored for a valid viewport.
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Responsive content</p></body></html>",
+        landscape=landscape,
+        page_size=page_size,
+    )
+
+    context_options = renderer._shared_browser_context_kwargs()
+
+    assert context_options["viewport"]["width"] == expected_width
+    assert context_options["viewport"]["height"] == renderer._DEFAULT_BROWSER_VIEWPORT_HEIGHT
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("landscape, expected_width", [(False, 1076), (True, 1652)])
+def test_browser_context_uses_custom_printable_width(tmp_path, landscape, expected_width):
+    # Orientation swaps the custom physical dimensions before margin subtraction.
+    renderer = _simple_renderer(
+        tmp_path,
+        "<html><body><p>Custom responsive width</p></body></html>",
+        landscape=landscape,
+        page_size=None,
+        width="12in",
+        height="18in",
+    )
+
+    assert renderer._shared_browser_context_kwargs()["viewport"]["width"] == expected_width
+
+
+@pytest.mark.unit
+def test_playwright_pdf_prepares_pagination_before_generation(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
-    page, _, _ = _stub_playwright_render(monkeypatch, renderer, pdf_width="420.00px")
+    page, _, _ = _stub_playwright_render(monkeypatch, renderer)
     call_order: list[str] = []
 
-    # Width measurement depends on the capture CSS already being present, and readiness
-    # waits must observe the same styled DOM that Chromium will later print to PDF.
+    # Styles establish print geometry, readiness settles the styled DOM, and
+    # pagination then mutates that final geometry immediately before page.pdf().
     monkeypatch.setattr(
         renderer,
         "_apply_pdf_capture_styles",
@@ -590,16 +842,15 @@ def test_playwright_pdf_applies_capture_styles_before_readiness_and_width(tmp_pa
         "_wait_for_render_ready",
         lambda observed_page, deadline=None: call_order.append("ready"),
     )
-
-    def capture_width(observed_page):
-        call_order.append("width")
-        return "420.00px"
-
-    monkeypatch.setattr(renderer, "_compute_pdf_width", capture_width)
+    monkeypatch.setattr(
+        renderer,
+        "_prepare_content_for_pagination",
+        lambda observed_page, deadline=None: call_order.append("pagination"),
+    )
 
     renderer.render_pdf()
 
-    assert call_order == ["styles", "ready", "width"]
+    assert call_order == ["styles", "ready", "pagination"]
     page.pdf.assert_called_once()
 
 
@@ -742,10 +993,13 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
     renderer._apply_pdf_capture_styles(page)
 
-    css = page.add_style_tag.call_args.kwargs["content"]
+    # Capture styles are injected in separate global and panel-layout blocks;
+    # inspect the combined contract rather than relying on call order.
+    css = "\n".join(call.kwargs["content"] for call in page.add_style_tag.call_args_list)
     assert "adr-data-item" in css
     assert ".nexus-plot" in css
     assert ".avz-viewer" in css
+    assert "ansys-adr-viewer" in css
     assert "ansys-nexus-viewer" in css
     assert "table.tree" in css
     assert 'adr-slider-template > section[id^="slider_container_"]' in css
@@ -760,6 +1014,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "--adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;" in css
     assert "-webkit-print-color-adjust: exact !important;" in css
     assert "print-color-adjust: exact !important;" in css
+    assert "overflow-x: clip !important;" in css
     assert "display: block !important;" in css
     assert "@media print" not in css
     assert "[nexus_template]" not in css
@@ -824,9 +1079,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
             <div class="nexus-plot" id="plot">
                 <div class="plot-container">Plot content</div>
             </div>
-            <div class="avz-viewer" id="scene-wrap">
-                <ansys-nexus-viewer id="viewer"></ansys-nexus-viewer>
-            </div>
+            <ansys-nexus-viewer id="viewer"></ansys-nexus-viewer>
             <img
                 id="image"
                 class="img img-fluid"
@@ -904,6 +1157,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const sliderRow = document.getElementById('slider_row');
                     const tableCell = document.getElementById('table-cell');
                     const collapsedHead = document.getElementById('collapsed-head');
+                    // Chromium may use either root element as the scrolling box;
+                    // both must clip horizontal overflow before PDF generation.
+                    const documentStyle = getComputedStyle(document.documentElement);
+                    const bodyStyle = getComputedStyle(document.body);
                     const sectionHeadingStyle = getComputedStyle(sectionHeading);
                     const itemStyle = getComputedStyle(item);
                     const plotStyle = getComputedStyle(plot);
@@ -917,6 +1174,10 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                     const tableCellStyle = getComputedStyle(tableCell);
                     const collapsedHeadStyle = getComputedStyle(collapsedHead);
                     return {
+                        document: {
+                            htmlOverflowX: documentStyle.overflowX,
+                            bodyOverflowX: bodyStyle.overflowX,
+                        },
                         sectionHeading: {
                             breakAfter: sectionHeadingStyle.breakAfter,
                             pageBreakAfter: sectionHeadingStyle.pageBreakAfter,
@@ -933,6 +1194,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
                         viewer: {
                             display: viewerStyle.display,
                             breakInside: viewerStyle.breakInside,
+                            overflow: viewerStyle.overflow,
                         },
                         image: {
                             breakInside: imageStyle.breakInside,
@@ -982,6 +1244,11 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
         # close the browser; call close() explicitly before the with-block exits.
         browser.close()
 
+    # Root clipping prevents Chromium from scaling all report content to fit a
+    # single over-width descendant.
+    assert computed_styles["document"]["htmlOverflowX"] == "clip"
+    assert computed_styles["document"]["bodyOverflowX"] == "clip"
+    # Cohesion rules keep headings and indivisible visuals with their content.
     assert computed_styles["sectionHeading"]["breakAfter"] == "avoid"
     assert computed_styles["sectionHeading"]["pageBreakAfter"] == "avoid"
     assert computed_styles["item"]["display"] == "block"
@@ -991,8 +1258,11 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     assert computed_styles["plot"]["pageBreakInside"] == "avoid"
     assert computed_styles["viewer"]["display"] == "block"
     assert computed_styles["viewer"]["breakInside"] == "avoid"
+    assert computed_styles["viewer"]["overflow"] == "hidden"
     assert computed_styles["image"]["breakInside"] == "avoid"
     assert computed_styles["image"]["pageBreakInside"] == "avoid"
+    # PDF capture overrides border tokens at the report root so descendants
+    # inherit printable contrast without selector-by-selector color patches.
     assert computed_styles["root"]["borderColorToken"] == "#adb5bd"
     assert computed_styles["root"]["translucentBorderColorToken"] == "rgba(0, 0, 0, 0.28)"
     assert computed_styles["root"]["printColorAdjust"] == "exact"
@@ -1012,12 +1282,414 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("landscape", [False, True])
+def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp_path, landscape):
+    """Exercise visual fitting, layout cohesion, and oversized fragmentation together."""
+    html = """
+    <html>
+    <head>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+            }
+            adr-panel,
+            adr-slider-template,
+            adr-data-item,
+            ansys-adr-viewer,
+            ansys-nexus-viewer,
+            section,
+            img,
+            video,
+            canvas {
+                display: block;
+            }
+            div[data-layout-type] {
+                padding: 4px;
+            }
+            .oversized-visual {
+                height: 1400px;
+                width: 320px;
+            }
+            .scene-visual {
+                height: 720px;
+                width: 960px;
+            }
+            .multi-media {
+                display: flex;
+                gap: 8px;
+            }
+            .multi-media img {
+                height: 100px;
+                width: 120px;
+            }
+            #responsive-image {
+                height: 120px;
+                width: 100%;
+            }
+        </style>
+        <script>
+            customElements.define('adr-panel', class extends HTMLElement {
+                connectedCallback() {
+                    if (this.shadowRoot) {
+                        return;
+                    }
+                    const shadowRoot = this.attachShadow({mode: 'open'});
+                    shadowRoot.innerHTML = `
+                        <style>
+                            :host, section { display: block; }
+                            header { height: 40px; }
+                            section.adr-panel-body { padding: 0 20px 4px; }
+                        </style>
+                        <section class="adr-panel">
+                            <header class="adr-panel-header">${this.dataset.title}</header>
+                            <section class="adr-panel-body"><slot></slot></section>
+                        </section>
+                    `;
+                }
+            });
+            window.__plotlyResizeCount = 0;
+            window.Plotly = {
+                Plots: {
+                    resize: () => {
+                        window.__plotlyResizeCount += 1;
+                    }
+                }
+            };
+        </script>
+    </head>
+    <body>
+        <main id="report_root">
+            <div id="explicit-layout" data-layout-type="basic">
+                <h2>Explicit image</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="image">
+                        <img
+                            id="explicit-image"
+                            class="oversized-visual"
+                            alt="explicit"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Slider video</h2>
+                <section class="adr-container">
+                    <adr-slider-template id="video-slider" data-guid="video-slider">
+                        <section id="slider_container_video">
+                            <section class="adr-row">
+                                <video id="slider-video" class="oversized-visual"></video>
+                            </section>
+                        </section>
+                    </adr-slider-template>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Canvas</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="image">
+                        <canvas id="canvas" class="oversized-visual"></canvas>
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Plot</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="table">
+                        <section id="plot" class="nexus-plot oversized-visual loaded">
+                            <canvas id="plot-canvas"></canvas>
+                        </section>
+                    </adr-data-item>
+                </section>
+            </div>
+            <div id="scene-panel-layout" data-layout-type="panel">
+                <adr-panel data-title="Scene panel">
+                    <div data-layout-type="basic">
+                        <h2>Scene</h2>
+                        <section class="adr-container">
+                            <adr-data-item id="viewer-item" data-item-type="scene">
+                                <div id="viewer-wrapper" class="scene-visual">
+                                    <ansys-adr-viewer id="viewer" aspect_ratio="1.333333">
+                                    </ansys-adr-viewer>
+                                </div>
+                            </adr-data-item>
+                        </section>
+                    </div>
+                </adr-panel>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Direct scene</h2>
+                <section class="adr-container">
+                    <adr-data-item id="direct-viewer-item" data-item-type="scene">
+                        <ansys-nexus-viewer
+                            id="direct-viewer"
+                            class="scene-visual"
+                            aspect_ratio="1.333333"
+                        ></ansys-nexus-viewer>
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Multiple media</h2>
+                <section class="adr-container">
+                    <adr-data-item class="multi-media" data-item-type="image">
+                        <img
+                            id="multi-image-a"
+                            alt="first"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                        <img
+                            id="multi-image-b"
+                            alt="second"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                    </adr-data-item>
+                </section>
+            </div>
+            <div data-layout-type="basic">
+                <h2>Responsive image</h2>
+                <section class="adr-container">
+                    <adr-data-item data-item-type="image">
+                        <img
+                            id="responsive-image"
+                            alt="responsive"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                        />
+                    </adr-data-item>
+                </section>
+            </div>
+            <img
+                id="hidden-image"
+                alt="hidden"
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+                style="display: none"
+            />
+            <div id="fitting-panel-layout" data-layout-type="panel">
+                <adr-panel data-title="Fitting panel">
+                    <adr-data-item style="height: 120px" data-item-type="table">
+                        Fitting table
+                    </adr-data-item>
+                </adr-panel>
+            </div>
+            <div id="oversized-panel-layout" data-layout-type="panel">
+                <adr-panel data-title="Oversized panel">
+                    <adr-data-item style="height: 1400px" data-item-type="table">
+                        Oversized panel table
+                    </adr-data-item>
+                </adr-panel>
+            </div>
+            <adr-slider-template id="oversized-slider" data-guid="oversized-slider">
+                <section id="slider_container_oversized" style="height: 1400px">
+                    <section id="oversized-slider-row" class="adr-row" style="height: 1400px">
+                        Oversized slider content
+                    </section>
+                </section>
+            </adr-slider-template>
+            <div id="oversized-layout" data-layout-type="basic">
+                <h2>Oversized table</h2>
+                <section class="adr-container">
+                    <adr-data-item id="oversized-item" data-item-type="table">
+                        <div class="table-responsive" style="height: 1400px">
+                            <table id="oversized-table"><tbody><tr><td>Value</td></tr></tbody></table>
+                        </div>
+                    </adr-data-item>
+                </section>
+            </div>
+        </main>
+    </body>
+    </html>
+    """
+    # Pin A4 so the 1,400 px fixtures remain taller than the printable page.
+    renderer = _simple_renderer(tmp_path, html, landscape=landscape, page_size=PDFPageSize.A4)
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport=renderer._shared_browser_context_kwargs()["viewport"])
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
+        page.emulate_media(media="screen")
+
+        renderer._apply_pdf_capture_styles(page)
+        renderer._prepare_content_for_pagination(page)
+        state = page.evaluate(
+            """async () => {
+                const inlineState = id => {
+                    const element = document.getElementById(id);
+                    return {
+                        breakInside: element.style.getPropertyValue('break-inside'),
+                        breakPriority: element.style.getPropertyPriority('break-inside'),
+                        height: element.style.getPropertyValue('height'),
+                        maxHeight: element.style.getPropertyValue('max-height'),
+                        maxHeightPriority: element.style.getPropertyPriority('max-height'),
+                        maxWidth: element.style.getPropertyValue('max-width'),
+                        maxWidthPriority: element.style.getPropertyPriority('max-width'),
+                        width: element.style.getPropertyValue('width'),
+                        aspectRatio: element.style.getPropertyValue('aspect-ratio'),
+                        display: element.style.getPropertyValue('display'),
+                        overflow: element.style.getPropertyValue('overflow'),
+                    };
+                };
+                const fittingPanel = document.querySelector(
+                    '#fitting-panel-layout > adr-panel'
+                );
+                const responsiveImage = document.getElementById('responsive-image');
+                const responsiveWidthCap = Number.parseFloat(
+                    responsiveImage.style.getPropertyValue('max-width')
+                );
+                const viewerWrapper = document.getElementById('viewer-wrapper');
+                const directViewer = document.getElementById('direct-viewer');
+                const fitsPanelBody = visual => {
+                    const panelBody = visual.closest('adr-panel').shadowRoot.querySelector(
+                        'section.adr-panel-body'
+                    );
+                    const panelBodyRect = panelBody.getBoundingClientRect();
+                    const panelBodyStyle = getComputedStyle(panelBody);
+                    const contentLeft = panelBodyRect.left
+                        + Number.parseFloat(panelBodyStyle.paddingLeft);
+                    const contentRight = panelBodyRect.right
+                        - Number.parseFloat(panelBodyStyle.paddingRight);
+                    const visualRect = visual.getBoundingClientRect();
+                    return visualRect.left >= contentLeft - 0.5
+                        && visualRect.right <= contentRight + 0.5;
+                };
+                const fitsContainer = visual => {
+                    const visualRect = visual.getBoundingClientRect();
+                    const containerRect = visual.closest(
+                        'section.adr-container'
+                    ).getBoundingClientRect();
+                    return visualRect.left >= containerRect.left - 0.5
+                        && visualRect.right <= containerRect.right + 0.5;
+                };
+                const viewerWrapperFitsPanelBody = fitsPanelBody(viewerWrapper);
+                const directViewerFitsContainer = fitsContainer(directViewer);
+                // Widen the ancestor after fitting to prove each visual received
+                // a stable inline cap rather than relying on transient layout width.
+                document.getElementById('report_root').style.width = '5000px';
+                await new Promise(resolve => requestAnimationFrame(
+                    () => requestAnimationFrame(resolve)
+                ));
+                return {
+                    explicitImage: inlineState('explicit-image'),
+                    explicitLayout: inlineState('explicit-layout'),
+                    sliderVideo: inlineState('slider-video'),
+                    canvas: inlineState('canvas'),
+                    plot: inlineState('plot'),
+                    viewerWrapper: inlineState('viewer-wrapper'),
+                    viewer: inlineState('viewer'),
+                    viewerItem: inlineState('viewer-item'),
+                    viewerWrapperFitsPanelBody,
+                    viewerWrapperWidth: viewerWrapper.getBoundingClientRect().width,
+                    directViewer: inlineState('direct-viewer'),
+                    directViewerItem: inlineState('direct-viewer-item'),
+                    directViewerFitsContainer,
+                    directViewerWidth: directViewer.getBoundingClientRect().width,
+                    multiImageA: inlineState('multi-image-a'),
+                    multiImageB: inlineState('multi-image-b'),
+                    responsiveImage: inlineState('responsive-image'),
+                    responsiveImageWidth: responsiveImage.getBoundingClientRect().width,
+                    responsiveWidthCap,
+                    hiddenImage: inlineState('hidden-image'),
+                    fittingPanel: inlineState('fitting-panel-layout'),
+                    oversizedPanel: inlineState('oversized-panel-layout'),
+                    oversizedSlider: inlineState('slider_container_oversized'),
+                    oversizedSliderRow: inlineState('oversized-slider-row'),
+                    oversizedLayout: inlineState('oversized-layout'),
+                    oversizedItem: inlineState('oversized-item'),
+                    oversizedTable: inlineState('oversized-table'),
+                    panelPaginationStyle: Boolean(
+                        fittingPanel.shadowRoot.querySelector(
+                            'style[data-adr-pdf-pagination]'
+                        )
+                    ),
+                    panelHeaderBreakAfter: getComputedStyle(
+                        fittingPanel.shadowRoot.querySelector('header.adr-panel-header')
+                    ).breakAfter,
+                    plotlyResizeCount: window.__plotlyResizeCount,
+                };
+            }"""
+        )
+        browser.close()
+
+    # Every visible indivisible visual receives explicit page-height and
+    # observed-width caps, regardless of its owning ADR component.
+    for visual_name in (
+        "explicitImage",
+        "sliderVideo",
+        "canvas",
+        "plot",
+        "viewerWrapper",
+        "directViewer",
+    ):
+        visual = state[visual_name]
+        assert visual["maxHeight"].endswith("px")
+        assert 0 < float(visual["maxHeight"][:-2]) <= renderer._printable_page_height_px()
+        assert visual["maxHeightPriority"] == "important"
+        assert visual["maxWidth"].endswith("px")
+        assert visual["maxWidthPriority"] == "important"
+
+    # Native replaced media preserve aspect ratio through auto dimensions;
+    # plots and scene viewers use their component-specific resize paths below.
+    for replaced_visual_name in ("explicitImage", "sliderVideo", "canvas"):
+        assert state[replaced_visual_name]["height"] == "auto"
+        assert state[replaced_visual_name]["width"] == "auto"
+
+    # Scene wrappers stay inside their owning content boxes while both current
+    # and compatibility tags retain the component dimensions they require.
+    assert state["plot"]["height"].endswith("px")
+    assert state["viewerWrapper"]["aspectRatio"]
+    assert state["viewerWrapper"]["display"] == "block"
+    assert state["viewerWrapper"]["overflow"] == "hidden"
+    assert state["viewerWrapperWidth"] <= 960
+    assert state["viewerWrapperFitsPanelBody"] is True
+    assert state["viewer"]["height"] == "100%"
+    assert state["viewer"]["width"] == "100%"
+    assert state["viewer"]["overflow"] == "hidden"
+    if state["viewerItem"]["height"]:
+        assert state["viewerItem"]["height"] == state["viewerWrapper"]["height"]
+    assert state["directViewer"]["aspectRatio"]
+    assert state["directViewer"]["display"] == "block"
+    assert state["directViewer"]["overflow"] == "hidden"
+    assert state["directViewerWidth"] <= 960
+    assert state["directViewerFitsContainer"] is True
+    if state["directViewerItem"]["height"]:
+        assert state["directViewerItem"]["height"] == state["directViewer"]["height"]
+    # Hidden visuals remain untouched, while every visible visual is capped
+    # independently, including multiple media in one item.
+    assert state["hiddenImage"]["maxWidth"] == ""
+    assert state["multiImageA"]["maxWidth"].endswith("px")
+    assert state["multiImageB"]["maxWidth"].endswith("px")
+    assert state["responsiveImage"]["maxWidth"].endswith("px")
+    assert state["responsiveImageWidth"] <= state["responsiveWidthCap"] + 0.5
+    # Fitting groups stay cohesive; structures taller than a page are released
+    # so Chromium can fragment them instead of clipping or leaving blank pages.
+    assert state["explicitLayout"]["breakInside"] == "avoid"
+    assert state["fittingPanel"]["breakInside"] == "avoid"
+    assert state["fittingPanel"]["breakPriority"] == "important"
+    assert state["oversizedPanel"]["breakInside"] == "auto"
+    assert state["oversizedSlider"]["breakInside"] == "auto"
+    assert state["oversizedSliderRow"]["breakInside"] == "auto"
+    assert state["oversizedLayout"]["breakInside"] == "auto"
+    assert state["oversizedItem"]["breakInside"] == "auto"
+    assert state["oversizedTable"]["breakInside"] == "auto"
+    assert state["panelPaginationStyle"] is True
+    assert state["panelHeaderBreakAfter"] == "avoid"
+    assert state["plotlyResizeCount"] == 1
+
+
+@pytest.mark.unit
 def test_pdf_length_to_px_supports_documented_pdf_units(tmp_path):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Units</p></body></html>")
 
+    # Strings follow CSS absolute-unit conversion; numeric values already mean
+    # CSS pixels and therefore pass through unchanged.
     assert renderer._pdf_length_to_px("25.4mm") == pytest.approx(96.0)
     assert renderer._pdf_length_to_px("1in") == pytest.approx(96.0)
     assert renderer._pdf_length_to_px("96px") == pytest.approx(96.0)
+    assert renderer._pdf_length_to_px(96.0) == pytest.approx(96.0)
 
 
 @pytest.mark.unit
@@ -1488,17 +2160,84 @@ def test_renderer_requires_html_dir_for_offline_entrypoint_resolution():
 
 
 @pytest.mark.unit
-def test_compute_pdf_width_uses_configured_margins(tmp_path, monkeypatch):
-    renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=_write_html(tmp_path, "<html><body>Margins</body></html>"),
-        margins={"top": "10mm", "right": "2in", "bottom": "10mm", "left": "1in"},
-        **_browser_metadata_kwargs(),
-    )
-    monkeypatch.setattr(renderer, "_measure_content_width_px", lambda page: 100.0)
-    monkeypatch.setattr(renderer, "_measure_layout_width_px", lambda page: 200.0)
+def test_renderer_rejects_non_enum_page_size(tmp_path):
+    # Raw strings are ambiguous with custom dimensions and bypass the supported
+    # public value set, so only enum members are accepted as fixed formats.
+    with pytest.raises(ADRException, match="page_size must be a PDFPageSize member"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>Invalid page size</body></html>"),
+            page_size="A3",
+            **_browser_metadata_kwargs(),
+        )
 
-    # The width uses the larger layout width plus the caller-provided left/right margins.
-    assert renderer._compute_pdf_width(Mock()) == "488.00px"
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "width, height",
+    [("12in", None), (None, "18in")],
+)
+def test_renderer_requires_custom_width_and_height_together(tmp_path, width, height):
+    # A complete pair keeps page orientation and printable-area calculations deterministic.
+    with pytest.raises(ADRException, match="width and height must be provided together"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>Incomplete dimensions</body></html>"),
+            page_size=None,
+            width=width,
+            height=height,
+            **_browser_metadata_kwargs(),
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "width, height, expected_error",
+    [
+        ("0px", "18in", "width must be a positive PDF length"),
+        ("12in", -1.0, "height must be a positive PDF length"),
+        ("1em", "18in", "Unsupported PDF length unit"),
+    ],
+)
+def test_renderer_rejects_invalid_custom_dimensions(tmp_path, width, height, expected_error):
+    # Validate values with the same converter used by viewport and pagination math.
+    with pytest.raises(ADRException, match=expected_error):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>Invalid dimensions</body></html>"),
+            page_size=None,
+            width=width,
+            height=height,
+            **_browser_metadata_kwargs(),
+        )
+
+
+@pytest.mark.unit
+def test_renderer_rejects_margins_that_consume_custom_page_height(tmp_path):
+    # Validation happens during construction, before Chromium or staging work starts.
+    with pytest.raises(ADRException, match="leave at least one CSS pixel"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>No printable height</body></html>"),
+            page_size=None,
+            width="8in",
+            height="1in",
+            margins={"top": "0.5in", "right": "0", "bottom": "0.5in", "left": "0"},
+            **_browser_metadata_kwargs(),
+        )
+
+
+@pytest.mark.unit
+def test_renderer_rejects_horizontal_margins_that_consume_selected_page_width(tmp_path):
+    # Pin A4 because two 105 mm margins consume its 210 mm portrait width.
+    with pytest.raises(ADRException, match="leave at least one CSS pixel"):
+        _OfflinePlaywrightPDFRenderer(
+            html_dir=_write_html(tmp_path, "<html><body>No printable width</body></html>"),
+            page_size=PDFPageSize.A4,
+            margins={
+                "top": "10mm",
+                "right": "105mm",
+                "bottom": "10mm",
+                "left": "105mm",
+            },
+            **_browser_metadata_kwargs(),
+        )
 
 
 @pytest.mark.unit

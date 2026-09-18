@@ -19,7 +19,7 @@ product's static files during setup:
 
 .. code-block:: python
 
-   from ansys.dynamicreporting.core.serverless import ADR
+   from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
 
    adr = ADR(
        ansys_installation=r"C:\Program Files\ANSYS Inc\v271",
@@ -48,6 +48,7 @@ when another API or storage layer needs the PDF as bytes:
        item_filter="A|i_tags|cont|project=wing;",
        dark_mode=True,
        landscape=True,
+       page_size=PDFPageSize.A3,
        margins={
            "top": "12mm",
            "right": "12mm",
@@ -75,11 +76,43 @@ to write the report directly:
        context={"project": "wing"},
        item_filter="A|i_tags|cont|project=wing;",
        dark_mode=True,
+       page_size=PDFPageSize.A3,
    )
 
 If ``filename`` is omitted, the export uses the report template GUID with a
 ``.pdf`` suffix. Both methods require at least one template lookup argument,
 such as ``name`` or ``guid``.
+
+Page sizes
+----------
+
+Browser-PDF export defaults to ``PDFPageSize.A3``. The following fixed formats
+are available: ``PDFPageSize.LETTER``, ``PDFPageSize.LEGAL``,
+``PDFPageSize.TABLOID``, ``PDFPageSize.LEDGER``, and ``PDFPageSize.A0`` through
+``PDFPageSize.A6``.
+
+For a custom page, set ``page_size=None`` and provide both ``width`` and
+``height``:
+
+.. code-block:: python
+
+   pdf_bytes = adr.render_report_as_browser_pdf(
+       name="Simulation Summary",
+       page_size=None,
+       width="320mm",
+       height="450mm",
+   )
+
+Each custom dimension can be a positive number, interpreted as CSS pixels, or
+a string using ``px``, ``in``, ``cm``, or ``mm``. Supplying only one dimension
+raises ``ADRException``. If ``page_size`` is ``None`` and neither dimension is
+provided, the export falls back to A3.
+
+``page_size`` takes precedence over ``width`` and ``height`` whenever it is not
+``None``. Set it to ``None`` to activate custom dimensions. Setting
+``landscape=True`` swaps the selected width and height for either fixed or
+custom sizing. Content wider than the printable area is clipped and never
+expands the page.
 
 Diagnosing failures
 --------------------
@@ -107,10 +140,14 @@ Options
 * ``context`` supplies template rendering values.
 * ``item_filter`` limits report items with an ADR query expression.
 * ``dark_mode`` selects the report's dark presentation.
-* ``landscape`` defaults to portrait output.
+* ``landscape`` defaults to portrait output. When enabled, it swaps the
+  selected page width and height.
 * ``margins`` must contain exactly ``top``, ``right``, ``bottom``, and
   ``left``. Values can use pixels, inches, centimeters, or millimeters. A
   unitless value is treated as pixels. The default is 10 mm on every side.
+* ``page_size`` selects a fixed ``PDFPageSize`` and defaults to A3.
+* ``width`` and ``height`` define a custom page when ``page_size=None``. Both
+  dimensions are required.
 * ``render_timeout`` is one shared browser-side budget for browser launch,
   navigation, readiness checks, and print preparation. It defaults to 30
   seconds. Server-side template rendering and offline asset staging occur
@@ -121,7 +158,8 @@ Offline rendering behavior
 
 The renderer waits for ADR web components, fonts, MathJax, Plotly, images, and
 videos. Print styling keeps headings with the following content and preserves
-the report canvas used by responsive charts.
+the report canvas used by responsive charts. Browser layout and pagination use
+the selected printable page dimensions.
 
 The staged report blocks external network requests. All content needed by the
 PDF must therefore be present in the offline bundle. Custom asynchronous

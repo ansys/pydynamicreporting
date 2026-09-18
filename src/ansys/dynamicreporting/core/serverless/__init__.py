@@ -22,6 +22,8 @@
 
 # serverless
 
+# Keep the serverless import surface aligned with the top-level client API.
+from ..common_utils import PDFPageSize
 from .adr import ADR
 
 # Item-related imports
@@ -61,6 +63,7 @@ from .template import (
 
 __all__ = [
     "ADR",
+    "PDFPageSize",
     "Session",
     "Dataset",
     "Item",

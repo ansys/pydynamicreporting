@@ -36,7 +36,7 @@ from ansys.dynamicreporting.core.exceptions import (
     ImproperlyConfiguredError,
     InvalidPath,
 )
-from ansys.dynamicreporting.core.serverless import ADR
+from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
 
 
 def _enve_modules() -> dict[str, object]:
@@ -1831,6 +1831,7 @@ def test_render_report_as_browser_pdf_template_render_failure_chains_cause(
 def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     adr_serverless, tmp_path, monkeypatch
 ):
+    """Keep scratch placement and default page geometry on the file-export path."""
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
@@ -1857,16 +1858,22 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         *,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
         logger=None,
     ):
-        # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
-        # both entry points avoid the slow global temp directory without changing the public API.
+        # Capture the renderer boundary: this test covers scratch placement and
+        # verifies that omitted sizing still reaches the renderer as fixed A3.
         captured["html_dir"] = html_dir
         captured["landscape"] = landscape
         captured["margins"] = margins
+        captured["page_size"] = page_size
+        captured["width"] = width
+        captured["height"] = height
         captured["render_timeout"] = render_timeout
         captured["ansys_installation"] = ansys_installation
         captured["ansys_version"] = ansys_version
@@ -1891,6 +1898,9 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     assert output_file.read_bytes() == b"%PDF-mock"
     assert Path(captured["html_dir"]).parent == db_directory
     assert captured["margins"] == margins
+    assert captured["page_size"] is PDFPageSize.A3
+    assert captured["width"] is None
+    assert captured["height"] is None
     assert captured["render_timeout"] == 30.0
     assert captured["ansys_installation"] == adr_serverless._ansys_installation
     assert captured["ansys_version"] == adr_serverless._ansys_version
@@ -1951,6 +1961,9 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
         *,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -2002,6 +2015,9 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
         *,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -2036,6 +2052,7 @@ def test_export_report_as_browser_pdf_no_kwarg(adr_serverless, tmp_path):
 
 @pytest.mark.ado_test
 def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypatch):
+    """Forward report, exporter, page, and installation options through one pipeline."""
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
@@ -2068,6 +2085,9 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         *,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         render_timeout=30.0,
         ansys_installation=None,
         ansys_version=None,
@@ -2076,6 +2096,9 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         captured["html_dir"] = html_dir
         captured["landscape"] = landscape
         captured["margins"] = margins
+        captured["page_size"] = page_size
+        captured["width"] = width
+        captured["height"] = height
         captured["render_timeout"] = render_timeout
         captured["ansys_installation"] = ansys_installation
         captured["ansys_version"] = ansys_version
@@ -2095,9 +2118,14 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         dark_mode=True,
         landscape=True,
         margins=margins,
+        page_size=None,
+        width="12in",
+        height="18in",
         render_timeout=12.5,
     )
 
+    # The staged HTML settings and renderer settings are separate boundaries;
+    # pin both so a future facade change cannot drop one side of the request.
     assert pdf_bytes == b"%PDF-mock"
     exporter_kwargs = captured["exporter_kwargs"]
     assert isinstance(exporter_kwargs, dict)
@@ -2108,6 +2136,9 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert isinstance(captured["html_dir"], Path)
     assert captured["landscape"] is True
     assert captured["margins"] == margins
+    assert captured["page_size"] is None
+    assert captured["width"] == "12in"
+    assert captured["height"] == "18in"
     assert captured["render_timeout"] == 12.5
     assert captured["ansys_installation"] == adr_serverless._ansys_installation
     assert captured["ansys_version"] == adr_serverless._ansys_version

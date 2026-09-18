@@ -34,6 +34,7 @@ Install resolution uses four distinct path and version concepts:
 """
 
 from dataclasses import dataclass
+from enum import Enum
 import logging
 import os
 from pathlib import Path
@@ -48,6 +49,33 @@ from .exceptions import InvalidAnsysPath
 from .utils.exceptions import TemplateEditorJSONLoadingError
 
 logger = logging.getLogger(__name__)
+
+
+# Keep the page-size enum outside the renderer module: both service and
+# serverless entry points can share one public type without importing Playwright.
+class PDFPageSize(str, Enum):
+    """Named page formats passed to Chromium by browser-PDF export."""
+
+    LETTER = "Letter"
+    LEGAL = "Legal"
+    TABLOID = "Tabloid"
+    LEDGER = "Ledger"
+    A0 = "A0"
+    A1 = "A1"
+    A2 = "A2"
+    A3 = "A3"
+    A4 = "A4"
+    A5 = "A5"
+    A6 = "A6"
+
+    def __str__(self) -> str:
+        """Return the page-size value accepted by the browser renderer.
+
+        Examples
+        --------
+        ``str(PDFPageSize.A4)`` returns ``"A4"``.
+        """
+        return self.value
 
 
 def get_install_version(install_dir: Path) -> int | None:

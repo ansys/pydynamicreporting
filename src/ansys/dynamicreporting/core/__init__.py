@@ -33,6 +33,10 @@ from .compatibility import (
     product_release_to_short_label,
 )
 
+# Expose page formats beside Report and Service so service-mode callers do not
+# need to import an internal renderer or the serverless package.
+from .common_utils import PDFPageSize
+
 VERSION = __version__
 # ``DEFAULT_ANSYS_VERSION`` remains the compatibility shim name used across the
 # codebase, even though the source of truth now lives in ``compatibility.py``.
