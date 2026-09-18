@@ -742,22 +742,35 @@ class _BasePlaywrightPDFRenderer(ABC):
         # ``:is(ansys-adr-viewer, ansys-nexus-viewer)`` before injecting the CSS.
         page.add_style_tag(
             content="""
+                /* The browser window was already sized to the page's printable width, so
+                   anything wider than that is genuine overflow. Clip it off here; if we let it
+                   stay, Chromium reacts by shrinking the whole report to fit, which ruins the
+                   fixed page size. Clipping only affects the horizontal axis, so top-to-bottom
+                   pagination is untouched. */
                 html,
                 body {
-                    /* The viewport matches the printable width. Clip wider descendants here so
-                       Chromium does not shrink the entire document during PDF pagination. */
                     overflow-x: clip !important;
                 }
 
+                /* Browsers give <body> a small default margin. That margin stacks on top of the
+                   PDF page margins we already ask Playwright for and pushes content inward.
+                   Zero it so the report starts flush against the printable area. */
                 body {
                     margin: 0 !important;
                     padding: 0 !important;
                 }
 
+                /* The report HTML sometimes begins with a stray line break before the first
+                   section. That blank line pushed content down far enough to leave an empty
+                   first page, most visibly in landscape (a shorter page). Hide just that first
+                   <br> of the first layout so the report starts at the top of page one. */
                 #report_root > div[data-layout-type]:first-child > br:first-child {
                     display: none !important;
                 }
 
+                /* Force plots, tables, viewers, and their containers to lay out as full-width
+                   blocks. Some render inline (side by side) on screen, which makes their size
+                   hard to measure and paginate; a block each takes its own line and full width. */
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
@@ -769,6 +782,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                     display: block !important;
                 }
 
+                /* Tell the PDF engine: never split any of these across a page break. Each plot,
+                   table, slider row, image, video, canvas, or viewer should stay whole on one
+                   page instead of having its top half on one page and bottom half on the next. */
                 adr-data-item,
                 .nexus-plot,
                 .nexus-plot > .plot-container,
@@ -790,6 +806,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page-break-inside: avoid !important;
                 }
 
+                /* On screen these can be scroll boxes with a capped height and hidden overflow.
+                   A PDF cannot scroll, so reveal the full content: drop the height cap and let
+                   the content flow instead of being trapped inside a fixed-height scroll box. */
                 adr-data-item,
                 .nexus-plot,
                 .plot-container,
@@ -800,12 +819,17 @@ class _BasePlaywrightPDFRenderer(ABC):
                     max-height: none !important;
                 }
 
+                /* The 3D viewers are the exception: the pagination pass resizes them to fit a
+                   page, so here we clip anything spilling past that resized box (rather than
+                   revealing it) while still removing any fixed height cap. */
                 .avz-viewer,
                 __ANSYS_VIEWER__ {
                     overflow: hidden !important;
                     max-height: none !important;
                 }
 
+                /* Hide UI that belongs on screen but not in a static document: the loading
+                   spinner and Plotly's floating toolbar (zoom/pan buttons). */
                 .adr-spinner-loader-container,
                 .modebar {
                     display: none !important;
@@ -814,13 +838,19 @@ class _BasePlaywrightPDFRenderer(ABC):
                 #report_root {
                     /* Wide browser-PDF pages can make 1px ADR borders look faint when PDF
                        viewers scale the page down. Override ADR's border design tokens for
-                       capture instead of selecting individual report items or changing layout. */
+                       capture instead of selecting individual report items or changing layout.
+                       The two color-adjust lines tell Chromium to print backgrounds and colors
+                       exactly as shown rather than "optimizing" them away for ink saving. */
                     --adr-border-color: #adb5bd !important;
                     --adr-border-color-translucent: rgba(0, 0, 0, 0.28) !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                 }
 
+                /* Keep a section heading glued to the content right after it. ":has(+ ...)"
+                   means "a heading immediately followed by a report section". "break-after:
+                   avoid" stops a page break landing between them, so a title is never stranded
+                   alone at the bottom of a page with its table or plot on the next. */
                 h1:has(+ section.adr-container),
                 h2:has(+ section.adr-container),
                 h3:has(+ section.adr-container),
@@ -832,6 +862,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page-break-after: avoid !important;
                 }
 
+                /* ADR emits an invisible ("collapsed") table header row. Chromium still reserves
+                   blank space for it when laying out the PDF, painting an empty band at the top
+                   of the table. Fully remove it so that blank band disappears. */
                 table.table-fit-head > thead[style*="visibility: collapse"] {
                     display: none !important;
                     visibility: hidden !important;
@@ -840,6 +873,8 @@ class _BasePlaywrightPDFRenderer(ABC):
             """.replace("__ANSYS_VIEWER__", _SCENE_VIEWER_SELECTOR),
         )
 
+        # Panel-type layouts default to "may split across pages". The pagination pass later
+        # tightens the ones that actually fit onto a single page back to "keep together".
         page.add_style_tag(
             content="""
                 div[data-layout-type="panel"] {
@@ -848,14 +883,22 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
             """,
         )
+        # An <adr-panel> renders its content inside a shadow DOM, a private subtree that the
+        # page-level stylesheet above cannot reach. So run a script that injects a small
+        # stylesheet directly into each panel's shadow root.
         page.evaluate(
             """() => {
+                // Visit every panel on the page.
                 for (const panel of document.querySelectorAll('adr-panel')) {
                     const shadowRoot = panel.shadowRoot;
+                    // Skip panels with no shadow root, and skip any we already stamped, so
+                    // running this more than once is harmless (no duplicate style tags).
                     if (!shadowRoot || shadowRoot.querySelector('style[data-adr-pdf-pagination]')) {
                         continue;
                     }
 
+                    // Build a <style> element, tag it with our marker attribute (the skip check
+                    // above looks for this), and fill it with the panel's print rules.
                     const style = document.createElement('style');
                     style.dataset.adrPdfPagination = '';
                     style.textContent = `
@@ -863,13 +906,18 @@ class _BasePlaywrightPDFRenderer(ABC):
                             display: block !important;
                         }
 
+                        /* Keep the panel's header from being the last thing on a page; it should
+                           stay with the body that follows it. */
                         header.adr-panel-header {
                             break-after: avoid !important;
                             page-break-after: avoid !important;
                         }
                     `;
+                    // Insert the stylesheet into the panel's private subtree.
                     shadowRoot.append(style);
 
+                    // Also keep the panel's first content block attached to the header, so the
+                    // header and the start of its content never separate across a page break.
                     const firstPanelContent = panel.firstElementChild;
                     if (firstPanelContent) {
                         firstPanelContent.style.setProperty(
@@ -903,17 +951,23 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Resize indivisible visual media to fit within one printable page."""
         return page.evaluate(
             """async (options) => {
+                // This function runs inside the page. Its job: find each "indivisible" visual
+                // (a plot, image, video, canvas, or 3D viewer that must not be split across
+                // pages) and shrink any that are taller than a single printable page so it fits
+                // on one page. "options" carries the numbers and selectors computed in Python.
                 const {
-                    printableHeightPx,
-                    fitGuardPx,
-                    headingSelector,
-                    visualSelector,
-                    sceneViewerSelector
+                    printableHeightPx,   // usable page height (page minus top/bottom margins)
+                    fitGuardPx,          // small safety margin so rounding never overflows a page
+                    headingSelector,     // matches a section's heading (h1..h6)
+                    visualSelector,      // matches the visuals we may need to resize
+                    sceneViewerSelector  // matches the 3D viewer tags
                 } = options;
-                const preparedVisuals = new Set();
-                const resizedVisuals = [];
-                const resizePromises = [];
+                const preparedVisuals = new Set();   // visuals already handled (avoid double work)
+                const resizedVisuals = [];           // record of what we shrank, for logging
+                const resizePromises = [];           // Plotly redraws to wait for before finishing
 
+                // True only when an element actually takes up space and is not hidden, so we
+                // never try to resize something the reader cannot see.
                 const isVisible = element => {
                     const style = window.getComputedStyle(element);
                     return element.getClientRects().length > 0
@@ -921,6 +975,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                         && style.visibility !== 'hidden';
                 };
 
+                // Collect the visible visuals under "root", de-duplicated. When a match is only
+                // an inner piece of a plot or viewer, climb to its stable ADR container instead
+                // of resizing the internal render node.
                 const findRenderedVisuals = root => {
                     const visuals = [];
                     const seen = new Set();
@@ -939,11 +996,15 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return visuals;
                 };
 
+                // Build a short human-readable name like "img#plot3" for log messages.
                 const visualLabel = visual => {
                     const id = visual.id ? `#${visual.id}` : '';
                     return `${visual.tagName.toLowerCase()}${id}`;
                 };
 
+                // A 3D viewer may sit inside a wrapper element that controls its size. Walk up
+                // from the viewer to the outermost wrapper still inside its data-item, and treat
+                // that wrapper as the thing to resize (works with or without a wrapper).
                 const sceneLayoutRoot = viewer => {
                     const item = viewer.closest('adr-data-item');
                     let layoutRoot = viewer;
@@ -956,11 +1017,17 @@ class _BasePlaywrightPDFRenderer(ABC):
                     return layoutRoot;
                 };
 
+                // Make a 3D viewer behave like a responsive image before we size it: give it a
+                // fixed width-to-height ratio, let it fill the available width, and cap it so it
+                // never grows past its current rendered width.
                 const prepareSceneViewer = (viewer, layoutRoot, layoutRect) => {
                     if (layoutRect.width < 1) {
                         return;
                     }
 
+                    // Pick the shape (aspect ratio) to lock in: the value the product set on the
+                    // viewer if present, otherwise the ratio it currently renders at, otherwise
+                    // a 16:9 fallback.
                     const configuredAspectRatio = Number.parseFloat(
                         viewer.aspect_ratio ?? viewer.getAttribute('aspect_ratio')
                     );
@@ -975,6 +1042,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                         : Number.isFinite(renderedAspectRatio) && renderedAspectRatio > 0
                             ? renderedAspectRatio
                             : 16 / 9;
+                    // Apply that ratio and make the wrapper a full-width block that keeps its
+                    // shape; the browser then derives its height from the width automatically.
                     layoutRoot.style.setProperty(
                         'aspect-ratio', `${aspectRatio}`, 'important'
                     );
@@ -998,11 +1067,15 @@ class _BasePlaywrightPDFRenderer(ABC):
                     viewer.style.setProperty('overflow', 'hidden', 'important');
                 };
 
+                // Core routine: shrink one visual so it, plus the fixed things sharing its page
+                // (such as a heading), fits within one printable page. "groupStart"/"groupEnd"
+                // mark the top and bottom of that shared group; "title" is only for logging.
                 const fitVisual = (visual, groupStart, groupEnd, title) => {
                     if (preparedVisuals.has(visual)) {
-                        return true;
+                        return true;   // already handled by an earlier pass
                     }
                     const isSceneViewer = visual.matches(sceneViewerSelector);
+                    // For a 3D viewer we resize its wrapper; for anything else, the visual itself.
                     const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
                     const initialVisualRect = fittedVisual.getBoundingClientRect();
                     if (isSceneViewer) {
@@ -1032,12 +1105,17 @@ class _BasePlaywrightPDFRenderer(ABC):
                             && computedMaxHeight > 0
                         ? computedMaxHeight
                         : Number.POSITIVE_INFINITY;
+                    // Final height = the smallest of: its current height, the height that fits
+                    // the page, and any max-height already set on it. Width starts at its current
+                    // width. "wasResized" is true only if we actually made it shorter.
                     let constrainedHeight = Math.max(1, Math.floor(Math.min(
                         visualRect.height, fittedHeight, existingMaxHeight
                     )));
                     let constrainedWidth = Math.max(1, Math.ceil(visualRect.width));
                     const wasResized = visualRect.height > constrainedHeight + 0.5;
 
+                    // For a shrunk 3D viewer, also narrow the width to keep its shape so it does
+                    // not look stretched after the height is reduced.
                     if (wasResized && isSceneViewer) {
                         const aspectRatio = visualRect.width / visualRect.height;
                         constrainedWidth = Math.max(1, Math.floor(Math.min(
@@ -1048,6 +1126,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                         );
                     }
 
+                    // Apply the computed caps. Then, only if we shrank it, pin the concrete size
+                    // in the way that suits each visual type (viewer, media element, or other).
                     fittedVisual.style.setProperty(
                         'max-height', `${constrainedHeight}px`, 'important'
                     );
@@ -1062,6 +1142,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                             'width', `${constrainedWidth}px`, 'important'
                         );
                     } else if (wasResized && visual.matches('img, video, canvas')) {
+                        // Let images/videos/canvases scale within the caps while keeping their
+                        // aspect ratio ("object-fit: contain" prevents stretching).
                         visual.style.setProperty('height', 'auto', 'important');
                         visual.style.setProperty('width', 'auto', 'important');
                         visual.style.setProperty('object-fit', 'contain', 'important');
@@ -1071,6 +1153,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                         );
                     }
 
+                    // A shrunk 3D viewer also clips its own overflow, and its surrounding
+                    // data-item is pinned to the same height so the box leaves no gap.
                     if (wasResized && isSceneViewer) {
                         const item = visual.closest('adr-data-item');
                         fittedVisual.style.setProperty('overflow', 'hidden', 'important');
@@ -1085,11 +1169,14 @@ class _BasePlaywrightPDFRenderer(ABC):
                         }
                     }
 
+                    // A Plotly chart keeps its old pixel size unless told to redraw; queue that
+                    // redraw at the new box size to wait for before the function returns.
                     if (wasResized && visual.matches('.nexus-plot')
                             && window.Plotly?.Plots?.resize) {
                         resizePromises.push(Promise.resolve(window.Plotly.Plots.resize(visual)));
                     }
-                    preparedVisuals.add(visual);
+                    preparedVisuals.add(visual);   // mark done so later passes skip it
+                    // Record what we shrank, for an info log line back in Python.
                     if (wasResized) {
                         resizedVisuals.push({
                             title,
@@ -1135,6 +1222,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                         const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
                         const ownerRect = owner.getBoundingClientRect();
                         const includesHeading = owner === firstOwner;
+                        // "groupStart" is the top of everything sharing this visual's page. The
+                        // first visual also carries the heading (and the panel header, if any),
+                        // so its group starts higher; later visuals start at their own top.
                         const groupStart = includesHeading && panelHeader
                                 && firstVisiblePanelChild === layout && panelLayout
                             ? panelLayout.getBoundingClientRect().top
@@ -1194,11 +1284,16 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
                 }
 
+                // Wait for any Plotly charts we asked to redraw at their new size.
                 await Promise.all(resizePromises);
+                // Wait two animation frames so the browser finishes applying every style change
+                // above before we hand back control (measurements must be settled first).
                 await new Promise(resolve => requestAnimationFrame(
                     () => requestAnimationFrame(resolve)
                 ));
 
+                // Report back to Python: how many visuals we touched, and details of the ones we
+                // actually shrank.
                 return {
                     cappedVisualCount: preparedVisuals.size,
                     resizedVisuals
@@ -1217,6 +1312,10 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Keep basic layouts and panels together when they fit on one page."""
         return page.evaluate(
             """(options) => {
+                // This runs in the page. For each report section and panel, decide whether it
+                // fits on one page. If it fits, ask the PDF engine to keep it whole ("avoid" a
+                // break); if not, allow it to split ("auto"), because forcing a too-tall block
+                // onto one page would clip it.
                 const { printableHeightPx, fitGuardPx, headingSelector } = options;
                 const isVisible = element => {
                     const style = window.getComputedStyle(element);
@@ -1224,6 +1323,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                         && style.display !== 'none'
                         && style.visibility !== 'hidden';
                 };
+                // "Fits" means its height is within the usable page height, minus a small guard
+                // so a block sitting exactly at the edge is not forced to stay whole.
                 const fitsOnPage = element =>
                     element.getBoundingClientRect().height <= printableHeightPx - fitGuardPx;
 
@@ -1238,6 +1339,8 @@ class _BasePlaywrightPDFRenderer(ABC):
                     if (!container?.matches('section.adr-container') || !isVisible(layout)) {
                         continue;
                     }
+                    // "avoid" keeps the section whole on one page; "auto" lets it split. Both the
+                    // modern and legacy property names are set for wider browser support.
                     const fits = fitsOnPage(layout);
                     layout.style.setProperty(
                         'break-inside', fits ? 'avoid' : 'auto', 'important'
@@ -1246,6 +1349,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                         'page-break-inside', fits ? 'avoid' : 'auto', 'important'
                     );
                     if (fits) {
+                        // Remember kept sections by title, for a debug log line in Python.
                         keptLayouts.push(heading.textContent.trim() || 'Untitled layout');
                     }
                 }
@@ -1289,7 +1393,10 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Allow over-height sliders, items, and tables to split between pages."""
         return page.evaluate(
             """(printableHeightPx) => {
-
+                // This runs in the page. The capture CSS earlier asked the PDF engine to keep
+                // sliders and data-items whole. But some are simply taller than a page and must
+                // be allowed to split, or they would overflow. Here we find those over-height
+                // structures and flip them back to "may split across pages".
                 const breakableSliders = [];
                 // Capture CSS initially protects sliders as one unit. Release
                 // only over-height containers and their direct row for paging.
@@ -1297,6 +1404,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                     const container = [...slider.children].find(
                         child => child.matches('section[id^="slider_container_"]')
                     );
+                    // Only touch sliders taller than one page; shorter ones stay whole.
                     if (!container || container.getBoundingClientRect().height <= printableHeightPx) {
                         continue;
                     }
@@ -1315,6 +1423,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 // release the item, owning layout, and table wrappers together.
                 for (const item of document.querySelectorAll('adr-data-item')) {
                     const itemRect = item.getBoundingClientRect();
+                    // Only over-height items need to become splittable; skip the rest.
                     if (itemRect.height <= printableHeightPx) {
                         continue;
                     }
