@@ -71,7 +71,7 @@ def _simple_renderer(
     *,
     landscape: bool = False,
     margins: dict[str, str] | None = None,
-    page_size: PDFPageSize | None = PDFPageSize.A4,
+    page_size: PDFPageSize | None = PDFPageSize.A3,
     width: str | float | None = None,
     height: str | float | None = None,
     render_timeout: float | None = None,
@@ -637,14 +637,14 @@ def test_pdf_page_size_is_exported_from_common_utils():
 # Fixed formats and custom dimensions are mutually exclusive Playwright option
 # shapes. These tests pin the public precedence rules as well as their values.
 @pytest.mark.unit
-def test_playwright_pdf_uses_a4_format_when_content_fits(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_a3_format_when_content_fits(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Fitting content</p></body></html>")
     page, _, _ = _stub_playwright_render(monkeypatch, renderer)
 
     renderer.render_pdf()
 
     pdf_options = page.pdf.call_args.kwargs
-    assert pdf_options["format"] == PDFPageSize.A4.value
+    assert pdf_options["format"] == PDFPageSize.A3.value
     assert pdf_options["landscape"] is False
     assert "width" not in pdf_options
     assert "height" not in pdf_options
@@ -744,9 +744,9 @@ def test_playwright_pdf_fixed_format_overrides_custom_dimensions(tmp_path, monke
 
 
 @pytest.mark.unit
-def test_playwright_pdf_uses_a4_when_all_sizing_is_omitted(tmp_path, monkeypatch):
+def test_playwright_pdf_uses_a3_when_all_sizing_is_omitted(tmp_path, monkeypatch):
     # ``page_size=None`` is also the custom-size switch. With no complete custom
-    # pair, it falls back to A4 for compatibility instead of producing no size.
+    # pair, it falls back to A3 instead of producing no size.
     renderer = _simple_renderer(
         tmp_path,
         "<html><body><p>Default dimensions</p></body></html>",
@@ -756,7 +756,7 @@ def test_playwright_pdf_uses_a4_when_all_sizing_is_omitted(tmp_path, monkeypatch
 
     renderer.render_pdf()
 
-    assert page.pdf.call_args.kwargs["format"] == PDFPageSize.A4.value
+    assert page.pdf.call_args.kwargs["format"] == PDFPageSize.A3.value
 
 
 @pytest.mark.unit

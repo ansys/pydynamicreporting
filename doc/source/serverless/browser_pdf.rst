@@ -86,7 +86,7 @@ such as ``name`` or ``guid``.
 Page sizes
 ----------
 
-Browser-PDF export defaults to ``PDFPageSize.A4``. The following fixed formats
+Browser-PDF export defaults to ``PDFPageSize.A3``. The following fixed formats
 are available: ``PDFPageSize.LETTER``, ``PDFPageSize.LEGAL``,
 ``PDFPageSize.TABLOID``, ``PDFPageSize.LEDGER``, and ``PDFPageSize.A0`` through
 ``PDFPageSize.A6``.
@@ -106,7 +106,7 @@ For a custom page, set ``page_size=None`` and provide both ``width`` and
 Each custom dimension can be a positive number, interpreted as CSS pixels, or
 a string using ``px``, ``in``, ``cm``, or ``mm``. Supplying only one dimension
 raises ``ADRException``. If ``page_size`` is ``None`` and neither dimension is
-provided, the export falls back to A4.
+provided, the export falls back to A3.
 
 ``page_size`` takes precedence over ``width`` and ``height`` whenever it is not
 ``None``. Set it to ``None`` to activate custom dimensions. Setting
@@ -145,7 +145,7 @@ Options
 * ``margins`` must contain exactly ``top``, ``right``, ``bottom``, and
   ``left``. Values can use pixels, inches, centimeters, or millimeters. A
   unitless value is treated as pixels. The default is 10 mm on every side.
-* ``page_size`` selects a fixed ``PDFPageSize`` and defaults to A4.
+* ``page_size`` selects a fixed ``PDFPageSize`` and defaults to A3.
 * ``width`` and ``height`` define a custom page when ``page_size=None``. Both
   dimensions are required.
 * ``render_timeout`` is one shared browser-side budget for browser launch,

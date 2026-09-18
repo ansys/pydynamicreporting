@@ -1159,7 +1159,7 @@ class Server:
         item_filter=None,
         landscape=False,
         margins=None,
-        page_size=PDFPageSize.A4,
+        page_size=PDFPageSize.A3,
         width=None,
         height=None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
@@ -1197,7 +1197,7 @@ class Server:
             ``in``, ``cm``, or ``mm`` units (for example ``"10mm"`` or ``"0.5in"``).
             Keys can include ``top``, ``right``, ``bottom``, and ``left``.
         page_size : PDFPageSize or None, optional
-            Fixed PDF page format. Default is ``PDFPageSize.A4``. A fixed format takes
+            Fixed PDF page format. Default is ``PDFPageSize.A3``. A fixed format takes
             precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
         width : str or float, optional
             Custom page width used with ``height`` when ``page_size`` is ``None``.

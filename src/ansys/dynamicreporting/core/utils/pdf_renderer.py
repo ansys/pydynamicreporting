@@ -288,7 +288,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
-    page_size : PDFPageSize or None, default: PDFPageSize.A4
+    page_size : PDFPageSize or None, default: PDFPageSize.A3
         Fixed page format used for browser layout, pagination, and PDF generation.
         A fixed format takes precedence over ``width`` and ``height``. Set to ``None``
         to use custom dimensions.
@@ -336,7 +336,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         "cm": 96.0 / 2.54,
         "mm": 96.0 / 25.4,
     }
-    _DEFAULT_PAGE_SIZE: PDFPageSize = PDFPageSize.A4
+    _DEFAULT_PAGE_SIZE: PDFPageSize = PDFPageSize.A3
     # Mirror Playwright's fixed-format dimensions for internal viewport and pagination calculations.
     _PAGE_DIMENSIONS: dict[PDFPageSize, tuple[str, str]] = {
         PDFPageSize.LETTER: ("8.5in", "11in"),
@@ -1959,7 +1959,7 @@ class _OfflinePlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
-    page_size : PDFPageSize or None, default: PDFPageSize.A4
+    page_size : PDFPageSize or None, default: PDFPageSize.A3
         Fixed page format. Set to ``None`` to use ``width`` and ``height``.
     width : str or float, optional
         Custom page width used when ``page_size`` is ``None``.
@@ -2100,7 +2100,7 @@ class _ReportURLPlaywrightPDFRenderer(_BasePlaywrightPDFRenderer):
         Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
         strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units.
         If omitted, 10 mm margins are used on every side.
-    page_size : PDFPageSize or None, default: PDFPageSize.A4
+    page_size : PDFPageSize or None, default: PDFPageSize.A3
         Fixed page format. Set to ``None`` to use ``width`` and ``height``.
     width : str or float, optional
         Custom page width used when ``page_size`` is ``None``.

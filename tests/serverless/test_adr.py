@@ -1858,7 +1858,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         *,
         landscape=False,
         margins=None,
-        page_size=PDFPageSize.A4,
+        page_size=PDFPageSize.A3,
         width=None,
         height=None,
         render_timeout=30.0,
@@ -1867,7 +1867,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
         logger=None,
     ):
         # Capture the renderer boundary: this test covers scratch placement and
-        # verifies that omitted sizing still reaches the renderer as fixed A4.
+        # verifies that omitted sizing still reaches the renderer as fixed A3.
         captured["html_dir"] = html_dir
         captured["landscape"] = landscape
         captured["margins"] = margins
@@ -1898,7 +1898,7 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     assert output_file.read_bytes() == b"%PDF-mock"
     assert Path(captured["html_dir"]).parent == db_directory
     assert captured["margins"] == margins
-    assert captured["page_size"] is PDFPageSize.A4
+    assert captured["page_size"] is PDFPageSize.A3
     assert captured["width"] is None
     assert captured["height"] is None
     assert captured["render_timeout"] == 30.0
@@ -1961,7 +1961,7 @@ def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
         *,
         landscape=False,
         margins=None,
-        page_size=PDFPageSize.A4,
+        page_size=PDFPageSize.A3,
         width=None,
         height=None,
         render_timeout=30.0,
@@ -2015,7 +2015,7 @@ def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
         *,
         landscape=False,
         margins=None,
-        page_size=PDFPageSize.A4,
+        page_size=PDFPageSize.A3,
         width=None,
         height=None,
         render_timeout=30.0,
@@ -2085,7 +2085,7 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         *,
         landscape=False,
         margins=None,
-        page_size=PDFPageSize.A4,
+        page_size=PDFPageSize.A3,
         width=None,
         height=None,
         render_timeout=30.0,

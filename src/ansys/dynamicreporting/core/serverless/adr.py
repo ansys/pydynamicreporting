@@ -1568,7 +1568,7 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize | None = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
         width: str | float | None = None,
         height: str | float | None = None,
         render_timeout: float = 30.0,
@@ -1666,7 +1666,7 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize | None = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
         width: str | float | None = None,
         height: str | float | None = None,
         render_timeout: float = 30.0,
@@ -1694,7 +1694,7 @@ class ADR:
             (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
             every side.
         page_size : PDFPageSize or None, optional
-            Fixed PDF page format. Default ``PDFPageSize.A4``. A fixed format takes
+            Fixed PDF page format. Default ``PDFPageSize.A3``. A fixed format takes
             precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
         width : str or float, optional
             Custom page width used with ``height`` when ``page_size`` is ``None``.
@@ -1952,7 +1952,7 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize | None = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
         width: str | float | None = None,
         height: str | float | None = None,
         render_timeout: float = 30.0,
@@ -1982,7 +1982,7 @@ class ADR:
             (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
             every side.
         page_size : PDFPageSize or None, optional
-            Fixed PDF page format. Default ``PDFPageSize.A4``. A fixed format takes
+            Fixed PDF page format. Default ``PDFPageSize.A3``. A fixed format takes
             precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
         width : str or float, optional
             Custom page width used with ``height`` when ``page_size`` is ``None``.

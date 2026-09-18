@@ -795,7 +795,7 @@ class Report:
         item_filter: str | None = None,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
-        page_size: PDFPageSize | None = PDFPageSize.A4,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
         width: str | float | None = None,
         height: str | float | None = None,
         # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
@@ -831,7 +831,7 @@ class Report:
             (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer
             defaults.
         page_size : PDFPageSize or None, optional
-            Fixed PDF page format. Default: ``PDFPageSize.A4``. A fixed format takes
+            Fixed PDF page format. Default: ``PDFPageSize.A3``. A fixed format takes
             precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
         width : str or float, optional
             Custom page width used with ``height`` when ``page_size`` is ``None``.
