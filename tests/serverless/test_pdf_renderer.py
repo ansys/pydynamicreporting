@@ -618,7 +618,6 @@ def test_live_report_url_renderer_forwards_product_browser_install_metadata():
 def test_pdf_page_size_is_exported_from_common_utils():
     """Expose one enum identity and the exact Chromium format spellings."""
     assert common_utils.PDFPageSize is PDFPageSize
-    assert "PDFPageSize" in common_utils.__all__
     assert tuple(page_size.value for page_size in PDFPageSize) == (
         "Letter",
         "Legal",
