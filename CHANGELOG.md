@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Jupyter and other IPython frontends, plus `get_iframe()` for retrieving the same
   escaped, sandboxed iframe as a string-like object. IPython remains optional, and
   the existing `render()` methods continue to return raw HTML.
-- Connected and serverless browser-PDF exports now accept a public `PDFPageSize`
+- Service-mode and serverless browser-PDF exports now accept a public `PDFPageSize`
   with Letter, Legal, Tabloid, Ledger, and A0 through A6 formats. A3 is the default;
   setting `page_size=None` enables paired custom `width` and `height` values in
   pixels, inches, centimeters, or millimeters.
@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Python 3.14 support on Windows and Linux for connected service mode and for
+- Python 3.14 support on Windows and Linux for service mode and for
   Serverless ADR with ADR 27.1. Serverless ADR with ADR 26.1 continues to require
   Python 3.12.
 - Support for setting up and using Serverless ADR in Jupyter notebooks. Wait for
@@ -51,11 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Browser-fidelity PDF export for both serverless and connected services. Serverless ADR now
+- Browser-fidelity PDF export for both serverless and service-mode workflows. Serverless ADR now
   provides `render_report_as_browser_pdf()` (bytes) and `export_report_as_browser_pdf()`
   (file output), while service-mode reports provide `Report.export_browser_pdf()`. Serverless
-  exports stage an offline bundle; connected exports render an authenticated live report page
-  without changing the shared REST session. Offline exports block external requests; connected live
+  exports stage an offline bundle; service-mode exports render an authenticated live report page
+  without changing the shared REST session. Offline exports block external requests; service-mode
   exports retain the report page's normal network access. The renderer supports serverless report
   context and dark mode, report query parameters and item filters, landscape output, unit-aware
   margins, and one bounded browser-render timeout covering launch, navigation, readiness, and print
@@ -134,11 +134,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   tree referenced by the report while retaining legacy MathJax 2.x layouts, creates required output
   directories on demand, preserves print styles, and avoids reprocessing already rewritten relative
   paths. Remote HTML
-  export derives the static-asset version from the connected server when no override is supplied.
+  export derives the static-asset version from the service when no override is supplied.
   Explicit asset-version overrides remain authoritative, continue if the best-effort server-version
   probe fails, and warn on a mismatch. Exports retain viewer, context-menu, and Draco assets,
   rewrite both quote styles of offline Draco decoder paths, and issue diagnostics for incomplete
-  remote legacy assets. Connected static HTML export no longer mutates the caller-provided query
+  remote legacy assets. Service-mode static HTML export no longer mutates the caller-provided query
   dictionary while adding `print=html`.
 - Product-settings initialization failures now restore partial compatibility shims and import-path
   additions. Later serverless setup failures reset ADR session/setup state and restore shims while
@@ -146,7 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   cleans up failed `enve` imports between candidate installations, restores the ADR 26.1 NumPy 2
   compatibility state on teardown, handles inaccessible embedded-Python runtime directories, and
   initializes in-memory `collectstatic` correctly on Django 5.1+.
-- Connected-server validation now raises `UnsupportedServerVersionError` for missing, malformed,
+- Service validation now raises `UnsupportedServerVersionError` for missing, malformed,
   or unsupported product versions and caches neither API nor product version until both validate.
   Local database version ceilings follow the resolved product installation. Install, launcher, and
   geometry-converter resolution consistently use supported paths and `exec_basis`, including clear
@@ -155,8 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   permission failure releases the launch lock.
 - `get_logger()` now uses the `ansys.dynamicreporting.core` logger, no longer forces it or the
   application root logger to `ERROR`, and avoids duplicate ADR-owned output handlers.
-- Disconnected report helpers no longer crash while logging: `get_guid()` still returns an empty
-  string, while `export_pdf()` and `export_html()` now return `False` rather than `""`.
+- Report helpers without an active service no longer crash while logging: `get_guid()` returns an
+  empty string, while `export_pdf()` and `export_html()` now return `False` rather than `""`.
 - Object-copy upload fallback now returns a valid response object when `requests` or `urllib3`
   raises during an upload. Best-effort cleanup of ADR-created temporary directories, copied Docker
   tar files and launcher resources, and serverless image handles no longer masks a successful

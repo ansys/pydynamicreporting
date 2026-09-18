@@ -978,11 +978,11 @@ class Server:
         from ansys.dynamicreporting.core.utils.report_download_html import ReportDownloadHTML
 
         url = self.build_url_with_query(report_guid, query, item_filter)
-        # Resolve the connected server version once, reusing validation state
+        # Resolve the service version once, reusing validation state
         # when available. Explicit overrides can still proceed if the best-effort
         # probe fails because some callers already know which namespace they need.
         try:
-            connected_ansys_version = (
+            service_ansys_version = (
                 self._ansys_version
                 if self._api_version is not None
                 else self.get_api_version().get("ansys_version")
@@ -990,27 +990,27 @@ class Server:
         except Exception:
             if ansys_version is None:
                 raise
-            connected_ansys_version = None
+            service_ansys_version = None
         resolved_ansys_version = ansys_version
         if resolved_ansys_version is None:
             # Ask the server for the Ansys version number when possible so the
             # downloader rewrites static asset paths against the same product
             # namespace the report was generated with.
             resolved_ansys_version = validate_supported_server_install_version(
-                connected_ansys_version
+                service_ansys_version
             )
             self._ansys_version = resolved_ansys_version
         else:
             # Best-effort UX: keep the explicit override as the source of truth,
-            # but warn when the connected server advertises a different asset
+            # but warn when the service advertises a different asset
             # namespace.  Ignore probe failures because the override exists to
             # support cases where /item/api_version/ is unavailable or wrong.
-            if connected_ansys_version is not None and str(connected_ansys_version) != str(
+            if service_ansys_version is not None and str(service_ansys_version) != str(
                 resolved_ansys_version
             ):
                 warning_message = (
                     f"Explicit HTML export ansys_version {resolved_ansys_version} does not match "
-                    f"connected server version {connected_ansys_version}; continuing with the "
+                    f"service version {service_ansys_version}; continuing with the "
                     "override."
                 )
                 logger.warning(warning_message)
@@ -1207,7 +1207,7 @@ class Server:
             The maximum time in seconds to wait for the report to render in the headless browser before
             timing out. Default is 30 seconds.
         ansys_installation : str, optional
-            Local Ansys installation root, forwarded from the connected service, used to locate the
+            Local Ansys installation root, forwarded from the service, used to locate the
             product-shipped browser binary for the local render. The underlying renderer requires
             this value together with ``ansys_version`` instead of falling back to an ambient browser.
         ansys_version : int, optional

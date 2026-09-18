@@ -85,15 +85,15 @@ class NotValidServer(ADRException):
 
 
 class UnsupportedServerVersionError(ADRException):
-    """Exception raised if the connected ADR server version is not supported."""
+    """Exception raised if the ADR service version is not supported."""
 
     detail = "Unsupported dynamic reporting server version."
 
 
 class AlreadyConnectedError(ADRException):
-    """Exception raised if the ADR service is already connected to a service."""
+    """Exception raised if an ADR service is already active."""
 
-    detail = "Already connected to a service."
+    detail = "A service is already active."
 
 
 class StartingServiceError(ADRException):

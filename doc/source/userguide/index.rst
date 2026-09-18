@@ -5,7 +5,7 @@ This section describes concepts that you need to know to use PyDynamicReporting.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Connected-service guides
+   :caption: Service-mode guides
 
    browser_pdf
    logging
@@ -101,10 +101,10 @@ current Ansys Dynamic Reporting session.
 
 Each time that you use the PyDynamicReporting
 :func:`start<ansys.dynamicreporting.core.Service.start>` method to
-start an Ansys Dynamic Reporting service or the
+start an Ansys Dynamic Reporting service or use the
 :func:`connect<ansys.dynamicreporting.core.Service.connect>` method
-to connect to one, you are connected to a specific session. Each
-session has its own GUID (globally unique identifier).
+for an existing one, the service object is associated with a specific session.
+Each session has its own GUID (globally unique identifier).
 
 On the Ansys Dynamic Reporting object, you can execute the
 :func:`visualize_report<ansys.dynamicreporting.core.Service.visualize_report>`
@@ -164,7 +164,7 @@ This GUID is then copied and pasted into another interpreter as shown in this co
    ret = adr_service.connect(url="http://localhost:8010", session=session_guid)
 
 
-Once you are connected to the session, you can query its items:
+After establishing the service session, you can query its items:
 
 .. code:: python
 
@@ -197,8 +197,8 @@ method:
    my_report = adr_service.get_report(report_name="My Top Report")
    my_report.visualize()
 
-Export a connected report as static HTML
-----------------------------------------
+Export a service-mode report as static HTML
+-------------------------------------------
 
 Use :meth:`~ansys.dynamicreporting.core.Report.export_html` to create an
 offline HTML bundle:
@@ -212,9 +212,9 @@ offline HTML bundle:
        filename="index.html",
    )
 
-The high-level report API uses the product version reported by the connected
+The high-level report API uses the product version reported by the active
 ADR server. If you call the low-level ``Server.export_report_as_html()`` API
-with an explicit ``ansys_version``, set it to the connected server's version.
+with an explicit ``ansys_version``, set it to the service's version.
 
 Diagnosing an export failure
 -----------------------------
@@ -242,7 +242,7 @@ Backward compatibility with template generator scripts
 ------------------------------------------------------
 
 The template editor in Ansys Dynamic Reporting contains a feature for exporting
-a Python script to create report templates on the connected server with all their
+a Python script to create report templates on the service with all their
 settings and properties and push these report templates to a new server.
 This script uses the low-level API for Ansys Dynamic Reporting, which preceded
 PyDynamicReporting.

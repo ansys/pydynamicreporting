@@ -117,7 +117,7 @@ expands the page.
 Diagnosing failures
 --------------------
 
-Unlike the connected-service :meth:`~ansys.dynamicreporting.core.Report.export_browser_pdf`,
+Unlike the service-mode :meth:`~ansys.dynamicreporting.core.Report.export_browser_pdf`,
 which returns ``False`` on failure for backward compatibility, both serverless methods
 raise ``ADRException`` when the export fails, for example when a readiness signal such as
 Plotly charts does not finish within ``render_timeout``. Catch that exception to see the
