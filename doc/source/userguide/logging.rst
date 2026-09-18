@@ -1,9 +1,9 @@
-.. _connected_logging:
+.. _service_logging:
 
 Logging
 #######
 
-Connected-service logging uses the shared
+Service-mode logging uses the shared
 ``ansys.dynamicreporting.core`` logger. PyDynamicReporting does not change the
 application's root logger.
 

@@ -63,7 +63,7 @@ Items and templates can display their rendered HTML inline in a notebook:
 
 .. code-block:: python
 
-    string_item.visualize()
+    item.visualize()
     top_template.visualize(item_filter="A|i_tags|cont|section=results;")
 
 Use ``get_iframe()`` when you need the display object without showing it immediately.

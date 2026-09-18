@@ -461,11 +461,10 @@ Troubleshooting
 Dependencies
 ------------
 PyDynamicReporting 1.x supports licensed ADR installations from the ``26.*``
-and ``27.*`` annual product lines. This requirement applies to both connected
-service mode and
-``ansys.dynamicreporting.core.serverless``.
+and ``27.*`` annual product lines. This requirement applies to both service mode
+and Serverless ADR (``ansys.dynamicreporting.core.serverless``).
 
-Python 3.14 is supported for connected service mode and Serverless ADR with
+Python 3.14 is supported for service mode and Serverless ADR with
 ADR ``27.1``. For Serverless ADR with ADR ``26.1``, use Python 3.12 and
 ``constraints/v261.txt``.
 

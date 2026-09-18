@@ -84,8 +84,8 @@ to be automatically shut down if the current Python interpreter instance
 exits cleanly.
 
 If the delete_db_on_python_exit argument is also set to True, then once
-the server is automatically shut down the database directory it was
-connected to will be deleted.
+the server is automatically shut down its database directory will be
+deleted.
 
 If the Qt parent is not set to None and the server has not been set to
 terminate on exit, then the use_system_tray option can be used to cause
