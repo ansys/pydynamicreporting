@@ -1498,7 +1498,8 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
     </body>
     </html>
     """
-    renderer = _simple_renderer(tmp_path, html, landscape=landscape)
+    # Pin A4 so the 1,400 px fixtures remain taller than the printable page.
+    renderer = _simple_renderer(tmp_path, html, landscape=landscape, page_size=PDFPageSize.A4)
 
     from playwright.sync_api import sync_playwright
 
@@ -2220,10 +2221,11 @@ def test_renderer_rejects_margins_that_consume_custom_page_height(tmp_path):
 
 @pytest.mark.unit
 def test_renderer_rejects_horizontal_margins_that_consume_selected_page_width(tmp_path):
-    # Cover the fixed-format horizontal axis separately from custom page height.
+    # Pin A4 because two 105 mm margins consume its 210 mm portrait width.
     with pytest.raises(ADRException, match="leave at least one CSS pixel"):
         _OfflinePlaywrightPDFRenderer(
             html_dir=_write_html(tmp_path, "<html><body>No printable width</body></html>"),
+            page_size=PDFPageSize.A4,
             margins={
                 "top": "10mm",
                 "right": "105mm",
