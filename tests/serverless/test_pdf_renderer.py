@@ -311,7 +311,11 @@ def _stub_playwright_render(
     """Stub browser preparation and return the rendered page."""
     stack = _stub_playwright_stack(monkeypatch)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
-    monkeypatch.setattr(renderer, "_prepare_content_for_pagination", lambda page: None)
+    monkeypatch.setattr(
+        renderer,
+        "_prepare_content_for_pagination",
+        lambda page, deadline=None: None,
+    )
     return stack.page, stack.context, stack.browser
 
 

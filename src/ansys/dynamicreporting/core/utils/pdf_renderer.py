@@ -564,7 +564,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                     page.emulate_media(media="screen")
                     self._apply_pdf_capture_styles(page)
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
-                    self._prepare_content_for_pagination(page)
+                    current_timeout_phase = "pagination preparation"
+                    self._prepare_content_for_pagination(
+                        page,
+                        deadline=browser_phase_deadline,
+                    )
                     pdf_options = {
                         **self._pdf_page_size_options(),
                         "margin": self._margins,
@@ -580,8 +584,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                     # Playwright's Python ``page.pdf()`` API does not expose a timeout parameter,
                     # so this deadline check is a preflight guard rather than an interruptible
                     # in-flight timeout.
+                    current_timeout_phase = "PDF generation"
                     self._remaining_browser_phase_timeout_ms(
-                        browser_phase_deadline, "PDF generation"
+                        browser_phase_deadline, current_timeout_phase
                     )
                     pdf_bytes = page.pdf(**pdf_options)
                     self._logger.info(
@@ -931,23 +936,57 @@ class _BasePlaywrightPDFRenderer(ABC):
             }"""
         )
 
-    def _prepare_content_for_pagination(self, page: Any) -> None:
+    def _prepare_content_for_pagination(
+        self,
+        page: Any,
+        *,
+        deadline: float | None = None,
+    ) -> None:
         """Fit indivisible visuals and configure vertical pagination boundaries."""
+        # ``render_pdf`` supplies its shared browser deadline. Direct internal callers start a
+        # fresh budget so this private preparation helper remains usable in isolation.
+        if deadline is None:
+            deadline = monotonic() + self._render_timeout
+
+        timeout_phase = "pagination preparation"
         printable_height_px = self._printable_page_height_px()
         # Later cohesion checks must see post-resize geometry. Fragmentation runs
         # last so structures that still exceed a page can override avoid rules.
-        visual_result = self._fit_visuals_for_pagination(page, printable_height_px)
+        remaining_timeout_ms = self._remaining_browser_phase_timeout_ms(
+            deadline,
+            timeout_phase,
+        )
+        visual_result = self._fit_visuals_for_pagination(
+            page,
+            printable_height_px,
+            timeout_ms=remaining_timeout_ms,
+        )
+        if visual_result.get("__adrTimedOut") is True:
+            raise ADRException(
+                f"Browser PDF rendering failed: {timeout_phase} timed out after "
+                f"{self._render_timeout:.1f}s"
+            )
+
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
         cohesion_result = self._set_pagination_cohesion(page, printable_height_px)
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
         fragmentation_result = self._make_oversized_structures_fragmentable(
             page, printable_height_px
         )
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
         self._log_pagination_preparation(
             visual_result,
             cohesion_result,
             fragmentation_result,
         )
 
-    def _fit_visuals_for_pagination(self, page: Any, printable_height_px: float) -> dict[str, Any]:
+    def _fit_visuals_for_pagination(
+        self,
+        page: Any,
+        printable_height_px: float,
+        *,
+        timeout_ms: int,
+    ) -> dict[str, Any]:
         """Resize indivisible visual media to fit within one printable page."""
         return page.evaluate(
             """async (options) => {
@@ -960,8 +999,15 @@ class _BasePlaywrightPDFRenderer(ABC):
                     fitGuardPx,          // small safety margin so rounding never overflows a page
                     headingSelector,     // matches a section's heading (h1..h6)
                     visualSelector,      // matches the visuals we may need to resize
-                    sceneViewerSelector  // matches the 3D viewer tags
+                    sceneViewerSelector, // matches the 3D viewer tags
+                    timeoutMs            // remaining shared browser-render budget
                 } = options;
+                let timeoutHandle;
+                const timeoutResult = new Promise(resolve => {
+                    timeoutHandle = window.setTimeout(() => {
+                        resolve({ __adrTimedOut: true });
+                    }, timeoutMs);
+                });
                 const preparedVisuals = new Set();   // visuals already handled (avoid double work)
                 const resizedVisuals = [];           // record of what we shrank, for logging
                 const resizePromises = [];           // Plotly redraws to wait for before finishing
@@ -1284,20 +1330,28 @@ class _BasePlaywrightPDFRenderer(ABC):
                     }
                 }
 
-                // Wait for any Plotly charts we asked to redraw at their new size.
-                await Promise.all(resizePromises);
-                // Wait two animation frames so the browser finishes applying every style change
-                // above before we hand back control (measurements must be settled first).
-                await new Promise(resolve => requestAnimationFrame(
-                    () => requestAnimationFrame(resolve)
-                ));
+                const preparationResult = (async () => {
+                    // Wait for any Plotly charts we asked to redraw at their new size.
+                    await Promise.all(resizePromises);
+                    // Wait two animation frames so the browser finishes applying every style
+                    // change above before we hand back control (measurements must be settled).
+                    await new Promise(resolve => requestAnimationFrame(
+                        () => requestAnimationFrame(resolve)
+                    ));
 
-                // Report back to Python: how many visuals we touched, and details of the ones we
-                // actually shrank.
-                return {
-                    cappedVisualCount: preparedVisuals.size,
-                    resizedVisuals
-                };
+                    // Report back to Python: how many visuals we touched, and details of the ones
+                    // we actually shrank.
+                    return {
+                        __adrTimedOut: false,
+                        cappedVisualCount: preparedVisuals.size,
+                        resizedVisuals
+                    };
+                })();
+                const result = await Promise.race([preparationResult, timeoutResult]);
+                if (!result.__adrTimedOut) {
+                    window.clearTimeout(timeoutHandle);
+                }
+                return result;
             }""",
             {
                 "printableHeightPx": printable_height_px,
@@ -1305,6 +1359,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 "headingSelector": _PAGINATION_HEADING_SELECTOR,
                 "visualSelector": _PAGINATION_VISUAL_SELECTOR,
                 "sceneViewerSelector": _SCENE_VIEWER_SELECTOR,
+                "timeoutMs": timeout_ms,
             },
         )
 
