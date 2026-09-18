@@ -1,0 +1,6 @@
+zaxis
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.zaxis

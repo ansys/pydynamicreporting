@@ -1,0 +1,1844 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Template Objects &#8212; PyDynamicReporting documentation |version|</title>
+
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=649a27d8" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/ansys_sphinx_theme.css?v=62c9ccaa" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+ 
+<link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+
+    <script src="../_static/documentation_options.js?v=d9b85e4f"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/js/table.js?v=b64f5182"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'lowlevelapi/TemplateObjects';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.5';
+        </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Server Object" href="ServerObject.html" />
+    <link rel="prev" title="Data Item Object" href="DataItemObject.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/lowlevelapi/TemplateObjects.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container"><!-- Debugging: html_theme_options =  -->
+
+<!-- If there is no MiliSearch enabled, use the PyData search -->
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+   
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys-logo-black-cropped.png" class="logo__image only-light" alt="Logo image"/>
+    <script>document.write(`<img src="../_static/pyansys-logo-black-cropped.png" class="logo__image only-dark" alt="Logo image"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.5  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>   <div class="container-xl">
+  <div class="row">
+    <div class="col-12 col-md-3" id="breadcrumbs-spacer"></div>
+    <div class="col-12 col-md-11 col-xl-9" id="breadcrumbs">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul> 
+<li class="nav-item nav-item-additional-breadcrumb">
+  <a href="https://docs.pyansys.com/">PyAnsys</a> » 
+</li>
+ 
+<li class="nav-item nav-item-0">
+  <a href="../index.html">PyDynamicReporting documentation |version|</a> » 
+</li>
+ 
+          <li class="nav-item nav-item-1"><a href="../class_documentation.html" >API reference</a> » </li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Low Level Python API</a> » </li>
+        <li class="nav-item nav-item-this"><a href="">Template Objects</a></li> 
+      </ul>
+    </div></div>
+  </div>
+</div>
+ 
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.5  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.html">Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Report.html">Report</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Low Level Python API</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="GettingStarted.html">Startup</a></li>
+
+
+
+
+<li class="toctree-l2"><a class="reference internal" href="DataItemObject.html">Data Item Object</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Template Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ServerObject.html">Server Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DatasetandSessionObjects.html">Dataset and Session Objects</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="template-objects">
+<span id="templaterest"></span><h1>Template Objects<a class="headerlink" href="#template-objects" title="Link to this heading">#</a></h1>
+<section id="report-objects-templaterest-object">
+<h2>report_objects.TemplateREST object<a class="headerlink" href="#report-objects-templaterest-object" title="Link to this heading">#</a></h2>
+<p>This object is a Python representation of an Ansys
+Dynamic Reporting template object. When
+this object is created, a GUID will automatically be generated for the
+object and the date is set to the current time/date. The
+report_objects.TemplateREST class represent features common to all
+template types. Two sub-classes, report_objects.LayoutREST and
+report_objects.GeneratorREST represent the generic Layout and Generator
+templates. From each of these classes, a set of sub-classes representing
+the specific template types are inherited. For information specific to
+each template type, refer to the <a class="reference internal" href="GettingStarted.html#reportobjectslist"><span class="std std-ref">subclass tree</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>TemplateREST objects should always be generated using the
+server object <a class="reference internal" href="ServerObject.html"><span class="doc">create_template()</span></a> method.</p>
+</div>
+<section id="data-members">
+<h3>Data members<a class="headerlink" href="#data-members" title="Link to this heading">#</a></h3>
+<p>The following attributes are available on a TemplateREST object:</p>
+<ul class="simple">
+<li><p>guid - string GUID. The default is <strong>str(uuid.uuid1())</strong></p></li>
+<li><p>tags - The user-defined tags string for this object. Multiple tags
+are space-separated. You can also access the tabs via the method
+<a class="reference internal" href="#template-get-tags"><span class="std std-ref">get_tags()</span></a>.</p></li>
+<li><p>date - The time &amp; date of the creation of this object. The default
+is: <strong>datetime.datetime.now(pytz.utc)</strong></p></li>
+<li><p>name - The name of the template</p></li>
+<li><p>report_type - The type of the report template (e.g. ‘Layout:basic’).
+The report_type is also set by the sub-class of the object. See
+<a class="reference internal" href="#template-type-table"><span class="std std-ref">this table</span></a> for the
+correspondence between report_type and template sub-class</p></li>
+<li><p>item_filter - The filter string for this report template. You can
+also access the filter via the method
+<a class="reference internal" href="#template-get-filter"><span class="std std-ref">get_filter()</span></a>.</p></li>
+<li><p>params - A Python dictionary of the parameters for this specific
+report_type. You can also access the parameters via the method
+<a class="reference internal" href="#template-get-params"><span class="std std-ref">get_params()</span></a>.</p></li>
+<li><p>children - A list of the child templates of this template</p></li>
+<li><p>master - True if the parent data member is None</p></li>
+<li><p>parent - The parent template (if any) of this template</p></li>
+</ul>
+</section>
+<section id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h3>
+<p id="template-get-params"><strong>template.get_params()</strong></p>
+<p>Get the parameters of the template.</p>
+<p>The parameter field contains all the fields that can be set via the GUI,
+including filters, list of properties, individual settings for the
+specific template type. While one can access all the values via this
+method, we would suggest using the methods specific to the field you are
+interested in for each field for sake of clarity and usability.</p>
+<p><strong>template.set_params({‘param1’: 1})</strong></p>
+<p>Set the parameters of the template. This function takes as input a
+dictionary.</p>
+<p>The parameter field contains all the fields that can be set via the GUI,
+including filters, list of properties, individual settings for the
+specific template type. While one can access all the values via this
+method, we would suggest using the methods specific to the field you are
+interested in for each field for sake of clarity and usability.</p>
+<p><strong>template.add_params({‘param1’: 1})</strong></p>
+<p>Add the parameters to the existing template parameters. This function
+takes as input a dictionary.</p>
+<p>The parameter field contains all the fields that can be set via the GUI,
+including filters, list of properties, individual settings for the
+specific template type. While one can access all the values via this
+method, we would suggest using the methods specific to the field you are
+interested in for each field for sake of clarity and usability.</p>
+<p><strong>template.get_property()</strong></p>
+<p>Get the properties of the template as a dictionary. A general
+description of what properties are for a template can be found
+<a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html">here</a>.</p>
+<p><strong>template.set_property(property={})</strong></p>
+<p>Set the properties of the template. Input needs to be a dictionary. A
+general description of what properties are for a template can be found
+<a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html">here</a>.</p>
+<p><strong>template.add_property(property={})</strong></p>
+<p>Add the properties of the template. Input needs to be a dictionary. A
+general description of what properties are for a template can be found
+<a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html">here</a>.</p>
+<p><strong>template.get_sort_fields()</strong></p>
+<p>Get the sorting filter of the template.</p>
+<p><strong>template.set_sort_fields([‘+i_date’, ‘-i_name’])</strong></p>
+<p>Set the sorting filter of the template. This function takes a list as
+input. The list is generated with ‘+’ for increasing, ‘-’ for
+decreasing, followed by the property to sort by, with the same strings
+as reported at this <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html">link</a>. Example: setting the sort
+fields to be by increasing item date and decreasing by item name
+becomes: [‘+i_date’, ‘-i_name’]</p>
+<p><strong>template.add_sort_fields([‘+i_date’, ‘-i_name’])</strong></p>
+<p>Add elements to the sorting filter of the template. This function takes
+a list as input. The list is generated with ‘+’ for increasing, ‘-’ for
+decreasing, followed by the property to sort by, with the same strings
+as reported <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html">link</a>. Example: setting the sort
+fields to be by increasing item date and decreasing by item name
+becomes: [‘+i_date’, ‘-i_name’]</p>
+<p><strong>template.get_sort_selection()</strong></p>
+<p>Get the sort selection parameter.</p>
+<p><strong>template.set_sort_selection(value=”all”)</strong></p>
+<p>Set the sort selection parameter for the template.This function takes a
+string as input, among the following options:</p>
+<ul class="simple">
+<li><p>‘all’</p></li>
+<li><p>‘first’</p></li>
+<li><p>‘last’</p></li>
+</ul>
+<p><strong>template.set_tags(tagstring)</strong></p>
+<p>Set the tags for the template to the passed string. Multiple tags are
+space-separated.</p>
+<p id="template-get-tags"><strong>template.get_tags()</strong></p>
+<p>Returns the tags string for this object. Multiple tags are
+space-separated.</p>
+<p><strong>template.add_tag(tag, value=None)</strong></p>
+<p>Adds a tag to the current tag string. If no value is passed, the simple
+tag string is added to the tags string. If a value is specified, a
+string of the form tag=value will be added to the tag string.</p>
+<p><strong>template.rem_tag(tag)</strong></p>
+<p>Remove the tag (and any potential associated value) from the current tag
+string.</p>
+<p id="template-get-filter"><strong>template.get_filter()</strong></p>
+<p>Get the item filter of the template. The item filter is encoded as a
+string using the format explained <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html">link</a>.</p>
+<p><strong>template.set_filter(filter_str=’’)</strong></p>
+<p>Sets the item filter of the template. Takes as input a string. The item
+filter is encoded as a string using the format explained
+<a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html">link</a>.</p>
+<p><strong>template.add_filter(filter_str=’’)</strong></p>
+<p>Add filters to the item filter of the template. Takes as input a string.
+The item filter is encoded as a string using the format explained
+<a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/QueryExpressions.html">link</a>.</p>
+<p><strong>template.get_filter_mode()</strong></p>
+<p>Returns the filter mode of the template. The possible outputs are:</p>
+<ul class="simple">
+<li><p>‘items’: corresponds to Incoming Items</p></li>
+<li><p>‘root_replace’: corresponds to Database (replace)</p></li>
+<li><p>‘root_append’: corresponds to Database (append)</p></li>
+</ul>
+<p><strong>template.set_filter_mode(value=’items’)</strong></p>
+<p>Sets the filter mode of the template. Takes as input a string. See
+get_filter_mode for the accepted values.</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the documentation example in the
+Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem306.png" />
+</figure>
+<p>Let’s also assume you want this template to be a root-level template
+(i.e.: that doesn’t have a parent template) in the database running
+locally on port 8000. These would be the lines of code to create the new
+template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Example Template&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:panel&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|i_src|cont|build_imagery;A|i_tags|cont|timestep=10;&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_property</span><span class="p">({</span><span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="s2">&quot;50&quot;</span><span class="p">})</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="subclasses">
+<h3>SubClasses<a class="headerlink" href="#subclasses" title="Link to this heading">#</a></h3>
+<p>Each template type is represented by a subclass of the TemplateREST
+class. There are two main subclasses: LayoutREST for the Layout template
+types and GeneratorREST for the Generator template types. Each of these
+subclasses has its own set of subclasses, to represent each specific
+template type.</p>
+<table class="table" id="template-type-table">
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Layouts</strong></p></th>
+<th class="head"><p><strong>Template type</strong></p></th>
+<th class="head"><p><strong>Template API sub-class</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>basic</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Columns.html">Columns</a></p></td>
+<td><p><a class="reference internal" href="#basicrest"><span class="std std-ref">report_objects.basicREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>panel</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Panel.html">Panel</a></p></td>
+<td><p><a class="reference internal" href="#panelrest"><span class="std std-ref">report_objects.panelREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>box</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Boxes.html">Boxes</a></p></td>
+<td><p><a class="reference internal" href="#boxrest"><span class="std std-ref">report_objects.boxREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>tabs</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Tabs.html">Tabs</a></p></td>
+<td><p><a class="reference internal" href="#tabsrest"><span class="std std-ref">report_objects.tabsREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>carousel</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Carousel.html">Carousel</a></p></td>
+<td><p><a class="reference internal" href="#carouselrest"><span class="std std-ref">report_objects.carouselREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>slider</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Slider.html">Slider</a></p></td>
+<td><p><a class="reference internal" href="#sliderrest"><span class="std std-ref">report_objects.sliderREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>footer</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageFooter.html">Page Footer</a></p></td>
+<td><p><a class="reference internal" href="#footerrest"><span class="std std-ref">report_objects.footerREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>header</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageHeader.html">Page Header</a></p></td>
+<td><p><a class="reference internal" href="#headerrest"><span class="std std-ref">report_objects.headerREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>iterator</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Iterator.html">Iterator</a></p></td>
+<td><p><a class="reference internal" href="#iteratorrest"><span class="std std-ref">report_objects.iteratorREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>tagprops</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TagProperties.html">Tag to Properties</a></p></td>
+<td><p><a class="reference internal" href="#tagpropsrest"><span class="std std-ref">report_objects.tagpropsREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>toc</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableofContents.html">Table of Contents</a></p></td>
+<td><p><a class="reference internal" href="#tocrest"><span class="std std-ref">report_objects.tocREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>reportlink</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LinkedReport.html">Link Report</a></p></td>
+<td><p><a class="reference internal" href="#reportlinkrest"><span class="std std-ref">report_objects.reportlinkREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>userdefined</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Userdefined.html">Userdefined</a></p></td>
+<td><p><a class="reference internal" href="#userdefinedrest"><span class="std std-ref">report_objects.userdefinedREST()</span></a></p></td>
+</tr>
+</tbody>
+</table>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Generators</strong></p></th>
+<th class="head"><p><strong>Template type</strong></p></th>
+<th class="head"><p><strong>Template API sub-class</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>tablemerge</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableMerge.html">Table Merge</a></p></td>
+<td><p><a class="reference internal" href="#tablemergerest"><span class="std std-ref">report_objects.tablemergeREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>tablereduce</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableReduction.html">Table Reduction</a></p></td>
+<td><p><a class="reference internal" href="#tablereducerest"><span class="std std-ref">report_objects.tablereduceREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>tablerowcolumnfilter</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnFilter.html">Table Row/Column Filter</a></p></td>
+<td><p><a class="reference internal" href="#tablerowcolumnfilterrest"><span class="std std-ref">report_objects.tablerowcolumnfilterREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>tablevaluefilter</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableValueFilter.html">Table Value Filter</a></p></td>
+<td><p><a class="reference internal" href="#tablevaluefilterrest"><span class="std std-ref">report_objects.tablevaluefilterREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>tablesortfilter</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnSort.html">Table Row/Column Sort</a></p></td>
+<td><p><a class="reference internal" href="#tablesortfilterrest"><span class="std std-ref">report_objects.tablesortfilterREST()</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>sqlqueries</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/SQLQuery.html">SQL Query</a></p></td>
+<td><p><a class="reference internal" href="#sqlqueriesrest"><span class="std std-ref">report_objects.sqlqueriesREST()</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>treemerge</p></td>
+<td><p><a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TreeMerge.html">Tree Merge</a></p></td>
+<td><p><a class="reference internal" href="#mergetreerest"><span class="std std-ref">report_objects.mergetreeREST()</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="layoutrest-class">
+<span id="layoutrest"></span><h3>LayoutREST class<a class="headerlink" href="#layoutrest-class" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST</p>
+<p>Class that groups all the common attributes among Layout templates
+(for reference, see <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LayoutTemplates.html">here</a>). Its specific methods are:</p>
+<p><strong>template.get_column_count()</strong></p>
+<p>Get the number of columns.</p>
+<p><strong>template.set_column_count(value)</strong></p>
+<p>Set the number of columns. Takes as input an integer larger than 0.</p>
+<p><strong>template.get_column_widths()</strong></p>
+<p>Get the list of the widths of the columns.</p>
+<p><strong>template.set_column_widths([1.0, 2.0, 1.0])</strong></p>
+<p>Set the list of the widths of the columns. Takes as input an array where
+each number represent the relative width of that column compared to the
+other columns.</p>
+<p><strong>template.get_transpose()</strong></p>
+<p>Returns the Transpose columns/rows status of the template. It returns 0
+for off, 1 for on. It supports only Layout: template types.</p>
+<p><strong>template.set_transpose(value=0)</strong></p>
+<p>Sets the Transpose columns/rows status of the template. value = 0 for
+off, value = 1 for on. It supports only Layout: template types.</p>
+<p><strong>template.get_skip()</strong></p>
+<p>Returns the Skip if no input items status of the template. It returns 0
+for off, 1 for on. It supports only Layout: template types.</p>
+<p><strong>template.set_skip(value=0)</strong></p>
+<p>Sets the Skip if no input items status of the template. value = 0
+(default) for off, value = 1 for on. It supports only Layout: template
+types.</p>
+<p><strong>template.get_html()</strong></p>
+<p>Returns the HTML of the template. It supports only Layout: template
+types</p>
+<p><strong>template.set_html(value=None)</strong></p>
+<p>Sets the HTML of the template. Takes as input a string. It supports only
+Layout: template types.</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the “Slider Example” template in the
+documentation example in the Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem307.png" />
+</figure>
+<p>Let’s also assume you want this template to be a root-level template
+(i.e.: that doesn’t have a parent template) in the database running
+locally on port 8000. These would be the lines of code to create the new
+template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Slider Example&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:panel&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_column_count</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_column_widths</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+<span class="o">*</span> <span class="n">my_template</span><span class="o">.</span><span class="n">set_html</span><span class="p">(</span><span class="s2">&quot;&lt;h2&gt;Example Slider Panels&lt;/h2&gt;キャンペー&quot;</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="generatorrest-class">
+<span id="generatorrest"></span><h3>GeneratorREST class<a class="headerlink" href="#generatorrest-class" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST</p>
+<p>Class that groups all the common attributes among
+<a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/GeneratorTemplates.html">Generator templates</a>. Its specific methods are:</p>
+<p><strong>template.get_generated_items()</strong></p>
+<p>Get the Generated items flag. Returned values:</p>
+<ul class="simple">
+<li><p>‘replace’: corresponds to Replace</p></li>
+<li><p>‘add’: corresponds to Append</p></li>
+</ul>
+<p><strong>template.set_generated_items(value)</strong></p>
+<p>Get the Generated items flag. Takes as input a string. See
+get_generated_items() for the acceptable strings.</p>
+<p><strong>template.get_append_tags()</strong></p>
+<p>Get the value for Append template tags to new items. Returned values are
+True for toggled ON, False for toggled OFF</p>
+<p><strong>template.set_append_tags(value=True)</strong></p>
+<p>Get the value for Append template tags to new items. The input needs to
+be a boolean: True / False</p>
+</section>
+<section id="basicrest-object">
+<span id="basicrest"></span><h3>basicREST object<a class="headerlink" href="#basicrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Columns.html">Columns</a> Layout template
+type. No specific methods.</p>
+</section>
+<section id="panelrest-object">
+<span id="panelrest"></span><h3>panelREST object<a class="headerlink" href="#panelrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Panel.html">Panel</a> Layout template type.
+Its specific methods are:</p>
+<p><strong>template.get_panel_style()</strong></p>
+<p>Get the style of the Panel. Possible returned values:</p>
+<ul class="simple">
+<li><p>‘panel’: corresponds to Titled Panel</p></li>
+<li><p>‘callout-default’: corresponds to Callout</p></li>
+<li><p>‘callout-danger’: corresponds to Callout Error</p></li>
+<li><p>‘callout-warning’: corresponds to Callout Warning</p></li>
+<li><p>‘callout-success’: corresponds to Callout Success</p></li>
+<li><p>‘callout-info’: corresponds to Callout Info</p></li>
+</ul>
+<p><strong>template.set_panel_style(value=’panel’)</strong></p>
+<p>Set the style of the Panel. Takes as input strings. For the acceptable
+values, see get_panel_style()</p>
+<p><strong>template.get_items_as_link()</strong></p>
+<p>Get the Show items as link toggle. 0 corresponds to Off, 1 corresponds
+to ON.</p>
+<p><strong>template.set_items_as_link(value=0)</strong></p>
+<p>Set the Show items as link toggle. Takes as input an integer. 0
+corresponds to Off, 1 corresponds to ON.</p>
+</section>
+<section id="boxrest-object">
+<span id="boxrest"></span><h3>boxREST object<a class="headerlink" href="#boxrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Boxes.html">Boxes</a> Layout template type.
+Its specific methods are:</p>
+<p><strong>template.get_children_layout()</strong></p>
+<p>Get the children layout. This method returns a dictionary where each
+entry is a different child layout.</p>
+<p>For each entry, the key corresponds to the guid of the child template.
+The corresponding value is an array that gives:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Width</span><span class="p">,</span> <span class="n">Height</span><span class="p">,</span> <span class="n">Clip</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>where Clip has the following values:</p>
+<ul class="simple">
+<li><p>‘self’: corresponds to Clip: To self</p></li>
+<li><p>‘scroll’: corresponds to Clip: Scroll</p></li>
+<li><p>‘none’: corresponds to Clip: None</p></li>
+</ul>
+<p><strong>template.set_child_position(guid=None, value=[0,0,10,10])</strong></p>
+<p>Set the children layout: position and size. The method takes as input
+the guid of the child template you want to modify, and an array of 4
+integers that corresponds to [X, Y, Width, Height] that you want to
+set.
+Remember that if you are setting a new child template (not modifying
+an existing one), you will manually need to set that this child
+template has the current box template as the parent template. See the
+example below for how to do it.</p>
+<p><strong>template.set_child_clip(guid=None, clip=’self’)</strong></p>
+<p>Set the children layout: clip parameter. The method takes as input the
+guid of the child template you want to modify, and the clip type as a
+string. Only the types enumerated in get_children_layout() are
+acceptable values.
+Remember that if you are setting the clip type for a new child
+template (not modifying an existing one), you will manually need to
+set that this child template has the current box template as the
+parent template. See the example below for how to do it.</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the documentation example in the
+Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem305.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child template of the
+template “Box report test” that already exists in in the database
+running locally on port 8000. These would be the lines of code to create
+the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Box reporttest&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Box Template&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:box&quot;</span>
+<span class="p">)</span>
+
+<span class="n">first_box</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;box_images&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_child_position</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">first_box</span><span class="o">.</span><span class="n">guid</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mi">40</span><span class="p">,</span> <span class="mi">39</span><span class="p">,</span> <span class="mi">320</span><span class="p">,</span> <span class="mi">240</span><span class="p">])</span>
+<span class="n">first_box</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">my_template</span><span class="o">.</span><span class="n">guid</span>
+<span class="n">second_box</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;box_movies&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_child_position</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">second_box</span><span class="o">.</span><span class="n">guid</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mi">370</span><span class="p">,</span> <span class="mi">39</span><span class="p">,</span> <span class="mi">355</span><span class="p">,</span> <span class="mi">241</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_child_clip</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">second_box</span><span class="o">.</span><span class="n">guid</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="s2">&quot;scroll&quot;</span><span class="p">)</span>
+<span class="n">second_box</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">my_template</span><span class="o">.</span><span class="n">guid</span>
+<span class="n">third_box</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;box_plot&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_child_position</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">third_box</span><span class="o">.</span><span class="n">guid</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mi">41</span><span class="p">,</span> <span class="mi">288</span><span class="p">,</span> <span class="mi">685</span><span class="p">,</span> <span class="mi">210</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_child_clip</span><span class="p">(</span><span class="n">guid</span><span class="o">=</span><span class="n">third_box</span><span class="o">.</span><span class="n">guid</span><span class="p">,</span> <span class="n">clip</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+<span class="n">third_box</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">my_template</span><span class="o">.</span><span class="n">guid</span>
+
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">([</span><span class="n">first_box</span><span class="p">,</span> <span class="n">second_box</span><span class="p">,</span> <span class="n">third_box</span><span class="p">])</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tabsrest-object">
+<span id="tabsrest"></span><h3>tabsREST object<a class="headerlink" href="#tabsrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Tabs.html">Tabs</a> Layout template type. No
+specific methods for this class.</p>
+</section>
+<section id="carouselrest-object">
+<span id="carouselrest"></span><h3>carouselREST object<a class="headerlink" href="#carouselrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Carousel.html">Carousel</a> Layout template
+type. Its specific methods are:</p>
+<p><strong>template.get_animated()</strong></p>
+<p>Get the Animated value. If the toggle is OFF (default), the method will
+return 0. This means that the Carousel doesn’t automatically change
+displayed image, and the user needs to click to see the next item.</p>
+<p>A non-zero integer value means the Carousel will automatically change
+displayed image. The value represents how long each image is displayed
+for in ms.</p>
+<p><strong>template.set_animated(value=0)</strong></p>
+<p>Set the Animated value. For an explanation of what this parameter
+represents, see the get_animated() method above.</p>
+<p><strong>template.get_slide_dots()</strong></p>
+<p>Get the Include side dots value. If zero (default), the method returns
+1.  If the number of side dots is larger than the number of items
+displayed on the Carousel, a number of dots corresponding to the number
+of items will be displayed. If the number of side dots is smaller than
+the number of items displayed on the Carousel, it is ignored an no dots
+are displayed.</p>
+<p><strong>template.set_slide_dots(value=20)</strong></p>
+<p>Set the Include side dots value. For an explanation of what this
+parameter represents, see the get_side_dots() method above.</p>
+</section>
+<section id="sliderrest-object">
+<span id="sliderrest"></span><h3>sliderREST object<a class="headerlink" href="#sliderrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Slider.html">Slider</a> template
+type. Its specific methods are:</p>
+<p><strong>template.get_map_to_slider()</strong></p>
+<p>Get the Selected tags and sort to map to sliders. This function returns
+a list where each element corresponds to one tag and its sorting order.
+The accepted sorted orders are:</p>
+<ul class="simple">
+<li><p>‘text_up’: corresponds to Text sort up</p></li>
+<li><p>‘text_down’: corresponds to Text sort down</p></li>
+<li><p>‘numeric_up’: corresponds to Numeric sort up</p></li>
+<li><p>‘numeric_down’: corresponds to Numeric sort down</p></li>
+<li><p>‘none’: corresponds to No sorting</p></li>
+</ul>
+<p>An example of output of this function is: [‘tag1|text_up’,
+‘tag2|numeric_down’, ‘tag3|none’] where the slider is sorted by “tag1”
+using the “Text sort up” sorting method, then by “tag2” using the
+“Numeric sort down” method and finally by “tag3” using no sorting
+method.</p>
+<p><strong>template.set_map_to_slider(value=[])</strong></p>
+<p>Set the Selected tags and sort to map to sliders. This function takes as
+input a list where each element corresponds to one tag and its sorting
+order. See function get_map_to_slider() for the accepted sorting order
+values. The input for this function will have form:</p>
+<p>[‘tag1|text_up’, ‘tag2|numeric_down’, ‘tag3|none’]</p>
+<p><strong>template.add_map_to_slider(value=[])</strong></p>
+<p>Add new tags and sorting methods to the the Selected tags and sort to
+map to sliders. This function takes as input a list where each element
+corresponds to one tag and its sorting order. See function
+get_map_to_slider() for the accepted sorting order values. The input for
+this function will have form:</p>
+<p>[‘tag1|text_up’, ‘tag2|numeric_down’, ‘tag3|none’]</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the “Basic Slider” template in the
+documentation example in the Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem308.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child of the template
+“Tabs” in the database running locally on port 8000. These would be the
+lines of code to create the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Tabs&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Basic Slider&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Layout:slider&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_filter</span><span class="p">(</span><span class="s2">&quot;A|s_app|cont|Imagery Session;&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_map_to_slider</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;timestep|numeric_up&quot;</span><span class="p">,</span> <span class="s2">&quot;variable|text_up&quot;</span><span class="p">,</span> <span class="s2">&quot;mode|text_down&quot;</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="footerrest-object">
+<span id="footerrest"></span><h3>footerREST object<a class="headerlink" href="#footerrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageFooter.html">Page Footer</a> Layout
+template type. No specific methods.</p>
+</section>
+<section id="headerrest-object">
+<span id="headerrest"></span><h3>headerREST object<a class="headerlink" href="#headerrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/PageHeader.html">Page Header</a> Layout
+template type. No specific methods.</p>
+</section>
+<section id="iteratorrest-object">
+<span id="iteratorrest"></span><h3>iteratorREST object<a class="headerlink" href="#iteratorrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Iterator.html">Iterator</a> template
+type. Its specific methods are:</p>
+<p><strong>template.get_iteration_tags()</strong></p>
+<p>Get the values for Iteration tag and Secondary sorting tag. The values
+are returned as element 0 and 1 of a list.</p>
+<p><strong>template.set_iteration_tags(value = [‘’, ‘’])</strong></p>
+<p>Set the values for Iteration tag and Secondary sorting tag. The input
+values are given as element 0 and 1 of a list, and they need to be
+strings</p>
+<p><strong>template.get_sort_tag()</strong></p>
+<p>Get the values for Sort items by tag and Reverse the sort as booleans.
+The values are returned as element 0 and 1 of a list.</p>
+<p><strong>template.set_sort_tag(value=[True, False])</strong></p>
+<p>Set the values for Iteration tag and Secondary sorting tag. The values
+are given as a list of booleans. Note that if you set the first element
+to False, the second will automatically be set to False as well,
+regardless of what the input is.</p>
+</section>
+<section id="tagpropsrest-object">
+<span id="tagpropsrest"></span><h3>tagpropsREST object<a class="headerlink" href="#tagpropsrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TagProperties.html">Tag to Properties</a>
+Layout template type. No specific methods.</p>
+</section>
+<section id="tocrest-object">
+<span id="tocrest"></span><h3>tocREST object<a class="headerlink" href="#tocrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableofContents.html">Table of Contents</a>
+Layout template type. Its specific methods are:</p>
+<p><strong>template.get_toc()</strong></p>
+<p>Get the values for Table of Contents, Figure List and Table List. Only
+one option can be ON at any given time. The function will return a
+string that corresponds to the option that is toggled on:</p>
+<ul class="simple">
+<li><p>‘toc’: corresponds to Table of Contents option</p></li>
+<li><p>‘figure’: corresponds to the Figure List option</p></li>
+<li><p>‘table’: corresponds to the Table List option</p></li>
+</ul>
+<p>If none of these option is ON (default when the template is created),
+then the method will return None.</p>
+<p><strong>template.set_toc(option=’toc’)</strong></p>
+<p>Set the values for Table of Contents, Figure List and Table List. Only
+one can be ON at any given time. Only the following values for option
+are accepted:</p>
+<ul class="simple">
+<li><p>‘toc’: toggles on the Table of Contents option</p></li>
+<li><p>‘figure’: toggles on the Figure List option</p></li>
+<li><p>‘table’: toggles on the Table List option</p></li>
+</ul>
+</section>
+<section id="reportlinkrest-object">
+<span id="reportlinkrest"></span><h3>reportlinkREST object<a class="headerlink" href="#reportlinkrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/LinkedReport.html">Link Report</a> Layout
+template type. Its specific methods are:</p>
+<p><strong>template.get_report_link()</strong></p>
+<p>Get the guid of the linked report. If no linked report, it will return
+None</p>
+<p><strong>template.set_report_link(link=None)</strong></p>
+<p>Set the guid of the linked report. It takes as input a valid guid. If
+you want to set to link to no report, set the input to None</p>
+</section>
+<section id="userdefinedrest-object">
+<span id="userdefinedrest"></span><h3>userdefinedREST object<a class="headerlink" href="#userdefinedrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, LayoutREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/Userdefined.html">Userdefined</a> Layout
+template type. This template inserts a named div into the HTML output.
+This div can be filled with any HTML the user would like.  By default,
+the HTML content will be filled in with the <code class="docutils literal notranslate"><span class="pre">TemplateREST.set_html()</span></code>
+content (if any).  This content may be placed before or after any
+child item/layout content.</p>
+<p>Specific properties include:</p>
+<p><strong>template.interactive_only: int</strong></p>
+<p>If this property is set to a non-zero value (the default), then the
+div will not be included when ADR is outputting PDF, PowerPoint or
+Offline HTML.  If set to zero, it will be included in PDF and Offline
+HTML output.</p>
+<p><strong>template.before_children: int</strong></p>
+<p>If this property is set to zero (the default), then any child content
+is placed in the report before the div.  If set to a non-zero value, the
+children will be placed in the report after the div.</p>
+<p><strong>template.userdef_name: str</strong></p>
+<p>This property is used to specify the value of the div <code class="docutils literal notranslate"><span class="pre">adr_userdefined_template</span></code>
+attribute.  The default value is <code class="docutils literal notranslate"><span class="pre">unspecified</span></code>.</p>
+<p>For example, if this property is set to <code class="docutils literal notranslate"><span class="pre">&quot;Hello&quot;</span></code> and the HTML is set
+to <code class="docutils literal notranslate"><span class="pre">&lt;h1&gt;Example&lt;/h1&gt;</span></code> the generated div will look like this:</p>
+<div class="highlight-html notranslate"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">div</span> <span class="na">adr_userdefined_template</span><span class="o">=</span><span class="s">&quot;Hello&quot;</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">h1</span><span class="p">&gt;</span>Example<span class="p">&lt;/</span><span class="nt">h1</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+</section>
+<section id="tablemergerest-object">
+<span id="tablemergerest"></span><h3>tablemergeREST object<a class="headerlink" href="#tablemergerest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <cite>Table Merge Generator</cite>
+template type. Its specific methods are:</p>
+<p><strong>template.get_merging_param()</strong></p>
+<p>Get the value of Merging. Possible outputs are:</p>
+<ul class="simple">
+<li><p>‘row’: corresponds to Rows</p></li>
+<li><p>‘column’: corresponds to Columns</p></li>
+</ul>
+<p><strong>template.set_merging_param(value=’row’)</strong></p>
+<p>Set the value of Merging. Input needs to be a string: either “row” or
+“column”.</p>
+<p><strong>template.get_table_name()</strong></p>
+<p>Get the value of Resulting table name.</p>
+<p><strong>template.set_table_name(value = ‘’)</strong></p>
+<p>Set the value of Resulting table name. Input should be a string.</p>
+<p><strong>template.get_sources()</strong></p>
+<p>Get the values of the Select source rows/columns. The output is a list
+where each element is a different source. Each element has the following
+form: ‘row_name|merge_operation’ where merge_operation can have one of
+the following values:</p>
+<ul class="simple">
+<li><p>‘duplicate’: corresponds to Allow Duplicates</p></li>
+<li><p>‘merge’: corresponds to Combine Values</p></li>
+<li><p>‘rename_tag’: corresponds to Rename Using Only Tag</p></li>
+<li><p>‘rename_nametag’: corresponds to Rename With Name and Tag</p></li>
+</ul>
+<p><strong>template.set_sources(value=[])</strong></p>
+<p>Set the values of the Select source. The input needs to be a list where
+each element is a different source, with the form explained in the
+get_sources() method section.</p>
+<p><strong>template.add_sources(value=[])</strong></p>
+<p>Add some values to the Select source. The input needs to be a list where
+each element is a different source, with the form explained in the
+get_sources() method section.</p>
+<p><strong>template.get_rename_tag()</strong></p>
+<p>Get the value of the Tag to use when renaming field. Output will be a
+string.</p>
+<p><strong>template.set_rename_tag(value=’’)</strong></p>
+<p>Set the value of the Tag to use when renaming field. Input should be a
+string.</p>
+<p><strong>template.get_rename_tag()</strong></p>
+<p>Get the value of the Tag to use when renaming field. Output will be a
+string.</p>
+<p><strong>template.set_rename_tag(value=’’)</strong></p>
+<p>Set the value of the Tag to use when renaming field. Input should be a
+string.</p>
+<p><strong>template.get_use_labels()</strong></p>
+<p>Get the value of the toggle for Use row/column labels as row/column IDs.
+Output is 0 for toggled OFF, 1 for toggled ON.</p>
+<p><strong>template.set_use_labels(value=1)</strong></p>
+<p>Set the value of the toggle for Use row/column labels as row/column IDs.
+Input should be an integer: 0 for toggled OFF, 1 for toggled ON.</p>
+<p><strong>template.get_use_ids()</strong></p>
+<p>Get the value for the Row/Column to use as column/row IDs field.</p>
+<p><strong>template.set_use_ids(value=’’)</strong></p>
+<p>Set the value for the Row/Column to use as column/row IDs field. Input
+should be a string. This method will not work if get_use_labels()
+returns 1.</p>
+<p><strong>template.get_id_selection()</strong></p>
+<p>Get the value for the Row/Column ID selection. The possible outputs are:</p>
+<ul class="simple">
+<li><p>‘all’: corresponds to All IDs</p></li>
+<li><p>‘intersect’: corresponds to Only Common IDs</p></li>
+<li><p>‘select’: corresponds to Select Specific IDs</p></li>
+</ul>
+<p><strong>template.set_id_selection(value=’all’)</strong></p>
+<p>Set the value for the Row/Column ID selection. Input should be a string
+among the ones listed in the get_id_selection() method.</p>
+<p><strong>template.get_ids()</strong></p>
+<p>Get the value for the Select column/row IDs values. If the Column/Row ID
+selection is not set to Select Specific IDs, it will return an empty
+list. Otherwise, it will return a list where each element is an ID.</p>
+<p><strong>template.set_ids(value=[])</strong></p>
+<p>Set the value for the Select column/row IDs values. If the Column/Row ID
+selection is not set to Select Specific IDs, the method will bail out.
+The input is a list, where each element is an ID as an integer.</p>
+<p><strong>template.add_ids(value=[])</strong></p>
+<p>Add IDs to the Select column/row IDs values. If the Column/Row ID
+selection is not set to Select Specific IDs, the method will bail out.
+The input is a list, where each element is an ID as an integer.</p>
+<p><strong>template.get_unknown_value()</strong></p>
+<p>Get the value for Unknown value. It returns a string. Default is ‘nan’.</p>
+<p><strong>template.set_unknown_value(value=’nan’)</strong></p>
+<p>Set the value for the Unknown value. Input needs to be a string.</p>
+<p><strong>template.get_table_transpose()</strong></p>
+<p>Get the value for Transpose results. Output is an integer: 0 for OFF, 1
+for ON.</p>
+<p><strong>template.set_table_transpose(value=0)</strong></p>
+<p>Set the value for Transpose results. Input must be an integer: 0 for
+OFF, 1 for ON.</p>
+<p><strong>template.get_numeric_output()</strong></p>
+<p>Get the value for Force numeric table output. Output is an integer: 0
+for OFF, 1 for ON.</p>
+<p><strong>template.set_numeric_output(value=0)</strong></p>
+<p>Set the value for Force numeric table output. Input must be an integer:
+0 for OFF, 1 for ON.</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the “Merged Table” template in the
+documentation example in the Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem309.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child of the template
+“Columns” in the database running locally on port 8000. These would be
+the lines of code to create the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Columns&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Merged Table&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Generator:tablemerge&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_generated_items</span><span class="p">(</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_table_name</span><span class="p">(</span><span class="s2">&quot;Simple_test&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_sources</span><span class="p">([</span><span class="s2">&quot;temperature|rename_nametag&quot;</span><span class="p">,</span> <span class="s2">&quot;Distance|merge&quot;</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_rename_tag</span><span class="p">(</span><span class="s2">&quot;\_index\_&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_use_labels</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_use_ids</span><span class="p">(</span><span class="s2">&quot;Distance&quot;</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tablereducerest-object">
+<span id="tablereducerest"></span><h3>tablereduceREST object<a class="headerlink" href="#tablereducerest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableReduction.html">Table Reduction</a>
+Generator template type. Its specific methods
+are:</p>
+<p><strong>template.get_reduce_param()</strong></p>
+<p>Get the value of Reduce. Possible outputs are:</p>
+<ul class="simple">
+<li><p>‘row’: corresponds to Rows</p></li>
+<li><p>‘column’: corresponds to Columns</p></li>
+</ul>
+<p><strong>template.set_reduce_param(value=’row’)</strong></p>
+<p>Set the value of Reduce. Input needs to be a string: either “row” or
+“column”.</p>
+<p><strong>template.get_table_name()</strong></p>
+<p>Get the value of Resulting table name.</p>
+<p><strong>template.set_table_name(value = ‘output_table’)</strong></p>
+<p>Set the value of Resulting table name. Input should be a string.</p>
+<p><strong>template.get_operations()</strong></p>
+<p>Get the values for the Reduce operations as a list. Each element
+corresponds to a different operation. Each element is a dictionary,
+where the following keys are presented:</p>
+<ul class="simple">
+<li><p>‘source_rows’: corresponds to the name(s) of the rows/columns used in
+the operation</p></li>
+<li><p>‘output_rows’: corresponds to the Output row/column name</p></li>
+<li><p>‘output_rows_from_values’: False (OFF) / True (ON) for the Use unique
+values from a column/row as column/row names</p></li>
+<li><p>‘output_column_select’: corresponds to the “Select columns/rows”
+field</p></li>
+<li><p>‘output_columns’: corresponds to the Column/Row name field</p></li>
+<li><p>‘output_columns_from_values’: False (OFF) / True (ON) for the Use
+unique values from a column/row as a new columns/rows toggle</p></li>
+<li><p>‘operation’: corresponds to the Operation field. Possible values:</p>
+<ul>
+<li><p>‘min’: Minimum</p></li>
+<li><p>‘max’: Maximum</p></li>
+<li><p>‘count’: Count</p></li>
+<li><p>‘sum’: Sum</p></li>
+<li><p>‘diff’: Difference</p></li>
+<li><p>‘mean’: Mean</p></li>
+<li><p>‘stdev’: Standard deviation</p></li>
+<li><p>‘skew’: Skew</p></li>
+<li><p>‘kurtosis’: Kurtosis</p></li>
+</ul>
+</li>
+</ul>
+<p><strong>template.delete_operation(name = [])</strong></p>
+<p>Method to remove an entire Reduce operation. Takes as input a list with
+the name(s) of the source rows/columns used in the operation. So for
+example to delete the third Reduce operation from the following panel:</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem293.png" />
+</figure>
+<p>use:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="o">.</span><span class="n">delete_source</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>To delete the first operation, use:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="o">.</span><span class="n">delete_source</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">])</span>
+<span class="n">template</span><span class="o">.</span><span class="n">add_operation</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;\*&quot;</span><span class="p">],</span>
+    <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;output row&quot;</span><span class="p">,</span>
+    <span class="n">existing</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">select_names</span><span class="o">=</span><span class="s2">&quot;\*&quot;</span><span class="p">,</span>
+    <span class="n">operation</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Add a new Reduce operation.</p>
+<ul class="simple">
+<li><p>‘name’: corresponds to the name(s) of the rows/columns used in the
+operation. Input needs to be a list of strings</p></li>
+<li><p>‘unique’: corresponds to the Use unique values from a column as row
+names toggle. False is OFF, True is ON</p></li>
+<li><p>output_name: corresponds to the Output row/column name.</p></li>
+<li><p>existing: corresponds to the Use existing columns/rows toggle. False
+if OFF, True is ON.</p></li>
+<li><p>select_names. If existing is set to True, it is used for the Selected
+columns/rows field. If existing is set to False, this field is used
+for the Column/Row name.</p></li>
+<li><p>operation: corresponds to the operation field. See get_operation()
+for the acceptable values.</p></li>
+</ul>
+<p>For example to create the operation in the following widget:</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem294.png" />
+</figure>
+<p>you would run:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="o">.</span><span class="n">add_operation</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">],</span>
+    <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;MinTemp&quot;</span><span class="p">,</span>
+    <span class="n">existing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">select_names</span><span class="o">=</span><span class="s2">&quot;simulationA&quot;</span><span class="p">,</span>
+    <span class="n">operation</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">template</span><span class="o">.</span><span class="n">get_table_transpose</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Get the value for Transpose results. Output is an integer: 0 for OFF, 1
+for ON.</p>
+<p><strong>template.set_table_transpose(value=0)</strong></p>
+<p>Set the value for Transpose results. Input must be an integer: 0 for
+OFF, 1 for ON.</p>
+<p><strong>template.get_numeric_output()</strong></p>
+<p>Get the value for Force numeric table output. Output is an integer: 0
+for OFF, 1 for ON.</p>
+<p><strong>template.set_numeric_output(value=0)</strong></p>
+<p>Set the value for Force numeric table output. Input must be an integer:
+0 for OFF, 1 for ON.</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the “ASCII reduce” template in the
+documentation example in the Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem310.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child of the template
+“Merge reduce example” in the database running locally on port 8000.
+These would be the lines of code to create the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Merge reduce example&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ASCII reduce&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Generator:tablereduce&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_generated_items</span><span class="p">(</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">delete_operation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;\*&quot;</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">add_operation</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;\*&quot;</span><span class="p">],</span>
+    <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;User&quot;</span><span class="p">,</span>
+    <span class="n">existing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">select_names</span><span class="o">=</span><span class="s2">&quot;Version&quot;</span><span class="p">,</span>
+    <span class="n">operation</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">add_operation</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;\*&quot;</span><span class="p">],</span>
+    <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;Totals&quot;</span><span class="p">,</span>
+    <span class="n">existing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">select_names</span><span class="o">=</span><span class="s2">&quot;Version&quot;</span><span class="p">,</span>
+    <span class="n">operation</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tablerowcolumnfilterrest-object">
+<span id="tablerowcolumnfilterrest"></span><h3>tablerowcolumnfilterREST object<a class="headerlink" href="#tablerowcolumnfilterrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnFilter.html">Table Row/Column Filter</a>
+Generator template type. Its specific
+methods are:</p>
+<p><strong>template.get_table_name()</strong></p>
+<p>Get the value of New table name.</p>
+<p><strong>template.set_table_name(value = ‘output_table’)</strong></p>
+<p>Set the value of New table name. Input should be a string.</p>
+<p><strong>template.get_filter_rows()</strong></p>
+<p>Get the value of Rows… The values are returned as a list of strings,
+where each element corresponds to a row value.</p>
+<p><strong>template.set_filter_rows(value=[’*’])</strong></p>
+<p>Set the value of Rows… The input value needs to be a list of strings,
+where each element corresponds to a different row value.</p>
+<p><strong>template.add_filter_rows(value=[’*’])</strong></p>
+<p>Add new values to the value of Rows… The input value needs to be a
+list of strings, where each element corresponds to a different row
+value.</p>
+<p><strong>template.get_filter_columns()</strong></p>
+<p>Get the value of Columns… The values are returned as a list of
+strings, where each element corresponds to a column value.</p>
+<p><strong>template.set_filter_columns(value=[’*’])</strong></p>
+<p>Set the value of Columns… The input value needs to be a list of
+strings, where each element corresponds to a different column value.</p>
+<p><strong>template.add_filter_columns(value=[’*’])</strong></p>
+<p>Add new values to the value of Columns… The input value needs to be a
+list of strings, where each element corresponds to a different column
+value.</p>
+<p><strong>template.get_invert()</strong></p>
+<p>Get the value of Select the rows/columns to remove. Returns 0 or False
+if it is toggled OFF, 1 or True if it is toggled ON</p>
+<p><strong>template.set_invert(value=False)</strong></p>
+<p>Set the value of Select the rows/columns to remove. Set it to 0 or False
+to toggle OFF, set to 1 or True to toggle ON</p>
+<p><strong>template.get_sort()</strong></p>
+<p>Get the value of Sort rows/columns by selection order. Returns 0 or
+False if it is toggled OFF, 1 or True if it is toggled ON</p>
+<p><strong>template.set_sort(value=False)</strong></p>
+<p>Set the value of Sort rows/columns by selection order. Set it to 0 or
+False to toggle OFF, set to 1 or True to toggle ON. This method works
+only if the Select the rows/columns to remove is toggled OFF.</p>
+<p><strong>template.get_table_transpose()</strong></p>
+<p>Get the value of Transpose the output table. Returns 0 or False if it is
+toggled OFF, 1 or True if it is toggled ON</p>
+<p><strong>template.set_table_transpose(value=False)</strong></p>
+<p>Set the value of Transpose the output table. Set it to 0 or False to
+toggle OFF, set to 1 or True to toggle ON</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the “Filter” template in the
+documentation example in the Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem311.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child of the template
+“RC Filter Generator” in the database running locally on port 8000.
+These would be the lines of code to create the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;RC Filter Generator&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Filter&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Generator:tablerowcolumnfilter&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_filter_rows</span><span class="p">([</span><span class="s2">&quot;0&quot;</span><span class="p">,</span> <span class="s2">&quot;fuselage&quot;</span><span class="p">,</span> <span class="s2">&quot;\*wing\*&quot;</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_filter_columns</span><span class="p">([</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;Tria3&quot;</span><span class="p">,</span> <span class="s2">&quot;Tetra\*&quot;</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_table_name</span><span class="p">(</span><span class="s2">&quot;RC_Filtered_Table&quot;</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tablevaluefilterrest-object">
+<span id="tablevaluefilterrest"></span><h3>tablevaluefilterREST object<a class="headerlink" href="#tablevaluefilterrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableValueFilter.html">Table Value Filter</a>
+Generator template type. Its specific methods
+are:</p>
+<p><strong>template.get_table_name()</strong></p>
+<p>Get the value of New table name.</p>
+<p><strong>template.set_table_name(value = ‘value filtered table’)</strong></p>
+<p>Set the value of New table name. Input should be a string.</p>
+<p><strong>template.get_filter_by()</strong></p>
+<p>Get the value of Filter by values in as a list. The first element is
+‘column’ (default) or ‘row’. The second element of the list of the
+number of row/column set in the following field.</p>
+<p><strong>template.set_filter_by(value = [‘column’, ‘0’])</strong></p>
+<p>Set the value of Filter by values in as a list. The first element needs
+to be ‘column’ or ‘row’. The second element of the list of the number of
+row/column set in the following field, and needs to be a string.</p>
+<p><strong>template.get_filter_value()</strong></p>
+<p>Get the value of Filter. Each different type of filter will return a
+different type of output:</p>
+<ul class="simple">
+<li><p>‘Range of values’: it returns a list of three elements. The first
+element is ‘range’. The second and third are strings that represent
+the min. and max. of the range.</p></li>
+<li><p>‘Specific values’: it returns a list of two elements. The first
+element is “specific”. The second element is a list of strings. Each
+element in this second list is one entry in the Select specific
+values… field</p></li>
+<li><p>‘Upper % of values’: it returns a list of two elements. The first
+element is “top_percent”. The second element is a float that
+corresponds to the Upper percent of values field.</p></li>
+<li><p>‘Upper # of values’: it returns a list of two elements. The first
+element is “top_count”. The second element is an integer that
+corresponds to the Upper number of values field.</p></li>
+<li><p>‘Lower % of values’: it returns a list of two elements. The first
+element is “bot_percent”. The second element is a float that
+corresponds to the Lower percent of values field.</p></li>
+<li><p>‘Lower # of values’: it returns a list of two elements. The first
+element is “bot_count”. The second element is an integer that
+corresponds to the Lower number of values field.</p></li>
+</ul>
+<p><strong>template.set_filter_value(value=[‘range’, ‘’, ‘’])</strong></p>
+<p>Set the value of Filter. Each different type needs a different type of
+input. See the description of get_filter_value() possible outputs to know the
+details of the accepted formats.</p>
+<p><strong>template.get_invert_filter()</strong></p>
+<p>Get the value of Invert filter sense. Returns 0 or False if it is
+toggled OFF, 1 or True if it is toggled ON</p>
+<p><strong>template.set_invert_filter(value=False)</strong></p>
+<p>Set the value of Invert filter sense. Set it to 0 or False to toggle
+OFF, set to 1 or True to toggle ON</p>
+<p><strong>template.get_values_as_dates()</strong></p>
+<p>Get the value of Treat values as dates. Returns 0 or False if it is
+toggled OFF, 1 or True if it is toggled ON</p>
+<p><strong>template.set_values_as_dates(value=False)</strong></p>
+<p>Set the value of Treat values as dates. Set it to 0 or False to toggle
+OFF, set to 1 or True to toggle ON</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the documentation example in the
+Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem304.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child template of the
+template “Value Filter Example” that already exists in in the database
+running locally on port 800. These would be the lines of code to create
+the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Value Filter Example&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Generator&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Generator:tablevaluefilter&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_sort_selection</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_table_name</span><span class="p">(</span><span class="s2">&quot;ValueFilteredTable&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_filter_by</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;row&quot;</span><span class="p">,</span> <span class="s2">&quot;Quad4&quot;</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_filter_value</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;range&quot;</span><span class="p">,</span> <span class="s2">&quot;100&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">])</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tablesortfilterrest-object">
+<span id="tablesortfilterrest"></span><h3>tablesortfilterREST object<a class="headerlink" href="#tablesortfilterrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TableRowColumnSort.html">Table Row/Column Sort</a>
+Generator template type. Its specific methods
+are:</p>
+<p><strong>template.get_table_name()</strong></p>
+<p>Get the value of New table name.</p>
+<p><strong>template.set_table_name(value = ‘value filtered table’)</strong></p>
+<p>Set the value of New table name. Input should be a string.</p>
+<p><strong>template.get_sort_rows()</strong></p>
+<p>Get the Select columns to sort rows by. This returns a list where each
+element is a filter. Each elements start with ‘+’ or ‘-’ to indicate the
+direction of the sort, and the string of the row name to sort by.</p>
+<p><strong>template.set_sort_rows([])</strong></p>
+<p>Set the Select columns to sort rows by. This function takes a list as
+input. The list is generated with ‘+’ for increasing, ‘-’ for
+decreasing, followed by the row to sort by. Example: setting the sort
+fields to be by increasing row “temperature” and decreasing by row
+“pressure” becomes: [‘+temperature’, ‘-pressure’]</p>
+<p><strong>template.add_sort_rows([])</strong></p>
+<p>Add the Select columns to sort rows by. This function takes a list as
+input. See set_sort_rows() for the description on how the list has to be
+formatted.</p>
+<p><strong>template.get_sort_columns()</strong></p>
+<p>Get the Select rows to sort columns by. This returns a list where each
+element is a filter. Each elements start with ‘+’ or ‘-’ to indicate the
+direction of the sort, and the string of the column name to sort by.</p>
+<p><strong>template.set_sort_columns([])</strong></p>
+<p>Set the Select rows to sort columns by. This function takes a list as
+input. See set_sort_rows() for the description on how the list has to be
+formatted.</p>
+<p><strong>template.add_sort_columns([])</strong></p>
+<p>Add the Select rows to sort columns by. This function takes a list as
+input. See set_sort_rows() for the description on how the list has to be
+formatted.</p>
+<p>Example of usage. Let’s assume you want to create a template like the
+one shown in the picture (from the “Sorted” template in the
+documentation example in the Ansys Dynamic Reporting installer):</p>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem312.png" />
+</figure>
+<figure class="align-center">
+<img alt="Image" src="../_images/NewItem313.png" />
+</figure>
+<p>Let’s also assume you want this template to be a child of the template
+“RC Sort Filter Example” in the database running locally on port 8000.
+These would be the lines of code to create the new template:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">server</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">all_reports</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span><span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">TemplateREST</span><span class="p">)</span>
+<span class="n">my_parent</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">all_reports</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;RC Sort Filter Example&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">my_template</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_template</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Sorted&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">my_parent</span><span class="p">,</span> <span class="n">report_type</span><span class="o">=</span><span class="s2">&quot;Generator:tablesortfilter&quot;</span>
+<span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_sort_rows</span><span class="p">([</span><span class="s2">&quot;+User&quot;</span><span class="p">,</span> <span class="s2">&quot;+Version&quot;</span><span class="p">,</span> <span class="s2">&quot;+Date&quot;</span><span class="p">])</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_generated_items</span><span class="p">(</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+<span class="n">my_template</span><span class="o">.</span><span class="n">set_sort_columns</span><span class="p">([</span><span class="s2">&quot;+Labels&quot;</span><span class="p">])</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_template</span><span class="p">)</span>
+<span class="n">server</span><span class="o">.</span><span class="n">put_objects</span><span class="p">(</span><span class="n">my_parent</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="sqlqueriesrest-object">
+<span id="sqlqueriesrest"></span><h3>sqlqueriesREST object<a class="headerlink" href="#sqlqueriesrest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/SQLQuery.html">SQL Query</a> Generator
+template type. Its specific methods are:</p>
+<p><strong>template.get_db_type()</strong></p>
+<p>Get the Database type. Possible outputs are: SQLite / PostgreSQL</p>
+<p><strong>template.set_db_type(value=’SQLite’)</strong></p>
+<p>Set the Database type. Input needs to be a string. Only two acceptable
+values: ‘SQLite’ or ‘PostgreSQL’</p>
+<p><strong>template.get_sqlite_name()</strong></p>
+<p>Get the SQLite filename.</p>
+<p><strong>template.set_sqlite_name(value=’’)</strong></p>
+<p>Set the SQLite filename. Input needs to be a string. The method will not
+work if the Database type is set to PostgreSQL</p>
+<p><strong>template.get_postgre()</strong></p>
+<p>Get the PostgreSQL parameters. This method returns a dictionary with
+five entries, corresponding to:</p>
+<ul class="simple">
+<li><p>Database name:</p></li>
+<li><p>Hostname:</p></li>
+<li><p>Port:</p></li>
+<li><p>Username:</p></li>
+<li><p>Password:</p></li>
+</ul>
+<p><strong>template.set_postgre(value = {‘database’</strong>: ‘’,
+‘hostname’:’localhost’, ‘port’: ‘5432’, ‘username’:’nexus’,
+‘password’:’cei’}<strong>)</strong></p>
+<p>Set the the PostgreSQL parameters. Input needs to be a dictionary with
+the keys: ‘database’, ‘hostname’, ‘port’, ‘username’, ‘password’. Note
+that all keys are strings. See get_postgre() method for the description
+of each element. The method will not work if the Database type is set to
+SQLite</p>
+<p><strong>template.get_query()</strong></p>
+<p>Get theSQL query text: field.</p>
+<p><strong>template.set_query(value=’’)</strong></p>
+<p>Set theSQL query text: field. Input needs to be a string. Note that no
+check on the validity of the SQL query itself is performed. It is up to
+the user to make sure the query is properly formatted.</p>
+<p><strong>template.validate()</strong></p>
+<p>Validate the database. This method should be run after all the
+parameters for the database connection have been set. The method
+returns:</p>
+<ul class="simple">
+<li><p>Boolean parameter: True is the database can be validated, False
+otherwise.</p></li>
+<li><p>Error message: If the connection is validated, this will be an empty
+string. Otherwise, and error message with more details about the
+failure will be returned.</p></li>
+</ul>
+</section>
+<section id="mergetreerest-object">
+<span id="mergetreerest"></span><h3>mergetreeREST object<a class="headerlink" href="#mergetreerest-object" title="Link to this heading">#</a></h3>
+<p>Inherits from TemplateREST, GeneratorREST</p>
+<p>Class that corresponds to the <a class="reference external" href="https://s3.amazonaws.com/www3.ensight.com/nexus_docs/nexus_sphinx/is/TreeMerge.html">Tree Merge</a> Generator
+template type. Its specific methods are:</p>
+<p><strong>template.get_merge_rule()</strong></p>
+<p>Get the row merging rule.</p>
+<p><strong>template.set_merge_rule(value=’all’)</strong></p>
+<p>Set the row merging rule. Legal values: ‘all’, ‘common’, ‘first’</p>
+<p><strong>template.get_match_rule()</strong></p>
+<p>Get the rule for matching rows.</p>
+<p><strong>template.set_match_rule(value=’both’)</strong></p>
+<p>Set the rule for matching rows. Legal values: ‘key’, ‘name’, ‘both’</p>
+<p><strong>template.get_tree_name()</strong></p>
+<p>Get the name that the generated tree will be given.</p>
+<p><strong>template.set_tree_name(value=’treemerge’)</strong></p>
+<p>Set the name that the generated tree will be given. Input needs to be a
+string.</p>
+<p><strong>template.get_fill_value()</strong></p>
+<p>Get the value to be used to fill unknown cells.</p>
+<p><strong>template.set_fill_value(value=’’)</strong></p>
+<p>Set the value to be used to fill unknown cells. Input needs to be a
+string.</p>
+<p><strong>template.get_header_tag()</strong></p>
+<p>Get the name of the tag (if any) to be used to generate an output tree
+header.</p>
+<p><strong>template.set_header_tag(value=’’)</strong></p>
+<p>Set the name of the tag to be used to generate an output tree header.
+Input needs to be a string. An empty string (the default) specifies that
+no tree header be generated.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#report-objects-templaterest-object">report_objects.TemplateREST object</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-members">Data members</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#methods">Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#subclasses">SubClasses</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layoutrest-class">LayoutREST class</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generatorrest-class">GeneratorREST class</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basicrest-object">basicREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#panelrest-object">panelREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#boxrest-object">boxREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tabsrest-object">tabsREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#carouselrest-object">carouselREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sliderrest-object">sliderREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#footerrest-object">footerREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#headerrest-object">headerREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iteratorrest-object">iteratorREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tagpropsrest-object">tagpropsREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tocrest-object">tocREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reportlinkrest-object">reportlinkREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#userdefinedrest-object">userdefinedREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tablemergerest-object">tablemergeREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tablereducerest-object">tablereduceREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tablerowcolumnfilterrest-object">tablerowcolumnfilterREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tablevaluefilterrest-object">tablevaluefilterREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tablesortfilterrest-object">tablesortfilterREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sqlqueriesrest-object">sqlqueriesREST object</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mergetreerest-object">mergetreeREST object</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/lowlevelapi/TemplateObjects.rst">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div class="tocsection sourcelink">
+    <a href="../_sources/lowlevelapi/TemplateObjects.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright (c) 2024 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  0.11.2. <br />Last updated on
+  <span id="date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var lastModifiedDate = new Date(document.lastModified);
+  var date = lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("date").innerHTML = date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

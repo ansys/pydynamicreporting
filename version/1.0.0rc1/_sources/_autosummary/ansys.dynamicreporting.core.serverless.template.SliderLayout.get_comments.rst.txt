@@ -1,0 +1,6 @@
+get\_comments
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.get_comments

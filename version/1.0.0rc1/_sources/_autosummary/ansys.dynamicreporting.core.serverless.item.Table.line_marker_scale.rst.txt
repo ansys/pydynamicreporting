@@ -1,0 +1,6 @@
+line\_marker\_scale
+===================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.line_marker_scale

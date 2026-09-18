@@ -1,0 +1,6 @@
+as\_dict
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: DataFilterLayout.as_dict

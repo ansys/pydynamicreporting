@@ -1,0 +1,6 @@
+values\_list
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.base
+
+.. automethod:: ObjectSet.values_list

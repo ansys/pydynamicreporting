@@ -1,0 +1,165 @@
+﻿TreeMergeGenerator
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TreeMergeGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TreeMergeGenerator.add_filter
+      
+      
+      TreeMergeGenerator.add_params
+      
+      
+      TreeMergeGenerator.add_properties
+      
+      
+      TreeMergeGenerator.add_property
+      
+      
+      TreeMergeGenerator.add_sort_fields
+      
+      
+      TreeMergeGenerator.add_tag
+      
+      
+      TreeMergeGenerator.as_dict
+      
+      
+      TreeMergeGenerator.create
+      
+      
+      TreeMergeGenerator.delete
+      
+      
+      TreeMergeGenerator.filter
+      
+      
+      TreeMergeGenerator.find
+      
+      
+      TreeMergeGenerator.get
+      
+      
+      TreeMergeGenerator.get_append_tags
+      
+      
+      TreeMergeGenerator.get_filter
+      
+      
+      TreeMergeGenerator.get_filter_mode
+      
+      
+      TreeMergeGenerator.get_generated_items
+      
+      
+      TreeMergeGenerator.get_params
+      
+      
+      TreeMergeGenerator.get_property
+      
+      
+      TreeMergeGenerator.get_sort_fields
+      
+      
+      TreeMergeGenerator.get_sort_selection
+      
+      
+      TreeMergeGenerator.get_tags
+      
+      
+      TreeMergeGenerator.reinit
+      
+      
+      TreeMergeGenerator.rem_tag
+      
+      
+      TreeMergeGenerator.remove_tag
+      
+      
+      TreeMergeGenerator.render
+      
+      
+      TreeMergeGenerator.render_pdf
+      
+      
+      TreeMergeGenerator.reorder_child
+      
+      
+      TreeMergeGenerator.reorder_children
+      
+      
+      TreeMergeGenerator.save
+      
+      
+      TreeMergeGenerator.set_append_tags
+      
+      
+      TreeMergeGenerator.set_filter
+      
+      
+      TreeMergeGenerator.set_filter_mode
+      
+      
+      TreeMergeGenerator.set_generated_items
+      
+      
+      TreeMergeGenerator.set_params
+      
+      
+      TreeMergeGenerator.set_property
+      
+      
+      TreeMergeGenerator.set_sort_fields
+      
+      
+      TreeMergeGenerator.set_sort_selection
+      
+      
+      TreeMergeGenerator.set_tags
+      
+      
+      TreeMergeGenerator.to_dict
+      
+      
+      TreeMergeGenerator.to_json
+      
+      
+      TreeMergeGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TreeMergeGenerator.children_order
+      TreeMergeGenerator.db
+      TreeMergeGenerator.item_filter
+      TreeMergeGenerator.master
+      TreeMergeGenerator.name
+      TreeMergeGenerator.params
+      TreeMergeGenerator.parent
+      TreeMergeGenerator.report_type
+      TreeMergeGenerator.saved
+      TreeMergeGenerator.tags
+      TreeMergeGenerator.type
+      TreeMergeGenerator.date
+      TreeMergeGenerator.children
+      TreeMergeGenerator.guid
+   
+   

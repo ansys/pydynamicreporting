@@ -1,0 +1,6 @@
+add\_tag
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: BoxLayout.add_tag
