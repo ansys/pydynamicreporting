@@ -133,6 +133,52 @@ Static Files Collection and Serving
 - Static files must be served by your web server or framework to enable proper report rendering.
 - The static URL prefix (e.g., ``/static/``) must correspond to your web server configuration.
 
+Serving Static Files from the Installation
+------------------------------------------
+
+An existing web application can avoid the copy by asking ADR which installation
+directories to mount:
+
+.. code-block:: python
+
+    adr = ADR(
+        ansys_installation=r"E:\Program Files\ANSYS Inc\ANSYS Student\v261",
+        db_directory=r"C:\ADR\db",
+        static_url="/adr-static/",
+    )
+
+    static_routes = adr.get_installation_static_routes()
+
+The method is available immediately after construction; ``setup()`` is not
+required to obtain the routes. For this 26R1 example, ``static_routes`` maps:
+
+- ``/adr-static/`` to the installation's ``nexus261/django/static`` directory.
+- ``/static/`` to the same directory for product assets that use the canonical
+  prefix.
+- ``/ansys261/`` to ``nexus261/django/static/ansys261`` for viewer modules,
+  Draco files, and other versioned assets.
+
+The returned paths are absolute, and each call returns a new dictionary. The
+method raises ``ImproperlyConfiguredError`` when an installation directory is
+missing or when ``static_url`` is not a valid, non-overlapping local prefix.
+
+ADR does not register or serve these routes. The host application is
+responsible for all of the following:
+
+- Mount every returned prefix without conflicting with an existing route.
+- Keep requested paths inside the mapped directory and prevent path traversal.
+- Set correct MIME and security headers.
+- Define caching and production file-serving behavior.
+- Serve ``media_url`` from ``media_directory`` separately; media routes are not
+  included in this mapping.
+
+Continue to use ``static_directory`` and ``adr.setup(collect_static=True)`` for
+workflows and export methods that require collected static files. Calling
+``get_installation_static_routes()`` does not populate ``static_directory`` or
+change ``setup()`` behavior.
+
+See :doc:`embedding_reports` for a Flask example.
+
 In-Memory Mode and Temporary Files
 ----------------------------------
 
