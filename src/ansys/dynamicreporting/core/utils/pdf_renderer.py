@@ -1971,6 +1971,9 @@ class _BasePlaywrightPDFRenderer(ABC):
                         const style = getComputedStyle(canvas);
                         return style.display !== 'none' && style.visibility !== 'hidden';
                     }
+                    function hasSource(img) {
+                        return Boolean(img.currentSrc || img.getAttribute('src'));
+                    }
                     function isReady(img) {
                         // Require both a source and decoded image dimensions before fast-passing
                         // the image. ``img.complete`` alone is too weak because a src-less <img>
@@ -1982,15 +1985,25 @@ class _BasePlaywrightPDFRenderer(ABC):
                         // stale completed <img> source around while a new TIFF or enhanced-image
                         // decode is still in flight, so do not treat the image as ready until the
                         // visible companion canvas has been unhidden.
-                        const hasSource = Boolean(img.currentSrc || img.getAttribute('src'));
-                        return hasSource && img.complete && img.naturalWidth > 0 && companionCanvasReady(img);
+                        return (
+                            hasSource(img) &&
+                            img.complete &&
+                            img.naturalWidth > 0 &&
+                            companionCanvasReady(img)
+                        );
+                    }
+                    function hasFailed(img) {
+                        // A sourced image that completed without decoded dimensions has already
+                        // emitted its error event, so waiting for a new event would time out.
+                        return hasSource(img) && img.complete && img.naturalWidth === 0;
                     }
                     imgs.forEach((img) => {
-                        if (isReady(img)) {
+                        if (isReady(img) || hasFailed(img)) {
                             done();
                             return;
                         }
                         let observer = null;
+                        let settled = false;
                         function cleanup() {
                             img.removeEventListener('load', onLoad);
                             img.removeEventListener('error', onError);
@@ -1998,15 +2011,21 @@ class _BasePlaywrightPDFRenderer(ABC):
                                 observer.disconnect();
                             }
                         }
+                        function settle() {
+                            if (settled) {
+                                return;
+                            }
+                            settled = true;
+                            cleanup();
+                            done();
+                        }
                         function onLoad() {
                             if (isReady(img)) {
-                                cleanup();
-                                done();
+                                settle();
                             }
                         }
                         function onError() {
-                            cleanup();
-                            done();
+                            settle();
                         }
                         img.addEventListener('load', onLoad, { once: true });
                         img.addEventListener('error', onError, { once: true });
@@ -2014,8 +2033,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                         if (companionCanvas) {
                             observer = new MutationObserver(() => {
                                 if (isReady(img)) {
-                                    cleanup();
-                                    done();
+                                    settle();
                                 }
                             });
                             observer.observe(companionCanvas, {
@@ -2041,9 +2059,26 @@ class _BasePlaywrightPDFRenderer(ABC):
                     let remaining = videos.length;
                     function done() { if (--remaining <= 0) resolve(); }
                     videos.forEach((vid) => {
-                        if (vid.readyState >= 2) { done(); return; }
-                        vid.addEventListener('loadeddata', done, { once: true });
-                        vid.addEventListener('error', done, { once: true });
+                        if (vid.readyState >= 2 || vid.error) { done(); return; }
+                        let settled = false;
+                        function cleanup() {
+                            vid.removeEventListener('loadeddata', settle);
+                            vid.removeEventListener('error', settle);
+                        }
+                        function settle() {
+                            if (settled) {
+                                return;
+                            }
+                            settled = true;
+                            cleanup();
+                            done();
+                        }
+                        vid.addEventListener('loadeddata', settle);
+                        vid.addEventListener('error', settle);
+                        // Close the gap between the initial state check and listener registration.
+                        if (vid.readyState >= 2 || vid.error) {
+                            settle();
+                        }
                     });
                 });
             }""",
