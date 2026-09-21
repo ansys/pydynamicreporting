@@ -562,8 +562,14 @@ class _BasePlaywrightPDFRenderer(ABC):
 
                     # Force screen media so the PDF matches the browser view instead of print CSS.
                     page.emulate_media(media="screen")
-                    self._apply_pdf_capture_styles(page)
+                    # Wait before applying capture CSS: readiness checks must observe the product's
+                    # loaders, and panel shadow roots must exist before receiving pagination styles.
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
+                    current_timeout_phase = "PDF capture styling"
+                    self._apply_pdf_capture_styles(
+                        page,
+                        deadline=browser_phase_deadline,
+                    )
                     current_timeout_phase = "pagination preparation"
                     self._prepare_content_for_pagination(
                         page,
@@ -679,10 +685,14 @@ class _BasePlaywrightPDFRenderer(ABC):
 
     def _browser_viewport_width_px(self) -> int:
         """Return an integer viewport no wider than the PDF content box."""
+        # Playwright and Chromium's device-metrics API require integer viewport dimensions.
+        # Round down so the browser layout never exceeds the printable PDF content box.
         return floor(self._printable_page_width_px())
 
     def _printable_page_height_px(self) -> float:
         """Return the oriented content-box height after vertical PDF margins."""
+        # This height is pagination geometry, not a browser viewport dimension, so retain
+        # fractional CSS pixels produced when PDF lengths are converted to pixels.
         page_height_px = self._pdf_length_to_px(self._oriented_page_height())
         margin_height_px = self._pdf_length_to_px(self._margins["top"]) + self._pdf_length_to_px(
             self._margins["bottom"]
@@ -721,8 +731,20 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Configure the browser context before opening the source page."""
         raise NotImplementedError
 
-    def _apply_pdf_capture_styles(self, page: Any) -> None:
+    def _apply_pdf_capture_styles(
+        self,
+        page: Any,
+        *,
+        deadline: float | None = None,
+    ) -> None:
         """Inject PDF-only overrides that keep browser-rendered content fully visible on pages."""
+        # Production rendering supplies the shared browser deadline. Direct internal callers start
+        # a fresh budget so this private styling helper remains usable in isolation.
+        if deadline is None:
+            deadline = monotonic() + self._render_timeout
+
+        timeout_phase = "PDF capture styling"
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
         # Chromium paginates based on the outer block formatting context. If a page-break rule is
         # applied too high in the ADR layout tree, an entire panel becomes unbreakable and content
         # can spill past the page boundary. Keep the override focused on the actual browser-rendered
@@ -877,6 +899,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
             """.replace("__ANSYS_VIEWER__", _SCENE_VIEWER_SELECTOR),
         )
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
 
         # Panel-type layouts default to "may split across pages". The pagination pass later
         # tightens the ones that actually fit onto a single page back to "keep together".
@@ -888,6 +911,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
             """,
         )
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
         # An <adr-panel> renders its content inside a shadow DOM, a private subtree that the
         # page-level stylesheet above cannot reach. So run a script that injects a small
         # stylesheet directly into each panel's shadow root.
@@ -935,6 +959,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 }
             }"""
         )
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
 
     def _prepare_content_for_pagination(
         self,
@@ -1629,7 +1654,7 @@ class _BasePlaywrightPDFRenderer(ABC):
         except (TypeError, ValueError) as exc:
             raise ADRException(error_message) from exc
 
-        if timeout <= 0:
+        if not isfinite(timeout) or timeout <= 0:
             raise ADRException(error_message)
         return timeout
 
