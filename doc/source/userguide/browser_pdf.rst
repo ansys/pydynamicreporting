@@ -1,9 +1,9 @@
-.. _connected_browser_pdf:
+.. _service_browser_pdf:
 
 Browser PDF export
 ##################
 
-Connected browser-PDF export is available with ADR 27.1 and later. It uses the
+Service-mode browser-PDF export is available with ADR 27.1 and later. It uses the
 Chromium package shipped with the local ADR installation to render the live,
 authenticated report page and print the browser view to PDF.
 
@@ -11,8 +11,8 @@ ADR 26.1 remains supported by PyDynamicReporting 1.x, but it does not contain
 the browser package required for this export path. Use another export format
 with ADR 26.1.
 
-Export a connected report
-=========================
+Export a service-mode report
+============================
 
 Create the ``Service`` with a local ADR 27.1 installation, connect to the
 service that hosts the report, and call
@@ -48,7 +48,7 @@ service that hosts the report, and call
        raise RuntimeError("The report was not exported.")
 
 The method returns ``True`` after writing the file and ``False`` if the report
-is disconnected or the export fails. It does not modify the supplied
+has no active service or the export fails. It does not modify the supplied
 ``query_params`` dictionary.
 
 Page sizes

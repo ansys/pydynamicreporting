@@ -47,6 +47,10 @@ organize items logically.
    ansys.dynamicreporting.core.serverless.item.Session
    ansys.dynamicreporting.core.serverless.item.Dataset
 
+The serverless package also re-exports the shared
+:class:`~ansys.dynamicreporting.core.PDFPageSize` enum for selecting a
+browser-PDF page format.
+
 
 Item Model API
 --------------

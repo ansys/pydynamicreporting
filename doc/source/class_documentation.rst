@@ -62,6 +62,12 @@ Logging utility
    ansys.dynamicreporting.core.Service
    ansys.dynamicreporting.core.Report
 
+.. autosummary::
+   :toctree: _autosummary/
+   :template: enum.rst
+
+   ansys.dynamicreporting.core.PDFPageSize
+
 .. toctree::
    lowlevelapi/index.rst
 
