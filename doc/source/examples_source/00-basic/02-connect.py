@@ -58,32 +58,32 @@ adr_service.visualize_report()
 #
 # .. _ref_connect_to_a_running_service:
 #
-# Create another service instance
-# -------------------------------
+# Create another connected instance
+# ---------------------------------
 #
 # Now that you have a running Ansys Dynamic Reporting service, create a
 # second instance of the ``Service`` class and use it to
 # connect to the database. Visualize the default report.
 
-second_service = adr.Service()
-second_service.connect(url=adr_service.url)
-second_service.visualize_report()
+connected_s = adr.Service()
+connected_s.connect(url=adr_service.url)
+connected_s.visualize_report()
 
 
 ###############################################################################
 #
 # .. image:: /_static/01_connect_1.png
 #
-# Create an item through the service object
-# -----------------------------------------
+# Create an item via the connected object
+# ---------------------------------------
 #
-# Use the new service object to create an ``Image`` item.
+# Use the new object for the connected service to create an ``Image`` item.
 # Visualize the default report again to verify that this item has been
 # added to the database.
 
-my_image = second_service.create_item(obj_name="Image", source="Documentation")
+my_image = connected_s.create_item(obj_name="Image", source="Documentation")
 my_image.item_image = examples.download_file("introduction.png", "multi_physics")
-second_service.visualize_report()
+connected_s.visualize_report()
 
 
 ###############################################################################
@@ -94,12 +94,12 @@ second_service.visualize_report()
 # -----------------------------------
 #
 # Assume that you want to visualize only the items that were
-# created from the second Ansys Dynamic Reporting session and not the
+# created from the connected Ansys Dynamic Reporting session and not the
 # original instance. To achieve this, you add a filter to the default
 # report visualization. Note that running this method on either of the
 # Ansys Dynamic Reporting instances produces the same result.
 
-adr_service.visualize_report(item_filter=f"A|s_guid|cont|{second_service.session_guid}")
+adr_service.visualize_report(item_filter=f"A|s_guid|cont|{connected_s.session_guid}")
 
 ###############################################################################
 # Close the service

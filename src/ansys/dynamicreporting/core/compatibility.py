@@ -238,7 +238,7 @@ def validate_supported_server_install_version(
     install_version: int | str | None,
     supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES,
 ) -> str:
-    """Validate the install version reported by an ADR service.
+    """Validate the install version reported by a connected ADR server.
 
     Parameters
     ----------
@@ -276,7 +276,7 @@ def validate_supported_server_install_version(
 
     supported_lines = ", ".join(f"{line}.*" for line in supported_product_lines)
     raise UnsupportedServerVersionError(
-        "ADR service reports product release "
+        "Connected ADR server reports product release "
         f"{detected_release}. This client is bundled with {BUNDLED_PRODUCT_RELEASE} "
         f"and supports annual lines {supported_lines}."
     )

@@ -423,8 +423,8 @@ def test_export_html_sets_html_print_query(monkeypatch) -> None:
     assert query == {"colormode": "dark"}
 
 
-def test_download_html_bundle_uses_service_version(tmp_path, monkeypatch) -> None:
-    """Use the v261 service's asset namespace over the client's installation."""
+def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatch) -> None:
+    """Use the connected v261 server's asset namespace over the client's installation."""
     server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
     downloader = Mock()
     captured: dict[str, object] = {}
@@ -446,12 +446,12 @@ def test_download_html_bundle_uses_service_version(tmp_path, monkeypatch) -> Non
     downloader.download.assert_called_once_with()
 
 
-def test_download_html_bundle_reuses_cached_service_version(tmp_path, monkeypatch) -> None:
+def test_download_html_bundle_reuses_cached_connected_server_version(tmp_path, monkeypatch) -> None:
     """Avoid another API probe when connection validation already cached the server version."""
     server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
-    service_version = _supported_server_install_version()
+    connected_version = _supported_server_install_version()
     server._api_version = 1.0
-    server._ansys_version = service_version
+    server._ansys_version = connected_version
     downloader = Mock()
     captured: dict[str, object] = {}
     probe = Mock(side_effect=AssertionError("cached server version should be reused"))
@@ -469,12 +469,14 @@ def test_download_html_bundle_reuses_cached_service_version(tmp_path, monkeypatc
         query={"print": "html"},
     )
 
-    assert captured["ansys_version"] == service_version
+    assert captured["ansys_version"] == connected_version
     probe.assert_not_called()
     downloader.download.assert_called_once_with()
 
 
-def test_download_html_bundle_rejects_missing_service_version(tmp_path, monkeypatch) -> None:
+def test_download_html_bundle_rejects_missing_connected_server_version(
+    tmp_path, monkeypatch
+) -> None:
     """Do not fall back to a local install version when the server cannot prove support."""
     server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
     downloader = Mock()
@@ -524,9 +526,9 @@ def test_download_html_bundle_warns_on_explicit_version_mismatch(
 ) -> None:
     """Warn when the caller forces a different asset namespace than the server advertises."""
     server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
-    service_version = _supported_server_install_version()
+    connected_version = _supported_server_install_version()
     server._api_version = 1.0
-    server._ansys_version = service_version
+    server._ansys_version = connected_version
     downloader = Mock()
     captured: dict[str, object] = {}
     probe = Mock(side_effect=AssertionError("cached server version should be reused"))
@@ -542,8 +544,8 @@ def test_download_html_bundle_warns_on_explicit_version_mismatch(
         with pytest.warns(
             UserWarning,
             match=(
-                "Explicit HTML export ansys_version 252 does not match "
-                f"service version {service_version}"
+                "Explicit HTML export ansys_version 252 does not match connected "
+                f"server version {connected_version}"
             ),
         ):
             server._download_report_as_html_bundle(
@@ -555,8 +557,8 @@ def test_download_html_bundle_warns_on_explicit_version_mismatch(
 
     assert captured["ansys_version"] == 252
     assert (
-        f"Explicit HTML export ansys_version 252 does not match service version {service_version}"
-        in caplog.text
+        f"Explicit HTML export ansys_version 252 does not match connected "
+        f"server version {connected_version}" in caplog.text
     )
     probe.assert_not_called()
     downloader.download.assert_called_once_with()
@@ -678,7 +680,7 @@ def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> No
     assert captured["renderer_width"] == "12in"
     assert captured["renderer_height"] == "18in"
     assert captured["renderer_render_timeout"] == 12.5
-    # The service's local install is forwarded so the renderer uses the packed browser.
+    # The connected service's local install is forwarded so the renderer uses the packed browser.
     assert captured["renderer_ansys_installation"] == "/opt/ansys/v271"
     assert captured["renderer_ansys_version"] == 271
     assert captured["report_guid"] == "report-guid"

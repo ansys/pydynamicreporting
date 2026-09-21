@@ -85,7 +85,7 @@ def test_unit_nexus_stop() -> None:
     a = Service(logfile=logfile)
     a.stop()
     f = open(logfile)
-    assert "Error validating the service" in f.read()
+    assert "Error validating the connected service" in f.read()
 
 
 @pytest.mark.ado_test
@@ -193,7 +193,7 @@ def test_no_docker(tmp_path) -> None:
     assert success is False
 
 
-def test_connect_when_service_is_active(adr_service_create) -> None:
+def test_connect_to_connected(adr_service_create) -> None:
     success = False
     try:
         _ = adr_service_create.start(

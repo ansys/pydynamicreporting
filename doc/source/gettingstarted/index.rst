@@ -157,8 +157,8 @@ start method:
    session_guid = adr_service.start(create_db=True)
 
 
-The ``adr_service`` object now manages a newly started Ansys Dynamic Reporting
-service on a new database. Once again, you can control the parameters
+The ``adr_service`` object is now connected to a newly started Ansys Dynamic
+Reporting service on a new database. Once again, you can control the parameters
 of the Ansys Dynamic Reporting service (port number, username, and
 password) by passing them as arguments:
 

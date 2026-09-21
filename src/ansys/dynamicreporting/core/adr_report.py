@@ -880,7 +880,7 @@ class Report:
                 width=width,
                 height=height,
                 render_timeout=render_timeout,
-                # Forward the service's local Ansys install so the remote render
+                # Forward the connected service's local Ansys install so the remote render
                 # uses the product-shipped browser binary.
                 ansys_installation=self.service._ansys_installation,
                 ansys_version=self.service._ansys_version,

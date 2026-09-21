@@ -336,7 +336,7 @@ class Service:
         NotValidServer
             The current Service doesn not have a valid server associated to it.
         UnsupportedServerVersionError
-            The service reports an unsupported, missing, or malformed Ansys version.
+            The connected server reports an unsupported, missing, or malformed Ansys version.
 
 
         Examples
@@ -348,7 +348,7 @@ class Service:
             ret = adr_service.connect(url="http://localhost:8010", username='admin', password = 'mypsw')
         """
         if self._url is not None:  # pragma: no cover
-            self.logger.warning("A dynamic reporting service is already active.\n")
+            self.logger.warning("Already connected to a dynamic reporting service.\n")
             return
         self.serverobj = report_remote_server.Server(
             url=url, username=username, password=password, ansys_version=self._ansys_version
@@ -409,7 +409,7 @@ class Service:
         Returns
         -------
         str
-            ID of the active service session.
+            ID of the connected session.
 
 
         Raises
@@ -419,7 +419,7 @@ class Service:
         CannotCreateDatabaseError
             Error when creating the database.
         AlreadyConnectedError
-            Object already manages a running ADR service.
+            Object is already connected to a running ADR service.
         StartingServiceError
             Can not start the ADR service.
         NotValidServer
@@ -447,7 +447,7 @@ class Service:
                 self._delete_db = True
 
         if self._url is not None:
-            self.logger.error("A service is already active.\n")
+            self.logger.error("Already connected to a service.\n")
             raise AlreadyConnectedError
 
         if create_db:
@@ -578,7 +578,7 @@ class Service:
 
     def stop(self) -> None:
         """
-        Stop the service associated with the session.
+        Stop the service connected to the session.
 
         Examples
         --------
@@ -594,7 +594,7 @@ class Service:
 
         if self.serverobj is None:
             self.logger.warning(
-                "The current session has no associated service. Can't shut it down.\n"
+                "There is no service connected to the current session. Can't shut it down.\n"
             )
 
         v = False
@@ -604,7 +604,7 @@ class Service:
             self.logger.error(f"Error: {str(e)}")
             pass
         if v is False:
-            self.logger.error("Error validating the service. Can't shut it down.")
+            self.logger.error("Error validating the connected service. Can't shut it down.")
         else:
             # If coming from a docker image, clean that up
             try:
