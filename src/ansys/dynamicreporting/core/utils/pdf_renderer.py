@@ -1790,7 +1790,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                     const style = getComputedStyle(root);
                     if (style.opacity === '1') { resolve(); return; }
                     root.addEventListener('transitionend', function handler(e) {
-                        if (e.propertyName === 'opacity') {
+                        if (
+                            e.target === root &&
+                            e.propertyName === 'opacity' &&
+                            getComputedStyle(root).opacity === '1'
+                        ) {
                             root.removeEventListener('transitionend', handler);
                             resolve();
                         }
@@ -1881,18 +1885,48 @@ class _BasePlaywrightPDFRenderer(ABC):
                             style.opacity === '0'
                         );
                     }
+                    function findPlotContainer(plot) {
+                        return plot.querySelector(':scope > .plot-container');
+                    }
+                    function plotVisible(plot) {
+                        const container = findPlotContainer(plot);
+                        return !container || getComputedStyle(container).opacity === '1';
+                    }
                     function isReady(plot) {
-                        return plot.classList.contains('loaded') && loaderHidden(findLoader(plot));
+                        return (
+                            plot.classList.contains('loaded') &&
+                            loaderHidden(findLoader(plot)) &&
+                            plotVisible(plot)
+                        );
                     }
                     plots.forEach((plot) => {
                         if (isReady(plot)) { check(); return; }
                         const loader = findLoader(plot);
-                        const observer = new MutationObserver(() => {
-                            if (isReady(plot)) {
-                                observer.disconnect();
-                                check();
+                        const plotContainer = findPlotContainer(plot);
+                        let settled = false;
+                        function finishIfReady() {
+                            if (settled || !isReady(plot)) {
+                                return;
                             }
-                        });
+                            settled = true;
+                            observer.disconnect();
+                            if (plotContainer) {
+                                plotContainer.removeEventListener(
+                                    'transitionend',
+                                    handleTransitionEnd,
+                                );
+                            }
+                            check();
+                        }
+                        function handleTransitionEnd(event) {
+                            if (
+                                event.target === plotContainer &&
+                                event.propertyName === 'opacity'
+                            ) {
+                                finishIfReady();
+                            }
+                        }
+                        const observer = new MutationObserver(finishIfReady);
                         observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
                         if (loader) {
                             observer.observe(loader, {
@@ -1900,6 +1934,11 @@ class _BasePlaywrightPDFRenderer(ABC):
                                 attributeFilter: ['style', 'class', 'hidden'],
                             });
                         }
+                        if (plotContainer) {
+                            plotContainer.addEventListener('transitionend', handleTransitionEnd);
+                        }
+                        // Close the gap between the initial readiness check and subscriptions.
+                        finishIfReady();
                     });
                 });
             }""",
