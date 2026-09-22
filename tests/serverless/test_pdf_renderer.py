@@ -441,9 +441,8 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
         **_browser_metadata_kwargs(),
     )
     stack = _stub_playwright_stack(monkeypatch)
-    monotonic_values = iter([100.0] * 10)
 
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: 100.0)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
@@ -464,9 +463,8 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
         **_browser_metadata_kwargs(),
     )
     stack = _stub_playwright_stack(monkeypatch)
-    monotonic_values = iter([100.0] * 10)
 
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: 100.0)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
 
     renderer.render_pdf()
@@ -491,9 +489,13 @@ def test_playwright_pdf_reuses_one_browser_phase_deadline_for_readiness(tmp_path
     )
     _stub_playwright_stack(monkeypatch)
     captured_deadline: dict[str, float] = {}
-    monotonic_values = iter([100.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0])
+    monotonic_values = iter([100.0, 100.0, 100.0, 100.0, 101.0])
 
-    monkeypatch.setattr(pdf_renderer_module, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(
+        pdf_renderer_module,
+        "monotonic",
+        lambda: next(monotonic_values, 101.0),
+    )
 
     def capture_ready(page, deadline=None):
         captured_deadline["value"] = deadline
