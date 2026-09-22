@@ -36,6 +36,8 @@ import ansys.dynamicreporting.core.utils.pdf_renderer as pdf_renderer_module
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION, PDFPageSize, common_utils
 from ansys.dynamicreporting.core.common_utils import resolve_install_info
 from ansys.dynamicreporting.core.exceptions import ADRException
+from ansys.dynamicreporting.core.utils._browser_pdf import browser_pdf_invocation_script
+from ansys.dynamicreporting.core.utils._browser_pdf import browser_pdf_runtime_script
 from ansys.dynamicreporting.core.utils.pdf_renderer import _ReportURLPlaywrightPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
@@ -839,6 +841,10 @@ def test_playwright_pdf_prepares_pagination_before_generation(
         phase_deadlines["ready"] = deadline
         call_order.append("ready")
 
+    def capture_helpers(_observed_page: Mock, *, deadline: float | None = None) -> None:
+        phase_deadlines["helpers"] = deadline
+        call_order.append("helpers")
+
     def capture_styles(_observed_page: Mock, *, deadline: float | None = None) -> None:
         phase_deadlines["styles"] = deadline
         call_order.append("styles")
@@ -847,16 +853,19 @@ def test_playwright_pdf_prepares_pagination_before_generation(
         phase_deadlines["pagination"] = deadline
         call_order.append("pagination")
 
-    # Readiness first settles product loaders and shadow roots. Capture styles then establish
-    # print geometry, and pagination mutates that final geometry immediately before page.pdf().
+    # Install the packaged helper runtime in the loaded document before readiness uses it.
+    # Capture styles then establish print geometry, and pagination mutates that final geometry.
+    monkeypatch.setattr(renderer, "_install_browser_pdf_helpers", capture_helpers)
     monkeypatch.setattr(renderer, "_wait_for_render_ready", capture_ready)
     monkeypatch.setattr(renderer, "_apply_pdf_capture_styles", capture_styles)
     monkeypatch.setattr(renderer, "_prepare_content_for_pagination", capture_pagination)
 
     renderer.render_pdf()
 
-    assert call_order == ["ready", "styles", "pagination"]
+    assert call_order == ["helpers", "ready", "styles", "pagination"]
+    assert phase_deadlines["helpers"] is not None
     assert phase_deadlines["ready"] is not None
+    assert phase_deadlines["ready"] == phase_deadlines["helpers"]
     assert phase_deadlines["styles"] == phase_deadlines["ready"]
     assert phase_deadlines["pagination"] == phase_deadlines["ready"]
     page.pdf.assert_called_once()
@@ -992,6 +1001,63 @@ def test_playwright_pdf_signal_timeout(tmp_path, product_playwright_context):
         assert "exceeded" not in error_text.lower()
     else:
         pytest.fail("Expected render_pdf() to fail due to readiness timeout.")
+
+
+@pytest.mark.unit
+def test_browser_pdf_runtime_loads_packaged_modules_once() -> None:
+    first_runtime = browser_pdf_runtime_script()
+    second_runtime = browser_pdf_runtime_script()
+
+    # The joined runtime must preserve dependency order: bootstrap creates the namespace,
+    # readiness registers steps, and the remaining modules add callable operations.
+    assert first_runtime is second_runtime
+    assert first_runtime.index("registerReadyStep") < first_runtime.index("foucGate")
+    assert first_runtime.index("foucGate") < first_runtime.index("applyPanelCaptureStyles")
+    assert first_runtime.index("applyPanelCaptureStyles") < first_runtime.index(
+        "fitVisualsForPagination"
+    )
+    assert "setPaginationCohesion" in first_runtime
+    assert "makeOversizedStructuresFragmentable" in first_runtime
+    assert "__ansysDynamicReportingBrowserPdf" in browser_pdf_invocation_script()
+
+
+@pytest.mark.unit
+def test_install_browser_pdf_helpers_spends_deadline_and_evaluates_runtime(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Runtime</p></body></html>")
+    page = Mock()
+    checkpoints: list[tuple[float, str]] = []
+
+    def capture_remaining_timeout(deadline: float, phase_name: str) -> int:
+        checkpoints.append((deadline, phase_name))
+        return 100
+
+    monkeypatch.setattr(
+        renderer,
+        "_remaining_browser_phase_timeout_ms",
+        capture_remaining_timeout,
+    )
+
+    renderer._install_browser_pdf_helpers(page, deadline=123.0)
+
+    assert checkpoints == [(123.0, "browser PDF helper installation")] * 2
+    page.evaluate.assert_called_once_with(browser_pdf_runtime_script())
+
+
+@pytest.mark.unit
+def test_browser_pdf_helper_invocation_uses_packaged_bridge(tmp_path: Path) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Bridge</p></body></html>")
+    page = Mock()
+    page.evaluate.return_value = {"value": "done"}
+
+    result = renderer._evaluate_browser_pdf_helper(page, "exampleMethod", {"value": 3})
+
+    assert result == {"value": "done"}
+    page.evaluate.assert_called_once_with(
+        browser_pdf_invocation_script(),
+        {"method": "exampleMethod", "argument": {"value": 3}},
+    )
 
 
 @pytest.mark.unit
@@ -1175,6 +1241,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
         # The anti-splitting rules must still apply in that media mode or Plotly figures can
         # break across pages during PDF pagination.
         page.emulate_media(media="screen")
+        renderer._install_browser_pdf_helpers(page)
         renderer._apply_pdf_capture_styles(page)
         computed_styles = page.evaluate(
             """() => {
@@ -1546,6 +1613,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp
         page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
         page.emulate_media(media="screen")
 
+        renderer._install_browser_pdf_helpers(page)
         renderer._apply_pdf_capture_styles(page)
         renderer._prepare_content_for_pagination(page)
         state = page.evaluate(
@@ -1755,7 +1823,7 @@ def test_evaluate_ready_step_rejects_expired_deadline_without_browser_call(tmp_p
         renderer._evaluate_ready_step(
             page,
             step_name="Expired step",
-            wait_script="() => Promise.resolve()",
+            step_key="expiredStep",
             deadline=0.0,
         )
 
@@ -1781,7 +1849,7 @@ def test_evaluate_ready_step_logs_duration_on_success(tmp_path, monkeypatch):
     renderer._evaluate_ready_step(
         page,
         step_name="Test step",
-        wait_script="() => Promise.resolve()",
+        step_key="testStep",
         deadline=101.0,
     )
 
@@ -1808,7 +1876,7 @@ def test_evaluate_ready_step_logs_duration_on_failure(tmp_path, monkeypatch):
         renderer._evaluate_ready_step(
             page,
             step_name="Broken step",
-            wait_script="() => Promise.resolve()",
+            step_key="brokenStep",
             deadline=201.0,
         )
 
@@ -1834,7 +1902,7 @@ def test_evaluate_ready_step_normalizes_in_page_timeout_message(tmp_path):
         renderer._evaluate_ready_step(
             page,
             step_name="Plotly charts",
-            wait_script="() => Promise.resolve()",
+            step_key="plotlyCharts",
             deadline=999.0,
         )
 
@@ -1845,7 +1913,7 @@ def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch)
     renderer = _simple_renderer(tmp_path, "<html><body><p>Steps</p></body></html>")
     step_names = []
 
-    def capture_ready_step(page, step_name, wait_script, deadline):
+    def capture_ready_step(page, step_name, step_key, deadline):
         step_names.append(step_name)
 
     monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
@@ -1864,42 +1932,35 @@ def test_wait_for_render_ready_matches_print_pdf_step_set(tmp_path, monkeypatch)
     ]
 
 
-def _capture_ready_step_scripts(
-    monkeypatch: pytest.MonkeyPatch, renderer: _OfflinePlaywrightPDFRenderer
-) -> dict[str, str]:
-    """Capture the JavaScript readiness script for each named step."""
-    wait_scripts: dict[str, str] = {}
-
-    def capture_ready_step(page, step_name, wait_script, deadline):
-        wait_scripts[step_name] = wait_script
-
-    monkeypatch.setattr(renderer, "_evaluate_ready_step", capture_ready_step)
-    renderer._wait_for_render_ready(Mock(), deadline=0.0)
-    return wait_scripts
-
-
-def _start_wait_script(page, wait_script: str) -> None:
-    """Run one readiness step script on the page and expose its eventual result."""
+def _start_ready_step(renderer: _OfflinePlaywrightPDFRenderer, page, step_name: str) -> None:
+    """Start one packaged readiness step and expose its eventual result to the test page."""
+    step_keys = dict(renderer._READINESS_STEPS)
+    renderer._install_browser_pdf_helpers(page)
     page.evaluate(
-        f"""() => {{
+        """(stepKey) => {
             window.waitReadyDone = false;
             window.waitReadyError = null;
-            const waitForReady = {wait_script};
-            waitForReady()
-                .then(() => {{
+            globalThis.__ansysDynamicReportingBrowserPdf.waitForReadyStep({
+                stepKey,
+                timeoutMs: 10000,
+            })
+                .then((result) => {
+                    if (result.__adrTimedOut) {
+                        throw new Error('Readiness step timed out in its browser test.');
+                    }
                     window.waitReadyDone = true;
-                }})
-                .catch((error) => {{
+                })
+                .catch((error) => {
                     window.waitReadyError = String(error);
-                }});
-        }}"""
+                });
+        }""",
+        step_keys[step_name],
     )
 
 
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-no-root-report"
     report_dir.mkdir()
     _write_html(report_dir, "<html><body><p>No report root</p></body></html>")
@@ -1911,7 +1972,7 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_pat
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["FOUC gate"])
+        _start_ready_step(renderer, page, "FOUC gate")
         page.wait_for_function("() => window.waitReadyDone === true")
 
         assert page.evaluate("() => window.waitReadyError") is None
@@ -1921,7 +1982,6 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_pat
 @pytest.mark.unit
 def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC gate</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-loaded-report"
     report_dir.mkdir()
     _write_html(
@@ -1936,7 +1996,7 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, m
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["FOUC gate"])
+        _start_ready_step(renderer, page, "FOUC gate")
 
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate("() => document.body.classList.add('loaded')")
@@ -1951,7 +2011,6 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-transition-report"
     report_dir.mkdir()
     _write_html(
@@ -1970,7 +2029,7 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["FOUC transition"])
+        _start_ready_step(renderer, page, "FOUC transition")
 
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate(
@@ -2010,7 +2069,6 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "plotly-ready-report"
     report_dir.mkdir()
     _write_html(
@@ -2036,7 +2094,7 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["Plotly charts"])
+        _start_ready_step(renderer, page, "Plotly charts")
 
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate("() => document.getElementById('plot').classList.add('loaded')")
@@ -2063,8 +2121,6 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
-    image_wait_script = wait_scripts["Images"]
 
     report_dir = tmp_path / "delayed-image-report"
     report_dir.mkdir()
@@ -2077,7 +2133,7 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, image_wait_script)
+        _start_ready_step(renderer, page, "Images")
 
         # Browsers report src-less images as complete, so the regression is that the
         # readiness step must still wait for a real source/load instead of resolving now.
@@ -2101,7 +2157,6 @@ def test_wait_for_render_ready_images_step_accepts_already_failed_images(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Failed image</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "failed-image-report"
     report_dir.mkdir()
     _write_html(
@@ -2121,7 +2176,7 @@ def test_wait_for_render_ready_images_step_accepts_already_failed_images(
         assert page.evaluate("() => document.getElementById('failed').complete") is True
         assert page.evaluate("() => document.getElementById('failed').naturalWidth") == 0
 
-        _start_wait_script(page, wait_scripts["Images"])
+        _start_ready_step(renderer, page, "Images")
         page.wait_for_function("() => window.waitReadyDone === true")
 
         assert page.evaluate("() => window.waitReadyError") is None
@@ -2133,8 +2188,6 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
-    image_wait_script = wait_scripts["Images"]
 
     report_dir = tmp_path / "canvas-backed-image-report"
     report_dir.mkdir()
@@ -2157,7 +2210,7 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, image_wait_script)
+        _start_ready_step(renderer, page, "Images")
 
         # ADR slider/deep-image views can keep a completed <img> source around while the
         # visible companion canvas is still hidden during async TIFF/enhanced-image work.
@@ -2182,7 +2235,6 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "video-ready-report"
     report_dir.mkdir()
     _write_html(
@@ -2206,7 +2258,7 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["Videos"])
+        _start_ready_step(renderer, page, "Videos")
 
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate(
@@ -2226,7 +2278,6 @@ def test_wait_for_render_ready_videos_step_accepts_already_failed_video(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Failed video</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "failed-video-report"
     report_dir.mkdir()
     _write_html(
@@ -2254,7 +2305,7 @@ def test_wait_for_render_ready_videos_step_accepts_already_failed_video(
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["Videos"])
+        _start_ready_step(renderer, page, "Videos")
         page.wait_for_function("() => window.waitReadyDone === true")
 
         assert page.evaluate("() => window.waitReadyError") is None
@@ -2266,7 +2317,6 @@ def test_wait_for_render_ready_videos_step_settles_each_video_once(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Two videos</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "two-video-report"
     report_dir.mkdir()
     _write_html(
@@ -2296,7 +2346,7 @@ def test_wait_for_render_ready_videos_step_settles_each_video_once(
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["Videos"])
+        _start_ready_step(renderer, page, "Videos")
         assert page.evaluate("() => window.waitReadyDone") is False
 
         page.evaluate(
@@ -2325,7 +2375,6 @@ def test_wait_for_render_ready_videos_step_settles_each_video_once(
 @pytest.mark.unit
 def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Animation frame</p></body></html>")
-    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "double-raf-report"
     report_dir.mkdir()
     _write_html(report_dir, "<html><body><p>Animation frame</p></body></html>")
@@ -2337,7 +2386,7 @@ def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path,
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
-        _start_wait_script(page, wait_scripts["Double requestAnimationFrame"])
+        _start_ready_step(renderer, page, "Double requestAnimationFrame")
 
         # The double-RAF step can resolve within the first repaint cycle on fast runners, so
         # assert only the observable contract that it eventually resolves without an error.

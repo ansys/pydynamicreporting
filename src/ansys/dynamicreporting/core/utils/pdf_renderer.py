@@ -88,6 +88,8 @@ from ..compatibility import product_release_to_product_line
 from ..common_utils import PDFPageSize
 from ..constants import ANSYS_VIEWER_TAGS
 from ..exceptions import ADRException
+from ._browser_pdf import browser_pdf_invocation_script
+from ._browser_pdf import browser_pdf_runtime_script
 
 # Product-browser metadata filename expected inside the packaged Playwright cache.
 _PLAYWRIGHT_BROWSER_METADATA_NAME = "playwright_browser_metadata.json"
@@ -356,6 +358,16 @@ class _BasePlaywrightPDFRenderer(ABC):
     _DEFAULT_BROWSER_VIEWPORT_HEIGHT: int = 900
     # Maximum time to wait for all JavaScript to finish rendering, in seconds.
     _DEFAULT_RENDER_TIMEOUT: float = 30.0
+    _READINESS_STEPS: tuple[tuple[str, str], ...] = (
+        ("FOUC gate", "foucGate"),
+        ("FOUC transition", "foucTransition"),
+        ("Web fonts", "webFonts"),
+        ("MathJax", "mathJax"),
+        ("Plotly charts", "plotlyCharts"),
+        ("Images", "images"),
+        ("Videos", "videos"),
+        ("Double requestAnimationFrame", "doubleAnimationFrame"),
+    )
     # This override changes Playwright's platform-specific browser lookup, while
     # the ADR resolver has already selected the product machine directory.
     # `PLAYWRIGHT_BROWSERS_PATH` is handled separately because browser-PDF replaces
@@ -562,8 +574,13 @@ class _BasePlaywrightPDFRenderer(ABC):
 
                     # Force screen media so the PDF matches the browser view instead of print CSS.
                     page.emulate_media(media="screen")
+                    # Install the packaged DOM helpers after navigation so they live in the report
+                    # document that readiness, styling, and pagination operate on.
+                    current_timeout_phase = "browser PDF helper installation"
+                    self._install_browser_pdf_helpers(page, deadline=browser_phase_deadline)
                     # Wait before applying capture CSS: readiness checks must observe the product's
                     # loaders, and panel shadow roots must exist before receiving pagination styles.
+                    current_timeout_phase = "browser render readiness"
                     self._wait_for_render_ready(page, deadline=browser_phase_deadline)
                     current_timeout_phase = "PDF capture styling"
                     self._apply_pdf_capture_styles(
@@ -730,6 +747,35 @@ class _BasePlaywrightPDFRenderer(ABC):
     def _prepare_context(self, context: Any) -> None:
         """Configure the browser context before opening the source page."""
         raise NotImplementedError
+
+    def _install_browser_pdf_helpers(
+        self,
+        page: Any,
+        *,
+        deadline: float | None = None,
+    ) -> None:
+        """Install the packaged browser-PDF JavaScript runtime in the current document."""
+        # The resource loader caches these package reads for the process. Each page still needs
+        # one installation because navigation creates a new JavaScript global environment.
+        if deadline is None:
+            deadline = monotonic() + self._render_timeout
+
+        timeout_phase = "browser PDF helper installation"
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
+        page.evaluate(browser_pdf_runtime_script())
+        self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
+
+    def _evaluate_browser_pdf_helper(
+        self,
+        page: Any,
+        method_name: str,
+        argument: Any = None,
+    ) -> Any:
+        """Invoke one method from the browser-PDF runtime installed on the page."""
+        return page.evaluate(
+            browser_pdf_invocation_script(),
+            {"method": method_name, "argument": argument},
+        )
 
     def _apply_pdf_capture_styles(
         self,
@@ -912,53 +958,8 @@ class _BasePlaywrightPDFRenderer(ABC):
             """,
         )
         self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
-        # An <adr-panel> renders its content inside a shadow DOM, a private subtree that the
-        # page-level stylesheet above cannot reach. So run a script that injects a small
-        # stylesheet directly into each panel's shadow root.
-        page.evaluate(
-            """() => {
-                // Visit every panel on the page.
-                for (const panel of document.querySelectorAll('adr-panel')) {
-                    const shadowRoot = panel.shadowRoot;
-                    // Skip panels with no shadow root, and skip any we already stamped, so
-                    // running this more than once is harmless (no duplicate style tags).
-                    if (!shadowRoot || shadowRoot.querySelector('style[data-adr-pdf-pagination]')) {
-                        continue;
-                    }
-
-                    // Build a <style> element, tag it with our marker attribute (the skip check
-                    // above looks for this), and fill it with the panel's print rules.
-                    const style = document.createElement('style');
-                    style.dataset.adrPdfPagination = '';
-                    style.textContent = `
-                        section.adr-panel {
-                            display: block !important;
-                        }
-
-                        /* Keep the panel's header from being the last thing on a page; it should
-                           stay with the body that follows it. */
-                        header.adr-panel-header {
-                            break-after: avoid !important;
-                            page-break-after: avoid !important;
-                        }
-                    `;
-                    // Insert the stylesheet into the panel's private subtree.
-                    shadowRoot.append(style);
-
-                    // Also keep the panel's first content block attached to the header, so the
-                    // header and the start of its content never separate across a page break.
-                    const firstPanelContent = panel.firstElementChild;
-                    if (firstPanelContent) {
-                        firstPanelContent.style.setProperty(
-                            'break-before', 'avoid', 'important'
-                        );
-                        firstPanelContent.style.setProperty(
-                            'page-break-before', 'avoid', 'important'
-                        );
-                    }
-                }
-            }"""
-        )
+        # Panel content lives in a shadow DOM that the page-level stylesheet cannot reach.
+        self._evaluate_browser_pdf_helper(page, "applyPanelCaptureStyles")
         self._remaining_browser_phase_timeout_ms(deadline, timeout_phase)
 
     def _prepare_content_for_pagination(
@@ -1013,371 +1014,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         timeout_ms: int,
     ) -> dict[str, Any]:
         """Resize indivisible visual media to fit within one printable page."""
-        return page.evaluate(
-            """async (options) => {
-                // This function runs inside the page. Its job: find each "indivisible" visual
-                // (a plot, image, video, canvas, or 3D viewer that must not be split across
-                // pages) and shrink any that are taller than a single printable page so it fits
-                // on one page. "options" carries the numbers and selectors computed in Python.
-                const {
-                    printableHeightPx,   // usable page height (page minus top/bottom margins)
-                    fitGuardPx,          // small safety margin so rounding never overflows a page
-                    headingSelector,     // matches a section's heading (h1..h6)
-                    visualSelector,      // matches the visuals we may need to resize
-                    sceneViewerSelector, // matches the 3D viewer tags
-                    timeoutMs            // remaining shared browser-render budget
-                } = options;
-                let timeoutHandle;
-                const timeoutResult = new Promise(resolve => {
-                    timeoutHandle = window.setTimeout(() => {
-                        resolve({ __adrTimedOut: true });
-                    }, timeoutMs);
-                });
-                const preparedVisuals = new Set();   // visuals already handled (avoid double work)
-                const resizedVisuals = [];           // record of what we shrank, for logging
-                const resizePromises = [];           // Plotly redraws to wait for before finishing
-
-                // True only when an element actually takes up space and is not hidden, so we
-                // never try to resize something the reader cannot see.
-                const isVisible = element => {
-                    const style = window.getComputedStyle(element);
-                    return element.getClientRects().length > 0
-                        && style.display !== 'none'
-                        && style.visibility !== 'hidden';
-                };
-
-                // Collect the visible visuals under "root", de-duplicated. When a match is only
-                // an inner piece of a plot or viewer, climb to its stable ADR container instead
-                // of resizing the internal render node.
-                const findRenderedVisuals = root => {
-                    const visuals = [];
-                    const seen = new Set();
-                    for (const candidate of root.querySelectorAll(visualSelector)) {
-                        // Plotly and the scene viewer can add image or canvas descendants.
-                        // Prepare their stable ADR containers instead of internal render nodes.
-                        const visual = candidate.closest(
-                            `.nexus-plot, ${sceneViewerSelector}`
-                        ) || candidate;
-                        if (!root.contains(visual) || seen.has(visual) || !isVisible(visual)) {
-                            continue;
-                        }
-                        seen.add(visual);
-                        visuals.push(visual);
-                    }
-                    return visuals;
-                };
-
-                // Build a short human-readable name like "img#plot3" for log messages.
-                const visualLabel = visual => {
-                    const id = visual.id ? `#${visual.id}` : '';
-                    return `${visual.tagName.toLowerCase()}${id}`;
-                };
-
-                // A 3D viewer may sit inside a wrapper element that controls its size. Walk up
-                // from the viewer to the outermost wrapper still inside its data-item, and treat
-                // that wrapper as the thing to resize (works with or without a wrapper).
-                const sceneLayoutRoot = viewer => {
-                    const item = viewer.closest('adr-data-item');
-                    let layoutRoot = viewer;
-                    // Current product HTML can place the component inside a sizing element.
-                    // Fit the direct slotted root so the same path also handles wrapper-free HTML.
-                    while (item && layoutRoot.parentElement
-                            && layoutRoot.parentElement !== item) {
-                        layoutRoot = layoutRoot.parentElement;
-                    }
-                    return layoutRoot;
-                };
-
-                // Make a 3D viewer behave like a responsive image before we size it: give it a
-                // fixed width-to-height ratio, let it fill the available width, and cap it so it
-                // never grows past its current rendered width.
-                const prepareSceneViewer = (viewer, layoutRoot, layoutRect) => {
-                    if (layoutRect.width < 1) {
-                        return;
-                    }
-
-                    // Pick the shape (aspect ratio) to lock in: the value the product set on the
-                    // viewer if present, otherwise the ratio it currently renders at, otherwise
-                    // a 16:9 fallback.
-                    const configuredAspectRatio = Number.parseFloat(
-                        viewer.aspect_ratio ?? viewer.getAttribute('aspect_ratio')
-                    );
-                    const renderedAspectRatio = layoutRect.height > 0
-                        ? layoutRect.width / layoutRect.height
-                        : Number.NaN;
-                    // Prefer product metadata, then the rendered box, and use a
-                    // stable widescreen fallback only when neither is usable.
-                    const aspectRatio = Number.isFinite(configuredAspectRatio)
-                            && configuredAspectRatio > 0
-                        ? configuredAspectRatio
-                        : Number.isFinite(renderedAspectRatio) && renderedAspectRatio > 0
-                            ? renderedAspectRatio
-                            : 16 / 9;
-                    // Apply that ratio and make the wrapper a full-width block that keeps its
-                    // shape; the browser then derives its height from the width automatically.
-                    layoutRoot.style.setProperty(
-                        'aspect-ratio', `${aspectRatio}`, 'important'
-                    );
-                    layoutRoot.style.setProperty('box-sizing', 'border-box', 'important');
-                    layoutRoot.style.setProperty('display', 'block', 'important');
-                    layoutRoot.style.setProperty('width', '100%', 'important');
-                    layoutRoot.style.setProperty('height', 'auto', 'important');
-                    layoutRoot.style.setProperty(
-                        'max-width', `${Math.ceil(layoutRect.width)}px`, 'important'
-                    );
-                    layoutRoot.style.setProperty('overflow', 'hidden', 'important');
-                    layoutRoot.style.setProperty('break-inside', 'avoid', 'important');
-                    layoutRoot.style.setProperty('page-break-inside', 'avoid', 'important');
-
-                    if (layoutRoot !== viewer) {
-                        viewer.style.setProperty('width', '100%', 'important');
-                        viewer.style.setProperty('height', '100%', 'important');
-                        viewer.style.setProperty('max-width', '100%', 'important');
-                        viewer.style.setProperty('max-height', '100%', 'important');
-                    }
-                    viewer.style.setProperty('overflow', 'hidden', 'important');
-                };
-
-                // Core routine: shrink one visual so it, plus the fixed things sharing its page
-                // (such as a heading), fits within one printable page. "groupStart"/"groupEnd"
-                // mark the top and bottom of that shared group; "title" is only for logging.
-                const fitVisual = (visual, groupStart, groupEnd, title) => {
-                    if (preparedVisuals.has(visual)) {
-                        return true;   // already handled by an earlier pass
-                    }
-                    const isSceneViewer = visual.matches(sceneViewerSelector);
-                    // For a 3D viewer we resize its wrapper; for anything else, the visual itself.
-                    const fittedVisual = isSceneViewer ? sceneLayoutRoot(visual) : visual;
-                    const initialVisualRect = fittedVisual.getBoundingClientRect();
-                    if (isSceneViewer) {
-                        prepareSceneViewer(visual, fittedVisual, initialVisualRect);
-                    }
-                    const visualRect = fittedVisual.getBoundingClientRect();
-                    const responsiveHeightReduction = Math.max(
-                        0, initialVisualRect.height - visualRect.height
-                    );
-                    // Keep the heading, owner chrome, and panel padding in the
-                    // same page-height budget as the indivisible visual.
-                    const fixedHeight = Math.max(0, visualRect.top - groupStart)
-                        + Math.max(
-                            0, groupEnd - responsiveHeightReduction - visualRect.bottom
-                        );
-                    const fittedHeight = Math.floor(
-                        printableHeightPx - fixedHeight - fitGuardPx
-                    );
-                    if (fittedHeight < 1 || visualRect.height < 1 || visualRect.width < 1) {
-                        return false;
-                    }
-
-                    const computedMaxHeight = Number.parseFloat(
-                        window.getComputedStyle(fittedVisual).maxHeight
-                    );
-                    const existingMaxHeight = Number.isFinite(computedMaxHeight)
-                            && computedMaxHeight > 0
-                        ? computedMaxHeight
-                        : Number.POSITIVE_INFINITY;
-                    // Final height = the smallest of: its current height, the height that fits
-                    // the page, and any max-height already set on it. Width starts at its current
-                    // width. "wasResized" is true only if we actually made it shorter.
-                    let constrainedHeight = Math.max(1, Math.floor(Math.min(
-                        visualRect.height, fittedHeight, existingMaxHeight
-                    )));
-                    let constrainedWidth = Math.max(1, Math.ceil(visualRect.width));
-                    const wasResized = visualRect.height > constrainedHeight + 0.5;
-
-                    // For a shrunk 3D viewer, also narrow the width to keep its shape so it does
-                    // not look stretched after the height is reduced.
-                    if (wasResized && isSceneViewer) {
-                        const aspectRatio = visualRect.width / visualRect.height;
-                        constrainedWidth = Math.max(1, Math.floor(Math.min(
-                            visualRect.width, constrainedHeight * aspectRatio
-                        )));
-                        constrainedHeight = Math.max(
-                            1, Math.floor(constrainedWidth / aspectRatio)
-                        );
-                    }
-
-                    // Apply the computed caps. Then, only if we shrank it, pin the concrete size
-                    // in the way that suits each visual type (viewer, media element, or other).
-                    fittedVisual.style.setProperty(
-                        'max-height', `${constrainedHeight}px`, 'important'
-                    );
-                    fittedVisual.style.setProperty(
-                        'max-width', `${constrainedWidth}px`, 'important'
-                    );
-                    if (wasResized && isSceneViewer) {
-                        fittedVisual.style.setProperty(
-                            'height', `${constrainedHeight}px`, 'important'
-                        );
-                        fittedVisual.style.setProperty(
-                            'width', `${constrainedWidth}px`, 'important'
-                        );
-                    } else if (wasResized && visual.matches('img, video, canvas')) {
-                        // Let images/videos/canvases scale within the caps while keeping their
-                        // aspect ratio ("object-fit: contain" prevents stretching).
-                        visual.style.setProperty('height', 'auto', 'important');
-                        visual.style.setProperty('width', 'auto', 'important');
-                        visual.style.setProperty('object-fit', 'contain', 'important');
-                    } else if (wasResized) {
-                        visual.style.setProperty(
-                            'height', `${constrainedHeight}px`, 'important'
-                        );
-                    }
-
-                    // A shrunk 3D viewer also clips its own overflow, and its surrounding
-                    // data-item is pinned to the same height so the box leaves no gap.
-                    if (wasResized && isSceneViewer) {
-                        const item = visual.closest('adr-data-item');
-                        fittedVisual.style.setProperty('overflow', 'hidden', 'important');
-                        if (item) {
-                            item.style.setProperty(
-                                'height', `${constrainedHeight}px`, 'important'
-                            );
-                            item.style.setProperty(
-                                'max-height', `${constrainedHeight}px`, 'important'
-                            );
-                            item.style.setProperty('overflow', 'hidden', 'important');
-                        }
-                    }
-
-                    // A Plotly chart keeps its old pixel size unless told to redraw; queue that
-                    // redraw at the new box size to wait for before the function returns.
-                    if (wasResized && visual.matches('.nexus-plot')
-                            && window.Plotly?.Plots?.resize) {
-                        resizePromises.push(Promise.resolve(window.Plotly.Plots.resize(visual)));
-                    }
-                    preparedVisuals.add(visual);   // mark done so later passes skip it
-                    // Record what we shrank, for an info log line back in Python.
-                    if (wasResized) {
-                        resizedVisuals.push({
-                            title,
-                            visual: visualLabel(visual),
-                            originalHeightPx: visualRect.height,
-                            fittedHeightPx: constrainedHeight
-                        });
-                    }
-                    return true;
-                };
-
-                // Basic layouts own headings and content containers, so fitting
-                // against that group keeps a title with its resized visual.
-                for (const layout of document.querySelectorAll(
-                    'div[data-layout-type="basic"]'
-                )) {
-                    const heading = layout.querySelector(headingSelector);
-                    const container = heading?.nextElementSibling;
-                    if (!container?.matches('section.adr-container')) {
-                        continue;
-                    }
-
-                    const visuals = findRenderedVisuals(container);
-                    if (!visuals.length) {
-                        continue;
-                    }
-
-                    const panel = layout.closest('adr-panel');
-                    const panelHeader = panel?.shadowRoot?.querySelector('header.adr-panel-header');
-                    const panelBody = panel?.shadowRoot?.querySelector('section.adr-panel-body');
-                    const layoutRect = layout.getBoundingClientRect();
-                    const panelLayout = panel?.closest('div[data-layout-type="panel"]');
-                    const firstVisiblePanelChild = panel
-                        ? [...panel.children].find(isVisible)
-                        : null;
-                    const firstOwner = visuals[0].closest(
-                        'adr-data-item, adr-slider-template'
-                    ) || visuals[0];
-                    const fragmentPaddingPx = panelBody
-                        ? Number.parseFloat(window.getComputedStyle(panelBody).paddingBottom) || 0
-                        : 0;
-                    for (const visual of visuals) {
-                        const owner = visual.closest('adr-data-item, adr-slider-template') || visual;
-                        const ownerRect = owner.getBoundingClientRect();
-                        const includesHeading = owner === firstOwner;
-                        // "groupStart" is the top of everything sharing this visual's page. The
-                        // first visual also carries the heading (and the panel header, if any),
-                        // so its group starts higher; later visuals start at their own top.
-                        const groupStart = includesHeading && panelHeader
-                                && firstVisiblePanelChild === layout && panelLayout
-                            ? panelLayout.getBoundingClientRect().top
-                            : includesHeading
-                                ? layoutRect.top
-                                : ownerRect.top;
-                        fitVisual(
-                            visual,
-                            groupStart,
-                            ownerRect.bottom + fragmentPaddingPx,
-                            heading.textContent.trim()
-                        );
-                    }
-                }
-
-                // Panels without the basic-layout wrapper still need their
-                // shadow-DOM header included in the available-height budget.
-                for (const panel of document.querySelectorAll('adr-panel')) {
-                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
-                    const visibleChildren = [...panel.children].filter(
-                        child => child.getClientRects().length > 0
-                    );
-                    if (!panelLayout || visibleChildren.length !== 1) {
-                        continue;
-                    }
-
-                    const panelRect = panelLayout.getBoundingClientRect();
-                    const panelHeader = panel.shadowRoot?.querySelector('header.adr-panel-header');
-                    for (const visual of findRenderedVisuals(visibleChildren[0])) {
-                        fitVisual(
-                            visual,
-                            panelRect.top,
-                            panelRect.bottom,
-                            panelHeader?.textContent.trim() || 'Untitled panel'
-                        );
-                    }
-                }
-
-                const reportRoot = document.getElementById('report_root');
-                if (reportRoot) {
-                    // Catch standalone visuals not owned by either known layout
-                    // shape without processing anything already fitted above.
-                    for (const visual of findRenderedVisuals(reportRoot)) {
-                        if (preparedVisuals.has(visual)) {
-                            continue;
-                        }
-                        const owner = visual.closest(
-                            'adr-data-item, adr-slider-template, div[data-layout-type]'
-                        ) || visual;
-                        const ownerRect = owner.getBoundingClientRect();
-                        fitVisual(
-                            visual,
-                            ownerRect.top,
-                            ownerRect.bottom,
-                            visualLabel(visual)
-                        );
-                    }
-                }
-
-                const preparationResult = (async () => {
-                    // Wait for any Plotly charts we asked to redraw at their new size.
-                    await Promise.all(resizePromises);
-                    // Wait two animation frames so the browser finishes applying every style
-                    // change above before we hand back control (measurements must be settled).
-                    await new Promise(resolve => requestAnimationFrame(
-                        () => requestAnimationFrame(resolve)
-                    ));
-
-                    // Report back to Python: how many visuals we touched, and details of the ones
-                    // we actually shrank.
-                    return {
-                        __adrTimedOut: false,
-                        cappedVisualCount: preparedVisuals.size,
-                        resizedVisuals
-                    };
-                })();
-                const result = await Promise.race([preparationResult, timeoutResult]);
-                if (!result.__adrTimedOut) {
-                    window.clearTimeout(timeoutHandle);
-                }
-                return result;
-            }""",
+        return self._evaluate_browser_pdf_helper(
+            page,
+            "fitVisualsForPagination",
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
@@ -1390,76 +1029,9 @@ class _BasePlaywrightPDFRenderer(ABC):
 
     def _set_pagination_cohesion(self, page: Any, printable_height_px: float) -> dict[str, Any]:
         """Keep basic layouts and panels together when they fit on one page."""
-        return page.evaluate(
-            """(options) => {
-                // This runs in the page. For each report section and panel, decide whether it
-                // fits on one page. If it fits, ask the PDF engine to keep it whole ("avoid" a
-                // break); if not, allow it to split ("auto"), because forcing a too-tall block
-                // onto one page would clip it.
-                const { printableHeightPx, fitGuardPx, headingSelector } = options;
-                const isVisible = element => {
-                    const style = window.getComputedStyle(element);
-                    return element.getClientRects().length > 0
-                        && style.display !== 'none'
-                        && style.visibility !== 'hidden';
-                };
-                // "Fits" means its height is within the usable page height, minus a small guard
-                // so a block sitting exactly at the edge is not forced to stay whole.
-                const fitsOnPage = element =>
-                    element.getBoundingClientRect().height <= printableHeightPx - fitGuardPx;
-
-                const keptLayouts = [];
-                // Avoid a split only when the complete heading-plus-content
-                // group fits; forcing it on taller content can create clipping.
-                for (const layout of document.querySelectorAll(
-                    'div[data-layout-type="basic"]'
-                )) {
-                    const heading = layout.querySelector(headingSelector);
-                    const container = heading?.nextElementSibling;
-                    if (!container?.matches('section.adr-container') || !isVisible(layout)) {
-                        continue;
-                    }
-                    // "avoid" keeps the section whole on one page; "auto" lets it split. Both the
-                    // modern and legacy property names are set for wider browser support.
-                    const fits = fitsOnPage(layout);
-                    layout.style.setProperty(
-                        'break-inside', fits ? 'avoid' : 'auto', 'important'
-                    );
-                    layout.style.setProperty(
-                        'page-break-inside', fits ? 'avoid' : 'auto', 'important'
-                    );
-                    if (fits) {
-                        // Remember kept sections by title, for a debug log line in Python.
-                        keptLayouts.push(heading.textContent.trim() || 'Untitled layout');
-                    }
-                }
-
-                const keptPanels = [];
-                // Apply the same fit-sensitive rule at the panel wrapper, which
-                // owns the shadow-DOM header and its light-DOM children.
-                for (const panel of document.querySelectorAll('adr-panel')) {
-                    const panelLayout = panel.closest('div[data-layout-type="panel"]');
-                    const visibleChildren = [...panel.children].filter(isVisible);
-                    if (!panelLayout || !visibleChildren.length) {
-                        continue;
-                    }
-                    const fits = fitsOnPage(panelLayout);
-                    panelLayout.style.setProperty(
-                        'break-inside', fits ? 'avoid' : 'auto', 'important'
-                    );
-                    panelLayout.style.setProperty(
-                        'page-break-inside', fits ? 'avoid' : 'auto', 'important'
-                    );
-                    if (fits) {
-                        keptPanels.push(
-                            panel.shadowRoot?.querySelector('header.adr-panel-header')
-                                ?.textContent.trim() || 'Untitled panel'
-                        );
-                    }
-                }
-
-                return { keptLayouts, keptPanels };
-            }""",
+        return self._evaluate_browser_pdf_helper(
+            page,
+            "setPaginationCohesion",
             {
                 "printableHeightPx": printable_height_px,
                 "fitGuardPx": _PAGINATION_FIT_GUARD_PX,
@@ -1471,66 +1043,9 @@ class _BasePlaywrightPDFRenderer(ABC):
         self, page: Any, printable_height_px: float
     ) -> dict[str, Any]:
         """Allow over-height sliders, items, and tables to split between pages."""
-        return page.evaluate(
-            """(printableHeightPx) => {
-                // This runs in the page. The capture CSS earlier asked the PDF engine to keep
-                // sliders and data-items whole. But some are simply taller than a page and must
-                // be allowed to split, or they would overflow. Here we find those over-height
-                // structures and flip them back to "may split across pages".
-                const breakableSliders = [];
-                // Capture CSS initially protects sliders as one unit. Release
-                // only over-height containers and their direct row for paging.
-                for (const slider of document.querySelectorAll('adr-slider-template')) {
-                    const container = [...slider.children].find(
-                        child => child.matches('section[id^="slider_container_"]')
-                    );
-                    // Only touch sliders taller than one page; shorter ones stay whole.
-                    if (!container || container.getBoundingClientRect().height <= printableHeightPx) {
-                        continue;
-                    }
-                    container.style.setProperty('break-inside', 'auto', 'important');
-                    container.style.setProperty('page-break-inside', 'auto', 'important');
-                    const row = container.querySelector(':scope > section.adr-row');
-                    if (row) {
-                        row.style.setProperty('break-inside', 'auto', 'important');
-                        row.style.setProperty('page-break-inside', 'auto', 'important');
-                    }
-                    breakableSliders.push(slider.dataset.guid || slider.id || 'untitled');
-                }
-
-                const breakableItems = [];
-                // Over-height tabular items cannot honor break-inside: avoid;
-                // release the item, owning layout, and table wrappers together.
-                for (const item of document.querySelectorAll('adr-data-item')) {
-                    const itemRect = item.getBoundingClientRect();
-                    // Only over-height items need to become splittable; skip the rest.
-                    if (itemRect.height <= printableHeightPx) {
-                        continue;
-                    }
-
-                    item.style.setProperty('break-inside', 'auto', 'important');
-                    item.style.setProperty('page-break-inside', 'auto', 'important');
-                    const layout = item.closest('div[data-layout-type="basic"]');
-                    if (layout) {
-                        layout.style.setProperty('break-inside', 'auto', 'important');
-                        layout.style.setProperty('page-break-inside', 'auto', 'important');
-                    }
-                    for (const child of item.querySelectorAll('.table-responsive, table')) {
-                        child.style.setProperty('break-inside', 'auto', 'important');
-                        child.style.setProperty('page-break-inside', 'auto', 'important');
-                    }
-                    breakableItems.push({
-                        id: item.id,
-                        type: item.dataset.itemType || 'unknown',
-                        heightPx: itemRect.height
-                    });
-                }
-
-                return {
-                    breakableSliders,
-                    breakableItems
-                };
-            }""",
+        return self._evaluate_browser_pdf_helper(
+            page,
+            "makeOversizedStructuresFragmentable",
             printable_height_px,
         )
 
@@ -1683,20 +1198,18 @@ class _BasePlaywrightPDFRenderer(ABC):
         page: Any,
         *,
         step_name: str,
-        wait_script: str,
+        step_key: str,
         deadline: float,
     ) -> None:
-        """Run one readiness step while enforcing the remaining phase budget.
+        """Run one packaged readiness step within the remaining browser-phase budget.
 
-        Playwright's Python ``evaluate`` API waits for returned JavaScript promises but does
-        not expose a per-call timeout argument. Each readiness promise therefore enforces the
-        remaining browser-render deadline inside the page instead of using fixed sleeps.
+        Playwright waits for promises returned by page.evaluate() but does not expose a
+        per-call timeout. The packaged runtime therefore races the selected readiness promise
+        against the remaining shared deadline inside the page.
         """
         try:
             remaining_ms = self._remaining_browser_phase_timeout_ms(deadline, step_name)
         except ADRException:
-            # Emit a separate diagnostic for steps that exhausted the shared render
-            # budget before the renderer could hand control to Playwright.
             self._logger.debug(
                 "Browser render readiness step failed before browser evaluation "
                 "because the shared render budget was exhausted: "
@@ -1707,28 +1220,17 @@ class _BasePlaywrightPDFRenderer(ABC):
         step_started = monotonic()
         step_outcome = "completed"
         try:
-            evaluate_result = page.evaluate(
-                f"""() => {{
-                    const timeoutMs = {remaining_ms};
-                    const waitForReady = {wait_script};
-                    const timeoutResult = new Promise((resolve) => {{
-                        setTimeout(() => {{
-                            resolve({{ __adrTimedOut: true }});
-                        }}, timeoutMs);
-                    }});
-                    const readinessResult = waitForReady()
-                        .then(() => {{
-                            return {{ __adrTimedOut: false }};
-                        }});
-                    return Promise.race([readinessResult, timeoutResult]);
-                }}""",
+            evaluate_result = self._evaluate_browser_pdf_helper(
+                page,
+                "waitForReadyStep",
+                {"stepKey": step_key, "timeoutMs": remaining_ms},
             )
             if isinstance(evaluate_result, dict) and evaluate_result.get("__adrTimedOut") is True:
                 raise ADRException(
                     f"Browser PDF rendering failed: {step_name} timed out after "
                     f"{self._render_timeout:.1f}s"
                 )
-        except Exception as exc:
+        except Exception:
             step_outcome = "failed"
             raise
         finally:
@@ -1741,361 +1243,16 @@ class _BasePlaywrightPDFRenderer(ABC):
         """Wait for browser rendering signals that indicate the page is ready to print."""
         self._logger.info("Waiting for browser render readiness signals.")
 
-        # The readiness pipeline intentionally waits only on product-owned signals that ADR
-        # emits during browser-PDF rendering. HTML items and layout ``HTML``
-        # fragments are rendered from raw macro-expanded HTML, so arbitrary custom JavaScript
-        # inside those fragments does not have a separate readiness contract here. Supported
-        # browser-PDF reports therefore assume such HTML is static or settles itself through
-        # one of the standard signals below.
-
-        # 1. FOUC gate: ADR hides the report with ``body #report_root { opacity: 0 }``
-        #    until all custom web-components are registered, which adds ``body.loaded``.
-        #    Skip this wait for non-ADR HTML that does not contain ``#report_root``.
-        #
-        #    FOUC (Flash Of Unstyled Content) is a brief flash of default/uninitialized
-        #    styling that can occur before web components or framework styles apply.
-        #    ADR intentionally avoids FOUC by keeping the root hidden until components
-        #    finish initializing; the renderer waits for the ``body.loaded`` signal so
-        #    the PDF captures the final, styled layout rather than an interim state.
-        self._evaluate_ready_step(
-            page,
-            step_name="FOUC gate",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const root = document.getElementById('report_root');
-                    if (!root) { resolve(); return; }
-                    if (document.body.classList.contains('loaded')) { resolve(); return; }
-                    const observer = new MutationObserver(() => {
-                        if (document.body.classList.contains('loaded')) {
-                            observer.disconnect();
-                            resolve();
-                        }
-                    });
-                    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-                });
-            }""",
-        )
-
-        # 2. FOUC transition: ``body.loaded #report_root`` triggers a 0.4s opacity
-        #    transition. Wait for it to reach opacity 1 before capturing.
-        self._evaluate_ready_step(
-            page,
-            step_name="FOUC transition",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const root = document.getElementById('report_root');
-                    if (!root) { resolve(); return; }
-                    const style = getComputedStyle(root);
-                    if (style.opacity === '1') { resolve(); return; }
-                    root.addEventListener('transitionend', function handler(e) {
-                        if (
-                            e.target === root &&
-                            e.propertyName === 'opacity' &&
-                            getComputedStyle(root).opacity === '1'
-                        ) {
-                            root.removeEventListener('transitionend', handler);
-                            resolve();
-                        }
-                    });
-                });
-            }""",
-        )
-
-        # 3. Web fonts (FontAwesome woff2 + MathJax woff2).
-        # document.fonts.ready promise resolves when font loading for the document has finished.
-        self._evaluate_ready_step(
-            page,
-            step_name="Web fonts",
-            deadline=deadline,
-            wait_script="""() => {
-                return document.fonts.ready;
-            }""",
-        )
-
-        # 4. MathJax renders equations asynchronously; wait only when the runtime is present.
-        self._evaluate_ready_step(
-            page,
-            step_name="MathJax",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve, reject) => {
-                    if (typeof MathJax === 'undefined') {
-                        resolve();
-                        return;
-                    }
-
-                    // MathJax 4.1 documents MathDocument.whenReady() for synchronizing
-                    // with pending typesetting work. Keep the startup.promise fallback
-                    // for v3/v4 initial typesetting because ADR can export either shape.
-                    if (
-                        MathJax.startup &&
-                        MathJax.startup.document &&
-                        typeof MathJax.startup.document.whenReady === 'function'
-                    ) {
-                        MathJax.startup.document.whenReady(() => undefined).then(resolve, reject);
-                    } else if (
-                        MathJax.startup &&
-                        MathJax.startup.promise &&
-                        typeof MathJax.startup.promise.then === 'function'
-                    ) {
-                        MathJax.startup.promise.then(resolve, reject);
-                    } else if (
-                        MathJax.Hub &&
-                        typeof MathJax.Hub.Queue === 'function'
-                    ) {
-                        // PyDynamicReporting v1 compatibility shim: MathJax 2.0 uses
-                        // Hub.Queue() for synchronization. Remove this branch in v2 after
-                        // legacy MathJax 2 offline exports are no longer supported.
-                        MathJax.Hub.Queue(resolve);
-                    } else {
-                        resolve();
-                    }
-                });
-            }""",
-        )
-
-        # 5. Plotly charts: each .nexus-plot container gets class 'loaded' after
-        #    Plotly.Plots.resize() resolves, but theme-mismatch rerenders can leave the
-        #    sibling ADR loader overlay visible until a later style update. Wait for both
-        #    the product-owned loaded class and a hidden loader overlay before capture.
-        self._evaluate_ready_step(
-            page,
-            step_name="Plotly charts",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const plots = document.querySelectorAll('.nexus-plot');
-                    if (plots.length === 0) { resolve(); return; }
-                    let remaining = plots.length;
-                    function check() { if (--remaining <= 0) resolve(); }
-                    function findLoader(plot) {
-                        const item = plot.closest('adr-data-item');
-                        return item ? item.querySelector('.adr-spinner-loader-container') : null;
-                    }
-                    function loaderHidden(loader) {
-                        if (!loader) {
-                            return true;
-                        }
-                        const style = getComputedStyle(loader);
-                        return (
-                            style.display === 'none' ||
-                            style.visibility === 'hidden' ||
-                            style.opacity === '0'
-                        );
-                    }
-                    function findPlotContainer(plot) {
-                        return plot.querySelector(':scope > .plot-container');
-                    }
-                    function plotVisible(plot) {
-                        const container = findPlotContainer(plot);
-                        return !container || getComputedStyle(container).opacity === '1';
-                    }
-                    function isReady(plot) {
-                        return (
-                            plot.classList.contains('loaded') &&
-                            loaderHidden(findLoader(plot)) &&
-                            plotVisible(plot)
-                        );
-                    }
-                    plots.forEach((plot) => {
-                        if (isReady(plot)) { check(); return; }
-                        const loader = findLoader(plot);
-                        const plotContainer = findPlotContainer(plot);
-                        let settled = false;
-                        function finishIfReady() {
-                            if (settled || !isReady(plot)) {
-                                return;
-                            }
-                            settled = true;
-                            observer.disconnect();
-                            if (plotContainer) {
-                                plotContainer.removeEventListener(
-                                    'transitionend',
-                                    handleTransitionEnd,
-                                );
-                            }
-                            check();
-                        }
-                        function handleTransitionEnd(event) {
-                            if (
-                                event.target === plotContainer &&
-                                event.propertyName === 'opacity'
-                            ) {
-                                finishIfReady();
-                            }
-                        }
-                        const observer = new MutationObserver(finishIfReady);
-                        observer.observe(plot, { attributes: true, attributeFilter: ['class'] });
-                        if (loader) {
-                            observer.observe(loader, {
-                                attributes: true,
-                                attributeFilter: ['style', 'class', 'hidden'],
-                            });
-                        }
-                        if (plotContainer) {
-                            plotContainer.addEventListener('transitionend', handleTransitionEnd);
-                        }
-                        // Close the gap between the initial readiness check and subscriptions.
-                        finishIfReady();
-                    });
-                });
-            }""",
-        )
-
-        # 6. Images: wait for every <img> to finish loading (covers static images,
-        #    scene proxy thumbnails, file proxy images, animation thumbnails, and
-        #    canvas-backed enhanced-image/deep-image views).
-        self._evaluate_ready_step(
-            page,
-            step_name="Images",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const imgs = document.querySelectorAll('img');
-                    if (imgs.length === 0) { resolve(); return; }
-                    let remaining = imgs.length;
-                    function done() { if (--remaining <= 0) resolve(); }
-                    function findCompanionCanvas(img) {
-                        if (!img.id) {
-                            return null;
-                        }
-                        return document.getElementById(`${img.id}_canvas`);
-                    }
-                    function companionCanvasReady(img) {
-                        const canvas = findCompanionCanvas(img);
-                        if (!canvas) {
-                            return true;
-                        }
-                        const style = getComputedStyle(canvas);
-                        return style.display !== 'none' && style.visibility !== 'hidden';
-                    }
-                    function hasSource(img) {
-                        return Boolean(img.currentSrc || img.getAttribute('src'));
-                    }
-                    function isReady(img) {
-                        // Require both a source and decoded image dimensions before fast-passing
-                        // the image. ``img.complete`` alone is too weak because a src-less <img>
-                        // can already report complete even though async product code has not yet
-                        // populated the final image bytes.
-                        //
-                        // ADR slider/deep-image widgets also render into a companion <canvas>
-                        // after the underlying <img> load finishes. Those widgets can keep a
-                        // stale completed <img> source around while a new TIFF or enhanced-image
-                        // decode is still in flight, so do not treat the image as ready until the
-                        // visible companion canvas has been unhidden.
-                        return (
-                            hasSource(img) &&
-                            img.complete &&
-                            img.naturalWidth > 0 &&
-                            companionCanvasReady(img)
-                        );
-                    }
-                    function hasFailed(img) {
-                        // A sourced image that completed without decoded dimensions has already
-                        // emitted its error event, so waiting for a new event would time out.
-                        return hasSource(img) && img.complete && img.naturalWidth === 0;
-                    }
-                    imgs.forEach((img) => {
-                        if (isReady(img) || hasFailed(img)) {
-                            done();
-                            return;
-                        }
-                        let observer = null;
-                        let settled = false;
-                        function cleanup() {
-                            img.removeEventListener('load', onLoad);
-                            img.removeEventListener('error', onError);
-                            if (observer) {
-                                observer.disconnect();
-                            }
-                        }
-                        function settle() {
-                            if (settled) {
-                                return;
-                            }
-                            settled = true;
-                            cleanup();
-                            done();
-                        }
-                        function onLoad() {
-                            if (isReady(img)) {
-                                settle();
-                            }
-                        }
-                        function onError() {
-                            settle();
-                        }
-                        img.addEventListener('load', onLoad, { once: true });
-                        img.addEventListener('error', onError, { once: true });
-                        const companionCanvas = findCompanionCanvas(img);
-                        if (companionCanvas) {
-                            observer = new MutationObserver(() => {
-                                if (isReady(img)) {
-                                    settle();
-                                }
-                            });
-                            observer.observe(companionCanvas, {
-                                attributes: true,
-                                attributeFilter: ['style', 'class', 'hidden'],
-                            });
-                        }
-                    });
-                });
-            }""",
-        )
-
-        # 7. Videos: wait for every <video> to reach HAVE_CURRENT_DATA (readyState >= 2)
-        #    so the current frame is available before Chromium prints the page.
-        self._evaluate_ready_step(
-            page,
-            step_name="Videos",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    const videos = document.querySelectorAll('video');
-                    if (videos.length === 0) { resolve(); return; }
-                    let remaining = videos.length;
-                    function done() { if (--remaining <= 0) resolve(); }
-                    videos.forEach((vid) => {
-                        if (vid.readyState >= 2 || vid.error) { done(); return; }
-                        let settled = false;
-                        function cleanup() {
-                            vid.removeEventListener('loadeddata', settle);
-                            vid.removeEventListener('error', settle);
-                        }
-                        function settle() {
-                            if (settled) {
-                                return;
-                            }
-                            settled = true;
-                            cleanup();
-                            done();
-                        }
-                        vid.addEventListener('loadeddata', settle);
-                        vid.addEventListener('error', settle);
-                        // Close the gap between the initial state check and listener registration.
-                        if (vid.readyState >= 2 || vid.error) {
-                            settle();
-                        }
-                    });
-                });
-            }""",
-        )
-
-        # 8. Double requestAnimationFrame gives the page another repaint opportunity
-        #     after all preceding DOM/style work settles.
-        self._evaluate_ready_step(
-            page,
-            step_name="Double requestAnimationFrame",
-            deadline=deadline,
-            wait_script="""() => {
-                return new Promise((resolve) => {
-                    requestAnimationFrame(() => requestAnimationFrame(resolve));
-                });
-            }""",
-        )
+        # These are product-owned browser signals: component registration and opacity, web fonts,
+        # MathJax, Plotly, image/video media, and a final repaint. Arbitrary JavaScript embedded
+        # in custom HTML has no separate readiness contract unless it settles through one of them.
+        for step_name, step_key in self._READINESS_STEPS:
+            self._evaluate_ready_step(
+                page,
+                step_name=step_name,
+                step_key=step_key,
+                deadline=deadline,
+            )
 
         self._logger.info("Browser render readiness checks completed.")
 
