@@ -131,7 +131,6 @@
                 return;
             }
             const loader = findLoader(plot);
-            const plotContainer = findPlotContainer(plot);
             let settled = false;
             const finishIfReady = () => {
                 if (settled || !isReady(plot)) {
@@ -139,13 +138,16 @@
                 }
                 settled = true;
                 observer.disconnect();
-                if (plotContainer) {
-                    plotContainer.removeEventListener('transitionend', handleTransitionEnd);
-                }
+                plot.removeEventListener('transitionend', handleTransitionEnd);
                 completeOne();
             };
             const handleTransitionEnd = (event) => {
-                if (event.target === plotContainer && event.propertyName === 'opacity') {
+                // Plotly can create or replace its direct container after readiness starts.
+                // Listen on the stable plot and accept only its current container's opacity event.
+                if (
+                    event.target === findPlotContainer(plot)
+                    && event.propertyName === 'opacity'
+                ) {
                     finishIfReady();
                 }
             };
@@ -157,9 +159,7 @@
                     attributeFilter: ['style', 'class', 'hidden'],
                 });
             }
-            if (plotContainer) {
-                plotContainer.addEventListener('transitionend', handleTransitionEnd);
-            }
+            plot.addEventListener('transitionend', handleTransitionEnd);
             // Close the gap between the initial readiness check and subscriptions.
             finishIfReady();
         });

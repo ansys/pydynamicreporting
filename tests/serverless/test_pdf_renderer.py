@@ -2247,6 +2247,58 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_plotly_step_observes_late_plot_container(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Late Plotly container</p></body></html>")
+    report_dir = tmp_path / "late-plotly-container-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <adr-data-item>
+            <section class='nexus-plot' id='plot'></section>
+            <section class='adr-spinner-loader-container' id='loader'></section>
+        </adr-data-item>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_ready_step(renderer, page, "Plotly charts")
+
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                const plot = document.getElementById('plot');
+                const container = document.createElement('div');
+                container.className = 'plot-container';
+                container.style.opacity = '0';
+                plot.appendChild(container);
+
+                plot.classList.add('loaded');
+                document.getElementById('loader').style.display = 'none';
+                container.style.opacity = '1';
+                container.dispatchEvent(
+                    new TransitionEvent('transitionend', {
+                        propertyName: 'opacity',
+                        bubbles: true
+                    })
+                );
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
