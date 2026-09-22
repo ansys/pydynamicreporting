@@ -825,32 +825,38 @@ def test_browser_context_uses_custom_printable_width(tmp_path, landscape, expect
 
 
 @pytest.mark.unit
-def test_playwright_pdf_prepares_pagination_before_generation(tmp_path, monkeypatch):
+def test_playwright_pdf_prepares_pagination_before_generation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Ordering</p></body></html>")
     page, _, _ = _stub_playwright_render(monkeypatch, renderer)
     call_order: list[str] = []
+    phase_deadlines: dict[str, float | None] = {}
 
-    # Styles establish print geometry, readiness settles the styled DOM, and
-    # pagination then mutates that final geometry immediately before page.pdf().
-    monkeypatch.setattr(
-        renderer,
-        "_apply_pdf_capture_styles",
-        lambda observed_page: call_order.append("styles"),
-    )
-    monkeypatch.setattr(
-        renderer,
-        "_wait_for_render_ready",
-        lambda observed_page, deadline=None: call_order.append("ready"),
-    )
-    monkeypatch.setattr(
-        renderer,
-        "_prepare_content_for_pagination",
-        lambda observed_page, deadline=None: call_order.append("pagination"),
-    )
+    def capture_ready(_observed_page: Mock, deadline: float | None = None) -> None:
+        phase_deadlines["ready"] = deadline
+        call_order.append("ready")
+
+    def capture_styles(_observed_page: Mock, *, deadline: float | None = None) -> None:
+        phase_deadlines["styles"] = deadline
+        call_order.append("styles")
+
+    def capture_pagination(_observed_page: Mock, deadline: float | None = None) -> None:
+        phase_deadlines["pagination"] = deadline
+        call_order.append("pagination")
+
+    # Readiness first settles product loaders and shadow roots. Capture styles then establish
+    # print geometry, and pagination mutates that final geometry immediately before page.pdf().
+    monkeypatch.setattr(renderer, "_wait_for_render_ready", capture_ready)
+    monkeypatch.setattr(renderer, "_apply_pdf_capture_styles", capture_styles)
+    monkeypatch.setattr(renderer, "_prepare_content_for_pagination", capture_pagination)
 
     renderer.render_pdf()
 
-    assert call_order == ["styles", "ready", "pagination"]
+    assert call_order == ["ready", "styles", "pagination"]
+    assert phase_deadlines["ready"] is not None
+    assert phase_deadlines["styles"] == phase_deadlines["ready"]
+    assert phase_deadlines["pagination"] == phase_deadlines["ready"]
     page.pdf.assert_called_once()
 
 
@@ -987,7 +993,7 @@ def test_playwright_pdf_signal_timeout(tmp_path, product_playwright_context):
 
 
 @pytest.mark.unit
-def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
+def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path: Path) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>CSS injection</p></body></html>")
     page = Mock()
 
@@ -1018,6 +1024,31 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
     assert "display: block !important;" in css
     assert "@media print" not in css
     assert "[nexus_template]" not in css
+
+
+@pytest.mark.unit
+def test_apply_pdf_capture_styles_spends_shared_deadline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>CSS deadline</p></body></html>")
+    page = Mock()
+    checkpoints: list[tuple[float, str]] = []
+
+    def capture_remaining_timeout(deadline: float, phase_name: str) -> int:
+        checkpoints.append((deadline, phase_name))
+        return 100
+
+    monkeypatch.setattr(
+        renderer,
+        "_remaining_browser_phase_timeout_ms",
+        capture_remaining_timeout,
+    )
+
+    renderer._apply_pdf_capture_styles(page, deadline=123.0)
+
+    # Styling checks the same shared deadline before starting and after each of its three
+    # browser operations, so none of that preparation can silently escape render_timeout.
+    assert checkpoints == [(123.0, "PDF capture styling")] * 4
 
 
 @pytest.mark.unit
@@ -1914,7 +1945,9 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, m
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_path, monkeypatch):
+def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-transition-report"
@@ -1922,7 +1955,9 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_
     _write_html(
         report_dir,
         """<html><body>
-        <section id="report_root" style="opacity: 0; transition: opacity 0.4s linear;">Report</section>
+        <section id="report_root" style="opacity: 0; transition: opacity 0.4s linear;">
+            Report<span id="child">Child</span>
+        </section>
         </body></html>""",
     )
 
@@ -1935,6 +1970,25 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_
 
         _start_wait_script(page, wait_scripts["FOUC transition"])
 
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                document.getElementById('child').dispatchEvent(
+                    new TransitionEvent('transitionend', {
+                        propertyName: 'opacity',
+                        bubbles: true
+                    })
+                );
+            }"""
+        )
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                document.getElementById('report_root').dispatchEvent(
+                    new TransitionEvent('transitionend', { propertyName: 'opacity' })
+                );
+            }"""
+        )
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate(
             """() => {
@@ -1951,8 +2005,8 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_
 
 @pytest.mark.unit
 def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loader(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "plotly-ready-report"
@@ -1961,7 +2015,13 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
         report_dir,
         """<html><body>
         <adr-data-item>
-            <section class='nexus-plot' id='plot'></section>
+            <section class='nexus-plot' id='plot'>
+                <div
+                    class='plot-container'
+                    id='plot-container'
+                    style='opacity: 0; transition: opacity 0.4s linear;'
+                ></div>
+            </section>
             <section class='adr-spinner-loader-container' id='loader'></section>
         </adr-data-item>
         </body></html>""",
@@ -1980,6 +2040,16 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
         page.evaluate("() => document.getElementById('plot').classList.add('loaded')")
         assert page.evaluate("() => window.waitReadyDone") is False
         page.evaluate("() => document.getElementById('loader').style.display = 'none'")
+        assert page.evaluate("() => window.waitReadyDone") is False
+        page.evaluate(
+            """() => {
+                const container = document.getElementById('plot-container');
+                container.style.opacity = '1';
+                container.dispatchEvent(
+                    new TransitionEvent('transitionend', { propertyName: 'opacity' })
+                );
+            }"""
+        )
         page.wait_for_function("() => window.waitReadyDone === true")
 
         assert page.evaluate("() => window.waitReadyError") is None
@@ -1987,7 +2057,9 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp_path, monkeypatch):
+def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2023,9 +2095,41 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp
 
 
 @pytest.mark.unit
+def test_wait_for_render_ready_images_step_accepts_already_failed_images(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Failed image</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "failed-image-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        "<html><body><img id='failed' src='data:image/png;base64,not-valid' /></body></html>",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        # The load failure occurred before readiness listeners are installed. A sourced image
+        # with complete=true and no decoded width must fast-pass instead of awaiting a lost event.
+        assert page.evaluate("() => document.getElementById('failed').complete") is True
+        assert page.evaluate("() => document.getElementById('failed').naturalWidth") == 0
+
+        _start_wait_script(page, wait_scripts["Images"])
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
 def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
-    tmp_path, monkeypatch
-):
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2072,7 +2176,9 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkeypatch):
+def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "video-ready-report"
@@ -2105,6 +2211,107 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkey
             """() => {
                 window.videoReadyState = 2;
                 document.getElementById('delayed-video').dispatchEvent(new Event('loadeddata'));
+            }"""
+        )
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_videos_step_accepts_already_failed_video(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Failed video</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "failed-video-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <video id="failed-video"></video>
+        <script>
+            const video = document.getElementById('failed-video');
+            Object.defineProperty(video, 'readyState', {
+                configurable: true,
+                get() { return 0; }
+            });
+            Object.defineProperty(video, 'error', {
+                configurable: true,
+                get() { return { code: 4 }; }
+            });
+        </script>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["Videos"])
+        page.wait_for_function("() => window.waitReadyDone === true")
+
+        assert page.evaluate("() => window.waitReadyError") is None
+        browser.close()
+
+
+@pytest.mark.unit
+def test_wait_for_render_ready_videos_step_settles_each_video_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Two videos</p></body></html>")
+    wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
+    report_dir = tmp_path / "two-video-report"
+    report_dir.mkdir()
+    _write_html(
+        report_dir,
+        """<html><body>
+        <video id="first-video"></video>
+        <video id="second-video"></video>
+        <script>
+            window.firstVideoReadyState = 0;
+            window.secondVideoReadyState = 0;
+            Object.defineProperty(document.getElementById('first-video'), 'readyState', {
+                configurable: true,
+                get() { return window.firstVideoReadyState; }
+            });
+            Object.defineProperty(document.getElementById('second-video'), 'readyState', {
+                configurable: true,
+                get() { return window.secondVideoReadyState; }
+            });
+        </script>
+        </body></html>""",
+    )
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((report_dir / "index.html").as_uri(), wait_until="load")
+
+        _start_wait_script(page, wait_scripts["Videos"])
+        assert page.evaluate("() => window.waitReadyDone") is False
+
+        page.evaluate(
+            """() => {
+                window.firstVideoReadyState = 2;
+                const first = document.getElementById('first-video');
+                first.dispatchEvent(new Event('loadeddata'));
+                first.dispatchEvent(new Event('error'));
+            }"""
+        )
+        # Both events belong to the same video, so they must consume only one counter slot.
+        assert page.evaluate("() => window.waitReadyDone") is False
+
+        page.evaluate(
+            """() => {
+                window.secondVideoReadyState = 2;
+                document.getElementById('second-video').dispatchEvent(new Event('loadeddata'));
             }"""
         )
         page.wait_for_function("() => window.waitReadyDone === true")
@@ -2324,6 +2531,9 @@ def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
     "kwargs, expected_error",
     [
         ({"render_timeout": 0}, "render_timeout must be a positive number"),
+        ({"render_timeout": float("nan")}, "render_timeout must be a positive number"),
+        ({"render_timeout": float("inf")}, "render_timeout must be a positive number"),
+        ({"render_timeout": float("-inf")}, "render_timeout must be a positive number"),
         ({"render_timeout": "abc"}, "render_timeout must be a positive number"),
         ({"render_timeout": None}, "render_timeout must be a positive number"),
         ({"render_timeout": []}, "render_timeout must be a positive number"),
@@ -2353,7 +2563,9 @@ def test_block_external_websockets_keeps_browser_export_offline(tmp_path):
         ),
     ],
 )
-def test_renderer_constructor_rejects_invalid_options(tmp_path, kwargs, expected_error):
+def test_renderer_constructor_rejects_invalid_options(
+    tmp_path: Path, kwargs: dict[str, object], expected_error: str
+) -> None:
     html_dir = _write_html(tmp_path, "<html><body>Invalid options</body></html>")
 
     with pytest.raises(ADRException, match=expected_error):
