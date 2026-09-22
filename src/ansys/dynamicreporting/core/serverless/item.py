@@ -56,6 +56,7 @@ from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
+from ._visualization import _build_iframe, _display_iframe
 from .base import BaseModel, StrEnum, Validator
 
 
@@ -742,6 +743,79 @@ class Item(BaseModel):
             ctx["HTML"] = get_render_error_html(e, target="report item", guid=self.guid)
 
         return render_to_string("data/item_detail_simple.html", context=ctx, request=request)
+
+    def get_iframe(
+        self,
+        width: int | float = 0,
+        height: int | float = 0,
+        *,
+        context=None,
+        request=None,
+    ) -> str:
+        """Return an inline iframe containing the rendered item.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. By default, image width is used up to 1000 pixels,
+            or 1000 pixels for other item types.
+        height : int or float, optional
+            Iframe height. By default, image height is used up to 400 pixels.
+            Scenes default to 800 pixels and other item types to 400 pixels.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Returns
+        -------
+        str
+            String-like iframe markup that rich display frontends render as HTML.
+        """
+        if width == 0:
+            item_width = getattr(self, "width", 0)
+            width = min(item_width * 1.1, 1000) if item_width > 0 else 1000
+        if height == 0:
+            max_height = 800 if self.type == ItemType.SCENE else 400
+            item_height = getattr(self, "height", 0)
+            height = min(item_height * 1.1, max_height) if item_height > 0 else max_height
+        return _build_iframe(
+            self.render(context=context, request=request),
+            width=width,
+            height=height,
+        )
+
+    def visualize(
+        self,
+        width: int | float = 0,
+        height: int | float = 0,
+        *,
+        context=None,
+        request=None,
+    ) -> None:
+        """Display the rendered item inline.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. When set to zero, the width is derived as described by
+            :meth:`get_iframe`.
+        height : int or float, optional
+            Iframe height. When set to zero, the height is derived as described by
+            :meth:`get_iframe`.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Raises
+        ------
+        RuntimeError
+            If IPython is unavailable.
+        """
+        _display_iframe(
+            self.get_iframe(width=width, height=height, context=context, request=request)
+        )
 
 
 class String(SimplePayloadMixin, Item):

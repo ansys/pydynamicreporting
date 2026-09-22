@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0rc3] - 2026-09-21
+
+### Added
+
+- Serverless items and templates now provide `visualize()` for inline display in
+  Jupyter and other IPython frontends, plus `get_iframe()` for retrieving the same
+  escaped, sandboxed iframe as a string-like object. IPython remains optional, and
+  the existing `render()` methods continue to return raw HTML.
+- Service-mode and serverless browser-PDF exports now accept a public `PDFPageSize`
+  with Letter, Legal, Tabloid, Ledger, and A0 through A6 formats. A3 is the default;
+  setting `page_size=None` enables paired custom `width` and `height` values in
+  pixels, inches, centimeters, or millimeters.
+
+### Fixed
+
+- Browser-PDF layout, pagination, and output now use the selected page's printable
+  dimensions. Wide content is clipped instead of shrinking the whole report,
+  over-height visuals are fitted to the page, headings stay with content that fits,
+  and only genuinely oversized tables, sliders, and report items split across pages.
+- Landscape browser-PDF exports no longer produce a blank first page from a leading
+  layout break.
+- Browser-PDF and standalone HTML export now handle both the `ansys-adr-viewer` tag
+  and its `ansys-nexus-viewer` compatibility alias, while retaining support for
+  legacy viewer classes and correctly inlining scene sources and proxy images.
+
 ## [1.0.0rc2] - 2026-09-11
 
 ### Added
