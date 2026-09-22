@@ -44,6 +44,29 @@ from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDF
 _EXPECTED_TRANSIENT_PLAYWRIGHT_OVERRIDE_ENV_VARS = ("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE",)
 _PACKAGED_BROWSER_DIR_NAME = "packaged-browser-dir"
 _STUBBED_BROWSER_DIR = Path("mock-product-browser")
+_OVERSIZED_PLOT_HTML = """
+<html>
+<head>
+    <style>
+        body { margin: 0; }
+        adr-data-item, section { display: block; }
+        .nexus-plot { display: block; width: 320px; height: 1400px; }
+    </style>
+</head>
+<body>
+    <main id="report_root">
+        <div data-layout-type="basic">
+            <h2>Async Plotly resize</h2>
+            <section class="adr-container">
+                <adr-data-item data-item-type="table">
+                    <section id="plot" class="nexus-plot loaded"></section>
+                </adr-data-item>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
+"""
 
 
 def _fake_ansys_installation(version: int) -> str:
@@ -1058,6 +1081,113 @@ def test_browser_pdf_helper_invocation_uses_packaged_bridge(tmp_path: Path) -> N
         browser_pdf_invocation_script(),
         {"method": "exampleMethod", "argument": {"value": 3}},
     )
+
+
+@pytest.mark.unit
+def test_browser_pdf_bridge_rejects_invalid_dispatch_in_browser(tmp_path: Path) -> None:
+    """Exercise bridge and readiness-registry failures in Chromium."""
+    renderer = _simple_renderer(tmp_path, "<html><body><p>Bridge errors</p></body></html>")
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page()
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri())
+
+        with pytest.raises(
+            PlaywrightError,
+            match="The browser PDF runtime has not been installed on this page",
+        ):
+            renderer._evaluate_browser_pdf_helper(page, "applyPanelCaptureStyles")
+
+        renderer._install_browser_pdf_helpers(page)
+        with pytest.raises(
+            PlaywrightError,
+            match="Unknown browser PDF runtime method: missingMethod",
+        ):
+            renderer._evaluate_browser_pdf_helper(page, "missingMethod")
+        with pytest.raises(
+            PlaywrightError,
+            match="Unknown browser PDF readiness step: missingStep",
+        ):
+            renderer._evaluate_browser_pdf_helper(
+                page,
+                "waitForReadyStep",
+                {"stepKey": "missingStep", "timeoutMs": 1000},
+            )
+        browser.close()
+
+
+@pytest.mark.unit
+def test_plotly_resize_pending_promise_respects_browser_timeout(tmp_path: Path) -> None:
+    """Return the timeout sentinel when Plotly never settles its resize promise."""
+    renderer = _simple_renderer(tmp_path, _OVERSIZED_PLOT_HTML, page_size=PDFPageSize.A4)
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport=renderer._shared_browser_context_kwargs()["viewport"])
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri())
+        renderer._install_browser_pdf_helpers(page)
+        page.evaluate(
+            """() => {
+                window.__plotlyResizeCount = 0;
+                window.Plotly = {
+                    Plots: {
+                        resize: () => {
+                            window.__plotlyResizeCount += 1;
+                            return new Promise(() => {});
+                        },
+                    },
+                };
+            }"""
+        )
+
+        result = renderer._fit_visuals_for_pagination(
+            page,
+            renderer._printable_page_height_px(),
+            timeout_ms=50,
+        )
+        resize_count = page.evaluate("() => window.__plotlyResizeCount")
+        browser.close()
+
+    assert result == {"__adrTimedOut": True}
+    assert resize_count == 1
+
+
+@pytest.mark.unit
+def test_plotly_resize_rejection_propagates_from_browser(tmp_path: Path) -> None:
+    """Propagate a rejected asynchronous Plotly resize promise to Python."""
+    renderer = _simple_renderer(tmp_path, _OVERSIZED_PLOT_HTML, page_size=PDFPageSize.A4)
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport=renderer._shared_browser_context_kwargs()["viewport"])
+        page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri())
+        renderer._install_browser_pdf_helpers(page)
+        page.evaluate(
+            """() => {
+                window.Plotly = {
+                    Plots: {
+                        resize: () => Promise.reject(
+                            new Error('resize rejection regression probe')
+                        ),
+                    },
+                };
+            }"""
+        )
+
+        with pytest.raises(PlaywrightError, match="resize rejection regression probe"):
+            renderer._fit_visuals_for_pagination(
+                page,
+                renderer._printable_page_height_px(),
+                timeout_ms=1000,
+            )
+        browser.close()
 
 
 @pytest.mark.unit
