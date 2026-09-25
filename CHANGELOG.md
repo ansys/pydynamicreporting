@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
--
+- [BETA] JSON item import: added `import_from_json` to both `Service` and serverless `ADR`, creating report items and report structure from a single versioned JSON document. The contract is published as `adr_import.schema.json`.
 
 ### Changed
 

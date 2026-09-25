@@ -3,6 +3,11 @@ User guide
 
 This section describes concepts that you need to know to use PyDynamicReporting.
 
+.. toctree::
+   :maxdepth: 2
+
+   json_import
+
 API overview
 ------------
 

@@ -29,8 +29,8 @@ check: ## Run all code quality checks
 	uv run pre-commit run --all-files
 
 .PHONY: schema
-schema: ## Generate the ADR exchange JSON schema artifact
-	uv run python scripts/gen_exchange_schema.py
+schema: ## Generate the ADR import JSON schema artifact
+	uv run python scripts/gen_import_schema.py
 
 .PHONY: version
 version: ## Print the current project version

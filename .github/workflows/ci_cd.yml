@@ -28,10 +28,10 @@ jobs:
       - name: Set up Python
         uses: ./.github/actions/setup-python-env
 
-      - name: Check ADR exchange schema artifact
+      - name: Check ADR import schema artifact
         run: |
           make schema
-          git diff --exit-code -- adr_exchange.schema.json
+          git diff --exit-code -- adr_import.schema.json
 
       - name: PyAnsys code style checks
         uses: ansys/actions/code-style@v10.3.1

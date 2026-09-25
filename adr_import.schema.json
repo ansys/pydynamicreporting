@@ -1,0 +1,595 @@
+{
+  "$defs": {
+    "animationItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "animation"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "dataset": {
+      "additionalProperties": true,
+      "properties": {
+        "filename": {
+          "description": "Source file name.",
+          "type": "string"
+        },
+        "format": {
+          "description": "Source file format.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Dataset name.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags applied to this object.",
+          "items": {
+            "$ref": "#/$defs/tagObject"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "fileItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "file"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "htmlItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "html"
+            },
+            "value": {
+              "description": "Inline payload body.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "value"
+          ]
+        }
+      ]
+    },
+    "imageItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "image"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "item": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/textItem"
+        },
+        {
+          "$ref": "#/$defs/htmlItem"
+        },
+        {
+          "$ref": "#/$defs/tableItem"
+        },
+        {
+          "$ref": "#/$defs/treeItem"
+        },
+        {
+          "$ref": "#/$defs/imageItem"
+        },
+        {
+          "$ref": "#/$defs/animationItem"
+        },
+        {
+          "$ref": "#/$defs/sceneItem"
+        },
+        {
+          "$ref": "#/$defs/fileItem"
+        }
+      ]
+    },
+    "itemBase": {
+      "additionalProperties": true,
+      "properties": {
+        "item_type": {
+          "type": "string"
+        },
+        "name": {
+          "description": "Item name.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "properties": {
+          "description": "Escape hatch for ADR fields not promoted to first class.",
+          "items": {
+            "$ref": "#/$defs/propertyObject"
+          },
+          "type": "array"
+        },
+        "sequence": {
+          "description": "Ordering hint within a report.",
+          "type": "integer"
+        },
+        "source": {
+          "description": "Producing application or component.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags applied to this object.",
+          "items": {
+            "$ref": "#/$defs/tagObject"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "item_type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "propertyObject": {
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "null",
+          "array",
+          "object"
+        ]
+      },
+      "minProperties": 1,
+      "type": "object"
+    },
+    "sceneItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "scene"
+            },
+            "path": {
+              "description": "Path to the payload file, absolute or relative to the document.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "path"
+          ]
+        }
+      ]
+    },
+    "session": {
+      "additionalProperties": true,
+      "properties": {
+        "application": {
+          "description": "Producing application.",
+          "type": "string"
+        },
+        "hostname": {
+          "description": "Host that produced the session.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Session name.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags applied to this object.",
+          "items": {
+            "$ref": "#/$defs/tagObject"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "tableColumn": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "tableItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "columns": {
+              "description": "Column definitions, in wire (record) order.",
+              "items": {
+                "$ref": "#/$defs/tableColumn"
+              },
+              "type": "array"
+            },
+            "format": {
+              "description": "Cell value format.",
+              "type": "string"
+            },
+            "item_type": {
+              "const": "table"
+            },
+            "plot": {
+              "description": "Plot style, for example 'line'.",
+              "type": "string"
+            },
+            "rows": {
+              "description": "Record-oriented rows; one inner list per record.",
+              "items": {
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "xaxis": {
+              "description": "Explicit x-axis label; must name a column.",
+              "type": "string"
+            },
+            "yaxis": {
+              "description": "Explicit y-axis labels; each must name a column.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "item_type",
+            "columns",
+            "rows"
+          ]
+        }
+      ]
+    },
+    "tagObject": {
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      },
+      "minProperties": 1,
+      "type": "object"
+    },
+    "template": {
+      "additionalProperties": true,
+      "properties": {
+        "children": {
+          "description": "Child templates, built parent-first.",
+          "items": {
+            "$ref": "#/$defs/template"
+          },
+          "type": "array"
+        },
+        "column_count": {
+          "description": "Layout column count.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "column_widths": {
+          "description": "Layout column width factors.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "filter_mode": {
+          "description": "How the item filter is applied.",
+          "enum": [
+            "items",
+            "root_replace",
+            "root_append"
+          ],
+          "type": "string"
+        },
+        "html": {
+          "description": "Layout HTML, stored as params['HTML'].",
+          "type": "string"
+        },
+        "item_filter": {
+          "description": "ADR query expression selecting items.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Template name.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "params": {
+          "description": "Raw template parameters merged with the convenience fields.",
+          "type": "object"
+        },
+        "sort_fields": {
+          "description": "Fields used to sort items.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sort_selection": {
+          "description": "Which items to keep after sorting.",
+          "enum": [
+            "all",
+            "first",
+            "last"
+          ],
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags applied to this object.",
+          "items": {
+            "$ref": "#/$defs/tagObject"
+          },
+          "type": "array"
+        },
+        "template_type": {
+          "description": "Discriminator selecting the ADR report type.",
+          "enum": [
+            "basic",
+            "panel",
+            "box",
+            "tabs",
+            "carousel",
+            "slider",
+            "header",
+            "footer",
+            "toc",
+            "iterator",
+            "tagproperty",
+            "reportlink",
+            "pptx",
+            "pptx_slide",
+            "datafilter",
+            "userdefined",
+            "sqlquery",
+            "tablemerge",
+            "tablereduce",
+            "tablemergercfilter",
+            "tablemergevaluefilter",
+            "tablemap",
+            "tablesortfilter",
+            "treemerge",
+            "statistical",
+            "itemscomparison",
+            "iterator_generator"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "textItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "text"
+            },
+            "value": {
+              "description": "Inline payload body.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_type",
+            "value"
+          ]
+        }
+      ]
+    },
+    "treeItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/itemBase"
+        },
+        {
+          "properties": {
+            "item_type": {
+              "const": "tree"
+            },
+            "nodes": {
+              "description": "Root nodes of the tree.",
+              "items": {
+                "$ref": "#/$defs/treeNode"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "item_type",
+            "nodes"
+          ]
+        }
+      ]
+    },
+    "treeNode": {
+      "additionalProperties": true,
+      "properties": {
+        "children": {
+          "description": "Child nodes.",
+          "items": {
+            "$ref": "#/$defs/treeNode"
+          },
+          "type": "array"
+        },
+        "key": {
+          "description": "Stable node key; generated when absent.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Node label.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "value": {
+          "description": "Node value. Defaults to the node name.",
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null",
+            "array"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.ansys.com/adr/import/1.0/adr-import.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "app_id": {
+      "description": "Names the generated root report and groups imported content.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "datasets": {
+      "description": "Accepted and retained in v1.0, but not applied to created items.",
+      "items": {
+        "$ref": "#/$defs/dataset"
+      },
+      "type": "array"
+    },
+    "items": {
+      "description": "Report items to create.",
+      "items": {
+        "$ref": "#/$defs/item"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "description": "Free-form producer metadata, stored on the root template params.",
+      "type": "object"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "description": "Import schema version, 'MAJOR.MINOR'.",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "sessions": {
+      "description": "Accepted and retained in v1.0, but not applied to created items.",
+      "items": {
+        "$ref": "#/$defs/session"
+      },
+      "type": "array"
+    },
+    "tags": {
+      "description": "Tags applied to this object.",
+      "items": {
+        "$ref": "#/$defs/tagObject"
+      },
+      "type": "array"
+    },
+    "templates": {
+      "description": "Report structure to create.",
+      "items": {
+        "$ref": "#/$defs/template"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "app_id"
+  ],
+  "title": "ADR Item Import Document",
+  "type": "object"
+}

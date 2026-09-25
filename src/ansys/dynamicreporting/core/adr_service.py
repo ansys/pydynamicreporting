@@ -50,7 +50,7 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -60,8 +60,6 @@ from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
 from .common_utils import resolve_install_info
 from .compatibility import get_compatibility_warning_for_install_version
-from .server_exchange_backend import ServerExchangeBackend
-from .serverless.exchange_importer import ExchangeImporter
 from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -74,6 +72,9 @@ from .exceptions import (
     NotValidServer,
     StartingServiceError,
 )
+
+if TYPE_CHECKING:
+    from .utils.json_import import ImportResult
 
 
 # Main class
@@ -719,24 +720,67 @@ class Service:
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
 
-    def import_from_json(self, json_file_path: str | Path, *, on_error: str = "collect") -> Any:
-        """Import an ADR exchange JSON document into the current ADR service.
+    def import_from_json(
+        self,
+        json_file_path: str | Path,
+        *,
+        on_error: str = "collect",
+        base_dir: str | None = None,
+        strict_keys: bool = False,
+    ) -> "ImportResult":
+        """Import an ADR JSON document into the connected service.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
 
         Parameters
         ----------
-        json_file_path : str or Path
+        json_file_path : str or pathlib.Path
             Path to the JSON document.
-        on_error : str, default="collect"
-            Strategy for item-level failures: ``"collect"`` keeps going and records the
-            failures while ``"raise"`` raises at the first failure.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing ``json_file_path``.
+        strict_keys : bool, default: False
+            Treat unknown keys in the document as validation errors.
 
         Returns
         -------
-        Any
-            Import summary from the exchange importer.
+        ImportResult
+            Counts, root template GUIDs, and any per-item failures.
+
+        Raises
+        ------
+        ImportValidationError
+            If the document violates the import contract.
+        ImportVersionError
+            If the document schema version is unsupported.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
+            adr_service.connect(url='http://localhost:8020')
+            result = adr_service.import_from_json(r'C:\\tmp\\report.json')
+            print(result.items_saved, result.ok)
         """
-        importer = ExchangeImporter(ServerExchangeBackend(self))
-        return importer.import_file(json_file_path, on_error=on_error)
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from .import_backend_server import ServerImportBackend
+        from .utils.json_import.importer import JSONImporter
+
+        importer = JSONImporter(ServerImportBackend(self))
+        return importer.import_file(
+            json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
+        )
 
     def query(
         self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""

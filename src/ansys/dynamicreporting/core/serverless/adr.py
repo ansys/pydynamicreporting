@@ -49,7 +49,7 @@ import platform
 import shutil
 import sys
 import tempfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import uuid
 import warnings
 from collections.abc import Iterable
@@ -81,6 +81,9 @@ from ..exceptions import (
 )
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
+
+if TYPE_CHECKING:
+    from ..utils.json_import import ImportResult
 
 
 class ADR:
@@ -1103,27 +1106,67 @@ class ADR:
         root_template.save()
         self._build_templates_from_parent(root_id_str, root_template, templates)
 
-    def import_from_json(self, json_file_path: str | Path, *, on_error: str = "collect") -> Any:
-        """Import an ADR exchange JSON document into the current ADR database.
+    def import_from_json(
+        self,
+        json_file_path: str | Path,
+        *,
+        on_error: str = "collect",
+        base_dir: str | None = None,
+        strict_keys: bool = False,
+    ) -> "ImportResult":
+        """Import an ADR JSON document into this serverless database.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
 
         Parameters
         ----------
-        json_file_path : str or Path
+        json_file_path : str or pathlib.Path
             Path to the JSON document.
-        on_error : str, default="collect"
-            Strategy for item-level failures: ``"collect"`` keeps going and records the
-            failures, while ``"raise"`` raises at the first failure.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing ``json_file_path``.
+        strict_keys : bool, default: False
+            Treat unknown keys in the document as validation errors.
 
         Returns
         -------
-        Any
-            Import summary from the exchange importer.
-        """
-        from .exchange_importer import ExchangeImporter
-        from .exchange_backend import ServerlessExchangeBackend
+        ImportResult
+            Counts, root template GUIDs, and any per-item failures.
 
-        importer = ExchangeImporter(ServerlessExchangeBackend(self))
-        return importer.import_file(json_file_path, on_error=on_error)
+        Raises
+        ------
+        ImportValidationError
+            If the document violates the import contract.
+        ImportVersionError
+            If the document schema version is unsupported.
+
+        Examples
+        --------
+        ::
+
+            from ansys.dynamicreporting.core.serverless import ADR
+
+            adr = ADR(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
+            adr.setup()
+            result = adr.import_from_json('report.json')
+            print(result.items_saved, result.ok)
+        """
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from ..utils.json_import.importer import JSONImporter
+        from .import_backend import ServerlessImportBackend
+
+        importer = JSONImporter(ServerlessImportBackend(self))
+        return importer.import_file(
+            json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
+        )
 
     @staticmethod
     def get_report(**kwargs) -> Template:
