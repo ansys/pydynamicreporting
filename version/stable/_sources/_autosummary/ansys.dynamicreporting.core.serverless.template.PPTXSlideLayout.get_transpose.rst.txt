@@ -1,0 +1,6 @@
+get\_transpose
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PPTXSlideLayout.get_transpose

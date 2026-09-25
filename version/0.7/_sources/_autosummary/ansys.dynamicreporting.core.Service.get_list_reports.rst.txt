@@ -1,0 +1,6 @@
+get\_list\_reports
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Service.get_list_reports

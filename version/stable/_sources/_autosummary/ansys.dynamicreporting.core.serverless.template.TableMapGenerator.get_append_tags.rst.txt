@@ -1,0 +1,6 @@
+get\_append\_tags
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMapGenerator.get_append_tags

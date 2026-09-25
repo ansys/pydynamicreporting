@@ -1,0 +1,6 @@
+table\_wrap\_content
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.table_wrap_content

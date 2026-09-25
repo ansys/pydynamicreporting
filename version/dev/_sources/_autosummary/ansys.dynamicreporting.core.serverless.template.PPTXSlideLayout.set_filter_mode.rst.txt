@@ -1,0 +1,6 @@
+set\_filter\_mode
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: PPTXSlideLayout.set_filter_mode

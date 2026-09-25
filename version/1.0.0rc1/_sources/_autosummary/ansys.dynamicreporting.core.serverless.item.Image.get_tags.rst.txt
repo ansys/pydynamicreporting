@@ -1,0 +1,6 @@
+get\_tags
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Image.get_tags

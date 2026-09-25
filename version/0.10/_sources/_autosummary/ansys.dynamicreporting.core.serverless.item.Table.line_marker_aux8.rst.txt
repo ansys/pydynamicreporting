@@ -1,0 +1,6 @@
+line\_marker\_aux8
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.line_marker_aux8

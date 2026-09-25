@@ -1,0 +1,6 @@
+palette
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.palette

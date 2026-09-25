@@ -1,0 +1,6 @@
+get\_iframe
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Scene.get_iframe

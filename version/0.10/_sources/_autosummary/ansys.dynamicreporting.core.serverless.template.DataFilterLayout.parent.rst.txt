@@ -1,0 +1,6 @@
+parent
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: DataFilterLayout.parent

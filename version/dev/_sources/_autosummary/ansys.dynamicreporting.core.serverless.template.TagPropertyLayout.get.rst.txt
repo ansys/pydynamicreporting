@@ -1,0 +1,6 @@
+get
+===
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TagPropertyLayout.get

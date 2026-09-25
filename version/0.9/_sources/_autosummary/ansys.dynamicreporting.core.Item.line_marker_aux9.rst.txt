@@ -1,0 +1,6 @@
+line\_marker\_aux9
+==================
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.line_marker_aux9

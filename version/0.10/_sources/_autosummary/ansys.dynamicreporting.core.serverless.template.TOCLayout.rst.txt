@@ -1,0 +1,189 @@
+﻿TOCLayout
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TOCLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TOCLayout.add_filter
+      
+      
+      TOCLayout.add_params
+      
+      
+      TOCLayout.add_properties
+      
+      
+      TOCLayout.add_property
+      
+      
+      TOCLayout.add_sort_fields
+      
+      
+      TOCLayout.add_tag
+      
+      
+      TOCLayout.as_dict
+      
+      
+      TOCLayout.create
+      
+      
+      TOCLayout.delete
+      
+      
+      TOCLayout.filter
+      
+      
+      TOCLayout.find
+      
+      
+      TOCLayout.get
+      
+      
+      TOCLayout.get_column_count
+      
+      
+      TOCLayout.get_column_widths
+      
+      
+      TOCLayout.get_comments
+      
+      
+      TOCLayout.get_filter
+      
+      
+      TOCLayout.get_filter_mode
+      
+      
+      TOCLayout.get_html
+      
+      
+      TOCLayout.get_params
+      
+      
+      TOCLayout.get_property
+      
+      
+      TOCLayout.get_skip
+      
+      
+      TOCLayout.get_sort_fields
+      
+      
+      TOCLayout.get_sort_selection
+      
+      
+      TOCLayout.get_tags
+      
+      
+      TOCLayout.get_transpose
+      
+      
+      TOCLayout.reinit
+      
+      
+      TOCLayout.rem_tag
+      
+      
+      TOCLayout.remove_tag
+      
+      
+      TOCLayout.render
+      
+      
+      TOCLayout.render_pdf
+      
+      
+      TOCLayout.reorder_child
+      
+      
+      TOCLayout.reorder_children
+      
+      
+      TOCLayout.save
+      
+      
+      TOCLayout.set_column_count
+      
+      
+      TOCLayout.set_column_widths
+      
+      
+      TOCLayout.set_comments
+      
+      
+      TOCLayout.set_filter
+      
+      
+      TOCLayout.set_filter_mode
+      
+      
+      TOCLayout.set_html
+      
+      
+      TOCLayout.set_params
+      
+      
+      TOCLayout.set_property
+      
+      
+      TOCLayout.set_skip
+      
+      
+      TOCLayout.set_sort_fields
+      
+      
+      TOCLayout.set_sort_selection
+      
+      
+      TOCLayout.set_tags
+      
+      
+      TOCLayout.set_transpose
+      
+      
+      TOCLayout.to_dict
+      
+      
+      TOCLayout.to_json
+      
+      
+      TOCLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TOCLayout.children_order
+      TOCLayout.db
+      TOCLayout.item_filter
+      TOCLayout.master
+      TOCLayout.name
+      TOCLayout.params
+      TOCLayout.parent
+      TOCLayout.report_type
+      TOCLayout.saved
+      TOCLayout.tags
+      TOCLayout.type
+      TOCLayout.date
+      TOCLayout.children
+      TOCLayout.guid
+   
+   

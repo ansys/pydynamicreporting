@@ -1,0 +1,6 @@
+copy\_objects
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.copy_objects
