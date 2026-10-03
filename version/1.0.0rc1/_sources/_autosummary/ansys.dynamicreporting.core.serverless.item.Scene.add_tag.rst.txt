@@ -1,0 +1,6 @@
+add\_tag
+========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Scene.add_tag

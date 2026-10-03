@@ -1,0 +1,6 @@
+filter\_slider
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: DataFilterLayout.filter_slider

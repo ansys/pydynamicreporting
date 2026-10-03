@@ -1,0 +1,6 @@
+export\_report\_as\_pdf
+=======================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.export_report_as_pdf

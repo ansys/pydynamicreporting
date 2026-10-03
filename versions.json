@@ -1,0 +1,27 @@
+[
+  {
+    "name": "dev",
+    "version": "dev",
+    "url": "https://dynamicreporting.docs.pyansys.com/version/dev/"
+  },
+  {
+    "name": "1.0.0rc3",
+    "version": "1.0.0rc3",
+    "url": "https://dynamicreporting.docs.pyansys.com/version/1.0.0rc3/"
+  },
+  {
+    "name": "1.0.0rc2",
+    "version": "1.0.0rc2",
+    "url": "https://dynamicreporting.docs.pyansys.com/version/1.0.0rc2/"
+  },
+  {
+    "name": "1.0.0rc1",
+    "version": "1.0.0rc1",
+    "url": "https://dynamicreporting.docs.pyansys.com/version/1.0.0rc1/"
+  },
+  {
+    "name": "Older version",
+    "version": "N/A",
+    "url": "https://dynamicreporting.docs.pyansys.com/version/"
+  }
+]

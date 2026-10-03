@@ -1,0 +1,6 @@
+collbls
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.collbls

@@ -1,0 +1,6 @@
+table\_sort
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.table_sort

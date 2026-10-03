@@ -1,0 +1,6 @@
+reinit
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TableMergeRCFilterGenerator.reinit

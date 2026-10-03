@@ -1,0 +1,6 @@
+bar\_mode
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.bar_mode

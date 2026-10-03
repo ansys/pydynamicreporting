@@ -1,0 +1,6 @@
+get\_tags
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Item.get_tags

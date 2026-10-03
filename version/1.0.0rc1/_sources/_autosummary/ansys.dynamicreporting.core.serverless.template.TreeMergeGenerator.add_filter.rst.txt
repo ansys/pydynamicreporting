@@ -1,0 +1,6 @@
+add\_filter
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: TreeMergeGenerator.add_filter

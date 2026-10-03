@@ -1,0 +1,6 @@
+save
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SQLQueryGenerator.save

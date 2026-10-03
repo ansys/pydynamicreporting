@@ -1,0 +1,6 @@
+before\_children
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: UserDefinedLayout.before_children

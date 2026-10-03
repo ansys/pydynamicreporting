@@ -1,0 +1,6 @@
+table\_default\_col\_labels
+===========================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.table_default_col_labels

@@ -1,0 +1,6 @@
+static\_url
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.static_url

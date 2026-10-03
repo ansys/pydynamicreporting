@@ -1,0 +1,6 @@
+align\_column
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.align_column

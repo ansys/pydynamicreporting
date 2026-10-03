@@ -1,0 +1,197 @@
+﻿PPTXLayout
+==========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: PPTXLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      PPTXLayout.add_filter
+      
+      
+      PPTXLayout.add_params
+      
+      
+      PPTXLayout.add_properties
+      
+      
+      PPTXLayout.add_property
+      
+      
+      PPTXLayout.add_sort_fields
+      
+      
+      PPTXLayout.add_tag
+      
+      
+      PPTXLayout.as_dict
+      
+      
+      PPTXLayout.create
+      
+      
+      PPTXLayout.delete
+      
+      
+      PPTXLayout.filter
+      
+      
+      PPTXLayout.find
+      
+      
+      PPTXLayout.get
+      
+      
+      PPTXLayout.get_column_count
+      
+      
+      PPTXLayout.get_column_widths
+      
+      
+      PPTXLayout.get_comments
+      
+      
+      PPTXLayout.get_filter
+      
+      
+      PPTXLayout.get_filter_mode
+      
+      
+      PPTXLayout.get_html
+      
+      
+      PPTXLayout.get_params
+      
+      
+      PPTXLayout.get_property
+      
+      
+      PPTXLayout.get_skip
+      
+      
+      PPTXLayout.get_sort_fields
+      
+      
+      PPTXLayout.get_sort_selection
+      
+      
+      PPTXLayout.get_tags
+      
+      
+      PPTXLayout.get_transpose
+      
+      
+      PPTXLayout.reinit
+      
+      
+      PPTXLayout.rem_tag
+      
+      
+      PPTXLayout.remove_tag
+      
+      
+      PPTXLayout.render
+      
+      
+      PPTXLayout.render_pdf
+      
+      
+      PPTXLayout.render_pptx
+      
+      
+      PPTXLayout.reorder_child
+      
+      
+      PPTXLayout.reorder_children
+      
+      
+      PPTXLayout.save
+      
+      
+      PPTXLayout.set_column_count
+      
+      
+      PPTXLayout.set_column_widths
+      
+      
+      PPTXLayout.set_comments
+      
+      
+      PPTXLayout.set_filter
+      
+      
+      PPTXLayout.set_filter_mode
+      
+      
+      PPTXLayout.set_html
+      
+      
+      PPTXLayout.set_params
+      
+      
+      PPTXLayout.set_property
+      
+      
+      PPTXLayout.set_skip
+      
+      
+      PPTXLayout.set_sort_fields
+      
+      
+      PPTXLayout.set_sort_selection
+      
+      
+      PPTXLayout.set_tags
+      
+      
+      PPTXLayout.set_transpose
+      
+      
+      PPTXLayout.to_dict
+      
+      
+      PPTXLayout.to_json
+      
+      
+      PPTXLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      PPTXLayout.children_order
+      PPTXLayout.db
+      PPTXLayout.font_size
+      PPTXLayout.html_font_scale
+      PPTXLayout.input_pptx
+      PPTXLayout.item_filter
+      PPTXLayout.master
+      PPTXLayout.name
+      PPTXLayout.output_pptx
+      PPTXLayout.params
+      PPTXLayout.parent
+      PPTXLayout.report_type
+      PPTXLayout.saved
+      PPTXLayout.tags
+      PPTXLayout.type
+      PPTXLayout.use_all_slides
+      PPTXLayout.date
+      PPTXLayout.children
+      PPTXLayout.guid
+   
+   

@@ -1,0 +1,6 @@
+column\_minimum
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.column_minimum

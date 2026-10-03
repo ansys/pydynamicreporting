@@ -1,0 +1,6 @@
+tags
+====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoattribute:: TableMergeValueFilterGenerator.tags

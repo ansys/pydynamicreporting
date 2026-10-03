@@ -1,0 +1,6 @@
+close
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.close
