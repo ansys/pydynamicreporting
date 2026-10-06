@@ -56,6 +56,19 @@ rendering child templates individually:
         context={}, item_filter="A|i_tags|cont|section=results;"
     )
 
+Displaying in Jupyter
+---------------------
+
+Items and templates can display their rendered HTML inline in a notebook:
+
+.. code-block:: python
+
+    item.visualize()
+    top_template.visualize(item_filter="A|i_tags|cont|section=results;")
+
+Use ``get_iframe()`` when you need the display object without showing it immediately.
+The result is also string-like, so it can be embedded in another HTML host.
+
 Integration Tips
 ----------------
 

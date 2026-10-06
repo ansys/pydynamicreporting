@@ -21,12 +21,15 @@
 # SOFTWARE.
 
 import json
+import logging
 import os
+from types import SimpleNamespace
 import warnings
 
 import pytest
 
-from ansys.dynamicreporting.core import Report, Service
+from ansys.dynamicreporting.core import PDFPageSize, Report, Service
+from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import report_remote_server
 
 
@@ -161,6 +164,32 @@ def test_unit_no_url(request) -> None:
     assert err_msg
 
 
+def test_export_pdf_returns_false_on_failure(tmp_path, monkeypatch) -> None:
+    def fake_export_report_as_pdf(**kwargs):
+        raise RuntimeError("Simulated pdf export failure")
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(serverobj, "export_report_as_pdf", fake_export_report_as_pdf, raising=False)
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-export-pdf"),
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        success = my_report.export_pdf(file_name=str(tmp_path / "report.pdf"))
+
+    assert success is False
+    assert len(w) == 1
+    assert issubclass(w[-1].category, UserWarning)
+    assert "Simulated pdf export failure" in str(w[-1].message)
+
+
 @pytest.mark.ado_test
 def test_save_as_pdf(adr_service_query, request, get_exec) -> None:
     exec_basis = get_exec
@@ -193,6 +222,190 @@ def test_save_as_pdf_with_filter(adr_service_query, request, get_exec) -> None:
     else:  # If no local installation, then skip this test
         success = True
     assert success is True
+
+
+def test_export_browser_pdf_forwards_options(tmp_path, monkeypatch) -> None:
+    """Keep the public Report facade lossless across the server export boundary."""
+    captured: dict[str, object] = {}
+
+    def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
+        captured["report_guid"] = report_guid
+        captured["file_name"] = file_name
+        captured.update(kwargs)
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_browser_pdf", fake_export_report_as_browser_pdf, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        # Forwarded as ansys_installation/ansys_version so the remote render uses the packed browser.
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    output_file = tmp_path / "browser-report.pdf"
+    margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
+    success = my_report.export_browser_pdf(
+        file_name=str(output_file),
+        query_params={"colormode": "dark"},
+        item_filter="A|i_tags|cont|dp=dp227;",
+        landscape=True,
+        margins=margins,
+        page_size=PDFPageSize.A3,
+        width="12in",
+        height="18in",
+        render_timeout=12.5,
+    )
+
+    # Width and height remain observable even with a fixed format; precedence is
+    # enforced by the renderer rather than silently rewriting public inputs here.
+    assert success is True
+    assert captured["report_guid"] == "report-guid"
+    assert captured["file_name"] == str(output_file)
+    assert captured["query"] == {"colormode": "dark"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["landscape"] is True
+    assert captured["margins"] == margins
+    assert captured["page_size"] is PDFPageSize.A3
+    assert captured["width"] == "12in"
+    assert captured["height"] == "18in"
+    assert captured["render_timeout"] == 12.5
+    assert captured["ansys_installation"] == "/opt/ansys/v271"
+    assert captured["ansys_version"] == 271
+
+
+def test_export_browser_pdf_returns_false_on_failure(tmp_path, monkeypatch) -> None:
+    def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
+        raise RuntimeError("Simulated browser export failure")
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_browser_pdf", fake_export_report_as_browser_pdf, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
+def test_export_browser_pdf_warns_with_specific_readiness_failure_reason(
+    tmp_path, monkeypatch
+) -> None:
+    # A renderer readiness timeout (e.g. Plotly charts never finishing) surfaces as an
+    # ADRException with a specific reason. That reason must reach the caller through both the
+    # log and a UserWarning, not just a generic failure message, even though the caller only
+    # sees a boolean return value.
+    failure_reason = "Browser PDF rendering failed: Plotly charts timed out after 120.0s"
+
+    def fake_export_report_as_browser_pdf(report_guid, file_name, **kwargs):
+        raise ADRException(failure_reason)
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_browser_pdf", fake_export_report_as_browser_pdf, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-browser-pdf"),
+        _ansys_installation="/opt/ansys/v271",
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        success = my_report.export_browser_pdf(
+            file_name=str(tmp_path / "browser-report.pdf"), render_timeout=120.0
+        )
+
+    assert success is False
+    assert len(w) == 1
+    assert issubclass(w[-1].category, UserWarning)
+    assert failure_reason in str(w[-1].message)
+
+
+def test_export_browser_pdf_returns_false_without_service(tmp_path) -> None:
+    my_report = Report(
+        service=None, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
+def test_export_browser_pdf_returns_false_without_serverobj(tmp_path) -> None:
+    service = SimpleNamespace(serverobj=None, logger=logging.getLogger("test-report-export-guards"))
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    success = my_report.export_browser_pdf(file_name=str(tmp_path / "browser-report.pdf"))
+
+    assert success is False
+
+
+def test_export_html_preserves_service_asset_version_override() -> None:
+    """Keep the legacy high-level Report.export_html asset-version behavior."""
+    captured: dict[str, object] = {}
+
+    def fake_export_report_as_html(**kwargs):
+        captured.update(kwargs)
+
+    service = SimpleNamespace(
+        serverobj=SimpleNamespace(export_report_as_html=fake_export_report_as_html),
+        logger=logging.getLogger("test-report-export-html"),
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    assert my_report.export_html(directory_name="html-output") is True
+    assert captured["ansys_version"] == 271
+
+
+def test_export_html_returns_false_on_failure(tmp_path, monkeypatch) -> None:
+    def fake_export_report_as_html(**kwargs):
+        raise RuntimeError("Simulated html export failure")
+
+    serverobj = SimpleNamespace()
+    monkeypatch.setattr(
+        serverobj, "export_report_as_html", fake_export_report_as_html, raising=False
+    )
+    service = SimpleNamespace(
+        serverobj=serverobj,
+        logger=logging.getLogger("test-report-export-html"),
+        _ansys_version=271,
+    )
+    my_report = Report(
+        service=service, report_name="My Top Report", report_obj=SimpleNamespace(guid="report-guid")
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        success = my_report.export_html(directory_name=str(tmp_path))
+
+    assert success is False
+    assert len(w) == 1
+    assert issubclass(w[-1].category, UserWarning)
+    assert "Simulated html export failure" in str(w[-1].message)
 
 
 @pytest.mark.ado_test

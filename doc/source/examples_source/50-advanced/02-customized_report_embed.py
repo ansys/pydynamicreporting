@@ -8,7 +8,7 @@ Applying the new custom web component ``<adr-report></adr-report>`` as an altern
 using ``<iframe></iframe>`` to fetch and embed a report in the external web application.
 
 .. note::
-   This example assumes that you have a local Ansys installation with a version v251 or
+   This example assumes that you have a local Ansys installation with version v261 or
    beyond. For this feature, as of **25R1**, **Panel** and **Tabs** are the only layout
    templates available for style overwrite, more templates will be included in the
    future release.
@@ -41,8 +41,8 @@ root = f"http://127.0.0.1:{adr_port}/"
 
 # start an ADR server
 adr_service = adr.Service(
-    # (installation version should be >= v251)
-    ansys_installation=r"C:\Program Files\ANSYS Inc\v251",
+    # (installation version should be >= v261)
+    ansys_installation=r"C:\Program Files\ANSYS Inc\v261",
     # Unlike previous examples, the db_directory MUST have an existing database in it
     db_directory=r"D:\tmp\new_db",
     port=adr_port,

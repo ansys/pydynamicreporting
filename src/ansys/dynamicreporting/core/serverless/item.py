@@ -37,6 +37,7 @@ the serverless ADR API:
 
 from dataclasses import field
 from datetime import datetime
+from contextlib import suppress
 from html.parser import HTMLParser as BaseHTMLParser
 import io
 from pathlib import Path
@@ -55,6 +56,7 @@ from ..exceptions import ADRException
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, get_avz_directory, rebuild_3d_geometry
 from ..utils.report_utils import is_enhanced
+from ._visualization import _build_iframe, _display_iframe
 from .base import BaseModel, StrEnum, Validator
 
 
@@ -181,18 +183,38 @@ class HTMLContent(StringContent):
 
 
 class TableContent(ItemContent):
-    """Validator for 2D table payloads backed by NumPy arrays."""
+    """Validator that normalizes supported table input to a 2D NumPy array."""
+
+    DEFAULT_DTYPE = "f8"
 
     def process(self, value, obj):
-        """Validate a 2D :class:`numpy.ndarray` table."""
+        """Convert nested data when needed, then validate its dtype and shape."""
         value = super().process(value, obj)
-        if not isinstance(value, numpy.ndarray):
-            raise TypeError("Expected content to be a numpy array")
-        if value.dtype.kind not in ("S", "f"):
+
+        if isinstance(value, dict):
+            if "array" not in value:
+                raise ValueError("Expected table content dictionary to contain an 'array' key.")
+            array = value["array"]
+            dtype = value.get("dtype") or self.DEFAULT_DTYPE
+        else:
+            array = value
+            dtype = self.DEFAULT_DTYPE
+
+        if not isinstance(array, numpy.ndarray):
+            # Plain Python and JSON values do not carry a NumPy dtype.
+            # Use the same float default as the older PyDR table API.
+            try:
+                array = numpy.asarray(array, dtype=dtype)
+            except (TypeError, ValueError) as error:
+                raise TypeError(
+                    f"Could not convert table content to dtype {dtype!r}: {error}"
+                ) from None
+
+        if array.dtype.kind not in ("S", "f"):
             raise TypeError("Expected content to be a numpy array of bytes or float type.")
-        if len(value.shape) != 2:
+        if len(array.shape) != 2:
             raise ValueError("Expected content to be a 2 dimensional numpy array.")
-        return value
+        return array
 
 
 class TreeContent(ItemContent):
@@ -299,7 +321,8 @@ class ImageContent(FileValidator):
                 raise ADRException("The enhanced image is empty")
             obj._enhanced = True
         obj._width, obj._height = image.size
-        image.close()
+        with suppress(OSError):
+            image.close()
         return file_str
 
 
@@ -721,6 +744,79 @@ class Item(BaseModel):
 
         return render_to_string("data/item_detail_simple.html", context=ctx, request=request)
 
+    def get_iframe(
+        self,
+        width: int | float = 0,
+        height: int | float = 0,
+        *,
+        context=None,
+        request=None,
+    ) -> str:
+        """Return an inline iframe containing the rendered item.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. By default, image width is used up to 1000 pixels,
+            or 1000 pixels for other item types.
+        height : int or float, optional
+            Iframe height. By default, image height is used up to 400 pixels.
+            Scenes default to 800 pixels and other item types to 400 pixels.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Returns
+        -------
+        str
+            String-like iframe markup that rich display frontends render as HTML.
+        """
+        if width == 0:
+            item_width = getattr(self, "width", 0)
+            width = min(item_width * 1.1, 1000) if item_width > 0 else 1000
+        if height == 0:
+            max_height = 800 if self.type == ItemType.SCENE else 400
+            item_height = getattr(self, "height", 0)
+            height = min(item_height * 1.1, max_height) if item_height > 0 else max_height
+        return _build_iframe(
+            self.render(context=context, request=request),
+            width=width,
+            height=height,
+        )
+
+    def visualize(
+        self,
+        width: int | float = 0,
+        height: int | float = 0,
+        *,
+        context=None,
+        request=None,
+    ) -> None:
+        """Display the rendered item inline.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. When set to zero, the width is derived as described by
+            :meth:`get_iframe`.
+        height : int or float, optional
+            Iframe height. When set to zero, the height is derived as described by
+            :meth:`get_iframe`.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
+
+        Raises
+        ------
+        RuntimeError
+            If IPython is unavailable.
+        """
+        _display_iframe(
+            self.get_iframe(width=width, height=height, context=context, request=request)
+        )
+
 
 class String(SimplePayloadMixin, Item):
     """Item representing a plain string payload."""
@@ -743,14 +839,16 @@ class HTML(String):
 
 
 class Table(Item):
-    """Item representing a 2D table backed by a NumPy array.
+    """Item representing a 2D table stored as a NumPy array.
 
-    The array is stored in the ORM ``payloaddata`` field together with
-    additional payload properties such as row and column labels.
+    ``content`` accepts an existing NumPy array, a nested sequence that is
+    converted to ``float64``, or a dictionary containing ``array`` and
+    ``dtype``. The normalized array is stored in the ORM ``payloaddata``
+    field with the table's other payload properties.
     """
 
     content: TableContent = TableContent()
-    """Validated 2D NumPy array content for this table item."""
+    """Validated table input normalized to a 2D NumPy array."""
 
     type: str = ItemType.TABLE
     """Item type identifier for table items."""
@@ -888,7 +986,8 @@ class Image(FilePayloadMixin, Item):
                 raise ADRException(f"Error converting image to {self._file_ext}: {e}") from e
         else:  # save image as is (if enhanced or already PNG)
             self._save_file(self.file_path, img_bytes)
-        image.close()
+        with suppress(OSError):
+            image.close()
         super().save(**kwargs)
 
 

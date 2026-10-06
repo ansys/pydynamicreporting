@@ -25,17 +25,36 @@ from os import environ
 from pathlib import Path
 from random import randint
 import re
+import sys
 import uuid
+from unittest.mock import Mock
 
 import pytest
 import requests
 
-from ansys.dynamicreporting.core import Service
+from ansys.dynamicreporting.core import PDFPageSize, Service, common_utils
+from ansys.dynamicreporting.core.compatibility import (
+    AUTO_DETECT_INSTALL_VERSIONS,
+    SUPPORTED_PRODUCT_LINES,
+    product_release_to_install_version,
+)
 from ansys.dynamicreporting.core.constants import DOCKER_DEV_REPO_URL
+from ansys.dynamicreporting.core.exceptions import ADRException, UnsupportedServerVersionError
 from ansys.dynamicreporting.core.utils import exceptions as e
+from ansys.dynamicreporting.core.utils import report_download_html as rd
 from ansys.dynamicreporting.core.utils import report_objects as ro
 from ansys.dynamicreporting.core.utils import report_remote_server as r
 from ansys.dynamicreporting.core.utils.exceptions import BadRequestError, DBCreationFailedError
+
+
+def _supported_server_install_version() -> str:
+    """Return a server install version inside the current client support window."""
+    return str(product_release_to_install_version(f"{SUPPORTED_PRODUCT_LINES[0]}.1"))
+
+
+def _unsupported_server_install_version() -> str:
+    """Return a server install version just before the current client support window."""
+    return str(product_release_to_install_version(f"{int(SUPPORTED_PRODUCT_LINES[0]) - 1}.1"))
 
 
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
@@ -183,6 +202,76 @@ def test_none_url() -> None:
     assert succ and succ_two and succ_three and succ_four and succ_five
 
 
+def test_server_validate_records_supported_server_install_version(monkeypatch) -> None:
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=999)
+    supported_version = _supported_server_install_version()
+    monkeypatch.setattr(
+        server,
+        "get_api_version",
+        lambda: {
+            "version": "1.0",
+            "server_name": "Supported ADR server",
+            "ansys_version": supported_version,
+        },
+    )
+
+    assert server.validate() == 1.0
+    assert server._ansys_version == supported_version
+    assert server.get_server_name() == "Supported ADR server"
+
+
+@pytest.mark.parametrize(
+    "server_info",
+    [
+        {"version": "1.0"},
+        {"version": "1.0", "ansys_version": "abc"},
+        {"version": "1.0", "ansys_version": _unsupported_server_install_version()},
+    ],
+)
+def test_server_validate_rejects_missing_malformed_or_unsupported_install_version(
+    monkeypatch, server_info
+) -> None:
+    server = r.Server(url="http://127.0.0.1:8000")
+    get_api_version = Mock(return_value=server_info)
+    monkeypatch.setattr(server, "get_api_version", get_api_version)
+
+    for _ in range(2):
+        with pytest.raises(UnsupportedServerVersionError):
+            server.validate()
+        assert server._api_version is None
+        assert server._ansys_version is None
+
+    assert get_api_version.call_count == 2
+
+
+def test_get_server_name_preserves_unsupported_server_version(monkeypatch) -> None:
+    server = r.Server(url="http://127.0.0.1:8000")
+    monkeypatch.setattr(
+        server,
+        "get_api_version",
+        lambda: {"version": "1.0", "ansys_version": _unsupported_server_install_version()},
+    )
+
+    with pytest.raises(UnsupportedServerVersionError):
+        server.get_server_name()
+
+
+def test_server_api_version_property_validates_server_install_version(monkeypatch) -> None:
+    server = r.Server(url="http://127.0.0.1:8000")
+    get_api_version = Mock(
+        return_value={"version": "1.0", "ansys_version": _unsupported_server_install_version()}
+    )
+    monkeypatch.setattr(server, "get_api_version", get_api_version)
+
+    for _ in range(2):
+        with pytest.raises(UnsupportedServerVersionError):
+            server.api_version
+        assert server._api_version is None
+        assert server._ansys_version is None
+
+    assert get_api_version.call_count == 2
+
+
 def test_server_token(adr_service_create) -> None:
     s = adr_service_create.serverobj
     token = s.generate_magic_token(max_age=10)
@@ -286,6 +375,596 @@ def test_export_html(adr_service_query) -> None:
     assert success is True
 
 
+def test_export_html_sets_html_print_query(monkeypatch) -> None:
+    server = r.Server()
+    captured: dict[str, object] = {}
+
+    def fake_download_report_as_html_bundle(
+        report_guid,
+        directory_name,
+        query=None,
+        item_filter=None,
+        filename="index.html",
+        no_inline_files=False,
+        ansys_version=None,
+    ):
+        captured["report_guid"] = report_guid
+        captured["directory_name"] = directory_name
+        captured["query"] = query
+        captured["item_filter"] = item_filter
+        captured["filename"] = filename
+        captured["no_inline_files"] = no_inline_files
+        captured["ansys_version"] = ansys_version
+
+    monkeypatch.setattr(
+        server,
+        "_download_report_as_html_bundle",
+        fake_download_report_as_html_bundle,
+    )
+
+    query = {"colormode": "dark"}
+    server.export_report_as_html(
+        report_guid="report-guid",
+        directory_name="html-output",
+        query=query,
+        item_filter="A|i_tags|cont|dp=dp227;",
+        filename="report.html",
+        no_inline_files=True,
+        ansys_version=252,
+    )
+
+    assert captured["report_guid"] == "report-guid"
+    assert captured["directory_name"] == "html-output"
+    assert captured["query"] == {"colormode": "dark", "print": "html"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["filename"] == "report.html"
+    assert captured["no_inline_files"] is True
+    assert captured["ansys_version"] == 252
+    assert query == {"colormode": "dark"}
+
+
+def test_download_html_bundle_uses_connected_server_version(tmp_path, monkeypatch) -> None:
+    """Use the connected v261 server's asset namespace over the client's installation."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+    captured: dict[str, object] = {}
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", lambda: {"ansys_version": "261"})
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    server._download_report_as_html_bundle(
+        report_guid="report-guid",
+        directory_name=tmp_path / "html-output",
+        query={"print": "html"},
+    )
+
+    assert captured["ansys_version"] == "261"
+    downloader.download.assert_called_once_with()
+
+
+def test_download_html_bundle_reuses_cached_connected_server_version(tmp_path, monkeypatch) -> None:
+    """Avoid another API probe when connection validation already cached the server version."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    connected_version = _supported_server_install_version()
+    server._api_version = 1.0
+    server._ansys_version = connected_version
+    downloader = Mock()
+    captured: dict[str, object] = {}
+    probe = Mock(side_effect=AssertionError("cached server version should be reused"))
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", probe)
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    server._download_report_as_html_bundle(
+        report_guid="report-guid",
+        directory_name=tmp_path / "html-output",
+        query={"print": "html"},
+    )
+
+    assert captured["ansys_version"] == connected_version
+    probe.assert_not_called()
+    downloader.download.assert_called_once_with()
+
+
+def test_download_html_bundle_rejects_missing_connected_server_version(
+    tmp_path, monkeypatch
+) -> None:
+    """Do not fall back to a local install version when the server cannot prove support."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+
+    monkeypatch.setattr(server, "get_api_version", lambda: {})
+    monkeypatch.setattr(rd, "ReportDownloadHTML", Mock(return_value=downloader))
+
+    with pytest.raises(UnsupportedServerVersionError):
+        server._download_report_as_html_bundle(
+            report_guid="report-guid",
+            directory_name=tmp_path / "html-output",
+            query={"print": "html"},
+        )
+    downloader.download.assert_not_called()
+
+
+def test_download_html_bundle_explicit_version_ignores_api_probe_failure(
+    tmp_path, monkeypatch
+) -> None:
+    """Keep the explicit asset namespace when the best-effort probe fails."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    downloader = Mock()
+    captured: dict[str, object] = {}
+    probe = Mock(side_effect=RuntimeError("api down"))
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", probe)
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    server._download_report_as_html_bundle(
+        report_guid="report-guid",
+        directory_name=tmp_path / "html-output",
+        query={"print": "html"},
+        ansys_version=252,
+    )
+
+    assert captured["ansys_version"] == 252
+    probe.assert_called_once_with()
+    downloader.download.assert_called_once_with()
+
+
+def test_download_html_bundle_warns_on_explicit_version_mismatch(
+    tmp_path, monkeypatch, caplog
+) -> None:
+    """Warn when the caller forces a different asset namespace than the server advertises."""
+    server = r.Server(url="http://127.0.0.1:8000", ansys_version=271)
+    connected_version = _supported_server_install_version()
+    server._api_version = 1.0
+    server._ansys_version = connected_version
+    downloader = Mock()
+    captured: dict[str, object] = {}
+    probe = Mock(side_effect=AssertionError("cached server version should be reused"))
+
+    def fake_report_download_html(**kwargs):
+        captured.update(kwargs)
+        return downloader
+
+    monkeypatch.setattr(server, "get_api_version", probe)
+    monkeypatch.setattr(rd, "ReportDownloadHTML", fake_report_download_html)
+
+    with caplog.at_level(logging.WARNING, logger="ansys.dynamicreporting.core"):
+        with pytest.warns(
+            UserWarning,
+            match=(
+                "Explicit HTML export ansys_version 252 does not match connected "
+                f"server version {connected_version}"
+            ),
+        ):
+            server._download_report_as_html_bundle(
+                report_guid="report-guid",
+                directory_name=tmp_path / "html-output",
+                query={"print": "html"},
+                ansys_version=252,
+            )
+
+    assert captured["ansys_version"] == 252
+    assert (
+        f"Explicit HTML export ansys_version 252 does not match connected "
+        f"server version {connected_version}" in caplog.text
+    )
+    probe.assert_not_called()
+    downloader.download.assert_called_once_with()
+
+
+def test_export_browser_pdf_renders_live_report_url(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+    captured: dict[str, object] = {}
+
+    def fake_build_url_with_query(report_guid, query, item_filter=None, rest_api=False):
+        captured["report_guid"] = report_guid
+        captured["query"] = query
+        captured["item_filter"] = item_filter
+        captured["rest_api"] = rest_api
+        return "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+
+    def fail_if_html_downloaded(**kwargs):
+        raise AssertionError("Remote browser-PDF export should not stage an offline HTML bundle.")
+
+    fake_session = requests.Session()
+    fake_session.cookies.set_cookie(
+        requests.cookies.create_cookie(
+            name="csrftoken",
+            value="csrf-token",
+            domain="127.0.0.1",
+            path="/",
+            expires=1234567890,
+            rest={"SameSite": "Lax"},
+        )
+    )
+    fake_session.cookies.set_cookie(
+        requests.cookies.create_cookie(
+            name="sessionid",
+            value="session-token",
+            domain="127.0.0.1",
+            path="/",
+            rest={"HttpOnly": None, "SameSite": "Lax"},
+        )
+    )
+
+    class FakeRenderer:
+        # Capture the live-render boundary without launching Chromium; lower-level
+        # renderer tests own page validation and browser behavior.
+        def __init__(
+            self,
+            url,
+            *,
+            auth_cookies=None,
+            landscape=False,
+            margins=None,
+            page_size=PDFPageSize.A3,
+            width=None,
+            height=None,
+            render_timeout=30.0,
+            ansys_installation=None,
+            ansys_version=None,
+            logger=None,
+        ):
+            captured["renderer_url"] = url
+            captured["renderer_auth_cookies"] = auth_cookies
+            captured["renderer_landscape"] = landscape
+            captured["renderer_margins"] = margins
+            captured["renderer_page_size"] = page_size
+            captured["renderer_width"] = width
+            captured["renderer_height"] = height
+            captured["renderer_render_timeout"] = render_timeout
+            captured["renderer_ansys_installation"] = ansys_installation
+            captured["renderer_ansys_version"] = ansys_version
+            captured["renderer_logger"] = logger
+
+        def render_pdf(
+            self,
+        ):
+            return b"%PDF-browser"
+
+    monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
+    monkeypatch.setattr(server, "_download_report_as_html_bundle", fail_if_html_downloaded)
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: fake_session)
+    monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
+
+    output_file = tmp_path / "browser-report.pdf"
+    query = {"colormode": "dark"}
+    margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
+    server.export_report_as_browser_pdf(
+        report_guid="report-guid",
+        file_name=str(output_file),
+        query=query,
+        item_filter="A|i_tags|cont|dp=dp227;",
+        landscape=True,
+        margins=margins,
+        page_size=None,
+        width="12in",
+        height="18in",
+        render_timeout=12.5,
+        ansys_installation="/opt/ansys/v271",
+        ansys_version=271,
+    )
+
+    assert output_file.read_bytes() == b"%PDF-browser"
+    assert captured["renderer_url"] == (
+        "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+    )
+    # The exact Playwright cookie shape is pinned by the dedicated _build_playwright_cookie tests;
+    # here only assert the authenticated session's cookies are forwarded to the renderer, in order.
+    assert [cookie["name"] for cookie in captured["renderer_auth_cookies"]] == [
+        "csrftoken",
+        "sessionid",
+    ]
+    # Custom dimensions must reach the shared renderer unchanged; this layer
+    # only constructs the authenticated live-report URL and writes returned bytes.
+    assert captured["renderer_landscape"] is True
+    assert captured["renderer_margins"] == margins
+    assert captured["renderer_page_size"] is None
+    assert captured["renderer_width"] == "12in"
+    assert captured["renderer_height"] == "18in"
+    assert captured["renderer_render_timeout"] == 12.5
+    # The connected service's local install is forwarded so the renderer uses the packed browser.
+    assert captured["renderer_ansys_installation"] == "/opt/ansys/v271"
+    assert captured["renderer_ansys_version"] == 271
+    assert captured["report_guid"] == "report-guid"
+    assert captured["query"] == {"colormode": "dark", "print": "pdf"}
+    assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
+    assert captured["rest_api"] is False
+    assert query == {"colormode": "dark"}
+
+
+def test_export_browser_pdf_requires_file_name() -> None:
+    server = r.Server()
+
+    with pytest.raises(ADRException, match="non-empty file_name"):
+        server.export_report_as_browser_pdf(report_guid="report-guid", file_name="")
+
+
+def test_export_browser_pdf_requires_install_metadata(tmp_path, monkeypatch) -> None:
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    monkeypatch.setattr(
+        server,
+        "build_url_with_query",
+        lambda report_guid, query, item_filter=None, rest_api=False: (
+            "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+        ),
+    )
+
+    with pytest.raises(
+        ADRException,
+        match="requires ansys_installation and ansys_version",
+    ):
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(tmp_path / "browser-report.pdf"),
+        )
+
+
+def test_export_browser_pdf_wraps_renderer_failures(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    def fake_build_url_with_query(report_guid, query, item_filter=None, rest_api=False):
+        return "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+
+    class FakeRenderer:
+        # Accept the complete production signature so this failure test catches
+        # wrapping behavior without masking argument-forwarding regressions.
+        def __init__(
+            self,
+            url,
+            *,
+            auth_cookies=None,
+            landscape=False,
+            margins=None,
+            page_size=PDFPageSize.A3,
+            width=None,
+            height=None,
+            render_timeout=30.0,
+            ansys_installation=None,
+            ansys_version=None,
+            logger=None,
+        ):
+            return None
+
+        def render_pdf(self):
+            raise RuntimeError("Simulated renderer failure")
+
+    monkeypatch.setattr(server, "build_url_with_query", fake_build_url_with_query)
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: requests.Session())
+    monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
+
+    # The surfaced error stays ADR-owned while preserving the renderer failure as the cause.
+    with pytest.raises(ADRException, match=r"Browser PDF export failed\.$") as exc_info:
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(tmp_path / "browser-report.pdf"),
+            ansys_installation="/opt/ansys/v271",
+            ansys_version=271,
+        )
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "Simulated renderer failure"
+
+
+def test_build_playwright_cookie_uses_base_url_when_cookie_has_no_domain() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="",
+        path="/",
+        secure=False,
+    )
+
+    assert r.Server._build_playwright_cookie(cookie, base_url="http://127.0.0.1:8000") == {
+        "name": "sessionid",
+        "value": "session-token",
+        "url": "http://127.0.0.1:8000",
+        "secure": False,
+        "httpOnly": True,
+    }
+
+
+def test_build_playwright_cookie_requires_domain_or_base_url() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="",
+        path="/",
+        secure=False,
+    )
+
+    with pytest.raises(ADRException, match="missing a domain and base URL"):
+        r.Server._build_playwright_cookie(cookie)
+
+
+def test_build_playwright_cookie_normalizes_value_less_cookie_to_empty_string() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value=None,
+        domain="127.0.0.1",
+        path="/",
+        secure=False,
+    )
+
+    assert r.Server._build_playwright_cookie(cookie)["value"] == ""
+
+
+def test_build_playwright_cookie_passes_through_present_same_site_value() -> None:
+    cookie = requests.cookies.create_cookie(
+        name="sessionid",
+        value="session-token",
+        domain="127.0.0.1",
+        path="/",
+        secure=False,
+        rest={"httponly": None, "samesite": "Experimental"},
+    )
+
+    playwright_cookie = r.Server._build_playwright_cookie(cookie)
+
+    assert playwright_cookie["httpOnly"] is True
+    assert playwright_cookie["sameSite"] == "Experimental"
+
+
+def test_authenticate_browser_pdf_web_session_uses_fresh_session_without_shared_cookies(
+    monkeypatch,
+) -> None:
+    shared_session = Mock()
+    shared_session.cookies = requests.cookies.RequestsCookieJar()
+    session = Mock()
+    init_response = Mock()
+    init_response.cookies.get.return_value = "csrf-token"
+    login_response = Mock(status_code=requests.codes.ok)
+    session.get.return_value = init_response
+    session.post.return_value = login_response
+    server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
+    server._http_session = shared_session
+
+    monkeypatch.setattr(server, "_create_http_session", lambda: session)
+
+    assert server._authenticate_browser_pdf_web_session() is session
+    shared_session.get.assert_not_called()
+    shared_session.post.assert_not_called()
+    assert shared_session.cookies.get("sessionid") is None
+    session.get.assert_called_once_with("http://127.0.0.1:8000/login/")
+    session.post.assert_called_once_with(
+        "http://127.0.0.1:8000/login/",
+        data={
+            # Server.get_auth() returns encoded bytes, so the Django login helper must continue
+            # forwarding the same credentials shape into the browser login POST.
+            "username": b"nexus",
+            "password": b"cei",
+            "csrfmiddlewaretoken": "csrf-token",
+            "next": "/",
+        },
+    )
+
+
+def test_authenticate_browser_pdf_web_session_returns_none_when_web_login_fails(
+    monkeypatch,
+) -> None:
+    shared_session = Mock()
+    shared_session.cookies = requests.cookies.RequestsCookieJar()
+    session = Mock()
+    init_response = Mock()
+    init_response.cookies.get.return_value = "csrf-token"
+    login_response = Mock(status_code=requests.codes.forbidden)
+    session.get.return_value = init_response
+    session.post.return_value = login_response
+    server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
+    server._http_session = shared_session
+    monkeypatch.setattr(server, "_create_http_session", lambda: session)
+
+    assert server._authenticate_browser_pdf_web_session() is None
+    shared_session.get.assert_not_called()
+    shared_session.post.assert_not_called()
+    assert shared_session.cookies.get("sessionid") is None
+
+
+def test_authenticate_browser_pdf_web_session_returns_none_without_csrf_token(
+    monkeypatch,
+) -> None:
+    shared_session = Mock()
+    shared_session.cookies = requests.cookies.RequestsCookieJar()
+    session = Mock()
+    init_response = Mock()
+    init_response.cookies.get.return_value = None
+    session.get.return_value = init_response
+    server = r.Server(url="http://127.0.0.1:8000", username="nexus", password="cei")
+    server._http_session = shared_session
+    monkeypatch.setattr(server, "_create_http_session", lambda: session)
+
+    assert server._authenticate_browser_pdf_web_session() is None
+    session.post.assert_not_called()
+    shared_session.get.assert_not_called()
+    shared_session.post.assert_not_called()
+    assert shared_session.cookies.get("sessionid") is None
+
+
+def test_get_browser_auth_cookies_returns_empty_list_without_configured_auth(monkeypatch) -> None:
+    server = r.Server()
+
+    def fail_if_called():
+        raise AssertionError("auth helper should not run")
+
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", fail_if_called)
+
+    assert server._get_browser_auth_cookies() == []
+
+
+def test_get_browser_auth_cookies_requires_authenticated_session(monkeypatch) -> None:
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: None)
+
+    with pytest.raises(ADRException, match="Unable to authenticate the browser PDF web session"):
+        server._get_browser_auth_cookies()
+
+
+def test_export_browser_pdf_wraps_output_write_failures(tmp_path, monkeypatch) -> None:
+    from ansys.dynamicreporting.core.utils import pdf_renderer
+
+    server = r.Server()
+    server.set_URL("http://127.0.0.1:8000")
+    server.set_username("nexus")
+    server.set_password("cei")
+
+    class FakeRenderer:
+        def __init__(self, url, **kwargs):
+            self.url = url
+
+        def render_pdf(self):
+            return b"%PDF-browser"
+
+    monkeypatch.setattr(
+        server,
+        "build_url_with_query",
+        lambda report_guid, query, item_filter=None, rest_api=False: (
+            "http://127.0.0.1:8000/reports/report_display/?view=report-guid&print=pdf"
+        ),
+    )
+    monkeypatch.setattr(server, "_authenticate_browser_pdf_web_session", lambda: requests.Session())
+    monkeypatch.setattr(pdf_renderer, "_ReportURLPlaywrightPDFRenderer", FakeRenderer)
+
+    output_directory = tmp_path / "browser-report.pdf"
+    output_directory.mkdir()
+
+    # A write-path failure is wrapped in the same clean ADR error while preserving the filesystem
+    # error as the chained cause.
+    with pytest.raises(ADRException, match=r"Browser PDF export failed\.$") as exc_info:
+        server.export_report_as_browser_pdf(
+            report_guid="report-guid",
+            file_name=str(output_directory),
+            ansys_installation="/opt/ansys/v271",
+            ansys_version=271,
+        )
+    assert isinstance(exc_info.value.__cause__, OSError)
+
+
 @pytest.mark.ado_test
 def test_export_pdf(adr_service_query, get_exec) -> None:
     exec_basis = get_exec
@@ -354,6 +1033,347 @@ def test_export_pdf_with_filter(adr_service_query, get_exec) -> None:
         except OSError:
             success = True
     assert success is True
+
+
+# --- Regression tests: launcher paths must never surface InvalidAnsysPath -----
+# The install-resolution hardening routed launcher paths through a strict resolver
+# that raises InvalidAnsysPath when no local install is found. These tests lock the
+# backward-compatible failure modes: run_nexus_utility must fail as OSError (the
+# export_report_as_pdf contract), and launch_local_database_server must return False
+# or raise ServerLaunchError per raise_exception -- never InvalidAnsysPath.
+#
+# The functions under test run the real resolver and error paths. Only external
+# discovery inputs and the unrelated network probe are isolated from the host.
+
+
+def _isolate_install_discovery(monkeypatch, tmp_path, *additional_versions) -> None:
+    """Keep implicit install discovery independent of the host machine."""
+    install_versions = (*AUTO_DETECT_INSTALL_VERSIONS, *additional_versions)
+    for variable in [
+        "PYADR_ANSYS_INSTALLATION",
+        "CEIDEVROOTDOS",
+        *(f"AWP_ROOT{version}" for version in install_versions),
+    ]:
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setitem(sys.modules, "enve", None)
+
+    def missing_default_release_root(install_version):
+        return tmp_path / "missing_installs" / f"v{install_version}"
+
+    monkeypatch.setattr(common_utils, "_default_release_root", missing_default_release_root)
+
+
+def _create_minimal_local_database(database_dir: Path) -> None:
+    """Create the files required by ``validate_local_db()``."""
+    database_dir.mkdir()
+    (database_dir / "db.sqlite3").touch()
+    (database_dir / "media").mkdir()
+
+
+def _raise_no_running_server(self, *args, **kwargs):
+    # Make the "is a server already running?" probe conclude "no" so execution
+    # reaches the explicit missing-install guard without a network call.
+    raise ConnectionError("no server running")
+
+
+def _assert_api_lock_released(lock_dir: Path) -> None:
+    """Prove that the launcher released its real API lock."""
+    lock = r.filelock.nexus_file_lock(str(lock_dir / ".nexus_api.lock"))
+    lock.acquire(timeout=0.1)
+    try:
+        assert lock.is_locked
+    finally:
+        lock.release()
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("raise_exception", [True, False])
+def test_launch_existing_unsupported_server_fails_fast(
+    monkeypatch, tmp_path, raise_exception
+) -> None:
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    monkeypatch.setattr(
+        r.Server,
+        "validate",
+        lambda self: (_ for _ in ()).throw(
+            UnsupportedServerVersionError("server reports product release 25.1")
+        ),
+    )
+    popen = Mock(side_effect=AssertionError("Popen must not run for an unsupported server"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+
+    def launch_server():
+        return r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=raise_exception,
+            verbose=False,
+            exec_basis=str(tmp_path / "install"),
+            ansys_version=int(_supported_server_install_version()),
+        )
+
+    if raise_exception:
+        with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+            launch_server()
+    else:
+        assert launch_server() is False
+
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("raise_exception", [True, False])
+def test_launch_polling_unsupported_server_version_stops_without_retrying(
+    monkeypatch, tmp_path, raise_exception
+) -> None:
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    validate_calls = 0
+
+    def validate_then_reject(self):
+        nonlocal validate_calls
+        validate_calls += 1
+        if validate_calls == 1:
+            raise ConnectionError("no server running")
+        raise UnsupportedServerVersionError("server reports product release 25.1")
+
+    class RunningProcess:
+        stderr = Mock()
+        stdout = Mock()
+
+        def poll(self):
+            return None
+
+    stop_background_server = Mock()
+    monkeypatch.setattr(r.Server, "validate", validate_then_reject)
+    monkeypatch.setattr(r.subprocess, "Popen", Mock(return_value=RunningProcess()))
+    monkeypatch.setattr(r, "stop_background_local_server", stop_background_server)
+
+    def launch_server():
+        return r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=raise_exception,
+            verbose=False,
+            exec_basis=str(tmp_path / "install"),
+            ansys_version=int(_supported_server_install_version()),
+        )
+
+    if raise_exception:
+        with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+            launch_server()
+    else:
+        assert launch_server() is False
+
+    assert validate_calls == 2
+    stop_background_server.assert_called_once_with(str(database_dir.resolve()))
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+def test_launch_polling_permission_denied_stops_without_retrying(monkeypatch, tmp_path) -> None:
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    validate_calls = 0
+
+    def validate_then_deny(self):
+        nonlocal validate_calls
+        validate_calls += 1
+        if validate_calls == 1:
+            raise ConnectionError("no server running")
+        raise r.exceptions.PermissionDenied("Invalid credentials")
+
+    class RunningProcess:
+        stderr = Mock()
+        stdout = Mock()
+
+        def poll(self):
+            return None
+
+    stop_background_server = Mock()
+    popen = Mock(return_value=RunningProcess())
+    monkeypatch.setattr(r.Server, "validate", validate_then_deny)
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+    monkeypatch.setattr(r, "stop_background_local_server", stop_background_server)
+
+    with pytest.raises(e.ServerConnectionError, match="Potential username/password error"):
+        r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=False,
+            verbose=False,
+            exec_basis=str(tmp_path / "install"),
+            ansys_version=int(_supported_server_install_version()),
+        )
+
+    assert validate_calls == 2
+    popen.assert_called_once()
+    stop_background_server.assert_called_once_with(str(database_dir.resolve()))
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+def test_create_new_local_database_no_install_wraps_resolution_error(monkeypatch, tmp_path) -> None:
+    """Wrap install-resolution failures in DBCreationFailedError."""
+    _isolate_install_discovery(monkeypatch, tmp_path)
+
+    with pytest.raises(DBCreationFailedError) as exc_info:
+        r.create_new_local_database(
+            parent=None,
+            directory=tmp_path / "no_install_database",
+            run_local=True,
+            raise_exception=True,
+        )
+
+    assert "Could not locate a valid ADR installation" in str(exc_info.value)
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_no_install_raises_oserror(monkeypatch, tmp_path) -> None:
+    # export_report_as_pdf reports a missing local installation as OSError.
+    _isolate_install_discovery(monkeypatch, tmp_path)
+
+    with pytest.raises(OSError):
+        r.run_nexus_utility(["report_save_pdf", "http://127.0.0.1:0", "out.pdf"])
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_no_install_uses_explicit_version(monkeypatch, tmp_path) -> None:
+    _isolate_install_discovery(monkeypatch, tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="cpython261"):
+        r.run_nexus_utility(
+            ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"],
+            ansys_version=261,
+        )
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_invalid_explicit_root_raises_oserror(tmp_path) -> None:
+    """Translate strict resolution failure into the historical OSError contract."""
+    invalid_release_root = tmp_path / "missing_release_root"
+
+    with pytest.raises(OSError, match="no local ADR installation"):
+        r.run_nexus_utility(
+            ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"],
+            exec_basis=str(invalid_release_root),
+        )
+
+
+@pytest.mark.ado_test
+def test_run_nexus_utility_preserves_complete_explicit_pair(monkeypatch, tmp_path) -> None:
+    """Use a complete supported product-root/version pair without inference."""
+    install_version = 261
+    product_root = tmp_path / f"v{install_version}" / "ADR"
+    django_dir = product_root / f"nexus{install_version}" / "django"
+    django_dir.mkdir(parents=True)
+    nexus_utility = product_root / f"nexus{install_version}" / "nexus_utility.py"
+    nexus_utility.touch()
+    app = product_root / "bin" / f"cpython{install_version}"
+    app.parent.mkdir()
+    app.touch()
+    resolver = Mock(side_effect=AssertionError("complete explicit pairs must not be resolved"))
+    utility_call = Mock(return_value=0)
+    monkeypatch.setattr(common_utils, "resolve_install_info", resolver)
+    monkeypatch.setattr(r.report_utils, "enve_arch", lambda: "linux")
+    monkeypatch.setattr(r.subprocess, "call", utility_call)
+
+    utility_args = ["report_save_pdf", "http://127.0.0.1:0", "out.pdf"]
+    r.run_nexus_utility(
+        utility_args,
+        exec_basis=str(product_root),
+        ansys_version=install_version,
+    )
+
+    resolver.assert_not_called()
+    utility_call.assert_called_once_with(
+        args=[str(app), str(nexus_utility), *utility_args],
+        stdout=r.subprocess.DEVNULL,
+        stderr=r.subprocess.DEVNULL,
+        stdin=r.subprocess.DEVNULL,
+        cwd=str(django_dir),
+    )
+
+
+@pytest.mark.ado_test
+def test_validate_local_db_version_uses_resolved_install_version(monkeypatch, tmp_path) -> None:
+    release_root = tmp_path / "v261"
+    django_dir = release_root / "ADR" / "nexus261" / "django"
+    django_dir.mkdir(parents=True)
+    (django_dir / "manage.py").touch()
+    monkeypatch.setenv("PYADR_ANSYS_INSTALLATION", str(release_root))
+
+    media_dir = tmp_path / "media"
+    media_dir.mkdir()
+    (media_dir / "csf_conversion_version").write_text("27.1")
+
+    assert r.validate_local_db_version(tmp_path) is False
+
+
+@pytest.mark.ado_test
+def test_launch_no_install_returns_false(monkeypatch, tmp_path) -> None:
+    # The launch error handler returns False when raise_exception is disabled.
+    _isolate_install_discovery(monkeypatch, tmp_path)
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    # Avoid a network call while allowing the real database and install checks to run.
+    monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+
+    result = r.launch_local_database_server(
+        parent=None,
+        directory=str(database_dir),
+        port=8000,
+        raise_exception=False,
+        verbose=False,
+    )
+    assert result is False
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
+
+
+@pytest.mark.ado_test
+def test_launch_no_install_raises_server_launch_error(monkeypatch, tmp_path) -> None:
+    # The launch error handler raises ServerLaunchError when requested.
+    _isolate_install_discovery(monkeypatch, tmp_path)
+    database_dir = tmp_path / "database"
+    _create_minimal_local_database(database_dir)
+    lock_dir = tmp_path / "locks"
+    lock_dir.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(lock_dir))
+    monkeypatch.setattr(r.Server, "validate", _raise_no_running_server)
+    popen = Mock(side_effect=AssertionError("Popen must not run without an installation"))
+    monkeypatch.setattr(r.subprocess, "Popen", popen)
+
+    with pytest.raises(e.ServerLaunchError):
+        r.launch_local_database_server(
+            parent=None,
+            directory=str(database_dir),
+            port=8000,
+            raise_exception=True,
+            verbose=False,
+        )
+
+    popen.assert_not_called()
+    _assert_api_lock_released(lock_dir)
 
 
 @pytest.mark.ado_test

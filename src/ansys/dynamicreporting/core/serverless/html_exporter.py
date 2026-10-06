@@ -27,10 +27,12 @@ import re
 from typing import Any
 
 from ..adr_utils import get_logger
+from ..constants import ANSYS_VIEWER_TAGS
 
 # Import the shared constants and file lists
 from ..utils.html_export_constants import (
     CONTEXT_MENU_JS,
+    CONTEXT_MENU_PATH,
     DRACO_JS,
     FONTS,
     MATHJAX_2X_FILES,
@@ -209,13 +211,25 @@ class ServerlessReportExporter:
         while True:
             # Find the next match using the legacy priority order
             idx1 = -1
+            matched_pattern = ""
             for pat in patterns:
                 pos = text.find(pat, current)
                 if pos != -1:
                     idx1 = pos
+                    matched_pattern = pat
                     break
             if idx1 == -1:
                 return text  # nothing more to replace
+
+            # The generic ``<script ...>`` pass runs after the dedicated
+            # ``<script src=...>`` pass, so already-rewritten relative paths can
+            # appear here as ``./media/...`` or ``./ansys...``.  Those are
+            # already export-safe and should not be re-processed with the legacy
+            # quote heuristic, which would otherwise truncate them at the next
+            # ``.`` (for example ``./media/jquery.min.js`` -> ``/media/jquery``).
+            if idx1 > 0 and text[idx1 - 1] == ".":
+                current = idx1 + len(matched_pattern)
+                continue
 
             # Legacy heuristic: assume we're inside an attribute quoted by the char before the path
             quote = text[idx1 - 1]
@@ -363,11 +377,7 @@ class ServerlessReportExporter:
         self._copy_static_files(
             VIEWER_JS, f"ansys{self._ansys_version}/nexus/", f"ansys{self._ansys_version}/nexus/"
         )
-        self._copy_static_files(
-            CONTEXT_MENU_JS,
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu/",
-        )
+        self._copy_legacy_context_menu_assets()
         self._copy_static_files(
             THREE_JS,
             f"ansys{self._ansys_version}/nexus/threejs/",
@@ -416,6 +426,23 @@ class ServerlessReportExporter:
             target_file.write_bytes(content)
         elif not silent:
             self._logger.warning(f"Warning: Static source file not found: {source_file}")
+
+    def _copy_legacy_context_menu_assets(self) -> None:
+        """Copy context-menu files required by older viewer loaders when available."""
+        context_menu_path = f"ansys{self._ansys_version}/{CONTEXT_MENU_PATH}/"
+        context_menu_dir = self._static_dir / context_menu_path
+        # ADR 26.1's viewer loader still requests these noVNC-era files. ADR
+        # 27.1 may not ship the directory, so skip it only when the whole
+        # dependency set is inapplicable. A partial v261 tree must still
+        # report each missing asset.
+        if not context_menu_dir.is_dir() and str(self._ansys_version) != "261":
+            return
+
+        self._copy_static_files(
+            CONTEXT_MENU_JS,
+            context_menu_path,
+            context_menu_path,
+        )
 
     def _copy_static_files(self, files: list[str], source_prefix: str, target_prefix: str):
         """Helper to copy a list of files using prefixes."""
@@ -608,30 +635,46 @@ class ServerlessReportExporter:
                 s = data.decode("latin-1")
             if ver:
                 s = s.replace(f'"/ansys{ver}/nexus/images/', f'"./ansys{ver}//nexus/images/')
+                # Example: "/ansys271/nexus/threejs/libs/draco/" becomes
+                # "./ansys271//nexus/threejs/libs/draco/"; // is intentional and browser-collapsed.
+                s = s.replace(
+                    f"'/ansys{ver}/nexus/threejs/libs/draco/'",
+                    f"'./ansys{ver}//nexus/threejs/libs/draco/'",
+                )
+                s = s.replace(
+                    f'"/ansys{ver}/nexus/threejs/libs/draco/"',
+                    f'"./ansys{ver}//nexus/threejs/libs/draco/"',
+                )
             return s.encode("utf-8")
 
         return data
 
     def _inline_ansys_viewer(self, html: str) -> str:
-        """Handles the special case of inlining assets for the <ansys-nexus-viewer> component."""
-        current_pos = 0
-        while True:
-            start, end, text_block = self._find_block(
-                html, current_pos, "<ansys-nexus-viewer", "</ansys-nexus-viewer>"
-            )
-            if start < 0:
-                break
-            # Legacy parity: always inline viewer attributes
-            text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=True)
-            text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
-            if "__SIZE_EXCEPTION__" in text:
-                msg = "3D geometry too large for stand-alone HTML file"
-                text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
-            if self._replaced_file_ext:
-                ext = self._replaced_file_ext.replace(".", "").upper()
-                text = text.replace("<ansys-nexus-viewer", f'<ansys-nexus-viewer src_ext="{ext}"')
-            html = html[:start] + text + html[end:]
-            current_pos = start + len(text)
+        """Inline assets for every registered Ansys 3D viewer component tag."""
+        # Scan each tag independently because transitional reports can contain
+        # both the ADR name and its Nexus compatibility alias.
+        for viewer_tag in ANSYS_VIEWER_TAGS:
+            opening_tag = f"<{viewer_tag}"
+            current_pos = 0
+            while True:
+                start, end, text_block = self._find_block(
+                    html, current_pos, opening_tag, f"</{viewer_tag}>"
+                )
+                if start < 0:
+                    break
+                # Legacy parity: always inline viewer attributes
+                text = self._replace_blocks(text_block, 'proxy_img="', '"', inline=True)
+                text = self._replace_blocks(text, 'src="', '"', inline=True, size_check=True)
+                if "__SIZE_EXCEPTION__" in text:
+                    msg = "3D geometry too large for stand-alone HTML file"
+                    text = text.replace('src="__SIZE_EXCEPTION__"', f'src="" proxy_only="{msg}"')
+                if self._replaced_file_ext:
+                    ext = self._replaced_file_ext.replace(".", "").upper()
+                    # Limit the format hint to this component's opening tag;
+                    # embedded payload text can contain tag-like strings.
+                    text = text.replace(opening_tag, f'{opening_tag} src_ext="{ext}"', 1)
+                html = html[:start] + text + html[end:]
+                current_pos = start + len(text)
         return html
 
     def _make_output_dirs(self):
@@ -673,12 +716,17 @@ class ServerlessReportExporter:
                 (self._output_dir / d).mkdir(parents=True, exist_ok=True)
 
         # Common directories (always created regardless of MathJax version)
-        for d in [
+        common_directories = [
             "webfonts",
             # Viewer
             f"ansys{self._ansys_version}/nexus/images",
             f"ansys{self._ansys_version}/nexus/utils",
             f"ansys{self._ansys_version}/nexus/threejs/libs/draco/gltf",
-            f"ansys{self._ansys_version}/nexus/novnc/vendor/jQuery-contextMenu",
-        ]:
+        ]
+        if str(self._ansys_version) == "261":
+            # Preserve the pre-vnc-removal export layout even if the source
+            # installation has an incomplete legacy context-menu tree.
+            common_directories.append(f"ansys{self._ansys_version}/{CONTEXT_MENU_PATH}")
+
+        for d in common_directories:
             (self._output_dir / d).mkdir(parents=True, exist_ok=True)

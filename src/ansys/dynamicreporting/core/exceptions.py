@@ -84,6 +84,12 @@ class NotValidServer(ADRException):
     detail = "Can not validate dynamic reporting server."
 
 
+class UnsupportedServerVersionError(ADRException):
+    """Exception raised if the connected ADR server version is not supported."""
+
+    detail = "Unsupported dynamic reporting server version."
+
+
 class AlreadyConnectedError(ADRException):
     """Exception raised if the ADR service is already connected to a service."""
 

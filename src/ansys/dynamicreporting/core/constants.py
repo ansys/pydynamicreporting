@@ -24,6 +24,10 @@ DOCKER_REPO_URL = "ghcr.io/ansys-internal/adr_dev"
 DOCKER_DEV_REPO_URL = "ghcr.io/ansys-internal/adr_dev"
 DOCKER_DEFAULT_PORT = 8000
 
+# The product registers the ADR tag as the canonical 3D viewer and retains the
+# Nexus tag as a compatibility alias backed by the same web component.
+ANSYS_VIEWER_TAGS = ("ansys-adr-viewer", "ansys-nexus-viewer")
+
 LAYOUT_TYPES = (
     "Layout:basic",
     "Layout:panel",

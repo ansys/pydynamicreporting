@@ -20,18 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Settings compatibility shim.
+"""Serverless runtime compatibility shims.
 
-Translate product settings so they remain compatible with the dependency
-versions installed in the client's venv. This module only handles known
-setting transitions between supported ADR product lines and current client
+Translate product settings and dependency APIs so they remain compatible with
+the versions installed in the client's venv. This module handles known
+transitions between supported ADR product lines and current client
 dependencies.
 """
 
 from __future__ import annotations
 
+import asyncio
 import importlib.metadata
 import logging
+import os
 import re
 from typing import Callable
 
@@ -40,6 +42,8 @@ logger = logging.getLogger(__name__)
 VersionKey = tuple[int, ...]
 ConditionFn = Callable[[dict, dict[str, VersionKey]], bool]
 TransformFn = Callable[[dict], dict]
+RuntimeCompatCleanup = Callable[[], None]
+_NUMPY_STRING_ALIAS_PRODUCT_VERSION = 261
 
 
 # Registry of settings transformations.
@@ -69,6 +73,111 @@ def _normalize_version(version_string: str) -> VersionKey:
     return tuple(components)
 
 
+def _enable_jupyter_async_support() -> RuntimeCompatCleanup | None:
+    """Enable synchronous Django calls in an active IPykernel event loop."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+    try:
+        from IPython import get_ipython
+        from ipykernel.zmqshell import ZMQInteractiveShell
+    except ImportError:
+        return None
+
+    shell = get_ipython()
+    if not isinstance(shell, ZMQInteractiveShell):
+        return None
+
+    previous_value = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+
+    def _restore_async_environment() -> None:
+        if previous_value is None:
+            os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+        else:
+            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = previous_value
+
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+    return _restore_async_environment
+
+
+def _enable_numpy_compatibility(product_version: int) -> RuntimeCompatCleanup | None:
+    """Apply NumPy compatibility changes required by an ADR product version."""
+    if product_version != _NUMPY_STRING_ALIAS_PRODUCT_VERSION:
+        return None
+
+    import numpy
+
+    cleanup_callbacks: list[RuntimeCompatCleanup] = []
+
+    def _restore_numpy_state() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
+
+    try:
+        if not hasattr(numpy, "string_"):
+            setattr(numpy, "string_", numpy.bytes_)
+
+            def _restore_string_alias() -> None:
+                if getattr(numpy, "string_", None) is numpy.bytes_:
+                    delattr(numpy, "string_")
+
+            cleanup_callbacks.append(_restore_string_alias)
+            logger.info("Compat shim: Restored 'numpy.string_' as 'numpy.bytes_' for ADR 26.1")
+
+        if _normalize_version(numpy.__version__) >= (2, 0):
+            previous_legacy = numpy.get_printoptions().get("legacy", False)
+            numpy.set_printoptions(legacy="1.25")
+
+            def _restore_legacy_printoptions() -> None:
+                numpy.set_printoptions(legacy=previous_legacy)
+
+            cleanup_callbacks.append(_restore_legacy_printoptions)
+            logger.info("Compat shim: Enabled NumPy 1.25 legacy printing for ADR 26.1")
+    except BaseException:
+        _restore_numpy_state()
+        raise
+
+    if not cleanup_callbacks:
+        return None
+    return _restore_numpy_state
+
+
+def apply_runtime_compatibility_shims(product_version: int) -> RuntimeCompatCleanup:
+    """Apply runtime shims and return a callback that restores process state.
+
+    In IPykernel, enable Django's synchronous ORM calls while ADR is active.
+    Restore the previous environment value when setup fails or ADR closes.
+
+    ADR 26.1's template generators access ``numpy.string_``. NumPy 2 removed
+    that alias in favor of ``numpy.bytes_``. Its plot renderer also converts
+    NumPy scalar representations directly into inline JavaScript. Restore the
+    alias and NumPy 1.25 print formatting before importing the product's Django
+    modules, and restore the previous NumPy state when ADR is torn down.
+    """
+    cleanup_callbacks: list[RuntimeCompatCleanup] = []
+
+    def _restore_cleanup_callbacks() -> None:
+        for cleanup in reversed(cleanup_callbacks):
+            cleanup()
+
+    try:
+        restore_jupyter = _enable_jupyter_async_support()
+        if restore_jupyter is not None:
+            cleanup_callbacks.append(restore_jupyter)
+
+        restore_numpy = _enable_numpy_compatibility(product_version)
+        if restore_numpy is not None:
+            cleanup_callbacks.append(restore_numpy)
+    except BaseException:  # catch interrupts as well
+        # Do not leave process-wide mutations behind if shim setup aborts.
+        _restore_cleanup_callbacks()
+        raise
+
+    return _restore_cleanup_callbacks
+
+
 def _guardian_monkey_patch_rename(overrides: dict) -> dict:
     """Translate ``GUARDIAN_MONKEY_PATCH`` to ``GUARDIAN_MONKEY_PATCH_USER``.
 
@@ -96,22 +205,31 @@ def _guardian_needs_rename(overrides: dict, pkg_versions: dict[str, VersionKey])
 
 
 def _remove_deprecated_default_file_storage(overrides: dict) -> dict:
-    """Translate ``DEFAULT_FILE_STORAGE`` into ``STORAGES['default']``.
+    """Translate ``DEFAULT_FILE_STORAGE`` into ``STORAGES`` entries.
 
     Django 4.2 introduced ``STORAGES`` and later releases expect callers to
     define the default backend there instead of through
-    ``DEFAULT_FILE_STORAGE``.
+    ``DEFAULT_FILE_STORAGE``. Once ``STORAGES`` is defined explicitly,
+    ``settings.configure()`` no longer injects Django's default
+    ``"staticfiles"`` alias, so collectstatic needs that alias to be seeded.
     """
     old_key = "DEFAULT_FILE_STORAGE"
     if old_key in overrides:
         backend = overrides.pop(old_key)
-        storages = overrides.get("STORAGES", {})
+        storages = overrides.setdefault("STORAGES", {})
         if "default" not in storages:
             storages["default"] = {"BACKEND": backend}
-            overrides["STORAGES"] = storages
             logger.info(
                 f"Compat shim: Translated '{old_key}' -> STORAGES['default'] (backend={backend})"
             )
+        if "staticfiles" not in storages:
+            # Explicit STORAGES overrides Django's built-in aliases, so keep
+            # collectstatic working after the default-storage migration.
+            storages["staticfiles"] = {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            }
+            logger.info("Compat shim: Seeded STORAGES['staticfiles'] with StaticFilesStorage")
+        overrides["STORAGES"] = storages
     return overrides
 
 

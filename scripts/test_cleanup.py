@@ -3,8 +3,6 @@ import os
 import shutil
 
 dir_list = [
-    "tests/test_data/ami",
-    "tests/test_data/dam_break",
     "tests/test_data/query_db/nginx",
     "tests/test_data/scenes/scene",
     "tests/test_data/viewer_test/",

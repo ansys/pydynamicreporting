@@ -51,11 +51,22 @@ The primary configuration options for the ``ADR`` class constructor are:
 - ``opts`` (dict, optional):
   Dictionary of environment variables to inject into the process environment.
 
+- ``log_output`` (str or os.PathLike, optional):
+  File path or ``"stdout"`` for ADR logs. If omitted, no output handler is
+  added.
+
+- ``log_level`` (int or str, optional):
+  Level for the shared ADR logger. If omitted, the caller's logging level is
+  unchanged.
+
 - ``logfile`` (str, optional):
-  File path to write logs. If omitted, logs to console.
+  Deprecated alias for ``log_output``.
+
+For complete examples and handler behavior, see :ref:`serverless_logging`.
 
 - ``docker_image`` (str, optional):
-  Docker image URL to use when ``ansys_installation="docker"``. Defaults to official Nexus image.
+  Docker image URL to use when ``ansys_installation="docker"``. This argument is required for
+  Docker-based setup.
 
 - ``in_memory`` (bool, optional):
   Enables in-memory database and media storage for ephemeral or test usage.
@@ -198,7 +209,7 @@ Examples
     from ansys.dynamicreporting.core.serverless import ADR
 
     adr = ADR(
-        ansys_installation=r"C:\Program Files\ANSYS Inc\v252",
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v261",
         db_directory=r"C:\Reports\DB",
         media_directory=r"C:\Reports\Media",
         static_directory=r"C:\Reports\Static",

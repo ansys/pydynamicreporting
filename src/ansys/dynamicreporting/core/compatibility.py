@@ -26,6 +26,7 @@ from dataclasses import dataclass
 import re
 
 from ._version import __version__
+from .exceptions import UnsupportedServerVersionError
 
 _PRODUCT_RELEASE_PATTERN = re.compile(r"^(?P<year_line>\d{2})\.(?P<release_index>\d+)$")
 _CLIENT_MAJOR_ONE_PRODUCT_LINE = 27
@@ -40,16 +41,6 @@ SUPPORTED_PRODUCT_RELEASE_POLICY = (
 # real installation by default. Unreleased lines can still be
 # probed explicitly or as lower-priority fallbacks.
 DEFAULT_ANSYS_INSTALL_RELEASE = "27.1"
-DEFAULT_ANSYS_INSTALL_VERSION = "271"
-# Preserve the historical no-argument constructor behavior by probing the
-# bundled product line first.  This keeps existing ``Service()`` / ``ADR()``
-# callers on the same default install they used on ``main`` while still
-# allowing a released install as a lower-priority fallback.
-#
-# We intentionally do not probe older releases implicitly anymore.  Selecting an
-# older unsupported line without an explicit user request changes the meaning
-# of the default constructors too aggressively for a compatibility fix.
-AUTO_DETECT_INSTALL_VERSIONS = ("271", "261")
 
 
 @dataclass(frozen=True)
@@ -168,6 +159,33 @@ def product_release_to_product_line(product_release: str) -> str:
     return year_line
 
 
+# Derived from DEFAULT_ANSYS_INSTALL_RELEASE.
+# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.1" produces "271".
+DEFAULT_ANSYS_INSTALL_VERSION = str(
+    product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
+)
+
+
+def _auto_detect_install_versions() -> tuple[str, str]:
+    """Return the implicit ADR install probe order.
+
+    Probe the default install line first, then the previous annual line.
+    """
+    # Example: "27.1" produces year_line="27" and release_index=1.
+    year_line, release_index = parse_product_release(DEFAULT_ANSYS_INSTALL_RELEASE)
+    # Example: year_line="27" and release_index=1 produce previous_release="26.1".
+    previous_release = f"{int(year_line) - 1:02d}.{release_index}"
+    # Example output: ("271", "261").
+    return (
+        DEFAULT_ANSYS_INSTALL_VERSION,
+        str(product_release_to_install_version(previous_release)),
+    )
+
+
+# Example: DEFAULT_ANSYS_INSTALL_RELEASE="27.1" produces ("271", "261").
+AUTO_DETECT_INSTALL_VERSIONS = _auto_detect_install_versions()
+
+
 def is_supported_product_release(
     product_release: str, supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES
 ) -> bool:
@@ -213,4 +231,52 @@ def get_compatibility_warning_for_install_version(
         f"{detected_release} is outside the supported window for this client. "
         f"This client is bundled with {BUNDLED_PRODUCT_RELEASE} and supports annual lines "
         f"{supported_lines}. Compatibility is not guaranteed."
+    )
+
+
+def validate_supported_server_install_version(
+    install_version: int | str | None,
+    supported_product_lines: tuple[str, ...] = SUPPORTED_PRODUCT_LINES,
+) -> str:
+    """Validate the install version reported by a connected ADR server.
+
+    Parameters
+    ----------
+    install_version : int, str, or None
+        Three-digit install version reported by ``/item/api_version/``.
+    supported_product_lines : tuple[str, ...], optional
+        Supported annual product lines.
+
+    Returns
+    -------
+    str
+        Normalized three-digit install version.
+
+    Raises
+    ------
+    UnsupportedServerVersionError
+        If the server does not report a usable, supported install version.
+    """
+    if install_version is None:
+        raise UnsupportedServerVersionError(
+            "The server did not report an Ansys version in /item/api_version/."
+        )
+
+    normalized = str(install_version).strip()
+    try:
+        detected_release = install_version_to_product_release(normalized)
+    except ValueError as exc:
+        raise UnsupportedServerVersionError(
+            f"The server reported Ansys version {install_version!r}, which is not a "
+            "three-digit install version such as '271'."
+        ) from exc
+
+    if is_supported_product_release(detected_release, supported_product_lines):
+        return normalized
+
+    supported_lines = ", ".join(f"{line}.*" for line in supported_product_lines)
+    raise UnsupportedServerVersionError(
+        "Connected ADR server reports product release "
+        f"{detected_release}. This client is bundled with {BUNDLED_PRODUCT_RELEASE} "
+        f"and supports annual lines {supported_lines}."
     )

@@ -20,7 +20,98 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+from types import ModuleType
+
+import pytest
+
 import ansys.dynamicreporting.core.serverless._compat as compat_module
+
+
+def test_apply_runtime_compatibility_restores_numpy_string_alias_for_261(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.5.2"
+    fake_numpy.bytes_ = object()
+    current_legacy = {"value": False}
+
+    def set_print_options(**kwargs):
+        current_legacy["value"] = kwargs["legacy"]
+
+    fake_numpy.set_printoptions = set_print_options
+    fake_numpy.get_printoptions = lambda: {"legacy": current_legacy["value"]}
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    restore = compat_module.apply_runtime_compatibility_shims(261)
+
+    assert fake_numpy.string_ is fake_numpy.bytes_
+    assert current_legacy["value"] == "1.25"
+
+    restore()
+
+    assert not hasattr(fake_numpy, "string_")
+    assert current_legacy["value"] is False
+
+
+def test_apply_runtime_compatibility_restores_partial_changes_after_interrupt(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = "2.5.2"
+    fake_numpy.bytes_ = object()
+    fake_numpy.get_printoptions = lambda: {"legacy": False}
+
+    def fail_set_print_options(**kwargs):
+        assert kwargs == {"legacy": "1.25"}
+        raise KeyboardInterrupt
+
+    fake_numpy.set_printoptions = fail_set_print_options
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    with pytest.raises(KeyboardInterrupt):
+        compat_module.apply_runtime_compatibility_shims(261)
+
+    assert not hasattr(fake_numpy, "string_")
+
+
+@pytest.mark.parametrize("numpy_version", ["1.26.4", "2.5.2"])
+def test_apply_runtime_compatibility_preserves_existing_numpy_string_alias(
+    monkeypatch, numpy_version
+):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.__version__ = numpy_version
+    fake_numpy.bytes_ = object()
+    existing_string_alias = object()
+    fake_numpy.string_ = existing_string_alias
+    current_legacy = {"value": False}
+
+    def set_print_options(**kwargs):
+        current_legacy["value"] = kwargs["legacy"]
+
+    fake_numpy.set_printoptions = set_print_options
+    fake_numpy.get_printoptions = lambda: {"legacy": current_legacy["value"]}
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    restore = compat_module.apply_runtime_compatibility_shims(261)
+
+    assert fake_numpy.string_ is existing_string_alias
+    if numpy_version.startswith("2"):
+        assert current_legacy["value"] == "1.25"
+    else:
+        assert current_legacy["value"] is False
+
+    restore()
+
+    assert fake_numpy.string_ is existing_string_alias
+    assert current_legacy["value"] is False
+
+
+def test_apply_runtime_compatibility_does_not_patch_newer_product(monkeypatch):
+    fake_numpy = ModuleType("numpy")
+    fake_numpy.bytes_ = object()
+    monkeypatch.setitem(sys.modules, "numpy", fake_numpy)
+
+    restore = compat_module.apply_runtime_compatibility_shims(271)
+
+    assert not hasattr(fake_numpy, "string_")
+    restore()
 
 
 def test_sanitize_settings_renames_guardian_setting(monkeypatch):
@@ -68,6 +159,9 @@ def test_sanitize_settings_migrates_default_file_storage(monkeypatch):
     assert sanitized["STORAGES"]["default"]["BACKEND"] == (
         "django.core.files.storage.FileSystemStorage"
     )
+    assert sanitized["STORAGES"]["staticfiles"]["BACKEND"] == (
+        "django.contrib.staticfiles.storage.StaticFilesStorage"
+    )
 
 
 def test_sanitize_settings_keeps_existing_default_storage_config(monkeypatch):
@@ -85,6 +179,29 @@ def test_sanitize_settings_keeps_existing_default_storage_config(monkeypatch):
 
     assert "DEFAULT_FILE_STORAGE" not in sanitized
     assert sanitized["STORAGES"]["default"]["BACKEND"] == "custom.backend.Storage"
+    assert sanitized["STORAGES"]["staticfiles"]["BACKEND"] == (
+        "django.contrib.staticfiles.storage.StaticFilesStorage"
+    )
+
+
+def test_sanitize_settings_preserves_explicit_staticfiles_storage_config(monkeypatch):
+    overrides = {
+        "DEFAULT_FILE_STORAGE": "django.core.files.storage.FileSystemStorage",
+        "STORAGES": {"staticfiles": {"BACKEND": "custom.backend.StaticFilesStorage"}},
+    }
+    monkeypatch.setattr(
+        compat_module,
+        "_get_installed_versions",
+        lambda: {"django": (5, 2, 0)},
+    )
+
+    sanitized = compat_module.sanitize_settings(overrides)
+
+    assert "DEFAULT_FILE_STORAGE" not in sanitized
+    assert sanitized["STORAGES"]["default"]["BACKEND"] == (
+        "django.core.files.storage.FileSystemStorage"
+    )
+    assert sanitized["STORAGES"]["staticfiles"]["BACKEND"] == "custom.backend.StaticFilesStorage"
 
 
 def test_sanitize_settings_is_noop_below_version_thresholds(monkeypatch):

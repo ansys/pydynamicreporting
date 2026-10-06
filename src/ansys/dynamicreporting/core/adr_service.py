@@ -28,7 +28,7 @@ Module for creating an Ansys Dynamic Reporting Service instance.
 Examples::
 
     import ansys.dynamicreporting.core as adr
-    adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+    adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
     ret = adr_service.connect()
     my_img = adr_service.create_item()
     my_img.item_image = 'Image_to_push_on_report'
@@ -50,7 +50,7 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -60,8 +60,6 @@ from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
 from .common_utils import resolve_install_info
 from .compatibility import get_compatibility_warning_for_install_version
-from .server_exchange_backend import ServerExchangeBackend
-from .serverless.exchange_importer import ExchangeImporter
 from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -73,7 +71,11 @@ from .exceptions import (
     MissingSession,
     NotValidServer,
     StartingServiceError,
+    UnsupportedServerVersionError,
 )
+
+if TYPE_CHECKING:
+    from .utils.json_import import ImportResult
 
 
 # Main class
@@ -85,10 +87,10 @@ class Service:
     ----------
     ansys_version : int, optional
         Three-digit format for a locally installed Ansys version.
-        For example, ``232`` for Ansys 2023 R2. The default is ``None``.
+        For example, ``261`` for Ansys 2026 R1. The default is ``None``.
     docker_image : str, optional
         Docker image to use if you do not have a local Ansys installation.
-        The default is ``"ghcr.io/ansys-internal/nexus"``.
+        This value is required when ``ansys_installation="docker"``.
     data_directory : str, optional
         Path to the directory for storing temporary information from the Docker image.
         The default is creating a new directory inside the OS
@@ -101,18 +103,26 @@ class Service:
     port : int, optional
         Port to run the Ansys Dynamic Reporting service on. The default is ``8000``.
     logfile : str, optional
-        File to write logs to. The default is ``None``. Acceptable values are
-        filenames or ``stdout`` for standard output.
+        Deprecated alias for ``log_output``.
     ansys_installation : str, optional
         Path to the directory where Ansys is installed locally. If Ansys is not
         installed locally but is to be run in a Docker image, set the
-        value for this paraemter to ``"docker"``.
+        value for this parameter to ``"docker"``.
+    log_output : str or os.PathLike, optional
+        File path or ``"stdout"`` for ADR logs. The default is ``None``, which
+        adds no output handler.
+    log_level : int or str, optional
+        Level for the shared ADR logger. The default is ``None``, which leaves
+        the caller's logging level unchanged.
 
 
     Raises
     ------
     DatabaseDirNotProvidedError
         The ``"db_directory"`` argument has not been provided when using a Docker image.
+    ValueError
+        The ``"docker_image"`` argument has not been provided when
+        ``ansys_installation="docker"``.
     CannotCreateDatabaseError
         Can not create the ``"db_directory"`` when using a Docker image.
     InvalidAnsysPath
@@ -129,7 +139,7 @@ class Service:
     set to ``"mypsw"`` using a local Ansys installation::
 
         import ansys.dynamicreporting.core as adr
-        installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
+        installation_dir = r'C:\\Program Files\\ANSYS Inc\\v261'
         adr_service = adr.Service(ansys_installation = installation_dir)
         ret = adr_service.connect(url = "http://localhost:8010", username = "admin", password = "mypsw")
     """
@@ -143,6 +153,9 @@ class Service:
         port: int = DOCKER_DEFAULT_PORT,
         logfile: str = None,
         ansys_installation: str | None = None,
+        *,
+        log_output: str | os.PathLike[str] | None = None,
+        log_level: int | str | None = None,
     ) -> None:
         """
         Initialize an Ansys Dynamic Reporting object.
@@ -151,16 +164,14 @@ class Service:
         ----------
         ansys_installation : str, optional
             Location of the Ansys installation, including the version directory.
-            For example, r'C:\\Program Files\\ANSYS Inc\\v232'. The default is
+            For example, r'C:\\Program Files\\ANSYS Inc\\v261'. The default is
             ``None``. This parameter is needed only if the Service instance is
             to launch a dynamic Reporting service. It is not needed if connecting
             to an existing service. If there is no local Ansys installation and
             a Docker image is to be used instead, enter ``"docker"``.
         docker_image : str, optional
-            Location of the Docker image for Ansys Dynamic Reporting. The default
-            is ghcr.io/ansys-internal/nexus. This parameter is used only if the
-            value for the ``ansys_installation`` parameter is set to ``"docker"``.
-            Default:
+            Location of the Docker image for Ansys Dynamic Reporting. This
+            parameter is required when ``ansys_installation="docker"``.
         data_directory: str, optional
             Directory where Docker is to store temporary copy of files. The
             default is ``None``, in which case ``TMP_DIR`` is used. This parameter
@@ -172,14 +183,22 @@ class Service:
             Service port number. The default is ``DOCKER_DEFAULT_PORT``, in which
             case ``8000`` is used.
         logfile: str, optional
-            Location for the log file. The default is None.
-            If this parameter is set to ``stdout``, the output will be printed
-            to stdout.
+            Deprecated alias for ``log_output``.
+        log_output : str or os.PathLike, optional
+            File path or ``"stdout"`` for ADR logs. The default is ``None``,
+            which adds no output handler.
+        log_level : int or str, optional
+            Level for the shared ADR logger. The default is ``None``, which
+            leaves the caller's logging level unchanged.
         """
         self.serverobj = None
         self._session_guid = ""
         self._url = None
-        self.logger = get_logger(logfile)
+        self.logger = get_logger(
+            logfile,
+            log_output=log_output,
+            log_level=log_level,
+        )
         self._data_directory = None
         self._db_directory = db_directory
         self._delete_db = False
@@ -247,16 +266,22 @@ class Service:
                 self.logger.error(f"Error starting the Docker Container.\n{str(e)}\n")
                 raise e
 
-            self._ansys_installation, self._ansys_version = (ansys_installation, ansys_version)
+            self._ansys_installation = ansys_installation
+            self._ansys_version = self._docker_launcher.ansys_version() or ansys_version
+            compatibility_warning = get_compatibility_warning_for_install_version(
+                self._ansys_version
+            )
+            if compatibility_warning:
+                warnings.warn(compatibility_warning, UserWarning, stacklevel=2)
 
         else:  # pragma: no cover
-            # local installation
-            install_resolution = resolve_install_info(
+            # Local ADR product root.
+            resolved_install = resolve_install_info(
                 ansys_installation=ansys_installation, ansys_version=ansys_version
             )
             self._ansys_installation, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+                resolved_install.install_dir,
+                resolved_install.version,
             )
             # Run the compatibility check only after the traditional install
             # probing succeeds so unsupported releases warn without changing the
@@ -315,6 +340,8 @@ class Service:
         ------
         NotValidServer
             The current Service doesn not have a valid server associated to it.
+        UnsupportedServerVersionError
+            The connected server reports an unsupported, missing, or malformed Ansys version.
 
 
         Examples
@@ -322,7 +349,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect(url="http://localhost:8010", username='admin', password = 'mypsw')
         """
         if self._url is not None:  # pragma: no cover
@@ -333,6 +360,8 @@ class Service:
         )
         try:
             self.serverobj.validate()
+        except UnsupportedServerVersionError:
+            raise
         except Exception as e:
             self.logger.error(f"Can not validate dynamic reporting server.\nError: {str(e)}")
             raise NotValidServer
@@ -400,13 +429,15 @@ class Service:
             Can not start the ADR service.
         NotValidServer
             Can not validate the current ADR service.
+        UnsupportedServerVersionError
+            The started server reports an unsupported, missing, or malformed Ansys version.
 
         Examples
         --------
         ::
 
             import ansys.dynamicreporting.core as adr
-            installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
+            installation_dir = r'C:\\Program Files\\ANSYS Inc\\v261'
             adr_service = adr.Service(ansys_installation = installation_dir,
             db_directory = r'D:\\tmp\\new_db', port = 8020)
             session_guid = adr_service.start()
@@ -444,7 +475,12 @@ class Service:
                     try:
                         create_output = self._docker_launcher.create_nexus_db()
                     except Exception as e:  # pragma: no cover
-                        self._docker_launcher.cleanup()
+                        try:
+                            self._docker_launcher.cleanup()
+                        except Exception as cleanup_error:
+                            self.logger.warning(
+                                f"Failed to clean up Docker launcher: {cleanup_error}"
+                            )
                         self.logger.error(
                             "Error creating the database at the path {self._db_directory} in the "
                             f"Docker container.\nError: {str(e)}"
@@ -453,7 +489,12 @@ class Service:
                     for f in ["db.sqlite3", "view_report.nexdb"]:
                         db_file = os.path.join(self._db_directory, f)
                         if not os.path.isfile(db_file):
-                            self._docker_launcher.cleanup()
+                            try:
+                                self._docker_launcher.cleanup()
+                            except Exception as cleanup_error:
+                                self.logger.warning(
+                                    f"Failed to clean up Docker launcher: {cleanup_error}"
+                                )
                             self.logger.error(
                                 "Error creating the database using Docker at the path "
                                 + f"{self._db_directory}.\n"
@@ -514,6 +555,8 @@ class Service:
 
             try:
                 launched = report_remote_server.launch_local_database_server(None, **launch_kwargs)
+            except UnsupportedServerVersionError:
+                raise
             except Exception as e:
                 self.logger.error(
                     "Error starting the service.\n"
@@ -547,7 +590,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
+            installation_dir = r'C:\\Program Files\\ANSYS Inc\\v261'
             adr_service = adr.Service(ansys_installation = installation_dir, port = 8020)
             session_guid = adr_service.start(username = 'admin', password = 'mypsw',
             db_directory ='/tmp/dbase')
@@ -653,7 +696,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            installation_dir = r'C:\\Program Files\\ANSYS Inc\\v232'
+            installation_dir = r'C:\\Program Files\\ANSYS Inc\\v261'
             adr_service = adr.Service(ansys_installation = installation_dir)
             ret = adr_service.connect()
             my_img = adr_service.create_item()
@@ -712,31 +755,77 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_img = adr_service.create_item()
         """
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
 
-    def import_from_json(self, json_file_path: str | Path, *, on_error: str = "collect") -> Any:
-        """Import an ADR exchange JSON document into the current ADR service.
+    def import_from_json(
+        self,
+        json_file_path: str | Path,
+        *,
+        on_error: str = "collect",
+        base_dir: str | None = None,
+        strict_keys: bool = False,
+    ) -> "ImportResult":
+        """Import ADR report items from a JSON document into the connected service.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
+
+        Report structure is out of scope: use :meth:`load_templates` to import
+        report templates.
 
         Parameters
         ----------
-        json_file_path : str or Path
+        json_file_path : str or pathlib.Path
             Path to the JSON document.
-        on_error : str, default="collect"
-            Strategy for item-level failures: ``"collect"`` keeps going and records the
-            failures while ``"raise"`` raises at the first failure.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing ``json_file_path``.
+        strict_keys : bool, default: False
+            Treat unknown keys in the document as validation errors.
 
         Returns
         -------
-        Any
-            Import summary from the exchange importer.
+        ImportResult
+            Counts and any per-item failures.
+
+        Raises
+        ------
+        ImportValidationError
+            If the document violates the import contract.
+        ImportVersionError
+            If the document schema version is unsupported.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
+            adr_service.connect(url='http://localhost:8020')
+            result = adr_service.import_from_json(r'C:\\tmp\\report.json')
+            print(result.items_saved, result.ok)
         """
-        importer = ExchangeImporter(ServerExchangeBackend(self))
-        return importer.import_file(json_file_path, on_error=on_error)
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from .import_backend_server import ServerImportBackend
+        from .utils.json_import.importer import JSONImporter
+
+        importer = JSONImporter(ServerImportBackend(self))
+        return importer.import_file(
+            json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
+        )
 
     def query(
         self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""
@@ -744,7 +833,7 @@ class Service:
         """
         Query the database.
 
-        .. _Query: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v251/en/adr_ug/adr_ug_query_expressions.html
+        .. _Query: https://ansyshelp.ansys.com/public/account/secured?returnurl=Views/Secured/corp/v261/en/adr_ug/adr_ug_query_expressions.html
 
         Parameters
         ----------
@@ -771,7 +860,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             imgs = adr_service.query(query_type='Item', item_filter='A|i_type|cont|image;')
         """
@@ -836,7 +925,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
             adr_service.connect(url='http://localhost:8020')
             all_items = adr_service.query(type='Item')
             adr_service.delete(all_items)
@@ -915,7 +1004,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
             adr_service.connect(url='http://localhost:8020')
             my_report = adr_service.get_report(report_name = "Top Level Report')
         """
@@ -961,7 +1050,7 @@ class Service:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
             adr_service.connect(url='http://localhost:8020')
             top_reports = adr_service.get_list_reports()
         """
@@ -1002,7 +1091,7 @@ class Service:
 
             import ansys.dynamicreporting.core as adr
 
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
             adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
             adr_service.load_templates(r'C:\\tmp\\my_json_file.json')
         """

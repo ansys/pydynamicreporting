@@ -26,7 +26,7 @@ import ansys.dynamicreporting.core as adr
 import ansys.dynamicreporting.core.examples as examples
 
 adr_service = adr.Service(
-    ansys_installation=r"C:\Program Files\ANSYS Inc\v251", db_directory=r"C:\tmp\new_template"
+    ansys_installation=r"C:\Program Files\ANSYS Inc\v261", db_directory=r"C:\tmp\new_template"
 )
 adr_service.start(create_db=True)
 adr_service.get_list_reports()

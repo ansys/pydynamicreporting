@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Run Ansys documentation building action
-        uses: ansys/actions/doc-build@v10.3.1
+        uses: ansys/actions/doc-build@v11.0.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           check-links: false
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Deploy development documentation
-        uses: ansys/actions/doc-deploy-dev@v10.3.1
+        uses: ansys/actions/doc-deploy-dev@v11.0.0
         with:
           cname: ${{ env.DOCUMENTATION_CNAME }}
           token: ${{ secrets.GITHUB_TOKEN }}

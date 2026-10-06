@@ -38,7 +38,6 @@ from PIL.TiffTags import TAGS
 import requests
 
 try:
-    import ceiversion
     import enve
 
     has_enve = True
@@ -54,7 +53,7 @@ except ImportError:
 TIFFTAG_IMAGEDESCRIPTION: int = 0x010E
 text_type = str
 """@package report_utils
-Methods that serve as a shim to the enve and ceiversion modules that may not be present
+Methods that serve as a shim to the enve module that may not be present
 """
 
 
@@ -324,39 +323,6 @@ def enve_home():
         return enve.home()
     tmp = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     return tmp
-
-
-def ceiversion_nexus_suffix():
-    if has_enve:
-        return ceiversion.nexus_suffix
-    # If we are coming from pynexus, get the version from that
-    try:
-        from ansys.dynamicreporting.core import ansys_version
-
-        tmp = ansys_version.replace("R", "")[-3:]
-        return str(tmp)
-    except Exception:  # nosec
-        # get "nexus###" folder name and then strip off the "nexus" bit
-        tmp = os.path.basename(os.path.dirname(os.path.dirname(__file__)))
-    return tmp[5:]
-
-
-def ceiversion_apex_suffix():
-    if has_enve:
-        return ceiversion.apex_suffix
-    # Note: at present the suffix strings are in lockstep and are expected
-    # to stay that way.  So the Nexus suffix (easily found by the location
-    # of this file) is a reasonable proxy for the apex suffix.
-    return ceiversion_nexus_suffix()
-
-
-def ceiversion_ensight_suffix():
-    if has_enve:
-        return ceiversion.ensight_suffix
-    # Note: at present the suffix strings are in lockstep and are expected
-    # to stay that way.  So the Nexus suffix (easily found by the location
-    # of this file) is a reasonable proxy for the ensight suffix as well.
-    return ceiversion_nexus_suffix()
 
 
 def platform_encoding():

@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "app_id": "adr-mechanical",
+  "tags": [{ "report": "thermal_run_42" }],
+  "metadata": {
+    "producer": "adr-mechanical",
+    "producer_version": "2026R1"
+  },
+  "items": [
+    {
+      "item_type": "text",
+      "name": "Summary",
+      "tags": [{ "section": "intro" }],
+      "source": "adr-mechanical",
+      "sequence": 0,
+      "value": "Simulation completed successfully."
+    },
+    {
+      "item_type": "html",
+      "name": "Notes",
+      "tags": [{ "section": "intro" }],
+      "value": "<p>All results within range.</p>"
+    },
+    {
+      "item_type": "image",
+      "name": "Contour",
+      "tags": [{ "section": "results" }],
+      "path": "media/contour.png"
+    },
+    {
+      "item_type": "animation",
+      "name": "Transient",
+      "tags": [{ "section": "results" }],
+      "path": "media/transient.mp4"
+    },
+    {
+      "item_type": "scene",
+      "name": "Assembly View",
+      "tags": [{ "section": "results" }],
+      "path": "media/assembly.avz"
+    },
+    {
+      "item_type": "file",
+      "name": "Solver Log",
+      "tags": [{ "section": "appendix" }],
+      "path": "media/solver.log"
+    },
+    {
+      "item_type": "table",
+      "name": "Probe Table",
+      "tags": [{ "section": "results" }],
+      "columns": [
+        { "name": "time", "type": "float" },
+        { "name": "T_max", "type": "float" },
+        { "name": "T_min", "type": "float" }
+      ],
+      "rows": [
+        [0.0, 300.1, 290.0],
+        [1.0, 320.5, 295.2],
+        [2.0, 318.7, 294.1]
+      ],
+      "plot": "line",
+      "format": "floatdot1",
+      "xaxis": "time",
+      "yaxis": ["T_max", "T_min"],
+      "properties": [{ "line_width": 2 }, { "table_title": "Probe temperatures" }]
+    },
+    {
+      "item_type": "tree",
+      "name": "Mesh",
+      "tags": [{ "section": "results" }],
+      "nodes": [
+        {
+          "name": "Assembly",
+          "children": [
+            { "name": "Part A", "value": 1204 },
+            { "name": "Part B", "value": 876 }
+          ]
+        }
+      ]
+    }
+  ]
+}

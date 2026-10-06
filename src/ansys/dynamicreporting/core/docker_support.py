@@ -23,7 +23,7 @@
 """
 Docker Support module.
 
-The Docker Support module provides PyDnamicReporting with the ability to start
+The Docker Support module provides PyDynamicReporting with the ability to start
 and stop the Ansys Dynamic Reporting Docker container as well as routines for
 copying files between the host file system and the container's file system.
 
@@ -41,6 +41,7 @@ import random
 import re
 import string
 import tarfile
+from contextlib import suppress
 from pathlib import Path
 
 import docker
@@ -157,7 +158,8 @@ class DockerLauncher:
             with tarfile.open(tar_file_path) as tar:
                 tar.extractall(path=output_path)  # nosec B202
             # Remove the tar archive
-            tar_file_path.unlink()
+            with suppress(OSError):
+                tar_file_path.unlink()
         except Exception as e:
             raise RuntimeError(f"Can't copy files from container: {src}\n\n{str(e)}")
 

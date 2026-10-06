@@ -41,14 +41,17 @@ Examples
 """
 
 import json
+import logging
 import os
 import sys
-from typing import Optional
 import warnings
 import webbrowser
 
 from ansys.dynamicreporting.core.adr_utils import build_query_url, in_ipynb
+from ansys.dynamicreporting.core.common_utils import PDFPageSize
 from ansys.dynamicreporting.core.utils import report_objects
+
+LOGGER = logging.getLogger(__name__)
 
 try:
     from IPython.display import IFrame
@@ -79,6 +82,12 @@ class Report:
             self.__find_report_obj__()
         else:
             self.report = report_obj
+
+    def _get_report_logger(self):
+        """Return the most specific logger available for this report."""
+        if self.service is not None and hasattr(self.service, "logger"):
+            return self.service.logger
+        return LOGGER
 
     def __find_report_obj__(self) -> bool:
         """
@@ -133,7 +142,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My First Report")
             my_report.visualize(new_tab = True)
@@ -184,7 +193,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             report_url = my_report.get_url()
@@ -235,17 +244,18 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             report_url = my_report.get_guid()
         """
         guid = ""
+        report_logger = self._get_report_logger()
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
+            report_logger.error("No connection to any report")
             return guid
         if self.service.serverobj is None or self.service.url is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
+            report_logger.error("No connection to any server")
             return guid
         if self.report:
             guid = self.report.guid
@@ -254,7 +264,7 @@ class Report:
             if success:
                 guid = self.report.guid
             else:
-                self.service.logger.error("Error: can not obtain the report guid")
+                report_logger.error("Error: can not obtain the report guid")
 
         return guid
 
@@ -283,7 +293,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             my_report.get_report_script()
@@ -550,7 +560,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = 'Top report')
             my_report.get_report_component()
@@ -606,7 +616,7 @@ class Report:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
             report_iframe = my_report.get_iframe()
@@ -656,26 +666,29 @@ class Report:
         Returns
         -------
         bool
-            Success status of the PDF export: True if it worked, False otherwise
+            Success status of the PDF export: True if it worked, False otherwise.
+            On failure, the reason is logged through the ADR logger and also raised as a
+            ``UserWarning``, since a False return on its own does not carry that detail.
 
         Examples
         --------
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
             succ = my_report.export_pdf(file_name=r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"})
             succ2 = my_report.export_pdf(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
         """
         success = False  # pragma: no cover
+        report_logger = self._get_report_logger()
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            report_logger.error("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
-            return ""
+            report_logger.error("No connection to any server")
+            return False
         try:  # pragma: no cover
             if query_params is None:
                 query_params = {}
@@ -692,7 +705,12 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error(f"Can not export pdf report: {str(e)}")
+            # report_logger.error() alone is invisible unless the caller configured log
+            # output, so also warn so the failure reason reaches a caller who only checks
+            # the boolean return value.
+            failure_message = f"Can not export pdf report: {str(e)}"
+            report_logger.error(failure_message)
+            warnings.warn(failure_message, UserWarning, stacklevel=2)
         return success
 
     def export_html(
@@ -724,26 +742,29 @@ class Report:
         Returns
         -------
         bool
-            Success status of the HTML export: True if it worked, False otherwise
+            Success status of the HTML export: True if it worked, False otherwise.
+            On failure, the reason is logged through the ADR logger and also raised as a
+            ``UserWarning``, since a False return on its own does not carry that detail.
 
         Examples
         --------
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_report = adr_service.get_report(report_name = "My Top Report")
             succ = my_report.export_html(directory_name = r'D:\\tmp', query_params={"colormode": "dark"})
-            succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.pdf', item_filter = 'A|i_type|cont|image;')
+            succ2 = my_report.export_html(filename=r'D:\\tmp\\onlyimages.html', item_filter = 'A|i_type|cont|image;')
         """
         success = False
+        report_logger = self._get_report_logger()
         if self.service is None:  # pragma: no cover
-            self.service.logger.error("No connection to any report")
-            return ""
+            report_logger.error("No connection to any report")
+            return False
         if self.service.serverobj is None:  # pragma: no cover
-            self.service.logger.error("No connection to any server")
-            return ""
+            report_logger.error("No connection to any server")
+            return False
         try:
             if query_params is None:
                 query_params = {}
@@ -758,8 +779,121 @@ class Report:
             )
             success = True
         except Exception as e:  # pragma: no cover
-            self.service.logger.error(f"Can not export static HTML report: {str(e)}")
+            # report_logger.error() alone is invisible unless the caller configured log
+            # output, so also warn so the failure reason reaches a caller who only checks
+            # the boolean return value.
+            failure_message = f"Can not export static HTML report: {str(e)}"
+            report_logger.error(failure_message)
+            warnings.warn(failure_message, UserWarning, stacklevel=2)
         return success
+
+    def export_browser_pdf(
+        self,
+        file_name: str,
+        *,
+        query_params: dict | None = None,
+        item_filter: str | None = None,
+        landscape: bool = False,
+        margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
+        # Mirrors _BasePlaywrightPDFRenderer._DEFAULT_RENDER_TIMEOUT; kept as a literal so importing
+        # Report does not eagerly import the Playwright renderer module (and Playwright with it).
+        render_timeout: float = 30.0,
+    ) -> bool:
+        """
+        Export report as a browser-fidelity PDF.
+
+        This export path requires a local ADR 27.1 or later installation with
+        its product-shipped browser package.
+
+        Unlike :meth:`export_pdf`, which uses the legacy server-side PDF path, this method
+        asks a headless browser to render the report through ADR's browser-facing output and
+        then print that browser view to PDF.
+
+        Parameters
+        ----------
+        file_name : str
+            Path and filename for the PDF file to export.
+        query_params : dict, optional
+            Dictionary for parameters to apply to the report template.
+            These values are forwarded as report-generation URL
+            query parameters. Default: None
+        item_filter : str, optional
+            String corresponding to query to run on the database items before rendering the report.
+            Default: None
+        landscape : bool, optional
+            Whether to export the PDF in landscape orientation. Default: False
+        margins : dict[str, str], optional
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+            strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
+            (for example ``"10mm"`` or ``"0.5in"``). Default: None, which uses the renderer
+            defaults.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default: ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
+        render_timeout : float, optional
+            Maximum time, in seconds, to spend waiting for browser readiness signals.
+            Default: 30.0
+
+        Returns
+        -------
+        bool
+            Success status of the browser PDF export: True if it worked, False otherwise.
+            On failure, the specific reason (for example, which readiness step timed out) is
+            logged through the ADR logger and also raised as a ``UserWarning``, since a False
+            return on its own does not carry that detail.
+
+        Examples
+        --------
+        ::
+
+            import ansys.dynamicreporting.core as adr
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v271')
+            ret = adr_service.connect(url = "http://localhost:8000", username = "nexus", password = "cei")
+            my_report = adr_service.get_report(report_name = "My Top Report")
+            succ = my_report.export_browser_pdf(file_name = r'D:\\tmp\\myreport.pdf', query_params = {"colormode": "dark"}, landscape = True)
+        """
+        report_logger = self._get_report_logger()
+        if self.service is None:
+            report_logger.error("No connection to any report")
+            return False
+        if self.service.serverobj is None:
+            report_logger.error("No connection to any server")
+            return False
+        try:
+            if query_params is None:
+                query_params = {}
+            self.service.serverobj.export_report_as_browser_pdf(
+                self.report.guid,
+                file_name,
+                query=query_params,
+                item_filter=item_filter,
+                landscape=landscape,
+                margins=margins,
+                page_size=page_size,
+                width=width,
+                height=height,
+                render_timeout=render_timeout,
+                # Forward the connected service's local Ansys install so the remote render
+                # uses the product-shipped browser binary.
+                ansys_installation=self.service._ansys_installation,
+                ansys_version=self.service._ansys_version,
+            )
+            return True
+        except Exception as e:
+            # report_logger.error() alone is invisible unless the caller configured log
+            # output, so also warn: that surfaces the specific failure reason (e.g. which
+            # readiness step timed out) to a caller who only checks the boolean return value.
+            failure_message = f"Can not export browser pdf report: {str(e)}"
+            report_logger.error(failure_message)
+            warnings.warn(failure_message, UserWarning, stacklevel=2)
+            return False
 
     def export_json(self, json_file_path: str) -> None:
         """
@@ -780,7 +914,7 @@ class Report:
 
             import ansys.dynamicreporting.core as adr
 
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
             adr_service.connect(url='http://localhost:8020', username = "admin", password = "mypassword")
             report = adr_service.get_report(report_name="my_report_name")
             report.export_json(r'C:\\tmp\\my_json_file.json')

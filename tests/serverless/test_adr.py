@@ -20,19 +20,288 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import importlib
+import os
+import sys
+import uuid
 from pathlib import Path
 from random import random as r
-import uuid
 
 import numpy as np
 import pytest
+from django.core.exceptions import ImproperlyConfigured as DjangoImproperlyConfigured
 
 from ansys.dynamicreporting.core.exceptions import (
     ADRException,
     ImproperlyConfiguredError,
     InvalidPath,
 )
-from ansys.dynamicreporting.core.serverless import ADR
+from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
+
+
+def _enve_modules() -> dict[str, object]:
+    """Return the modules associated with optional native ``enve`` loading."""
+    return {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "enve" or name == "enve_common" or name.startswith("enve_common.")
+    }
+
+
+@pytest.mark.unit
+def test_import_enve_uses_later_candidate_after_import_failure(tmp_path, monkeypatch):
+    """A failed native candidate must not prevent a later one from loading."""
+    bad_candidate = tmp_path / "bad_candidate"
+    bad_package = bad_candidate / "enve_common"
+    bad_package.mkdir(parents=True)
+    (bad_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = "bad_candidate"\n'
+        'raise ImportError("broken native extension")\n'
+    )
+
+    good_candidate = tmp_path / "good_candidate"
+    good_package = good_candidate / "enve_common"
+    good_package.mkdir(parents=True)
+    (good_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = __path__[0]\nfrom . import enve\n'
+    )
+    (good_package / "enve.py").write_text('ORIGIN = "good_candidate"\n')
+
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+    importlib.invalidate_caches()
+
+    try:
+        assert ADR._import_enve([bad_candidate, good_candidate]) is None
+        assert sys.path[0] == str(good_candidate)
+        assert str(bad_candidate) not in sys.path
+        assert sys.modules["enve_common.enve"].ORIGIN == "good_candidate"
+        assert os.environ["CEI_UDILPATH"] == str(good_package)
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
+def test_import_enve_uses_direct_module_fallback(tmp_path, monkeypatch):
+    """Older product layouts should load a directly packaged ``enve.py``."""
+    candidate = tmp_path / "direct_candidate"
+    candidate.mkdir()
+    (candidate / "enve.py").write_text('ORIGIN = "direct_candidate"\n')
+
+    original_modules = _enve_modules()
+    original_udi_path = os.environ.get("CEI_UDILPATH")
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.delenv("CEI_UDILPATH", raising=False)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+    importlib.invalidate_caches()
+
+    try:
+        assert ADR._import_enve([candidate]) is None
+        assert sys.path[0] == str(candidate)
+        assert sys.modules["enve"].ORIGIN == "direct_candidate"
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        if original_udi_path is None:
+            os.environ.pop("CEI_UDILPATH", None)
+        else:
+            os.environ["CEI_UDILPATH"] = original_udi_path
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
+def test_import_enve_restores_state_when_every_candidate_fails(tmp_path, monkeypatch):
+    """A failed native candidate must not leave its package state behind."""
+    from types import ModuleType
+
+    bad_candidate = tmp_path / "bad_candidate"
+    bad_package = bad_candidate / "enve_common"
+    bad_package.mkdir(parents=True)
+    (bad_package / "__init__.py").write_text(
+        'import os\nos.environ["CEI_UDILPATH"] = "bad_candidate"\n'
+        'raise ImportError("broken native extension")\n'
+    )
+
+    original_modules = _enve_modules()
+    original_udi_path = os.environ.get("CEI_UDILPATH")
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    sentinel_common = ModuleType("enve_common")
+    sentinel_enve = ModuleType("enve_common.enve")
+    sys.modules["enve_common"] = sentinel_common
+    sys.modules["enve_common.enve"] = sentinel_enve
+    os.environ["CEI_UDILPATH"] = "pre-existing-udi-path"
+    isolated_path = [str(tmp_path)]
+    monkeypatch.setattr(sys, "path", isolated_path)
+    importlib.invalidate_caches()
+
+    try:
+        error = ADR._import_enve([bad_candidate])
+
+        assert isinstance(error, ImportError)
+        assert sys.path == isolated_path
+        assert sys.modules["enve_common"] is sentinel_common
+        assert sys.modules["enve_common.enve"] is sentinel_enve
+        assert os.environ["CEI_UDILPATH"] == "pre-existing-udi-path"
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+        if original_udi_path is None:
+            os.environ.pop("CEI_UDILPATH", None)
+        else:
+            os.environ["CEI_UDILPATH"] = original_udi_path
+        importlib.invalidate_caches()
+
+
+@pytest.mark.unit
+def test_import_enve_reports_missing_module_without_candidates(tmp_path, monkeypatch):
+    """Missing ``enve`` must be reported even when no product path is available."""
+    original_modules = _enve_modules()
+    for name in original_modules:
+        sys.modules.pop(name, None)
+    monkeypatch.setattr(sys, "path", [str(tmp_path)])
+
+    try:
+        assert isinstance(ADR._import_enve([]), ImportError)
+    finally:
+        for name in _enve_modules():
+            sys.modules.pop(name, None)
+        sys.modules.update(original_modules)
+
+
+@pytest.mark.unit
+def test_get_embedded_python_version_stops_after_first_valid_runtime(monkeypatch):
+    """Embedded Python runtime discovery should use only one product runtime."""
+    from types import SimpleNamespace
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    class ProductRoot:
+        def __truediv__(self, _):
+            return self
+
+        def glob(self, pattern):
+            assert pattern == "[Pp]ython-*"
+            yield SimpleNamespace(name="Python-not-a-version", is_dir=lambda: True)
+            yield SimpleNamespace(name="Python-3.12.11", is_dir=lambda: True)
+            pytest.fail("Runtime discovery should stop after the first valid runtime.")
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(ProductRoot(), 261) == (3, 12)
+
+
+@pytest.mark.unit
+def test_get_embedded_python_version_returns_none_without_valid_runtime(tmp_path, monkeypatch):
+    """Embedded Python runtime discovery returns ``None`` when no runtime is usable."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    product_root = tmp_path / "CEI"
+    runtime_directory = product_root / "apex261" / "machines" / "win64"
+    (runtime_directory / "Python-not-a-version").mkdir(parents=True)
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(product_root, 261) is None
+
+
+@pytest.mark.unit
+def test_get_embedded_python_version_returns_none_when_runtime_glob_fails(monkeypatch):
+    """Runtime discovery should tolerate an error while iterating product paths."""
+    from types import SimpleNamespace
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    class ProductRoot:
+        def __truediv__(self, _):
+            return self
+
+        def glob(self, pattern):
+            assert pattern == "[Pp]ython-*"
+            yield SimpleNamespace(name="Python-not-a-version", is_dir=lambda: True)
+            raise OSError("runtime directory disappeared")
+
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    assert ADR._get_embedded_python_version(ProductRoot(), 261) is None
+
+
+@pytest.mark.unit
+def test_warn_for_embedded_python_mismatch_before_animation_import(tmp_path, monkeypatch):
+    """A Python mismatch should warn even before an animation is rendered."""
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    active_python_version = (sys.version_info.major, sys.version_info.minor)
+    embedded_python_version = (active_python_version[0], active_python_version[1] + 1)
+    product_root = tmp_path / "CEI"
+    (
+        product_root
+        / "apex261"
+        / "machines"
+        / "win64"
+        / f"Python-{embedded_python_version[0]}.{embedded_python_version[1]}.0"
+    ).mkdir(parents=True)
+
+    adr = object.__new__(ADR)
+    adr._ansys_installation = product_root
+    adr._ansys_version = 261
+    adr._logger = Mock()
+    monkeypatch.setattr(adr_module.platform, "system", lambda: "Windows")
+
+    with pytest.warns(UserWarning, match="Serverless ADR is running on Python") as warning_info:
+        adr._warn_for_embedded_python_mismatch()
+
+    assert adr._embedded_python_version == embedded_python_version
+    warning_message = str(warning_info[0].message)
+    adr._logger.warning.assert_called_once_with(warning_message)
+    assert f"Python {active_python_version[0]}.{active_python_version[1]}" in warning_message
+    assert f"Python {embedded_python_version[0]}.{embedded_python_version[1]}" in warning_message
+    assert "animation" not in warning_message.lower()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "embedded_python_version",
+    [(3, 12), None],
+    ids=["compatible_runtime", "missing_runtime"],
+)
+def test_embedded_python_mismatch_message_skips_non_mismatch(embedded_python_version):
+    """Compatible or unavailable runtimes do not produce a warning message."""
+    assert ADR._get_embedded_python_mismatch_message(embedded_python_version, (3, 12)) is None
+
+
+@pytest.mark.unit
+def test_render_report_does_not_preflight_animation_availability(monkeypatch):
+    """Rendering does not query report items before template rendering."""
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    class SuccessfulTemplate:
+        """Template stand-in for a report that renders successfully."""
+
+        def render(self, **kwargs):
+            return "report rendered"
+
+    adr = object.__new__(ADR)
+    adr._request = None
+    monkeypatch.setattr(
+        adr_module.Item,
+        "find",
+        lambda *args, **kwargs: pytest.fail("Rendering should not preflight report items."),
+    )
+    monkeypatch.setattr(adr_module.Template, "get", lambda *args, **kwargs: SuccessfulTemplate())
+
+    assert adr.render_report(name="StaticReport") == "report rendered"
 
 
 @pytest.mark.ado_test
@@ -86,13 +355,62 @@ def test_get_database_config_before_setup():
 
 @pytest.mark.ado_test
 def test_get_database_config_before_setup_raise():
-    with pytest.raises(ImproperlyConfiguredError):
+    with pytest.raises(ImproperlyConfiguredError) as exc_info:
         ADR.get_database_config(raise_exception=True)
+
+    assert isinstance(exc_info.value.__cause__, DjangoImproperlyConfigured)
 
 
 @pytest.mark.ado_test
 def test_is_setup_before_setup():
     assert not ADR.get_instance().is_setup
+
+
+@pytest.mark.unit
+def test_get_counts_use_database_level_queries(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from ansys.dynamicreporting.core.serverless import Item, Template
+
+    item_manager = Mock()
+    item_manager.count.return_value = 12
+    template_manager = Mock()
+    template_manager.filter.return_value.count.return_value = 4
+    monkeypatch.setitem(
+        Item._model_cls_registry,
+        "Item",
+        SimpleNamespace(objects=item_manager),
+    )
+    monkeypatch.setitem(
+        Template._model_cls_registry,
+        "Template",
+        SimpleNamespace(objects=template_manager),
+    )
+
+    assert ADR.get_item_count() == 12
+    assert ADR.get_report_count() == 4
+    item_manager.count.assert_called_once_with()
+    template_manager.filter.assert_called_once_with(parent=None)
+
+
+@pytest.mark.unit
+def test_close_restores_runtime_compatibility_callback(monkeypatch):
+    from unittest.mock import Mock
+
+    import ansys.dynamicreporting.core.serverless.adr as adr_module
+
+    restore_calls: list[str] = []
+    adr = object.__new__(ADR)
+    adr._tmp_dirs = []
+    adr._logger = Mock()
+    adr._runtime_compat_restore = lambda: restore_calls.append("restored")
+    monkeypatch.setattr(adr_module.connections, "close_all", lambda: None)
+
+    adr.close()
+
+    assert restore_calls == ["restored"]
+    assert adr._runtime_compat_restore is None
 
 
 @pytest.mark.ado_test
@@ -250,6 +568,23 @@ def test_create_item_empty_kwarg_failure(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_get_item_count(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import String
+
+    initial_count = adr_serverless.get_item_count()
+    item = adr_serverless.create_item(
+        String,
+        name=f"test_get_item_count_{uuid.uuid4()}",
+        content="Count this item.",
+    )
+
+    try:
+        assert adr_serverless.get_item_count() == initial_count + 1
+    finally:
+        item.delete()
+
+
+@pytest.mark.ado_test
 def test_edit_html(adr_serverless):
     from ansys.dynamicreporting.core.serverless import HTML
 
@@ -363,40 +698,6 @@ def test_create_file_csf(adr_serverless):
     )
 
     assert File.get(name="intro_csf").guid == intro_csf.guid
-
-
-@pytest.mark.ado_test
-def test_create_file_ens(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import File
-
-    # ens
-    intro_ens = adr_serverless.create_item(
-        File,
-        name="intro_ens",
-        content=str(Path(__file__).parent / "test_data" / "scene2.ens"),
-        tags="dp=dp227 section=data",
-        source="sls-test",
-        sequence=1,
-    )
-
-    assert File.get(name="intro_ens").guid == intro_ens.guid
-
-
-@pytest.mark.ado_test
-def test_create_file_evsn(adr_serverless):
-    from ansys.dynamicreporting.core.serverless import File
-
-    # evsn
-    intro_evsn = adr_serverless.create_item(
-        File,
-        name="intro_evsn",
-        content=str(Path(__file__).parent / "test_data" / "scenario.evsn"),
-        tags="dp=dp227 section=data",
-        source="sls-test",
-        sequence=1,
-    )
-
-    assert File.get(name="intro_evsn").guid == intro_evsn.guid
 
 
 @pytest.mark.ado_test
@@ -703,6 +1004,29 @@ def test_create_template_kwarg_empty_failure(adr_serverless):
 
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.create_template(TOCLayout)
+
+
+@pytest.mark.ado_test
+def test_get_report_count_counts_only_top_level_templates(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import BasicLayout, PanelLayout
+
+    initial_count = adr_serverless.get_report_count()
+    report = adr_serverless.create_template(
+        BasicLayout,
+        name=f"test_get_report_count_{uuid.uuid4()}",
+        parent=None,
+    )
+    child = adr_serverless.create_template(
+        PanelLayout,
+        name=f"test_get_report_count_child_{uuid.uuid4()}",
+        parent=report,
+    )
+
+    try:
+        assert adr_serverless.get_report_count() == initial_count + 1
+    finally:
+        child.delete()
+        report.delete()
 
 
 @pytest.mark.ado_test
@@ -1210,87 +1534,6 @@ def test_export_report_html_no_kwarg_fails(adr_serverless, tmp_path):
 
 
 @pytest.mark.ado_test
-def test_render_report_as_pdf_success(adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    # Create a template and monkeypatch its render_pdf to return bytes
-    adr_serverless.create_template(BasicLayout, name="TestPDFReport", parent=None)
-
-    def fake_render_pdf(self, context, item_filter, request):
-        return b"dummy pdf content"
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf)
-
-    pdf_bytes = adr_serverless.render_report_as_pdf(
-        name="TestPDFReport", item_filter="A|i_tags|cont|dp=dp227;"
-    )
-    assert pdf_bytes == b"dummy pdf content"
-
-
-@pytest.mark.ado_test
-def test_render_report_as_pdf_no_kwarg(adr_serverless):
-    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
-        adr_serverless.render_report_as_pdf()
-
-
-@pytest.mark.ado_test
-def test_render_report_as_pdf_render_failure(adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    adr_serverless.create_template(BasicLayout, name="FailingPDFReport", parent=None)
-
-    def fake_render_pdf_fail(self, context, item_filter, request):
-        raise Exception("Simulated rendering engine failure")
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf_fail)
-
-    with pytest.raises(ADRException, match="PDF Report rendering failed"):
-        adr_serverless.render_report_as_pdf(name="FailingPDFReport")
-
-
-@pytest.mark.ado_test
-def test_export_report_as_pdf_success(tmp_path, adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    adr_serverless.create_template(BasicLayout, name="TestPDFExport", parent=None)
-
-    def fake_render_pdf(self, context, item_filter, request):
-        return b"dummy pdf content"
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf)
-
-    output_file = tmp_path / "output.pdf"
-    adr_serverless.export_report_as_pdf(
-        filename=output_file, name="TestPDFExport", item_filter="A|i_tags|cont|dp=dp227;"
-    )
-    assert output_file.exists()
-    assert output_file.read_bytes() == b"dummy pdf content"
-
-
-@pytest.mark.ado_test
-def test_export_report_as_pdf_no_kwarg(tmp_path, adr_serverless):
-    with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
-        adr_serverless.export_report_as_pdf(filename=tmp_path / "output.pdf")
-
-
-@pytest.mark.ado_test
-def test_export_report_as_pdf_render_failure(tmp_path, adr_serverless, monkeypatch):
-    from ansys.dynamicreporting.core.serverless import BasicLayout
-
-    adr_serverless.create_template(BasicLayout, name="FailingTestPDFExport", parent=None)
-
-    def fake_render_pdf_fail(self, context, item_filter, request):
-        raise Exception("Simulated rendering engine failure")
-
-    monkeypatch.setattr(BasicLayout, "render_pdf", fake_render_pdf_fail)
-
-    with pytest.raises(ADRException, match="PDF Report rendering failed"):
-        adr_serverless.export_report_as_pdf(
-            filename=tmp_path / "output.pdf", name="FailingTestPDFExport"
-        )
-
-
-@pytest.mark.ado_test
 def test_copy_sessions(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Session
 
@@ -1477,8 +1720,8 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDF", parent=None)
@@ -1492,7 +1735,7 @@ def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="TestBrowserPDF")
     assert pdf_bytes == b"%PDF-mock"
@@ -1538,8 +1781,8 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFRenderer", parent=None)
@@ -1555,22 +1798,46 @@ def test_render_report_as_browser_pdf_renderer_failure(adr_serverless, monkeypat
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", fake_render_pdf)
 
-    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
+    with pytest.raises(ADRException, match="Browser PDF rendering failed") as exc_info:
         adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFRenderer")
+
+    assert type(exc_info.value.__cause__) is Exception
+    assert str(exc_info.value.__cause__) == "Simulated browser PDF renderer failure"
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_template_render_failure_chains_cause(
+    adr_serverless, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    adr_serverless.create_template(BasicLayout, name="FailingBrowserPDFTemplate", parent=None)
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        raise RuntimeError("Simulated template render failure")
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+
+    with pytest.raises(ADRException, match="Report rendering failed") as exc_info:
+        adr_serverless.render_report_as_browser_pdf(name="FailingBrowserPDFTemplate")
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "Simulated template render failure"
 
 
 @pytest.mark.ado_test
 def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     adr_serverless, tmp_path, monkeypatch
 ):
+    """Keep scratch placement and default page geometry on the file-export path."""
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFExport", parent=None)
@@ -1588,26 +1855,34 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
-        # Export-to-file uses the same ADR database-backed scratch root as the byte-stream API, so
-        # both entry points avoid the slow global temp directory without changing the public API.
+        # Capture the renderer boundary: this test covers scratch placement and
+        # verifies that omitted sizing still reaches the renderer as fixed A3.
         captured["html_dir"] = html_dir
-        captured["filename"] = filename
         captured["landscape"] = landscape
         captured["margins"] = margins
+        captured["page_size"] = page_size
+        captured["width"] = width
+        captured["height"] = height
         captured["render_timeout"] = render_timeout
+        captured["ansys_installation"] = ansys_installation
+        captured["ansys_version"] = ansys_version
         captured["logger"] = logger
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     output_dir = tmp_path / "exports"
     output_dir.mkdir()
@@ -1623,7 +1898,12 @@ def test_export_report_as_browser_pdf_prefers_db_directory_for_scratch_files(
     assert output_file.read_bytes() == b"%PDF-mock"
     assert Path(captured["html_dir"]).parent == db_directory
     assert captured["margins"] == margins
+    assert captured["page_size"] is PDFPageSize.A3
+    assert captured["width"] is None
+    assert captured["height"] is None
     assert captured["render_timeout"] == 30.0
+    assert captured["ansys_installation"] == adr_serverless._ansys_installation
+    assert captured["ansys_version"] == adr_serverless._ansys_version
 
 
 @pytest.mark.ado_test
@@ -1652,6 +1932,119 @@ def test_browser_pdf_scratch_root_rejects_missing_database_directory(
 
 
 @pytest.mark.ado_test
+def test_render_report_as_browser_pdf_cleans_empty_fallback_scratch_root(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanup", parent=None)
+    monkeypatch.setattr(adr_serverless, "_db_directory", None)
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+    captured: dict[str, Path] = {}
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        return "<html><body><h1>Fallback cleanup</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        *,
+        landscape=False,
+        margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
+        render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
+        logger=None,
+    ):
+        # The render helper stages browser-PDF bundles in a dedicated temp child. Once the
+        # temporary child is gone, the empty fallback parent should also be removed cleanly.
+        captured["html_dir"] = Path(html_dir)
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+
+    pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanup")
+
+    scratch_root = tmp_path / "adr_browser_pdf_scratch"
+    assert pdf_bytes == b"%PDF-mock"
+    assert captured["html_dir"].parent == scratch_root
+    assert not scratch_root.exists()
+
+
+@pytest.mark.ado_test
+def test_render_report_as_browser_pdf_ignores_fallback_scratch_cleanup_oserror(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless import adr as adr_module
+    from ansys.dynamicreporting.core.serverless.html_exporter import (
+        ServerlessReportExporter,
+    )
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
+    )
+
+    adr_serverless.create_template(BasicLayout, name="FallbackScratchCleanupOSError", parent=None)
+    monkeypatch.setattr(adr_serverless, "_db_directory", None)
+    monkeypatch.setattr(adr_module.tempfile, "gettempdir", lambda: str(tmp_path))
+
+    def fake_render(self, *, context=None, item_filter="", embed_scene_data=False, request=None):
+        return "<html><body><h1>Fallback cleanup OSError</h1></body></html>"
+
+    def fake_export(self):
+        return None
+
+    def fake_init(
+        self,
+        html_dir,
+        *,
+        landscape=False,
+        margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
+        render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
+        logger=None,
+    ):
+        return None
+
+    original_rmdir = Path.rmdir
+
+    def raising_rmdir(path):
+        if path == tmp_path / "adr_browser_pdf_scratch":
+            raise OSError("scratch root busy")
+        return original_rmdir(path)
+
+    monkeypatch.setattr(BasicLayout, "render", fake_render)
+    monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(Path, "rmdir", raising_rmdir)
+
+    pdf_bytes = adr_serverless.render_report_as_browser_pdf(name="FallbackScratchCleanupOSError")
+
+    assert pdf_bytes == b"%PDF-mock"
+    assert (tmp_path / "adr_browser_pdf_scratch").is_dir()
+
+
+@pytest.mark.ado_test
 def test_export_report_as_browser_pdf_no_kwarg(adr_serverless, tmp_path):
     with pytest.raises(ADRException, match="At least one keyword argument must be provided"):
         adr_serverless.export_report_as_browser_pdf(filename=tmp_path / "browser-output.pdf")
@@ -1659,12 +2052,13 @@ def test_export_report_as_browser_pdf_no_kwarg(adr_serverless, tmp_path):
 
 @pytest.mark.ado_test
 def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypatch):
+    """Forward report, exporter, page, and installation options through one pipeline."""
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless.html_exporter import (
         ServerlessReportExporter,
     )
-    from ansys.dynamicreporting.core.serverless.pdf_renderer import (
-        PlaywrightPDFRenderer,
+    from ansys.dynamicreporting.core.utils.pdf_renderer import (
+        _OfflinePlaywrightPDFRenderer,
     )
 
     adr_serverless.create_template(BasicLayout, name="TestBrowserPDFOptions", parent=None)
@@ -1688,25 +2082,33 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     def fake_init(
         self,
         html_dir,
-        filename="index.html",
         *,
         landscape=False,
         margins=None,
+        page_size=PDFPageSize.A3,
+        width=None,
+        height=None,
         render_timeout=30.0,
+        ansys_installation=None,
+        ansys_version=None,
         logger=None,
     ):
         captured["html_dir"] = html_dir
-        captured["filename"] = filename
         captured["landscape"] = landscape
         captured["margins"] = margins
+        captured["page_size"] = page_size
+        captured["width"] = width
+        captured["height"] = height
         captured["render_timeout"] = render_timeout
+        captured["ansys_installation"] = ansys_installation
+        captured["ansys_version"] = ansys_version
         captured["logger"] = logger
 
     monkeypatch.setattr(BasicLayout, "render", fake_render)
     monkeypatch.setattr(ServerlessReportExporter, "__init__", fake_exporter_init)
     monkeypatch.setattr(ServerlessReportExporter, "export", fake_export)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "__init__", fake_init)
-    monkeypatch.setattr(PlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "__init__", fake_init)
+    monkeypatch.setattr(_OfflinePlaywrightPDFRenderer, "render_pdf", lambda self: b"%PDF-mock")
 
     margins = {"top": "8mm", "right": "14mm", "bottom": "8mm", "left": "14mm"}
     pdf_bytes = adr_serverless.render_report_as_browser_pdf(
@@ -1716,9 +2118,14 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
         dark_mode=True,
         landscape=True,
         margins=margins,
+        page_size=None,
+        width="12in",
+        height="18in",
         render_timeout=12.5,
     )
 
+    # The staged HTML settings and renderer settings are separate boundaries;
+    # pin both so a future facade change cannot drop one side of the request.
     assert pdf_bytes == b"%PDF-mock"
     exporter_kwargs = captured["exporter_kwargs"]
     assert isinstance(exporter_kwargs, dict)
@@ -1727,10 +2134,14 @@ def test_render_report_as_browser_pdf_with_page_options(adr_serverless, monkeypa
     assert exporter_kwargs["no_inline_files"] is True
     assert exporter_kwargs["dark_mode"] is True
     assert isinstance(captured["html_dir"], Path)
-    assert captured["filename"] == "index.html"
     assert captured["landscape"] is True
     assert captured["margins"] == margins
+    assert captured["page_size"] is None
+    assert captured["width"] == "12in"
+    assert captured["height"] == "18in"
     assert captured["render_timeout"] == 12.5
+    assert captured["ansys_installation"] == adr_serverless._ansys_installation
+    assert captured["ansys_version"] == adr_serverless._ansys_version
     assert captured["render_context"] == {"custom": "value", "print": "pdf"}
     assert captured["item_filter"] == "A|i_tags|cont|dp=dp227;"
     assert captured["embed_scene_data"] is False
@@ -1749,10 +2160,48 @@ def test_export_report_as_browser_pdf_uses_template_guid_default_filename(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         ADR,
-        "_render_report_as_browser_pdf_impl",
-        lambda self, **kwargs: b"%PDF-default-name",
+        "_render_template_as_browser_pdf",
+        lambda self, template, **kwargs: b"%PDF-default-name",
     )
 
     adr_serverless.export_report_as_browser_pdf(name="DefaultBrowserPDF")
 
     assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-default-name"
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_default_filename_reuses_template_lookup(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import ADR
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+    from ansys.dynamicreporting.core.serverless.template import Template
+
+    template = adr_serverless.create_template(
+        BasicLayout, name="SingleLookupBrowserPDF", parent=None
+    )
+    captured_calls: list[dict[str, str]] = []
+    rendered_templates: list[Template] = []
+    original_get = Template.get
+
+    def capture_get(**kwargs):
+        # The no-filename export path needs the template GUID after rendering. Capturing the
+        # lookup count here locks in that ADR reuses the same resolved Template object instead
+        # of querying the database a second time just to rebuild the default filename.
+        captured_calls.append(dict(kwargs))
+        return original_get(**kwargs)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Template, "get", staticmethod(capture_get))
+
+    def fake_render_pdf(self, resolved_template, **kwargs):
+        rendered_templates.append(resolved_template)
+        return b"%PDF-single-lookup"
+
+    monkeypatch.setattr(ADR, "_render_template_as_browser_pdf", fake_render_pdf)
+
+    adr_serverless.export_report_as_browser_pdf(name="SingleLookupBrowserPDF")
+
+    assert captured_calls == [{"name": "SingleLookupBrowserPDF"}]
+    assert rendered_templates == [template]
+    assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-single-lookup"

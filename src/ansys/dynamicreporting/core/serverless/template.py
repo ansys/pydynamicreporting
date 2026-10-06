@@ -48,6 +48,7 @@ from django.utils import timezone
 from ..common_utils import check_dictionary_for_html
 from ..constants import JSON_ATTR_KEYS
 from ..exceptions import ADRException, TemplateDoesNotExist, TemplateReorderOutOfBounds
+from ._visualization import _build_iframe, _display_iframe
 from .base import BaseModel, StrEnum
 
 
@@ -643,44 +644,91 @@ class Template(BaseModel):
 
         return render_to_string("reports/report_display_simple.html", context=ctx, request=request)
 
-    def render_pdf(self, *, context=None, item_filter: str = "", request=None) -> bytes:
-        """Render the template to a PDF byte stream.
+    def get_iframe(
+        self,
+        width: int | float = 1000,
+        height: int | float = 800,
+        *,
+        context=None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        request=None,
+    ) -> str:
+        """Return an inline iframe containing the rendered report.
 
         Parameters
         ----------
-        context : dict, optional
-            Additional context passed to the rendering engine.
+        width : int or float, optional
+            Iframe width. The default is 1000 pixels.
+        height : int or float, optional
+            Iframe height. The default is 800 pixels.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
         item_filter : str, optional
-            ADR query string used to select :class:`Item` instances.
-        request : HttpRequest, optional
-            Django request object, if available.
+            ADR query string used to select items for the report.
+        embed_scene_data : bool, optional
+            Whether to include full scene data in the rendered HTML.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
 
         Returns
         -------
-        bytes
-            PDF document bytes.
+        str
+            String-like iframe markup that rich display frontends render as HTML.
+        """
+        return _build_iframe(
+            self.render(
+                context=context,
+                item_filter=item_filter,
+                embed_scene_data=embed_scene_data,
+                request=request,
+            ),
+            width=width,
+            height=height,
+        )
+
+    def visualize(
+        self,
+        width: int | float = 1000,
+        height: int | float = 800,
+        *,
+        context=None,
+        item_filter: str = "",
+        embed_scene_data: bool = False,
+        request=None,
+    ) -> None:
+        """Display the rendered report inline.
+
+        Parameters
+        ----------
+        width : int or float, optional
+            Iframe width. The default is 1000 pixels.
+        height : int or float, optional
+            Iframe height. The default is 800 pixels.
+        context : dict or None, optional
+            Context dictionary passed to :meth:`render`.
+        item_filter : str, optional
+            ADR query string used to select items for the report.
+        embed_scene_data : bool, optional
+            Whether to include full scene data in the rendered HTML.
+        request : HttpRequest or None, optional
+            Django request object passed to :meth:`render`, if available.
 
         Raises
         ------
-        ADRException
-            If rendering or PDF generation fails.
+        RuntimeError
+            If IPython is unavailable.
         """
-        ctx = self._get_base_context(context, request)
-        try:
-            from data.models import Item
-            from reports.engine import TemplateEngine
-            from weasyprint import HTML
-
-            items = Item.find(query=item_filter)
-            template_obj = self._orm_instance
-            engine = template_obj.get_engine()
-            static_html = engine.dispatch_render("pdf", items, ctx)
-            # Convert rendered HTML to PDF using WeasyPrint.
-            return HTML(string=static_html).write_pdf()
-        except Exception as e:
-            raise ADRException(
-                f"Failed to render PDF for template {self.name} ({self.guid}): {e}"
-            ) from e
+        _display_iframe(
+            self.get_iframe(
+                width=width,
+                height=height,
+                context=context,
+                item_filter=item_filter,
+                embed_scene_data=embed_scene_data,
+                request=request,
+            )
+        )
 
 
 class Layout(Template):

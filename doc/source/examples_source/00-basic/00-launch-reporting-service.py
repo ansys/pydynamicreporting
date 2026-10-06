@@ -15,7 +15,7 @@ You can provide an existing, empty, directory if you intend to create a database
 import ansys.dynamicreporting.core as adr
 
 db_dir = "C:\\tmp\\my_local_db_directory"
-ansys_ins = "C:\\Program Files\\Ansys Inc\\v241"
+ansys_ins = "C:\\Program Files\\Ansys Inc\\v261"
 
 adr_service = adr.Service(ansys_installation=ansys_ins, db_directory=db_dir)
 
@@ -43,7 +43,7 @@ adr_service.stop()
 # used.
 #
 
-ansys_ins = r"C:\Program Files\Ansys Inc\v241"
+ansys_ins = r"C:\Program Files\Ansys Inc\v261"
 adr_service = adr.Service(ansys_installation=ansys_ins)
 adr_service.connect(url="http://localhost:8000", username="user", password="p455w0rd")
 

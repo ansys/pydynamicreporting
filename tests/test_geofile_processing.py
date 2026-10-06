@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 from os.path import isdir, join
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -31,27 +33,10 @@ def return_file_paths(request):
     test_path = join(request.fspath.dirname, "test_data")
     image_file = join(test_path, "aa_00_0_alpha1.png")
     scene_file = join(join(test_path, "scenes"), "scene.avz")
-    ens_file = join(test_path, "dam_break.ens")
-    evsn_file = join(test_path, "ami.evsn")
     scdoc_file = join(test_path, "viewer_test.scdoc")
     csf_file = join(test_path, "flow2d.csf")
     img_proxy = join(join(test_path, "scenes"), "proxy.png")
-    return [image_file, scene_file, ens_file, evsn_file, scdoc_file, csf_file, img_proxy]
-
-
-@pytest.mark.ado_test
-def test_get_evsn_proxy_image(request) -> None:
-    try:
-        result = gp.get_evsn_proxy_image(filename=return_file_paths(request)[6])
-        assert result is None
-    except Exception as e:
-        pytest.fail(f"get_evsn_proxy_image raised an unexpected exception: {e}")
-
-
-@pytest.mark.ado_test
-def test_get_evsn_proxy_error(request) -> None:
-    succ = gp.get_evsn_proxy_image(filename=return_file_paths(request)[5]) is None
-    assert succ
+    return [image_file, scene_file, scdoc_file, csf_file, img_proxy]
 
 
 @pytest.mark.ado_test
@@ -85,29 +70,9 @@ def test_rebuild_3d_geom_avz(request) -> None:
 
 
 @pytest.mark.ado_test
-def test_rebuild_3d_geom_ens(request) -> None:
-    _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
-    )
-    test_path = join(request.fspath.dirname, "test_data")
-    new_dir = join(test_path, "dam_break")
-    assert isdir(new_dir)
-
-
-@pytest.mark.ado_test
-def test_rebuild_3d_geom_evsn(request) -> None:
-    _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[3], unique_id="abc", exec_basis="avz"
-    )
-    test_path = join(request.fspath.dirname, "test_data")
-    new_dir = join(test_path, "ami")
-    assert isdir(new_dir)
-
-
-@pytest.mark.ado_test
 def test_rebuild_3d_geom_scdoc(request) -> None:
     _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[4], unique_id="abc", exec_basis="avz"
+        csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
     )
     test_path = join(request.fspath.dirname, "test_data")
     new_dir = join(test_path, "viewer_test")
@@ -116,7 +81,7 @@ def test_rebuild_3d_geom_scdoc(request) -> None:
 
 def test_rebuild_3d_geom_scdoc_second(request) -> None:
     _ = gp.rebuild_3d_geometry(
-        csf_file=return_file_paths(request)[4], unique_id="abc", exec_basis="avz"
+        csf_file=return_file_paths(request)[2], unique_id="abc", exec_basis="avz"
     )
     test_path = join(request.fspath.dirname, "test_data")
     new_dir = join(test_path, "viewer_test")
@@ -127,7 +92,7 @@ def test_rebuild_3d_geom_csf(request, get_exec) -> None:
     exec_basis = get_exec
     if exec_basis:
         _ = gp.rebuild_3d_geometry(
-            csf_file=return_file_paths(request)[5], unique_id="abc", exec_basis=exec_basis
+            csf_file=return_file_paths(request)[3], unique_id="abc", exec_basis=exec_basis
         )
         test_path = join(request.fspath.dirname, "test_data")
         new_dir = join(test_path, "flow2d")
@@ -136,3 +101,37 @@ def test_rebuild_3d_geom_csf(request, get_exec) -> None:
         # If there is no local installation, then skip this as we do not have
         # the cei_apex???_udrw3avz executable available
         assert True
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize(
+    ("settings_values", "expected_version"),
+    [
+        ({"ADR_VERSION": "271", "CEI_APEX_SUFFIX": "261"}, "271"),
+        ({"CEI_APEX_SUFFIX": "261"}, "261"),
+    ],
+)
+def test_rebuild_3d_geometry_uses_supported_version_setting(
+    monkeypatch, tmp_path, settings_values, expected_version
+) -> None:
+    monkeypatch.setattr(gp, "settings", SimpleNamespace(**settings_values))
+    monkeypatch.setattr(gp, "is_enve", False)
+    monkeypatch.setattr(gp.platform, "system", lambda: "Linux")
+
+    def create_empty_avz(command, **kwargs):
+        with gp.zipfile.ZipFile(command[-1], "w"):
+            pass
+        return 0
+
+    converter_call = Mock(side_effect=create_empty_avz)
+    monkeypatch.setattr(gp.subprocess, "call", converter_call)
+    csf_file = tmp_path / "scene.csf"
+    csf_file.touch()
+    product_root = tmp_path / "product"
+
+    gp.rebuild_3d_geometry(csf_file=str(csf_file), exec_basis=str(product_root))
+
+    converter_call.assert_called_once()
+    assert converter_call.call_args.args[0][0] == str(
+        product_root / "bin" / f"cei_apex{expected_version}_udrw2avz"
+    )

@@ -32,11 +32,9 @@ def return_file_paths(request) -> list:
     test_path = join(request.fspath.dirname, "test_data")
     image_file = join(test_path, "aa_00_0_alpha1.png")
     scene_file = join(join(test_path, "scenes"), "scene.avz")
-    ens_file = join(test_path, "dam_break.ens")
-    evsn_file = join(test_path, "ami.evsn")
     scdoc_file = join(test_path, "viewer_test.scdoc")
     csf_file = join(test_path, "flow2d.csf")
-    return [image_file, scene_file, ens_file, evsn_file, scdoc_file, csf_file]
+    return [image_file, scene_file, scdoc_file, csf_file]
 
 
 @pytest.mark.ado_test
@@ -68,39 +66,6 @@ def test_env_arch() -> None:
 def test_enve_home() -> None:
     enve_home = ru.enve_home()
     assert "ansys" in enve_home
-
-
-@pytest.mark.ado_test
-def test_ceiversion_nexus_suffix() -> None:
-    suffix = ru.ceiversion_nexus_suffix()
-    try:
-        int_suffix = int(suffix)
-        success = True
-    except Exception:  # nosec
-        success = False
-    assert success and int_suffix / 100 < 10
-
-
-@pytest.mark.ado_test
-def test_ceiversion_apex_suffix() -> None:
-    suffix = ru.ceiversion_apex_suffix()
-    try:
-        int_suffix = int(suffix)
-        success = True
-    except Exception:  # nosec
-        success = False
-    assert success and int_suffix / 100 < 10
-
-
-@pytest.mark.ado_test
-def test_ceiversion_ensight_suffix() -> None:
-    suffix = ru.ceiversion_ensight_suffix()
-    try:
-        int_suffix = int(suffix)
-        success = True
-    except Exception:  # nosec
-        success = False
-    assert success and int_suffix / 100 < 10
 
 
 @pytest.mark.ado_test

@@ -43,13 +43,15 @@ templates, and report exports.
 """
 
 import copy
+import importlib
 import json
 import os
 import platform
+import re
 import shutil
 import sys
 import tempfile
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable
 import uuid
 import warnings
 from collections.abc import Iterable
@@ -68,7 +70,7 @@ from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..compatibility import get_compatibility_warning_for_install_version
-from ..common_utils import populate_template, resolve_install_info
+from ..common_utils import PDFPageSize, populate_template, resolve_install_info
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -82,13 +84,16 @@ from ..exceptions import (
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 
+if TYPE_CHECKING:
+    from ..utils.json_import import ImportResult
+
 
 class ADR:
     """
     Ansys Dynamic Reporting (ADR) class.
 
     This class provides a high-level API for interacting with ADR without
-    running the full web server. It encapsulates Django setup,
+    running the full web server. It encapsulates setup,
     database configuration, media/static configuration, and report
     rendering/export.
 
@@ -106,7 +111,7 @@ class ADR:
         Directory for a local SQLite database (and media subdirectory).
         Either this or ``databases`` is required unless ``in_memory=True``.
     databases : dict, optional
-        Full Django ``DATABASES`` configuration. If provided, it replaces
+        Full ``DATABASES`` configuration. If provided, it replaces
         the default SQLite configuration. Must include a ``"default"`` key.
     media_directory : str, optional
         Directory where uploaded media files are stored. If omitted, ADR
@@ -120,22 +125,28 @@ class ADR:
     static_url : str, default: "/static/"
         Base URL (relative) for serving static files.
     debug : bool, optional
-        Explicit Django DEBUG flag. If omitted, the value from the ADR
+        Explicit DEBUG flag. If omitted, the value from the ADR
         settings module is used.
     opts : dict, optional
         Extra environment variables to inject into :mod:`os.environ`
         before setup.
     request : HttpRequest, optional
-        Django request object, useful when ADR is used in a web context.
+        Request object, useful when ADR is used in a web context.
     logfile : str, optional
-        Path to the log file. If omitted, logging typically goes to stderr.
+        Deprecated alias for ``log_output``.
     docker_image : str, optional
         Docker image URL to use when ``ansys_installation="docker"``.
-        Defaults to :data:`DOCKER_REPO_URL`.
+        This argument is required when ``ansys_installation="docker"``.
     in_memory : bool, default: False
         If ``True``, ADR configures an in-memory SQLite database and
         temporary media/static directories, suitable for tests or
         ephemeral usage.
+    log_output : str or os.PathLike, optional
+        File path or ``"stdout"`` for ADR logs. The default is ``None``, which
+        adds no output handler.
+    log_level : int or str, optional
+        Level for the shared ADR logger. The default is ``None``, which leaves
+        the caller's logging level unchanged.
 
     Raises
     ------
@@ -153,7 +164,7 @@ class ADR:
     --------
     Basic local SQLite usage::
 
-        install_loc = r"C:\\Program Files\\ANSYS Inc\\v252"
+        install_loc = r"C:\\Program Files\\ANSYS Inc\\v261"
         db_dir = r"C:\\DBs\\docex"
         from ansys.dynamicreporting.core.serverless import ADR, String, BasicLayout
 
@@ -213,6 +224,8 @@ class ADR:
         logfile: str | None = None,
         docker_image: str | None = None,
         in_memory: bool = False,
+        log_output: str | os.PathLike[str] | None = None,
+        log_level: int | str | None = None,
     ) -> None:
         # Basic attributes / configuration.
         self._db_directory = None
@@ -224,7 +237,13 @@ class ADR:
         self._request = request  # Used when ADR is embedded in a web server.
         self._session: Session | None = None
         self._dataset: Dataset | None = None
-        self._logger = get_logger(logfile)
+        self._runtime_compat_restore: Callable[[], None] | None = None
+        self._embedded_python_version: tuple[int, int] | None = None
+        self._logger = get_logger(
+            logfile,
+            log_output=log_output,
+            log_level=log_level,
+        )
         self._tmp_dirs: list[tempfile.TemporaryDirectory] = []
         self._in_memory = in_memory
 
@@ -243,9 +262,9 @@ class ADR:
                 }
             }
             # Ephemeral media/static directories.
-            tmp_media_dir = tempfile.TemporaryDirectory()
+            tmp_media_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             self._media_directory = self._check_dir(Path(tmp_media_dir.name))
-            tmp_static_dir = tempfile.TemporaryDirectory()
+            tmp_static_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             self._static_directory = self._check_dir(Path(tmp_static_dir.name))
             self._tmp_dirs.extend([tmp_media_dir, tmp_static_dir])
         else:
@@ -335,7 +354,7 @@ class ADR:
             # Copy installation from container to a local temp directory.
             # New Docker images use /Nexus/ADR, legacy images use /Nexus/CEI.
             # Try the new path first, then fall back to the legacy path.
-            tmp_install_dir = tempfile.TemporaryDirectory()
+            tmp_install_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             self._tmp_dirs.append(tmp_install_dir)
             try:
                 docker_launcher.copy_to_host("/Nexus/ADR", dest=tmp_install_dir.name)
@@ -354,28 +373,28 @@ class ADR:
             except Exception as e:
                 self._logger.warning(f"Problem shutting down container/service: {str(e)}")
 
-            install_resolution = resolve_install_info(
+            resolved_install = resolve_install_info(
                 ansys_installation=tmp_install_dir.name,
                 ansys_version=ansys_version,
             )
-            install_dir, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+            product_root, self._ansys_version = (
+                resolved_install.install_dir,
+                resolved_install.version,
             )
         else:
-            # Local installation.
-            install_resolution = resolve_install_info(
+            # Local ADR product root.
+            resolved_install = resolve_install_info(
                 ansys_installation=ansys_installation,
                 ansys_version=ansys_version,
             )
-            install_dir, self._ansys_version = (
-                install_resolution.install_dir,
-                install_resolution.version,
+            product_root, self._ansys_version = (
+                resolved_install.install_dir,
+                resolved_install.version,
             )
 
-        if install_dir is None:
+        if product_root is None:
             raise InvalidAnsysPath(f"Unable to detect an installation in: {ansys_installation}")
-        self._ansys_installation = Path(install_dir)
+        self._ansys_installation = Path(product_root)
         # Mirror the service-mode check: warn after resolving the install
         # version, but do not block setup for an otherwise valid installation.
         #
@@ -396,7 +415,7 @@ class ADR:
 
     @staticmethod
     def _migrate_db(db: str) -> None:
-        """Run Django migrations for the given database alias.
+        """Run db migrations for the given database alias.
 
         For the ``"default"`` database, a ``nexus`` superuser and group
         (with all permissions) is created if none exists.
@@ -422,7 +441,7 @@ class ADR:
 
     @classmethod
     def get_database_config(cls: type["ADR"], raise_exception: bool = False) -> dict | None:
-        """Return the Django ``DATABASES`` configuration, if available.
+        """Return the multi database configuration, if available.
 
         Parameters
         ----------
@@ -433,24 +452,31 @@ class ADR:
         Returns
         -------
         dict or None
-            The ``DATABASES`` mapping, or ``None`` if settings are not
+            The database configuration mapping, or ``None`` if settings are not
             configured and ``raise_exception`` is ``False``.
 
         Raises
         ------
         ImproperlyConfiguredError
-            If Django settings are not configured and
+            If settings are not configured and
             ``raise_exception=True``.
         """
         try:
             from django.conf import settings
 
             return settings.DATABASES
-        except ImproperlyConfigured as e:
+        except ImproperlyConfigured as exc:
             if raise_exception:
+                # Surface a clean ADR setup error while preserving Django's exception as the
+                # chained cause for debugging.
+                # This is a classmethod, so use the module logger accessor, not ``self._logger``.
+                get_logger().debug(
+                    "Settings are not configured; ADR setup() has not run.",
+                    exc_info=True,
+                )
                 raise ImproperlyConfiguredError(
                     "The ADR instance has not been set up. Call setup() first."
-                ) from e
+                ) from exc
             return None
 
     def _is_sqlite(self, database: str) -> bool:
@@ -498,16 +524,157 @@ class ADR:
         if cls._instance is None or not cls._is_setup:
             raise RuntimeError("ADR has not been set up. Instantiate ADR first and call setup().")
 
+    @staticmethod
+    def _import_enve(candidate_paths: Iterable[Path]) -> ImportError | None:
+        """Import the native ``enve`` module from available product paths.
+
+        A failed native-module import can leave a partially initialized
+        ``enve_common`` package, its directory on ``sys.path``, and a
+        ``CEI_UDILPATH`` environment setting. Restore those between candidates
+        so that one unusable product installation does not prevent a later
+        compatible candidate from loading.
+
+        Parameters
+        ----------
+        candidate_paths : Iterable[Path]
+            Product directories that might contain the ``enve_common`` package
+            or a directly importable ``enve`` module.
+
+        Returns
+        -------
+        ImportError | None
+            The final import error when ``enve`` cannot load; otherwise,
+            ``None``.
+        """
+        try:
+            importlib.import_module("enve")
+        except ImportError as error:
+            last_error = error
+        else:
+            return None
+
+        for path in candidate_paths:
+            if not path.is_dir():
+                continue
+
+            original_sys_path = sys.path.copy()
+            original_udi_path = os.environ.get("CEI_UDILPATH")
+            old_enve_modules = {
+                name: module
+                for name, module in sys.modules.items()
+                if name in ("enve", "enve_common") or name.startswith("enve_common.")
+            }
+            for name in old_enve_modules:
+                sys.modules.pop(name, None)
+
+            sys.path.insert(0, str(path))
+            try:
+                # Newer product packaging exposes enve as a submodule.
+                importlib.import_module("enve_common.enve")
+            except ImportError:
+                try:
+                    # Older product packaging exposes enve directly.
+                    importlib.import_module("enve")
+                except ImportError as error:
+                    last_error = error
+                else:
+                    return None
+            else:
+                return None
+
+            sys.path[:] = original_sys_path
+            for name in tuple(sys.modules):
+                if name in ("enve", "enve_common") or name.startswith("enve_common."):
+                    sys.modules.pop(name)
+            sys.modules.update(old_enve_modules)
+            if original_udi_path is None:
+                os.environ.pop("CEI_UDILPATH", None)
+            else:
+                os.environ["CEI_UDILPATH"] = original_udi_path
+
+        return last_error
+
+    @staticmethod
+    def _get_embedded_python_version(
+        ansys_installation: Path, ansys_version: int
+    ) -> tuple[int, int] | None:
+        """Return the Python major/minor version bundled with an ADR installation.
+
+        Parameters
+        ----------
+        ansys_installation : Path
+            Resolved ADR or CEI product root.
+        ansys_version : int
+            Resolved three-digit Ansys product version.
+
+        Returns
+        -------
+        tuple[int, int] | None
+            The first Python major/minor version found in the product's Apex
+            machine runtime directory, or ``None`` when none is found.
+        """
+        machine_directory = (
+            "win64" if platform.system().lower().startswith("win") else "linux_2.6_64"
+        )
+        runtime_directory = (
+            ansys_installation / f"apex{ansys_version}" / "machines" / machine_directory
+        )
+        try:
+            for runtime_path in runtime_directory.glob("[Pp]ython-*"):
+                if not runtime_path.is_dir():
+                    continue
+                match = re.fullmatch(
+                    r"python-(\d+)\.(\d+)(?:\.\d+)?", runtime_path.name, flags=re.IGNORECASE
+                )
+                if match:
+                    return (int(match.group(1)), int(match.group(2)))
+        except OSError:
+            return None
+        return None
+
+    @staticmethod
+    def _get_embedded_python_mismatch_message(
+        embedded_python_version: tuple[int, int] | None,
+        active_python_version: tuple[int, int],
+    ) -> str | None:
+        """Return a compatibility message when Python cannot match the product runtime."""
+        if embedded_python_version is None or active_python_version == embedded_python_version:
+            return None
+
+        embedded_version_text = f"{embedded_python_version[0]}.{embedded_python_version[1]}"
+        active_version_text = f"{active_python_version[0]}.{active_python_version[1]}"
+        return (
+            f"Serverless ADR is running on Python {active_version_text}, but the Ansys "
+            f"installation bundles Python {embedded_version_text} for native components. "
+            "Some serverless components may not work correctly unless the Python major.minor "
+            "versions match."
+        )
+
+    def _warn_for_embedded_python_mismatch(self) -> None:
+        """Warn when the active interpreter differs from the product runtime."""
+        self._embedded_python_version = self._get_embedded_python_version(
+            self._ansys_installation, self._ansys_version
+        )
+        active_python_version = (sys.version_info.major, sys.version_info.minor)
+        warning_message = self._get_embedded_python_mismatch_message(
+            self._embedded_python_version, active_python_version
+        )
+        if warning_message is None:
+            return
+
+        self._logger.warning(warning_message)
+        warnings.warn(warning_message, UserWarning, stacklevel=2)
+
     def setup(self, collect_static: bool = False) -> None:
-        """Configure Django and perform ADR initialization.
+        """Configure perform ADR initialization.
 
         This method:
 
-        * Optionally locates and imports the ``enve`` module for geometry.
-        * Adds the Nexus Django directory to ``sys.path`` and imports
+        * Locates and imports the ``enve`` module used by animation rendering.
+        * Adds the Nexus directory to ``sys.path`` and imports
           the serverless settings module.
-        * Builds an overrides dict and calls :func:`django.conf.settings.configure`.
-        * Runs Django migrations for all configured databases.
+        * Runs configuration
+        * Runs database migrations for all configured databases.
         * Runs geometry migration/update checks.
         * Optionally collects static files to :attr:`_static_directory`.
         * Creates a default :class:`Session` and :class:`Dataset`.
@@ -520,7 +687,7 @@ class ADR:
         Raises
         ------
         ImportError
-            If the Nexus Django settings could not be imported.
+            If the Nexus settings could not be imported.
         DatabaseMigrationError
             If migrations fail on any database.
         GeometryMigrationError
@@ -533,232 +700,246 @@ class ADR:
         if ADR._is_setup:
             raise RuntimeError("ADR has already been configured. setup() can only be called once.")
 
-        # Try to import 'enve', optionally adding paths based on installation layout.
-        try:
-            import enve  # type: ignore[unused-ignore]
-        except ImportError:
-            # On Windows/Linux, attempt known Ansys paths.
-            if platform.system().lower().startswith("win"):
-                dirs_to_check = [
-                    # Windows path from commonfiles
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "ensight_components"
-                    / "winx64",
-                    # Old Windows path
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "fluids"
-                    / "ensight_components"
-                    / "winx64",
-                    # Windows path from apex folder (new ADR layout)
-                    self._ansys_installation
-                    / f"apex{self._ansys_version}"
-                    / "machines"
-                    / "win64"
-                    / "CEI",
-                    # Windows path from apex folder (legacy CEI layout, same subdir name)
-                    # Note: the inner "CEI" directory under machines/ is unchanged
-                    # in both old and new layouts.
-                ]
-            else:  # Linux
-                dirs_to_check = [
-                    # Linux path from commonfiles
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "ensight_components"
-                    / "linx64",
-                    # Old Linux path
-                    self._ansys_installation.parent
-                    / "commonfiles"
-                    / "fluids"
-                    / "ensight_components"
-                    / "linx64",
-                    # Linux path from apex folder (the inner 'CEI' directory
-                    # under machines/ is unchanged in both ADR and CEI layouts)
-                    self._ansys_installation
-                    / f"apex{self._ansys_version}"
-                    / "machines"
-                    / "linux_2.6_64"
-                    / "CEI",
-                ]
+        # Try to import native 'enve', adding paths based on installation layout.
+        if platform.system().lower().startswith("win"):
+            dirs_to_check = [
+                # Windows path from commonfiles
+                self._ansys_installation.parent / "commonfiles" / "ensight_components" / "winx64",
+                # Old Windows path
+                self._ansys_installation.parent
+                / "commonfiles"
+                / "fluids"
+                / "ensight_components"
+                / "winx64",
+                # Windows path from apex folder (new ADR layout)
+                self._ansys_installation
+                / f"apex{self._ansys_version}"
+                / "machines"
+                / "win64"
+                / "CEI",
+                # Windows path from apex folder (legacy CEI layout, same subdir name)
+                # Note: the inner "CEI" directory under machines/ is unchanged
+                # in both old and new layouts.
+            ]
+        else:  # Linux
+            dirs_to_check = [
+                # Linux path from commonfiles
+                self._ansys_installation.parent / "commonfiles" / "ensight_components" / "linx64",
+                # Old Linux path
+                self._ansys_installation.parent
+                / "commonfiles"
+                / "fluids"
+                / "ensight_components"
+                / "linx64",
+                # Linux path from apex folder (the inner 'CEI' directory
+                # under machines/ is unchanged in both ADR and CEI layouts)
+                self._ansys_installation
+                / f"apex{self._ansys_version}"
+                / "machines"
+                / "linux_2.6_64"
+                / "CEI",
+            ]
 
-            module_found = False
-            for path in dirs_to_check:
-                if path.is_dir():
-                    sys.path.append(str(path))
-                    module_found = True
-                    break
+        self._warn_for_embedded_python_mismatch()
+        enve_error = self._import_enve(dirs_to_check)
+        if enve_error is not None:
+            msg = (
+                "Animation rendering is unavailable because 'enve' could not be imported from "
+                f"the Ansys installation: {enve_error}"
+            )
+            self._logger.warning(msg)
+            warnings.warn(msg, UserWarning, stacklevel=2)
 
-            if module_found:
-                try:
-                    # Newer packaging style.
-                    from enve_common import enve  # type: ignore[unused-ignore]
-                except ImportError:
-                    try:
-                        # Fallback to direct import.
-                        import enve  # type: ignore[unused-ignore]
-                    except ImportError as e:
-                        msg = (
-                            "Failed to import 'enve' from the Ansys installation. "
-                            f"Animations may not render correctly: {e}"
-                        )
-                        self._logger.warning(msg)
-                        warnings.warn(msg, ImportWarning)
+        from ._compat import apply_runtime_compatibility_shims, sanitize_settings
 
-        # Add the Nexus Django folder to sys.path and import settings.
+        # Resolve the product Django path before enabling any process-wide
+        # runtime shims so missing installs fail without changing process state.
+        adr_path_added = False
         try:
             adr_path = (
                 self._ansys_installation / f"nexus{self._ansys_version}" / "django"
             ).resolve(strict=True)
-            sys.path.append(str(adr_path))
+            adr_path_string = str(adr_path)
+            if adr_path_string not in sys.path:
+                sys.path.append(adr_path_string)
+                adr_path_added = True
+
+            # Apply runtime compatibility shims before importing the product's Django modules.
+            self._runtime_compat_restore = apply_runtime_compatibility_shims(self._ansys_version)
             from ceireports import settings_serverless
-        except (ImportError, OSError) as e:
-            raise ImportError(f"Failed to import ADR from the Ansys installation: {e}")
+        except BaseException as e:  # Restore shims even when notebook setup is interrupted.
+            self._restore_runtime_compatibility_shims()
+            if adr_path_added:
+                sys.path.remove(adr_path_string)
+            if isinstance(e, (AttributeError, ImportError, OSError, TypeError, ValueError)):
+                raise ImportError(
+                    f"Failed to initialize ADR from the Ansys installation: {e}"
+                ) from e
+            raise
 
-        overrides = {}
-        for setting in dir(settings_serverless):
-            if setting.isupper():
-                overrides[setting] = getattr(settings_serverless, setting)
-
-        # Allow explicit override of DEBUG.
-        if self._debug is not None:
-            overrides["DEBUG"] = self._debug
-
-        # Override MEDIA_ROOT for serverless mode.
-        overrides["MEDIA_ROOT"] = str(self._media_directory)
-
-        # Configure static if a directory is provided.
-        if self._static_directory is not None:
-            # collect static files to this directory
-            overrides["STATIC_ROOT"] = str(self._static_directory)
-            # Replace STATICFILES_DIRS to only include the pre-collected directory
-            # from the Ansys installation.
-            source_static_dir = (
-                self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
-            )
-            if not source_static_dir.exists():
-                raise ImproperlyConfiguredError(
-                    f"The static files directory '{source_static_dir}' does not exist in the "
-                    "installation. Please check your Ansys installation and version."
-                )
-            overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
-
-        # Enforce relative media/static URLs.
-        if self._media_url is not None:
-            if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
-                raise ImproperlyConfiguredError(
-                    "The 'media_url' option must be a relative URL and start and end with a "
-                    "forward slash. Example: '/media/'"
-                )
-            overrides["MEDIA_URL"] = self._media_url
-
-        if self._static_url is not None:
-            if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
-                raise ImproperlyConfiguredError(
-                    "The 'static_url' option must be a relative URL and start and end with a "
-                    "forward slash. Example: '/static/'"
-                )
-            overrides["STATIC_URL"] = self._static_url
-
-        # Inject explicit database configuration if provided.
-        if self._databases:
-            if "default" not in self._databases:
-                raise ImproperlyConfiguredError(
-                    """The 'databases' option must be a dictionary of the following format with
-                    a "default" database specified.
-
-                {
-                    "default": {
-                        "ENGINE": "sqlite3",
-                        "NAME": os.path.join(local_db_dir, "db.sqlite3"),
-                        "USER": "user",
-                        "PASSWORD": "adr",
-                        "HOST": "",
-                        "PORT": "",
-                    }
-                    "remote": {
-                        "ENGINE": "postgresql",
-                        "NAME": "my_database",
-                        "USER": "user",
-                        "PASSWORD": "adr",
-                        "HOST": "127.0.0.1",
-                        "PORT": "5432",
-                    }
-                }
-                """
-                )
-            for db in self._databases:
-                engine = self._databases[db]["ENGINE"]
-                self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"
-            # replace the database config
-            overrides["DATABASES"] = self._databases
-
-        # In-memory media storage configuration (no on-disk files).
-        if self._in_memory:
-            overrides.update(
-                {
-                    "DEFAULT_FILE_STORAGE": "django.core.files.storage.InMemoryStorage",
-                    "FILE_UPLOAD_HANDLERS": [
-                        "django.core.files.uploadhandler.MemoryFileUploadHandler"
-                    ],
-                    "FILE_UPLOAD_MAX_MEMORY_SIZE": 1 * 10**9,  # 1 GB
-                }
-            )
-
-        # Work around Linux timezone issues when needed.
-        report_utils.apply_timezone_workaround()
-
-        # === Settings compatibility shim ===
-        from ._compat import sanitize_settings
-
-        overrides = sanitize_settings(overrides)
-
-        # Django settings + setup.
         try:
-            from django.conf import settings
+            overrides = {}
+            for setting in dir(settings_serverless):
+                if setting.isupper():
+                    overrides[setting] = getattr(settings_serverless, setting)
 
-            if not settings.configured:
-                import django
+            # Allow explicit override of DEBUG.
+            if self._debug is not None:
+                overrides["DEBUG"] = self._debug
 
-                settings.configure(**overrides)
-                django.setup()
-        except ImproperlyConfigured as e:
-            raise ImproperlyConfiguredError(extra_detail=str(e))
+            # Override MEDIA_ROOT for serverless mode.
+            overrides["MEDIA_ROOT"] = str(self._media_directory)
 
-        # Run migrations.
-        database_config = self.get_database_config()
-        if database_config:
-            for db in database_config:
-                self._migrate_db(db)
-        elif self._db_directory is not None:
-            self._migrate_db("default")
-
-        # Geometry migration/update checks.
-        try:
-            from data.geofile_rendering import do_geometry_update_check
-
-            do_geometry_update_check(self._logger.info)
-        except Exception as e:
-            raise GeometryMigrationError(extra_detail=str(e))
-
-        # Optionally collect static files.
-        if collect_static:
-            if self._static_directory is None:
-                raise ImproperlyConfiguredError(
-                    "The 'static_directory' option must be specified to collect static files."
+            # Configure static if a directory is provided.
+            if self._static_directory is not None:
+                # collect static files to this directory
+                overrides["STATIC_ROOT"] = str(self._static_directory)
+                # Replace STATICFILES_DIRS to only include the pre-collected directory
+                # from the Ansys installation.
+                source_static_dir = (
+                    self._ansys_installation / f"nexus{self._ansys_version}" / "django" / "static"
                 )
+                if not source_static_dir.exists():
+                    raise ImproperlyConfiguredError(
+                        f"The static files directory '{source_static_dir}' does not exist in the "
+                        "installation. Please check your Ansys installation and version."
+                    )
+                overrides["STATICFILES_DIRS"] = [str(source_static_dir)]
+
+            # Enforce relative media/static URLs.
+            if self._media_url is not None:
+                if not self._media_url.startswith("/") or not self._media_url.endswith("/"):
+                    raise ImproperlyConfiguredError(
+                        "The 'media_url' option must be a relative URL and start and end with a "
+                        "forward slash. Example: '/media/'"
+                    )
+                overrides["MEDIA_URL"] = self._media_url
+
+            if self._static_url is not None:
+                if not self._static_url.startswith("/") or not self._static_url.endswith("/"):
+                    raise ImproperlyConfiguredError(
+                        "The 'static_url' option must be a relative URL and start and end with a "
+                        "forward slash. Example: '/static/'"
+                    )
+                overrides["STATIC_URL"] = self._static_url
+
+            # Inject explicit database configuration if provided.
+            if self._databases:
+                if "default" not in self._databases:
+                    raise ImproperlyConfiguredError(
+                        """The 'databases' option must be a dictionary of the following format with
+                        a "default" database specified.
+
+                    {
+                        "default": {
+                            "ENGINE": "sqlite3",
+                            "NAME": os.path.join(local_db_dir, "db.sqlite3"),
+                            "USER": "user",
+                            "PASSWORD": "adr",
+                            "HOST": "",
+                            "PORT": "",
+                        }
+                        "remote": {
+                            "ENGINE": "postgresql",
+                            "NAME": "my_database",
+                            "USER": "user",
+                            "PASSWORD": "adr",
+                            "HOST": "127.0.0.1",
+                            "PORT": "5432",
+                        }
+                    }
+                    """
+                    )
+                for db in self._databases:
+                    engine = self._databases[db]["ENGINE"]
+                    self._databases[db]["ENGINE"] = f"django.db.backends.{engine}"
+                # replace the database config
+                overrides["DATABASES"] = self._databases
+
+            # In-memory media storage configuration (no on-disk files).
+            if self._in_memory:
+                overrides.update(
+                    {
+                        "DEFAULT_FILE_STORAGE": "django.core.files.storage.InMemoryStorage",
+                        "FILE_UPLOAD_HANDLERS": [
+                            "django.core.files.uploadhandler.MemoryFileUploadHandler"
+                        ],
+                        "FILE_UPLOAD_MAX_MEMORY_SIZE": 1 * 10**9,  # 1 GB
+                    }
+                )
+
+            # Work around Linux timezone issues when needed.
+            report_utils.apply_timezone_workaround()
+
+            # === Settings compatibility shim ===
+            overrides = sanitize_settings(overrides)
+
+            # Django settings + setup.
             try:
-                call_command("collectstatic", "--no-input", "--verbosity", 0)
+                from django.conf import settings
+
+                if not settings.configured:
+                    import django
+
+                    settings.configure(**overrides)
+                    django.setup()
+            except ImproperlyConfigured as e:
+                self._logger.debug(
+                    "Settings could not be configured during ADR setup.",
+                    exc_info=True,
+                )
+                raise ImproperlyConfiguredError(extra_detail=str(e)) from e
+
+            # Run migrations.
+            database_config = self.get_database_config()
+            if database_config:
+                for db in database_config:
+                    self._migrate_db(db)
+            elif self._db_directory is not None:
+                self._migrate_db("default")
+
+            # Geometry migration/update checks.
+            try:
+                from data.geofile_rendering import do_geometry_update_check
+
+                do_geometry_update_check(self._logger.info)
             except Exception as e:
-                raise StaticFilesCollectionError(extra_detail=str(e))
+                raise GeometryMigrationError(extra_detail=str(e))
 
-        # Mark setup as complete and create default session/dataset.
-        ADR._is_setup = True
+            # Optionally collect static files.
+            if collect_static:
+                if self._static_directory is None:
+                    raise ImproperlyConfiguredError(
+                        "The 'static_directory' option must be specified to collect static files."
+                    )
+                try:
+                    call_command("collectstatic", "--no-input", "--verbosity", 0)
+                except Exception as e:
+                    raise StaticFilesCollectionError(extra_detail=str(e))
 
-        # create session and dataset w/ defaults
-        self._session = Session.create()
-        self._dataset = Dataset.create()
+            # create session and dataset w/ defaults
+            ADR._is_setup = True
+            self._session = Session.create()
+            self._dataset = Dataset.create()
+        except BaseException:  # Restore shims and setup state on interruption too.
+            ADR._is_setup = False
+            self._session = None
+            self._dataset = None
+            self._restore_runtime_compatibility_shims()
+            self._logger.debug(
+                "ADR could not complete setup.",
+                exc_info=True,
+            )
+            raise
+
+    def _restore_runtime_compatibility_shims(self) -> None:
+        """Restore any temporary process-wide compatibility shims."""
+        if self._runtime_compat_restore is None:
+            return
+
+        restore = self._runtime_compat_restore
+        self._runtime_compat_restore = None
+        restore()
 
     def close(self) -> None:
         """Close DB connections and clean up any temporary directories.
@@ -772,9 +953,14 @@ class ADR:
         except DatabaseError:  # pragma: no cover
             pass
 
+        self._restore_runtime_compatibility_shims()
+
         # Clean up any TemporaryDirectory objects we created.
         for tmp_dir in self._tmp_dirs:
-            tmp_dir.cleanup()
+            try:
+                tmp_dir.cleanup()
+            except OSError:
+                self._logger.debug("Failed to clean up temporary ADR directory.", exc_info=True)
 
     def backup_database(
         self,
@@ -842,7 +1028,7 @@ class ADR:
         input_file : str or Path
             Path to the dump file.
         database : str, default: "default"
-            Django database alias to restore into.
+            Database alias to restore into.
 
         Raises
         ------
@@ -986,6 +1172,17 @@ class ADR:
         )
 
     @staticmethod
+    def get_item_count() -> int:
+        """Return the total number of items in the default database.
+
+        Returns
+        -------
+        int
+            Number of persisted :class:`Item` objects.
+        """
+        return Item._orm_model_cls.objects.count()
+
+    @staticmethod
     def _create_template_with_parent(template_type: type[Template], **kwargs: Any) -> Template:
         """Internal helper to create a template and attach it to its parent."""
         template = template_type.create(**kwargs)
@@ -1025,6 +1222,20 @@ class ADR:
                 "At least one keyword argument must be provided to create the template."
             )
         return ADR._create_template_with_parent(template_type, **kwargs)
+
+    @staticmethod
+    def get_report_count() -> int:
+        """Return the number of top-level reports in the default database.
+
+        A report is a root :class:`Template` with no parent. Child templates
+        are not included in the count.
+
+        Returns
+        -------
+        int
+            Number of persisted root templates.
+        """
+        return Template._orm_model_cls.objects.filter(parent=None).count()
 
     def _populate_template(self, id_str, attr, parent_template) -> Template:
         """Internal helper to create a :class:`Template` from JSON attributes.
@@ -1103,27 +1314,70 @@ class ADR:
         root_template.save()
         self._build_templates_from_parent(root_id_str, root_template, templates)
 
-    def import_from_json(self, json_file_path: str | Path, *, on_error: str = "collect") -> Any:
-        """Import an ADR exchange JSON document into the current ADR database.
+    def import_from_json(
+        self,
+        json_file_path: str | Path,
+        *,
+        on_error: str = "collect",
+        base_dir: str | None = None,
+        strict_keys: bool = False,
+    ) -> "ImportResult":
+        """Import ADR report items from a JSON document into this serverless database.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
+
+        Report structure is out of scope: use
+        :meth:`load_templates_from_file` to import report templates.
 
         Parameters
         ----------
-        json_file_path : str or Path
+        json_file_path : str or pathlib.Path
             Path to the JSON document.
-        on_error : str, default="collect"
-            Strategy for item-level failures: ``"collect"`` keeps going and records the
-            failures, while ``"raise"`` raises at the first failure.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing ``json_file_path``.
+        strict_keys : bool, default: False
+            Treat unknown keys in the document as validation errors.
 
         Returns
         -------
-        Any
-            Import summary from the exchange importer.
-        """
-        from .exchange_importer import ExchangeImporter
-        from .exchange_backend import ServerlessExchangeBackend
+        ImportResult
+            Counts and any per-item failures.
 
-        importer = ExchangeImporter(ServerlessExchangeBackend(self))
-        return importer.import_file(json_file_path, on_error=on_error)
+        Raises
+        ------
+        ImportValidationError
+            If the document violates the import contract.
+        ImportVersionError
+            If the document schema version is unsupported.
+
+        Examples
+        --------
+        ::
+
+            from ansys.dynamicreporting.core.serverless import ADR
+
+            adr = ADR(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
+            adr.setup()
+            result = adr.import_from_json('report.json')
+            print(result.items_saved, result.ok)
+        """
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from ..utils.json_import.importer import JSONImporter
+        from .import_backend import ServerlessImportBackend
+
+        importer = JSONImporter(ServerlessImportBackend(self))
+        return importer.import_file(
+            json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
+        )
 
     @staticmethod
     def get_report(**kwargs) -> Template:
@@ -1243,7 +1497,7 @@ class ADR:
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> html_content = adr.render_report(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.html", "w", encoding="utf-8") as f:
         ...     f.write(html_content)
@@ -1295,7 +1549,7 @@ class ADR:
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> pptx_stream = adr.render_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         >>> with open("report.pptx", "wb") as f:
@@ -1318,53 +1572,6 @@ class ADR:
             )
         except Exception as e:
             raise ADRException(f"PPTX Report rendering failed: {e}")
-
-    def render_report_as_pdf(
-        self, *, context: dict | None = None, item_filter: str = "", **kwargs: Any
-    ) -> bytes:
-        """Render a report as a PDF byte stream.
-
-        Parameters
-        ----------
-        context : dict, optional
-            Context to pass to the report template.
-        item_filter : str, optional
-            ADR filter applied to items in the report.
-        **kwargs : Any
-            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
-            At least one keyword argument must be provided to fetch the report.
-
-        Returns
-        -------
-        bytes
-            PDF document bytes (media type ``application/pdf``).
-
-        Raises
-        ------
-        ADRException
-            If no keyword arguments are provided or if the report rendering fails.
-
-        Examples
-        --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
-        >>> adr.setup()
-        >>> pdf_stream = adr.render_report_as_pdf(name="Serverless Simulation Report")
-        >>> with open("report.pdf", "wb") as f:
-        ...     f.write(pdf_stream)
-        """
-        if not kwargs:
-            raise ADRException(
-                "At least one keyword argument must be provided to fetch the report."
-            )
-        try:
-            return Template.get(**kwargs).render_pdf(
-                context=context,
-                item_filter=item_filter,
-                request=self._request,
-            )
-        except Exception as e:
-            raise ADRException(f"PDF Report rendering failed: {e}")
 
     def _resolve_browser_pdf_scratch_root(self) -> Path:
         """Return a writable root directory for browser-PDF scratch files.
@@ -1401,18 +1608,46 @@ class ADR:
         scratch_root.mkdir(parents=True, exist_ok=True)
         return scratch_root
 
-    def _render_report_as_browser_pdf_impl(
+    def _cleanup_browser_pdf_scratch_root(self, scratch_root: Path) -> None:
+        """Remove an empty fallback scratch parent after browser-PDF rendering.
+
+        The per-render ``TemporaryDirectory`` is still responsible for deleting its own child
+        directory. This helper only tries to remove the dedicated fallback parent that ADR
+        created under the system temp directory for external-database configurations.
+        """
+        # When a local db_directory exists, the scratch root lives inside it and
+        # the per-render TemporaryDirectory handles all cleanup.
+        if self._db_directory is not None:
+            return
+
+        try:
+            scratch_root.rmdir()
+        except OSError:
+            # Concurrent exports, stale child directories, or already-removed roots should not
+            # turn a successful browser-PDF render into a cleanup failure.
+            return
+
+    def _render_template_as_browser_pdf(
         self,
+        template: Template,
         *,
         context: dict | None = None,
         item_filter: str = "",
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
-        **kwargs: Any,
     ) -> bytes:
-        """Render a browser-fidelity PDF using the ADR database directory for staging."""
+        """Render one resolved template as a browser-fidelity PDF byte stream.
+
+        The public browser-PDF entry points resolve the template up front so they can
+        reuse the same object for both rendering and any export-time filename decisions.
+        Keeping the staging/export/render pipeline here avoids duplicating that logic
+        while still preventing a second ``Template.get(**kwargs)`` lookup.
+        """
         if self._static_directory is None:
             raise ImproperlyConfiguredError(
                 "The 'static_directory' must be configured for browser PDF export."
@@ -1422,31 +1657,47 @@ class ADR:
 
         try:
             # Import lazily so browser startup and Chromium use happen only on this export path.
-            from .pdf_renderer import PlaywrightPDFRenderer
+            from ..utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 
             with tempfile.TemporaryDirectory(
                 prefix="adr-browser-pdf-",
                 dir=scratch_root,
+                ignore_cleanup_errors=True,
             ) as tmp_dir:
                 tmp_path = Path(tmp_dir)
                 # Build the renderer first so invalid PDF options fail before the report render
                 # and asset export pipeline does any meaningful work.
-                renderer = PlaywrightPDFRenderer(
+                renderer = _OfflinePlaywrightPDFRenderer(
                     html_dir=tmp_path,
                     landscape=landscape,
                     margins=margins,
+                    page_size=page_size,
+                    width=width,
+                    height=height,
                     render_timeout=render_timeout,
+                    ansys_installation=self._ansys_installation,
+                    ansys_version=self._ansys_version,
                     logger=self._logger,
                 )
 
                 pdf_context = {"print": "pdf"}
-                # Reuse the existing browser HTML render path, then export it into a self-contained
-                # directory so Chromium can load every asset from disk without a running web server.
-                html_content = self.render_report(
-                    context={**(context or {}), **pdf_context},
-                    item_filter=item_filter,
-                    **kwargs,
-                )
+                # Browser PDF stages the same print-mode HTML that export_report_as_html() uses,
+                # but it renders from a concrete Template instance so the caller can reuse that
+                # resolved object for default filenames and other metadata-derived decisions.
+                # Keep ``embed_scene_data`` at the existing ``Template.render()`` default so this
+                # path stays aligned with ``render_report()`` unless a future public browser-PDF
+                # API intentionally exposes scene-data inlining as a separate option.
+                try:
+                    html_content = template.render(
+                        context={**(context or {}), **pdf_context},
+                        item_filter=item_filter,
+                        request=self._request,
+                    )
+                except Exception as exc:
+                    # Keep the caller-facing error ADR-owned while preserving the template-render
+                    # failure as the chained cause for debugging.
+                    self._logger.debug("Browser PDF template rendering failed.", exc_info=True)
+                    raise ADRException("Report rendering failed.") from exc
 
                 exporter = ServerlessReportExporter(
                     html_content=html_content,
@@ -1467,8 +1718,13 @@ class ADR:
                 return renderer.render_pdf()
         except ADRException:
             raise
-        except Exception as e:
-            raise ADRException(f"Browser PDF rendering failed: {e}") from e
+        except Exception as exc:
+            # Keep the caller-facing error ADR-owned while preserving the underlying browser or
+            # staging failure as the chained cause for debugging.
+            self._logger.debug("Browser PDF rendering failed.", exc_info=True)
+            raise ADRException("Browser PDF rendering failed.") from exc
+        finally:
+            self._cleanup_browser_pdf_scratch_root(scratch_root)
 
     def render_report_as_browser_pdf(
         self,
@@ -1478,14 +1734,17 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> bytes:
-        """Render a report as a browser-fidelity PDF byte stream via headless Chromium.
+        """Render a report as a browser-fidelity PDF byte stream via a headless browser.
 
-        Unlike ``render_report_as_pdf()`` which uses WeasyPrint (static CSS rendering),
-        this method produces PDF output that matches the on-screen browser appearance
-        by using Playwright + headless Chromium.
+        This method produces PDF output that matches the on-screen browser appearance
+        by rendering in a headless browser. It requires ADR 27.1 or later and
+        the product-shipped browser package.
 
         Parameters
         ----------
@@ -1498,11 +1757,22 @@ class ADR:
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
         margins : dict[str, str], optional
-            Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
-            If omitted, 10 mm margins are used on every side.
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+            strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
+            (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
+            every side.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
-            Maximum time, in seconds, to wait for browser readiness signals.
-            Default ``30.0``.
+            Maximum time, in seconds, for the browser render phase after the offline HTML
+            bundle has been staged. This shared browser-side budget covers launch, navigation,
+            readiness waits, and related browser preparation, but not server-side report
+            rendering or offline asset export. Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1510,7 +1780,7 @@ class ADR:
         Returns
         -------
         bytes
-            PDF content generated by headless Chromium.
+            PDF content generated by the headless browser.
 
         Raises
         ------
@@ -1518,20 +1788,56 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Notes
+        -----
+        Browser-PDF readiness waits cover ADR-owned signals such as web-component
+        initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
+        layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
+        underlying template system, so custom asynchronous JavaScript inside those
+        fragments does not get a separate readiness hook here. Static HTML content is
+        supported, but arbitrary async HTML content can still be captured before it
+        finishes updating unless it settles through the built-in browser-PDF signals.
+
+        Examples
+        --------
+        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
+        >>> adr = ADR(
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
+        ...     db_directory=r"C:\\DBs\\docex",
+        ...     media_directory=r"C:\\DBs\\docex\\media",
+        ...     static_directory=r"C:\\static",
+        ... )
+        >>> adr.setup(collect_static=True)
+        >>> pdf_bytes = adr.render_report_as_browser_pdf(
+        ...     name="Serverless Simulation Report",
+        ...     landscape=True,
+        ...     page_size=PDFPageSize.A3,
+        ...     margins={"top": "12mm", "right": "12mm", "bottom": "12mm", "left": "12mm"},
+        ... )
+        >>> with open("browser-report.pdf", "wb") as f:
+        ...     f.write(pdf_bytes)
         """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        return self._render_report_as_browser_pdf_impl(
+        template = Template.get(**kwargs)
+
+        # Route byte-stream export through the same resolved-template pipeline
+        # used by file export so both entry points apply identical page geometry.
+        return self._render_template_as_browser_pdf(
+            template,
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
-            **kwargs,
         )
 
     def export_report_as_pptx(
@@ -1573,7 +1879,7 @@ class ADR:
         Examples
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
+        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261", db_directory=r"C:\\DBs\\docex")
         >>> adr.setup()
         >>> adr.export_report_as_pptx(name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
         """
@@ -1648,7 +1954,7 @@ class ADR:
         --------
         >>> from ansys.dynamicreporting.core.serverless import ADR
         >>> adr = ADR(
-                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252",
+                    ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v261",
                     db_directory=r"C:\\DBs\\docex",
                     media_directory=r"C:\\DBs\\docex\\media",
                     static_directory=r"C:\\static"
@@ -1705,65 +2011,6 @@ class ADR:
         self._logger.info(f"Successfully exported report to: {final_path}")
         return final_path
 
-    def export_report_as_pdf(
-        self,
-        *,
-        filename: str | Path = None,
-        context: dict | None = None,
-        item_filter: str = "",
-        **kwargs: Any,
-    ) -> None:
-        """Render a PDF report and write it to disk.
-
-        Parameters
-        ----------
-        filename : str or Path, optional
-            Target PDF filename. If omitted, use ``"<guid>.pdf"`` based
-            on the template GUID.
-        context : dict, optional
-            Context to pass to the report template.
-
-        item_filter : str, optional
-            ADR filter applied to items in the report.
-        **kwargs : Any
-            Additional keyword arguments to pass to the report template. Eg: `guid`, `name`, etc.
-            At least one keyword argument must be provided to fetch the report.
-
-        Returns
-        -------
-            None
-
-        Raises
-        ------
-        ADRException
-            If no keyword arguments are provided or if the report rendering fails.
-
-        Examples
-        --------
-        >>> from ansys.dynamicreporting.core.serverless import ADR
-        >>> adr = ADR(ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v252", db_directory=r"C:\\DBs\\docex")
-        >>> adr.setup()
-        >>> adr.export_report_as_pdf(filename="report.pdf", name="Serverless Simulation Report", item_filter="A|i_tags|cont|dp=dp227;")
-        """
-        if not kwargs:
-            raise ADRException(
-                "At least one keyword argument must be provided to fetch the report."
-            )
-        template = Template.get(**kwargs)
-        try:
-            pdf_stream = template.render_pdf(
-                context=context,
-                item_filter=item_filter,
-                request=self._request,
-            )
-        except Exception as e:
-            raise ADRException(f"PDF Report rendering failed: {e}")
-
-        output_path = Path(filename) if filename else Path(f"{template.guid}.pdf")
-        with open(output_path, "wb") as f:
-            f.write(pdf_stream)
-        self._logger.info(f"Successfully exported report to: {output_path}")
-
     def export_report_as_browser_pdf(
         self,
         *,
@@ -1773,14 +2020,17 @@ class ADR:
         dark_mode: bool = False,
         landscape: bool = False,
         margins: dict[str, str] | None = None,
+        page_size: PDFPageSize | None = PDFPageSize.A3,
+        width: str | float | None = None,
+        height: str | float | None = None,
         render_timeout: float = 30.0,
         **kwargs: Any,
     ) -> None:
-        """Export a report as a browser-fidelity PDF file via headless Chromium.
+        """Export a report as a browser-fidelity PDF file via a headless browser.
 
-        Unlike ``export_report_as_pdf()`` which uses WeasyPrint (static CSS rendering),
-        this method produces PDF output that matches the on-screen browser appearance
-        by using Playwright + headless Chromium.
+        This method produces PDF output that matches the on-screen browser appearance
+        by rendering in a headless browser. It requires ADR 27.1 or later and
+        the product-shipped browser package.
 
         Parameters
         ----------
@@ -1795,11 +2045,22 @@ class ADR:
         landscape : bool, optional
             Whether to use landscape orientation. Default ``False``.
         margins : dict[str, str], optional
-            Page margins with ``top``, ``right``, ``bottom``, and ``left`` Playwright PDF lengths.
-            If omitted, 10 mm margins are used on every side.
+            Page margins with ``top``, ``right``, ``bottom``, and ``left`` values expressed as
+            strings using unitless pixels or the ``px``, ``in``, ``cm``, or ``mm`` units
+            (for example ``"10mm"`` or ``"0.5in"``). If omitted, 10 mm margins are used on
+            every side.
+        page_size : PDFPageSize or None, optional
+            Fixed PDF page format. Default ``PDFPageSize.A3``. A fixed format takes
+            precedence over ``width`` and ``height``. Set to ``None`` to use custom dimensions.
+        width : str or float, optional
+            Custom page width used with ``height`` when ``page_size`` is ``None``.
+        height : str or float, optional
+            Custom page height used with ``width`` when ``page_size`` is ``None``.
         render_timeout : float, optional
-            Maximum time, in seconds, to wait for browser readiness signals.
-            Default ``30.0``.
+            Maximum time, in seconds, for the browser render phase after the offline HTML
+            bundle has been staged. This shared browser-side budget covers launch, navigation,
+            readiness waits, and related browser preparation, but not server-side report
+            rendering or offline asset export. Default ``30.0``.
         **kwargs : Any
             Additional keyword arguments used to fetch the report template.
             At least one keyword argument must be provided.
@@ -1814,26 +2075,59 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+
+        Notes
+        -----
+        Browser-PDF readiness waits cover ADR-owned signals such as web-component
+        initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
+        layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
+        underlying template system, so custom asynchronous JavaScript inside those
+        fragments does not get a separate readiness hook here. Static HTML content is
+        supported, but arbitrary async HTML content can still be captured before it
+        finishes updating unless it settles through the built-in browser-PDF signals.
+
+        Examples
+        --------
+        >>> from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
+        >>> adr = ADR(
+        ...     ansys_installation=r"C:\\Program Files\\ANSYS Inc\\v271",
+        ...     db_directory=r"C:\\DBs\\docex",
+        ...     media_directory=r"C:\\DBs\\docex\\media",
+        ...     static_directory=r"C:\\static",
+        ... )
+        >>> adr.setup(collect_static=True)
+        >>> adr.export_report_as_browser_pdf(
+        ...     filename="browser-report.pdf",
+        ...     name="Serverless Simulation Report",
+        ...     item_filter="A|i_tags|cont|dp=dp227;",
+        ...     landscape=True,
+        ...     page_size=PDFPageSize.A3,
+        ... )
         """
         if not kwargs:
             raise ADRException(
                 "At least one keyword argument must be provided to fetch the report."
             )
 
-        pdf_stream = self._render_report_as_browser_pdf_impl(
+        template = Template.get(**kwargs)
+        # Render from the object already resolved above; its GUID remains
+        # available for the default filename without a second template lookup.
+        pdf_stream = self._render_template_as_browser_pdf(
+            template,
             context=context,
             item_filter=item_filter,
             dark_mode=dark_mode,
             landscape=landscape,
             margins=margins,
+            page_size=page_size,
+            width=width,
+            height=height,
             render_timeout=render_timeout,
-            **kwargs,
         )
 
         if filename is not None:
             output_path = Path(filename)
         else:
-            template = Template.get(**kwargs)
             output_path = Path(f"{template.guid}.pdf")
 
         with open(output_path, "wb") as f:
@@ -1973,7 +2267,7 @@ class ADR:
             One of :class:`Session`, :class:`Dataset`, :class:`Item`
             subclass, or :class:`Template`.
         target_database : str
-            Django database alias to copy into.
+            Target database alias to copy into.
         query : str, default: ""
             ADR query string used to select objects from the source DB.
         target_media_dir : str or Path, default: ""

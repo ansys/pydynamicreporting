@@ -22,13 +22,21 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import textwrap
 from unittest.mock import patch
 
 import pytest
 
+from ansys.dynamicreporting.core.constants import ANSYS_VIEWER_TAGS
 from ansys.dynamicreporting.core.serverless.html_exporter import ServerlessReportExporter
+
+LEGACY_CONTEXT_MENU_FILES = (
+    "jquery.contextMenu.min.css",
+    "jquery.contextMenu.min.js",
+    "jquery.ui.position.min.js",
+)
 
 # ----------------------------
 # helpers
@@ -65,6 +73,21 @@ def _make_exporter_for_mathjax_detection(
         static_url="/static/",
         media_url="/media/",
         ansys_version="252",
+    )
+
+
+def _make_exporter_for_legacy_context_menu_assets(
+    tmp_path: Path, *, ansys_version: str = "261"
+) -> ServerlessReportExporter:
+    """Build an exporter for legacy context-menu asset tests."""
+    return ServerlessReportExporter(
+        html_content="<div/>",
+        output_dir=tmp_path / "out",
+        static_dir=tmp_path / "static",
+        media_dir=tmp_path / "media",
+        static_url="/static/",
+        media_url="/media/",
+        ansys_version=ansys_version,
     )
 
 
@@ -163,6 +186,104 @@ def test_static_is_flattened_media_and_ansys_tree_preserved(adr_serverless, tmp_
     assert f"./ansys{ver}/nexus/utils/js-test.js" in out
 
 
+def test_copies_legacy_context_menu_assets_when_available(tmp_path: Path):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+
+    for filename in LEGACY_CONTEXT_MENU_FILES:
+        _write(exporter._static_dir / context_menu_path / filename, filename)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    for filename in LEGACY_CONTEXT_MENU_FILES:
+        copied_file = exporter._output_dir / context_menu_path / filename
+        assert copied_file.read_text(encoding="utf-8") == filename
+
+
+def test_warns_for_incomplete_legacy_context_menu_assets(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    context_menu_path = "ansys261/nexus/novnc/vendor/jQuery-contextMenu/"
+    available_file = LEGACY_CONTEXT_MENU_FILES[0]
+    _write(exporter._static_dir / context_menu_path / available_file, available_file)
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert (exporter._output_dir / context_menu_path / available_file).is_file()
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in LEGACY_CONTEXT_MENU_FILES[1:]:
+        assert any(filename in message for message in warning_messages)
+
+
+def test_warns_when_v261_legacy_context_menu_directory_is_missing(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert not (exporter._output_dir / "ansys261/nexus/novnc").exists()
+    warning_messages = [record.getMessage() for record in caplog.records]
+    for filename in LEGACY_CONTEXT_MENU_FILES:
+        assert any(filename in message for message in warning_messages)
+
+
+def test_skips_missing_legacy_context_menu_assets_for_newer_products(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    caplog.set_level(logging.WARNING)
+
+    exporter._copy_legacy_context_menu_assets()
+
+    assert not (exporter._output_dir / "ansys271/nexus/novnc").exists()
+    assert not any("jQuery-contextMenu" in record.getMessage() for record in caplog.records)
+
+
+def test_copy_special_files_wires_v261_legacy_context_menu_assets(tmp_path: Path, monkeypatch):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+    legacy_context_menu_calls = []
+
+    monkeypatch.setattr(exporter, "_detect_mathjax_version", lambda: "unknown")
+    monkeypatch.setattr(exporter, "_copy_mathjax_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(exporter, "_copy_static_files", lambda *args, **kwargs: None)
+    monkeypatch.setattr(exporter, "_copy_static_file", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        exporter,
+        "_copy_legacy_context_menu_assets",
+        lambda: legacy_context_menu_calls.append(True),
+    )
+
+    exporter._copy_special_files()
+
+    assert legacy_context_menu_calls == [True]
+
+
+def test_make_output_dirs_creates_v261_legacy_context_menu_directory(tmp_path: Path):
+    """Preserve the v261 directory layout even without legacy source assets."""
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path)
+
+    exporter._make_output_dirs()
+
+    assert (exporter._output_dir / "ansys261/nexus/novnc/vendor/jQuery-contextMenu").is_dir()
+
+
+@pytest.mark.parametrize("quote", ["'", '"'], ids=["single_quote", "double_quote"])
+def test_fix_viewer_component_paths_rewrites_draco_decoder_root(tmp_path: Path, quote: str):
+    exporter = _make_exporter_for_legacy_context_menu_assets(tmp_path, ansys_version="271")
+    source = (
+        f"dracoLoader.setDecoderPath({quote}/ansys271/nexus/threejs/libs/draco/{quote});"
+    ).encode()
+
+    patched = exporter._fix_viewer_component_paths("viewer-loader.js", source).decode("utf-8")
+
+    expected = f"dracoLoader.setDecoderPath({quote}./ansys271//nexus/threejs/libs/draco/{quote});"
+    assert expected in patched
+
+
 @pytest.mark.ado_test
 def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
     static_dir = Path(adr_serverless.static_directory)
@@ -192,12 +313,16 @@ def test_favicon_png_is_duplicated_as_ico(adr_serverless, tmp_path: Path):
 
 
 @pytest.mark.ado_test
-def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: Path):
+@pytest.mark.parametrize("viewer_tag", ANSYS_VIEWER_TAGS)
+def test_inline_viewer_size_exception_sets_proxy_only(
+    adr_serverless, tmp_path: Path, viewer_tag: str
+):
+    """Preserve proxy-only fallback for the canonical and compatibility viewer tags."""
     static_dir = Path(adr_serverless.static_directory)
     media_dir = Path(adr_serverless.media_directory)
     ver = str(adr_serverless.ansys_version)
 
-    # Provide a "large" file to force size exception
+    # Exceed a deliberately tiny inline limit to exercise the proxy-only path.
     _write(media_dir / "bigfile.stl", b"x" * 2048)
     _write(media_dir / "preview.png", b"P")
     _write(static_dir / "website/images/favicon.png", b"P")
@@ -208,7 +333,7 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
     html = textwrap.dedent(
         f"""
         <div>
-          <ansys-nexus-viewer src="{media_src}" proxy_img="{media_preview}"></ansys-nexus-viewer>
+                    <{viewer_tag} src="{media_src}" proxy_img="{media_preview}"></{viewer_tag}>
         </div>
         """
     )
@@ -227,8 +352,8 @@ def test_inline_viewer_size_exception_sets_proxy_only(adr_serverless, tmp_path: 
 
     out = (tmp_path / "export5" / "index.html").read_text(encoding="utf-8")
     assert 'proxy_only="3D geometry too large for stand-alone HTML file"' in out
-    assert 'src=""' in out  # viewer src cleared
-    # proxy_img still inlined or copied
+    assert 'src=""' in out  # The unusable geometry source must be cleared.
+    # The preview remains available even when the full scene cannot be embedded.
     assert "./media/preview.png" in out or "data:application/octet-stream;base64," in out
 
 
@@ -355,6 +480,53 @@ def test_missing_source_file_keeps_original_ref(adr_serverless, tmp_path: Path):
     assert missing_href in out
 
 
+@pytest.mark.ado_test
+def test_script_src_blocks_are_not_reprocessed_after_relative_rewrite(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    """Skip the generic script pass once a src-only tag is already export-safe."""
+    static_dir = tmp_path / "static-src"
+    media_dir = tmp_path / "media-src"
+    ver = "252"
+    static_url = "/static/"
+    media_url = "/media/"
+
+    _write(static_dir / "website/images/favicon.png", b"P")
+    _write(static_dir / "website/scripts/jquery.min.js", "window.jqueryLoaded = true;")
+    _write(static_dir / f"ansys{ver}/nexus/utils/js-unzip.js", "window.unzipLoaded = true;")
+
+    html = textwrap.dedent(
+        f"""
+        <div>
+          <script src="{static_url}website/scripts/jquery.min.js"></script>
+          <script src="{static_url}ansys{ver}/nexus/utils/js-unzip.js"></script>
+        </div>
+        """
+    )
+
+    logger = logging.getLogger("test_html_exporter_script_rewrite")
+    caplog.set_level(logging.WARNING, logger=logger.name)
+
+    exporter = ServerlessReportExporter(
+        html_content=html,
+        output_dir=tmp_path / "export10",
+        static_dir=static_dir,
+        media_dir=media_dir,
+        static_url=static_url,
+        media_url=media_url,
+        ansys_version=ver,
+        logger=logger,
+    )
+    exporter.export()
+
+    warning_messages = [record.getMessage() for record in caplog.records]
+    assert not any("Unable to find local file for path" in message for message in warning_messages)
+
+    out = (tmp_path / "export10" / "index.html").read_text(encoding="utf-8")
+    assert 'src="./media/jquery.min.js"' in out
+    assert f'src="./ansys{ver}/nexus/utils/js-unzip.js"' in out
+
+
 def test_detect_mathjax_version_4x_from_static_tree(tmp_path: Path):
     """A 4.x sentinel on disk should be reported without probing the 2.x tree."""
     exporter = _make_exporter_for_mathjax_detection(tmp_path)
@@ -448,7 +620,6 @@ def test_make_output_dirs_creates_only_4x_mathjax_tree(tmp_path: Path):
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(
@@ -490,7 +661,6 @@ def test_make_output_dirs_creates_only_2x_mathjax_tree(tmp_path: Path):
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(
@@ -519,7 +689,6 @@ def test_make_output_dirs_unknown_version_skips_version_specific_dirs(tmp_path: 
             "ansys252/nexus/images",
             "ansys252/nexus/utils",
             "ansys252/nexus/threejs/libs/draco/gltf",
-            "ansys252/nexus/novnc/vendor/jQuery-contextMenu",
         ),
     )
     _assert_output_dirs_missing(

@@ -12,6 +12,7 @@ When you change code in this repo, aim to always:
 - **Add or update tests** for behavior changes (at least: happy path + 1 edge case).
 - **Keep tests separate from production code** in dedicated test files or test folders.
 - **Run focused verification** before concluding and after every commit:
+  - `uv run pre-commit run --all-files` and fix any failures before committing
   - `make check` (lockfile consistency + pre-commit)
   - `make smoketest` (fast import sanity check)
   - focused tests for the changed behavior
@@ -26,7 +27,7 @@ When you change code in this repo, aim to always:
 - **Repository**: https://github.com/ansys/pydynamicreporting
 - **Documentation**: https://dynamicreporting.docs.pyansys.com/
 - **Package**: `ansys-dynamicreporting-core` on PyPI
-- **Python support**: 3.10–3.13 (`requires-python = ">=3.10, <3.14"`)
+- **Python support**: 3.10–3.14 (`requires-python = ">=3.10, <3.15"`)
 - **License**: MIT
 
 ## Repository structure (high level)
@@ -54,7 +55,7 @@ Notes:
 This repo uses **uv** + a checked-in lockfile (`uv.lock`). The Makefile wraps the canonical workflows.
 
 ### Prerequisites
-- Python 3.10, 3.11, 3.12, or 3.13
+- Python 3.10, 3.11, 3.12, 3.13, or 3.14
 - `uv`
 - `make` (on Windows, `make install` uses Git Bash under the hood)
 
@@ -72,8 +73,10 @@ If you’re not using `make`, the equivalent is:
 
 ```bash
 uv sync --frozen --all-extras
-uv run python -m pip install -e .
 ```
+
+Important:
+- Avoid mixing `uv sync` with `pip install -e .` for this repo. Use `uv sync` as the single installer path to prevent stale `*.dist-info` metadata.
 
 ## Code style and standards
 
@@ -186,7 +189,7 @@ Highlights:
 - `requests`, `docker`, `Pillow`
 - Serverless stack: `django`, `djangorestframework`, `django-guardian`, `psycopg[binary]`
 - Data/analytics: `numpy`, `pandas`, `statsmodels`
-- Export/rendering: `python-pptx`, `weasyprint`, `django-weasyprint`
+- Export/rendering: `python-pptx`, `qtpy`, `playwright`
 
 ## Making changes (workflow)
 
@@ -217,6 +220,7 @@ Highlights:
 - Run lint/checks, smoke tests, and focused tests locally after every commit and before finishing:
 
 ```bash
+uv run pre-commit run --all-files
 make check
 make smoketest
 uv run pytest path/to/test_file.py -q

@@ -49,8 +49,10 @@ from ansys.dynamicreporting.core.compatibility import (
     product_line_for_client_major,
     product_release_to_install_version,
     supported_product_lines_for_client_major,
+    validate_supported_server_install_version,
 )
 from ansys.dynamicreporting.core.common_utils import InstallResolution
+from ansys.dynamicreporting.core.exceptions import UnsupportedServerVersionError
 from ansys.dynamicreporting.core.serverless import ADR
 
 
@@ -65,6 +67,26 @@ def _unsupported_newer_install_version() -> int:
 
     newest_supported_line = int(_current_supported_lines()[1])
     return product_release_to_install_version(f"{newest_supported_line + 1}.1")
+
+
+def _patch_docker_launcher(monkeypatch, detected_version: str) -> None:
+    """Patch Docker startup so service compatibility tests stay unit-level."""
+
+    class FakeDockerLauncher:
+        def __init__(self, image_url):
+            self._ansys_version = None
+
+        def pull_image(self):
+            return None
+
+        def start(self, **kwargs):
+            self._ansys_version = detected_version
+
+        def ansys_version(self):
+            return self._ansys_version
+
+    monkeypatch.setattr(adr_service_module, "DockerLauncher", FakeDockerLauncher)
+    monkeypatch.setattr(adr_service_module.report_utils, "is_port_in_use", lambda port: False)
 
 
 def test_parse_product_release():
@@ -178,6 +200,29 @@ def test_get_compatibility_warning_skips_unparsable_install_version():
     assert get_compatibility_warning_for_install_version("2710") is None
 
 
+def test_validate_supported_server_install_version_accepts_supported_release():
+    supported_install_version = product_release_to_install_version(
+        f"{_current_supported_lines()[0]}.1"
+    )
+
+    assert validate_supported_server_install_version(supported_install_version) == str(
+        supported_install_version
+    )
+
+
+@pytest.mark.parametrize("server_version", [None, "abc", "1", "2710"])
+def test_validate_supported_server_install_version_rejects_missing_or_malformed_version(
+    server_version,
+):
+    with pytest.raises(UnsupportedServerVersionError):
+        validate_supported_server_install_version(server_version)
+
+
+def test_validate_supported_server_install_version_rejects_unsupported_release():
+    with pytest.raises(UnsupportedServerVersionError, match="outside|supports annual lines"):
+        validate_supported_server_install_version(_unsupported_newer_install_version())
+
+
 @pytest.mark.parametrize("invalid_version", ["ab", "1", "  ", "12.3", "270", "2710", "2712"])
 def test_install_version_to_product_release_rejects_invalid_input(invalid_version):
     with pytest.raises(ValueError):
@@ -213,7 +258,7 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
         "resolve_install_info",
         lambda ansys_installation=None, ansys_version=None: InstallResolution(
             install_dir=str(install_dir),
-            version=261,
+            version=product_release_to_install_version(f"{_current_supported_lines()[0]}.1"),
         ),
     )
 
@@ -222,6 +267,34 @@ def test_service_does_not_warn_for_supported_product_release(monkeypatch, tmp_pa
         Service(ansys_installation=str(install_dir))
 
     assert not any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_service_connect_preserves_unsupported_server_version_error(monkeypatch, tmp_path):
+    install_dir = tmp_path / "install"
+    install_dir.mkdir()
+    monkeypatch.setattr(
+        adr_service_module,
+        "resolve_install_info",
+        lambda ansys_installation=None, ansys_version=None: InstallResolution(
+            install_dir=str(install_dir),
+            version=product_release_to_install_version(f"{_current_supported_lines()[0]}.1"),
+        ),
+    )
+
+    class UnsupportedServer:
+        def __init__(self, **kwargs):
+            pass
+
+        def validate(self):
+            raise UnsupportedServerVersionError("server reports product release 25.1")
+
+    monkeypatch.setattr(adr_service_module.report_remote_server, "Server", UnsupportedServer)
+
+    service = Service(ansys_installation=str(install_dir))
+
+    with pytest.raises(UnsupportedServerVersionError, match="25.1"):
+        service.connect(url="http://127.0.0.1:8000")
+    assert service.url is None
 
 
 def test_service_warns_for_implicit_default_install_when_unsupported(monkeypatch, tmp_path):
@@ -241,6 +314,38 @@ def test_service_warns_for_implicit_default_install_when_unsupported(monkeypatch
         Service()
 
     assert any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_service_warns_for_unsupported_docker_product_release(monkeypatch, tmp_path):
+    detected_version = str(_unsupported_newer_install_version())
+    _patch_docker_launcher(monkeypatch, detected_version)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        service = Service(
+            ansys_installation="docker",
+            docker_image="ghcr.io/ansys-internal/adr_dev",
+            db_directory=str(tmp_path / "db"),
+        )
+
+    assert service._ansys_version == detected_version
+    assert any("outside the supported window" in str(w.message) for w in caught)
+
+
+def test_service_does_not_warn_for_supported_docker_product_release(monkeypatch, tmp_path):
+    detected_version = str(product_release_to_install_version(f"{_current_supported_lines()[0]}.1"))
+    _patch_docker_launcher(monkeypatch, detected_version)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        service = Service(
+            ansys_installation="docker",
+            docker_image="ghcr.io/ansys-internal/adr_dev",
+            db_directory=str(tmp_path / "db"),
+        )
+
+    assert service._ansys_version == detected_version
+    assert not any("outside the supported window" in str(w.message) for w in caught)
 
 
 def test_serverless_warns_for_unsupported_product_release(monkeypatch, tmp_path):

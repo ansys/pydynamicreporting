@@ -1,5 +1,5 @@
 Caveats
-=======
+========
 
 Multiprocessing / Multithreading Usage
 --------------------------------------
@@ -53,14 +53,14 @@ Thread-Level Behavior
 ---------------------
 
 - Serverless ADR configuration applies process-wide and is shared by all threads.
-- It is unnecessary and discouraged to call ``ADR.setup()`` multiple times within the
-  same process.
-- Ensure the main thread calls ``ADR.setup()`` **before spawning any threads** that
-  will use Serverless ADR.
-- Calling ``setup()`` concurrently or repeatedly from multiple threads can cause
-  race conditions or inconsistent environment state.
+- Call ``ADR.setup()`` once, before starting any threads that use Serverless ADR.
+- While threads are running, do not call ``ADR.setup()`` or ``ADR.close()``, change the
+  default session or dataset, or modify the same item or template from multiple threads.
+- Do not use ``in_memory=True`` when multiple threads access Serverless ADR.
+- When using a local SQLite database, run write operations one at a time.
+- Run report rendering and export operations one at a time.
 
-Example: Threading with Serverless ADR
+Example: Querying from multiple threads with Serverless ADR
 
 .. code-block:: python
 
@@ -70,8 +70,7 @@ Example: Threading with Serverless ADR
 
     def thread_task():
         adr = ADR.get_instance()
-        # ADR is already setup in main thread, so just use it directly
-        # Make ADR API calls here
+        print(adr.get_item_count())
 
 
     if __name__ == "__main__":
@@ -86,6 +85,14 @@ Example: Threading with Serverless ADR
 
         for t in threads:
             t.join()
+
+        adr.close()
+
+Jupyter Notebook Usage
+----------------------
+
+In Jupyternotebooks, wait for each Serverless ADR operation to finish before starting another
+from a different cell or background task.
 
 External Venv Dependency Drift
 ------------------------------
@@ -110,7 +117,8 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
 
 - ``ADR.setup()`` now sanitizes the imported product settings before reaching into the product's modules.
   This allows the setup process to complete and the product's modules to be imported, even if the client venv
-  has newer versions of dependencies that would otherwise cause import errors.
+  has newer versions of dependencies that would otherwise cause import errors. This can patch known setting
+  mismatches after the product settings module has been imported.
 
 - The base dependency set in ``pyproject.toml`` now defines the broad
   compatibility envelope, while release-specific dependency
@@ -118,24 +126,41 @@ PyDynamicReporting currently mitigates this class of failure in two ways:
   checked-in ``uv.lock``, so release-specific stacks are documented as
   constraints files rather than mutually incompatible extras.
 
-The compatibility shim is a safety net for known setting transitions in the core product. It is
-not a substitute for matching the external venv to the target ADR release.
+The compatibility shim is a safety net for known product-setting and dependency
+API transitions. External-venv compatibility is still bounded by the target ADR
+release and the packages installed in that environment.
 
 Recommended practice for external venv usage:
 
-- Install ``ansys-dynamicreporting-core`` together with the constraints
-  file that matches the target ADR release.
+- For the current ADR line bundled with a client major release, install
+  ``ansys-dynamicreporting-core`` normally unless your workflow needs stricter
+  pins. For example, the ``1.x`` client line is bundled with ADR ``27.1``.
+- For the previous supported ADR line, use the matching constraints file when
+  one is provided. For example, ``1.x`` also supports ADR ``26.1``, and
+  ``constraints/v261.txt`` documents that release profile.
+- The ADR ``26.1`` constraint profile is not supported on Python 3.14. Use
+  Python 3.12 for Serverless ADR with ADR ``26.1``.
 - Keep one external virtual environment per product release family.
 
-If you are installing from PyPI instead of a local checkout, copy the matching
-constraints file from ``constraints/`` in the GitHub repository and pass
-it to ``pip install -c ...``.
+If you are installing from PyPI instead of a local checkout and using a
+constraints file, copy it from ``constraints/`` in the GitHub repository and
+pass it to ``pip install -c ...``.
 
-Example from PyPI after downloading the matching constraints file locally:
+Example for ADR ``26.1`` from PyPI after downloading the matching constraints
+file locally:
 
 .. code-block:: bash
 
     pip install -c /path/to/v261.txt ansys-dynamicreporting-core
+
+Feature-specific product requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The compatibility window describes the product lines covered for regressions
+and bug fixes. Some features can still require a newer product line when the
+feature depends on files shipped by that product. For example, browser PDF
+export requires ADR ``27.1`` or newer because the required browser binary is
+shipped with ADR product line ``27`` and later.
 
 Using Subprocesses for Multiple Configurations
 ----------------------------------------------
@@ -195,7 +220,7 @@ Parent process (run different configs safely):
             "ADR_DB_DIR": "/srv/tenantA/db",
             "ADR_MEDIA_DIR": "/srv/tenantA/media",
             "ADR_STATIC_DIR": "/srv/tenantA/static",
-            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+            "ANSYS_INSTALLATION": "/opt/ansys/v261",
         }
     )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_a)
@@ -207,7 +232,7 @@ Parent process (run different configs safely):
             "ADR_DB_DIR": "/srv/tenantB/db",
             "ADR_MEDIA_DIR": "/srv/tenantB/media",
             "ADR_STATIC_DIR": "/srv/tenantB/static",
-            "ANSYS_INSTALLATION": "/opt/ansys/v252",
+            "ANSYS_INSTALLATION": "/opt/ansys/v261",
         }
     )
     subprocess.run([sys.executable, "run_task.py"], check=True, env=env_b)

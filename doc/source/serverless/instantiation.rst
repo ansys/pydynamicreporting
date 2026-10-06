@@ -12,7 +12,7 @@ This method creates or uses a local SQLite database directory.
 
     from ansys.dynamicreporting.core.serverless import ADR
 
-    install_loc = r"C:\Program Files\ANSYS Inc\v252"
+    install_loc = r"C:\Program Files\ANSYS Inc\v261"
     db_dir = r"C:\ADR\DBs\ogdocex"
 
     adr = ADR(
@@ -33,7 +33,7 @@ Use this method when working with multiple databases, e.g., PostgreSQL or databa
     from ansys.dynamicreporting.core.serverless import ADR
     import os
 
-    install_loc = r"C:\Program Files\ANSYS Inc\v252"
+    install_loc = r"C:\Program Files\ANSYS Inc\v261"
     db_dir = r"C:\ADR\DBs\ogdocex"
     dest_dir = rf"{db_dir}_dest"
 
@@ -72,8 +72,9 @@ Useful for testing and ephemeral workflows where persistence is not needed.
 
     from ansys.dynamicreporting.core.serverless import ADR
 
+    db_dir = r"C:\ADR\DBs\docker"
     adr = ADR(
-        ansys_installation=r"C:\Program Files\ANSYS Inc\v252",
+        ansys_installation=r"C:\Program Files\ANSYS Inc\v261",
         in_memory=True,
     )
     adr.setup()
@@ -97,11 +98,14 @@ Use a Docker image to run ADR in containerized environments.
 
     adr = ADR(
         ansys_installation="docker",
-        docker_image="ghcr.io/ansys-internal/adr_dev",
+        docker_image="your-adr-image:latest",
         db_directory=db_dir,
         media_directory=rf"{db_dir}\media",
     )
     adr.setup()
+
+There is no public ADR Docker image. Replace ``your-adr-image:latest`` with an
+image that you are authorized to use.
 
 Legacy Environment Variable Configuration
 -----------------------------------------
@@ -118,7 +122,7 @@ Supported for backward compatibility but not recommended for new projects.
         "CEI_NEXUS_LOCAL_DB_DIR": r"C:\cygwin64\home\vrajendr\ogdocex",
     }
 
-    install_loc = r"C:\Program Files\ANSYS Inc\v252"
+    install_loc = r"C:\Program Files\ANSYS Inc\v261"
     adr = ADR(ansys_installation=install_loc, opts=opts)
     adr.setup()
 

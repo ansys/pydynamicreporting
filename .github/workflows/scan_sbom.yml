@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -27,7 +27,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Build wheelhouse
-        uses: ansys/actions/build-wheelhouse@v10.3.1
+        uses: ansys/actions/build-wheelhouse@v11.0.0
         with:
           library-name: ${{ env.PACKAGE_NAME }}
           operating-system: ubuntu-latest
@@ -55,10 +55,12 @@ jobs:
   vulnerabilities:
     name: Vulnerabilities
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/codegen
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
           fetch-tags: true
@@ -68,7 +70,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on main)
         if: github.ref == 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.3.1
+        uses: ansys/actions/check-vulnerabilities@v11.0.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}
@@ -79,7 +81,7 @@ jobs:
 
       - name: PyAnsys Vulnerability check (on dev)
         if: github.ref != 'refs/heads/main'
-        uses: ansys/actions/check-vulnerabilities@v10.3.1
+        uses: ansys/actions/check-vulnerabilities@v11.0.0
         with:
           python-version: ${{ env.MAIN_PYTHON_VERSION }}
           python-package-name: ${{ env.PACKAGE_NAME }}

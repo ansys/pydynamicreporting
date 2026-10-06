@@ -97,7 +97,7 @@ class Item:
     create an object as a text item::
 
         import ansys.dynamicreporting.core as adr
-        adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+        adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
         adr_service.connect(url='http://localhost:8010')
         my_txt = adr_service.create_item()
         my_txt.item_text = '<h1>The test</h1>This is a text item'
@@ -253,7 +253,7 @@ class Item:
         Create a text item and render it in a new tab::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect(url='http://localhost:8010')
             my_txt = adr_service.create_item()
             my_txt.item_text = '<h1>The test</h1>This is a text item'
@@ -296,7 +296,7 @@ class Item:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect(url='http://localhost:8010')
             my_txt = adr_service.create_item()
             my_txt.item_text = '<h1>The test</h1>This is a text item'
@@ -342,7 +342,7 @@ class Item:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_txt = adr_service.create_item()
             my_txt.item_text = '<h1>The test</h1>This is a text item'
@@ -366,7 +366,7 @@ class Item:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             item_list = adr_service.query()
             first_item = item_list[0]
@@ -396,7 +396,7 @@ class Item:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             my_txt = adr_service.create_item()
             my_txt.item_text = '<h1>The test</h1>This is a text item'
@@ -425,7 +425,7 @@ class Item:
         ::
 
             import ansys.dynamicreporting.core as adr
-            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v232')
+            adr_service = adr.Service(ansys_installation = r'C:\\Program Files\\ANSYS Inc\\v261')
             ret = adr_service.connect()
             item_list = adr_service.query()
             first_item = item_list[0]

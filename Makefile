@@ -3,7 +3,8 @@ SHELL := bash
 
 # Cross-platform Bash
 ifeq ($(OS),Windows_NT)
-BASH := "C:/Program Files/Git/bin/bash.exe"
+GIT_CORE_PATH := $(shell git --exec-path)
+BASH := "$(patsubst %/mingw64/libexec/git-core,%/bin/bash.exe,$(GIT_CORE_PATH))"
 else
 BASH := bash
 endif
@@ -29,8 +30,8 @@ check: ## Run all code quality checks
 	uv run pre-commit run --all-files
 
 .PHONY: schema
-schema: ## Generate the ADR exchange JSON schema artifact
-	uv run python scripts/gen_exchange_schema.py
+schema: ## Generate the ADR item import JSON schema artifact
+	uv run python scripts/gen_import_schema.py
 
 .PHONY: version
 version: ## Print the current project version
@@ -40,7 +41,6 @@ pull-docker:
 	bash scripts/pull_adr_image.sh
 
 test:
-	uv run python -m pip install -e .[test]
 	uv run python -m pytest \
 		-rvx --setup-show \
 		--cov=ansys.dynamicreporting.core \
@@ -60,8 +60,7 @@ build: clean ## Build package using uv
 install: ## 🚀 Set up environment and install project
 	@echo "🚀 Syncing dependencies with uv..."
 	uv sync --frozen --all-extras
-	@echo "🔧 Installing project in editable mode..."
-	uv run python -m pip install -e .
+	@echo "✅ Environment ready (project installed editable via uv sync)."
 
 .PHONY: check-dist
 check-dist: ## Validate dist/ artifacts (long description, format)
@@ -72,8 +71,8 @@ check-dist: ## Validate dist/ artifacts (long description, format)
 	uv run twine check dist/*
 
 .PHONY: tag
-tag: ## 🏷 Tag the current release version (fixes changelog and pushes tag)
-	$(BASH) scripts/tag_release.sh
+tag: ## 🏷 Validate the release state, then create and push the tag
+	$(BASH) scripts/tag_release.sh "$(RELEASE_VERSION)"
 
 .PHONY: publish
 publish-test: ## Publish to Azure Private PyPI
@@ -103,7 +102,7 @@ test-clean:
 	uv run python scripts/test_cleanup.py
 
 docs:
-	$(MAKE) -C doc html
+	$(MAKE) -C doc html SPHINXBUILD="uv run sphinx-build"
 
 docs-clean:
 	$(MAKE) -C doc clean
