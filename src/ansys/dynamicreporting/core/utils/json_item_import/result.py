@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Result objects returned by the ADR JSON importer."""
+"""Result objects returned by the ADR JSON item importer."""
 
 from __future__ import annotations
 

@@ -35,7 +35,7 @@ from pathlib import Path
 import pytest
 
 from ansys.dynamicreporting.core.adr_utils import table_attr
-from ansys.dynamicreporting.core.import_backend_server import ITEM_ATTRIBUTE
+from ansys.dynamicreporting.core.import_item_backend_server import ITEM_ATTRIBUTE
 from ansys.dynamicreporting.core.serverless import (
     HTML,
     Animation,
@@ -46,21 +46,21 @@ from ansys.dynamicreporting.core.serverless import (
     Table,
     Tree,
 )
-from ansys.dynamicreporting.core.serverless.import_backend import ITEM_CLASS
+from ansys.dynamicreporting.core.serverless.import_item_backend import ITEM_CLASS
 from ansys.dynamicreporting.core.serverless.item import ItemType
-from ansys.dynamicreporting.core.utils.json_import import mapping
-from ansys.dynamicreporting.core.utils.json_import.enums import (
+from ansys.dynamicreporting.core.utils.json_item_import import mapping
+from ansys.dynamicreporting.core.utils.json_item_import.enums import (
     ITEM_TYPE_TO_ADR_TYPE,
     ITEM_TYPES,
 )
-from ansys.dynamicreporting.core.utils.json_import.parser import load_document
-from ansys.dynamicreporting.core.utils.json_import.spec import (
+from ansys.dynamicreporting.core.utils.json_item_import.parser import load_document
+from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     DOCUMENT_SPEC,
     ITEM_SPECS,
     TABLE_FIELDS,
     TREE_NODE_SPEC,
 )
-from ansys.dynamicreporting.core.utils.json_import.version import SCHEMA_VERSION
+from ansys.dynamicreporting.core.utils.json_item_import.version import SCHEMA_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACT = REPO_ROOT / "adr_item_import.schema.json"
@@ -72,8 +72,14 @@ SAMPLE = REPO_ROOT / "tests" / "test_data" / "adr_import" / "canonical_report.js
 FIRST_CLASS_TABLE_FIELDS = {"plot", "format", "xaxis", "yaxis"}
 
 ADAPTER_SOURCES = (
-    REPO_ROOT / "src" / "ansys" / "dynamicreporting" / "core" / "serverless" / "import_backend.py",
-    REPO_ROOT / "src" / "ansys" / "dynamicreporting" / "core" / "import_backend_server.py",
+    REPO_ROOT
+    / "src"
+    / "ansys"
+    / "dynamicreporting"
+    / "core"
+    / "serverless"
+    / "import_item_backend.py",
+    REPO_ROOT / "src" / "ansys" / "dynamicreporting" / "core" / "import_item_backend_server.py",
 )
 
 
@@ -174,7 +180,7 @@ def test_every_shared_helper_is_used_by_both_adapters(helper):
 @pytest.mark.unit
 @pytest.mark.parametrize("source", ADAPTER_SOURCES, ids=lambda p: p.name)
 def test_adapters_do_not_render_tags_locally(source: Path):
-    # Tag rendering lives in json_import.tags; an inline f-string join here is
+    # Tag rendering lives in json_item_import.tags; an inline f-string join here is
     # how the two adapters drift apart.
     text = source.read_text(encoding="utf-8")
     assert 'f"{key}={value}"' not in text

@@ -26,14 +26,14 @@ from __future__ import annotations
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_import.errors import ImportValidationError
-from ansys.dynamicreporting.core.utils.json_import.parser import (
+from ansys.dynamicreporting.core.utils.json_item_import.errors import ImportItemValidationError
+from ansys.dynamicreporting.core.utils.json_item_import.parser import (
     ErrorCollector,
     _matches,
     _type_name,
     apply_spec,
 )
-from ansys.dynamicreporting.core.utils.json_import.spec import (
+from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     ANY,
     FieldSpec,
     coerce_columns,
@@ -78,7 +78,7 @@ def test_error_collector_raises_with_every_problem():
     errors.add("a", "first")
     errors.add("b", "second")
 
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         errors.raise_if_any()
     assert excinfo.value.problems == (("a", "first"), ("b", "second"))
     assert "2 problems found" in str(excinfo.value)

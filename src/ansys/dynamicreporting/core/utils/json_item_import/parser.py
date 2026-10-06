@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Validation and construction of ADR import documents.
+"""Validation and construction of ADR import item documents.
 
 The parser walks the declarative tables in
-:mod:`~ansys.dynamicreporting.core.utils.json_import.spec` and turns raw JSON
+:mod:`~ansys.dynamicreporting.core.utils.json_item_import.spec` and turns raw JSON
 into the frozen payload objects in
-:mod:`~ansys.dynamicreporting.core.utils.json_import.models`.
+:mod:`~ansys.dynamicreporting.core.utils.json_item_import.models`.
 
 Every contract violation found in a document is accumulated and reported
 together, so a producer can fix a whole document in one edit rather than one
@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from .enums import ITEM_TYPES
-from .errors import ImportValidationError
+from .errors import ImportItemValidationError
 from .models import (
     DatasetPayload,
     ImportDocument,
@@ -94,7 +94,7 @@ class ErrorCollector:
     def raise_if_any(self) -> None:
         """Raise :class:`ImportValidationError` when anything was recorded."""
         if self._problems:
-            raise ImportValidationError(self._problems)
+            raise ImportItemValidationError(self._problems)
 
 
 def _type_name(kind: Any) -> str:
@@ -615,11 +615,11 @@ def load_document(
         with document_path.open("r", encoding="utf-8") as handle:
             raw = json.load(handle)
     except FileNotFoundError:
-        raise ImportValidationError(
+        raise ImportItemValidationError(
             [(str(document_path), "the import document does not exist")]
         ) from None
     except json.JSONDecodeError as exc:
-        raise ImportValidationError(
+        raise ImportItemValidationError(
             [(f"{document_path}:{exc.lineno}:{exc.colno}", f"invalid JSON: {exc.msg}")]
         ) from None
 

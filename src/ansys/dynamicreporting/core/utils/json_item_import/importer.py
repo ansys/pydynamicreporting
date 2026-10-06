@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Backend-agnostic orchestration for ADR JSON imports."""
+"""Backend-agnostic orchestration for ADR JSON item imports."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ class ImportBackend(Protocol):
         """Create and persist one item."""
 
 
-class JSONImporter:
+class JSONItemImporter:
     """Drives an :class:`ImportBackend` from a validated import document."""
 
     def __init__(self, backend: ImportBackend) -> None:

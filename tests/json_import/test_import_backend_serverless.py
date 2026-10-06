@@ -29,7 +29,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.serverless.import_backend import (
+from ansys.dynamicreporting.core.serverless.import_item_backend import (
     ITEM_CLASS,
     ServerlessImportBackend,
 )
@@ -43,7 +43,7 @@ from ansys.dynamicreporting.core.serverless.item import (
     Table,
     Tree,
 )
-from ansys.dynamicreporting.core.utils.json_import.parser import build_document
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
 
 
 @pytest.fixture

@@ -50,7 +50,6 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
-from typing import TYPE_CHECKING, Any
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -58,8 +57,8 @@ from ansys.dynamicreporting.core.utils import report_objects, report_remote_serv
 from .adr_item import Item
 from .adr_report import Report
 from .adr_utils import build_query_url, check_filter, dict_items, get_logger, in_ipynb, type_maps
-from .common_utils import resolve_install_info
 from .compatibility import get_compatibility_warning_for_install_version
+from .common_utils import resolve_install_info
 from .constants import DOCKER_DEFAULT_PORT
 from .docker_support import DockerLauncher
 from .exceptions import (
@@ -74,8 +73,7 @@ from .exceptions import (
     UnsupportedServerVersionError,
 )
 
-if TYPE_CHECKING:
-    from .utils.json_import import ImportResult
+from .utils.json_item_import import ImportResult
 
 
 # Main class
@@ -762,7 +760,7 @@ class Service:
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
 
-    def import_from_json(
+    def import_items_from_json(
         self,
         json_file_path: str | Path,
         *,
@@ -801,28 +799,17 @@ class Service:
 
         Raises
         ------
-        ImportValidationError
-            If the document violates the import contract.
-        ImportVersionError
+        ImportItemValidationError
+            If the document violates the item import contract.
+        ImportItemVersionError
             If the document schema version is unsupported.
-
-        Examples
-        --------
-        ::
-
-            import ansys.dynamicreporting.core as adr
-
-            adr_service = adr.Service(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
-            adr_service.connect(url='http://localhost:8020')
-            result = adr_service.import_from_json(r'C:\\tmp\\report.json')
-            print(result.items_saved, result.ok)
         """
         # Imported lazily so that importing the package does not pull the
         # import machinery for users who never call this.
-        from .import_backend_server import ServerImportBackend
-        from .utils.json_import.importer import JSONImporter
+        from .import_item_backend_server import ServerImportBackend
+        from .utils.json_item_import.importer import JSONItemImporter
 
-        importer = JSONImporter(ServerImportBackend(self))
+        importer = JSONItemImporter(ServerImportBackend(self))
         return importer.import_file(
             json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
         )

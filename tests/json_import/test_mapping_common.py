@@ -31,7 +31,7 @@ from unittest.mock import MagicMock
 import numpy
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_import.mapping import (
+from ansys.dynamicreporting.core.utils.json_item_import.mapping import (
     apply_properties,
     column_labels,
     derive_axes,
@@ -39,7 +39,7 @@ from ansys.dynamicreporting.core.utils.json_import.mapping import (
     resolve_path,
     rows_to_array,
 )
-from ansys.dynamicreporting.core.utils.json_import.models import TableColumn, TreeNode
+from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn, TreeNode
 
 COLUMNS = (TableColumn("time"), TableColumn("T_max"), TableColumn("T_min"))
 

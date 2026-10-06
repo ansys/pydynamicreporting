@@ -28,8 +28,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_import.errors import ImportVersionError
-from ansys.dynamicreporting.core.utils.json_import.version import (
+from ansys.dynamicreporting.core.utils.json_item_import.errors import ImportItemVersionError
+from ansys.dynamicreporting.core.utils.json_item_import.version import (
     SCHEMA_VERSION,
     SUPPORTED_MAJOR,
     check_version,
@@ -49,14 +49,14 @@ def test_parse_version_accepts_major_minor(text, expected):
 @pytest.mark.unit
 @pytest.mark.parametrize("text", ["1", "1.0.0", "x.y", "", "1.", ".1", "1,0", "v1.0", "1.0b"])
 def test_parse_version_rejects_malformed(text):
-    with pytest.raises(ImportVersionError):
+    with pytest.raises(ImportItemVersionError):
         parse_version(text)
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("value", [None, 1.0, 10, ["1", "0"]])
 def test_parse_version_rejects_non_strings(value):
-    with pytest.raises(ImportVersionError):
+    with pytest.raises(ImportItemVersionError):
         parse_version(value)
 
 
@@ -99,12 +99,12 @@ def test_check_version_accepts_older_major():
 
 @pytest.mark.unit
 def test_check_version_rejects_newer_major():
-    with pytest.raises(ImportVersionError) as excinfo:
+    with pytest.raises(ImportItemVersionError) as excinfo:
         check_version(f"{SUPPORTED_MAJOR + 1}.0")
     assert "newer than the supported major" in str(excinfo.value)
 
 
 @pytest.mark.unit
 def test_check_version_rejects_malformed():
-    with pytest.raises(ImportVersionError):
+    with pytest.raises(ImportItemVersionError):
         check_version("1.0.0")

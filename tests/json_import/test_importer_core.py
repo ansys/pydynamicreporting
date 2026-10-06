@@ -30,8 +30,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_import.importer import JSONImporter
-from ansys.dynamicreporting.core.utils.json_import.parser import build_document
+from ansys.dynamicreporting.core.utils.json_item_import.importer import JSONItemImporter
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
 
 
 class FakeBackend:
@@ -71,7 +71,7 @@ def _text(name, **extra):
 @pytest.mark.unit
 def test_backend_is_made_ready_first():
     backend = FakeBackend()
-    JSONImporter(backend).import_document(_document(items=[_text("a")]))
+    JSONItemImporter(backend).import_document(_document(items=[_text("a")]))
     assert backend.ready is True
 
 
@@ -80,7 +80,7 @@ def test_importer_creates_no_report_structure():
     # Report structure is imported by load_templates*; this contract is
     # items-only, so the backend seam exposes no template entry point.
     backend = FakeBackend()
-    JSONImporter(backend).import_document(_document(items=[_text("a")]))
+    JSONItemImporter(backend).import_document(_document(items=[_text("a")]))
     assert not hasattr(backend, "create_template")
 
 
@@ -93,7 +93,7 @@ def test_importer_creates_no_report_structure():
 def test_items_are_saved_with_the_document_tag_string():
     backend = FakeBackend()
     document = _document(tags=[{"report": "run42"}, {"stage": "final"}], items=[_text("a")])
-    JSONImporter(backend).import_document(document)
+    JSONItemImporter(backend).import_document(document)
 
     _, doc_tags = backend.items[0]
     assert doc_tags == "report=run42 stage=final"
@@ -103,7 +103,7 @@ def test_items_are_saved_with_the_document_tag_string():
 def test_items_are_saved_in_document_order():
     backend = FakeBackend()
     document = _document(items=[_text("a"), _text("b"), _text("c")])
-    result = JSONImporter(backend).import_document(document)
+    result = JSONItemImporter(backend).import_document(document)
 
     assert result.items_saved == 3
     assert [model.name for model, _ in backend.items] == ["a", "b", "c"]
@@ -112,7 +112,7 @@ def test_items_are_saved_in_document_order():
 @pytest.mark.unit
 def test_document_without_tags_passes_an_empty_tag_string():
     backend = FakeBackend()
-    JSONImporter(backend).import_document(_document(items=[_text("a")]))
+    JSONItemImporter(backend).import_document(_document(items=[_text("a")]))
     assert backend.items[0][1] == ""
 
 
@@ -125,7 +125,7 @@ def test_document_without_tags_passes_an_empty_tag_string():
 def test_collect_records_failures_and_continues():
     backend = FakeBackend(fail_items={"bad"})
     document = _document(items=[_text("good"), _text("bad"), _text("also-good")])
-    result = JSONImporter(backend).import_document(document, on_error="collect")
+    result = JSONItemImporter(backend).import_document(document, on_error="collect")
 
     assert result.items_saved == 2
     assert len(result.failures) == 1
@@ -140,7 +140,7 @@ def test_collect_records_failures_and_continues():
 @pytest.mark.unit
 def test_collect_is_the_default_strategy():
     backend = FakeBackend(fail_items={"bad"})
-    result = JSONImporter(backend).import_document(_document(items=[_text("bad")]))
+    result = JSONItemImporter(backend).import_document(_document(items=[_text("bad")]))
     assert len(result.failures) == 1
 
 
@@ -149,7 +149,7 @@ def test_raise_stops_at_the_first_failure():
     backend = FakeBackend(fail_items={"bad"})
     document = _document(items=[_text("good"), _text("bad"), _text("never")])
     with pytest.raises(RuntimeError):
-        JSONImporter(backend).import_document(document, on_error="raise")
+        JSONItemImporter(backend).import_document(document, on_error="raise")
 
     assert [model.name for model, _ in backend.items] == ["good"]
 
@@ -157,14 +157,14 @@ def test_raise_stops_at_the_first_failure():
 @pytest.mark.unit
 def test_item_failures_are_logged_by_name():
     backend = FakeBackend(fail_items={"bad"})
-    JSONImporter(backend).import_document(_document(items=[_text("bad")]))
+    JSONItemImporter(backend).import_document(_document(items=[_text("bad")]))
     assert "bad" in str(backend.logger.error.call_args)
 
 
 @pytest.mark.unit
 def test_a_clean_import_is_ok():
     backend = FakeBackend()
-    result = JSONImporter(backend).import_document(_document(items=[_text("a")]))
+    result = JSONItemImporter(backend).import_document(_document(items=[_text("a")]))
     assert result.ok is True
     assert result.failures == []
 
@@ -173,7 +173,7 @@ def test_a_clean_import_is_ok():
 def test_unknown_on_error_strategy_is_rejected():
     backend = FakeBackend()
     with pytest.raises(ValueError) as excinfo:
-        JSONImporter(backend).import_document(_document(), on_error="ignore")
+        JSONItemImporter(backend).import_document(_document(), on_error="ignore")
     assert "on_error" in str(excinfo.value)
 
 
@@ -185,7 +185,7 @@ def test_unknown_on_error_strategy_is_rejected():
 @pytest.mark.unit
 def test_result_echoes_the_document_envelope():
     backend = FakeBackend()
-    result = JSONImporter(backend).import_document(_document(items=[_text("a")]))
+    result = JSONItemImporter(backend).import_document(_document(items=[_text("a")]))
     assert result.schema_version == "1.0"
     assert result.app_id == "demo-app"
 
@@ -193,7 +193,7 @@ def test_result_echoes_the_document_envelope():
 @pytest.mark.unit
 def test_empty_document_is_a_successful_no_op():
     backend = FakeBackend()
-    result = JSONImporter(backend).import_document(_document())
+    result = JSONItemImporter(backend).import_document(_document())
     assert result.items_saved == 0
     assert backend.items == []
     assert result.ok is True
@@ -212,7 +212,7 @@ def test_import_file_reads_validates_and_imports(tmp_path: Path):
         encoding="utf-8",
     )
     backend = FakeBackend()
-    result = JSONImporter(backend).import_file(path)
+    result = JSONItemImporter(backend).import_file(path)
 
     assert result.items_saved == 1
     assert result.app_id == "demo-app"
@@ -232,7 +232,7 @@ def test_import_file_defaults_base_dir_to_the_document_directory(tmp_path: Path)
         encoding="utf-8",
     )
     backend = FakeBackend()
-    JSONImporter(backend).import_file(path)
+    JSONItemImporter(backend).import_file(path)
     assert backend.items[0][0].base_dir == str(tmp_path)
 
 
@@ -245,5 +245,5 @@ def test_import_file_forwards_base_dir_and_strict_keys(tmp_path: Path):
     )
     backend = FakeBackend()
     with pytest.raises(Exception) as excinfo:
-        JSONImporter(backend).import_file(path, strict_keys=True)
+        JSONItemImporter(backend).import_file(path, strict_keys=True)
     assert "unknown key" in str(excinfo.value)

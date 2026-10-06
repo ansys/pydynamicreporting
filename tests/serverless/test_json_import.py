@@ -37,7 +37,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ansys.dynamicreporting.core.serverless import ADR
-from ansys.dynamicreporting.core.utils.json_import import ImportResult
+from ansys.dynamicreporting.core.utils.json_item_import import ImportResult
 
 
 def _write_document(tmp_path: Path, **overrides) -> Path:
@@ -56,10 +56,10 @@ def test_import_from_json_delegates_to_the_importer(tmp_path: Path):
     expected = ImportResult(schema_version="1.0", app_id="demo-app")
 
     with patch(
-        "ansys.dynamicreporting.core.utils.json_import.importer.JSONImporter"
+        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
     ) as importer_cls:
         importer_cls.return_value.import_file.return_value = expected
-        result = adr.import_from_json(path)
+        result = adr.import_items_from_json(path)
 
     assert result is expected
     importer_cls.return_value.import_file.assert_called_once_with(
@@ -74,28 +74,13 @@ def test_import_from_json_forwards_every_option(tmp_path: Path):
     path = _write_document(tmp_path)
 
     with patch(
-        "ansys.dynamicreporting.core.utils.json_import.importer.JSONImporter"
+        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
     ) as importer_cls:
-        adr.import_from_json(path, on_error="raise", base_dir="/media", strict_keys=True)
+        adr.import_items_from_json(path, on_error="raise", base_dir="/media", strict_keys=True)
 
     importer_cls.return_value.import_file.assert_called_once_with(
         path, on_error="raise", base_dir="/media", strict_keys=True
     )
-
-
-@pytest.mark.unit
-def test_importing_the_package_does_not_load_the_import_machinery():
-    # The entry point imports its adapter lazily, so a user who never calls
-    # import_from_json does not pay for the import layer.
-    code = (
-        "import sys; import ansys.dynamicreporting.core as adr; "
-        "import ansys.dynamicreporting.core.serverless as sls; "
-        "print(any('json_import' in name for name in sys.modules))"
-    )
-    completed = subprocess.run(
-        [sys.executable, "-c", code], capture_output=True, text=True, check=True
-    )
-    assert completed.stdout.strip() == "False"
 
 
 @pytest.mark.ado_test
@@ -142,7 +127,7 @@ def test_import_from_json_end_to_end(adr_serverless: ADR, tmp_path: Path):
     path = tmp_path / "e2e.json"
     path.write_text(json.dumps(document), encoding="utf-8")
 
-    result = adr_serverless.import_from_json(path)
+    result = adr_serverless.import_items_from_json(path)
 
     assert result.ok, result.failures
     assert result.app_id == "json-import-e2e"

@@ -32,8 +32,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ansys.dynamicreporting.core.utils.json_import.enums import ITEM_TYPES
-from ansys.dynamicreporting.core.utils.json_import.spec import (
+from ansys.dynamicreporting.core.utils.json_item_import.enums import ITEM_TYPES
+from ansys.dynamicreporting.core.utils.json_item_import.spec import (
     DATASET_SPEC,
     DOCUMENT_SPEC,
     ITEM_SPECS,
@@ -41,7 +41,7 @@ from ansys.dynamicreporting.core.utils.json_import.spec import (
     TREE_NODE_SPEC,
     FieldSpec,
 )
-from ansys.dynamicreporting.core.utils.json_import.version import SCHEMA_VERSION
+from ansys.dynamicreporting.core.utils.json_item_import.version import SCHEMA_VERSION
 
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "adr_item_import.schema.json"
 

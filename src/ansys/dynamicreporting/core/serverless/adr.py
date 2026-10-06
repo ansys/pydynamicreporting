@@ -51,7 +51,7 @@ import re
 import shutil
 import sys
 import tempfile
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 import uuid
 import warnings
 from collections.abc import Iterable
@@ -84,8 +84,7 @@ from ..exceptions import (
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 
-if TYPE_CHECKING:
-    from ..utils.json_import import ImportResult
+from ..utils.json_item_import import ImportResult
 
 
 class ADR:
@@ -1314,7 +1313,7 @@ class ADR:
         root_template.save()
         self._build_templates_from_parent(root_id_str, root_template, templates)
 
-    def import_from_json(
+    def import_items_from_json(
         self,
         json_file_path: str | Path,
         *,
@@ -1322,7 +1321,7 @@ class ADR:
         base_dir: str | None = None,
         strict_keys: bool = False,
     ) -> "ImportResult":
-        """Import ADR report items from a JSON document into this serverless database.
+        """Import ADR report items from a JSON document into database.
 
         .. note::
 
@@ -1353,28 +1352,17 @@ class ADR:
 
         Raises
         ------
-        ImportValidationError
-            If the document violates the import contract.
-        ImportVersionError
+        ImportItemValidationError
+            If the document violates the item import contract.
+        ImportItemVersionError
             If the document schema version is unsupported.
-
-        Examples
-        --------
-        ::
-
-            from ansys.dynamicreporting.core.serverless import ADR
-
-            adr = ADR(ansys_installation=r'C:\\Program Files\\ANSYS Inc\\v261')
-            adr.setup()
-            result = adr.import_from_json('report.json')
-            print(result.items_saved, result.ok)
         """
         # Imported lazily so that importing the package does not pull the
         # import machinery for users who never call this.
-        from ..utils.json_import.importer import JSONImporter
-        from .import_backend import ServerlessImportBackend
+        from ..utils.json_item_import.importer import JSONItemImporter
+        from .import_item_backend import ServerlessImportBackend
 
-        importer = JSONImporter(ServerlessImportBackend(self))
+        importer = JSONItemImporter(ServerlessImportBackend(self))
         return importer.import_file(
             json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
         )

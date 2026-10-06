@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_import.tags import combine_tags, normalize_tags
+from ansys.dynamicreporting.core.utils.json_item_import.tags import combine_tags, normalize_tags
 
 
 @pytest.mark.unit

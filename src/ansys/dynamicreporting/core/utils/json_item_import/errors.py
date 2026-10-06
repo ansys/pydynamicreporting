@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Exceptions raised by the ADR JSON import layer."""
+"""Exceptions raised by the ADR JSON import item layer."""
 
 from __future__ import annotations
 
@@ -29,33 +29,33 @@ from collections.abc import Iterable
 from ...exceptions import ADRException
 
 
-class ADRImportError(ADRException):
+class ADRItemImportError(ADRException):
     """Base class for every failure raised by the JSON import layer."""
 
-    detail = "ADR JSON import failed"
+    detail = "ADR JSON import item failed"
 
 
-class ImportVersionError(ADRImportError):
+class ImportItemVersionError(ADRItemImportError):
     """Raised when a document declares an unsupported or malformed schema version."""
 
-    detail = "Unsupported ADR import schema version"
+    detail = "Unsupported ADR import item schema version"
 
 
-class ImportValidationError(ADRImportError):
-    """Raised when a document violates the import contract.
+class ImportItemValidationError(ADRItemImportError):
+    """Raised when a document violates the item import contract.
 
     Unlike a fail-fast validator, this error carries **every** problem found
     during a single validation pass so that a producer can fix an entire
-    document in one edit.
+    json document in one edit.
 
     Parameters
     ----------
     problems : iterable of tuple of (str, str)
         Pairs of ``(location, message)``, where ``location`` is a dotted and
-        indexed path into the document such as ``"items[3].path"``.
+        indexed path into the json document such as ``"items[3].path"``.
     """
 
-    detail = "The ADR import document is not valid"
+    detail = "The ADR import item json document is not valid"
 
     def __init__(self, problems: Iterable[tuple[str, str]]) -> None:
         self.problems: tuple[tuple[str, str], ...] = tuple(problems)

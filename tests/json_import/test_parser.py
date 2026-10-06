@@ -30,12 +30,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.utils.json_import.errors import (
-    ImportValidationError,
-    ImportVersionError,
+from ansys.dynamicreporting.core.utils.json_item_import.errors import (
+    ImportItemValidationError,
+    ImportItemVersionError,
 )
-from ansys.dynamicreporting.core.utils.json_import.models import TableColumn, TreeNode
-from ansys.dynamicreporting.core.utils.json_import.parser import build_document, load_document
+from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn, TreeNode
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document, load_document
 
 
 def _document(**overrides):
@@ -65,21 +65,21 @@ def test_minimal_document_is_valid():
 
 @pytest.mark.unit
 def test_document_must_be_an_object():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(["not", "an", "object"])
     assert _locations(excinfo) == {"<document>"}
 
 
 @pytest.mark.unit
 def test_app_id_is_required():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document({"schema_version": "1.0"})
     assert "app_id" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_app_id_must_be_non_empty():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(app_id=""))
     assert "app_id" in _locations(excinfo)
 
@@ -95,7 +95,7 @@ def test_schema_version_defaults_when_absent():
 @pytest.mark.unit
 def test_newer_major_is_rejected_before_field_validation():
     # The envelope fails fast even though 'items' is also malformed.
-    with pytest.raises(ImportVersionError):
+    with pytest.raises(ImportItemVersionError):
         build_document({"schema_version": "9.0", "items": 5})
 
 
@@ -121,7 +121,7 @@ def test_unknown_keys_are_retained_and_warned():
 
 @pytest.mark.unit
 def test_unknown_keys_are_errors_in_strict_mode():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(future_field=1), strict_keys=True)
     assert any("unknown key" in message for _, message in excinfo.value.problems)
 
@@ -154,7 +154,7 @@ def test_report_structure_is_not_part_of_the_contract():
 
 @pytest.mark.unit
 def test_every_problem_is_reported_in_one_pass():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             {
                 "schema_version": "1.0",
@@ -176,7 +176,7 @@ def test_every_problem_is_reported_in_one_pass():
 
 @pytest.mark.unit
 def test_validation_error_message_lists_every_problem():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document({"items": [{"item_type": "text", "name": "a"}]})
     text = str(excinfo.value)
     assert "problems found" in text
@@ -185,7 +185,7 @@ def test_validation_error_message_lists_every_problem():
 
 @pytest.mark.unit
 def test_single_problem_is_rendered_in_the_singular():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document({"schema_version": "1.0"})
     assert "1 problem found" in str(excinfo.value)
 
@@ -197,14 +197,14 @@ def test_single_problem_is_rendered_in_the_singular():
 
 @pytest.mark.unit
 def test_item_must_be_an_object():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=["nope"]))
     assert "items[0]" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_unknown_item_type_is_rejected():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "spreadsheet", "name": "x"}]))
     assert "items[0].item_type" in _locations(excinfo)
 
@@ -221,7 +221,7 @@ def test_item_common_defaults():
 
 @pytest.mark.unit
 def test_item_sequence_rejects_a_boolean():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(items=[{"item_type": "text", "name": "n", "value": "v", "sequence": True}])
         )
@@ -247,7 +247,7 @@ def test_item_tags_accept_objects_and_key_value_strings():
 
 @pytest.mark.unit
 def test_item_tags_reject_a_bare_string_entry():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(items=[{"item_type": "text", "name": "n", "value": "v", "tags": ["oops"]}])
         )
@@ -266,7 +266,7 @@ def test_item_tags_accept_a_single_mapping():
 
 @pytest.mark.unit
 def test_item_properties_must_be_objects():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(
                 items=[{"item_type": "text", "name": "n", "value": "v", "properties": ["nope"]}]
@@ -283,7 +283,7 @@ def test_item_properties_must_be_objects():
 @pytest.mark.unit
 @pytest.mark.parametrize("item_type", ["text", "html"])
 def test_inline_items_require_a_value(item_type):
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": item_type, "name": "n"}]))
     assert "items[0].value" in _locations(excinfo)
 
@@ -298,7 +298,7 @@ def test_inline_items_carry_their_value(item_type):
 
 @pytest.mark.unit
 def test_value_must_be_a_string():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "text", "name": "n", "value": 5}]))
     assert "items[0].value" in _locations(excinfo)
 
@@ -311,7 +311,7 @@ def test_value_must_be_a_string():
 @pytest.mark.unit
 @pytest.mark.parametrize("item_type", ["image", "animation", "scene", "file"])
 def test_media_items_require_a_path(item_type):
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": item_type, "name": "n"}]))
     assert "items[0].path" in _locations(excinfo)
 
@@ -390,35 +390,35 @@ def test_table_columns_accept_objects():
 
 @pytest.mark.unit
 def test_table_column_object_requires_a_name():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[_table(columns=[{"type": "float"}, "b", "c"])]))
     assert "items[0].columns" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_table_rows_must_be_rectangular():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[_table(rows=[[1, 2, 3], [4, 5]])]))
     assert "items[0].rows[1]" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_table_rows_must_match_the_column_count():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[_table(rows=[[1, 2], [3, 4]])]))
     assert "items[0].rows[0]" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_table_cells_must_be_scalars():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[_table(rows=[[1, 2, {"a": 1}], [4, 5, 6]])]))
     assert "items[0].rows[0][2]" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_table_requires_columns_and_rows():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "table", "name": "t"}]))
     locations = _locations(excinfo)
     assert "items[0].columns" in locations
@@ -427,7 +427,7 @@ def test_table_requires_columns_and_rows():
 
 @pytest.mark.unit
 def test_table_axes_must_name_columns():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[_table(xaxis="nope", yaxis=["T_max", "missing"])]))
     locations = _locations(excinfo)
     assert "items[0].xaxis" in locations
@@ -473,21 +473,21 @@ def test_table_top_level_wins_over_the_data_wrapper():
 
 @pytest.mark.unit
 def test_table_data_wrapper_must_be_an_object():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "table", "name": "t", "data": "nope"}]))
     assert "items[0].data" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_tree_node_entries_must_be_objects():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": ["nope"]}]))
     assert "items[0].nodes[0]" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_tree_child_entries_must_be_objects():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(
                 items=[
@@ -563,14 +563,14 @@ def test_tree_node_keeps_an_explicit_value_and_key():
 
 @pytest.mark.unit
 def test_tree_node_requires_a_name():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [{}]}]))
     assert "items[0].nodes[0].name" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_tree_node_value_rejects_a_nested_object():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(
                 items=[{"item_type": "tree", "name": "t", "nodes": [{"name": "a", "value": {}}]}]
@@ -581,7 +581,7 @@ def test_tree_node_value_rejects_a_nested_object():
 
 @pytest.mark.unit
 def test_tree_node_value_rejects_a_list_of_objects():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(
                 items=[{"item_type": "tree", "name": "t", "nodes": [{"name": "a", "value": [{}]}]}]
@@ -592,7 +592,7 @@ def test_tree_node_value_rejects_a_list_of_objects():
 
 @pytest.mark.unit
 def test_nested_tree_problems_report_their_full_location():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(
             _document(
                 items=[
@@ -629,14 +629,14 @@ def test_sessions_and_datasets_are_parsed_and_noted():
 
 @pytest.mark.unit
 def test_session_entries_must_be_objects():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(sessions=["nope"]))
     assert "sessions[0]" in _locations(excinfo)
 
 
 @pytest.mark.unit
 def test_dataset_entries_must_be_objects():
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_document(datasets=[1]))
     assert "datasets[0]" in _locations(excinfo)
 
@@ -668,7 +668,7 @@ def test_load_document_honors_an_explicit_base_dir(tmp_path: Path):
 
 @pytest.mark.unit
 def test_load_document_reports_a_missing_file(tmp_path: Path):
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         load_document(tmp_path / "absent.json")
     assert "does not exist" in str(excinfo.value)
 
@@ -677,6 +677,6 @@ def test_load_document_reports_a_missing_file(tmp_path: Path):
 def test_load_document_reports_invalid_json(tmp_path: Path):
     path = tmp_path / "broken.json"
     path.write_text("{not json", encoding="utf-8")
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         load_document(path)
     assert "invalid JSON" in str(excinfo.value)

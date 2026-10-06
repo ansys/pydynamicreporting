@@ -118,7 +118,7 @@ document_path.write_text(json.dumps(document, indent=2), encoding="utf-8")
 adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
 adr_service.connect(url="http://localhost:8010")
 
-result = adr_service.import_from_json(document_path)
+result = adr_service.import_items_from_json(document_path)
 
 ###############################################################################
 # Inspect the result

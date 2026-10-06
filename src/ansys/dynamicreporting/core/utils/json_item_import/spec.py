@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Declarative field specification for the ADR item import schema.
+"""Declarative field specification for the ADR import item schema.
 
 This module is the single source of truth for the item import contract. The
 parser validates against these tables, and ``scripts/gen_import_schema.py``

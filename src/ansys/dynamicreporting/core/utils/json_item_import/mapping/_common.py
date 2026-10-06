@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Shared mapping helpers for the ADR import adapters.
+"""Shared mapping helpers for the ADR item import adapters.
 
 Every public helper here must be called by **both** backend adapters. A helper
 with only one call site means the adapters have grown divergent inline copies,

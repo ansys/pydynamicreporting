@@ -42,17 +42,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.serverless.import_backend import (
+from ansys.dynamicreporting.core.serverless.import_item_backend import (
     ITEM_CLASS,
     ServerlessImportBackend,
 )
-from ansys.dynamicreporting.core.utils.json_import.errors import (
-    ImportValidationError,
-    ImportVersionError,
+from ansys.dynamicreporting.core.utils.json_item_import.errors import (
+    ImportItemValidationError,
+    ImportItemVersionError,
 )
-from ansys.dynamicreporting.core.utils.json_import.importer import JSONImporter
-from ansys.dynamicreporting.core.utils.json_import.models import TableColumn
-from ansys.dynamicreporting.core.utils.json_import.parser import build_document, load_document
+from ansys.dynamicreporting.core.utils.json_item_import.importer import JSONItemImporter
+from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document, load_document
 
 CANONICAL_DOCUMENT: dict[str, Any] = {
     "schema_version": "1.0",
@@ -237,7 +237,7 @@ def imported(tmp_path: Path):
     adr.create_item.side_effect = create_item
 
     document = build_document(copy.deepcopy(CANONICAL_DOCUMENT), base_dir=str(tmp_path))
-    result = JSONImporter(ServerlessImportBackend(adr)).import_document(document)
+    result = JSONItemImporter(ServerlessImportBackend(adr)).import_document(document)
     return result, created
 
 
@@ -367,7 +367,7 @@ def _nested_tree_node_without_a_name(document):
     ids=lambda value: value.__name__.lstrip("_") if callable(value) else value,
 )
 def test_canonical_document_rejects_a_single_break(mutate, location):
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_mutated(mutate))
     assert location in _locations(excinfo)
 
@@ -383,7 +383,7 @@ def test_canonical_document_rejects_a_newer_major(version):
     def mutate(document):
         document["schema_version"] = version
 
-    with pytest.raises(ImportVersionError):
+    with pytest.raises(ImportItemVersionError):
         build_document(_mutated(mutate))
 
 
@@ -393,7 +393,7 @@ def test_canonical_document_rejects_a_malformed_version(version):
     def mutate(document):
         document["schema_version"] = version
 
-    with pytest.raises(ImportVersionError):
+    with pytest.raises(ImportItemVersionError):
         build_document(_mutated(mutate))
 
 
@@ -418,7 +418,7 @@ def test_an_unknown_key_is_retained_by_default_and_rejected_when_strict():
     document = _mutated(mutate)
     assert build_document(copy.deepcopy(document)).items[TEXT].extra == {"unexpected": 1}
 
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(document, strict_keys=True)
     assert f"items[{TEXT}]" in _locations(excinfo)
 
@@ -431,7 +431,7 @@ def test_every_break_is_reported_in_one_pass():
         document["items"][TABLE]["xaxis"] = "pressure"
         document["items"][TREE]["nodes"][0]["children"][1] = {"value": "Part B"}
 
-    with pytest.raises(ImportValidationError) as excinfo:
+    with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(_mutated(mutate))
 
     locations = _locations(excinfo)
@@ -450,9 +450,9 @@ def test_a_broken_document_never_reaches_the_backend():
 
     adr = MagicMock()
     adr._logger = MagicMock()
-    importer = JSONImporter(ServerlessImportBackend(adr))
+    importer = JSONItemImporter(ServerlessImportBackend(adr))
 
-    with pytest.raises(ImportValidationError):
+    with pytest.raises(ImportItemValidationError):
         importer.import_document(build_document(_mutated(mutate)))
 
     adr.create_item.assert_not_called()

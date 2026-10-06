@@ -8,9 +8,9 @@ JSON import schema reference
    the ``schema_version`` major. Pin the version you validate against.
 
 This page is the field-by-field reference for the JSON document consumed by
-:func:`Service.import_from_json<ansys.dynamicreporting.core.Service.import_from_json>`
+:func:`Service.import_items_from_json<ansys.dynamicreporting.core.Service.import_items_from_json>`
 and
-:func:`ADR.import_from_json<ansys.dynamicreporting.core.serverless.ADR.import_from_json>`.
+:func:`ADR.import_items_from_json<ansys.dynamicreporting.core.serverless.ADR.import_items_from_json>`.
 
 For a task-oriented introduction, start with :ref:`ref_json_import_guide`. Use
 this page when you are writing a producer and need to know exactly what is
@@ -430,7 +430,7 @@ typo validates. To catch typos in your own pipeline, enable strict mode:
 
 .. code:: python
 
-   result = adr_service.import_from_json("report.json", strict_keys=True)
+   result = adr_service.import_items_from_json("report.json", strict_keys=True)
 
 With ``strict_keys=True`` every unknown key becomes a validation error. Using it
 in your continuous integration and leaving it off in production gives you both
@@ -473,7 +473,7 @@ commonly a media file that does not exist. These are governed by ``on_error``:
 
 .. code:: python
 
-   result = adr_service.import_from_json("report.json", on_error="collect")
+   result = adr_service.import_items_from_json("report.json", on_error="collect")
 
    print(result.items_saved, result.ok)
    for failure in result.failures:

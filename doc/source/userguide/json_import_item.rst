@@ -12,9 +12,9 @@ JSON item import
 
 PyDynamicReporting can create report items from a single JSON document. The
 same document imports identically through
-:func:`Service.import_from_json<ansys.dynamicreporting.core.Service.import_from_json>`
+:func:`Service.import_items_from_json<ansys.dynamicreporting.core.Service.import_items_from_json>`
 (server mode) and
-:func:`ADR.import_from_json<ansys.dynamicreporting.core.serverless.ADR.import_from_json>`
+:func:`ADR.import_items_from_json<ansys.dynamicreporting.core.serverless.ADR.import_items_from_json>`
 (serverless mode).
 
 This is useful when a producing application already knows what it wants to
@@ -66,7 +66,7 @@ Then import it:
    adr_service = adr.Service(ansys_installation=r"C:\Program Files\ANSYS Inc\v261")
    adr_service.connect(url="http://localhost:8010")
 
-   result = adr_service.import_from_json(r"D:\runs\42\report.json")
+   result = adr_service.import_items_from_json(r"D:\runs\42\report.json")
    print(result.items_saved, result.ok)
 
 The serverless call is identical:
@@ -80,7 +80,7 @@ The serverless call is identical:
    )
    adr_obj.setup()
 
-   result = adr_obj.import_from_json(r"D:\runs\42\report.json")
+   result = adr_obj.import_items_from_json(r"D:\runs\42\report.json")
 
 The document envelope
 ---------------------
@@ -181,7 +181,7 @@ Per-item failures during creation are governed by ``on_error``:
 
 .. code:: python
 
-   result = adr_service.import_from_json("report.json", on_error="collect")
+   result = adr_service.import_items_from_json("report.json", on_error="collect")
    for failure in result.failures:
        print(failure.name, failure.item_type, failure.error)
 

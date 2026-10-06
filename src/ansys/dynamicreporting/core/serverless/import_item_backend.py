@@ -20,17 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Server (REST) backend adapter for the ADR JSON importer.
+"""Serverless backend adapter for the ADR JSON item importer.
 
-The adapter drives the existing :class:`~ansys.dynamicreporting.core.adr_item.Item`
-attribute dispatch; it changes nothing in ``adr_item`` or ``report_objects``.
+The adapter only calls the existing public creation API
+(:meth:`ADR.create_item`), so the serverless validators still run underneath
+every imported item.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from .utils.json_import.mapping import (
+from ..adr_utils import get_logger
+from ..utils.json_item_import.mapping import (
     apply_properties,
     column_labels,
     derive_axes,
@@ -38,56 +40,65 @@ from .utils.json_import.mapping import (
     resolve_path,
     rows_to_array,
 )
-from .utils.json_import.models import ItemPayload
-from .utils.json_import.tags import combine_tags
+from ..utils.json_item_import.models import ItemPayload
+from ..utils.json_item_import.tags import combine_tags
+from .item import HTML, Animation, File, Image, Scene, String, Table, Tree
 
-ITEM_ATTRIBUTE: dict[str, str] = {
-    "text": "item_text",
-    "html": "item_text",
-    "table": "item_table",
-    "tree": "item_tree",
-    "image": "item_image",
-    "animation": "item_animation",
-    "scene": "item_scene",
-    "file": "item_file",
+ITEM_CLASS: dict[str, type] = {
+    "text": String,
+    "html": HTML,
+    "table": Table,
+    "tree": Tree,
+    "image": Image,
+    "animation": Animation,
+    "scene": Scene,
+    "file": File,
 }
-"""Wire ``item_type`` to the ``adr_item.Item`` attribute that triggers the push.
+"""Wire ``item_type`` to the serverless item class.
 
-``text`` and ``html`` share ``item_text``: the REST payload for that attribute
-is always pushed via ``set_payload_html``.
+``html`` binds to :class:`HTML` and ``animation`` binds to :class:`Animation`.
+Collapsing them onto :class:`String`/:class:`Image` would skip the markup
+validation and route video files through the image save path.
 """
 
 
-class ServerImportBackend:
-    """Translate import payloads into REST service objects."""
+class ServerlessImportBackend:
+    """Translate import item payloads into serverless ADR item objects."""
 
-    def __init__(self, service: Any) -> None:
-        self._service = service
-        self.logger = service.logger
+    def __init__(self, adr: Any) -> None:
+        self._adr = adr
+        self.logger = getattr(adr, "_logger", None) or get_logger()
 
     def ensure_ready(self) -> None:
-        """Verify the service is connected to a server."""
-        if getattr(self._service, "serverobj", None) is None:
-            raise RuntimeError("The ADR service is not connected; call connect() first.")
+        """Verify the ADR singleton has been set up."""
+        self._adr.ensure_setup()
 
     def save_item(self, model: ItemPayload, doc_tags: str) -> Any:
-        """Create one item and push it to the server."""
-        item = self._service.create_item(obj_name=model.name, source=model.source or "ADR")
-        # Set before the payload: assigning the payload attribute pushes.
-        item.item.sequence = model.sequence
+        """Create and persist one item."""
+        item = self._adr.create_item(
+            ITEM_CLASS[model.item_type],
+            name=model.name,
+            content=self._content_for(model),
+            source=model.source,
+            sequence=model.sequence,
+            tags=combine_tags(doc_tags, model.tags),
+        )
 
-        setattr(item, ITEM_ATTRIBUTE[model.item_type], self._content_for(model))
-
+        needs_resave = False
         if model.item_type == "table":
             self._set_table_meta(item, model)
-        apply_properties(item, model.properties, self.logger)
+            needs_resave = True
+        if model.properties:
+            apply_properties(item, model.properties, self.logger)
+            needs_resave = True
 
-        item.set_tags(combine_tags(doc_tags, model.tags))
+        if needs_resave:
+            item.save()
         return item
 
     @staticmethod
     def _content_for(model: ItemPayload) -> Any:
-        """Build the REST content payload for one item."""
+        """Build the backend content payload for one item."""
         if model.item_type in ("text", "html"):
             return model.value
         if model.item_type == "table":

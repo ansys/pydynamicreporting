@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Tag rendering for the ADR import layer.
+"""Tag rendering for the ADR import item layer.
 
 Both backend adapters are required to render tags through these two functions.
 A backend that builds its own ``key=value`` string will drift from the other

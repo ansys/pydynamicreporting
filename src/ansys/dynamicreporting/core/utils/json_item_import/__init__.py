@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Backend-agnostic JSON import contract for Ansys Dynamic Reporting.
+"""Backend-agnostic JSON item import contract for Ansys Dynamic Reporting.
 
 This package owns the import document schema, its validation, and the
 orchestration that drives a backend adapter. It depends only on the standard
@@ -28,8 +28,8 @@ library and NumPy; it must never import a backend module.
 """
 
 from .enums import ITEM_TYPES
-from .errors import ADRImportError, ImportValidationError, ImportVersionError
-from .importer import ImportBackend, JSONImporter
+from .errors import ADRItemImportError, ImportItemValidationError, ImportItemVersionError
+from .importer import ImportBackend, JSONItemImporter
 from .models import (
     DatasetPayload,
     ImportDocument,
@@ -44,11 +44,11 @@ from .tags import combine_tags, normalize_tags
 from .version import SCHEMA_VERSION, SUPPORTED_MAJOR, check_version, parse_version
 
 __all__ = [
-    "ADRImportError",
-    "ImportValidationError",
-    "ImportVersionError",
+    "ADRItemImportError",
+    "ImportItemValidationError",
+    "ImportItemVersionError",
     "ImportBackend",
-    "JSONImporter",
+    "JSONItemImporter",
     "ImportDocument",
     "ItemPayload",
     "SessionPayload",

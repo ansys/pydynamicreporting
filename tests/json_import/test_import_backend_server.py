@@ -29,12 +29,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ansys.dynamicreporting.core.import_backend_server import (
+from ansys.dynamicreporting.core.import_item_backend_server import (
     ITEM_ATTRIBUTE,
     ServerImportBackend,
 )
-from ansys.dynamicreporting.core.utils.json_import.enums import ITEM_TYPES
-from ansys.dynamicreporting.core.utils.json_import.parser import build_document
+from ansys.dynamicreporting.core.utils.json_item_import.enums import ITEM_TYPES
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
 
 
 @pytest.fixture

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Backend-neutral mapping helpers shared by every import adapter."""
+"""Backend-neutral mapping helpers shared by every import item adapter."""
 
 from ._common import (
     apply_properties,

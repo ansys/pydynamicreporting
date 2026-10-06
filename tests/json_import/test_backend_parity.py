@@ -37,17 +37,17 @@ from unittest.mock import MagicMock
 import numpy
 import pytest
 
-from ansys.dynamicreporting.core.import_backend_server import (
+from ansys.dynamicreporting.core.import_item_backend_server import (
     ITEM_ATTRIBUTE,
     ServerImportBackend,
 )
-from ansys.dynamicreporting.core.serverless.import_backend import (
+from ansys.dynamicreporting.core.serverless.import_item_backend import (
     ITEM_CLASS,
     ServerlessImportBackend,
 )
-from ansys.dynamicreporting.core.utils.json_import.enums import ITEM_TYPES
-from ansys.dynamicreporting.core.utils.json_import.importer import JSONImporter
-from ansys.dynamicreporting.core.utils.json_import.parser import build_document
+from ansys.dynamicreporting.core.utils.json_item_import.enums import ITEM_TYPES
+from ansys.dynamicreporting.core.utils.json_item_import.importer import JSONItemImporter
+from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document
 
 DOCUMENT = {
     "schema_version": "1.0",
@@ -108,7 +108,7 @@ def _run_serverless(base_dir: str) -> Run:
     adr.create_item.side_effect = create_item
 
     document = build_document(DOCUMENT, base_dir=base_dir)
-    result = JSONImporter(ServerlessImportBackend(adr)).import_document(document)
+    result = JSONItemImporter(ServerlessImportBackend(adr)).import_document(document)
     return Run(result, items, item_order)
 
 
@@ -129,7 +129,7 @@ def _run_server(base_dir: str) -> Run:
     service.create_item.side_effect = create_item
 
     document = build_document(DOCUMENT, base_dir=base_dir)
-    result = JSONImporter(ServerImportBackend(service)).import_document(document)
+    result = JSONItemImporter(ServerImportBackend(service)).import_document(document)
 
     # The server adapter assigns the payload to a type-specific attribute.
     for model in document.items:

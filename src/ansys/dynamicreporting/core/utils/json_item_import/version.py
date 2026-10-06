@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import re
 
-from .errors import ImportVersionError
+from .errors import ImportItemVersionError
 
 SCHEMA_VERSION = "1.0"
 """Schema version emitted and fully understood by this importer."""
@@ -59,12 +59,12 @@ def parse_version(version: str) -> tuple[int, int]:
         If ``version`` is not exactly two dot-separated integers.
     """
     if not isinstance(version, str):
-        raise ImportVersionError(
+        raise ImportItemVersionError(
             f"expected a 'MAJOR.MINOR' version string, got {type(version).__name__}"
         )
     match = _VERSION_RE.match(version.strip())
     if match is None:
-        raise ImportVersionError(
+        raise ImportItemVersionError(
             f"{version!r} is not a valid schema version; expected 'MAJOR.MINOR', for example '1.0'"
         )
     return int(match.group(1)), int(match.group(2))
@@ -102,7 +102,7 @@ def check_version(version: str | None, logger: object | None = None) -> str:
 
     major, minor = parse_version(version)
     if major > SUPPORTED_MAJOR:
-        raise ImportVersionError(
+        raise ImportItemVersionError(
             f"document major version {major} is newer than the supported major "
             f"{SUPPORTED_MAJOR}; upgrade ansys-dynamicreporting-core to import it"
         )

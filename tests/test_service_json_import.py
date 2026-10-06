@@ -31,7 +31,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ansys.dynamicreporting.core import Service
-from ansys.dynamicreporting.core.utils.json_import import ImportResult
+from ansys.dynamicreporting.core.utils.json_item_import import ImportResult
 
 
 def _write_document(tmp_path: Path) -> Path:
@@ -48,10 +48,10 @@ def test_import_from_json_delegates_to_the_importer(tmp_path: Path):
     expected = ImportResult(schema_version="1.0", app_id="demo-app")
 
     with patch(
-        "ansys.dynamicreporting.core.utils.json_import.importer.JSONImporter"
+        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
     ) as importer_cls:
         importer_cls.return_value.import_file.return_value = expected
-        result = service.import_from_json(path)
+        result = service.import_items_from_json(path)
 
     assert result is expected
     importer_cls.return_value.import_file.assert_called_once_with(
@@ -66,9 +66,9 @@ def test_import_from_json_forwards_every_option(tmp_path: Path):
     path = _write_document(tmp_path)
 
     with patch(
-        "ansys.dynamicreporting.core.utils.json_import.importer.JSONImporter"
+        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
     ) as importer_cls:
-        service.import_from_json(path, on_error="raise", base_dir="/media", strict_keys=True)
+        service.import_items_from_json(path, on_error="raise", base_dir="/media", strict_keys=True)
 
     importer_cls.return_value.import_file.assert_called_once_with(
         path, on_error="raise", base_dir="/media", strict_keys=True
@@ -77,16 +77,16 @@ def test_import_from_json_forwards_every_option(tmp_path: Path):
 
 @pytest.mark.unit
 def test_import_from_json_uses_the_server_backend(tmp_path: Path):
-    from ansys.dynamicreporting.core.import_backend_server import ServerImportBackend
+    from ansys.dynamicreporting.core.import_item_backend_server import ServerImportBackend
 
     service = Service.__new__(Service)
     service.logger = MagicMock()
     path = _write_document(tmp_path)
 
     with patch(
-        "ansys.dynamicreporting.core.utils.json_import.importer.JSONImporter"
+        "ansys.dynamicreporting.core.utils.json_item_import.importer.JSONItemImporter"
     ) as importer_cls:
-        service.import_from_json(path)
+        service.import_items_from_json(path)
 
     backend = importer_cls.call_args.args[0]
     assert isinstance(backend, ServerImportBackend)

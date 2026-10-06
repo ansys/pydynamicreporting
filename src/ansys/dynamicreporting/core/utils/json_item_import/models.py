@@ -20,10 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Parsed payload objects for the ADR import document.
+"""Parsed payload objects for the ADR import item document.
 
 These are plain frozen dataclasses. They are produced by
-:mod:`~ansys.dynamicreporting.core.utils.json_import.parser` and consumed by
+:mod:`~ansys.dynamicreporting.core.utils.json_item_import.parser` and consumed by
 the importer core and the backend adapters.
 """
 
