@@ -35,7 +35,12 @@ from typing import Any
 
 import numpy
 
+from ....adr_utils import table_attr
+
 _SLUG_RE = re.compile(r"[^0-9a-z]+")
+
+KNOWN_PROPERTY_NAMES: frozenset[str] = frozenset(table_attr)
+"""Property names ADR recognizes; anything else is reported rather than dropped."""
 
 
 def rows_to_array(rows: Any, column_count: int | None = None) -> numpy.ndarray:
@@ -67,8 +72,11 @@ def rows_to_array(rows: Any, column_count: int | None = None) -> numpy.ndarray:
         return numpy.array(rows, dtype="float").T
     except (TypeError, ValueError):
         # Fall back to auto-sized bytes. 'S' without a width never truncates,
-        # unlike a fixed '|S20'.
-        text_rows = [["" if cell is None else cell for cell in row] for row in rows]
+        # unlike a fixed '|S20'. Cells are encoded explicitly because NumPy
+        # encodes str -> bytes as ASCII, which rejects a degree sign.
+        text_rows = [
+            [b"" if cell is None else str(cell).encode("utf-8") for cell in row] for row in rows
+        ]
         return numpy.array(text_rows, dtype="S").T
 
 
@@ -132,11 +140,14 @@ def _item_label(item: Any) -> str:
     return getattr(item, "name", None) or getattr(item, "obj_name", None) or "<unnamed>"
 
 
-def apply_properties(item: Any, properties: Any, logger: Any = None) -> None:
+def apply_properties(
+    item: Any, properties: Any, logger: Any = None, setter: Any = None
+) -> list[str]:
     """Apply escape-hatch properties onto a created item.
 
-    Keys that are private or that would shadow a method are skipped and
-    logged, so a document cannot overwrite ``save`` or ``delete``.
+    Keys that are private, that would shadow a method, or that ADR does not
+    recognize are skipped and logged, so a document cannot overwrite ``save``
+    and cannot have a misspelled property silently discarded.
 
     Parameters
     ----------
@@ -146,14 +157,26 @@ def apply_properties(item: Any, properties: Any, logger: Any = None) -> None:
         One-key objects from the item ``properties`` array.
     logger : object, optional
         Logger used to report skipped keys.
+    setter : callable, optional
+        Called as ``setter(item, key, value)``. Defaults to :func:`setattr`.
+        The REST adapter passes a deferred setter so that applying several
+        properties does not re-upload the payload once per key.
+
+    Returns
+    -------
+    list of str
+        Names actually applied, in document order.
     """
     if not properties:
-        return
+        return []
+
+    assign = setter or setattr
 
     flat: dict[str, Any] = {}
     for entry in properties:
         flat.update(entry)
 
+    applied: list[str] = []
     for key, value in flat.items():
         if not isinstance(key, str) or key.startswith("_"):
             if logger is not None:
@@ -172,7 +195,19 @@ def apply_properties(item: Any, properties: Any, logger: Any = None) -> None:
                     key,
                 )
             continue
-        setattr(item, key, value)
+        if key not in KNOWN_PROPERTY_NAMES:
+            # Both backends drop unrecognized names at save time, so report
+            # them here rather than letting them disappear.
+            if logger is not None:
+                logger.warning(
+                    "Item %r: property %r is not a known ADR field; ignored.",
+                    _item_label(item),
+                    key,
+                )
+            continue
+        assign(item, key, value)
+        applied.append(key)
+    return applied
 
 
 def resolve_path(path: str, base_dir: str | None = None) -> str:

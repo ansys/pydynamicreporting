@@ -27,10 +27,10 @@ Import report items from a JSON document
 ========================================
 
 Build an ADR import document in memory, write it to disk, and import it with
-:func:`Service.import_from_json<ansys.dynamicreporting.core.Service.import_from_json>`.
+:func:`Service.import_items_from_json<ansys.dynamicreporting.core.Service.import_items_from_json>`.
 
 The same document imports unchanged through
-:func:`ADR.import_from_json<ansys.dynamicreporting.core.serverless.ADR.import_from_json>`
+:func:`ADR.import_items_from_json<ansys.dynamicreporting.core.serverless.ADR.import_items_from_json>`
 in serverless mode.
 
 .. warning::

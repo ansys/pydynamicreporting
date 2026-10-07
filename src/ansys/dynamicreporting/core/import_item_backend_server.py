@@ -58,6 +58,15 @@ is always pushed via ``set_payload_html``.
 """
 
 
+def _stage(item: Any, name: str, value: Any) -> None:
+    """Set an attribute without triggering a server round trip.
+
+    ``only_set`` is the same flag ``adr_item.Item.__copyattrs__`` uses to
+    populate an item without writing back.
+    """
+    item.__setattr__(name, value, only_set=True)
+
+
 class ServerImportBackend:
     """Translate import payloads into REST service objects."""
 
@@ -72,17 +81,28 @@ class ServerImportBackend:
 
     def save_item(self, model: ItemPayload, doc_tags: str) -> Any:
         """Create one item and push it to the server."""
-        item = self._service.create_item(obj_name=model.name, source=model.source or "ADR")
-        # Set before the payload: assigning the payload attribute pushes.
+        item = self._service.create_item(obj_name=model.name, source=model.source)
+        # adr_item.Item has no 'sequence' passthrough, and its set_tags() pushes
+        # on its own. Both are staged on the server object so they ride the
+        # payload push instead of costing a round trip each.
         item.item.sequence = model.sequence
+        item.item.set_tags(combine_tags(doc_tags, model.tags))
 
+        # Assigning the payload sets the item type and performs the first push.
+        # Item.__setattr__ re-uploads the whole table on every table_attr write
+        # once the array is present, so everything after this point is staged
+        # with only_set and pushed once at the end.
         setattr(item, ITEM_ATTRIBUTE[model.item_type], self._content_for(model))
 
+        staged = False
         if model.item_type == "table":
             self._set_table_meta(item, model)
-        apply_properties(item, model.properties, self.logger)
+            staged = True
+        if apply_properties(item, model.properties, self.logger, setter=_stage):
+            staged = True
+        if staged:
+            item.__pushonly__()
 
-        item.set_tags(combine_tags(doc_tags, model.tags))
         return item
 
     @staticmethod
@@ -98,14 +118,14 @@ class ServerImportBackend:
 
     @staticmethod
     def _set_table_meta(item: Any, model: ItemPayload) -> None:
-        """Apply table labels, axes, and display fields."""
-        item.labels_row = column_labels(model.columns)
+        """Stage table labels, axes, and display fields without pushing."""
+        _stage(item, "labels_row", column_labels(model.columns))
         xaxis, yaxis = derive_axes(model.columns, model.xaxis, model.yaxis)
         if xaxis is not None:
-            item.xaxis = xaxis
+            _stage(item, "xaxis", xaxis)
         if yaxis:
-            item.yaxis = yaxis
+            _stage(item, "yaxis", yaxis)
         if model.plot is not None:
-            item.plot = model.plot
+            _stage(item, "plot", model.plot)
         if model.table_format is not None:
-            item.format = model.table_format
+            _stage(item, "format", model.table_format)

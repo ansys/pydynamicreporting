@@ -37,6 +37,7 @@ from unittest.mock import MagicMock
 import numpy
 import pytest
 
+from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.import_item_backend_server import (
     ITEM_ATTRIBUTE,
     ServerImportBackend,
@@ -101,6 +102,7 @@ def _run_serverless(base_dir: str) -> Run:
         item.imported_content = kwargs["content"]
         item.imported_tags = kwargs["tags"]
         item.imported_class = item_class
+        item.imported_source = kwargs["source"]
         items[kwargs["name"]] = item
         item_order.append(kwargs["name"])
         return item
@@ -118,14 +120,19 @@ def _run_server(base_dir: str) -> Run:
     items: dict[str, Any] = {}
     item_order: list[str] = []
 
-    def create_item(**kwargs):
-        item = MagicMock()
-        item.imported_tags = None
-        item.set_tags.side_effect = lambda value: setattr(item, "imported_tags", value)
-        items[kwargs["obj_name"]] = item
-        item_order.append(kwargs["obj_name"])
+    def create_item(obj_name=None, source=None):
+        # A real Item, so the adapter's staged writes behave as they do in
+        # production rather than being absorbed by a permissive mock.
+        item = Item(service=service, obj_name=obj_name, source=source)
+        item.imported_source = source
+        items[obj_name] = item
+        item_order.append(obj_name)
         return item
 
+    service.serverobj.get_URL.return_value = None
+    # A distinct REST object per item; the default shared return_value would
+    # make every Item write tags onto the same mock.
+    service.serverobj.create_item.side_effect = lambda **kwargs: MagicMock()
     service.create_item.side_effect = create_item
 
     document = build_document(DOCUMENT, base_dir=base_dir)
@@ -135,6 +142,7 @@ def _run_server(base_dir: str) -> Run:
     for model in document.items:
         item = items[model.name]
         item.imported_content = getattr(item, ITEM_ATTRIBUTE[model.item_type])
+        item.imported_tags = item.item.set_tags.call_args.args[0]
     return Run(result, items, item_order)
 
 
@@ -156,6 +164,14 @@ def server_run(tmp_path: Path) -> Run:
 @pytest.mark.unit
 def test_both_adapters_cover_every_item_type():
     assert set(ITEM_CLASS) == set(ITEM_ATTRIBUTE) == set(ITEM_TYPES)
+
+
+@pytest.mark.unit
+def test_both_backends_store_the_same_source(serverless_run: Run, server_run: Run):
+    # An adapter-local default would make the same document produce different
+    # queryable metadata on the two backends.
+    for name in ("txt", "tbl"):
+        assert serverless_run.items[name].imported_source == server_run.items[name].imported_source
 
 
 # --------------------------------------------------------------------------

@@ -50,6 +50,7 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
+from typing import TYPE_CHECKING
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -73,7 +74,8 @@ from .exceptions import (
     UnsupportedServerVersionError,
 )
 
-from .utils.json_item_import import ImportResult
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from .utils.json_item_import import ImportResult
 
 
 # Main class

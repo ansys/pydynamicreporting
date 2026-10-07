@@ -235,11 +235,20 @@ def test_simple_item_is_not_saved_a_second_time(backend):
 
 @pytest.mark.unit
 def test_item_with_properties_is_saved_once(backend):
-    model = _item(
-        {"item_type": "text", "name": "n", "value": "v", "properties": [{"text_color": "red"}]}
-    )
+    model = _item({"item_type": "text", "name": "n", "value": "v", "properties": [{"title": "t"}]})
     item = backend.save_item(model, "")
     item.save.assert_called_once()
+
+
+@pytest.mark.unit
+def test_item_with_only_unknown_properties_is_not_resaved(backend):
+    # An unrecognized name is reported and skipped, so there is nothing to
+    # write back and the redundant save is avoided.
+    model = _item(
+        {"item_type": "text", "name": "n", "value": "v", "properties": [{"not_a_field": 1}]}
+    )
+    item = backend.save_item(model, "")
+    item.save.assert_not_called()
 
 
 # --------------------------------------------------------------------------

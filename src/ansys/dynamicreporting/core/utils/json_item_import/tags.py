@@ -35,9 +35,10 @@ from typing import Any
 def _quote(token: str) -> str:
     """Quote a tag token that contains whitespace.
 
-    Mirrors the convention used by
-    :meth:`ansys.dynamicreporting.core.serverless.base.BaseModel._add_quotes`,
-    so tags produced here survive a later parse of the tag string.
+    Deliberately duplicates
+    :meth:`ansys.dynamicreporting.core.serverless.base.BaseModel._add_quotes`
+    rather than importing it: that module pulls in Django, and this package
+    must stay importable without a configured backend.
     """
     if " " in token and not token.startswith("'"):
         return f"'{token}'"

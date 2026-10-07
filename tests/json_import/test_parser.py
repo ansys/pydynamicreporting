@@ -35,7 +35,11 @@ from ansys.dynamicreporting.core.utils.json_item_import.errors import (
     ImportItemVersionError,
 )
 from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn, TreeNode
-from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document, load_document
+from ansys.dynamicreporting.core.utils.json_item_import.parser import (
+    MAX_TREE_DEPTH,
+    build_document,
+    load_document,
+)
 
 
 def _document(**overrides):
@@ -117,6 +121,70 @@ def test_unknown_keys_are_retained_and_warned():
     doc = build_document(_document(future_field={"a": 1}), logger=logger)
     assert doc.extra == {"future_field": {"a": 1}}
     assert any("unknown key" in str(call) for call in logger.warning.call_args_list)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("literal", ["NaN", "Infinity", "-Infinity"])
+def test_non_finite_numbers_are_rejected(literal):
+    # Python's json reads these, but they are not valid JSON and the published
+    # schema rejects them; the parser must not disagree with the artifact.
+    raw = json.loads(
+        '{"schema_version":"1.0","app_id":"demo-app","items":[{"item_type":"table",'
+        f'"name":"t","columns":["a"],"rows":[[{literal}]]}}]}}'
+    )
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(raw)
+    assert "items[0].rows[0][0]" in _locations(excinfo)
+
+
+@pytest.mark.unit
+def test_null_is_the_supported_missing_number():
+    doc = build_document(
+        _document(items=[{"item_type": "table", "name": "t", "columns": ["a"], "rows": [[None]]}])
+    )
+    assert doc.items[0].rows == ((None,),)
+
+
+@pytest.mark.unit
+def test_deeply_nested_tree_is_a_validation_error_not_a_crash():
+    # The builders recurse during parsing, so an unbounded depth would abort
+    # the whole document with a RecursionError before any item could be saved.
+    node = {"name": "leaf"}
+    for _ in range(MAX_TREE_DEPTH + 5):
+        node = {"name": "n", "children": [node]}
+    with pytest.raises(ImportItemValidationError) as excinfo:
+        build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
+    assert any("nesting is deeper" in message for _, message in excinfo.value.problems)
+
+
+@pytest.mark.unit
+def test_tree_at_the_depth_limit_is_accepted():
+    node = {"name": "leaf"}
+    for _ in range(MAX_TREE_DEPTH - 1):
+        node = {"name": "n", "children": [node]}
+    doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
+    assert doc.items[0].nodes
+
+
+@pytest.mark.unit
+def test_property_shadowing_a_first_class_field_is_warned():
+    logger = MagicMock()
+    build_document(
+        _document(
+            items=[
+                {
+                    "item_type": "table",
+                    "name": "t",
+                    "columns": ["a"],
+                    "rows": [[1]],
+                    "plot": "line",
+                    "properties": [{"plot": "bar"}],
+                }
+            ]
+        ),
+        logger=logger,
+    )
+    assert any("overrides the first-class" in str(c) for c in logger.warning.call_args_list)
 
 
 @pytest.mark.unit
@@ -680,3 +748,12 @@ def test_load_document_reports_invalid_json(tmp_path: Path):
     with pytest.raises(ImportItemValidationError) as excinfo:
         load_document(path)
     assert "invalid JSON" in str(excinfo.value)
+
+
+@pytest.mark.unit
+def test_load_document_accepts_a_utf8_bom(tmp_path: Path):
+    # Several Windows editors and writers prepend a BOM; plain utf-8 decoding
+    # would reject the file as invalid JSON.
+    path = tmp_path / "bom.json"
+    path.write_text(json.dumps(_document(items=[])), encoding="utf-8-sig")
+    assert load_document(path).app_id == "demo-app"

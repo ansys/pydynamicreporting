@@ -51,7 +51,7 @@ import re
 import shutil
 import sys
 import tempfile
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 import uuid
 import warnings
 from collections.abc import Iterable
@@ -84,7 +84,8 @@ from ..exceptions import (
 from ..utils import report_utils
 from ..utils.geofile_processing import file_is_3d_geometry, rebuild_3d_geometry
 
-from ..utils.json_item_import import ImportResult
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from ..utils.json_item_import import ImportResult
 
 
 class ADR:

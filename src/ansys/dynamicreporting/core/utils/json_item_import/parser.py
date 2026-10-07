@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +66,14 @@ _INVALID = object()
 
 _JSON_SCALARS = (str, int, float, bool, type(None))
 """Scalar types that can appear in a table cell or a tree value."""
+
+MAX_TREE_DEPTH = 100
+"""Deepest ``children`` nesting accepted.
+
+Reported as a validation error rather than allowed to exhaust the interpreter
+stack: the recursive builders run during parsing, so a RecursionError there
+would abort the whole document before any item could be saved.
+"""
 
 
 class ErrorCollector:
@@ -260,6 +269,16 @@ def apply_spec(
     return values, extra
 
 
+def _is_non_finite(value: Any) -> bool:
+    """Whether ``value`` is a NaN or infinite float.
+
+    Python's ``json`` accepts the ``NaN``/``Infinity`` literals, but they are
+    not valid JSON and the published schema rejects them. Use ``null`` for a
+    missing number; it already becomes NaN in a numeric table.
+    """
+    return isinstance(value, float) and not math.isfinite(value)
+
+
 def _validate_tree_value(value: Any, location: str, errors: ErrorCollector) -> None:
     """Check that a tree node value is a JSON scalar or a list of scalars."""
     if isinstance(value, list):
@@ -284,10 +303,15 @@ def build_tree_node(
     *,
     strict_keys: bool = False,
     logger: Any = None,
+    depth: int = 1,
 ) -> TreeNode | None:
     """Build one tree node, recursing into its children."""
     if not isinstance(raw, dict):
         errors.add(location, f"expected an object, got {type(raw).__name__}")
+        return None
+
+    if depth > MAX_TREE_DEPTH:
+        errors.add(location, f"tree nesting is deeper than {MAX_TREE_DEPTH} levels")
         return None
 
     values, _ = apply_spec(
@@ -311,6 +335,7 @@ def build_tree_node(
                 errors,
                 strict_keys=strict_keys,
                 logger=logger,
+                depth=depth + 1,
             )
         )
         is not None
@@ -371,6 +396,11 @@ def _validate_table(values: dict[str, Any], location: str, errors: ErrorCollecto
                 errors.add(
                     f"{row_location}[{cell_index}]",
                     f"table cells must be scalars, got {type(cell).__name__}",
+                )
+            elif _is_non_finite(cell):
+                errors.add(
+                    f"{row_location}[{cell_index}]",
+                    "NaN and Infinity are not valid JSON; use null for a missing number",
                 )
 
     if not column_names:
@@ -434,6 +464,16 @@ def build_item(
         )
 
     payload = {name: value for name, value in values.items() if name not in COMMON_ITEM_NAMES}
+
+    if logger is not None:
+        # A property of the same name is applied after the first-class field,
+        # so it silently wins unless the conflict is surfaced here.
+        shadowed = {key for entry in values["properties"] for key in entry} & payload.keys()
+        for key in sorted(shadowed):
+            logger.warning(
+                "%s: property %r overrides the first-class %r field.", location, key, key
+            )
+
     return ItemPayload(
         item_type=values["item_type"],
         name=values["name"],
@@ -612,7 +652,8 @@ def load_document(
     """
     document_path = Path(path)
     try:
-        with document_path.open("r", encoding="utf-8") as handle:
+        # utf-8-sig also reads plain UTF-8; Windows editors routinely add a BOM.
+        with document_path.open("r", encoding="utf-8-sig") as handle:
             raw = json.load(handle)
     except FileNotFoundError:
         raise ImportItemValidationError(

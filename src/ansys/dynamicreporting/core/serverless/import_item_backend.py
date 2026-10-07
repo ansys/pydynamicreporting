@@ -88,8 +88,7 @@ class ServerlessImportBackend:
         if model.item_type == "table":
             self._set_table_meta(item, model)
             needs_resave = True
-        if model.properties:
-            apply_properties(item, model.properties, self.logger)
+        if apply_properties(item, model.properties, self.logger):
             needs_resave = True
 
         if needs_resave:

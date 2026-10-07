@@ -329,11 +329,16 @@ Rules
 - Every row must have the same number of cells, and that count must match
   ``columns``. A ragged table is rejected with the offending row index.
 - Cells must be scalars: string, number, boolean, or null.
+- Use ``null`` for a missing number. ``NaN`` and ``Infinity`` are not valid
+  JSON and are rejected; a ``null`` in a numeric table is stored as NaN.
 - If ``xaxis`` and ``yaxis`` are omitted, the first column becomes the x axis
   and the remaining columns become the y axes.
 - If supplied, ``xaxis`` and ``yaxis`` must name real columns.
 - Numeric tables are stored as floats. A table containing any text is stored as
   text, with no truncation of long values.
+- Text cells may contain any Unicode character. Accented letters, symbols such
+  as ``°`` and ``µ``, and non-Latin scripts are encoded as UTF-8 on the way in
+  and survive the round trip unchanged.
 
 Storage orientation
 ~~~~~~~~~~~~~~~~~~~
@@ -412,8 +417,11 @@ This covers the full table attribute vocabulary, including ``line_color``,
 ``line_style``, ``palette``, ``show_legend``, ``xtitle``, ``ytitle``,
 ``xrange``, ``yrange``, ``histogram_bin_size``, and many more.
 
-Names that are private or that would shadow a method are refused and logged;
-a document cannot overwrite behavior through this channel.
+Unlike the rest of the document, ``properties`` is a **closed** vocabulary: a
+name Ansys Dynamic Reporting does not recognize is reported at warning level
+and skipped, because neither backend would persist it. Names that are private
+or that would shadow a method are refused the same way, so a document cannot
+overwrite behavior through this channel.
 
 Forward compatibility
 =====================

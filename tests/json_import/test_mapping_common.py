@@ -86,6 +86,16 @@ def test_rows_to_array_does_not_truncate_long_labels():
 
 
 @pytest.mark.unit
+def test_rows_to_array_accepts_non_ascii_text():
+    # NumPy encodes str -> bytes as ASCII, so cells are encoded explicitly;
+    # without that, a degree sign raises UnicodeEncodeError.
+    array = rows_to_array((("25 °C", "naïve"),))
+    assert array.dtype.kind == "S"
+    assert array[0][0].decode("utf-8") == "25 °C"
+    assert array[1][0].decode("utf-8") == "naïve"
+
+
+@pytest.mark.unit
 def test_rows_to_array_renders_none_as_empty_text():
     array = rows_to_array((("alpha", None),))
     assert array[1][0] == b""
@@ -224,9 +234,30 @@ class _Target:
 @pytest.mark.unit
 def test_apply_properties_sets_public_fields():
     target = _Target()
-    apply_properties(target, [{"line_width": 2}, {"table_title": "Probe"}])
+    applied = apply_properties(target, [{"line_width": 2}, {"table_title": "Probe"}])
     assert target.line_width == 2
     assert target.table_title == "Probe"
+    assert applied == ["line_width", "table_title"]
+
+
+@pytest.mark.unit
+def test_apply_properties_reports_an_unknown_field():
+    # Both backends drop unrecognized names at save time, so the escape hatch
+    # must report them rather than appear to accept them.
+    target = _Target()
+    logger = MagicMock()
+    applied = apply_properties(target, [{"not_an_adr_field": 1}], logger)
+    assert applied == []
+    assert not hasattr(target, "not_an_adr_field")
+    assert any("not a known ADR field" in str(call) for call in logger.warning.call_args_list)
+
+
+@pytest.mark.unit
+def test_apply_properties_uses_a_supplied_setter():
+    target = _Target()
+    seen: list[tuple] = []
+    apply_properties(target, [{"line_width": 2}], setter=lambda o, k, v: seen.append((k, v)))
+    assert seen == [("line_width", 2)]
 
 
 @pytest.mark.unit

@@ -83,6 +83,23 @@ def test_import_from_json_forwards_every_option(tmp_path: Path):
     )
 
 
+@pytest.mark.unit
+def test_importing_the_package_does_not_load_the_import_machinery():
+    # The entry points annotate ImportResult under TYPE_CHECKING and import the
+    # adapter inside the method, so users who never import JSON pay nothing.
+    code = (
+        "import sys; "
+        "import ansys.dynamicreporting.core; "
+        "import ansys.dynamicreporting.core.serverless; "
+        "print([n for n in sys.modules if 'json_item_import' in n "
+        "or 'import_item_backend' in n])"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert completed.stdout.strip() == "[]"
+
+
 @pytest.mark.ado_test
 def test_import_from_json_end_to_end(adr_serverless: ADR, tmp_path: Path):
     from ansys.dynamicreporting.core.serverless import HTML, Item, String, Table

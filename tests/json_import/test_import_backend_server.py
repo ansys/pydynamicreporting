@@ -29,6 +29,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from ansys.dynamicreporting.core.adr_item import Item
 from ansys.dynamicreporting.core.import_item_backend_server import (
     ITEM_ATTRIBUTE,
     ServerImportBackend,
@@ -39,10 +40,18 @@ from ansys.dynamicreporting.core.utils.json_item_import.parser import build_docu
 
 @pytest.fixture
 def service():
-    """A mock Service whose create_item returns an inspectable stand-in."""
+    """A mock Service whose create_item returns a real Item on a mocked server.
+
+    A real Item is used so the adapter exercises ``adr_item.Item.__setattr__``
+    push semantics; a bare MagicMock accepts any attribute and would hide both
+    dropped metadata and redundant round trips.
+    """
     mock = MagicMock()
     mock.logger = MagicMock()
-    mock.create_item.side_effect = lambda **kwargs: MagicMock(_kwargs=kwargs)
+    mock.serverobj.get_URL.return_value = None
+    mock.create_item.side_effect = lambda obj_name=None, source=None: Item(
+        service=mock, obj_name=obj_name, source=source
+    )
     return mock
 
 
@@ -100,9 +109,11 @@ def test_item_name_and_source_are_forwarded(backend, service):
 
 
 @pytest.mark.unit
-def test_item_source_defaults_to_adr(backend, service):
+def test_item_source_is_forwarded_unchanged(backend, service):
+    # Both backends must store the document value verbatim; an adapter-local
+    # default here would diverge from the serverless adapter.
     backend.save_item(_item({"item_type": "text", "name": "n", "value": "v"}), "")
-    assert service.create_item.call_args.kwargs["source"] == "ADR"
+    assert service.create_item.call_args.kwargs["source"] == ""
 
 
 @pytest.mark.unit
@@ -128,13 +139,13 @@ def test_media_paths_resolve_against_the_document_directory(backend, tmp_path: P
 def test_set_tags_is_called_exactly_once(backend):
     model = _item({"item_type": "text", "name": "n", "value": "v", "tags": [{"a": "1"}]})
     item = backend.save_item(model, "doc=1")
-    item.set_tags.assert_called_once_with("doc=1 a=1")
+    item.item.set_tags.assert_called_once_with("doc=1 a=1")
 
 
 @pytest.mark.unit
 def test_document_tags_are_not_applied_twice(backend):
     item = backend.save_item(_item({"item_type": "text", "name": "n", "value": "v"}), "doc=1")
-    assert item.set_tags.call_args.args[0] == "doc=1"
+    assert item.item.set_tags.call_args.args[0] == "doc=1"
 
 
 # --------------------------------------------------------------------------
@@ -176,12 +187,28 @@ def test_table_axes_and_display_fields(backend):
 
 
 @pytest.mark.unit
-def test_table_meta_is_applied_after_the_array(backend):
-    # labels only reach table_dict once the array has set the item type.
-    model = _table_model()
-    item = backend.save_item(model, "")
-    assert item.item_table is not None
-    assert item.labels_row is not None
+def test_table_meta_reaches_the_pushed_payload(backend):
+    # Metadata is staged after the array so that Item.__setattr__ routes it
+    # into table_dict, which is what set_payload_table actually uploads.
+    item = backend.save_item(_table_model(plot="line", format="floatdot1"), "")
+    assert set(item.table_dict) >= {"array", "labels_row", "xaxis", "yaxis", "plot", "format"}
+
+
+@pytest.mark.unit
+def test_table_item_is_pushed_a_bounded_number_of_times(backend, service):
+    # Item.__setattr__ re-uploads the whole table on every table_attr write
+    # once the array is set. Staging the metadata, and letting sequence and
+    # tags ride the payload push, keeps a table at payload + metadata.
+    backend.save_item(_table_model(plot="line", format="floatdot1"), "doc=1")
+    assert service.serverobj.put_objects.call_count == 2
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("item_type", ["text", "html", "tree"])
+def test_simple_item_is_pushed_once(backend, service, item_type):
+    payload = {"value": "v"} if item_type != "tree" else {"nodes": [{"name": "r"}]}
+    backend.save_item(_item({"item_type": item_type, "name": "n", **payload}), "doc=1")
+    assert service.serverobj.put_objects.call_count == 1
 
 
 # --------------------------------------------------------------------------
@@ -209,11 +236,17 @@ def test_tree_children_are_not_dropped(backend):
 
 @pytest.mark.unit
 def test_properties_are_applied(backend):
-    model = _item(
-        {"item_type": "text", "name": "n", "value": "v", "properties": [{"text_color": "red"}]}
-    )
+    model = _table_model(properties=[{"line_width": 2}])
     item = backend.save_item(model, "")
-    assert item.text_color == "red"
+    assert item.table_dict["line_width"] == 2
+
+
+@pytest.mark.unit
+def test_unknown_property_is_reported_and_not_applied(backend, service):
+    model = _table_model(properties=[{"not_an_adr_field": 1}])
+    item = backend.save_item(model, "")
+    assert "not_an_adr_field" not in item.table_dict
+    assert any("not a known ADR field" in str(c) for c in service.logger.warning.call_args_list)
 
 
 # --------------------------------------------------------------------------
