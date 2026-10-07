@@ -41,6 +41,7 @@ import os
 import shutil
 import tempfile
 import time
+from pathlib import Path
 
 try:
     from IPython.display import IFrame
@@ -49,6 +50,7 @@ except ImportError:  # pragma: no cover
 
 import warnings
 import webbrowser
+from typing import TYPE_CHECKING
 
 from ansys.dynamicreporting.core.utils import exceptions as adr_utils_exceptions
 from ansys.dynamicreporting.core.utils import report_objects, report_remote_server, report_utils
@@ -71,6 +73,9 @@ from .exceptions import (
     StartingServiceError,
     UnsupportedServerVersionError,
 )
+
+if TYPE_CHECKING:  # keeps the import machinery off the package import path
+    from .utils.json_item_import import ImportResult
 
 
 # Main class
@@ -756,6 +761,60 @@ class Service:
         """
         a = Item(service=self, obj_name=str(obj_name), source=source)
         return a
+
+    def import_items_from_json(
+        self,
+        json_file_path: str | Path,
+        *,
+        on_error: str = "collect",
+        base_dir: str | None = None,
+        strict_keys: bool = False,
+    ) -> "ImportResult":
+        """Import ADR report items from a JSON document into the connected service.
+
+        .. note::
+
+           **Beta.** The document schema and this API may change in a future
+           release. A breaking change to the format raises the document
+           ``schema_version`` major.
+
+        Report structure is out of scope: use :meth:`load_templates` to import
+        report templates.
+
+        Parameters
+        ----------
+        json_file_path : str or pathlib.Path
+            Path to the JSON document.
+        on_error : {'collect', 'raise'}, default: 'collect'
+            ``'collect'`` records per-item failures and continues;
+            ``'raise'`` stops at the first failure.
+        base_dir : str, optional
+            Directory that relative media paths resolve against. Defaults to
+            the directory containing ``json_file_path``.
+        strict_keys : bool, default: False
+            Treat unknown keys in the document as validation errors.
+
+        Returns
+        -------
+        ImportResult
+            Counts and any per-item failures.
+
+        Raises
+        ------
+        ImportItemValidationError
+            If the document violates the item import contract.
+        ImportItemVersionError
+            If the document schema version is unsupported.
+        """
+        # Imported lazily so that importing the package does not pull the
+        # import machinery for users who never call this.
+        from .import_item_backend_server import ServerImportBackend
+        from .utils.json_item_import.importer import JSONItemImporter
+
+        importer = JSONItemImporter(ServerImportBackend(self))
+        return importer.import_file(
+            json_file_path, on_error=on_error, base_dir=base_dir, strict_keys=strict_keys
+        )
 
     def query(
         self, query_type: str = "Item", filter: str | None = "", item_filter: str | None = ""
