@@ -1113,18 +1113,19 @@ def test_item_has_file(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_item_is_enhanced(adr_serverless):
+@pytest.mark.parametrize("filename, enhanced", [("nexus_logo.png", False), ("case.tif", True)])
+def test_item_is_enhanced(adr_serverless, filename, enhanced):
     from ansys.dynamicreporting.core.serverless import Image
 
     # image
     intro_image = Image(
         name="test_item_is_enhanced",
-        content=str(Path(__file__).parent / "test_data" / "nexus_logo.png"),
+        content=str(Path(__file__).parent / "test_data" / filename),
         tags="dp=dp227 section=data",
         source="sls-test",
     )
 
-    assert intro_image.enhanced is False
+    assert intro_image.enhanced is enhanced
 
 
 @pytest.mark.ado_test
@@ -1171,10 +1172,11 @@ def test_image_on_disk(adr_serverless):
 
 
 @pytest.mark.ado_test
-def test_image_conversion_to_png(adr_serverless):
+@pytest.mark.parametrize("suffix", [".jpg", ".jpeg", ".JPEG"])
+def test_image_conversion_to_png(adr_serverless, suffix):
     from ansys.dynamicreporting.core.serverless import Image
 
-    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp_path = Path(tmp.name)
         img = PILImage.new("RGB", (10, 10), color="red")
         img.save(tmp_path, "JPEG")  # Save as JPEG
@@ -1190,7 +1192,7 @@ def test_image_conversion_to_png(adr_serverless):
         )
         file_path = Path(image_obj.file_path)
         assert (
-            Path(image_obj._file.name).suffix == ".jpg"
+            Path(image_obj._file.name).suffix == suffix
             and file_path.is_file()
             and file_path.suffix == ".png"
         )
@@ -1250,26 +1252,27 @@ def test_image_save_raises_adr_exception(adr_serverless, monkeypatch):
 
 
 @pytest.mark.ado_test
-def test_is_enhanced_fails_on_non_enhanced_tiff(adr_serverless):
+@pytest.mark.parametrize("suffix", [".tif", ".tiff"])
+def test_non_enhanced_tiff_converts_to_png(adr_serverless, tmp_path, suffix):
     from ansys.dynamicreporting.core.serverless import Image
 
-    with tempfile.NamedTemporaryFile(suffix=".tiff", delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        img = PILImage.new("RGB", (10, 10), color="blue")
-        img.save(tmp_path, format="TIFF")
+    image_path = tmp_path / f"ordinary{suffix}"
+    PILImage.new("RGB", (10, 20), color="blue").save(image_path, format="TIFF")
 
-    try:
-        with pytest.raises(ADRException, match="The enhanced image is empty"):
-            Image.create(
-                name="test_is_enhanced_fails_on_non_enhanced_tiff",
-                content=str(tmp_path),
-                tags="dp=dp227",
-                session=adr_serverless.session,
-                dataset=adr_serverless.dataset,
-                source="sls-test",
-            )
-    finally:
-        tmp_path.unlink(missing_ok=True)
+    image_obj = Image.create(
+        name="test_non_enhanced_tiff_converts_to_png",
+        content=str(image_path),
+        tags="dp=dp227",
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+        source="sls-test",
+    )
+
+    assert image_obj.enhanced is False
+    assert (image_obj.width, image_obj.height) == (10, 20)
+    with PILImage.open(image_obj.file_path) as stored_image:
+        assert stored_image.format == "PNG"
+        assert stored_image.size == (10, 20)
 
 
 @pytest.mark.ado_test
