@@ -70,7 +70,12 @@ from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..compatibility import get_compatibility_warning_for_install_version
-from ..common_utils import PDFPageSize, populate_template, resolve_install_info
+from ..common_utils import (
+    PDFPageSize,
+    populate_template,
+    resolve_install_info,
+    validate_template_tree,
+)
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -1295,17 +1300,10 @@ class ADR:
         Raises
         ------
         ValueError
-            If no root (parent-less) template can be found in the mapping.
+            If the mapping does not define a single consistent template tree,
+            or params or sort selection is invalid.
         """
-        root_id_str = None
-        for template_id_str, template_attr in templates.items():
-            if template_attr["parent"] is None:
-                root_id_str = template_id_str
-                break
-
-        if root_id_str is None:
-            raise ValueError("No report or root template found in the provided templates.")
-
+        root_id_str = validate_template_tree(templates)
         with transaction.atomic():
             root_attr = templates[root_id_str]
             root_template = self._populate_template(root_id_str, root_attr, None)

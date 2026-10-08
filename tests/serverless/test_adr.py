@@ -1742,6 +1742,29 @@ def test_load_templates_rolls_back_invalid_child(adr_serverless):
 
 
 @pytest.mark.ado_test
+def test_load_templates_rolls_back_child_save_failure(adr_serverless, monkeypatch):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    sample_file = Path(__file__).parent.parent / "test_data" / "sample.json"
+    templates = json.loads(sample_file.read_text(encoding="utf-8"))
+    existing_guids = set(Template.filter().values_list("guid", flat=True))
+    real_save = Template.save
+
+    def fail_child_save(template, *args, **kwargs):
+        if template.name == templates["Template_3"]["name"]:
+            assert existing_guids < set(Template.filter().values_list("guid", flat=True))
+            raise ADRException("Child save failed")
+        return real_save(template, *args, **kwargs)
+
+    monkeypatch.setattr(Template, "save", fail_child_save)
+
+    with pytest.raises(ADRException, match="Child save failed"):
+        adr_serverless.load_templates(templates)
+
+    assert set(Template.filter().values_list("guid", flat=True)) == existing_guids
+
+
+@pytest.mark.ado_test
 def test_render_report_as_browser_pdf_success(adr_serverless, monkeypatch):
     from ansys.dynamicreporting.core.serverless import BasicLayout
     from ansys.dynamicreporting.core.serverless.html_exporter import (
