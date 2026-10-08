@@ -2310,14 +2310,16 @@ def test_export_report_as_browser_pdf_destination_error_precedes_rendering(
 
 
 @pytest.mark.ado_test
+@pytest.mark.parametrize("existing", [False, True])
 def test_export_report_as_browser_pdf_render_failure_preserves_destination(
-    adr_serverless, tmp_path, monkeypatch
+    adr_serverless, tmp_path, monkeypatch, existing
 ):
     from ansys.dynamicreporting.core.serverless import BasicLayout
 
     template = adr_serverless.create_template(BasicLayout, name="FailedPDFDestination", parent=None)
     output_path = tmp_path / "report.pdf"
-    output_path.write_bytes(b"Existing PDF contents")
+    if existing:
+        output_path.write_bytes(b"Existing PDF contents")
 
     def render_pdf(self, template, **kwargs):
         raise ADRException("PDF rendering failed")
@@ -2327,4 +2329,7 @@ def test_export_report_as_browser_pdf_render_failure_preserves_destination(
     with pytest.raises(ADRException, match="PDF rendering failed"):
         adr_serverless.export_report_as_browser_pdf(filename=output_path, guid=template.guid)
 
-    assert output_path.read_bytes() == b"Existing PDF contents"
+    if existing:
+        assert output_path.read_bytes() == b"Existing PDF contents"
+    else:
+        assert not output_path.exists()

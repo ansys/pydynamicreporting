@@ -2053,21 +2053,33 @@ class ADR:
             output_path = Path(f"{template.guid}.pdf")
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_path.open("ab") as pdf_file:
-            pdf_stream = self._render_template_as_browser_pdf(
-                template,
-                context=context,
-                item_filter=item_filter,
-                dark_mode=dark_mode,
-                landscape=landscape,
-                margins=margins,
-                page_size=page_size,
-                width=width,
-                height=height,
-                render_timeout=render_timeout,
-            )
-            pdf_file.truncate(0)
-            pdf_file.write(pdf_stream)
+        try:
+            pdf_file = output_path.open("xb")
+        except FileExistsError:
+            pdf_file = output_path.open("ab")
+            created_output = False
+        else:
+            created_output = True
+        try:
+            with pdf_file:
+                pdf_stream = self._render_template_as_browser_pdf(
+                    template,
+                    context=context,
+                    item_filter=item_filter,
+                    dark_mode=dark_mode,
+                    landscape=landscape,
+                    margins=margins,
+                    page_size=page_size,
+                    width=width,
+                    height=height,
+                    render_timeout=render_timeout,
+                )
+                pdf_file.truncate(0)
+                pdf_file.write(pdf_stream)
+        except Exception:
+            if created_output:
+                output_path.unlink(missing_ok=True)
+            raise
         self._logger.info(f"Successfully exported browser PDF to: {output_path}")
 
     @staticmethod
