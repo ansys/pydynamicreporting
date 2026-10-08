@@ -61,7 +61,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key
-from django.db import DatabaseError, connections
+from django.db import DatabaseError, connections, transaction
 from django.http import HttpRequest
 
 from .base import ObjectSet
@@ -1294,7 +1294,7 @@ class ADR:
 
         Raises
         ------
-        ADRException
+        ValueError
             If no root (parent-less) template can be found in the mapping.
         """
         root_id_str = None
@@ -1304,12 +1304,13 @@ class ADR:
                 break
 
         if root_id_str is None:
-            raise ADRException("No report or root template found in the provided templates.")
+            raise ValueError("No report or root template found in the provided templates.")
 
-        root_attr = templates[root_id_str]
-        root_template = self._populate_template(root_id_str, root_attr, None)
-        root_template.save()
-        self._build_templates_from_parent(root_id_str, root_template, templates)
+        with transaction.atomic():
+            root_attr = templates[root_id_str]
+            root_template = self._populate_template(root_id_str, root_attr, None)
+            root_template.save()
+            self._build_templates_from_parent(root_id_str, root_template, templates)
 
     @staticmethod
     def get_report(**kwargs) -> Template:

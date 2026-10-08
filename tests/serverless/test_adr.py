@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import importlib
+import json
 import os
 import sys
 import uuid
@@ -37,6 +38,7 @@ from ansys.dynamicreporting.core.exceptions import (
     InvalidPath,
 )
 from ansys.dynamicreporting.core.serverless import ADR, PDFPageSize
+from ansys.dynamicreporting.core.utils.exceptions import TemplateEditorJSONLoadingError
 
 
 def _enve_modules() -> dict[str, object]:
@@ -1712,6 +1714,31 @@ def test_load_templates_from_file(adr_serverless):
 def test_load_templates_from_file_no_such_file(adr_serverless):
     with pytest.raises(FileNotFoundError, match="The file 'nonexistent.json' does not exist."):
         adr_serverless.load_templates_from_file("nonexistent.json")
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("templates", [{}, {"Template_0": {"parent": "Template_1"}}])
+def test_load_templates_from_file_requires_root(adr_serverless, tmp_path, templates):
+    template_file = tmp_path / "rootless.json"
+    template_file.write_text(json.dumps(templates), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="No report or root template"):
+        adr_serverless.load_templates_from_file(template_file)
+
+
+@pytest.mark.ado_test
+def test_load_templates_rolls_back_invalid_child(adr_serverless):
+    from ansys.dynamicreporting.core.serverless import Template
+
+    sample_file = Path(__file__).parent.parent / "test_data" / "sample.json"
+    templates = json.loads(sample_file.read_text(encoding="utf-8"))
+    templates["Template_3"]["report_type"] = "Layout:invalid"
+    existing_guids = set(Template.filter().values_list("guid", flat=True))
+
+    with pytest.raises(TemplateEditorJSONLoadingError, match="invalid 'report_type'"):
+        adr_serverless.load_templates(templates)
+
+    assert set(Template.filter().values_list("guid", flat=True)) == existing_guids
 
 
 @pytest.mark.ado_test
