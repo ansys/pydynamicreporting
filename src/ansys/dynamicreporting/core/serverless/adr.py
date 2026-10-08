@@ -1968,7 +1968,8 @@ class ADR:
         Parameters
         ----------
         filename : str or Path, optional
-            Output PDF path. If omitted, uses ``"<guid>.pdf"``.
+            Output PDF path. Missing parent directories are created.
+            If omitted, uses ``"<guid>.pdf"``.
         context : dict, optional
             Additional rendering context.
         item_filter : str, optional
@@ -2008,9 +2009,14 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+        OSError
+            If the output directory or file cannot be created or opened.
 
         Notes
         -----
+        The destination is opened before rendering. An existing output file is
+        not overwritten unless rendering succeeds.
+
         Browser-PDF readiness waits cover ADR-owned signals such as web-component
         initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
         layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
@@ -2043,28 +2049,27 @@ class ADR:
             )
 
         template = Template.get(**kwargs)
-        # Render from the object already resolved above; its GUID remains
-        # available for the default filename without a second template lookup.
-        pdf_stream = self._render_template_as_browser_pdf(
-            template,
-            context=context,
-            item_filter=item_filter,
-            dark_mode=dark_mode,
-            landscape=landscape,
-            margins=margins,
-            page_size=page_size,
-            width=width,
-            height=height,
-            render_timeout=render_timeout,
-        )
-
         if filename is not None:
             output_path = Path(filename)
         else:
             output_path = Path(f"{template.guid}.pdf")
 
-        with open(output_path, "wb") as f:
-            f.write(pdf_stream)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("ab") as pdf_file:
+            pdf_stream = self._render_template_as_browser_pdf(
+                template,
+                context=context,
+                item_filter=item_filter,
+                dark_mode=dark_mode,
+                landscape=landscape,
+                margins=margins,
+                page_size=page_size,
+                width=width,
+                height=height,
+                render_timeout=render_timeout,
+            )
+            pdf_file.truncate(0)
+            pdf_file.write(pdf_stream)
         self._logger.info(f"Successfully exported browser PDF to: {output_path}")
 
     @staticmethod

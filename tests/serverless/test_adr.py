@@ -2232,3 +2232,76 @@ def test_export_report_as_browser_pdf_default_filename_reuses_template_lookup(
     assert captured_calls == [{"name": "SingleLookupBrowserPDF"}]
     assert rendered_templates == [template]
     assert (tmp_path / f"{template.guid}.pdf").read_bytes() == b"%PDF-single-lookup"
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("existing", [False, True])
+def test_export_report_as_browser_pdf_prepares_destination(
+    adr_serverless, tmp_path, monkeypatch, existing
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    template = adr_serverless.create_template(
+        BasicLayout, name="PreparedPDFDestination", parent=None
+    )
+    output_path = tmp_path / "new" / "nested" / "report.pdf"
+    if existing:
+        output_path.parent.mkdir(parents=True)
+        output_path.write_bytes(b"Previous PDF contents longer than the replacement")
+
+    def render_pdf(self, template, **kwargs):
+        assert output_path.parent.is_dir()
+        return b"%PDF-prepared"
+
+    monkeypatch.setattr(ADR, "_render_template_as_browser_pdf", render_pdf)
+
+    adr_serverless.export_report_as_browser_pdf(filename=output_path, guid=template.guid)
+
+    assert output_path.read_bytes() == b"%PDF-prepared"
+
+
+@pytest.mark.ado_test
+@pytest.mark.parametrize("destination", ["parent_file", "directory"])
+def test_export_report_as_browser_pdf_destination_error_precedes_rendering(
+    adr_serverless, tmp_path, monkeypatch, destination
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    template = adr_serverless.create_template(
+        BasicLayout, name="InvalidPDFDestination", parent=None
+    )
+    output_path = tmp_path / "blocked"
+    if destination == "parent_file":
+        output_path.write_bytes(b"Not a directory")
+        output_path = output_path / "report.pdf"
+    else:
+        output_path.mkdir()
+
+    def unexpected_render(self, template, **kwargs):
+        pytest.fail("The browser must not render when the PDF destination is invalid")
+
+    monkeypatch.setattr(ADR, "_render_template_as_browser_pdf", unexpected_render)
+
+    with pytest.raises(OSError):
+        adr_serverless.export_report_as_browser_pdf(filename=output_path, guid=template.guid)
+
+
+@pytest.mark.ado_test
+def test_export_report_as_browser_pdf_render_failure_preserves_destination(
+    adr_serverless, tmp_path, monkeypatch
+):
+    from ansys.dynamicreporting.core.serverless import BasicLayout
+
+    template = adr_serverless.create_template(BasicLayout, name="FailedPDFDestination", parent=None)
+    output_path = tmp_path / "report.pdf"
+    output_path.write_bytes(b"Existing PDF contents")
+
+    def render_pdf(self, template, **kwargs):
+        raise ADRException("PDF rendering failed")
+
+    monkeypatch.setattr(ADR, "_render_template_as_browser_pdf", render_pdf)
+
+    with pytest.raises(ADRException, match="PDF rendering failed"):
+        adr_serverless.export_report_as_browser_pdf(filename=output_path, guid=template.guid)
+
+    assert output_path.read_bytes() == b"Existing PDF contents"
