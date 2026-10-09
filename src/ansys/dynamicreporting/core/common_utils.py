@@ -35,6 +35,7 @@ Install resolution uses four distinct path and version concepts:
 
 from dataclasses import dataclass
 from enum import Enum
+import json
 import logging
 import os
 from pathlib import Path
@@ -379,16 +380,35 @@ def get_install_info(
 def _check_template_name_convention(template_name):
     if template_name is None:
         return True
+    if not isinstance(template_name, str):
+        return False
     parts = template_name.split("_")
     return len(parts) == 2 and parts[0] == "Template" and parts[1].isdigit()
 
 
 def _check_template(template_id_str, template_attr, logger=None):
+    if not isinstance(template_attr, dict):
+        raise TemplateEditorJSONLoadingError(
+            f"The entries under '{template_id_str}' must be a dictionary."
+        )
     # Check template_id_str
-    if not _check_template_name_convention(template_id_str):
+    if template_id_str is None or not _check_template_name_convention(template_id_str):
         raise TemplateEditorJSONLoadingError(
             f"The loaded JSON file has an invalid template name: '{template_id_str}' as the key.\n"
             "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
+        )
+
+    # Check missing necessary keys
+    for necessary_key in JSON_NECESSARY_KEYS:
+        if necessary_key not in template_attr:
+            raise TemplateEditorJSONLoadingError(
+                f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
+                f"Please check the entries under '{template_id_str}'."
+            )
+
+    if not isinstance(template_attr["children"], list):
+        raise TemplateEditorJSONLoadingError(
+            f"The 'children' entry under '{template_id_str}' must be a list."
         )
 
     # Check parent and children template name convention
@@ -400,19 +420,11 @@ def _check_template(template_id_str, template_attr, logger=None):
         )
 
     for child_name in template_attr["children"]:
-        if not _check_template_name_convention(child_name):
+        if child_name is None or not _check_template_name_convention(child_name):
             raise TemplateEditorJSONLoadingError(
                 f"The loaded JSON file has an invalid template name: '{child_name}' "
                 f"that does not have the correct name convention under the key: 'children' of '{template_id_str}'\n"
                 "Please note that the naming convention is 'Template_{NONE_NEGATIVE_NUMBER}'"
-            )
-
-    # Check missing necessary keys
-    for necessary_key in JSON_NECESSARY_KEYS:
-        if necessary_key not in template_attr.keys():
-            raise TemplateEditorJSONLoadingError(
-                f"The loaded JSON file is missing a necessary key: '{necessary_key}'\n"
-                f"Please check the entries under '{template_id_str}'."
             )
 
     # Add warnings to the logger about the extra keys
@@ -432,7 +444,10 @@ def _check_template(template_id_str, template_attr, logger=None):
 
     # Check item_filter
     common_error_str = "The loaded JSON file does not follow the correct item_filter convention!\n"
-    for query_stanza in template_attr["item_filter"].split(";"):
+    item_filter = template_attr.get("item_filter", "")
+    if not isinstance(item_filter, str):
+        raise TemplateEditorJSONLoadingError(common_error_str + "The filter must be a string.")
+    for query_stanza in item_filter.split(";"):
         if len(query_stanza) > 0:
             parts = query_stanza.split("|")
             if len(parts) != 4:
@@ -451,7 +466,101 @@ def _check_template(template_id_str, template_attr, logger=None):
                     f"{common_error_str}The second part of the filter can only be '{prefix}', "
                     f"while the second part of the input is '{parts[1]}' under '{template_id_str}'"
                 )
-    # TODO: check 'sort_selection' and 'params'
+
+    params = template_attr.get("params")
+    if params is not None and not isinstance(params, dict):
+        raise ValueError(f"The 'params' entry under '{template_id_str}' must be a dictionary.")
+    try:
+        json.dumps(params)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"The 'params' entry under '{template_id_str}' must be JSON-serializable."
+        ) from error
+
+    sort_selection = template_attr.get("sort_selection", "")
+    if not isinstance(sort_selection, str) or sort_selection not in ("", "all", "first", "last"):
+        raise ValueError(
+            f"The 'sort_selection' entry under '{template_id_str}' must be empty, "
+            "'all', 'first', or 'last'."
+        )
+
+
+def validate_template_tree(templates):
+    """Validate all template attributes and links before persistence.
+
+    Parameters
+    ----------
+    templates : dict
+        JSON-compatible mapping of template IDs to attributes.
+
+    Returns
+    -------
+    str
+        ID of the single root template.
+
+    Raises
+    ------
+    ValueError
+        If the hierarchy, params, or sort selection is invalid.
+    TemplateEditorJSONLoadingError
+        If a template has invalid or missing attributes.
+    """
+    if not isinstance(templates, dict):
+        raise ValueError("Templates must be a dictionary.")
+    root_ids = [
+        template_id
+        for template_id, attributes in templates.items()
+        if isinstance(attributes, dict) and "parent" in attributes and attributes["parent"] is None
+    ]
+    if not root_ids:
+        raise ValueError("No report or root template found in the provided templates.")
+    if len(root_ids) != 1:
+        raise ValueError("The provided templates must contain exactly one root template.")
+    root_id = root_ids[0]
+
+    for template_id, attributes in templates.items():
+        _check_template(template_id, attributes)
+
+    child_parents = {}
+    for template_id, attributes in templates.items():
+        for child_id in attributes["children"]:
+            if child_id not in templates:
+                raise ValueError(f"Missing child template '{child_id}' under '{template_id}'.")
+            if child_id in child_parents:
+                raise ValueError(f"Child template '{child_id}' is listed more than once.")
+            child_parents[child_id] = template_id
+
+    if root_id in child_parents:
+        raise ValueError(f"A cycle lists root template '{root_id}' as a child.")
+    for template_id, attributes in templates.items():
+        if template_id == root_id:
+            continue
+        parent_id = attributes["parent"]
+        if parent_id not in templates:
+            raise ValueError(f"Missing parent template '{parent_id}' for '{template_id}'.")
+        if template_id not in child_parents:
+            raise ValueError(f"Orphaned template '{template_id}' is not listed under its parent.")
+        if child_parents[template_id] != parent_id:
+            raise ValueError(f"The parent of '{template_id}' does not match its listed parent.")
+
+    visited = set()
+    visiting = set()
+    for template_id in templates:
+        if template_id in visited:
+            continue
+        pending = [(template_id, False)]
+        while pending:
+            current_id, finished = pending.pop()
+            if finished:
+                visiting.remove(current_id)
+                visited.add(current_id)
+            elif current_id in visiting:
+                raise ValueError(f"A cycle includes template '{current_id}'.")
+            elif current_id not in visited:
+                visiting.add(current_id)
+                pending.append((current_id, True))
+                pending.extend((child_id, False) for child_id in templates[current_id]["children"])
+    return root_id
 
 
 def populate_template(id_str, attr, parent_template, create_template_func, logger=None, *args):

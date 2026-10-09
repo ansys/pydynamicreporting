@@ -307,7 +307,7 @@ class ImageContent(FileValidator):
     """Validator for image payloads, including enhanced images."""
 
     ENHANCED_EXT = ("tif", "tiff")
-    ALLOWED_EXT = ("png", "jpg") + ENHANCED_EXT
+    ALLOWED_EXT = ("png", "jpg", "jpeg") + ENHANCED_EXT
 
     def process(self, value, obj):
         """Validate an image file and record its metadata."""
@@ -315,12 +315,8 @@ class ImageContent(FileValidator):
         with obj._file.open(mode="rb") as f:
             img_bytes = f.read()
         image = PILImage.open(io.BytesIO(img_bytes))
-        if obj._file_ext in self.ENHANCED_EXT:
-            metadata = is_enhanced(image)
-            if not metadata:
-                raise ADRException("The enhanced image is empty")
-            obj._enhanced = True
         obj._width, obj._height = image.size
+        obj._enhanced = obj._file_ext in self.ENHANCED_EXT and bool(is_enhanced(image))
         with suppress(OSError):
             image.close()
         return file_str
