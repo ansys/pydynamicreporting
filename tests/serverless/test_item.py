@@ -892,6 +892,50 @@ def test_table_item_properties(adr_serverless):
 
 
 @pytest.mark.ado_test
+@pytest.mark.parametrize("dtype", ["f8", "S20"])
+@pytest.mark.parametrize(
+    "formatting_rule",
+    [
+        '&col("outlet_vel-op *"):value < 10|rgb(0.8,0.1,0.1) + contrast()',
+        '&col("outlet_vel-op *"):value < 10|rgb(0.8,0.1,0.1) + contrast()\n',
+    ],
+)
+def test_table_conditional_formatting(adr_serverless, formatting_rule, dtype):
+    import numpy as np
+    from data.conditional_format import ConditionalFormattingHTMLStyle
+
+    from ansys.dynamicreporting.core.serverless import Table
+
+    table = Table(
+        name="test_table_conditional_formatting",
+        content=np.array([[100, 9], [100, 10]], dtype=dtype),
+        session=adr_serverless.session,
+        dataset=adr_serverless.dataset,
+        source="sls-test",
+    )
+    table.rowlbls = ["Base DP", "DP1"]
+    table.collbls = ["inlet_vel [m/s]", "outlet_vel-op [m/s]"]
+    table.table_cond_format = formatting_rule
+    table.save()
+
+    loaded_table = Table.get(guid=table.guid)
+    assert loaded_table.table_cond_format == formatting_rule
+
+    styles = ConditionalFormattingHTMLStyle().compute_style_array(
+        loaded_table.content,
+        loaded_table.table_cond_format,
+        row_names=loaded_table.rowlbls,
+        col_names=loaded_table.collbls,
+    )
+    assert "background-color: #cc1919" in styles[0, 1]
+    assert "color: #ffffff" in styles[0, 1]
+    assert not styles[1, 1]
+    assert not styles[0, 0]
+    assert not styles[1, 0]
+    assert styles[0, 1] in loaded_table.render(context={"format": "html"})
+
+
+@pytest.mark.ado_test
 def test_create_tree_success(adr_serverless):
     from ansys.dynamicreporting.core.serverless import Tree
 
