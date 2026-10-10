@@ -1,0 +1,6 @@
+row\_tags
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.row_tags

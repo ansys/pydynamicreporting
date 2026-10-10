@@ -1,0 +1,189 @@
+﻿BasicLayout
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: BasicLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      BasicLayout.add_filter
+      
+      
+      BasicLayout.add_params
+      
+      
+      BasicLayout.add_properties
+      
+      
+      BasicLayout.add_property
+      
+      
+      BasicLayout.add_sort_fields
+      
+      
+      BasicLayout.add_tag
+      
+      
+      BasicLayout.as_dict
+      
+      
+      BasicLayout.create
+      
+      
+      BasicLayout.delete
+      
+      
+      BasicLayout.filter
+      
+      
+      BasicLayout.find
+      
+      
+      BasicLayout.get
+      
+      
+      BasicLayout.get_column_count
+      
+      
+      BasicLayout.get_column_widths
+      
+      
+      BasicLayout.get_comments
+      
+      
+      BasicLayout.get_filter
+      
+      
+      BasicLayout.get_filter_mode
+      
+      
+      BasicLayout.get_html
+      
+      
+      BasicLayout.get_params
+      
+      
+      BasicLayout.get_property
+      
+      
+      BasicLayout.get_skip
+      
+      
+      BasicLayout.get_sort_fields
+      
+      
+      BasicLayout.get_sort_selection
+      
+      
+      BasicLayout.get_tags
+      
+      
+      BasicLayout.get_transpose
+      
+      
+      BasicLayout.reinit
+      
+      
+      BasicLayout.rem_tag
+      
+      
+      BasicLayout.remove_tag
+      
+      
+      BasicLayout.render
+      
+      
+      BasicLayout.render_pdf
+      
+      
+      BasicLayout.reorder_child
+      
+      
+      BasicLayout.reorder_children
+      
+      
+      BasicLayout.save
+      
+      
+      BasicLayout.set_column_count
+      
+      
+      BasicLayout.set_column_widths
+      
+      
+      BasicLayout.set_comments
+      
+      
+      BasicLayout.set_filter
+      
+      
+      BasicLayout.set_filter_mode
+      
+      
+      BasicLayout.set_html
+      
+      
+      BasicLayout.set_params
+      
+      
+      BasicLayout.set_property
+      
+      
+      BasicLayout.set_skip
+      
+      
+      BasicLayout.set_sort_fields
+      
+      
+      BasicLayout.set_sort_selection
+      
+      
+      BasicLayout.set_tags
+      
+      
+      BasicLayout.set_transpose
+      
+      
+      BasicLayout.to_dict
+      
+      
+      BasicLayout.to_json
+      
+      
+      BasicLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      BasicLayout.children_order
+      BasicLayout.db
+      BasicLayout.item_filter
+      BasicLayout.master
+      BasicLayout.name
+      BasicLayout.params
+      BasicLayout.parent
+      BasicLayout.report_type
+      BasicLayout.saved
+      BasicLayout.tags
+      BasicLayout.type
+      BasicLayout.date
+      BasicLayout.children
+      BasicLayout.guid
+   
+   

@@ -1,0 +1,6 @@
+get\_guid
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Report.get_guid

@@ -1,0 +1,884 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Data Item Object &#8212; PyDynamicReporting documentation |version|</title>
+
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=649a27d8" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/ansys_sphinx_theme.css?v=62c9ccaa" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+ 
+<link href="../_static/css/breadcrumbs.css" rel="stylesheet" />
+
+    <script src="../_static/documentation_options.js?v=b9678aa1"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/js/table.js?v=b64f5182"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'lowlevelapi/DataItemObject';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.7';
+        </script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Template Objects" href="TemplateObjects.html" />
+    <link rel="prev" title="Startup" href="GettingStarted.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/lowlevelapi/DataItemObject.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container"><!-- Debugging: html_theme_options =  -->
+
+<!-- If there is no MiliSearch enabled, use the PyData search -->
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+   
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/pyansys-logo-black-cropped.png" class="logo__image only-light" alt="Logo image"/>
+    <script>document.write(`<img src="../_static/pyansys-logo-black-cropped.png" class="logo__image only-dark" alt="Logo image"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.7  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>   <div class="container-xl">
+  <div class="row">
+    <div class="col-12 col-md-3" id="breadcrumbs-spacer"></div>
+    <div class="col-12 col-md-11 col-xl-9" id="breadcrumbs">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul> 
+<li class="nav-item nav-item-additional-breadcrumb">
+  <a href="https://docs.pyansys.com/">PyAnsys</a> » 
+</li>
+ 
+<li class="nav-item nav-item-0">
+  <a href="../index.html">PyDynamicReporting documentation |version|</a> » 
+</li>
+ 
+          <li class="nav-item nav-item-1"><a href="../class_documentation.html" >API reference</a> » </li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">Low Level Python API</a> » </li>
+        <li class="nav-item nav-item-this"><a href="">Data Item Object</a></li> 
+      </ul>
+    </div></div>
+  </div>
+</div>
+ 
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../gettingstarted/index.html">
+                        Getting started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../userguide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../class_documentation.html">
+                        API reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="../contributing.html">
+                        Contribute
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <div class="version-switcher__container dropdown">
+    <button type="button" class="version-switcher__button btn btn-sm navbar-btn dropdown-toggle" data-bs-toggle="dropdown">
+      0.7  <!-- this text may get changed later by javascript -->
+      <span class="caret"></span>
+    </button>
+    <div class="version-switcher__menu dropdown-menu list-group-flush py-0">
+    <!-- dropdown will be populated by javascript on page load -->
+    </div>
+  </div>
+`);
+</script></div>
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Service.html">Service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../_autosummary/ansys.dynamicreporting.core.Report.html">Report</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Low Level Python API</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="GettingStarted.html">Startup</a></li>
+
+
+
+
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Data Item Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TemplateObjects.html">Template Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ServerObject.html">Server Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DatasetandSessionObjects.html">Dataset and Session Objects</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="data-item-object">
+<h1>Data Item Object<a class="headerlink" href="#data-item-object" title="Link to this heading">#</a></h1>
+<section id="report-objects-itemrest-object">
+<span id="itemrest"></span><h2>report_objects.ItemREST object<a class="headerlink" href="#report-objects-itemrest-object" title="Link to this heading">#</a></h2>
+<p>This object is a Python representation of an Ansys Dynamic
+Reporting data item object. When
+this object is created, a GUID will automatically be generated for the
+object and the date is set to the current time/date.</p>
+<section id="data-members">
+<h3>Data members<a class="headerlink" href="#data-members" title="Link to this heading">#</a></h3>
+<p>The following attributes are available on an ItemREST object:</p>
+<ul class="simple">
+<li><p>guid - string GUID. The default is <code class="docutils literal notranslate"><span class="pre">str(uuid.uuid1())</span></code></p></li>
+<li><p>tags - The user-defined tags string for this object. Multiple tags
+are space-separated.</p></li>
+<li><p>sequence - An integer sequence number that can be used for
+sorting/indexing in a report</p></li>
+<li><p>date - The time &amp; date of the creation of this object. The default
+is: <code class="docutils literal notranslate"><span class="pre">datetime.datetime.now(pytz.utc)</span></code></p></li>
+<li><p>name - The name of the data object, a string</p></li>
+<li><p>source - The source of the data object, a string</p></li>
+<li><p>session - string GUID of a SessionREST object that already exists in
+the database</p></li>
+<li><p>dataset - string GUID of a DatasetREST object that already exists in
+the database</p></li>
+</ul>
+</section>
+<section id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h3>
+<p><strong>item.set_tags(tagstring)</strong></p>
+<p>Set the tags for the item to the passed string. Multiple tags are
+space-separated.</p>
+<p><strong>item.get_tags()</strong></p>
+<p>Returns the tags string for this object. Multiple tags are
+space-separated.</p>
+<p><strong>item.add_tag(tag, value=None)</strong></p>
+<p>Adds a tag to the current tag string. If no value is passed, the simple
+tag string is added to the tags string. If a value is specified, a
+string of the form tag=value will be added to the tag string.</p>
+<p><strong>item.rem_tag(tag)</strong></p>
+<p>Remove the tag (and any potential associated value) from the current tag
+string.</p>
+<p><strong>has_file = item.is_file_protocol()</strong></p>
+<p>This method returns True if the data item refers to an actual file on
+the server. Currently the ItemRest.type values of ItemREST.type_img,
+ItemREST.type_scn, ItemREST.type_anim and ItemREST.type_file all refer
+to files.</p>
+<p>Once all of the metadata attributes listed above are set, an actual data
+payload needs to be set for the data item. There are convenience methods
+to set the item type and fill in the payload data.</p>
+<p><strong>content = item.get_payload_content()</strong></p>
+<p>For Items that have been fetched using the Server object, this method
+allows you to get the payload without having to manually decode the
+payload data.</p>
+<p>An example of the use of this method is shown below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ansys.dynamicreporting.core.utils</span> <span class="kn">import</span> <span class="n">report_remote_server</span><span class="p">,</span> <span class="n">report_objects</span>
+
+<span class="n">serverobj</span> <span class="o">=</span> <span class="n">report_remote_server</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="s2">&quot;http://localhost:8000/&quot;</span><span class="p">,</span> <span class="s2">&quot;nexus&quot;</span><span class="p">,</span> <span class="s2">&quot;cei&quot;</span><span class="p">)</span>
+<span class="n">obj_list</span> <span class="o">=</span> <span class="n">serverobj</span><span class="o">.</span><span class="n">get_objects</span><span class="p">(</span>
+    <span class="n">objtype</span><span class="o">=</span><span class="n">report_objects</span><span class="o">.</span><span class="n">ItemREST</span><span class="p">,</span> <span class="n">query</span><span class="o">=</span><span class="s2">&quot;A|i_type|cont|string;&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># Previously you had to do this to get the data of an item and then decode it to view human readable content</span>
+
+<span class="c1"># import pickle**</span>
+<span class="c1"># data = pickle.loads(obj_list[0].payloaddata)</span>
+
+<span class="c1"># This method gives you the human readable content directly (handles decoding internally.)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">obj_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_payload_content</span><span class="p">()</span>
+</pre></div>
+</div>
+<section id="animation-item">
+<h4>Animation Item<a class="headerlink" href="#animation-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_animation(mp4_filename)</strong></p>
+<p>This method sets the item payload to an animation. The “mp4_filename”
+argument should be the name of a .mp4 encoded video file. Note: the file
+must exist on disk before this call is made and must stay on disk until
+the item is pushed to the ADR Nexus server.</p>
+</section>
+<section id="file-item">
+<h4>File Item<a class="headerlink" href="#file-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_file(filename)</strong></p>
+<p>This method sets the item payload to the content of an arbitrary file on
+disk. The argument should be the name of a file to be uploaded. Note:
+the file must exist on disk before this call is made and must stay on
+disk until the item is pushed to the ADR Nexus server.</p>
+</section>
+<section id="html-item">
+<h4>HTML Item<a class="headerlink" href="#html-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_html(html_text)</strong></p>
+<p>This will set the item payload to HTML formatted text.</p>
+</section>
+<section id="image-item">
+<h4>Image Item<a class="headerlink" href="#image-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_image(image)</strong></p>
+<p>This method sets the item payload to an image. The argument can be one
+of three things: the binary representation of a .png file on disk as a
+string, a QImage object or an enve.image object. Examples are shown
+below:</p>
+<ul>
+<li><p>A string which is the binary data representation of the image. Note:
+this is the only format supported in a Python interpreter that lacks
+the PyQt and enve modules.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;example.png&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">fp</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_image</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>A Qt QImage object instance</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyQt4</span> <span class="kn">import</span> <span class="n">QtGui</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QImage</span><span class="p">(</span><span class="s2">&quot;example.png&quot;</span><span class="p">)</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_image</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>An enve image object instance</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">enve</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">enve</span><span class="o">.</span><span class="n">image</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;example.png&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">item</span><span class="o">.</span><span class="n">set_payload_image</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="none-item">
+<h4>None Item<a class="headerlink" href="#none-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_none()</strong></p>
+<p>By default an item has no payload. This method will reset the item to
+that state. It is legal to push an item without a data payload into the
+server.</p>
+</section>
+<section id="scene-item">
+<h4>Scene Item<a class="headerlink" href="#scene-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_scene(filename)</strong></p>
+<p>This method sets the item payload to the 3D geometry found in the passed
+filename.  Supported geometry formats include: EnSight CSF, STL, PLY,
+SCDOC and AVZ format files.</p>
+</section>
+<section id="string-item">
+<h4>String Item<a class="headerlink" href="#string-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_string(string)</strong></p>
+<p>This will set the item payload to an ASCII string.</p>
+</section>
+<section id="table-item">
+<h4>Table Item<a class="headerlink" href="#table-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_table(dictionary)</strong></p>
+<p>This will set the item payload to be a table, the table being specified
+in a dictionary. Minimally, the dictionary must contain a single numpy
+array with the ‘array’ key. There are a few restrictions on this array.
+First, it must be 2D. Second, the dtype of the array should be
+numpy.float32, numpy.double or a string (dtype=”|S20”).</p>
+<p>Other table properties (e.g. row/column labels, text formatting, etc)
+can also be set in this dictionary. A simple example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">array</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">),</span>
+    <span class="n">rowlbls</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Row 1&quot;</span><span class="p">,</span> <span class="s2">&quot;Row 2&quot;</span><span class="p">,</span> <span class="s2">&quot;Row 3&quot;</span><span class="p">],</span>
+    <span class="n">collbls</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Column A&quot;</span><span class="p">,</span> <span class="s2">&quot;Column B&quot;</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Simple table&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_table</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If the external Python API is being used from within EnSight, it is also
+possible to pass an ENS_PLOTTER object to the set_payload_table()
+method. It will capture not only the data in the plots, but many of the
+plotter attributes. One example might be:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">plot</span> <span class="o">=</span> <span class="n">ensight</span><span class="o">.</span><span class="n">objs</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">PLOTS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># get the first ENS_PLOTTER object</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_table</span><span class="p">(</span><span class="n">plot</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Many more table properties exist and can be set as the default values
+for a table by setting same-named keys in the dictionary. The properties
+are documented in the item properties section at <a class="reference external" href="https://nexusdemo.ensight.com/docs/en/html/Nexus.html?TableItem.html">this</a> page.</p>
+<p>A short-cut APIs exists for a common case:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">item</span><span class="o">.</span><span class="n">set_payload_table_values</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">rowlbls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">collbls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This is a shortcut for the following two lines of python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">array</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">),</span>
+    <span class="n">rowlbls</span><span class="o">=</span><span class="n">rowlbls</span><span class="p">,</span>
+    <span class="n">collbls</span><span class="o">=</span><span class="n">collbls</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_table</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note this can be handy for cases like:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">item</span><span class="o">.</span><span class="n">set_payload_table_values</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]])</span>
+</pre></div>
+</div>
+<p>where one does not want to work with numpy and prefers to pass lists of
+lists. The core API will convert the list of lists into a 2D numpy array
+for the caller.</p>
+<p>It is possible to use a table of strings. To create a 2 row, 3 column
+array of strings (up to 20 characters), one might use code like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="n">array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;\|S20&quot;</span><span class="p">)</span>
+<span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">array</span><span class="o">=</span><span class="n">array</span><span class="p">,</span>
+    <span class="n">rowlbls</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Row 1&quot;</span><span class="p">,</span> <span class="s2">&quot;Row 2&quot;</span><span class="p">],</span>
+    <span class="n">collbls</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Column A&quot;</span><span class="p">,</span> <span class="s2">&quot;Column B&quot;</span><span class="p">,</span> <span class="s2">&quot;Column C&quot;</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Simple ASCII table&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_table</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A numpy array of strings contains strings of all the same length. The
+maximum length must be specified using the ‘dtype=’ named argument when
+the array is created.</p>
+</section>
+<section id="tree-item">
+<span id="treeitemdetails"></span><h4>Tree Item<a class="headerlink" href="#tree-item" title="Link to this heading">#</a></h4>
+<p><strong>item.set_payload_tree(tree)</strong></p>
+<p>A tree payload consists of a list of “entities”. Each entity is a
+dictionary with several required keys and potentially some optional
+ones. The required dictionary keys are:</p>
+<ul class="simple">
+<li><p>‘name’ - the text string that will be displayed in the tree view.</p></li>
+<li><p>‘key’ - a simple text string that can be used to specify the type of
+the entity. This value can be used to enforce a schema on the
+entities. This value is not displayed.</p></li>
+<li><p>‘value’ - the data item value for the entity. This can be the None
+object or an object of any of the following types: bool, int, float,
+str, datetime.datetime, uuid.UUID.</p></li>
+</ul>
+<p>optional keys include:</p>
+<ul class="simple">
+<li><p>‘children’ - this key can be set to another list of entities. These
+entities are ‘children’ of the entity with this key and their
+visibility is controlled by the visible state of this entity.</p></li>
+<li><p>‘state’ - if present, this key hints the generation engine that this
+entity node (or the nodes below it) should be initially displayed
+expanded or collapsed. Valid values include the strings: “expanded”,
+“collapsed”, “collapseRecursive” and “expandRecursive”.</p></li>
+<li><p>‘header’ - this key may be set to a boolean and defaults to False. If
+it is present and set to True, the rendered row associated with this
+item will be displayed as bold text and with an enhanced bottom
+border line.</p></li>
+</ul>
+<p>The following example includes examples of all of the various options:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">enve</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+
+<span class="n">image_item</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;An Image&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;externalAPI&quot;</span><span class="p">,</span> <span class="n">sequence</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">enve</span><span class="o">.</span><span class="n">image</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;example.png&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">image_item</span><span class="o">.</span><span class="n">set_payload_image</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+
+<span class="n">leaves</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">leaves</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;leaves&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Leaf </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">value</span><span class="o">=</span><span class="n">i</span><span class="p">))</span>
+
+<span class="n">children</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Boolean example&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Integer example&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Float example&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">99.99</span><span class="p">))</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Simple string&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;Hello world!!!&quot;</span><span class="p">))</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;The current date&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+<span class="p">)</span>
+
+<span class="c1"># this entity will display the image item (or a link to it) created above</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;A data item guid&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">(</span><span class="n">image_item</span><span class="o">.</span><span class="n">guid</span><span class="p">))</span>
+<span class="p">)</span>
+<span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">key</span><span class="o">=</span><span class="s2">&quot;child_parent&quot;</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;A child parent&quot;</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="s2">&quot;Parents can have values&quot;</span><span class="p">,</span>
+        <span class="n">children</span><span class="o">=</span><span class="n">leaves</span><span class="p">,</span>
+        <span class="n">state</span><span class="o">=</span><span class="s2">&quot;expanded&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">tree</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="n">tree</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+    <span class="nb">dict</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;root&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Top Level&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="n">children</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="s2">&quot;collapsed&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">item</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">create_item</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Tree List Example&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;externalAPI&quot;</span><span class="p">,</span> <span class="n">sequence</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">item</span><span class="o">.</span><span class="n">set_payload_tree</span><span class="p">(</span><span class="n">tree</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#report-objects-itemrest-object">report_objects.ItemREST object</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-members">Data members</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#methods">Methods</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#animation-item">Animation Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#file-item">File Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#html-item">HTML Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#image-item">Image Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#none-item">None Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#scene-item">Scene Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#string-item">String Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#table-item">Table Item</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#tree-item">Tree Item</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="https://github.com/ansys/pydynamicreporting/edit/main/doc/source/lowlevelapi/DataItemObject.rst">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div class="tocsection sourcelink">
+    <a href="../_sources/lowlevelapi/DataItemObject.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright (c) 2024 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  0.11.2. <br />Last updated on
+  <span id="date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var lastModifiedDate = new Date(document.lastModified);
+  var date = lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("date").innerHTML = date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

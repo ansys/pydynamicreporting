@@ -1,0 +1,167 @@
+﻿ItemsComparisonGenerator
+========================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: ItemsComparisonGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      ItemsComparisonGenerator.add_filter
+      
+      
+      ItemsComparisonGenerator.add_params
+      
+      
+      ItemsComparisonGenerator.add_properties
+      
+      
+      ItemsComparisonGenerator.add_property
+      
+      
+      ItemsComparisonGenerator.add_sort_fields
+      
+      
+      ItemsComparisonGenerator.add_tag
+      
+      
+      ItemsComparisonGenerator.as_dict
+      
+      
+      ItemsComparisonGenerator.create
+      
+      
+      ItemsComparisonGenerator.delete
+      
+      
+      ItemsComparisonGenerator.filter
+      
+      
+      ItemsComparisonGenerator.find
+      
+      
+      ItemsComparisonGenerator.get
+      
+      
+      ItemsComparisonGenerator.get_append_tags
+      
+      
+      ItemsComparisonGenerator.get_filter
+      
+      
+      ItemsComparisonGenerator.get_filter_mode
+      
+      
+      ItemsComparisonGenerator.get_generated_items
+      
+      
+      ItemsComparisonGenerator.get_params
+      
+      
+      ItemsComparisonGenerator.get_property
+      
+      
+      ItemsComparisonGenerator.get_sort_fields
+      
+      
+      ItemsComparisonGenerator.get_sort_selection
+      
+      
+      ItemsComparisonGenerator.get_tags
+      
+      
+      ItemsComparisonGenerator.reinit
+      
+      
+      ItemsComparisonGenerator.rem_tag
+      
+      
+      ItemsComparisonGenerator.remove_tag
+      
+      
+      ItemsComparisonGenerator.render
+      
+      
+      ItemsComparisonGenerator.render_pdf
+      
+      
+      ItemsComparisonGenerator.reorder_child
+      
+      
+      ItemsComparisonGenerator.reorder_children
+      
+      
+      ItemsComparisonGenerator.save
+      
+      
+      ItemsComparisonGenerator.set_append_tags
+      
+      
+      ItemsComparisonGenerator.set_filter
+      
+      
+      ItemsComparisonGenerator.set_filter_mode
+      
+      
+      ItemsComparisonGenerator.set_generated_items
+      
+      
+      ItemsComparisonGenerator.set_params
+      
+      
+      ItemsComparisonGenerator.set_property
+      
+      
+      ItemsComparisonGenerator.set_sort_fields
+      
+      
+      ItemsComparisonGenerator.set_sort_selection
+      
+      
+      ItemsComparisonGenerator.set_tags
+      
+      
+      ItemsComparisonGenerator.to_dict
+      
+      
+      ItemsComparisonGenerator.to_json
+      
+      
+      ItemsComparisonGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      ItemsComparisonGenerator.children_order
+      ItemsComparisonGenerator.chunk_size
+      ItemsComparisonGenerator.db
+      ItemsComparisonGenerator.filters_table
+      ItemsComparisonGenerator.item_filter
+      ItemsComparisonGenerator.master
+      ItemsComparisonGenerator.name
+      ItemsComparisonGenerator.params
+      ItemsComparisonGenerator.parent
+      ItemsComparisonGenerator.report_type
+      ItemsComparisonGenerator.saved
+      ItemsComparisonGenerator.tags
+      ItemsComparisonGenerator.type
+      ItemsComparisonGenerator.date
+      ItemsComparisonGenerator.children
+      ItemsComparisonGenerator.guid
+   
+   

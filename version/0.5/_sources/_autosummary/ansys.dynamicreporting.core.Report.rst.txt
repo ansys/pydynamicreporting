@@ -1,0 +1,37 @@
+﻿Report
+======
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoclass:: Report
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Report.export_html
+      
+      
+      Report.export_pdf
+      
+      
+      Report.get_iframe
+      
+      
+      Report.get_url
+      
+      
+      Report.visualize
+      
+   
+   
+
+   
+   
+   

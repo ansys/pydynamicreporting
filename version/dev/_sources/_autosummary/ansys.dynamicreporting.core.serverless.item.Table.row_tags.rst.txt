@@ -1,0 +1,6 @@
+row\_tags
+=========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.row_tags

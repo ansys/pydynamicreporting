@@ -1,0 +1,6 @@
+get\_sort\_selection
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: FooterLayout.get_sort_selection

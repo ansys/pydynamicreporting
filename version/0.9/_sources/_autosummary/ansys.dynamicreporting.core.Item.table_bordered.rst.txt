@@ -1,0 +1,6 @@
+table\_bordered
+===============
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoattribute:: Item.table_bordered

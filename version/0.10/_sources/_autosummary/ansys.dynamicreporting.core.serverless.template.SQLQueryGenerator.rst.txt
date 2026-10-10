@@ -1,0 +1,165 @@
+﻿SQLQueryGenerator
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: SQLQueryGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      SQLQueryGenerator.add_filter
+      
+      
+      SQLQueryGenerator.add_params
+      
+      
+      SQLQueryGenerator.add_properties
+      
+      
+      SQLQueryGenerator.add_property
+      
+      
+      SQLQueryGenerator.add_sort_fields
+      
+      
+      SQLQueryGenerator.add_tag
+      
+      
+      SQLQueryGenerator.as_dict
+      
+      
+      SQLQueryGenerator.create
+      
+      
+      SQLQueryGenerator.delete
+      
+      
+      SQLQueryGenerator.filter
+      
+      
+      SQLQueryGenerator.find
+      
+      
+      SQLQueryGenerator.get
+      
+      
+      SQLQueryGenerator.get_append_tags
+      
+      
+      SQLQueryGenerator.get_filter
+      
+      
+      SQLQueryGenerator.get_filter_mode
+      
+      
+      SQLQueryGenerator.get_generated_items
+      
+      
+      SQLQueryGenerator.get_params
+      
+      
+      SQLQueryGenerator.get_property
+      
+      
+      SQLQueryGenerator.get_sort_fields
+      
+      
+      SQLQueryGenerator.get_sort_selection
+      
+      
+      SQLQueryGenerator.get_tags
+      
+      
+      SQLQueryGenerator.reinit
+      
+      
+      SQLQueryGenerator.rem_tag
+      
+      
+      SQLQueryGenerator.remove_tag
+      
+      
+      SQLQueryGenerator.render
+      
+      
+      SQLQueryGenerator.render_pdf
+      
+      
+      SQLQueryGenerator.reorder_child
+      
+      
+      SQLQueryGenerator.reorder_children
+      
+      
+      SQLQueryGenerator.save
+      
+      
+      SQLQueryGenerator.set_append_tags
+      
+      
+      SQLQueryGenerator.set_filter
+      
+      
+      SQLQueryGenerator.set_filter_mode
+      
+      
+      SQLQueryGenerator.set_generated_items
+      
+      
+      SQLQueryGenerator.set_params
+      
+      
+      SQLQueryGenerator.set_property
+      
+      
+      SQLQueryGenerator.set_sort_fields
+      
+      
+      SQLQueryGenerator.set_sort_selection
+      
+      
+      SQLQueryGenerator.set_tags
+      
+      
+      SQLQueryGenerator.to_dict
+      
+      
+      SQLQueryGenerator.to_json
+      
+      
+      SQLQueryGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      SQLQueryGenerator.children_order
+      SQLQueryGenerator.db
+      SQLQueryGenerator.item_filter
+      SQLQueryGenerator.master
+      SQLQueryGenerator.name
+      SQLQueryGenerator.params
+      SQLQueryGenerator.parent
+      SQLQueryGenerator.report_type
+      SQLQueryGenerator.saved
+      SQLQueryGenerator.tags
+      SQLQueryGenerator.type
+      SQLQueryGenerator.date
+      SQLQueryGenerator.children
+      SQLQueryGenerator.guid
+   
+   

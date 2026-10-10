@@ -1,0 +1,6 @@
+get\_item\_count
+================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.get_item_count

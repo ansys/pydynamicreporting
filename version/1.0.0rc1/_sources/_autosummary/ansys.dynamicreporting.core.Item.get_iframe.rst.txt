@@ -1,0 +1,6 @@
+get\_iframe
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Item.get_iframe

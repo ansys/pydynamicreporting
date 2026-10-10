@@ -1,0 +1,6 @@
+get\_property
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: FooterLayout.get_property

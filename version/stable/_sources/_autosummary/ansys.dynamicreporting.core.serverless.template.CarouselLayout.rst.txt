@@ -1,0 +1,201 @@
+﻿CarouselLayout
+==============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: CarouselLayout
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      CarouselLayout.add_filter
+      
+      
+      CarouselLayout.add_params
+      
+      
+      CarouselLayout.add_properties
+      
+      
+      CarouselLayout.add_property
+      
+      
+      CarouselLayout.add_sort_fields
+      
+      
+      CarouselLayout.add_tag
+      
+      
+      CarouselLayout.as_dict
+      
+      
+      CarouselLayout.create
+      
+      
+      CarouselLayout.delete
+      
+      
+      CarouselLayout.filter
+      
+      
+      CarouselLayout.find
+      
+      
+      CarouselLayout.get
+      
+      
+      CarouselLayout.get_animated
+      
+      
+      CarouselLayout.get_column_count
+      
+      
+      CarouselLayout.get_column_widths
+      
+      
+      CarouselLayout.get_comments
+      
+      
+      CarouselLayout.get_filter
+      
+      
+      CarouselLayout.get_filter_mode
+      
+      
+      CarouselLayout.get_html
+      
+      
+      CarouselLayout.get_params
+      
+      
+      CarouselLayout.get_property
+      
+      
+      CarouselLayout.get_skip
+      
+      
+      CarouselLayout.get_slide_dots
+      
+      
+      CarouselLayout.get_sort_fields
+      
+      
+      CarouselLayout.get_sort_selection
+      
+      
+      CarouselLayout.get_tags
+      
+      
+      CarouselLayout.get_transpose
+      
+      
+      CarouselLayout.reinit
+      
+      
+      CarouselLayout.rem_tag
+      
+      
+      CarouselLayout.remove_tag
+      
+      
+      CarouselLayout.render
+      
+      
+      CarouselLayout.render_pdf
+      
+      
+      CarouselLayout.reorder_child
+      
+      
+      CarouselLayout.reorder_children
+      
+      
+      CarouselLayout.save
+      
+      
+      CarouselLayout.set_animated
+      
+      
+      CarouselLayout.set_column_count
+      
+      
+      CarouselLayout.set_column_widths
+      
+      
+      CarouselLayout.set_comments
+      
+      
+      CarouselLayout.set_filter
+      
+      
+      CarouselLayout.set_filter_mode
+      
+      
+      CarouselLayout.set_html
+      
+      
+      CarouselLayout.set_params
+      
+      
+      CarouselLayout.set_property
+      
+      
+      CarouselLayout.set_skip
+      
+      
+      CarouselLayout.set_slide_dots
+      
+      
+      CarouselLayout.set_sort_fields
+      
+      
+      CarouselLayout.set_sort_selection
+      
+      
+      CarouselLayout.set_tags
+      
+      
+      CarouselLayout.set_transpose
+      
+      
+      CarouselLayout.to_dict
+      
+      
+      CarouselLayout.to_json
+      
+      
+      CarouselLayout.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      CarouselLayout.children_order
+      CarouselLayout.db
+      CarouselLayout.item_filter
+      CarouselLayout.master
+      CarouselLayout.name
+      CarouselLayout.params
+      CarouselLayout.parent
+      CarouselLayout.report_type
+      CarouselLayout.saved
+      CarouselLayout.tags
+      CarouselLayout.type
+      CarouselLayout.date
+      CarouselLayout.children
+      CarouselLayout.guid
+   
+   
