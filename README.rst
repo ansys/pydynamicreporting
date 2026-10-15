@@ -217,7 +217,7 @@ Creating a Release
 This project now uses **tag-driven releases** and **dynamic versions** powered
 by ``hatch-timestamp-version`` (based on ``hatch-vcs``). Stable releases are
 cut from **Git tags** (``vX.Y.Z``). Development builds use **UTC timestamped**
-versions derived from the most recent tag. Version numbers come from tags, but
+versions derived from a reachable Git tag. Version numbers come from tags, but
 maintained product lines can still use long-lived ``stable/`` branches.
 
 Versioning model
@@ -233,6 +233,31 @@ Versioning model
   version stays plain SemVer, while the package metadata declares the bundled
   ADR product release and the supported annual product lines.
 
+Development on ``main`` targets PyDynamicReporting ``1.1.0`` for ADR 27R2
+(``27.2``). The ADR 27R1 release remains on ``stable/27.1``.
+Install discovery and CI continue to use ADR ``27.1`` while the ``27.2``
+development target is being prepared.
+
+Start the next development series by tagging a new commit on ``main`` after
+the maintenance branch has been cut. From an up-to-date ``main`` checkout:
+
+.. code-block:: bash
+
+   git tag -a v1.1.0.dev0 -m "Start 1.1.0 development"
+   git push origin v1.1.0.dev0
+
+The existing version plugin turns this marker into
+``1.1.0.devYYYYMMDDHHMMSS``. Development tags are excluded from tag-triggered
+CI-CD and draft-release workflows; builds still run on ``main`` pushes and
+nightly runs. Use Git directly for the development marker; ``make tag`` is
+reserved for final and release-candidate tags.
+
+To refresh the version reported by an existing editable installation, run:
+
+.. code-block:: bash
+
+   uv sync --all-extras --reinstall-package ansys-dynamicreporting-core
+
 Maintenance branch policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -242,8 +267,10 @@ Maintenance branch policy
 - Stable releases are still cut from tags, but the tag should be created from
   the maintenance branch that owns that product line.
 - Backport only the specific fixes you want to ship on an older supported
-  line. Forward-port maintenance fixes from ``stable/<product-line>.x`` back
-  to ``main`` after they are released.
+  line. After release, squash-merge or cherry-pick maintenance changes back
+  to ``main`` so release-only tagged commits stay outside its history.
+  A normal merge can make the maintenance tag the version source for development
+  builds.
 
 Product compatibility policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -270,14 +297,15 @@ The client major line determines the ADR compatibility epoch:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
   annual product lines.
-- ``1.x`` is bundled with ADR ``27.1`` and supports the ``26.*`` and ``27.*``
-  annual product lines.
+- ``1.x`` supports the ``26.*`` and ``27.*`` annual product lines. The
+  ``1.0`` series bundles ADR ``27.1``; development of ``1.1`` targets ADR
+  ``27.2`` within the same support window.
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
-there is only one release per annual line, so ``26.*`` currently means
-``26.1``, ``27.*`` means ``27.1``, and so on.
+An annual product line can contain multiple releases, such as ``27.1`` and
+``27.2``. The compatibility window covers the annual line regardless of its
+release cadence.
 
 For example, under this policy:
 
@@ -289,7 +317,7 @@ For example, under this policy:
 What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Create Draft Release** (on tag push): builds wheels/sdist and opens a
+- **Create Draft Release** (on a final or RC tag push): builds wheels/sdist and opens a
   **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
   marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads

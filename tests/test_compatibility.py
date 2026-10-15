@@ -160,7 +160,6 @@ def test_public_compatibility_surface_is_consistent():
     assert compatibility.bundled_product_release == BUNDLED_PRODUCT_RELEASE
     assert compatibility.supported_product_lines == SUPPORTED_PRODUCT_LINES
     assert compatibility.support_policy == SUPPORTED_PRODUCT_RELEASE_POLICY
-    assert BUNDLED_PRODUCT_RELEASE == bundled_product_release_for_client_major(current_major)
     assert SUPPORTED_PRODUCT_LINES == supported_product_lines_for_client_major(current_major)
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
@@ -170,16 +169,26 @@ def test_public_compatibility_surface_is_consistent():
     assert __ansys_version_str__ == "2027 R1"
 
 
-def test_compatibility_info_derives_from_client_major():
-    compatibility = get_compatibility_info("1.2.2")
-    assert compatibility.client_major_epoch == 1
-    assert compatibility.bundled_product_release == "27.1"
-    assert compatibility.supported_product_lines == ("26", "27")
-
-    next_major = get_compatibility_info("2.0.0")
-    assert next_major.client_major_epoch == 2
-    assert next_major.bundled_product_release == "28.1"
-    assert next_major.supported_product_lines == ("27", "28")
+@pytest.mark.parametrize(
+    "client_version, bundled_release, supported_lines",
+    [
+        ("0.10.7", "26.1", ("25", "26")),
+        ("1.0.0rc3", "27.1", ("26", "27")),
+        ("1.0.0", "27.1", ("26", "27")),
+        ("1.1.0.dev20261015120000", "27.2", ("26", "27")),
+        ("1.1.0rc1", "27.2", ("26", "27")),
+        ("1.1.0", "27.2", ("26", "27")),
+        ("1.2.2", "27.2", ("26", "27")),
+        ("2.0.0", "28.1", ("27", "28")),
+    ],
+)
+def test_compatibility_info_tracks_client_series_without_widening_support(
+    client_version, bundled_release, supported_lines
+):
+    compatibility = get_compatibility_info(client_version)
+    assert compatibility.client_major_epoch == get_client_major_epoch(client_version)
+    assert compatibility.bundled_product_release == bundled_release
+    assert compatibility.supported_product_lines == supported_lines
 
 
 def test_get_compatibility_warning_for_install_version():

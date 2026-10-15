@@ -76,15 +76,15 @@ compatibility is a separate explicit contract.
 Under this policy:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
-- ``1.x`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
+- ``1.x`` supports ``26.*`` and ``27.*``. The ``1.0`` series bundles ADR
+  ``27.1``; development of ``1.1`` targets ADR 27R2 (``27.2``) within that
+  same window.
 - ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
-ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
-annual line currently has only one concrete release, so ``26.*`` currently
-means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Ansys/Synopsys
-changes the release cadence or adds more releases per line, but the support policy will remain the same
-since it is based on the annual product line, not the number of releases.
+An annual product line can contain multiple releases, such as ``27.1`` and
+``27.2``. The support window covers the annual product line regardless of
+the number of releases within it.
 
 What "Supported" Means
 ----------------------
@@ -125,10 +125,10 @@ inside the installed ADR product release.
 This means that external virtual environments should be treated as a versioned
 compatibility boundary.
 
-- For the current ADR line bundled with a client major release, install the
+- For the ADR release bundled with a client release series, install the
   package normally unless your workflow needs stricter pins.
 - For the previous supported ADR line, use the matching constraints file when
-  one is provided. For example, ``1.x`` is bundled with ADR ``27.1`` and can use
+  one is provided. For example, ``1.0.x`` is bundled with ADR ``27.1`` and can use
   ``constraints/v261.txt`` when targeting ADR ``26.1``.
 - Python 3.14 is supported with ADR ``27.1``. Use Python 3.12 with the ADR
   ``26.1`` constraint profile.
