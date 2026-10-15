@@ -81,6 +81,7 @@ Under this policy:
   metadata identifies ``27.2`` while retaining support for ``26.*`` and
   ``27.*``, including 27R1.
 - ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
+
 ... and so on.
 
 An annual product line can contain multiple releases: ``27.*`` includes
@@ -88,7 +89,7 @@ An annual product line can contain multiple releases: ``27.*`` includes
 client release advances the bundled ADR release within that window.
 
 Development and Maintenance Branches
------------------------------------
+------------------------------------
 ``main`` currently targets PyDynamicReporting ``1.1.0`` for ADR ``27.2``.
 ``stable/27.1`` holds the frozen 27R1 line and its ``1.0.x`` release fixes.
 Create ``stable/27.2`` for ``1.1.x`` when 27R2 freezes, then use ``main`` for
