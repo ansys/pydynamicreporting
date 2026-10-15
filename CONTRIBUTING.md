@@ -45,12 +45,6 @@ encourage the use of the following branch naming convention:
 
 ## Forward-Porting Compatibility Changes
 
-Development on `main` targets PyDynamicReporting `1.1.0` for ADR `27.2`
-(27R2). Keep 27R1 release work on `stable/27.1`; create `stable/27.2` when
-27R2 freezes. Both client lines retain support for the `26.*` and `27.*`
-annual product lines. Product release branches accept approved release
-fixes; new features belong on `main`.
-
 When forward-porting maintenance-line compatibility work into `main`, do not
 assume that version constants, install defaults, or dependency floors should
 come across unchanged. Recheck the following items explicitly:

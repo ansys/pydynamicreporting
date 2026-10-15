@@ -148,7 +148,6 @@ def test_major_one_support_window_matches_current_policy():
     supported_lines = supported_product_lines_for_client_major(1)
     assert is_supported_product_release("26.1", supported_lines)
     assert is_supported_product_release("27.1", supported_lines)
-    assert is_supported_product_release("27.2", supported_lines)
     assert not is_supported_product_release("25.2", supported_lines)
     assert not is_supported_product_release("28.1", supported_lines)
 
@@ -161,6 +160,7 @@ def test_public_compatibility_surface_is_consistent():
     assert compatibility.bundled_product_release == BUNDLED_PRODUCT_RELEASE
     assert compatibility.supported_product_lines == SUPPORTED_PRODUCT_LINES
     assert compatibility.support_policy == SUPPORTED_PRODUCT_RELEASE_POLICY
+    assert BUNDLED_PRODUCT_RELEASE == bundled_product_release_for_client_major(current_major)
     assert SUPPORTED_PRODUCT_LINES == supported_product_lines_for_client_major(current_major)
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
@@ -170,33 +170,10 @@ def test_public_compatibility_surface_is_consistent():
     assert __ansys_version_str__ == "2027 R1"
 
 
-@pytest.mark.parametrize(
-    "client_version,bundled_release,supported_lines",
-    [
-        ("0.10.7", "26.1", ("25", "26")),
-        ("1.0.0rc3", "27.1", ("26", "27")),
-        ("1.0.1", "27.1", ("26", "27")),
-        ("1.1.0.dev20261015000000", "27.2", ("26", "27")),
-        ("1.1.0rc1", "27.2", ("26", "27")),
-        ("1.1.0", "27.2", ("26", "27")),
-        ("1.1.1", "27.2", ("26", "27")),
-        ("1.2.2", "27.2", ("26", "27")),
-        ("2.0.0.dev20261015000000", "28.1", ("27", "28")),
-    ],
-)
-def test_compatibility_info_tracks_bundled_release_without_changing_support_window(
-    client_version, bundled_release, supported_lines
-):
-    compatibility = get_compatibility_info(client_version)
-    assert compatibility.client_version == client_version
-    assert compatibility.bundled_product_release == bundled_release
-    assert compatibility.supported_product_lines == supported_lines
-
-
-def test_compatibility_info_derives_support_window_from_client_major():
+def test_compatibility_info_derives_from_client_major():
     compatibility = get_compatibility_info("1.2.2")
     assert compatibility.client_major_epoch == 1
-    assert compatibility.bundled_product_release == "27.2"
+    assert compatibility.bundled_product_release == "27.1"
     assert compatibility.supported_product_lines == ("26", "27")
 
     next_major = get_compatibility_info("2.0.0")

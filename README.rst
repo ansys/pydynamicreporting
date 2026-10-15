@@ -225,11 +225,10 @@ Versioning model
 
 - **Stable releases**: The version is the exact **Git tag** (for example,
   ``v0.10.0`` -> package version ``0.10.0``).
-- **Development builds on main**: Version targets the next minor release after the
-  nearest reachable tag and adds a UTC timestamp, for example
-  ``1.1.0.devYYYYMMDDHHMMSS`` during 27R2 development.
-- Package version numbers come from Git tags. ``[tool.hatch.version]``
-  controls how development versions are calculated between tags.
+- **Development builds**: Version is computed from the latest tag **plus a
+  timestamp**, for example ``1.1.0.devYYYYMMDDHHMMSS``.
+- No manual editing of ``pyproject.toml`` for versions;
+  ``[tool.hatch.version]`` drives everything.
 - **Product compatibility** is declared separately from SemVer. The package
   version stays plain SemVer, while the package metadata declares the bundled
   ADR product release and the supported annual product lines.
@@ -237,23 +236,17 @@ Versioning model
 Maintenance branch policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``main`` is reserved for the next ADR product release under development.
-  It currently targets PyDynamicReporting ``1.1.0`` for ADR ``27.2`` (27R2).
-- Maintain product releases separately with ``stable/<product-release>``
-  branches. ``stable/27.1`` owns the frozen 27R1 line (``1.0.x``).
-  Create ``stable/27.2`` for ``1.1.x`` when 27R2 freezes; until then, develop
-  27R2 on ``main``. The existing ``stable/26.x`` branch keeps its legacy name.
+- ``main`` targets PyDynamicReporting ``1.1.0`` for ADR ``27.2`` (27R2).
+- Maintenance branches use ``stable/<product-release>``, such as ``stable/27.1``
+  for frozen 27R1. Create ``stable/27.2`` when 27R2 freezes. The existing
+  ``stable/26.x`` branch keeps its legacy name.
+- On new maintenance branches, set ``version_scheme = "guess-next-dev"`` in
+  ``[tool.hatch.version.raw-options]`` to retain patch/RC development versions.
 - Stable releases are still cut from tags, but the tag should be created from
   the maintenance branch that owns that product line.
-- Keep feature work on ``main`` and backport only approved release fixes.
-  Forward-port applicable maintenance fixes to later maintained releases and
-  ``main``.
-- When cutting a new maintenance branch from ``main``, set
-  ``version_scheme = "guess-next-dev"`` in
-  ``[tool.hatch.version.raw-options]`` on that branch. This keeps patch and
-  release-candidate builds on their release line. ``main`` uses
-  ``release-branch-semver`` to advance development to the next minor release.
-  Exact release tags still determine the published package version.
+- Backport only the specific fixes you want to ship on an older supported
+  line. Forward-port maintenance fixes from ``stable/<product-release>`` back
+  to ``main`` after they are released.
 
 Product compatibility policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -280,21 +273,17 @@ The client major line determines the ADR compatibility epoch:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
   annual product lines.
-- ``1.0.x`` is bundled with ADR ``27.1`` (27R1); ``1.1.0`` development targets
-  ADR ``27.2`` (27R2). Both support the ``26.*`` and ``27.*`` annual product
-  lines. Advancing the bundled release within the same year does not require
-  a new client major.
+- ``1.x`` is bundled with ADR ``27.1`` and supports the ``26.*`` and ``27.*``
+  annual product lines.
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-An annual product line can contain multiple releases. For example, ``27.*``
-includes both ``27.1`` and ``27.2``. The support window follows the annual
-line, so adding 27R2 does not drop support for 27R1 or ``26.*``.
+Annual product lines can contain multiple releases. ADR ``27.1`` and ``27.2``
+both belong to the existing ``27.*`` support window.
 
 For example, under this policy:
 
 - ``1.0.0`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
-- ``1.1.0`` targets ADR ``27.2`` with the same support window.
 - ``1.2.0`` and ``1.2.2`` would still support ``26.*`` and ``27.*``.
 - ``2.0.0`` could bundle ADR ``28.1`` and support ``27.*`` and ``28.*``,
   dropping support for ``26.*``.

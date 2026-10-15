@@ -134,8 +134,7 @@ Recommended practice for external venv usage:
 
 - For the current ADR line bundled with a client major release, install
   ``ansys-dynamicreporting-core`` normally unless your workflow needs stricter
-  pins. The ``1.0.x`` client line is bundled with ADR ``27.1``; ``1.1.0``
-  development targets ADR ``27.2`` within the same annual support window.
+  pins. For example, the ``1.x`` client line is bundled with ADR ``27.1``.
 - For the previous supported ADR line, use the matching constraints file when
   one is provided. For example, ``1.x`` also supports ADR ``26.1``, and
   ``constraints/v261.txt`` documents that release profile.
