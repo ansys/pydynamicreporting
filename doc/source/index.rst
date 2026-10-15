@@ -64,10 +64,6 @@ Compatibility Policy
 PyDynamicReporting uses plain SemVer for package versions, but product
 compatibility is a separate explicit contract.
 
-``main`` targets PyDynamicReporting ``1.1.0`` for ADR ``27.2`` (27R2).
-27R1 remains frozen on ``stable/27.1``; create ``stable/27.2`` when 27R2 freezes.
-The supported annual product lines remain ``26.*`` and ``27.*``.
-
 - ``0.x`` is the legacy transition line. ``0.10.x`` is the last legacy line
   tied to ADR ``26.1`` behavior.
 - ``1.0.0`` is the first fully policy-driven line. Starting there, each client
@@ -84,8 +80,8 @@ Under this policy:
 - ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
-Annual product lines can contain multiple releases. ADR ``27.1`` and ``27.2``
-both belong to the existing ``27.*`` support window.
+An annual product line can contain multiple releases. Compatibility is based
+on the annual product line, regardless of the number of releases within it.
 
 What "Supported" Means
 ----------------------

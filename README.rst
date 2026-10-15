@@ -226,7 +226,7 @@ Versioning model
 - **Stable releases**: The version is the exact **Git tag** (for example,
   ``v0.10.0`` -> package version ``0.10.0``).
 - **Development builds**: Version is computed from the latest tag **plus a
-  timestamp**, for example ``1.1.0.devYYYYMMDDHHMMSS``.
+  timestamp**, for example ``0.10.1.devYYYYMMDDHHMMSS``.
 - No manual editing of ``pyproject.toml`` for versions;
   ``[tool.hatch.version]`` drives everything.
 - **Product compatibility** is declared separately from SemVer. The package
@@ -236,12 +236,11 @@ Versioning model
 Maintenance branch policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``main`` targets PyDynamicReporting ``1.1.0`` for ADR ``27.2`` (27R2).
-- Maintenance branches use ``stable/<product-release>``, such as ``stable/27.1``
-  for frozen 27R1. Create ``stable/27.2`` when 27R2 freezes. The existing
-  ``stable/26.x`` branch keeps its legacy name.
+- ``main`` is reserved for the next ADR product release under development.
+- Long-lived maintenance branches use the ``stable/<product-release>`` naming
+  convention and are created when that product release freezes.
 - Stable releases are still cut from tags, but the tag should be created from
-  the maintenance branch that owns that product line.
+  the maintenance branch that owns that product release.
 - Backport only the specific fixes you want to ship on an older supported
   line. Forward-port maintenance fixes from ``stable/<product-release>`` back
   to ``main`` after they are released.
@@ -276,8 +275,8 @@ The client major line determines the ADR compatibility epoch:
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-Annual product lines can contain multiple releases. ADR ``27.1`` and ``27.2``
-both belong to the existing ``27.*`` support window.
+An annual product line can contain multiple releases. Compatibility is based
+on the annual product line, regardless of the number of releases within it.
 
 For example, under this policy:
 
