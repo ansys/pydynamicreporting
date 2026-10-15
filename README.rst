@@ -240,8 +240,6 @@ Maintenance branch policy
 - Maintenance branches use ``stable/<product-release>``, such as ``stable/27.1``
   for frozen 27R1. Create ``stable/27.2`` when 27R2 freezes. The existing
   ``stable/26.x`` branch keeps its legacy name.
-- On new maintenance branches, set ``version_scheme = "guess-next-dev"`` in
-  ``[tool.hatch.version.raw-options]`` to retain patch/RC development versions.
 - Stable releases are still cut from tags, but the tag should be created from
   the maintenance branch that owns that product line.
 - Backport only the specific fixes you want to ship on an older supported
