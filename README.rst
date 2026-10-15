@@ -217,7 +217,7 @@ Creating a Release
 This project now uses **tag-driven releases** and **dynamic versions** powered
 by ``hatch-timestamp-version`` (based on ``hatch-vcs``). Stable releases are
 cut from **Git tags** (``vX.Y.Z``). Development builds use **UTC timestamped**
-versions derived from a reachable Git tag. Version numbers come from tags, but
+versions derived from the most recent tag. Version numbers come from tags, but
 maintained product lines can still use long-lived ``stable/`` branches.
 
 Versioning model
@@ -230,16 +230,16 @@ Versioning model
 - No manual editing of ``pyproject.toml`` for versions;
   ``[tool.hatch.version]`` drives everything.
 - **Product compatibility** is declared separately from SemVer. The package
-  version stays plain SemVer, while the package metadata identifies the ADR
-  release that includes the client and the supported annual product lines.
+  version stays plain SemVer, while the package metadata declares the bundled
+  ADR product release and the supported annual product lines.
 
-Development on ``main`` targets PyDynamicReporting ``1.1.0`` for ADR 27R2
-(``27.2``). The ADR 27R1 release remains on ``stable/27.1``.
+PyDynamicReporting ``1.1.0`` is being developed on ``main`` for inclusion in
+ADR 27R2 (``27.2``). The ADR 27R1 release remains on ``stable/27.1``.
 Install discovery and CI continue to use ADR ``27.1`` while the ``27.2``
 development target is being prepared.
 
-Start the next development series by tagging a new commit on ``main`` after
-the maintenance branch has been cut. From an up-to-date ``main`` checkout:
+After merging the 27R2 preparation, tag the new commit from an up-to-date
+``main`` checkout to start the development series:
 
 .. code-block:: bash
 
@@ -288,8 +288,8 @@ Policy start point
 - ``0.x`` is the legacy transition line. ``0.10.x`` remains the last legacy
   line tied to ADR ``26.1`` behavior.
 - ``1.0.0`` is the first fully policy-driven line. It starts the
-  product-release-aligned scheme as the client included in ADR ``27.1``,
-  with support for the ``26.*`` and ``27.*`` annual product lines.
+  product-release-aligned scheme with ADR ``27.1`` as the bundled release and
+  support for the ``26.*`` and ``27.*`` annual product lines.
 - Every future client major advances the supported window by exactly one ADR
   annual product line.
 
@@ -297,28 +297,26 @@ The client major line determines the ADR compatibility epoch:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
   annual product lines.
-- ``1.x`` supports the ``26.*`` and ``27.*`` annual product lines.
-  ADR 27R1 (``27.1``) includes the ``1.0`` client series. ADR 27R2 (``27.2``)
-  will include the ``1.1`` client series.
+- ``1.x`` is bundled with ADR ``27.1`` and supports the ``26.*`` and ``27.*``
+  annual product lines.
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-An annual product line can contain multiple releases, such as ``27.1`` and
-``27.2``. The compatibility window covers the annual line regardless of its
-release cadence.
+ADR ``27.2`` is part of the ``27.*`` annual product line. Client ``1.1``
+therefore keeps support for ``26.*`` and ``27.*``.
 
 For example, under this policy:
 
 - ``1.0.0`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
 - ``1.2.0`` and ``1.2.2`` would still support ``26.*`` and ``27.*``.
-- ADR ``28.1`` could include client ``2.0.0``, which would support ``27.*``
-  and ``28.*`` and drop support for ``26.*``.
+- ``2.0.0`` could bundle ADR ``28.1`` and support ``27.*`` and ``28.*``,
+  dropping support for ``26.*``.
 
 What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Create Draft Release** (on a final or RC tag push): builds wheels/sdist and opens a
-  **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
+- **Create Draft Release** (on a final or RC tag push): builds wheels/sdist
+  and opens a **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
   marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads
   the reviewed GitHub Release artifacts to **PyPI** via Trusted Publisher,
@@ -428,7 +426,7 @@ CI workflows (reference)
 
 - **.github/workflows/create-draft-release.yml**
 
-  - Triggers on tag push ``v*`` or manual dispatch.
+  - Triggers on tag push ``v*`` (excluding development tags) or manual dispatch.
   - Builds artifacts and opens a **draft** GitHub Release attaching
     ``dist/*``. An ``rcN`` tag is marked as a prerelease automatically.
 

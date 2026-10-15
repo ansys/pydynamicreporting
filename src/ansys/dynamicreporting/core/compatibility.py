@@ -75,7 +75,7 @@ def product_line_for_client_major(client_major: int) -> str:
 
 
 def bundled_product_release_for_client_major(client_major: int) -> str:
-    """Return the first ADR release that includes a client major series."""
+    """Return the bundled product release for a client major epoch."""
     return f"{product_line_for_client_major(client_major)}.1"
 
 
@@ -85,7 +85,7 @@ def _bundled_product_release_for_client_version(client_version: str) -> str:
     if client_major == 1:
         minor = re.match(r"^\d+\.(\d+)", client_version)
         # Client 1.1 is planned for ADR 27R2 within the same annual support window.
-        if minor is not None and int(minor.group(1)) >= 1:
+        if minor is not None and int(minor.group(1)) == 1:
             return "27.2"
     return bundled_product_release_for_client_major(client_major)
 
@@ -97,8 +97,7 @@ def supported_product_lines_for_client_major(client_major: int) -> tuple[str, st
 
 
 _CURRENT_CLIENT_MAJOR_EPOCH = get_client_major_epoch()
-# The ADR release that includes the client follows its release series.
-# The supported annual product lines follow the client's major version.
+# Client 1.1 is bundled with ADR 27R2; support still follows the client major.
 # Major ``0`` is permanently anchored to the shipped 2026 product epoch.
 BUNDLED_PRODUCT_RELEASE = _bundled_product_release_for_client_version(__version__)
 SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
