@@ -75,8 +75,18 @@ def product_line_for_client_major(client_major: int) -> str:
 
 
 def bundled_product_release_for_client_major(client_major: int) -> str:
-    """Return the bundled product release for a client major epoch."""
+    """Return the first bundled product release for a client major epoch."""
     return f"{product_line_for_client_major(client_major)}.1"
+
+
+def _bundled_product_release_for_client_version(client_version: str) -> str:
+    """Return the bundled product release for a specific client version."""
+    client_major = get_client_major_epoch(client_version)
+    # 1.1 advances the bundled release within the existing 26/27 support window.
+    minor_match = re.match(r"^1\.(\d+)", client_version)
+    if minor_match is not None and int(minor_match.group(1)) >= 1:
+        return "27.2"
+    return bundled_product_release_for_client_major(client_major)
 
 
 def supported_product_lines_for_client_major(client_major: int) -> tuple[str, str]:
@@ -86,9 +96,9 @@ def supported_product_lines_for_client_major(client_major: int) -> tuple[str, st
 
 
 _CURRENT_CLIENT_MAJOR_EPOCH = get_client_major_epoch()
-# Public compatibility metadata follows the installed client major line.
+# The support window follows the major; the bundled release can advance within it.
 # Major ``0`` is permanently anchored to the shipped 2026 product epoch.
-BUNDLED_PRODUCT_RELEASE = bundled_product_release_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
+BUNDLED_PRODUCT_RELEASE = _bundled_product_release_for_client_version(__version__)
 SUPPORTED_PRODUCT_LINES = supported_product_lines_for_client_major(_CURRENT_CLIENT_MAJOR_EPOCH)
 
 
@@ -201,7 +211,7 @@ def get_compatibility_info(client_version: str = __version__) -> ProductCompatib
     return ProductCompatibility(
         client_version=client_version,
         client_major_epoch=client_major_epoch,
-        bundled_product_release=bundled_product_release_for_client_major(client_major_epoch),
+        bundled_product_release=_bundled_product_release_for_client_version(client_version),
         supported_product_lines=supported_product_lines_for_client_major(client_major_epoch),
         support_policy=SUPPORTED_PRODUCT_RELEASE_POLICY,
     )
