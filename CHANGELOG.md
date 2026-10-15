@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Client 1.1 development targets ADR 27R2 (27.2) as its bundled product release,
-  while retaining support for the 26.* and 27.* annual product lines.
+- Client 1.1 is being developed for inclusion in ADR 27R2 (27.2), with support
+  for the 26.* and 27.* annual product lines.
 
 ## [1.0.0rc3] - 2026-09-21
 

@@ -230,8 +230,8 @@ Versioning model
 - No manual editing of ``pyproject.toml`` for versions;
   ``[tool.hatch.version]`` drives everything.
 - **Product compatibility** is declared separately from SemVer. The package
-  version stays plain SemVer, while the package metadata declares the bundled
-  ADR product release and the supported annual product lines.
+  version stays plain SemVer, while the package metadata identifies the ADR
+  release that includes the client and the supported annual product lines.
 
 Development on ``main`` targets PyDynamicReporting ``1.1.0`` for ADR 27R2
 (``27.2``). The ADR 27R1 release remains on ``stable/27.1``.
@@ -288,8 +288,8 @@ Policy start point
 - ``0.x`` is the legacy transition line. ``0.10.x`` remains the last legacy
   line tied to ADR ``26.1`` behavior.
 - ``1.0.0`` is the first fully policy-driven line. It starts the
-  product-release-aligned scheme with ADR ``27.1`` as the bundled release and
-  support for the ``26.*`` and ``27.*`` annual product lines.
+  product-release-aligned scheme as the client included in ADR ``27.1``,
+  with support for the ``26.*`` and ``27.*`` annual product lines.
 - Every future client major advances the supported window by exactly one ADR
   annual product line.
 
@@ -297,9 +297,9 @@ The client major line determines the ADR compatibility epoch:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports the ``25.*`` and ``26.*``
   annual product lines.
-- ``1.x`` supports the ``26.*`` and ``27.*`` annual product lines. The
-  ``1.0`` series bundles ADR ``27.1``; development of ``1.1`` targets ADR
-  ``27.2`` within the same support window.
+- ``1.x`` supports the ``26.*`` and ``27.*`` annual product lines.
+  ADR 27R1 (``27.1``) includes the ``1.0`` client series. ADR 27R2 (``27.2``)
+  will include the ``1.1`` client series.
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
@@ -311,8 +311,8 @@ For example, under this policy:
 
 - ``1.0.0`` is bundled with ADR ``27.1`` and supports ``26.*`` and ``27.*``.
 - ``1.2.0`` and ``1.2.2`` would still support ``26.*`` and ``27.*``.
-- ``2.0.0`` could bundle ADR ``28.1`` and support ``27.*`` and ``28.*``,
-  dropping support for ``26.*``.
+- ADR ``28.1`` could include client ``2.0.0``, which would support ``27.*``
+  and ``28.*`` and drop support for ``26.*``.
 
 What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^

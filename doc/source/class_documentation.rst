@@ -33,8 +33,8 @@ Compatibility information
 =========================
 
 The package exposes its client-to-product compatibility contract so
-applications can inspect the bundled ADR release and supported annual product
-lines:
+applications can inspect the ADR release that includes the client and the
+annual product lines the client supports:
 
 .. code-block:: python
 

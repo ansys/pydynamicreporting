@@ -68,17 +68,17 @@ compatibility is a separate explicit contract.
   tied to ADR ``26.1`` behavior.
 - ``1.0.0`` is the first fully policy-driven line. Starting there, each client
   major version maps to one ADR annual product line.
-- A policy-driven client major supports the bundled ADR annual line and the
-  immediately previous annual line.
+- A policy-driven client major supports the annual ADR line that includes it
+  and the immediately previous annual line.
 - Minor and patch releases stay inside the same support window.
 - Every future client major advances the support window by one ADR annual line.
 
 Under this policy:
 
 - ``0.x`` is bundled with ADR ``26.1`` and supports ``25.*`` and ``26.*``.
-- ``1.x`` supports ``26.*`` and ``27.*``. The ``1.0`` series bundles ADR
-  ``27.1``; development of ``1.1`` targets ADR 27R2 (``27.2``) within that
-  same window.
+- ``1.x`` supports ``26.*`` and ``27.*``. ADR 27R1 (``27.1``) includes the
+  ``1.0`` client series. ADR 27R2 (``27.2``) will include the ``1.1`` client
+  series.
 - ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
@@ -125,11 +125,11 @@ inside the installed ADR product release.
 This means that external virtual environments should be treated as a versioned
 compatibility boundary.
 
-- For the ADR release bundled with a client release series, install the
+- For the ADR release that includes your client series, install the
   package normally unless your workflow needs stricter pins.
 - For the previous supported ADR line, use the matching constraints file when
-  one is provided. For example, ``1.0.x`` is bundled with ADR ``27.1`` and can use
-  ``constraints/v261.txt`` when targeting ADR ``26.1``.
+  one is provided. For example, ADR ``27.1`` includes the ``1.0.x`` client
+  series, which can use ``constraints/v261.txt`` when targeting ADR ``26.1``.
 - Python 3.14 is supported with ADR ``27.1``. Use Python 3.12 with the ADR
   ``26.1`` constraint profile.
 - Keep one external serverless virtual environment per supported ADR product
