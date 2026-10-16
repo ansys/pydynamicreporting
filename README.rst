@@ -293,9 +293,10 @@ The client major line determines the ADR compatibility epoch:
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
-there is only one release per annual line, so ``26.*`` currently means
-``26.1``, ``27.*`` means ``27.1``, and so on.
+ADR released 25R1 and 25R2, followed by a single release, 26R1.
+Starting with 27R1 and 27R2, ADR returns to multiple releases per year.
+Client compatibility remains based on annual product lines, regardless
+of the number of releases in each line.
 
 For example, under this policy:
 

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Document ADR's return to multiple releases per year while retaining the
+  annual product-line compatibility policy.
 - Exclude development marker tags (`v*.dev*`) from the CI-CD and
   Create Draft Release workflows.
 
