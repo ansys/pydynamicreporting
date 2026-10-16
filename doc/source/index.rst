@@ -80,8 +80,9 @@ Under this policy:
 - ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
-ADR released 25R1 and 25R2, followed by a single release, 26R1.
-Starting with 27R1 and 27R2, ADR returns to multiple releases per year.
+Ansys previously followed a twice-yearly release schedule, with releases
+such as 25R1 and 25R2. The 2026 product line had a single release, 26R1.
+Starting with 27R1 and 27R2, Ansys returns to two releases per year.
 Client compatibility remains based on annual product lines, regardless
 of the number of releases in each line.
 
