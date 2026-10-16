@@ -233,24 +233,15 @@ Versioning model
   version stays plain SemVer, while the package metadata declares the bundled
   ADR product release and the supported annual product lines.
 
-PyDynamicReporting ``1.1.0`` is being developed on ``main`` for inclusion in
-ADR 27R2 (``27.2``). The ADR 27R1 release remains on ``stable/27.1``.
-Install discovery and CI continue to use ADR ``27.1`` while the ``27.2``
-development target is being prepared.
+To start a new development series, create and push a marker tag named
+``vX.Y.Z.dev0``, replacing ``X.Y.Z`` with the next package version. Tag a
+new commit on ``main`` after cutting the maintenance branch; keep that
+commit outside the maintenance branch's history.
 
-After merging the 27R2 preparation, tag the new commit from an up-to-date
-``main`` checkout to start the development series:
-
-.. code-block:: bash
-
-   git tag -a v1.1.0.dev0 -m "Start 1.1.0 development"
-   git push origin v1.1.0.dev0
-
-The existing version plugin turns this marker into
-``1.1.0.devYYYYMMDDHHMMSS``. Development tags are excluded from tag-triggered
-CI-CD and draft-release workflows; builds still run on ``main`` pushes and
-nightly runs. Use Git directly for the development marker; ``make tag`` is
-reserved for final and release-candidate tags.
+The existing version plugin produces ``X.Y.Z.devYYYYMMDDHHMMSS`` from this
+marker. Use Git directly for development markers; ``make tag`` is reserved
+for final and release-candidate tags. Development tags are excluded from
+the CI-CD and Create Draft Release tag triggers.
 
 To refresh the version reported by an existing editable installation, run:
 
@@ -302,8 +293,9 @@ The client major line determines the ADR compatibility epoch:
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-ADR ``27.2`` is part of the ``27.*`` annual product line. Client ``1.1``
-therefore keeps support for ``26.*`` and ``27.*``.
+ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
+there is only one release per annual line, so ``26.*`` currently means
+``26.1``, ``27.*`` means ``27.1``, and so on.
 
 For example, under this policy:
 

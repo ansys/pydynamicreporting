@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Client 1.1 is being developed for inclusion in ADR 27R2 (27.2), with support
-  for the 26.* and 27.* annual product lines.
+- Exclude development marker tags (`v*.dev*`) from the CI-CD and
+  Create Draft Release workflows.
+
+### Security
+
+- Update the development lockfile to Django 5.2.18 for its security fixes.
 
 ## [1.0.0rc3] - 2026-09-21
 

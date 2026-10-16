@@ -80,9 +80,11 @@ Under this policy:
 - ``2.x`` would be bundled with ADR ``28.1`` and support ``27.*`` and ``28.*``.
 ... and so on.
 
-ADR 27R2 (``27.2``) will include client ``1.1``. This release is part of the
-``27.*`` annual product line, so client ``1.1`` continues to support ADR
-``26.*`` and ``27.*``.
+ADR ``25.2`` was the last half-year release. Starting with ADR ``26.1``, each
+annual line currently has only one concrete release, so ``26.*`` currently
+means ``26.1``, ``27.*`` means ``27.1``, and so on. This can change if Ansys/Synopsys
+changes the release cadence or adds more releases per line, but the support policy will remain the same
+since it is based on the annual product line, not the number of releases.
 
 What "Supported" Means
 ----------------------

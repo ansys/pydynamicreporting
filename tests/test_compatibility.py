@@ -160,6 +160,7 @@ def test_public_compatibility_surface_is_consistent():
     assert compatibility.bundled_product_release == BUNDLED_PRODUCT_RELEASE
     assert compatibility.supported_product_lines == SUPPORTED_PRODUCT_LINES
     assert compatibility.support_policy == SUPPORTED_PRODUCT_RELEASE_POLICY
+    assert BUNDLED_PRODUCT_RELEASE == bundled_product_release_for_client_major(current_major)
     assert SUPPORTED_PRODUCT_LINES == supported_product_lines_for_client_major(current_major)
     assert DEFAULT_ANSYS_VERSION == str(
         product_release_to_install_version(DEFAULT_ANSYS_INSTALL_RELEASE)
@@ -179,14 +180,6 @@ def test_compatibility_info_derives_from_client_major():
     assert next_major.client_major_epoch == 2
     assert next_major.bundled_product_release == "28.1"
     assert next_major.supported_product_lines == ("27", "28")
-
-
-@pytest.mark.parametrize("client_version", ["1.1.0.dev20261015120000", "1.1.0rc1", "1.1.0"])
-def test_client_one_one_is_bundled_with_27r2(client_version):
-    compatibility = get_compatibility_info(client_version)
-    assert compatibility.client_major_epoch == 1
-    assert compatibility.bundled_product_release == "27.2"
-    assert compatibility.supported_product_lines == ("26", "27")
 
 
 def test_get_compatibility_warning_for_install_version():
