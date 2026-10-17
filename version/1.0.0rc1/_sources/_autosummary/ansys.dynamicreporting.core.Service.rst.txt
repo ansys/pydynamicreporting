@@ -1,0 +1,60 @@
+﻿Service
+=======
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoclass:: Service
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Service.connect
+      
+      
+      Service.create_item
+      
+      
+      Service.delete
+      
+      
+      Service.get_list_reports
+      
+      
+      Service.get_report
+      
+      
+      Service.load_templates
+      
+      
+      Service.query
+      
+      
+      Service.start
+      
+      
+      Service.stop
+      
+      
+      Service.visualize_report
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Service.session_guid
+      Service.url
+   
+   

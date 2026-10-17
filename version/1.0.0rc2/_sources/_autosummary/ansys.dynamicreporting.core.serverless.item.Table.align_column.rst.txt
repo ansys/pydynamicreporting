@@ -1,0 +1,6 @@
+align\_column
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.align_column

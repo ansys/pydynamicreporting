@@ -1,0 +1,6 @@
+marker\_text\_rowname
+=====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.marker_text_rowname

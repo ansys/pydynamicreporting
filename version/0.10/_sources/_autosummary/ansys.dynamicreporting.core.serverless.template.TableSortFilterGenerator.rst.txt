@@ -1,0 +1,165 @@
+﻿TableSortFilterGenerator
+========================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TableSortFilterGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TableSortFilterGenerator.add_filter
+      
+      
+      TableSortFilterGenerator.add_params
+      
+      
+      TableSortFilterGenerator.add_properties
+      
+      
+      TableSortFilterGenerator.add_property
+      
+      
+      TableSortFilterGenerator.add_sort_fields
+      
+      
+      TableSortFilterGenerator.add_tag
+      
+      
+      TableSortFilterGenerator.as_dict
+      
+      
+      TableSortFilterGenerator.create
+      
+      
+      TableSortFilterGenerator.delete
+      
+      
+      TableSortFilterGenerator.filter
+      
+      
+      TableSortFilterGenerator.find
+      
+      
+      TableSortFilterGenerator.get
+      
+      
+      TableSortFilterGenerator.get_append_tags
+      
+      
+      TableSortFilterGenerator.get_filter
+      
+      
+      TableSortFilterGenerator.get_filter_mode
+      
+      
+      TableSortFilterGenerator.get_generated_items
+      
+      
+      TableSortFilterGenerator.get_params
+      
+      
+      TableSortFilterGenerator.get_property
+      
+      
+      TableSortFilterGenerator.get_sort_fields
+      
+      
+      TableSortFilterGenerator.get_sort_selection
+      
+      
+      TableSortFilterGenerator.get_tags
+      
+      
+      TableSortFilterGenerator.reinit
+      
+      
+      TableSortFilterGenerator.rem_tag
+      
+      
+      TableSortFilterGenerator.remove_tag
+      
+      
+      TableSortFilterGenerator.render
+      
+      
+      TableSortFilterGenerator.render_pdf
+      
+      
+      TableSortFilterGenerator.reorder_child
+      
+      
+      TableSortFilterGenerator.reorder_children
+      
+      
+      TableSortFilterGenerator.save
+      
+      
+      TableSortFilterGenerator.set_append_tags
+      
+      
+      TableSortFilterGenerator.set_filter
+      
+      
+      TableSortFilterGenerator.set_filter_mode
+      
+      
+      TableSortFilterGenerator.set_generated_items
+      
+      
+      TableSortFilterGenerator.set_params
+      
+      
+      TableSortFilterGenerator.set_property
+      
+      
+      TableSortFilterGenerator.set_sort_fields
+      
+      
+      TableSortFilterGenerator.set_sort_selection
+      
+      
+      TableSortFilterGenerator.set_tags
+      
+      
+      TableSortFilterGenerator.to_dict
+      
+      
+      TableSortFilterGenerator.to_json
+      
+      
+      TableSortFilterGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TableSortFilterGenerator.children_order
+      TableSortFilterGenerator.db
+      TableSortFilterGenerator.item_filter
+      TableSortFilterGenerator.master
+      TableSortFilterGenerator.name
+      TableSortFilterGenerator.params
+      TableSortFilterGenerator.parent
+      TableSortFilterGenerator.report_type
+      TableSortFilterGenerator.saved
+      TableSortFilterGenerator.tags
+      TableSortFilterGenerator.type
+      TableSortFilterGenerator.date
+      TableSortFilterGenerator.children
+      TableSortFilterGenerator.guid
+   
+   

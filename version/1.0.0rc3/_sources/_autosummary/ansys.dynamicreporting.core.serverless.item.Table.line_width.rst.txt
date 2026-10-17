@@ -1,0 +1,6 @@
+line\_width
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.line_width

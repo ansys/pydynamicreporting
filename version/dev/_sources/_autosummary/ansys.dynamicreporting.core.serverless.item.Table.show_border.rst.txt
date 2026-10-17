@@ -1,0 +1,6 @@
+show\_border
+============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.show_border

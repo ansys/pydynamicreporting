@@ -1,0 +1,165 @@
+﻿TableReduceGenerator
+====================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. autoclass:: TableReduceGenerator
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      TableReduceGenerator.add_filter
+      
+      
+      TableReduceGenerator.add_params
+      
+      
+      TableReduceGenerator.add_properties
+      
+      
+      TableReduceGenerator.add_property
+      
+      
+      TableReduceGenerator.add_sort_fields
+      
+      
+      TableReduceGenerator.add_tag
+      
+      
+      TableReduceGenerator.as_dict
+      
+      
+      TableReduceGenerator.create
+      
+      
+      TableReduceGenerator.delete
+      
+      
+      TableReduceGenerator.filter
+      
+      
+      TableReduceGenerator.find
+      
+      
+      TableReduceGenerator.get
+      
+      
+      TableReduceGenerator.get_append_tags
+      
+      
+      TableReduceGenerator.get_filter
+      
+      
+      TableReduceGenerator.get_filter_mode
+      
+      
+      TableReduceGenerator.get_generated_items
+      
+      
+      TableReduceGenerator.get_params
+      
+      
+      TableReduceGenerator.get_property
+      
+      
+      TableReduceGenerator.get_sort_fields
+      
+      
+      TableReduceGenerator.get_sort_selection
+      
+      
+      TableReduceGenerator.get_tags
+      
+      
+      TableReduceGenerator.reinit
+      
+      
+      TableReduceGenerator.rem_tag
+      
+      
+      TableReduceGenerator.remove_tag
+      
+      
+      TableReduceGenerator.render
+      
+      
+      TableReduceGenerator.render_pdf
+      
+      
+      TableReduceGenerator.reorder_child
+      
+      
+      TableReduceGenerator.reorder_children
+      
+      
+      TableReduceGenerator.save
+      
+      
+      TableReduceGenerator.set_append_tags
+      
+      
+      TableReduceGenerator.set_filter
+      
+      
+      TableReduceGenerator.set_filter_mode
+      
+      
+      TableReduceGenerator.set_generated_items
+      
+      
+      TableReduceGenerator.set_params
+      
+      
+      TableReduceGenerator.set_property
+      
+      
+      TableReduceGenerator.set_sort_fields
+      
+      
+      TableReduceGenerator.set_sort_selection
+      
+      
+      TableReduceGenerator.set_tags
+      
+      
+      TableReduceGenerator.to_dict
+      
+      
+      TableReduceGenerator.to_json
+      
+      
+      TableReduceGenerator.update_children_order
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      TableReduceGenerator.children_order
+      TableReduceGenerator.db
+      TableReduceGenerator.item_filter
+      TableReduceGenerator.master
+      TableReduceGenerator.name
+      TableReduceGenerator.params
+      TableReduceGenerator.parent
+      TableReduceGenerator.report_type
+      TableReduceGenerator.saved
+      TableReduceGenerator.tags
+      TableReduceGenerator.type
+      TableReduceGenerator.date
+      TableReduceGenerator.children
+      TableReduceGenerator.guid
+   
+   

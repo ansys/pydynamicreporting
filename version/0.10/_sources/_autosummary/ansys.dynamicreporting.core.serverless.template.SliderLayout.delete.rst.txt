@@ -1,0 +1,6 @@
+delete
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.template
+
+.. automethod:: SliderLayout.delete

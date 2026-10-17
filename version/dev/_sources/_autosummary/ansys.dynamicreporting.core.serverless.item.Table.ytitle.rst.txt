@@ -1,0 +1,6 @@
+ytitle
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoattribute:: Table.ytitle
