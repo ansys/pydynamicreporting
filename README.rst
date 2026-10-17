@@ -233,6 +233,22 @@ Versioning model
   version stays plain SemVer, while the package metadata declares the bundled
   ADR product release and the supported annual product lines.
 
+To start a new development series, create and push a marker tag named
+``vX.Y.Z.dev0``, replacing ``X.Y.Z`` with the next package version. Tag a
+new commit on ``main`` after cutting the maintenance branch; keep that
+commit outside the maintenance branch's history.
+
+The existing version plugin produces ``X.Y.Z.devYYYYMMDDHHMMSS`` from this
+marker. Use Git directly for development markers; ``make tag`` is reserved
+for final and release-candidate tags. Development tags are excluded from
+the CI-CD and Create Draft Release tag triggers.
+
+To refresh the version reported by an existing editable installation, run:
+
+.. code-block:: bash
+
+   uv sync --all-extras --reinstall-package ansys-dynamicreporting-core
+
 Maintenance branch policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -242,8 +258,10 @@ Maintenance branch policy
 - Stable releases are still cut from tags, but the tag should be created from
   the maintenance branch that owns that product line.
 - Backport only the specific fixes you want to ship on an older supported
-  line. Forward-port maintenance fixes from ``stable/<product-line>.x`` back
-  to ``main`` after they are released.
+  line. After release, squash-merge or cherry-pick maintenance changes back
+  to ``main`` so release-only tagged commits stay outside its history.
+  A normal merge can make the maintenance tag the version source for development
+  builds.
 
 Product compatibility policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -275,9 +293,11 @@ The client major line determines the ADR compatibility epoch:
 - ``2.x`` is bundled with ADR ``28.1`` and supports the ``27.*`` and ``28.*``
   annual product lines.
 
-ADR ``25.2`` was the final half-year release. Starting with ADR ``26.1``,
-there is only one release per annual line, so ``26.*`` currently means
-``26.1``, ``27.*`` means ``27.1``, and so on.
+Ansys previously followed a twice-yearly release schedule, with releases
+such as 25R1 and 25R2. The 2026 product line had a single release, 26R1.
+Starting with 27R1 and 27R2, Ansys returns to two releases per year.
+Client compatibility remains based on annual product lines, regardless
+of the number of releases in each line.
 
 For example, under this policy:
 
@@ -289,8 +309,8 @@ For example, under this policy:
 What the automation does
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Create Draft Release** (on tag push): builds wheels/sdist and opens a
-  **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
+- **Create Draft Release** (on a final or RC tag push): builds wheels/sdist
+  and opens a **draft GitHub Release** attaching artifacts. Tags ending in ``rcN`` are
   marked as prereleases.
 - **Publish Release** (when the GitHub Release is **published**): uploads
   the reviewed GitHub Release artifacts to **PyPI** via Trusted Publisher,
@@ -400,7 +420,7 @@ CI workflows (reference)
 
 - **.github/workflows/create-draft-release.yml**
 
-  - Triggers on tag push ``v*`` or manual dispatch.
+  - Triggers on tag push ``v*`` (excluding development tags) or manual dispatch.
   - Builds artifacts and opens a **draft** GitHub Release attaching
     ``dist/*``. An ``rcN`` tag is marked as a prerelease automatically.
 

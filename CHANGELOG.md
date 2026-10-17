@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Document ADR's return to multiple releases per year while retaining the
+  annual product-line compatibility policy.
+- Exclude development marker tags (`v*.dev*`) from the CI-CD and
+  Create Draft Release workflows.
+
+### Security
+
+- Update the development lockfile to Django 5.2.18 for its security fixes.
+
 ## [1.0.0rc3] - 2026-09-21
 
 ### Added
