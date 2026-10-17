@@ -1401,11 +1401,7 @@ class Server:
         templates : dict
             A dictionary containing the templates to load. Ideally, it is supposed to be converted from JSON.
         """
-        for template_id_str, template_attr in templates.items():
-            if template_attr["parent"] is None:
-                root_id_str = template_id_str
-                break
-
+        root_id_str = common_utils.validate_template_tree(templates)
         root_attr = templates[root_id_str]
         root_template = self._populate_template(root_id_str, root_attr, None, logger)
         self.put_objects(root_template)
@@ -1431,7 +1427,7 @@ class Server:
 
         self.put_objects(child_templates)
 
-        for child_id_str in children_id_strs:
+        for child_id_str, child_template in zip(children_id_strs, child_templates):
             self._build_templates_from_parent(child_id_str, child_template, templates_json, logger)
 
     def _build_template_data(self, guid, templates_data, templates, template_guid_id_map):
