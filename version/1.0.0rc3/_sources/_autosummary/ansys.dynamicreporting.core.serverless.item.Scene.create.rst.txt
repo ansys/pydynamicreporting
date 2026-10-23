@@ -1,0 +1,6 @@
+create
+======
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. automethod:: Scene.create

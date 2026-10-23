@@ -1,0 +1,6 @@
+start
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. automethod:: Service.start

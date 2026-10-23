@@ -1,0 +1,962 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Serverless ADR API Reference &#8212; PyDynamicReporting documentation |version|</title>
+  
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/ansys-sphinx-theme.css?v=9e79609d" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/ansys-sphinx-theme.css?v=9e79609d" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://www.nerdfonts.com/assets/css/webfont.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+
+  <!-- Include desired assets -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  
+
+  
+    <link href="_static/css/breadcrumbs.css" rel="stylesheet" />
+  
+    <script src="_static/documentation_options.js?v=3f37fbb9"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api_docs_serverless';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://dynamicreporting.docs.pyansys.com/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.10';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <link rel="icon" href="_static/ansys-favicon.png"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ADR" href="_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.html" />
+    <link rel="prev" title="Caveats" href="serverless/caveats.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.10" />
+  <meta property="og:site_name" content="PyAnsys" />
+  <meta name="physics" content="dynamicreporting" />
+  <meta name="physics" content="reporting" />
+  <meta name="physics" content="report" />
+  <meta name="physics" content="adr" />
+  <meta name="physics" content="nexus" />
+  <link rel="canonical" href="https://dynamicreporting.docs.pyansys.com/version/stable/api_docs_serverless.html" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/pyansys_logo_transparent_black.png" class="logo__image only-light" alt="PyDynamicReporting documentation |version| - Home"/>
+    <img src="_static/pyansys_logo_transparent_white.png" class="logo__image only-dark pst-js-only" alt="PyDynamicReporting documentation |version| - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="#">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="contributing.html">
+    Contribute
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav>
+</div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div></div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+  
+    <div id="announcement_msg"></div>
+<script>
+  fetch("announcement.html")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(
+      (text) => (document.getElementById("announcement_msg").innerHTML = text),
+    )
+    .catch((error) => console.error(`Fetch problem: ${error.message}`));
+</script>
+  
+
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html" title="PyDynamicReporting documentation |version| home">Home</a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="gettingstarted/index.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="userguide/index.html">
+    User guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="class_documentation.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="serverless/index.html">
+    Serverless ADR
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Serverless ADR API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="contributing.html">
+    Contribute
+  </a>
+</li>
+
+  </ul>
+</nav>
+</div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="search-bar pst-js-only" id="search-bar">
+  <form class="bd-search d-flex align-items-center" action="search.html" method="get">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="form-control" name="q" placeholder="Search the docs ..."
+      aria-label="Search the docs ..." autocomplete="off" autocorrect="off"
+      autocapitalize="off" spellcheck="false" />
+    <span class="search-button__kbd-shortcut">
+      <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+    </span>
+  </form>
+  <div id="static-search-results" class="static-search-results" style="display:none;" tabindex="0"></div>
+</div></div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ansys/pydynamicreporting/" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.html">ADR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.base.ObjectSet.html">ObjectSet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Session.html">Session</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Dataset.html">Dataset</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Item.html">Item</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.String.html">String</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.HTML.html">HTML</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Table.html">Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Tree.html">Tree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.File.html">File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Image.html">Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Animation.html">Animation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Scene.html">Scene</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.Template.html">Template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.BasicLayout.html">BasicLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.PanelLayout.html">PanelLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.BoxLayout.html">BoxLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TabLayout.html">TabLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.CarouselLayout.html">CarouselLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.SliderLayout.html">SliderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.FooterLayout.html">FooterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.HeaderLayout.html">HeaderLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.IteratorLayout.html">IteratorLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TagPropertyLayout.html">TagPropertyLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TOCLayout.html">TOCLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.ReportLinkLayout.html">ReportLinkLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.PPTXLayout.html">PPTXLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout.html">PPTXSlideLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.DataFilterLayout.html">DataFilterLayout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.UserDefinedLayout.html">UserDefinedLayout</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMergeGenerator.html">TableMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableReduceGenerator.html">TableReduceGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator.html">TableMergeRCFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator.html">TableMergeValueFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMapGenerator.html">TableMapGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator.html">TableSortFilterGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.html">TreeMergeGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator.html">SQLQueryGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator.html">ItemsComparisonGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.StatisticalGenerator.html">StatisticalGenerator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.IteratorGenerator.html">IteratorGenerator</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+         
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="https://docs.pyansys.com/" class="nav-link">PyAnsys</a>
+    </li>
+     
+    <li class="breadcrumb-item">
+      <a
+        href="index.html"
+        class="nav-link"
+        aria-label="Home"
+      >
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+      
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Serverless ADR API Reference</span></li>
+    
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="serverless-adr-api-reference">
+<h1>Serverless ADR API Reference<a class="headerlink" href="#serverless-adr-api-reference" title="Link to this heading">#</a></h1>
+<p>This section documents the public API exposed by
+<code class="docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless</span></code>.
+Only classes explicitly exported through <code class="docutils literal notranslate"><span class="pre">__all__</span></code> are shown.</p>
+<p>The serverless API is designed for programmatic report generation without
+running a long-lived ADR server. It provides:</p>
+<ul class="simple">
+<li><p>A single entry point (<a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.html#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-class docutils literal notranslate"><span class="pre">ADR</span></code></a>)
+that manages setup, database/media locations, and rendering.</p></li>
+<li><p>A small, well-defined set of item types (tables, trees, HTML, images, scenes,
+files, animations, and strings) that represent report content.</p></li>
+<li><p>Layout and generator templates that assemble items into interactive HTML
+reports or PPTX slide decks.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The list is intentionally explicit to avoid exposing internal classes
+and to keep the API reference stable across releases.</p>
+</div>
+<section id="core-entry-point">
+<h2>Core Entry Point<a class="headerlink" href="#core-entry-point" title="Link to this heading">#</a></h2>
+<p>The core entry point wraps all serverless functionality behind a single object.
+You typically:</p>
+<ol class="arabic simple">
+<li><p>Instantiate <a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.html#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-class docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.adr.ADR</span></code></a>,</p></li>
+<li><p>Call <code class="xref py py-meth docutils literal notranslate"><span class="pre">ADR.setup()</span></code> to configure database and storage,</p></li>
+<li><p>Create and query items and templates, and</p></li>
+<li><p>Render HTML or PPTX outputs.</p></li>
+</ol>
+<p>The <a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.base.ObjectSet.html#ansys.dynamicreporting.core.serverless.base.ObjectSet" title="ansys.dynamicreporting.core.serverless.base.ObjectSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectSet</span></code></a> helper
+provides a lightweight ORM-style interface for querying collections of models,
+while <a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Session.html#ansys.dynamicreporting.core.serverless.item.Session" title="ansys.dynamicreporting.core.serverless.item.Session"><code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code></a> and
+<a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Dataset.html#ansys.dynamicreporting.core.serverless.item.Dataset" title="ansys.dynamicreporting.core.serverless.item.Dataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a> help group and
+organize items logically.</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.adr.ADR.html#ansys.dynamicreporting.core.serverless.adr.ADR" title="ansys.dynamicreporting.core.serverless.adr.ADR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.adr.ADR</span></code></a></p></td>
+<td><p>Ansys Dynamic Reporting (ADR) class.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.base.ObjectSet.html#ansys.dynamicreporting.core.serverless.base.ObjectSet" title="ansys.dynamicreporting.core.serverless.base.ObjectSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.base.ObjectSet</span></code></a></p></td>
+<td><p>Collection wrapper around a queryset of <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code> objects.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Session.html#ansys.dynamicreporting.core.serverless.item.Session" title="ansys.dynamicreporting.core.serverless.item.Session"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Session</span></code></a></p></td>
+<td><p>Execution context for a reporting run.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Dataset.html#ansys.dynamicreporting.core.serverless.item.Dataset" title="ansys.dynamicreporting.core.serverless.item.Dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Dataset</span></code></a></p></td>
+<td><p>Metadata describing a source dataset used for reporting.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="item-model-api">
+<h2>Item Model API<a class="headerlink" href="#item-model-api" title="Link to this heading">#</a></h2>
+<p>Item classes represent the atomic content units stored in the serverless ADR
+database. They are created and managed through the <code class="xref py py-class docutils literal notranslate"><span class="pre">ADR</span></code> instance and
+persisted in the configured SQLite database.</p>
+<p>Typical usage is:</p>
+<ul class="simple">
+<li><p>Create items from raw data (NumPy arrays, pandas DataFrames, file paths,
+image buffers, etc.).</p></li>
+<li><p>Attach metadata, tags, and visualization options.</p></li>
+<li><p>Reference items from templates to build complete reports.</p></li>
+</ul>
+<p>All item types share a common base
+(<a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><code class="xref py py-class docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Item</span></code></a>), but specialize in
+how they store and render data (for example, tables vs. trees vs. images).</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Item.html#ansys.dynamicreporting.core.serverless.item.Item" title="ansys.dynamicreporting.core.serverless.item.Item"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Item</span></code></a></p></td>
+<td><p>Base class for all persisted report items.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.String.html#ansys.dynamicreporting.core.serverless.item.String" title="ansys.dynamicreporting.core.serverless.item.String"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.String</span></code></a></p></td>
+<td><p>Item representing a plain string payload.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.HTML.html#ansys.dynamicreporting.core.serverless.item.HTML" title="ansys.dynamicreporting.core.serverless.item.HTML"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.HTML</span></code></a></p></td>
+<td><p>Item representing an HTML fragment.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Table.html#ansys.dynamicreporting.core.serverless.item.Table" title="ansys.dynamicreporting.core.serverless.item.Table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Table</span></code></a></p></td>
+<td><p>Item representing a 2D table backed by a NumPy array.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Tree.html#ansys.dynamicreporting.core.serverless.item.Tree" title="ansys.dynamicreporting.core.serverless.item.Tree"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Tree</span></code></a></p></td>
+<td><p>Item representing a hierarchical tree payload.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.File.html#ansys.dynamicreporting.core.serverless.item.File" title="ansys.dynamicreporting.core.serverless.item.File"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.File</span></code></a></p></td>
+<td><p>Item representing a generic file payload.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Image.html#ansys.dynamicreporting.core.serverless.item.Image" title="ansys.dynamicreporting.core.serverless.item.Image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Image</span></code></a></p></td>
+<td><p>Item representing an image payload, optionally enhanced.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Animation.html#ansys.dynamicreporting.core.serverless.item.Animation" title="ansys.dynamicreporting.core.serverless.item.Animation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Animation</span></code></a></p></td>
+<td><p>Item representing an animation/video payload.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.item.Scene.html#ansys.dynamicreporting.core.serverless.item.Scene" title="ansys.dynamicreporting.core.serverless.item.Scene"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.item.Scene</span></code></a></p></td>
+<td><p>Item representing a 3D scene or geometry payload.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="layout-template-api">
+<h2>Layout Template API<a class="headerlink" href="#layout-template-api" title="Link to this heading">#</a></h2>
+<p>Layout templates control how items are arranged and rendered in a report.
+They define the “frame” of the report (tabs, panels, carousels, sliders,
+headers/footers, PPTX slide layouts, and so on) without hard-coding any
+particular dataset.</p>
+<p>In a typical workflow you:</p>
+<ol class="arabic simple">
+<li><p>Define a <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> hierarchy using one or more layout classes,</p></li>
+<li><p>Bind item filters and parameters to the template, and</p></li>
+<li><p>Ask <code class="xref py py-class docutils literal notranslate"><span class="pre">ADR</span></code> to render the template to HTML, PDF, or PPTX.</p></li>
+</ol>
+<p>These classes focus on <em>presentation</em> and navigation rather than on data
+transformation.</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.Template.html#ansys.dynamicreporting.core.serverless.template.Template" title="ansys.dynamicreporting.core.serverless.template.Template"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.Template</span></code></a></p></td>
+<td><p>Base class for all report templates.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.BasicLayout.html#ansys.dynamicreporting.core.serverless.template.BasicLayout" title="ansys.dynamicreporting.core.serverless.template.BasicLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.BasicLayout</span></code></a></p></td>
+<td><p>Simple layout with no extra behavior.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.PanelLayout.html#ansys.dynamicreporting.core.serverless.template.PanelLayout" title="ansys.dynamicreporting.core.serverless.template.PanelLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.PanelLayout</span></code></a></p></td>
+<td><p>Panel-style layout with optional callout styling and link rendering.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.BoxLayout.html#ansys.dynamicreporting.core.serverless.template.BoxLayout" title="ansys.dynamicreporting.core.serverless.template.BoxLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.BoxLayout</span></code></a></p></td>
+<td><p>Box layout where each child is positioned explicitly in a grid.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TabLayout.html#ansys.dynamicreporting.core.serverless.template.TabLayout" title="ansys.dynamicreporting.core.serverless.template.TabLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TabLayout</span></code></a></p></td>
+<td><p>Tab-based layout that arranges children as tabs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.CarouselLayout.html#ansys.dynamicreporting.core.serverless.template.CarouselLayout" title="ansys.dynamicreporting.core.serverless.template.CarouselLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.CarouselLayout</span></code></a></p></td>
+<td><p>Carousel layout with optional animation and dot controls.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.SliderLayout.html#ansys.dynamicreporting.core.serverless.template.SliderLayout" title="ansys.dynamicreporting.core.serverless.template.SliderLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.SliderLayout</span></code></a></p></td>
+<td><p>Slider layout that maps tags to slider controls.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.FooterLayout.html#ansys.dynamicreporting.core.serverless.template.FooterLayout" title="ansys.dynamicreporting.core.serverless.template.FooterLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.FooterLayout</span></code></a></p></td>
+<td><p>Layout representing a page footer region.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.HeaderLayout.html#ansys.dynamicreporting.core.serverless.template.HeaderLayout" title="ansys.dynamicreporting.core.serverless.template.HeaderLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.HeaderLayout</span></code></a></p></td>
+<td><p>Layout representing a page header region.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.IteratorLayout.html#ansys.dynamicreporting.core.serverless.template.IteratorLayout" title="ansys.dynamicreporting.core.serverless.template.IteratorLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.IteratorLayout</span></code></a></p></td>
+<td><p>Layout used as an iterator over items or templates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TagPropertyLayout.html#ansys.dynamicreporting.core.serverless.template.TagPropertyLayout" title="ansys.dynamicreporting.core.serverless.template.TagPropertyLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TagPropertyLayout</span></code></a></p></td>
+<td><p>Layout that exposes item tags as properties.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TOCLayout.html#ansys.dynamicreporting.core.serverless.template.TOCLayout" title="ansys.dynamicreporting.core.serverless.template.TOCLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TOCLayout</span></code></a></p></td>
+<td><p>Layout responsible for Table-of-Contents entries.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.ReportLinkLayout.html#ansys.dynamicreporting.core.serverless.template.ReportLinkLayout" title="ansys.dynamicreporting.core.serverless.template.ReportLinkLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.ReportLinkLayout</span></code></a></p></td>
+<td><p>Layout that links to external or other ADR reports.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.PPTXLayout.html#ansys.dynamicreporting.core.serverless.template.PPTXLayout" title="ansys.dynamicreporting.core.serverless.template.PPTXLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.PPTXLayout</span></code></a></p></td>
+<td><p>Layout representing a full PPTX report definition.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout.html#ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout" title="ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.PPTXSlideLayout</span></code></a></p></td>
+<td><p>Layout defining settings for an individual PPTX slide.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.DataFilterLayout.html#ansys.dynamicreporting.core.serverless.template.DataFilterLayout" title="ansys.dynamicreporting.core.serverless.template.DataFilterLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.DataFilterLayout</span></code></a></p></td>
+<td><p>Layout that exposes interactive data filtering controls.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.UserDefinedLayout.html#ansys.dynamicreporting.core.serverless.template.UserDefinedLayout" title="ansys.dynamicreporting.core.serverless.template.UserDefinedLayout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.UserDefinedLayout</span></code></a></p></td>
+<td><p>Layout whose behavior is delegated to user-defined logic.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="generator-template-api">
+<h2>Generator Template API<a class="headerlink" href="#generator-template-api" title="Link to this heading">#</a></h2>
+<p>Generator templates encapsulate reusable data-processing patterns. Instead of
+laying out items directly, they derive new items or sub-templates from existing
+data: table merges, reductions, sorting and filtering, tree operations, SQL
+queries, or cross-item comparisons.</p>
+<p>You typically plug these classes into a larger <code class="xref py py-class docutils literal notranslate"><span class="pre">Template</span></code> tree to:</p>
+<ul class="simple">
+<li><p>Transform one or more <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> instances into a derived view,</p></li>
+<li><p>Encapsulate complex business logic in a single node, and</p></li>
+<li><p>Keep layouts declarative while still supporting advanced processing.</p></li>
+</ul>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMergeGenerator.html#ansys.dynamicreporting.core.serverless.template.TableMergeGenerator" title="ansys.dynamicreporting.core.serverless.template.TableMergeGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TableMergeGenerator</span></code></a></p></td>
+<td><p>Generator that merges multiple tables into one.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableReduceGenerator.html#ansys.dynamicreporting.core.serverless.template.TableReduceGenerator" title="ansys.dynamicreporting.core.serverless.template.TableReduceGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TableReduceGenerator</span></code></a></p></td>
+<td><p>Generator that reduces table data (for example aggregation).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator.html#ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator" title="ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TableMergeRCFilterGenerator</span></code></a></p></td>
+<td><p>Generator that filters table rows/columns.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator.html#ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator" title="ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TableMergeValueFilterGenerator</span></code></a></p></td>
+<td><p>Generator that filters table rows based on cell values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableMapGenerator.html#ansys.dynamicreporting.core.serverless.template.TableMapGenerator" title="ansys.dynamicreporting.core.serverless.template.TableMapGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TableMapGenerator</span></code></a></p></td>
+<td><p>Generator that maps or transforms table values.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator.html#ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator" title="ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TableSortFilterGenerator</span></code></a></p></td>
+<td><p>Generator that sorts table rows based on configured criteria.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator.html#ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator" title="ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.TreeMergeGenerator</span></code></a></p></td>
+<td><p>Generator that merges multiple tree structures.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator.html#ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator" title="ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.SQLQueryGenerator</span></code></a></p></td>
+<td><p>Generator that produces items from SQL queries.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator.html#ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator" title="ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.ItemsComparisonGenerator</span></code></a></p></td>
+<td><p>Generator that compares items and outputs comparisons.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.StatisticalGenerator.html#ansys.dynamicreporting.core.serverless.template.StatisticalGenerator" title="ansys.dynamicreporting.core.serverless.template.StatisticalGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.StatisticalGenerator</span></code></a></p></td>
+<td><p>Generator that performs statistical analyses on input items.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/ansys.dynamicreporting.core.serverless.template.IteratorGenerator.html#ansys.dynamicreporting.core.serverless.template.IteratorGenerator" title="ansys.dynamicreporting.core.serverless.template.IteratorGenerator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ansys.dynamicreporting.core.serverless.template.IteratorGenerator</span></code></a></p></td>
+<td><p>Generator that iterates over subsets of items or templates.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#core-entry-point">Core Entry Point</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#item-model-api">Item Model API</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#layout-template-api">Layout Template API</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generator-template-api">Generator Template API</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item"> 
+<div class="tocsection editthispage">
+  <a href="None">
+    <i class="fa-solid fa-pencil"></i>
+       Edit
+    on GitHub  
+  </a>
+</div>
+
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <ul class="this-page-menu">
+      <li><a href="_sources/api_docs_serverless.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+
+  <!-- Include desired assets -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.7/require.min.js"></script>
+
+<script>
+// Passing the search options to the search.js file
+const SEARCH_OPTIONS = JSON.parse('{"keys": ["title", "text", "objectID"], "limit": 10, "threshold": 0.2}');
+const SEARCH_FILE = "_static/search.json";
+const ADVANCE_SEARCH_PATH = "search.html";
+const EXTRA_SOURCES = JSON.parse('""');
+</script>
+
+
+<script src="_static/js/search.js"></script>
+
+  
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright (c) 2025 ANSYS, Inc. All rights reserved.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the
+  <a href="https://sphinxdocs.ansys.com/version/stable/index.html"
+    >Ansys Sphinx Theme</a
+  >
+  1.6.4. <br />Last updated on
+  <span id="ast_build_date"></span>
+</p>
+<script>
+  var options = { day: "numeric", month: "long", year: "numeric" };
+  var ast_lastModifiedDate = new Date(document.lastModified);
+  var ast_build_date = ast_lastModifiedDate.toLocaleDateString("en-US", options);
+  document.getElementById("ast_build_date").innerHTML = ast_build_date;
+</script></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

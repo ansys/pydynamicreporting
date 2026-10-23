@@ -1,0 +1,6 @@
+﻿PDFPageSize
+===========
+
+.. currentmodule:: ansys.dynamicreporting.core
+
+.. autoclass:: PDFPageSize

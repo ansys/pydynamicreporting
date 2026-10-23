@@ -1,0 +1,88 @@
+﻿Image
+=====
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.item
+
+.. autoclass:: Image
+
+   
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+   
+      
+      
+      Image.add_tag
+      
+      
+      Image.as_dict
+      
+      
+      Image.create
+      
+      
+      Image.delete
+      
+      
+      Image.filter
+      
+      
+      Image.find
+      
+      
+      Image.get
+      
+      
+      Image.get_tags
+      
+      
+      Image.reinit
+      
+      
+      Image.rem_tag
+      
+      
+      Image.remove_tag
+      
+      
+      Image.render
+      
+      
+      Image.save
+      
+      
+      Image.set_tags
+      
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+      :toctree:
+   
+      Image.content
+      Image.dataset
+      Image.db
+      Image.enhanced
+      Image.file_ext
+      Image.file_path
+      Image.has_file
+      Image.height
+      Image.name
+      Image.saved
+      Image.sequence
+      Image.session
+      Image.source
+      Image.tags
+      Image.type
+      Image.width
+      Image.date
+      Image.guid
+   
+   

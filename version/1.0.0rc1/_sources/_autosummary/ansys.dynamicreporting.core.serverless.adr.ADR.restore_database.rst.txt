@@ -1,0 +1,6 @@
+restore\_database
+=================
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. automethod:: ADR.restore_database

@@ -1,0 +1,6 @@
+session\_guid
+=============
+
+.. currentmodule:: ansys.dynamicreporting.core.serverless.adr
+
+.. autoproperty:: ADR.session_guid
