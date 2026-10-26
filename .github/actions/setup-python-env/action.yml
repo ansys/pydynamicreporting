@@ -49,13 +49,13 @@ runs:
         fi
         "$python_command" scripts/check_ci_python.py
         "$python_command" -c "import os, sys; print(os.path.dirname(sys.executable))" >> "$GITHUB_PATH"
-        echo "UV_PYTHON=$python_executable" >> "$GITHUB_ENV"
         echo "UV_PYTHON_INSTALL_DIR=$UV_PYTHON_INSTALL_DIR" >> "$GITHUB_ENV"
 
     - name: Get exact Python version
       id: resolved-python
       shell: bash
       run: |
+        python scripts/check_ci_python.py
         PYTHON_VERSION=$(python -c "import sys; print('{}.{}.{}'.format(*sys.version_info[:3]))")
         echo "version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
