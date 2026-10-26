@@ -78,6 +78,12 @@ For the base client package, run:
 
    pip install ansys-dynamicreporting-core
 
+For the patched Python versions and environment updates needed after the
+eMudhra certificate incident, follow the
+`TLS security guidance <https://github.com/ansys/pydynamicreporting/blob/stable/27.1/SECURITY.md#tls-security-after-the-emudhra-incident>`_.
+Python 3.10 remains package-compatible but has no upstream interpreter fix for
+this incident.
+
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
 This project uses `uv <https://github.com/astral-sh/uv>`_ for fast dependency

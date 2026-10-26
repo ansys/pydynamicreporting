@@ -27,9 +27,9 @@ dependencies = [
     "qtpy>=2.4.3,<2.5.0",
     "lark>=1.2.2,<1.3.0",
     "bleach>=6.2.0",
-    # Browser-PDF uses the Playwright browser package shipped by ADR; keep this pin
-    # aligned with that product packaging source rather than a runtime version check.
-    "playwright==1.60.0",
+    # This pin includes Playwright's embedded Node runtime. Verify browser-PDF
+    # compatibility with ADR's product-shipped browser before updating it.
+    "playwright==1.64.1",
 ]
 description = "Python interface to Ansys Dynamic Reporting"
 readme = "README.rst"
@@ -89,6 +89,7 @@ dev = [
     "hatch",
     "ipdb",
     "uv>=0.13.5",
+    "virtualenv>=21.14.13",
     "pre-commit",
     "ruff",
     #    "pip-audit",

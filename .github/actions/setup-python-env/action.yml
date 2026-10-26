@@ -5,11 +5,15 @@ inputs:
   python-version:
     description: "Python version to use"
     required: false
-    default: "3.14"
+    default: "3.14.10"
   uv-version:
     description: "uv version to use"
     required: false
     default: "0.13.5"
+  sync-project:
+    description: "Install the frozen project environment"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -17,17 +21,36 @@ runs:
     - name: Setup Env
       uses: ./.github/actions/setup-env
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ inputs.python-version }}
-
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
         version: ${{ inputs.uv-version }}
         enable-cache: true
         cache-suffix: ${{ inputs.python-version }}
+
+    - name: Install patched Python
+      shell: bash
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
+        UV_PYTHON_INSTALL_DIR: ${{ runner.temp }}/pydr-python
+      run: |
+        metadata_path="$GITHUB_WORKSPACE/.github/python-downloads.json"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          metadata_url="file:///$(cygpath -am "$metadata_path")"
+        else
+          metadata_url="file://$metadata_path"
+        fi
+        uv python install "$PYTHON_VERSION" --no-bin --no-registry \
+          --python-downloads-json-url "$metadata_url"
+        python_executable="$(uv python find --managed-python "$PYTHON_VERSION")"
+        python_command="$python_executable"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          python_command="$(cygpath -u "$python_executable")"
+        fi
+        "$python_command" scripts/check_ci_python.py
+        "$python_command" -c "import os, sys; print(os.path.dirname(sys.executable))" >> "$GITHUB_PATH"
+        echo "UV_PYTHON=$python_executable" >> "$GITHUB_ENV"
+        echo "UV_PYTHON_INSTALL_DIR=$UV_PYTHON_INSTALL_DIR" >> "$GITHUB_ENV"
 
     - name: Get exact Python version
       id: resolved-python
@@ -37,6 +60,7 @@ runs:
         echo "version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Cache .venv directory
+      if: inputs.sync-project == 'true'
       uses: actions/cache@v4
       with:
         path: .venv
@@ -45,10 +69,12 @@ runs:
           uv-venv-${{ runner.os }}-${{ steps.resolved-python.outputs.version }}-
 
     - name: Install Python dependencies
+      if: inputs.sync-project == 'true'
       run: make install
       shell: bash
 
     - name: Add .venv to PATH (cross-platform)
+      if: inputs.sync-project == 'true'
       run: |
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           echo "$(pwd)/.venv/Scripts" >> $GITHUB_PATH

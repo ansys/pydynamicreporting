@@ -4,39 +4,49 @@ repos:
   rev: 1.19.1
   hooks:
   - id: blacken-docs
-    additional_dependencies: [ black==23.3.0 ]
+    additional_dependencies: [ black==23.3.0, "pip>=26.2.2" ]
 
 - repo: https://github.com/codespell-project/codespell
   rev: v2.4.0
   hooks:
   - id: codespell
     args: ["--toml", "pyproject.toml"]
-    additional_dependencies: [ "tomli" ]
+    additional_dependencies: [ "tomli", "pip>=26.2.2" ]
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
   rev: 0.31.0
   hooks:
     - id: check-github-workflows
+      additional_dependencies: [ "pip>=26.2.2", "certifi>=2026.10.19" ]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.14.14
   hooks:
     - id: ruff-format
+      additional_dependencies: [ "pip>=26.2.2" ]
     - id: ruff-check
+      additional_dependencies: [ "pip>=26.2.2" ]
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0
   hooks:
   - id: check-added-large-files
+    additional_dependencies: [ "pip>=26.2.2" ]
   - id: check-yaml
+    additional_dependencies: [ "pip>=26.2.2" ]
   - id: check-case-conflict
+    additional_dependencies: [ "pip>=26.2.2" ]
   - id: debug-statements
+    additional_dependencies: [ "pip>=26.2.2" ]
   - id: check-merge-conflict
+    additional_dependencies: [ "pip>=26.2.2" ]
   - id: trailing-whitespace
+    additional_dependencies: [ "pip>=26.2.2" ]
 
 - repo: https://github.com/ansys/pre-commit-hooks
   rev: v0.5.2
   hooks:
   - id: add-license-headers
+    additional_dependencies: [ "pip>=26.2.2", "certifi>=2026.10.19" ]
     args:
     - --start_year=2023
