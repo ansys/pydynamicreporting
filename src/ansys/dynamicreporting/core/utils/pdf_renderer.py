@@ -114,6 +114,15 @@ class _PlaywrightBrowserBinaryInfo:
     machine_arch: str
     packaged_binary_dir: str
 
+    @property
+    def executable_path(self) -> Path:
+        """Return the headless-shell executable inside the product's packaged revision."""
+        platform_dir, executable_name = {
+            "win64": ("chrome-headless-shell-win64", "chrome-headless-shell.exe"),
+            "linux_2.6_64": ("chrome-headless-shell-linux64", "chrome-headless-shell"),
+        }[self.machine_arch]
+        return self.path / self.packaged_binary_dir / platform_dir / executable_name
+
     @classmethod
     def metadata_field_names(cls) -> tuple[str, ...]:
         """Return the serialized metadata fields, excluding the filesystem path."""
@@ -244,6 +253,14 @@ def _validate_playwright_browsers_path(
             "Ignoring product Playwright binary at %s because installation marker %s is missing.",
             browser_dir,
             marker_path,
+        )
+        return None
+
+    if not metadata_info.executable_path.is_file():
+        get_logger().warning(
+            "Ignoring product Playwright binary at %s because browser executable %s is missing.",
+            browser_dir,
+            metadata_info.executable_path,
         )
         return None
 
@@ -471,6 +488,8 @@ class _BasePlaywrightPDFRenderer(ABC):
         caller's original environment must still be restored afterward. The
         host-platform override is cleared because it can make Playwright look for
         a different platform layout than the ADR package resolver selected.
+        The yielded metadata selects the executable explicitly, so a driver
+        update does not change the product's packaged browser revision.
 
         This mutates ``os.environ`` for the duration of the render and restores it on
         exit, so two browser-PDF renders must not run concurrently in the same process.
@@ -490,7 +509,7 @@ class _BasePlaywrightPDFRenderer(ABC):
                 browser_binary_dir.path,
             )
             os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_binary_dir.path)
-            yield
+            yield browser_binary_dir
         finally:
             # Restore the caller's original browser-path override after the
             # render so the product-specific choice stays scoped to this
@@ -522,9 +541,15 @@ class _BasePlaywrightPDFRenderer(ABC):
             # Point Playwright at the product-shipped browser binary before the
             # driver resolves browser binaries so browser-PDF never falls back
             # to an unrelated machine-level Chromium cache.
-            with self._playwright_browser_binary_env(), sync_playwright() as playwright:
+            with (
+                self._playwright_browser_binary_env() as browser_binary_info,
+                sync_playwright() as playwright,
+            ):
                 self._logger.info("Launching headless Chromium for browser PDF export.")
                 browser = playwright.chromium.launch(
+                    # Driver security updates can change its default browser revision.
+                    # Keep launching the validated browser packaged by this ADR install.
+                    executable_path=browser_binary_info.executable_path,
                     headless=True,
                     timeout=self._remaining_browser_phase_timeout_ms(
                         browser_phase_deadline, "browser launch"

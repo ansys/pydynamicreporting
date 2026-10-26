@@ -53,4 +53,8 @@ explicit CA-file overrides, PostgreSQL/libpq configuration, and ADR's bundled
 Chromium or Qt runtime. PyDynamicReporting cannot replace these external stores
 or vendor binaries. Validate the deployed ADR browser when updating Playwright;
 its embedded Node runtime and the product browser have separate trust stores.
+Browser-PDF exports select the validated executable from ADR's browser metadata,
+so updating the driver preserves the installed product browser. The Node fix
+does not refresh that browser's certificate store; obtain any required browser
+patches from the product vendor.
 The gRPC/DPF certificate store remains a separate remediation.
