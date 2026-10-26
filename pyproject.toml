@@ -84,7 +84,7 @@ doc = [
     "docutils>=0.21"
 ]
 dev = [
-    "pip",
+    "pip>=26.2.2",
     "twine",
     "hatch",
     "ipdb",
