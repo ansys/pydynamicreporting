@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Security
 
 - Update the development lockfile to Django 5.2.18 for its security fixes.
+- Allow djangorestframework 3.18 so environments can install 3.18.2, which fixes
+  CVE-2026-114136 and CVE-2026-114137, and update the development lockfile to it.
 
 ## [1.0.0rc3] - 2026-09-21
 
