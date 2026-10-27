@@ -4,30 +4,9 @@ description: "Sets shared environment variables for all workflows"
 runs:
   using: "composite"
   steps:
-    - name: Refresh Linux CA certificates
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        source /etc/os-release
-        if [[ "$ID" != "ubuntu" ]]; then
-          echo "::error::The Linux CI trust-store bootstrap requires Ubuntu."
-          exit 1
-        fi
-        dpkg-query -W ca-certificates
-        sudo apt-get update
-        sudo apt-get install --yes --only-upgrade --no-install-recommends ca-certificates
-        sudo update-ca-certificates
-        ca_version="$(dpkg-query -W -f='${Version}' ca-certificates)"
-        minimum="20260816ubuntu0.${VERSION_ID}.1"
-        if ! dpkg --compare-versions "$ca_version" ge "$minimum"; then
-          echo "::error::ca-certificates $ca_version is below the required $minimum."
-          exit 1
-        fi
-        echo "CI trust-store baseline verified: ca-certificates $ca_version"
-
     - run: |
         echo "DOCUMENTATION_CNAME=dynamicreporting.docs.pyansys.com" >> $GITHUB_ENV
-        echo "MAIN_PYTHON_VERSION=3.14.10" >> $GITHUB_ENV
+        echo "MAIN_PYTHON_VERSION=3.14" >> $GITHUB_ENV
         echo "PACKAGE_NAME=ansys-dynamicreporting-core" >> $GITHUB_ENV
         echo "PACKAGE_NAMESPACE=ansys.dynamicreporting.core" >> $GITHUB_ENV
         echo "ANSYS_VERSION=271" >> $GITHUB_ENV

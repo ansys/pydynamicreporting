@@ -43,7 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        python-version: [ '3.11.18', '3.12.16', '3.13.18', '3.14.10' ]
+        python-version: [ '3.10', '3.11', '3.12', '3.13', '3.14' ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
@@ -51,11 +51,8 @@ jobs:
           fetch-depth: '0'
           fetch-tags: true
 
-      - name: Set up patched Python and uv
-        uses: ./.github/actions/setup-python-env
-        with:
-          python-version: ${{ matrix.python-version }}
-          sync-project: "false"
+      - name: Set up Env
+        uses: ./.github/actions/setup-env
 
       - name: Build wheelhouse
         uses: ansys/actions/build-wheelhouse@v11.1.3
@@ -65,7 +62,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           check-licenses: 'false'
           checkout: false
-          skip-python-setup: true
 
       - name: Install from wheelhouse
         env:
