@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Python 3.10 support. The package now requires Python 3.11 through 3.14. Python
   3.10 is end-of-life, has no upstream fix for the eMudhra certificate incident,
-  and is no longer supported by current Pillow and Django releases.
+  and is no longer supported by current Pillow releases or Django 6.
 
 ### Security
 
@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   compromised eMudhra intermediates. See `SECURITY.md` for the other trust stores
   that need updating.
 - Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
-- Update Pillow to 13.0.0 and Django to 5.2.18. Development installs now require
+- Update Pillow to 13.0.0 and Django to 5.2.18. 32-bit integer images are still
+  stored as 16-bit PNGs, as they were with earlier Pillow releases. Development installs now require
   pip 26.2.2+, uv 0.13.5+, and virtualenv 21.14.13+, and the test extra requires
   grpcio 1.85.0+.
 
