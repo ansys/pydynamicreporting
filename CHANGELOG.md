@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Removed
+
+- Python 3.10 support. The package now requires Python 3.11 through 3.14. Python
+  3.10 is end-of-life, has no upstream fix for the eMudhra certificate incident,
+  and is no longer supported by current Pillow and Django releases.
+
+### Security
+
+- Require certifi 2026.10.19 or later, which removes trust in the CA used by the
+  compromised eMudhra intermediates. See `SECURITY.md` for the other trust stores
+  that need updating.
+- Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
+
 ## [1.0.0rc3] - 2026-09-21
 
 ### Added

@@ -21,9 +21,7 @@ This package requires certifi 2026.10.19 or later, which removes trust in the
 CA used by the compromised eMudhra intermediates. Other trust stores in your
 environment need separate updates:
 
-- **Python:** use CPython 3.11.18+, 3.12.16+, 3.13.18+, or 3.14.10+. The package
-  still supports Python 3.10, but 3.10 has no upstream fix; use a vendor backport
-  or another verified mitigation. See the
+- **Python:** use CPython 3.11.18+, 3.12.16+, 3.13.18+, or 3.14.10+. See the
   [Python security announcement](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576).
 - **Installers:** update pip to 26.2.2+, uv to 0.13.5+, and virtualenv to 21.14.13+,
   which carry their own CA bundles, then recreate existing environments.

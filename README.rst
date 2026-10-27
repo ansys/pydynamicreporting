@@ -68,7 +68,7 @@ To reach the project support team, email
 
 Installation
 ------------
-The ``pydynamicreporting`` package supports Python 3.10 through 3.14 on
+The ``pydynamicreporting`` package supports Python 3.11 through 3.14 on
 Windows and Linux. It is currently available on
 `PyPI <https://pypi.org/project/ansys-dynamicreporting-core/>`_.
 
@@ -81,8 +81,6 @@ For the base client package, run:
 For the patched Python versions and environment updates needed after the
 eMudhra certificate incident, follow the
 `TLS security guidance <https://github.com/ansys/pydynamicreporting/blob/stable/27.1/SECURITY.md#tls-security-after-the-emudhra-incident>`_.
-Python 3.10 remains package-compatible but has no upstream interpreter fix for
-this incident.
 
 Developer installation
 ^^^^^^^^^^^^^^^^^^^^^^
