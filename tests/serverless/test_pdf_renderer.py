@@ -169,7 +169,6 @@ class _ProductPlaywrightContext:
     ansys_installation: str
     ansys_version: int
     playwright_browsers_path: str
-    playwright_executable_path: Path
 
 
 @pytest.fixture(scope="module")
@@ -191,7 +190,6 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
                     ansys_installation=explicit_resolution.install_dir,
                     ansys_version=explicit_resolution.version,
                     playwright_browsers_path=str(binary_info.path),
-                    playwright_executable_path=binary_info.executable_path,
                 )
 
     # Priority 2: live ADR server fixture.
@@ -205,7 +203,6 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
             ansys_installation=adr_init.ansys_installation,
             ansys_version=adr_init.ansys_version,
             playwright_browsers_path=str(binary_info.path),
-            playwright_executable_path=binary_info.executable_path,
         )
 
     # Priority 3: auto-detected local product install.
@@ -220,7 +217,6 @@ def product_playwright_context(request, pytestconfig) -> _ProductPlaywrightConte
                 ansys_installation=local_resolution.install_dir,
                 ansys_version=local_resolution.version,
                 playwright_browsers_path=str(binary_info.path),
-                playwright_executable_path=binary_info.executable_path,
             )
 
     pytest.fail(
@@ -451,11 +447,7 @@ def test_playwright_pdf_uses_render_timeout_for_browser_launch_and_navigation(
     monkeypatch.setattr(renderer, "_wait_for_render_ready", lambda page, deadline=None: None)
 
     assert renderer.render_pdf() == b"%PDF-mock"
-    stack.playwright.chromium.launch.assert_called_once_with(
-        executable_path=_browser_binary_info(_STUBBED_BROWSER_DIR).executable_path,
-        headless=True,
-        timeout=12500,
-    )
+    stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=12500)
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
@@ -481,11 +473,7 @@ def test_playwright_pdf_rounds_tiny_browser_timeouts_up_to_one_millisecond(tmp_p
 
     # Playwright treats timeout=0 as "no timeout", so tiny positive ADR budgets round up to 1 ms
     # under the shared browser-phase deadline helper instead of truncating to 0.
-    stack.playwright.chromium.launch.assert_called_once_with(
-        executable_path=_browser_binary_info(_STUBBED_BROWSER_DIR).executable_path,
-        headless=True,
-        timeout=1,
-    )
+    stack.playwright.chromium.launch.assert_called_once_with(headless=True, timeout=1)
     stack.page.goto.assert_called_once_with(
         (html_dir / "index.html").resolve().as_uri(),
         wait_until="load",
@@ -1033,9 +1021,7 @@ def test_apply_pdf_capture_styles_targets_plot_containers(tmp_path):
 
 
 @pytest.mark.unit
-def test_apply_pdf_capture_styles_take_effect_under_screen_media(
-    tmp_path, product_playwright_context
-):
+def test_apply_pdf_capture_styles_take_effect_under_screen_media(tmp_path):
     html = """
     <html>
     <head>
@@ -1146,9 +1132,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto(
             (renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(),
@@ -1299,9 +1283,7 @@ def test_apply_pdf_capture_styles_take_effect_under_screen_media(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("landscape", [False, True])
-def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
-    tmp_path, landscape, product_playwright_context
-):
+def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(tmp_path, landscape):
     """Exercise visual fitting, layout cohesion, and oversized fragmentation together."""
     html = """
     <html>
@@ -1526,9 +1508,7 @@ def test_prepare_content_for_pagination_handles_core_media_and_fragmentation(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page(viewport=renderer._shared_browser_context_kwargs()["viewport"])
         page.goto((renderer._html_dir / renderer._ENTRYPOINT_FILENAME).as_uri(), wait_until="load")
         page.emulate_media(media="screen")
@@ -1884,9 +1864,7 @@ def _start_wait_script(page, wait_script: str) -> None:
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
-    tmp_path, monkeypatch, product_playwright_context
-):
+def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>No report root</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-no-root-report"
@@ -1896,9 +1874,7 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -1910,9 +1886,7 @@ def test_wait_for_render_ready_fouc_gate_fast_passes_without_report_root(
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
-    tmp_path, monkeypatch, product_playwright_context
-):
+def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC gate</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-gate-loaded-report"
@@ -1925,9 +1899,7 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -1942,9 +1914,7 @@ def test_wait_for_render_ready_fouc_gate_waits_for_body_loaded_class(
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
-    tmp_path, monkeypatch, product_playwright_context
-):
+def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>FOUC transition</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "fouc-transition-report"
@@ -1959,9 +1929,7 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -1983,7 +1951,7 @@ def test_wait_for_render_ready_fouc_transition_waits_for_opacity_transition(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loader(
-    tmp_path, monkeypatch, product_playwright_context
+    tmp_path, monkeypatch
 ):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Plotly</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
@@ -2002,9 +1970,7 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -2021,9 +1987,7 @@ def test_wait_for_render_ready_plotly_step_waits_for_loaded_class_and_hidden_loa
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
-    tmp_path, monkeypatch, product_playwright_context
-):
+def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     image_wait_script = wait_scripts["Images"]
@@ -2035,9 +1999,7 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -2062,7 +2024,7 @@ def test_wait_for_render_ready_images_step_does_not_fast_pass_srcless_images(
 
 @pytest.mark.unit
 def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
-    tmp_path, monkeypatch, product_playwright_context
+    tmp_path, monkeypatch
 ):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Images</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
@@ -2085,9 +2047,7 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -2112,9 +2072,7 @@ def test_wait_for_render_ready_images_step_waits_for_visible_companion_canvas(
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
-    tmp_path, monkeypatch, product_playwright_context
-):
+def test_wait_for_render_ready_videos_step_waits_for_loadeddata(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Videos</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "video-ready-report"
@@ -2136,9 +2094,7 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 
@@ -2158,9 +2114,7 @@ def test_wait_for_render_ready_videos_step_waits_for_loadeddata(
 
 
 @pytest.mark.unit
-def test_wait_for_render_ready_double_request_animation_frame_resolves(
-    tmp_path, monkeypatch, product_playwright_context
-):
+def test_wait_for_render_ready_double_request_animation_frame_resolves(tmp_path, monkeypatch):
     renderer = _simple_renderer(tmp_path, "<html><body><p>Animation frame</p></body></html>")
     wait_scripts = _capture_ready_step_scripts(monkeypatch, renderer)
     report_dir = tmp_path / "double-raf-report"
@@ -2170,9 +2124,7 @@ def test_wait_for_render_ready_double_request_animation_frame_resolves(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            executable_path=product_playwright_context.playwright_executable_path
-        )
+        browser = playwright.chromium.launch()
         page = browser.new_page()
         page.goto((report_dir / "index.html").as_uri(), wait_until="load")
 

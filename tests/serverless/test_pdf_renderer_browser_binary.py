@@ -22,14 +22,11 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from ansys.dynamicreporting.core import DEFAULT_ANSYS_VERSION
-from ansys.dynamicreporting.core.exceptions import ADRException
 from ansys.dynamicreporting.core.utils import pdf_renderer as pdf_renderer_module
-from ansys.dynamicreporting.core.utils.pdf_renderer import _OfflinePlaywrightPDFRenderer
 from ansys.dynamicreporting.core.utils.pdf_renderer import _PlaywrightBrowserBinaryInfo
 from ansys.dynamicreporting.core.utils.pdf_renderer import (
     resolve_playwright_browser_binary_info,
@@ -81,7 +78,6 @@ def _create_packaged_browser_binary(
     packaged_binary_dir: str | None = None,
     write_metadata: bool = True,
     create_marker: bool = True,
-    create_executable: bool = True,
 ) -> Path:
     """Create ``playwright-browsers/<packaged dir>`` with optional metadata and marker."""
     browser_binary_dir = machine_root / "playwright-browsers"
@@ -90,14 +86,6 @@ def _create_packaged_browser_binary(
     )
     packaged_dir = browser_binary_dir / packaged_dir_name
     packaged_dir.mkdir(parents=True)
-    if create_executable:
-        platform_dir, executable_name = {
-            "win64": ("chrome-headless-shell-win64", "chrome-headless-shell.exe"),
-            "linux_2.6_64": ("chrome-headless-shell-linux64", "chrome-headless-shell"),
-        }[machine_arch]
-        executable = packaged_dir / platform_dir / executable_name
-        executable.parent.mkdir()
-        executable.write_bytes(b"product-browser-stub")
     if create_marker:
         # Playwright writes this marker after a complete browser install; the resolver treats
         # its absence as an incomplete product package even when the directory exists.
@@ -143,12 +131,6 @@ def test_resolve_playwright_browser_binary_info_finds_full_install_layout(tmp_pa
 
     assert binary_info is not None
     assert binary_info.path == browser_binary_dir
-    assert binary_info.executable_path == (
-        browser_binary_dir
-        / _PACKAGED_BROWSER_DIR_NAME
-        / "chrome-headless-shell-win64"
-        / "chrome-headless-shell.exe"
-    )
 
 
 @pytest.mark.ado_test
@@ -166,72 +148,6 @@ def test_resolve_playwright_browser_binary_info_uses_linux_machine_layout(tmp_pa
 
     assert binary_info is not None
     assert binary_info.path == browser_binary_dir
-    assert binary_info.executable_path == (
-        browser_binary_dir
-        / _PACKAGED_BROWSER_DIR_NAME
-        / "chrome-headless-shell-linux64"
-        / "chrome-headless-shell"
-    )
-
-
-@pytest.mark.ado_test
-@pytest.mark.parametrize("executable_is_directory", [False, True])
-def test_resolve_playwright_browser_binary_info_rejects_missing_executable(
-    tmp_path, monkeypatch, executable_is_directory
-):
-    install_dir = _fake_install_dir(tmp_path)
-    browser_dir = _create_packaged_browser_binary(
-        _machine_root(tmp_path, "win64"),
-        machine_arch="win64",
-        create_executable=False,
-    )
-    if executable_is_directory:
-        (
-            browser_dir
-            / _PACKAGED_BROWSER_DIR_NAME
-            / "chrome-headless-shell-win64"
-            / "chrome-headless-shell.exe"
-        ).mkdir(parents=True)
-    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
-
-    assert (
-        resolve_playwright_browser_binary_info(
-            ansys_installation=str(install_dir), ansys_version=_DEFAULT_INSTALL_VERSION
-        )
-        is None
-    )
-
-
-@pytest.mark.ado_test
-def test_browser_pdf_launch_selects_product_executable(tmp_path, monkeypatch):
-    install_dir = _fake_install_dir(tmp_path)
-    browser_dir = _create_packaged_browser_binary(
-        _machine_root(tmp_path, "win64"), machine_arch="win64"
-    )
-    (tmp_path / "index.html").write_text("<html><body>Report</body></html>")
-    renderer = _OfflinePlaywrightPDFRenderer(
-        html_dir=tmp_path,
-        ansys_installation=str(install_dir),
-        ansys_version=_DEFAULT_INSTALL_VERSION,
-    )
-    playwright = MagicMock()
-    playwright.chromium.launch.side_effect = RuntimeError("Launch probe")
-    manager = MagicMock()
-    manager.__enter__.return_value = playwright
-    monkeypatch.setattr(pdf_renderer_module.platform, "system", lambda: "Windows")
-    monkeypatch.setattr(pdf_renderer_module, "sync_playwright", lambda: manager)
-    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", "unrelated-browser-cache")
-
-    with pytest.raises(ADRException, match="Browser PDF rendering failed"):
-        renderer.render_pdf()
-
-    playwright.chromium.launch.assert_called_once()
-    assert playwright.chromium.launch.call_args.kwargs["executable_path"] == (
-        browser_dir
-        / _PACKAGED_BROWSER_DIR_NAME
-        / "chrome-headless-shell-win64"
-        / "chrome-headless-shell.exe"
-    )
 
 
 @pytest.mark.ado_test
