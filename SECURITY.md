@@ -57,4 +57,10 @@ Browser-PDF exports select the validated executable from ADR's browser metadata,
 so updating the driver preserves the installed product browser. The Node fix
 does not refresh that browser's certificate store; obtain any required browser
 patches from the product vendor.
-The gRPC/DPF certificate store remains a separate remediation.
+
+The test extra requires gRPC 1.85.0+, which updates its independent CA bundle.
+See the [gRPC release notes](https://github.com/grpc/grpc/releases/tag/v1.85.0).
+DPF package and server versions are unchanged. Applications that install DPF
+separately must also update gRPC. Check any explicit gRPC root certificates or
+`GRPC_DEFAULT_SSL_ROOTS_FILE_PATH` overrides; they can replace the corrected
+default store.
