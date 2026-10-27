@@ -61,7 +61,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.core.management.utils import get_random_secret_key
-from django.db import DatabaseError, connections
+from django.db import DatabaseError, connections, transaction
 from django.http import HttpRequest
 
 from .base import ObjectSet
@@ -70,7 +70,12 @@ from .item import Dataset, Item, Session
 from .template import PPTXLayout, Template
 from ..adr_utils import get_logger
 from ..compatibility import get_compatibility_warning_for_install_version
-from ..common_utils import PDFPageSize, populate_template, resolve_install_info
+from ..common_utils import (
+    PDFPageSize,
+    populate_template,
+    resolve_install_info,
+    validate_template_tree,
+)
 from ..docker_support import DockerLauncher
 from ..exceptions import (
     ADRException,
@@ -1294,22 +1299,16 @@ class ADR:
 
         Raises
         ------
-        ADRException
-            If no root (parent-less) template can be found in the mapping.
+        ValueError
+            If the mapping does not define a single consistent template tree,
+            or params or sort selection is invalid.
         """
-        root_id_str = None
-        for template_id_str, template_attr in templates.items():
-            if template_attr["parent"] is None:
-                root_id_str = template_id_str
-                break
-
-        if root_id_str is None:
-            raise ADRException("No report or root template found in the provided templates.")
-
-        root_attr = templates[root_id_str]
-        root_template = self._populate_template(root_id_str, root_attr, None)
-        root_template.save()
-        self._build_templates_from_parent(root_id_str, root_template, templates)
+        root_id_str = validate_template_tree(templates)
+        with transaction.atomic():
+            root_attr = templates[root_id_str]
+            root_template = self._populate_template(root_id_str, root_attr, None)
+            root_template.save()
+            self._build_templates_from_parent(root_id_str, root_template, templates)
 
     @staticmethod
     def get_report(**kwargs) -> Template:
@@ -1967,7 +1966,8 @@ class ADR:
         Parameters
         ----------
         filename : str or Path, optional
-            Output PDF path. If omitted, uses ``"<guid>.pdf"``.
+            Output PDF path. Missing parent directories are created.
+            If omitted, uses ``"<guid>.pdf"``.
         context : dict, optional
             Additional rendering context.
         item_filter : str, optional
@@ -2007,9 +2007,14 @@ class ADR:
             If no keyword arguments are provided or browser PDF rendering fails.
         ImproperlyConfiguredError
             If ``static_directory`` is not configured.
+        OSError
+            If the output directory or file cannot be created or opened.
 
         Notes
         -----
+        The destination is opened before rendering. An existing output file is
+        not overwritten unless rendering succeeds.
+
         Browser-PDF readiness waits cover ADR-owned signals such as web-component
         initialization, fonts, MathJax, Plotly, images, and videos. HTML items and
         layout ``HTML`` fragments are rendered as raw macro-expanded HTML by the
@@ -2042,28 +2047,39 @@ class ADR:
             )
 
         template = Template.get(**kwargs)
-        # Render from the object already resolved above; its GUID remains
-        # available for the default filename without a second template lookup.
-        pdf_stream = self._render_template_as_browser_pdf(
-            template,
-            context=context,
-            item_filter=item_filter,
-            dark_mode=dark_mode,
-            landscape=landscape,
-            margins=margins,
-            page_size=page_size,
-            width=width,
-            height=height,
-            render_timeout=render_timeout,
-        )
-
         if filename is not None:
             output_path = Path(filename)
         else:
             output_path = Path(f"{template.guid}.pdf")
 
-        with open(output_path, "wb") as f:
-            f.write(pdf_stream)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            pdf_file = output_path.open("xb")
+        except FileExistsError:
+            pdf_file = output_path.open("ab")
+            created_output = False
+        else:
+            created_output = True
+        try:
+            with pdf_file:
+                pdf_stream = self._render_template_as_browser_pdf(
+                    template,
+                    context=context,
+                    item_filter=item_filter,
+                    dark_mode=dark_mode,
+                    landscape=landscape,
+                    margins=margins,
+                    page_size=page_size,
+                    width=width,
+                    height=height,
+                    render_timeout=render_timeout,
+                )
+                pdf_file.truncate(0)
+                pdf_file.write(pdf_stream)
+        except Exception:
+            if created_output:
+                output_path.unlink(missing_ok=True)
+            raise
         self._logger.info(f"Successfully exported browser PDF to: {output_path}")
 
     @staticmethod

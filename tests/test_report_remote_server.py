@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
 import logging
 from os import environ
 from pathlib import Path
@@ -55,6 +56,144 @@ def _supported_server_install_version() -> str:
 def _unsupported_server_install_version() -> str:
     """Return a server install version just before the current client support window."""
     return str(product_release_to_install_version(f"{int(SUPPORTED_PRODUCT_LINES[0]) - 1}.1"))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("children", None),
+        ("params", []),
+        ("params", {"unsupported": {1}}),
+        ("sort_selection", ["all"]),
+        ("sort_selection", "invalid"),
+    ],
+)
+def test_populate_template_validates_fields_before_creation(field, value):
+    attributes = {"name": "Root", "report_type": "Layout:basic", "parent": None, "children": []}
+    attributes[field] = value
+    factory = Mock()
+
+    with pytest.raises((ValueError, e.TemplateEditorJSONLoadingError), match=field):
+        common_utils.populate_template("Template_0", attributes, None, factory)
+
+    factory.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("sort_selection", ["", "all", "first", "last"])
+def test_populate_template_accepts_optional_fields(sort_selection):
+    attributes = {
+        "name": "Root",
+        "report_type": "Layout:basic",
+        "parent": None,
+        "children": [],
+        "sort_selection": sort_selection,
+    }
+    server = r.Server()
+
+    template = common_utils.populate_template(
+        "Template_0", attributes, None, server.create_template
+    )
+
+    assert template.get_sort_selection() == sort_selection
+    assert template.get_filter() == ""
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("loader", ["remote", "serverless"])
+@pytest.mark.parametrize(
+    "fault, message",
+    [
+        ("no_root", "root template"),
+        ("extra_root", "exactly one root"),
+        ("orphan", "Orphaned"),
+        ("two_parents", "listed more than once"),
+        ("duplicate_child", "listed more than once"),
+        ("missing_child", "Missing child"),
+        ("missing_children", "children"),
+        ("missing_parent", "Missing parent"),
+        ("parent_mismatch", "does not match"),
+        ("root_cycle", "cycle"),
+        ("detached_cycle", "cycle"),
+        ("params", "params"),
+        ("sort_selection", "sort_selection"),
+    ],
+)
+def test_load_templates_rejects_malformed_tree_before_creation(monkeypatch, loader, fault, message):
+    sample_file = Path(__file__).parent / "test_data" / "sample.json"
+    templates = json.loads(sample_file.read_text(encoding="utf-8"))
+    if fault == "no_root":
+        templates["Template_0"]["parent"] = "Template_3"
+    elif fault == "extra_root":
+        templates["Template_1"]["parent"] = None
+    elif fault == "orphan":
+        templates["Template_0"]["children"].remove("Template_1")
+    elif fault == "two_parents":
+        templates["Template_1"]["children"].append("Template_3")
+    elif fault == "duplicate_child":
+        templates["Template_0"]["children"].append("Template_1")
+    elif fault == "missing_child":
+        del templates["Template_3"]
+    elif fault == "missing_children":
+        del templates["Template_3"]["children"]
+    elif fault == "missing_parent":
+        templates["Template_3"]["parent"] = "Template_99"
+    elif fault == "parent_mismatch":
+        templates["Template_3"]["parent"] = "Template_1"
+    elif fault == "root_cycle":
+        templates["Template_3"]["children"].append("Template_0")
+    elif fault == "detached_cycle":
+        templates["Template_0"]["children"] = []
+        templates["Template_1"]["parent"] = "Template_3"
+        templates["Template_1"]["children"] = ["Template_2"]
+        templates["Template_2"]["parent"] = "Template_1"
+        templates["Template_3"]["children"] = ["Template_1"]
+    elif fault == "params":
+        templates["Template_3"]["params"] = []
+    else:
+        templates["Template_3"]["sort_selection"] = "invalid"
+
+    if loader == "remote":
+        client = r.Server()
+        writer = Mock(side_effect=AssertionError("Invalid templates must not be persisted"))
+        monkeypatch.setattr(client, "put_objects", writer)
+    else:
+        from ansys.dynamicreporting.core.serverless import ADR
+
+        client = object.__new__(ADR)
+        client._logger = None
+    factory = Mock(side_effect=AssertionError("Invalid templates must not be created"))
+    monkeypatch.setattr(client, "_populate_template", factory)
+
+    with pytest.raises((ValueError, e.TemplateEditorJSONLoadingError), match=message):
+        client.load_templates(templates)
+
+    factory.assert_not_called()
+    if loader == "remote":
+        writer.assert_not_called()
+
+
+@pytest.mark.unit
+def test_load_templates_preserves_remote_branch_parents(monkeypatch):
+    sample_file = Path(__file__).parent / "test_data" / "sample.json"
+    templates = json.loads(sample_file.read_text(encoding="utf-8"))
+    templates["Template_1"]["children"] = ["Template_4"]
+    templates["Template_4"] = dict(templates["Template_3"], name="E", parent="Template_1")
+    saved_templates = []
+    server = r.Server()
+
+    def save_templates(objects):
+        saved_templates.extend(objects if isinstance(objects, list) else [objects])
+
+    monkeypatch.setattr(server, "put_objects", save_templates)
+
+    server.load_templates(templates)
+
+    by_name = {template.name: template for template in saved_templates}
+    assert set(by_name) == {"A", "B", "C", "D", "E"}
+    assert by_name["E"].parent == by_name["B"].guid
+    assert by_name["D"].parent == by_name["C"].guid
 
 
 def test_copy_item(adr_service_query, tmp_path, get_exec) -> None:
