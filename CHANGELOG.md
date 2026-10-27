@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   compromised eMudhra intermediates. See `SECURITY.md` for the other trust stores
   that need updating.
 - Allow djangorestframework 3.18, which fixes CVE-2026-114136 and CVE-2026-114137.
+- Update Pillow to 13.0.0 and Django to 5.2.18. Development installs now require
+  pip 26.2.2+, uv 0.13.5+, and virtualenv 21.14.13+, and the test extra requires
+  grpcio 1.85.0+.
 
 ## [1.0.0rc3] - 2026-09-21
 
