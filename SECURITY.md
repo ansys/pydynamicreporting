@@ -46,6 +46,15 @@ with SHA-256 values checked against the release assets. uv verifies these hashes
 before installation, and `scripts/check_ci_python.py` checks the selected
 interpreter. Keep the metadata, matrices, and guard in sync when updating CI.
 
+JavaScript Actions use the runner's own Node runtime. The official
+[runner 2.338.2 build](https://github.com/actions/runner/blob/v2.338.2/src/Misc/externals.sh)
+includes Node 24.22.1; runner 2.338.0 includes unpatched Node 24.21.0.
+Update self-hosted runners and verify hosted runner updates or vendor backports.
+Changing Node on `PATH` does not replace the runtime used by Actions. Refresh
+the runner OS trust store as well; GitHub tracks its hosted image rollout in
+[runner-images issue 15018](https://github.com/actions/runner-images/issues/15018).
+Passing project checks does not establish that these host-managed stores are fixed.
+
 Deployment owners must also refresh OS certificate stores and rebuild container
 images without cached layers. Preserve required enterprise CAs while removing
 compromised trust. Inspect the stores used by the running process, including
