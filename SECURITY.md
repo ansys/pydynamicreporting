@@ -55,6 +55,12 @@ the runner OS trust store as well; GitHub tracks its hosted image rollout in
 [runner-images issue 15018](https://github.com/actions/runner-images/issues/15018).
 Passing project checks does not establish that these host-managed stores are fixed.
 
+The shared CI setup refreshes Ubuntu's `ca-certificates` package and requires
+`20260816ubuntu0.<Ubuntu release>.1` or newer, following
+[Ubuntu's security update](https://ubuntu.com/security/notices/USN-8944-1).
+The package update preserves separately installed enterprise CAs. It runs after
+checkout, so it does not establish protection for the runner's earlier bootstrap.
+
 Deployment owners must also refresh OS certificate stores and rebuild container
 images without cached layers. Preserve required enterprise CAs while removing
 compromised trust. Inspect the stores used by the running process, including
