@@ -138,10 +138,9 @@ Recommended practice for external venv usage:
 - For the previous supported ADR line, use the matching constraints file when
   one is provided. For example, ``1.x`` also supports ADR ``26.1``, and
   ``constraints/v261.txt`` documents that release profile.
-- The ADR ``26.1`` profile matches the dependency stack bundled with ADR
-  ``26.1``: Django 4.2, Django REST Framework 3.15, and Pillow 11. It does not
-  include the newer Django, Django REST Framework, or Pillow security updates.
-  Use ADR ``27.1`` to get them.
+- The ADR ``26.1`` profile keeps Django 4.2 and Django REST Framework 3.15, so
+  it does not include the newer Django or Django REST Framework security
+  updates. Use ADR ``27.1`` to get them.
 - The ADR ``26.1`` constraint profile is not supported on Python 3.14. Use
   Python 3.12 for Serverless ADR with ADR ``26.1``.
 - Keep one external virtual environment per product release family.

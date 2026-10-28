@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- The ADR 26.1 constraints profile (`constraints/v261.txt`) now also limits
-  Pillow to 11.x, matching the Pillow release bundled with ADR 26.1. The profile
-  keeps the ADR 26.1 dependency stack, so it does not include the Django,
-  djangorestframework, or Pillow security updates below. Use ADR 27.1 to get them.
-
 ### Removed
 
 - Python 3.10 support. The package now requires Python 3.11 through 3.14. Python
@@ -29,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Lock Pillow 13.0.0 and Django 5.2.18 for development installs, and support
   Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
   with earlier Pillow releases.
+- The ADR 26.1 constraints profile (`constraints/v261.txt`) keeps Django 4.2 and
+  djangorestframework 3.15, so it does not get the Django and djangorestframework
+  updates. Use ADR 27.1 to get them.
 
 ## [1.0.0rc3] - 2026-09-21
 
