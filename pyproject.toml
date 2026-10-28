@@ -72,7 +72,6 @@ test = [
     "pytest-cov",
     "pyvista==0.48.4",
     "vtk==9.6.2",
-    "grpcio>=1.85.0",
     "ansys-dpf-core==0.16.1"
 ]
 doc = [
@@ -84,12 +83,11 @@ doc = [
     "docutils>=0.21"
 ]
 dev = [
-    "pip>=26.2.2",
+    "pip",
     "twine",
     "hatch",
     "ipdb",
-    "uv>=0.13.5",
-    "virtualenv>=21.14.13",
+    "uv",
     "pre-commit",
     "ruff",
     #    "pip-audit",
@@ -141,7 +139,6 @@ path = ".venv"
 env-vars = { PYTHONPATH = "." }
 
 [tool.uv]
-required-version = ">=0.13.5"
 default-groups = "all"
 link-mode = "copy"
 

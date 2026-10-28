@@ -17,7 +17,6 @@ repos:
   rev: 0.31.0
   hooks:
     - id: check-github-workflows
-      additional_dependencies: [ "certifi>=2026.10.19" ]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.14.14
@@ -39,6 +38,5 @@ repos:
   rev: v0.5.2
   hooks:
   - id: add-license-headers
-    additional_dependencies: [ "certifi>=2026.10.19" ]
     args:
     - --start_year=2023

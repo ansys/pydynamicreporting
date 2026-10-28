@@ -23,9 +23,6 @@ environment need separate updates:
 
 - **Python:** use CPython 3.11.18+, 3.12.16+, 3.13.18+, or 3.14.10+. See the
   [Python security announcement](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576).
-- **Installers:** update pip to 26.2.2+, uv to 0.13.5+, and virtualenv to 21.14.13+,
-  which carry their own CA bundles, then recreate existing environments.
-- **gRPC:** if you use gRPC, for example through DPF, update grpcio to 1.85.0+.
 - **System and product:** refresh OS and container certificate stores, and check
   explicit CA-file overrides. ADR's bundled browser and Qt runtime have their own
   trust stores; get updates for those from the product vendor.
