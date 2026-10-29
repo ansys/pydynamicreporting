@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   3.10 is end-of-life, has no upstream fix for the eMudhra certificate incident,
   and is not supported by Pillow 13.
 
+### Fixed
+
+- Require statsmodels 0.14.5 or later. Earlier statsmodels releases cannot be
+  imported with SciPy 1.16 or later, which made Serverless ADR setup fail.
+
 ### Security
 
 - Require certifi 2026.10.19 or later, which removes trust in the CA used by the
