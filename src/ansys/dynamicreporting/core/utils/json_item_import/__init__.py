@@ -33,10 +33,7 @@ from .importer import ImportBackend, JSONItemImporter
 from .models import (
     DatasetPayload,
     ImportDocument,
-    ItemPayload,
     SessionPayload,
-    TableColumn,
-    TreeNode,
 )
 from .parser import build_document, load_document
 from .result import ImportResult, ItemFailure
@@ -50,11 +47,8 @@ __all__ = [
     "ImportBackend",
     "JSONItemImporter",
     "ImportDocument",
-    "ItemPayload",
     "SessionPayload",
     "DatasetPayload",
-    "TableColumn",
-    "TreeNode",
     "ImportResult",
     "ItemFailure",
     "ITEM_TYPES",

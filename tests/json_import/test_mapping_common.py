@@ -39,9 +39,8 @@ from ansys.dynamicreporting.core.utils.json_item_import.mapping import (
     resolve_path,
     rows_to_array,
 )
-from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn, TreeNode
 
-COLUMNS = (TableColumn("time"), TableColumn("T_max"), TableColumn("T_min"))
+COLUMNS = ({"name": "time"}, {"name": "T_max"}, {"name": "T_min"})
 
 
 # --------------------------------------------------------------------------
@@ -118,7 +117,7 @@ def test_rows_to_array_handles_no_rows_and_no_columns():
 
 
 @pytest.mark.unit
-def test_column_labels_accepts_objects_and_strings():
+def test_column_labels_accepts_mappings_and_strings():
     assert column_labels(COLUMNS) == ["time", "T_max", "T_min"]
     assert column_labels(["a", "b"]) == ["a", "b"]
 
@@ -135,7 +134,7 @@ def test_derive_axes_explicit_values_win():
 
 @pytest.mark.unit
 def test_derive_axes_with_a_single_column():
-    assert derive_axes((TableColumn("only"),)) == ("only", [])
+    assert derive_axes(({"name": "only"},)) == ("only", [])
 
 
 @pytest.mark.unit
@@ -156,18 +155,22 @@ def test_derive_axes_accepts_an_explicit_empty_yaxis():
 @pytest.mark.unit
 def test_flatten_tree_recurses_to_full_depth():
     tree = (
-        TreeNode(
-            name="Assembly",
-            value="Assembly",
-            children=(
-                TreeNode(name="Part A", value="Part A"),
-                TreeNode(
-                    name="Part B",
-                    value="Part B",
-                    children=(TreeNode(name="Face 1", value="Face 1"),),
-                ),
+        {
+            "name": "Assembly",
+            "value": "Assembly",
+            "key": None,
+            "children": (
+                {"name": "Part A", "value": "Part A", "key": None, "children": ()},
+                {
+                    "name": "Part B",
+                    "value": "Part B",
+                    "key": None,
+                    "children": (
+                        {"name": "Face 1", "value": "Face 1", "key": None, "children": ()},
+                    ),
+                },
             ),
-        ),
+        },
     )
     flat = flatten_tree(tree)
     assert len(flat) == 1
@@ -177,7 +180,7 @@ def test_flatten_tree_recurses_to_full_depth():
 
 @pytest.mark.unit
 def test_flatten_tree_carries_name_and_value():
-    flat = flatten_tree((TreeNode(name="Alpha", value=7),))
+    flat = flatten_tree(({"name": "Alpha", "value": 7, "key": None, "children": ()},))
     assert flat[0]["name"] == "Alpha"
     assert flat[0]["value"] == 7
 
@@ -185,10 +188,15 @@ def test_flatten_tree_carries_name_and_value():
 @pytest.mark.unit
 def test_flatten_tree_generates_collision_free_keys_for_duplicate_names():
     tree = (
-        TreeNode(
-            name="root",
-            children=(TreeNode(name="same"), TreeNode(name="same")),
-        ),
+        {
+            "name": "root",
+            "value": None,
+            "key": None,
+            "children": (
+                {"name": "same", "value": None, "key": None, "children": ()},
+                {"name": "same", "value": None, "key": None, "children": ()},
+            ),
+        },
     )
     keys = [child["key"] for child in flatten_tree(tree)[0]["children"]]
     assert len(set(keys)) == 2
@@ -196,7 +204,7 @@ def test_flatten_tree_generates_collision_free_keys_for_duplicate_names():
 
 @pytest.mark.unit
 def test_flatten_tree_preserves_an_explicit_key():
-    flat = flatten_tree((TreeNode(name="Alpha", key="custom"),))
+    flat = flatten_tree(({"name": "Alpha", "value": None, "key": "custom", "children": ()},))
     assert flat[0]["key"] == "custom"
 
 

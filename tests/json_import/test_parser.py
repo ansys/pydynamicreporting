@@ -34,7 +34,6 @@ from ansys.dynamicreporting.core.utils.json_item_import.errors import (
     ImportItemValidationError,
     ImportItemVersionError,
 )
-from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn, TreeNode
 from ansys.dynamicreporting.core.utils.json_item_import.parser import (
     MAX_TREE_DEPTH,
     build_document,
@@ -142,7 +141,7 @@ def test_null_is_the_supported_missing_number():
     doc = build_document(
         _document(items=[{"item_type": "table", "name": "t", "columns": ["a"], "rows": [[None]]}])
     )
-    assert doc.items[0].rows == ((None,),)
+    assert doc.items[0]["rows"] == ((None,),)
 
 
 @pytest.mark.unit
@@ -163,7 +162,7 @@ def test_tree_at_the_depth_limit_is_accepted():
     for _ in range(MAX_TREE_DEPTH - 1):
         node = {"name": "n", "children": [node]}
     doc = build_document(_document(items=[{"item_type": "tree", "name": "t", "nodes": [node]}]))
-    assert doc.items[0].nodes
+    assert doc.items[0]["nodes"]
 
 
 @pytest.mark.unit
@@ -199,7 +198,7 @@ def test_unknown_item_keys_are_retained():
     doc = build_document(
         _document(items=[{"item_type": "text", "name": "n", "value": "v", "typo_key": []}])
     )
-    assert doc.items[0].extra == {"typo_key": []}
+    assert doc.items[0]["extra"] == {"typo_key": []}
 
 
 @pytest.mark.unit
@@ -281,10 +280,10 @@ def test_unknown_item_type_is_rejected():
 def test_item_common_defaults():
     doc = build_document(_document(items=[{"item_type": "text", "name": "n", "value": "v"}]))
     item = doc.items[0]
-    assert item.tags == ()
-    assert item.source == ""
-    assert item.sequence == 0
-    assert item.properties == ()
+    assert item["tags"] == ()
+    assert item["source"] == ""
+    assert item["sequence"] == 0
+    assert item["properties"] == ()
 
 
 @pytest.mark.unit
@@ -310,7 +309,7 @@ def test_item_tags_accept_objects_and_key_value_strings():
             ]
         )
     )
-    assert doc.items[0].tags == ({"section": "intro"}, {"dp": "1"})
+    assert doc.items[0]["tags"] == ({"section": "intro"}, {"dp": "1"})
 
 
 @pytest.mark.unit
@@ -329,7 +328,7 @@ def test_item_tags_accept_a_single_mapping():
             items=[{"item_type": "text", "name": "n", "value": "v", "tags": {"section": "intro"}}]
         )
     )
-    assert doc.items[0].tags == ({"section": "intro"},)
+    assert doc.items[0]["tags"] == ({"section": "intro"},)
 
 
 @pytest.mark.unit
@@ -360,8 +359,8 @@ def test_inline_items_require_a_value(item_type):
 @pytest.mark.parametrize("item_type", ["text", "html"])
 def test_inline_items_carry_their_value(item_type):
     doc = build_document(_document(items=[{"item_type": item_type, "name": "n", "value": "body"}]))
-    assert doc.items[0].value == "body"
-    assert doc.items[0].item_type == item_type
+    assert doc.items[0]["value"] == "body"
+    assert doc.items[0]["item_type"] == item_type
 
 
 @pytest.mark.unit
@@ -392,7 +391,7 @@ def test_media_items_accept_the_legacy_src_alias(item_type):
         _document(items=[{"item_type": item_type, "name": "n", "src": "payload.bin"}]),
         logger=logger,
     )
-    assert doc.items[0].path == "payload.bin"
+    assert doc.items[0]["path"] == "payload.bin"
     assert any("deprecated" in str(call) for call in logger.warning.call_args_list)
 
 
@@ -403,14 +402,14 @@ def test_path_wins_when_both_path_and_src_are_present():
         _document(items=[{"item_type": "image", "name": "n", "path": "new.png", "src": "old.png"}]),
         logger=logger,
     )
-    assert doc.items[0].path == "new.png"
+    assert doc.items[0]["path"] == "new.png"
     assert any("both" in str(call) for call in logger.warning.call_args_list)
 
 
 @pytest.mark.unit
 def test_src_is_not_reported_as_an_unknown_key():
     doc = build_document(_document(items=[{"item_type": "image", "name": "n", "src": "a.png"}]))
-    assert doc.items[0].extra == {}
+    assert doc.items[0]["extra"] == {}
 
 
 @pytest.mark.unit
@@ -419,7 +418,7 @@ def test_base_dir_is_attached_to_items():
         _document(items=[{"item_type": "image", "name": "n", "path": "a.png"}]),
         base_dir="/runs/42",
     )
-    assert doc.items[0].base_dir == "/runs/42"
+    assert doc.items[0]["base_dir"] == "/runs/42"
 
 
 # --------------------------------------------------------------------------
@@ -441,10 +440,10 @@ def _table(**overrides):
 @pytest.mark.unit
 def test_table_columns_are_normalized():
     doc = build_document(_document(items=[_table()]))
-    assert doc.items[0].columns == (
-        TableColumn("time"),
-        TableColumn("T_max"),
-        TableColumn("T_min"),
+    assert doc.items[0]["columns"] == (
+        {"name": "time", "type": "string"},
+        {"name": "T_max", "type": "string"},
+        {"name": "T_min", "type": "string"},
     )
 
 
@@ -453,7 +452,7 @@ def test_table_columns_accept_objects():
     doc = build_document(
         _document(items=[_table(columns=[{"name": "time", "type": "float"}, "T_max", "T_min"])])
     )
-    assert doc.items[0].columns[0] == TableColumn("time", "float")
+    assert doc.items[0]["columns"][0] == {"name": "time", "type": "float"}
 
 
 @pytest.mark.unit
@@ -506,9 +505,9 @@ def test_table_axes_must_name_columns():
 def test_table_accepts_explicit_axes_that_name_columns():
     doc = build_document(_document(items=[_table(xaxis="time", yaxis=["T_max"], plot="line")]))
     item = doc.items[0]
-    assert item.xaxis == "time"
-    assert item.yaxis == ("T_max",)
-    assert item.plot == "line"
+    assert item["xaxis"] == "time"
+    assert item["yaxis"] == ("T_max",)
+    assert item["plot"] == "line"
 
 
 @pytest.mark.unit
@@ -525,9 +524,12 @@ def test_table_data_wrapper_is_accepted():
         )
     )
     item = doc.items[0]
-    assert item.columns == (TableColumn("a"), TableColumn("b"))
-    assert item.rows == ((1, 2),)
-    assert "data" not in item.payload
+    assert item["columns"] == (
+        {"name": "a", "type": "string"},
+        {"name": "b", "type": "string"},
+    )
+    assert item["rows"] == ((1, 2),)
+    assert "data" not in item
 
 
 @pytest.mark.unit
@@ -536,7 +538,7 @@ def test_table_top_level_wins_over_the_data_wrapper():
     doc = build_document(
         _document(items=[_table(data={"columns": ["x"], "rows": [[9]]})]), logger=logger
     )
-    assert doc.items[0].columns[0].name == "time"
+    assert doc.items[0]["columns"][0]["name"] == "time"
 
 
 @pytest.mark.unit
@@ -596,11 +598,10 @@ def test_tree_nodes_recurse():
             ]
         )
     )
-    root = doc.items[0].nodes[0]
-    assert isinstance(root, TreeNode)
-    assert root.name == "Assembly"
-    assert len(root.children) == 2
-    assert root.children[1].children[0].name == "Face 1"
+    root = doc.items[0]["nodes"][0]
+    assert root["name"] == "Assembly"
+    assert len(root["children"]) == 2
+    assert root["children"][1]["children"][0]["name"] == "Face 1"
 
 
 @pytest.mark.unit
@@ -608,7 +609,7 @@ def test_tree_node_value_defaults_to_the_name():
     doc = build_document(
         _document(items=[{"item_type": "tree", "name": "t", "nodes": [{"name": "Alpha"}]}])
     )
-    assert doc.items[0].nodes[0].value == "Alpha"
+    assert doc.items[0]["nodes"][0]["value"] == "Alpha"
 
 
 @pytest.mark.unit
@@ -624,9 +625,9 @@ def test_tree_node_keeps_an_explicit_value_and_key():
             ]
         )
     )
-    node = doc.items[0].nodes[0]
-    assert node.value == [1, 2]
-    assert node.key == "alpha"
+    node = doc.items[0]["nodes"][0]
+    assert node["value"] == [1, 2]
+    assert node["key"] == "alpha"
 
 
 @pytest.mark.unit
@@ -724,7 +725,7 @@ def test_load_document_reads_a_file_and_defaults_base_dir(tmp_path: Path):
     doc = load_document(path)
     assert doc.app_id == "demo-app"
     assert doc.base_dir == str(tmp_path)
-    assert doc.items[0].base_dir == str(tmp_path)
+    assert doc.items[0]["base_dir"] == str(tmp_path)
 
 
 @pytest.mark.unit

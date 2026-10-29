@@ -48,7 +48,7 @@ class ImportBackend(Protocol):
         """Raise if the backend cannot accept writes."""
 
     def save_item(
-        self, model: Any, doc_tags: str
+        self, item: dict[str, Any], doc_tags: str
     ) -> Any:  # pragma: no cover - structural protocol member
         """Create and persist one item."""
 
@@ -104,15 +104,18 @@ class JSONItemImporter:
             except Exception as exc:
                 if self._logger is not None:
                     self._logger.error(
-                        "Failed to import item %r (%s): %s", item.name, item.item_type, exc
+                        "Failed to import item %r (%s): %s",
+                        item["name"],
+                        item["item_type"],
+                        exc,
                     )
                 if on_error == "raise":
                     raise
                 result.failures.append(
                     ItemFailure(
                         index=index,
-                        name=item.name,
-                        item_type=item.item_type,
+                        name=item["name"],
+                        item_type=item["item_type"],
                         error=str(exc),
                     )
                 )

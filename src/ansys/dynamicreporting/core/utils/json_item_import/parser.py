@@ -24,8 +24,8 @@
 
 The parser walks the declarative tables in
 :mod:`~ansys.dynamicreporting.core.utils.json_item_import.spec` and turns raw JSON
-into the frozen payload objects in
-:mod:`~ansys.dynamicreporting.core.utils.json_item_import.models`.
+into normalized item mappings. The backend adapters pass those mappings to the
+existing server and serverless item models.
 
 Every contract violation found in a document is accumulated and reported
 together, so a producer can fix a whole document in one edit rather than one
@@ -45,16 +45,14 @@ from .errors import ImportItemValidationError
 from .models import (
     DatasetPayload,
     ImportDocument,
-    ItemPayload,
     SessionPayload,
-    TreeNode,
 )
 from .spec import (
     ANY,
-    COMMON_ITEM_NAMES,
     DATASET_SPEC,
     DOCUMENT_SPEC,
     ITEM_SPECS,
+    ITEM_COMMON_NAMES,
     SESSION_SPEC,
     TREE_NODE_SPEC,
     FieldSpec,
@@ -304,7 +302,7 @@ def build_tree_node(
     strict_keys: bool = False,
     logger: Any = None,
     depth: int = 1,
-) -> TreeNode | None:
+) -> dict[str, Any] | None:
     """Build one tree node, recursing into its children."""
     if not isinstance(raw, dict):
         errors.add(location, f"expected an object, got {type(raw).__name__}")
@@ -341,7 +339,12 @@ def build_tree_node(
         is not None
     )
 
-    return TreeNode(name=values["name"], value=value, key=values["key"], children=children)
+    return {
+        "name": values["name"],
+        "value": value,
+        "key": values["key"],
+        "children": children,
+    }
 
 
 def _normalize_table_shape(
@@ -381,7 +384,7 @@ def _validate_table(values: dict[str, Any], location: str, errors: ErrorCollecto
     """Check table shape, cell types, and axis references."""
     columns = values["columns"] or ()
     rows = values["rows"] or ()
-    column_names = [column.name for column in columns]
+    column_names = [column["name"] for column in columns]
 
     expected_width = len(columns) if columns else (len(rows[0]) if rows else 0)
     for row_index, row in enumerate(rows):
@@ -425,7 +428,7 @@ def build_item(
     base_dir: str | None = None,
     strict_keys: bool = False,
     logger: Any = None,
-) -> ItemPayload | None:
+) -> dict[str, Any] | None:
     """Build one item payload from the document ``items`` array."""
     location = f"items[{index}]"
     if not isinstance(raw, dict):
@@ -463,28 +466,18 @@ def build_item(
             is not None
         )
 
-    payload = {name: value for name, value in values.items() if name not in COMMON_ITEM_NAMES}
-
     if logger is not None:
         # A property of the same name is applied after the first-class field,
         # so it silently wins unless the conflict is surfaced here.
-        shadowed = {key for entry in values["properties"] for key in entry} & payload.keys()
+        shadowed = {key for entry in values["properties"] for key in entry} & (
+            values.keys() - ITEM_COMMON_NAMES
+        )
         for key in sorted(shadowed):
             logger.warning(
                 "%s: property %r overrides the first-class %r field.", location, key, key
             )
 
-    return ItemPayload(
-        item_type=values["item_type"],
-        name=values["name"],
-        tags=values["tags"],
-        source=values["source"],
-        sequence=values["sequence"],
-        properties=values["properties"],
-        payload=payload,
-        extra=extra,
-        base_dir=base_dir,
-    )
+    return {**values, "extra": extra, "base_dir": base_dir}
 
 
 def _build_simple(

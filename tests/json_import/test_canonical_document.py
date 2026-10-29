@@ -51,7 +51,6 @@ from ansys.dynamicreporting.core.utils.json_item_import.errors import (
     ImportItemVersionError,
 )
 from ansys.dynamicreporting.core.utils.json_item_import.importer import JSONItemImporter
-from ansys.dynamicreporting.core.utils.json_item_import.models import TableColumn
 from ansys.dynamicreporting.core.utils.json_item_import.parser import build_document, load_document
 
 CANONICAL_DOCUMENT: dict[str, Any] = {
@@ -143,7 +142,7 @@ def test_canonical_document_keeps_its_tags_and_metadata(canonical):
 @pytest.mark.unit
 def test_canonical_document_has_no_unknown_keys(canonical):
     assert canonical.extra == {}
-    assert all(item.extra == {} for item in canonical.items)
+    assert all(item["extra"] == {} for item in canonical.items)
 
 
 @pytest.mark.unit
@@ -160,7 +159,7 @@ def test_canonical_document_round_trips_through_a_file(tmp_path: Path):
     assert document.app_id == "adr-mechanical"
     assert len(document.items) == 5
     # Relative media paths resolve against the directory holding the document.
-    assert document.items[IMAGE].base_dir == str(tmp_path)
+    assert document.items[IMAGE]["base_dir"] == str(tmp_path)
 
 
 # --------------------------------------------------------------------------
@@ -170,7 +169,7 @@ def test_canonical_document_round_trips_through_a_file(tmp_path: Path):
 
 @pytest.mark.unit
 def test_canonical_item_types_and_names(canonical):
-    assert [(item.item_type, item.name) for item in canonical.items] == [
+    assert [(item["item_type"], item["name"]) for item in canonical.items] == [
         ("text", "Summary"),
         ("html", "Notes"),
         ("image", "Contour"),
@@ -181,37 +180,37 @@ def test_canonical_item_types_and_names(canonical):
 
 @pytest.mark.unit
 def test_canonical_inline_items(canonical):
-    assert canonical.items[TEXT].value == "Simulation completed successfully."
-    assert canonical.items[HTML_ITEM].value == "<p>All results within range.</p>"
+    assert canonical.items[TEXT]["value"] == "Simulation completed successfully."
+    assert canonical.items[HTML_ITEM]["value"] == "<p>All results within range.</p>"
 
 
 @pytest.mark.unit
 def test_canonical_image_path(canonical):
-    assert canonical.items[IMAGE].path == "contour.png"
+    assert canonical.items[IMAGE]["path"] == "contour.png"
 
 
 @pytest.mark.unit
 def test_canonical_tree_keeps_both_children(canonical):
-    root = canonical.items[TREE].nodes[0]
-    assert root.name == "Assembly"
-    assert [child.name for child in root.children] == ["Part A", "Part B"]
+    root = canonical.items[TREE]["nodes"][0]
+    assert root["name"] == "Assembly"
+    assert [child["name"] for child in root["children"]] == ["Part A", "Part B"]
     # An omitted value defaults to the node name.
-    assert root.value == "Assembly"
+    assert root["value"] == "Assembly"
 
 
 @pytest.mark.unit
 def test_canonical_table_is_parsed(canonical):
     table = canonical.items[TABLE]
-    assert table.columns == (
-        TableColumn("time"),
-        TableColumn("T_max"),
-        TableColumn("T_min"),
+    assert table["columns"] == (
+        {"name": "time", "type": "string"},
+        {"name": "T_max", "type": "string"},
+        {"name": "T_min", "type": "string"},
     )
-    assert table.rows == ((0.0, 300.1, 290.0), (1.0, 320.5, 295.2))
-    assert table.plot == "line"
-    assert table.xaxis == "time"
-    assert table.yaxis == ("T_max", "T_min")
-    assert table.properties == ({"line_width": 2}, {"table_title": "Probe temperatures"})
+    assert table["rows"] == ((0.0, 300.1, 290.0), (1.0, 320.5, 295.2))
+    assert table["plot"] == "line"
+    assert table["xaxis"] == "time"
+    assert table["yaxis"] == ("T_max", "T_min")
+    assert table["properties"] == ({"line_width": 2}, {"table_title": "Probe temperatures"})
 
 
 # --------------------------------------------------------------------------
@@ -416,7 +415,7 @@ def test_an_unknown_key_is_retained_by_default_and_rejected_when_strict():
         document["items"][TEXT]["unexpected"] = 1
 
     document = _mutated(mutate)
-    assert build_document(copy.deepcopy(document)).items[TEXT].extra == {"unexpected": 1}
+    assert build_document(copy.deepcopy(document)).items[TEXT]["extra"] == {"unexpected": 1}
 
     with pytest.raises(ImportItemValidationError) as excinfo:
         build_document(document, strict_keys=True)

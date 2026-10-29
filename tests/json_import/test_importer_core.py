@@ -47,8 +47,8 @@ class FakeBackend:
         self.ready = True
 
     def save_item(self, model, doc_tags):
-        if model.name in self._fail_items:
-            raise RuntimeError(f"cannot save item {model.name!r}")
+        if model["name"] in self._fail_items:
+            raise RuntimeError(f"cannot save item {model['name']!r}")
         self.items.append((model, doc_tags))
         return model
 
@@ -106,7 +106,7 @@ def test_items_are_saved_in_document_order():
     result = JSONItemImporter(backend).import_document(document)
 
     assert result.items_saved == 3
-    assert [model.name for model, _ in backend.items] == ["a", "b", "c"]
+    assert [model["name"] for model, _ in backend.items] == ["a", "b", "c"]
 
 
 @pytest.mark.unit
@@ -151,7 +151,7 @@ def test_raise_stops_at_the_first_failure():
     with pytest.raises(RuntimeError):
         JSONItemImporter(backend).import_document(document, on_error="raise")
 
-    assert [model.name for model, _ in backend.items] == ["good"]
+    assert [model["name"] for model, _ in backend.items] == ["good"]
 
 
 @pytest.mark.unit
@@ -233,7 +233,7 @@ def test_import_file_defaults_base_dir_to_the_document_directory(tmp_path: Path)
     )
     backend = FakeBackend()
     JSONItemImporter(backend).import_file(path)
-    assert backend.items[0][0].base_dir == str(tmp_path)
+    assert backend.items[0][0]["base_dir"] == str(tmp_path)
 
 
 @pytest.mark.unit

@@ -81,8 +81,8 @@ def rows_to_array(rows: Any, column_count: int | None = None) -> numpy.ndarray:
 
 
 def column_labels(columns: Any) -> list[str]:
-    """Return the column names, accepting bare strings or column objects."""
-    return [column if isinstance(column, str) else column.name for column in columns]
+    """Return names from bare strings or normalized column mappings."""
+    return [column if isinstance(column, str) else column["name"] for column in columns]
 
 
 def derive_axes(
@@ -121,18 +121,21 @@ def flatten_tree(nodes: Any) -> list[dict[str, Any]]:
     """
 
     def _convert(node: Any, path: str) -> dict[str, Any]:
+        name = node["name"]
         children = [
-            _convert(child, f"{path}_{index}_{_slug(child.name)}")
-            for index, child in enumerate(node.children)
+            _convert(child, f"{path}_{index}_{_slug(child['name'])}")
+            for index, child in enumerate(node["children"])
         ]
         return {
-            "key": node.key or path,
-            "name": node.name,
-            "value": node.value,
+            "key": node["key"] or path,
+            "name": name,
+            "value": node["value"],
             "children": children,
         }
 
-    return [_convert(node, f"node_{index}_{_slug(node.name)}") for index, node in enumerate(nodes)]
+    return [
+        _convert(node, f"node_{index}_{_slug(node['name'])}") for index, node in enumerate(nodes)
+    ]
 
 
 def _item_label(item: Any) -> str:

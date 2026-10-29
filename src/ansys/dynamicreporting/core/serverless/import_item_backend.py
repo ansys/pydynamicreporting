@@ -40,7 +40,6 @@ from ..utils.json_item_import.mapping import (
     resolve_path,
     rows_to_array,
 )
-from ..utils.json_item_import.models import ItemPayload
 from ..utils.json_item_import.tags import combine_tags
 from .item import HTML, Animation, File, Image, Scene, String, Table, Tree
 
@@ -73,22 +72,22 @@ class ServerlessImportBackend:
         """Verify the ADR singleton has been set up."""
         self._adr.ensure_setup()
 
-    def save_item(self, model: ItemPayload, doc_tags: str) -> Any:
+    def save_item(self, item_data: dict[str, Any], doc_tags: str) -> Any:
         """Create and persist one item."""
         item = self._adr.create_item(
-            ITEM_CLASS[model.item_type],
-            name=model.name,
-            content=self._content_for(model),
-            source=model.source,
-            sequence=model.sequence,
-            tags=combine_tags(doc_tags, model.tags),
+            ITEM_CLASS[item_data["item_type"]],
+            name=item_data["name"],
+            content=self._content_for(item_data),
+            source=item_data["source"],
+            sequence=item_data["sequence"],
+            tags=combine_tags(doc_tags, item_data["tags"]),
         )
 
         needs_resave = False
-        if model.item_type == "table":
-            self._set_table_meta(item, model)
+        if item_data["item_type"] == "table":
+            self._set_table_meta(item, item_data)
             needs_resave = True
-        if apply_properties(item, model.properties, self.logger):
+        if apply_properties(item, item_data["properties"], self.logger):
             needs_resave = True
 
         if needs_resave:
@@ -96,26 +95,28 @@ class ServerlessImportBackend:
         return item
 
     @staticmethod
-    def _content_for(model: ItemPayload) -> Any:
+    def _content_for(item_data: dict[str, Any]) -> Any:
         """Build the backend content payload for one item."""
-        if model.item_type in ("text", "html"):
-            return model.value
-        if model.item_type == "table":
-            return rows_to_array(model.rows, len(model.columns))
-        if model.item_type == "tree":
-            return flatten_tree(model.nodes)
-        return resolve_path(model.path, model.base_dir)
+        item_type = item_data["item_type"]
+        if item_type in ("text", "html"):
+            return item_data["value"]
+        if item_type == "table":
+            return rows_to_array(item_data["rows"], len(item_data["columns"]))
+        if item_type == "tree":
+            return flatten_tree(item_data["nodes"])
+        return resolve_path(item_data["path"], item_data["base_dir"])
 
     @staticmethod
-    def _set_table_meta(item: Any, model: ItemPayload) -> None:
+    def _set_table_meta(item: Any, item_data: dict[str, Any]) -> None:
         """Apply table labels, axes, and display fields."""
-        item.labels_row = column_labels(model.columns)
-        xaxis, yaxis = derive_axes(model.columns, model.xaxis, model.yaxis)
+        columns = item_data["columns"]
+        item.labels_row = column_labels(columns)
+        xaxis, yaxis = derive_axes(columns, item_data["xaxis"], item_data["yaxis"])
         if xaxis is not None:
             item.xaxis = xaxis
         if yaxis:
             item.yaxis = yaxis
-        if model.plot is not None:
-            item.plot = model.plot
-        if model.table_format is not None:
-            item.format = model.table_format
+        if item_data["plot"] is not None:
+            item.plot = item_data["plot"]
+        if item_data["format"] is not None:
+            item.format = item_data["format"]

@@ -251,7 +251,7 @@ def test_parser_accepts_the_sample_document():
 @pytest.mark.unit
 def test_sample_document_demonstrates_every_item_type():
     document = load_document(SAMPLE)
-    assert {item.item_type for item in document.items} == set(ITEM_TYPES)
+    assert {item["item_type"] for item in document.items} == set(ITEM_TYPES)
 
 
 @pytest.mark.unit
@@ -260,4 +260,4 @@ def test_sample_document_has_no_unknown_keys():
     # misspelling to anyone who copies the sample.
     document = load_document(SAMPLE)
     assert document.extra == {}
-    assert all(item.extra == {} for item in document.items)
+    assert all(item["extra"] == {} for item in document.items)

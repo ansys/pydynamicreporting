@@ -38,7 +38,6 @@ from .utils.json_item_import.mapping import (
     resolve_path,
     rows_to_array,
 )
-from .utils.json_item_import.models import ItemPayload
 from .utils.json_item_import.tags import combine_tags
 
 ITEM_ATTRIBUTE: dict[str, str] = {
@@ -79,26 +78,26 @@ class ServerImportBackend:
         if getattr(self._service, "serverobj", None) is None:
             raise RuntimeError("The ADR service is not connected; call connect() first.")
 
-    def save_item(self, model: ItemPayload, doc_tags: str) -> Any:
+    def save_item(self, item_data: dict[str, Any], doc_tags: str) -> Any:
         """Create one item and push it to the server."""
-        item = self._service.create_item(obj_name=model.name, source=model.source)
+        item = self._service.create_item(obj_name=item_data["name"], source=item_data["source"])
         # adr_item.Item has no 'sequence' passthrough, and its set_tags() pushes
         # on its own. Both are staged on the server object so they ride the
         # payload push instead of costing a round trip each.
-        item.item.sequence = model.sequence
-        item.item.set_tags(combine_tags(doc_tags, model.tags))
+        item.item.sequence = item_data["sequence"]
+        item.item.set_tags(combine_tags(doc_tags, item_data["tags"]))
 
         # Assigning the payload sets the item type and performs the first push.
         # Item.__setattr__ re-uploads the whole table on every table_attr write
         # once the array is present, so everything after this point is staged
         # with only_set and pushed once at the end.
-        setattr(item, ITEM_ATTRIBUTE[model.item_type], self._content_for(model))
+        setattr(item, ITEM_ATTRIBUTE[item_data["item_type"]], self._content_for(item_data))
 
         staged = False
-        if model.item_type == "table":
-            self._set_table_meta(item, model)
+        if item_data["item_type"] == "table":
+            self._set_table_meta(item, item_data)
             staged = True
-        if apply_properties(item, model.properties, self.logger, setter=_stage):
+        if apply_properties(item, item_data["properties"], self.logger, setter=_stage):
             staged = True
         if staged:
             item.__pushonly__()
@@ -106,26 +105,28 @@ class ServerImportBackend:
         return item
 
     @staticmethod
-    def _content_for(model: ItemPayload) -> Any:
+    def _content_for(item_data: dict[str, Any]) -> Any:
         """Build the REST content payload for one item."""
-        if model.item_type in ("text", "html"):
-            return model.value
-        if model.item_type == "table":
-            return rows_to_array(model.rows, len(model.columns))
-        if model.item_type == "tree":
-            return flatten_tree(model.nodes)
-        return resolve_path(model.path, model.base_dir)
+        item_type = item_data["item_type"]
+        if item_type in ("text", "html"):
+            return item_data["value"]
+        if item_type == "table":
+            return rows_to_array(item_data["rows"], len(item_data["columns"]))
+        if item_type == "tree":
+            return flatten_tree(item_data["nodes"])
+        return resolve_path(item_data["path"], item_data["base_dir"])
 
     @staticmethod
-    def _set_table_meta(item: Any, model: ItemPayload) -> None:
+    def _set_table_meta(item: Any, item_data: dict[str, Any]) -> None:
         """Stage table labels, axes, and display fields without pushing."""
-        _stage(item, "labels_row", column_labels(model.columns))
-        xaxis, yaxis = derive_axes(model.columns, model.xaxis, model.yaxis)
+        columns = item_data["columns"]
+        _stage(item, "labels_row", column_labels(columns))
+        xaxis, yaxis = derive_axes(columns, item_data["xaxis"], item_data["yaxis"])
         if xaxis is not None:
             _stage(item, "xaxis", xaxis)
         if yaxis:
             _stage(item, "yaxis", yaxis)
-        if model.plot is not None:
-            _stage(item, "plot", model.plot)
-        if model.table_format is not None:
-            _stage(item, "format", model.table_format)
+        if item_data["plot"] is not None:
+            _stage(item, "plot", item_data["plot"])
+        if item_data["format"] is not None:
+            _stage(item, "format", item_data["format"])

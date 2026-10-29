@@ -63,7 +63,7 @@ def backend(adr):
 
 
 def _item(raw, base_dir=None):
-    """Build a single ItemPayload from a raw item mapping."""
+    """Build a normalized item mapping from a raw item mapping."""
     document = build_document(
         {"schema_version": "1.0", "app_id": "demo", "items": [raw]}, base_dir=base_dir
     )

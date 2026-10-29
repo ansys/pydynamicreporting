@@ -20,103 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Parsed payload objects for the ADR import item document.
-
-These are plain frozen dataclasses. They are produced by
-:mod:`~ansys.dynamicreporting.core.utils.json_item_import.parser` and consumed by
-the importer core and the backend adapters.
-"""
+"""Document envelope objects for the ADR import item document."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
-
-
-@dataclass(frozen=True)
-class TableColumn:
-    """A single table column definition."""
-
-    name: str
-    type: str = "string"
-
-
-@dataclass(frozen=True)
-class TreeNode:
-    """A node of a tree item payload."""
-
-    name: str
-    value: Any = None
-    key: str | None = None
-    children: tuple["TreeNode", ...] = ()
-
-
-@dataclass(frozen=True)
-class ItemPayload:
-    """A validated item from the document ``items`` array.
-
-    Type-specific fields live in :attr:`payload` and are surfaced by the
-    convenience properties below, so every item type shares one class.
-    """
-
-    item_type: str
-    name: str
-    tags: tuple[dict[str, Any], ...] = ()
-    source: str = ""
-    sequence: int = 0
-    properties: tuple[dict[str, Any], ...] = ()
-    payload: dict[str, Any] = field(default_factory=dict)
-    extra: dict[str, Any] = field(default_factory=dict)
-    base_dir: str | None = None
-
-    @property
-    def value(self) -> str | None:
-        """Inline body for ``text`` and ``html`` items."""
-        return self.payload.get("value")
-
-    @property
-    def path(self) -> str | None:
-        """Unresolved file path for media items."""
-        return self.payload.get("path")
-
-    @property
-    def columns(self) -> tuple[TableColumn, ...]:
-        """Column definitions for ``table`` items."""
-        return self.payload.get("columns", ())
-
-    @property
-    def rows(self) -> tuple[tuple[Any, ...], ...]:
-        """Record-oriented rows for ``table`` items."""
-        return self.payload.get("rows", ())
-
-    @property
-    def nodes(self) -> tuple[TreeNode, ...]:
-        """Root nodes for ``tree`` items."""
-        return self.payload.get("nodes", ())
-
-    @property
-    def plot(self) -> str | None:
-        """Plot style for ``table`` items."""
-        return self.payload.get("plot")
-
-    @property
-    def table_format(self) -> str | None:
-        """Cell format for ``table`` items.
-
-        Named ``table_format`` rather than ``format`` to avoid shadowing
-        :meth:`str.format` semantics on the payload object.
-        """
-        return self.payload.get("format")
-
-    @property
-    def xaxis(self) -> str | None:
-        """Explicit x-axis label for ``table`` items, if supplied."""
-        return self.payload.get("xaxis")
-
-    @property
-    def yaxis(self) -> tuple[str, ...] | None:
-        """Explicit y-axis labels for ``table`` items, if supplied."""
-        return self.payload.get("yaxis")
 
 
 @dataclass(frozen=True)
@@ -157,6 +66,6 @@ class ImportDocument:
     metadata: dict[str, Any] = field(default_factory=dict)
     sessions: tuple[SessionPayload, ...] = ()
     datasets: tuple[DatasetPayload, ...] = ()
-    items: tuple[ItemPayload, ...] = ()
+    items: tuple[dict[str, Any], ...] = ()
     extra: dict[str, Any] = field(default_factory=dict)
     base_dir: str | None = None

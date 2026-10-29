@@ -140,8 +140,8 @@ def _run_server(base_dir: str) -> Run:
 
     # The server adapter assigns the payload to a type-specific attribute.
     for model in document.items:
-        item = items[model.name]
-        item.imported_content = getattr(item, ITEM_ATTRIBUTE[model.item_type])
+        item = items[model["name"]]
+        item.imported_content = getattr(item, ITEM_ATTRIBUTE[model["item_type"]])
         item.imported_tags = item.item.set_tags.call_args.args[0]
     return Run(result, items, item_order)
 

@@ -34,7 +34,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from .enums import ITEM_TYPES
-from .models import TableColumn
 from .version import SCHEMA_VERSION
 
 ANY = object
@@ -123,12 +122,12 @@ def coerce_tag_list(value: Any) -> tuple[dict[str, Any], ...]:
     return tuple(out)
 
 
-def coerce_columns(value: Any) -> tuple[TableColumn, ...]:
-    """Normalize table columns to :class:`TableColumn` objects."""
-    out: list[TableColumn] = []
+def coerce_columns(value: Any) -> tuple[dict[str, str], ...]:
+    """Normalize table columns to objects with a name and optional type."""
+    out: list[dict[str, str]] = []
     for index, entry in enumerate(value):
         if isinstance(entry, str):
-            out.append(TableColumn(name=entry))
+            out.append({"name": entry, "type": "string"})
             continue
         name = entry.get("name")
         if not isinstance(name, str) or not name:
@@ -136,7 +135,7 @@ def coerce_columns(value: Any) -> tuple[TableColumn, ...]:
         col_type = entry.get("type", "string")
         if not isinstance(col_type, str):
             raise ValueError(f"column [{index}] 'type' must be a string")
-        out.append(TableColumn(name=name, type=col_type))
+        out.append({"name": name, "type": col_type})
     return tuple(out)
 
 
@@ -198,6 +197,7 @@ ITEM_COMMON: tuple[FieldSpec, ...] = (
         description="Escape hatch for ADR fields not promoted to first class.",
     ),
 )
+ITEM_COMMON_NAMES = frozenset(spec.name for spec in ITEM_COMMON)
 
 # Declared once and shared by all four media types. Duplicating the 'src'
 # alias per type is how the contract drifts.
@@ -272,9 +272,6 @@ ITEM_SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "file": ITEM_COMMON + (_PATH,),
 }
 """Field tables keyed by ``item_type``."""
-
-COMMON_ITEM_NAMES: frozenset[str] = frozenset(spec.name for spec in ITEM_COMMON)
-"""Names handled by :class:`~...models.ItemPayload` itself rather than ``payload``."""
 
 TREE_NODE_SPEC: tuple[FieldSpec, ...] = (
     FieldSpec("name", str, required=True, min_len=1, description="Node label."),
