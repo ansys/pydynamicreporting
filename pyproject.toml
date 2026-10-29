@@ -6,6 +6,8 @@ dependencies = [
     "docker>=7.1.0",
     "pypng>=0.20220715.0",
     "requests>=2.32.4",
+    # Not imported directly: requests verifies HTTPS with certifi's CA bundle, and this floor
+    # drops trust in the CA behind the compromised eMudhra intermediates.
     "certifi>=2026.10.19",
     "urllib3>=2.6.3,<3.0.0",
     "Pillow>=11.1.0",
