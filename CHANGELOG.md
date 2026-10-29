@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Lock Pillow 13.0.0 and Django 5.2.18 for development installs, and support
   Pillow 13. 32-bit integer images are still stored as 16-bit PNGs, as they were
   with earlier Pillow releases.
+- Update Playwright to 1.64.1. Its bundled Node.js 24.22.1 distrusts the
+  compromised eMudhra intermediates, and it uses Chromium 156. Browser PDF export
+  needs the matching Chromium build (`chromium_headless_shell-1248`) in the ADR
+  installation.
 
 ## [1.0.0rc3] - 2026-09-21
 
